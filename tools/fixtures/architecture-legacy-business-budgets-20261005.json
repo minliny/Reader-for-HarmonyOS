@@ -1,0 +1,686 @@
+{
+  "sourceHead": "552b05b730df5efa0db637f3c1c178eb66b1df2e",
+  "description": "Immutable original 100 business budgets. Current 93 unchanged rows and 7 individually approved existing-UI policy transitions must reversibly match these rows.",
+  "rows": [
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookRemovalDialog.ets",
+      "counts": {
+        "fontSize": 1,
+        "CustomDialogController": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 6
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+      "counts": {
+        "fontSize": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfGroupSelector.ets",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+      "counts": {
+        "fontSize": 17,
+        "backgroundColor": 11
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets",
+      "counts": {
+        "fontSize": 8,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "counts": {
+        "fontSize": 18,
+        "backgroundColor": 6,
+        "bindSheet": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "counts": {
+        "fontSize": 15,
+        "backgroundColor": 9
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+      "counts": {
+        "fontSize": 16,
+        "backgroundColor": 14
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/NoCoverCover.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/AppTopBar.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/JsonImportDialog.ets",
+      "counts": {
+        "fontSize": 6,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "counts": {
+        "fontSize": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderCard.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderDialogSurface.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 1,
+        "CustomDialogController": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderPressFeedback.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 5
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSectionHeading.ets",
+      "counts": {
+        "fontSize": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSegmentedControl.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSelect.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 5
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 5
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderThemeRegistry.ts",
+      "counts": {
+        "showAlertDialog": 18,
+        "bindSheet": 6
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderToggle.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/StatusBadge.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+      "counts": {
+        "fontSize": 14,
+        "backgroundColor": 7
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+      "counts": {
+        "fontSize": 8,
+        "backgroundColor": 16
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 1,
+        "showAlertDialog": 8
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets",
+      "counts": {
+        "fontSize": 18,
+        "backgroundColor": 15
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAppearanceModulePanel.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 5
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAppearanceMotionStage.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+      "counts": {
+        "fontSize": 21,
+        "backgroundColor": 12
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPagePanel.ets",
+      "counts": {
+        "fontSize": 7,
+        "backgroundColor": 7
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderBookTurnSurface.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderBookmarkEmptyState.ets",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderBookmarkErrorState.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderBookmarkLoadingState.ets",
+      "counts": {
+        "fontSize": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderBookmarkRow.ets",
+      "counts": {
+        "fontSize": 10,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets",
+      "counts": {
+        "fontSize": 16,
+        "backgroundColor": 7
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+      "counts": {
+        "fontSize": 18,
+        "backgroundColor": 10
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "counts": {
+        "fontSize": 6,
+        "backgroundColor": 6
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlMotionStage.ets",
+      "counts": {
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "counts": {
+        "fontSize": 14,
+        "backgroundColor": 19,
+        "bindPopup": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+      "counts": {
+        "fontSize": 25,
+        "backgroundColor": 10
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlSearchContent.ets",
+      "counts": {
+        "fontSize": 6,
+        "backgroundColor": 7
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+      "counts": {
+        "fontSize": 6,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlSettingsOptionModifier.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets",
+      "counts": {
+        "fontSize": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+      "counts": {
+        "fontSize": 27,
+        "backgroundColor": 22,
+        "bindContentCover": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryModulePanel.ets",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 8
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "counts": {
+        "fontSize": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryRules.ets",
+      "counts": {
+        "fontSize": 7,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets",
+      "counts": {
+        "fontSize": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderPageChrome.ets",
+      "counts": {
+        "fontSize": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderPaperBackground.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderQuickSearchPanel.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderReplaceQuickPanel.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderSearchFullPanel.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderSessionCapsule.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderSessionLaunchStage.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderSettingsFullPanel.ets",
+      "counts": {
+        "fontSize": 7,
+        "backgroundColor": 7
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderSettingsModulePanel.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 3
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+      "counts": {
+        "fontSize": 22,
+        "backgroundColor": 11
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+      "counts": {
+        "fontSize": 28,
+        "backgroundColor": 17
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 8
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsWaveform.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+      "counts": {
+        "fontSize": 12,
+        "backgroundColor": 13
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssPage.ets",
+      "counts": {
+        "fontSize": 24,
+        "backgroundColor": 17
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+      "counts": {
+        "fontSize": 8,
+        "backgroundColor": 8
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+      "counts": {
+        "fontSize": 10,
+        "backgroundColor": 5
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+      "counts": {
+        "fontSize": 6,
+        "backgroundColor": 6
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/search/SearchPage.ets",
+      "counts": {
+        "fontSize": 40,
+        "backgroundColor": 12
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/CategoryRow.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+      "counts": {
+        "fontSize": 13,
+        "backgroundColor": 10
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "counts": {
+        "fontSize": 5,
+        "backgroundColor": 5,
+        "showAlertDialog": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsSelectOverlay.ets",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 9
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 4
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabShell.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/SettingsShell.ets",
+      "counts": {
+        "backgroundColor": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/source/CandidateRow.ets",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/source/LatencyBar.ets",
+      "counts": {
+        "backgroundColor": 2
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "counts": {
+        "fontSize": 16,
+        "backgroundColor": 9
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "counts": {
+        "fontSize": 15,
+        "backgroundColor": 7
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+      "counts": {
+        "fontSize": 25,
+        "backgroundColor": 16,
+        "showAlertDialog": 1
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "counts": {
+        "fontSize": 23,
+        "backgroundColor": 15
+      }
+    }
+  ]
+}

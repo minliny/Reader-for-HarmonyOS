@@ -1,0 +1,14 @@
+{
+  "title": "PH42 在线卷夹具",
+  "tocHtml": "<ol class=\"toc\"><li><a href=\"/directory/volume/1\">卷一（有URL，不是正文）</a><span class=\"volume\">true</span></li><li><a href=\"/directory/chapter/1\">第一章</a><span class=\"volume\">false</span></li><li><a href=\"/directory/volume/2\">卷二（有URL，不是正文）</a><span class=\"volume\">true</span></li><li><a href=\"/directory/chapter/2\">第二章</a><span class=\"volume\">false</span></li></ol>",
+  "expectedKinds": [
+    "group",
+    "target",
+    "group",
+    "target"
+  ],
+  "expectedReadableIndexes": [
+    1,
+    3
+  ]
+}

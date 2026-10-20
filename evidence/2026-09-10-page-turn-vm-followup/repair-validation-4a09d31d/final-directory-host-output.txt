@@ -1,2 +1,0 @@
-app pid: 9690
-目录 PASS

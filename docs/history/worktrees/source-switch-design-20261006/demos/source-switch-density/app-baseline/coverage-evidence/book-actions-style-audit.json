@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 2,
+  "checkedAt": "2026-10-05T07:57:11.901Z",
+  "request": "书架底部书籍操作浮层参考 demo 调整样式",
+  "status": "STYLE_APPLIED_SCOPE_CONFIRMED",
+  "reference": "用户明确指定此前4197漫画demo的书架操作样式；保留四项当前业务动作",
+  "pending": null,
+  "scope": {
+    "nativeChanged": false,
+    "designChanged": true,
+    "deviceVerified": false,
+    "hapBuilt": false
+  },
+  "bindings": {
+    "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+    "coreHead": "e1b29a4b774b005154f9c7cb679aac4799c5c9f0",
+    "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+    "designSourceSha256": "4e2f547d1de7179c98e11f1e81b6b0a1df87c1e14d905fc551a0ab2923cea3f5",
+    "logicSha256": "1c17de0c12e3028b8d5e1e46bc422ac30caf99f0d5cd6a8e4acfaf7c429a6b6b"
+  },
+  "currentDesignEvidence": [
+    "ui-library.mjs:164",
+    "library.css",
+    "spec-library.mjs:159"
+  ],
+  "remainingRelatedFindings": [
+    "LIB-01",
+    "COM-04"
+  ],
+  "meaning": "仅记录视觉参考已明确并已应用；不代表书籍身份/演示/原生应用全量通过",
+  "previousAudit": {
+    "schemaVersion": 1,
+    "observedDate": "2026-10-05",
+    "request": "书架底部书籍操作浮层参考 demo 调整样式",
+    "finding": "book-actions demo 居中绘制只覆盖 preferType 声明，未区分本机 SDK 文档规定的 W<600 bottom 系统呈现限制。",
+    "evidence": [
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+        "line": 279,
+        "fact": "bindSheet 高270、prefer CENTER、上下圆角24/0；长按与列表更多共用宿主。"
+      },
+      {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+        "line": 31,
+        "fact": "内容抓手、标题、4动作几何和颜色基本与当前 demo 一致。"
+      },
+      {
+        "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/component/common.d.ts",
+        "line": 15678,
+        "fact": "SheetOptions.preferType 注释规定 Width < 600 vp: bottom。这是 SDK 文档证据，未验证当前目标运行效果。"
+      },
+      {
+        "path": "docs/ui-design/app-baseline/app.css",
+        "line": 3,
+        "fact": "当前 demo overlay-layer 使用居中 flex，phone reference 也居中。"
+      }
+    ],
+    "scope": {
+      "nativeChanged": false,
+      "designChanged": false,
+      "deviceVerified": false,
+      "hapBuilt": false
+    },
+    "pending": "已询问用户参考目标：沿用当前卡片置底、按当前 demo 居中、或另一份 demo。参考范围确定后再修改宿主与样式；右上更多属于锚定菜单。",
+    "status": "OPEN_REFERENCE_SCOPE"
+  }
+}

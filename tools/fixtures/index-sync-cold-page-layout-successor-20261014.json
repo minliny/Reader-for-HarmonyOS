@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "page": "entry/src/main/ets/pages/Index.ets",
+  "previousSourceHead": "838078322bb267c95e11757ccce8a242678be44a",
+  "previousSourceSha256": "1188b0d70577c69db47034a89b149fff12ac0e8398e8206834de306702651191",
+  "previousMethod": "build",
+  "currentMethod": "syncPreparingContent",
+  "host": "ReaderPageScaffold",
+  "variant": "standard",
+  "slot": "content",
+  "previousNative": {
+    "kind": "Text",
+    "text": "'正在读取安全配置…'",
+    "modifiers": {},
+    "attributes": {}
+  },
+  "previousNativeSha256": "0f01c49163e90235533e52da318276e9925eb0f10e09f6525ffce140080cc092",
+  "previousNativeCount": 1,
+  "previousColumnAttributes": {
+    "width": "'100%'",
+    "height": "'100%'",
+    "justifyContent": "FlexAlign.Center"
+  },
+  "previousPrivateBackground": "readerAppColor('app.Index.build.backgroundColor.FFF8F4EC', this.appThemeScheme)",
+  "currentBackgroundOwner": "ReaderPageFrameModifier",
+  "previousArchitecturePolicy": {
+    "file": "entry/src/main/ets/pages/Index.ets",
+    "kind": "page-orchestration",
+    "owner": "Index unique integration owner",
+    "reason": "Actual page/surface host, navigation and native dialog admission; existing background/controller budget recorded without claiming migration closure.",
+    "counts": {
+      "backgroundColor": 4,
+      "CustomDialogController": 2,
+      "showAlertDialog": 4
+    },
+    "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+  },
+  "previousArchitecturePolicySha256": "042e334c90b3951370412f168c9538eb0b7d6596707cfc4f7ffabb4f41897ae5",
+  "sdkProof": "tools/test-reader-page-header-contract.mjs"
+}

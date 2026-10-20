@@ -7,6 +7,8 @@ import {
 export interface ReaderAppearancePersistence {
   load(): Promise<ReaderAppearanceSnapshot>;
   save(snapshot: ReaderAppearanceSnapshot): Promise<void>;
+  /** Warm platform cache is not a durable acknowledgement. */
+  hasUnconfirmedSave?(): boolean;
 }
 
 export type ReaderAppearanceChange = (current: ReaderAppearanceSnapshot) => ReaderAppearanceSnapshot;
@@ -26,7 +28,6 @@ export class ReaderAppearanceCommit {
 export class ReaderAppearanceStore {
   private readonly persistence: ReaderAppearancePersistence;
   private snapshot: ReaderAppearanceSnapshot | undefined = undefined;
-  private durableSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
   private readonly listeners: Set<(snapshot: ReaderAppearanceSnapshot, revision: number) => void> = new Set();
   private loading: Promise<void> | undefined = undefined;
   private revision: number = 0;
@@ -87,10 +88,8 @@ export class ReaderAppearanceStore {
       }
       this.snapshot = next;
       this.revision += 1;
-      const themeChanged = current.appThemeMode !== next.appThemeMode || current.activeTheme !== next.activeTheme ||
-        current.dayTheme !== next.dayTheme || current.nightTheme !== next.nightTheme;
       this.publish();
-      return new ReaderAppearanceCommit(this.revision, this.enqueueSave(themeChanged));
+      return new ReaderAppearanceCommit(this.revision, this.enqueueSave());
     });
     this.changeTail = applied.then((): void => {}, (): void => {});
     return applied;
@@ -115,7 +114,7 @@ export class ReaderAppearanceStore {
     if (this.loading === undefined) {
       this.loading = this.persistence.load().then((snapshot: ReaderAppearanceSnapshot): void => {
         this.snapshot = normalizeReaderAppearanceSnapshot(snapshot);
-        this.durableSnapshot = this.current();
+        if (this.persistence.hasUnconfirmedSave?.() === true) this.revision = 1;
         this.publish();
       });
     }
@@ -127,31 +126,19 @@ export class ReaderAppearanceStore {
     }
   }
 
-  private enqueueSave(rollbackThemeOnFailure: boolean = false): Promise<void> {
+  private enqueueSave(): Promise<void> {
     const snapshot = this.current();
     const revision = this.revision;
     this.pendingWrites += 1;
     const save = this.writeTail.then((): Promise<void> => this.persistence.save(snapshot))
       .then((): void => {
         this.savedRevision = revision;
-        this.durableSnapshot = copyReaderAppearanceSnapshot(snapshot);
-      })
-      .catch((error: Error): never => {
-        if (rollbackThemeOnFailure && revision === this.revision && this.durableSnapshot !== undefined) {
-          // An older failed write cannot undo a newer intent. Roll back both scopes
-          // together to the last durable snapshot and compensate a possible put/flush split.
-          this.snapshot = copyReaderAppearanceSnapshot(this.durableSnapshot);
-          this.revision += 1;
-          const rollbackRevision = this.revision;
-          this.publish();
-          void Promise.resolve().then((): void => {
-            if (this.revision === rollbackRevision) void this.enqueueSave().catch((): void => {});
-          });
-        }
-        throw error;
       })
       .finally((): void => { this.pendingWrites -= 1; });
-    // Failure belongs to this commit; it cannot poison later user writes.
+    // A rejected native put/flush may have persisted. Retain accepted intent;
+    // no compensation or cached read may manufacture a durable receipt.
+    // A later lifecycle flush/new choice writes the latest complete snapshot
+    // through the same ordered, idempotent setter.
     this.writeTail = save.catch((): void => {});
     this.latestSave = save;
     return save;

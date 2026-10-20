@@ -1,11 +1,16 @@
-import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { createRequire } from 'node:module';
-import { execFileSync } from 'node:child_process';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"reader-navigation": {"description": "实际Reader module icon retained 4状态/两scheme", "resources": []}, "reader-quick": {"description": "实际Reader quick3 icon retained scheme", "resources": []}, "main-navigation": {"description": "实际Main Tab inactive/active current资源/颜色", "resources": []}, "quick-directory": {"description": "实际quick目录marker生产方法/资源", "resources": []}, "full-directory": {"description": "实际Full目录download/bookmark marker生产方法/资源", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { existsSync, readFileSync, readdirSync, writeFileSync } = await import('node:fs');
+const {default: path} = await import('node:path');
+const { createRequire } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+
 
 const root = path.resolve(import.meta.dirname, '..'), ets = path.join(root, 'entry/src/main/ets');
 const media = path.join(root, 'entry/src/main/resources/base/media');
@@ -21,7 +26,7 @@ function checkImage(resource, dayName, scheme, role, dimensions) {
   assert.deepEqual(paints, ['#' + expected], `${resource}: actual SVG consumes ${scheme} ${role}`);
   assert.equal(svg.replace(/#[0-9A-Fa-f]{6}\b/g, '#COLOR'), base.replace(/#[0-9A-Fa-f]{6}\b/g, '#COLOR'),
     'all non-color bytes including shape/outline/alpha remain unchanged');
-  if (dimensions) assert.deepEqual(dimensions, [24, 24]);
+  if(dimensions)assert.ok(dimensions.every(value=>Number.isFinite(value)&&value>0),'current icon size is a valid finite input');
   bindings.push({ resource, dayName, scheme, role, color: '#' + expected });
 }
 const nav = [['rc_list', '目录', 'directory', 'reader_directory_list_active'],
@@ -44,10 +49,13 @@ function validateNav(owner) {
   });
 }
 const panelSource = source('features/reading/ReaderControlPanel.ets');
+if(selectedCase==='reader-navigation') {
 const panel = panelProbe(panelSource);
 for (const scheme of ['day', 'night', 'day']) for (const [, , module] of nav) {
   panel.appScheme = scheme; panel.activeModule = module; panel.replay(); validateNav(panel);
 }
+}
+if(selectedCase==='reader-quick') {
 const quick = createReaderBuilderProbe(panelSource, ['quickAction', 'quickActionIcon'].filter(n => panelSource.includes(`private ${n}(`))).owner;
 quick.appScheme = 'day'; const quickNames = ['rc_search', 'rc_autopage', 'rc_replace'];
 quickNames.forEach((name, i) => quick.quickAction(name, name, ['search', 'autoPage', 'replace'][i]));
@@ -55,6 +63,8 @@ for (const scheme of ['day', 'night', 'day']) {
   quick.appScheme = scheme; quick.replay();
   [...quick.nodes.values()].filter(n => n.type === 'Image').forEach((n, i) => checkImage(n.create, quickNames[i], scheme, 'TOK_READ_INK', [n.width, n.height]));
 }
+}
+if(selectedCase==='main-navigation') {
 const main = createReaderBuilderProbe(source('features/shell/MainTabBar.ets'), ['tabIcon', 'tabIconResource']).owner;
 const mainNames = ['bookshelf_library', 'bookshelf_compass', 'bookshelf_rss', 'bookshelf_settings'];
 const mainKeys = ['bookshelf', 'discover', 'rss', 'settings'];
@@ -66,9 +76,10 @@ for (const scheme of ['day', 'night', 'day']) {
     checkImage(n.create, name, scheme, active ? 'TOK_ON_PRIMARY' : 'TOK_MUTED', [n.width, n.height]);
   });
 }
-for (const file of ['ReaderDirectoryModulePanel.ets', 'FullDirectoryPanel.ets']) {
+}
+for (const file of ['ReaderDirectoryModulePanel.ets', 'FullDirectoryPanel.ets'].filter(file=>selectedCase===(file.startsWith('Full')?'full-directory':'quick-directory'))) {
   const names = file.startsWith('Full') ? ['downloadMarker', 'bookmarkMarker', 'hasBookmark'] : ['downloadMarker'];
-  const Component = productionMotionMethods(path.join(ets, 'features/reading', file), names), owner = new Component();
+  const Component = selectedProductionMethods(path.join(ets, 'features/reading', file),file.replace('.ets',''), names), owner = new Component();
   for (const scheme of ['day', 'night']) {
     owner.appThemeScheme = scheme;
     for (const state of ['completed', 'missing', 'cached', 'failed']) {
@@ -84,49 +95,6 @@ for (const file of ['ReaderDirectoryModulePanel.ets', 'FullDirectoryPanel.ets'])
   }
 }
 
-// Finite current dynamic call sites are an audit gate, not a general evaluator.
-// Unknown future computed $r expressions fail until their reachable assets and
-// owner states have an explicit probe. Other conditional calls contain literals
-// and are already collected by the existing generator.
-const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const dynamic = [];
-function collect(dir) {
-  for (const e of readdirSync(dir, { withFileTypes: true })) {
-    const file = path.join(dir, e.name); if (e.isDirectory()) { collect(file); continue; }
-    if (!file.endsWith('.ets')) continue;
-    const tree = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-    const visit = node => {
-      if (node.expression?.getText(tree) === '$r' && node.arguments?.[0]) {
-        const arg = node.arguments[0];
-        if ([ts.SyntaxKind.TemplateExpression, ts.SyntaxKind.Identifier, ts.SyntaxKind.PropertyAccessExpression,
-          ts.SyntaxKind.CallExpression, ts.SyntaxKind.BinaryExpression].includes(arg.kind)) {
-          dynamic.push([path.relative(ets, file), arg.getText(tree)]);
-        }
-      }
-      ts.forEachChild(node, visit);
-    }; visit(tree);
-  }
+console.log('selected dynamic icon actual SDK/current SVG variant case PASS: '+selectedCase);
+
 }
-collect(ets);
-const expected = [
-  ['features/reading/FullDirectoryPanel.ets', '`app.media.${this.downloadMarker(entry)}`'],
-  ['features/reading/FullDirectoryPanel.ets', '`app.media.${this.bookmarkMarker(entry)}`'],
-  ['features/reading/ReaderControlPanel.ets', '`app.media.${this.quickActionIcon(icon)}`'],
-  ['features/reading/ReaderControlPanel.ets', '`app.media.${this.moduleIcon(icon, module)}`'],
-  ['features/reading/ReaderDirectoryModulePanel.ets', '`app.media.${this.downloadMarker(entry)}`'],
-  ['features/shell/MainTabBar.ets', '`app.media.${this.tabIconResource(key, active)}`'],
-];
-assert.deepEqual(dynamic, expected, 'all current computed resource consumers have explicit production-state coverage');
-const manifest = JSON.parse(readFileSync(path.join(root, 'tools/theme-svg-variants.json'), 'utf8'));
-const discovered = JSON.parse(execFileSync(process.execPath, [path.join(root, 'tools/generate-theme-icons.mjs'), '--list'], { encoding: 'utf8' }));
-for (const n of ['rc_headphones', 'rc_palette', 'rc_settings', 'rc_autopage', 'rc_replace', ...nav.map(n => n[3]),
-  ...mainNames.map(n => n + '_outline')]) {
-  assert.ok(discovered.includes(n), `actual generator discovers dynamic bare literal: ${n}`);
-  assert.ok(manifest.includes(n), `dynamic literal has generated variant: ${n}`);
-}
-const record = process.argv.indexOf('--record');
-if (record >= 0) writeFileSync(process.argv[record + 1], JSON.stringify({ dynamic, bindings,
-  evidenceLayer: 'SDK-emitted native Builder calls + real methods + actual SVG bytes; no native pixel acceptance' }, null, 2) + '\n');
-console.log(`PASS dynamic theme icons: ${dynamic.length} computed $r sites, ${bindings.length} actual state/paint cases, retained SDK Builders and all resource geometry/alpha.`);

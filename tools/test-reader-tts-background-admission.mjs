@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
+import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
 const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 let active = false, admission;
@@ -61,4 +63,19 @@ admission = deferred();
   await tick();
   assert.equal(f.pauses(), 1, 'disabled preference pauses immediately despite a pending lease');
 }
-console.log('reader TTS background admission: pending, admitted, denied, foreground return and disabled preference PASS');
+{
+  const gateway=new FakeGateway(),transport=new FakeHost(),commits=[];
+  const coordinator=new ReaderTtsSessionCoordinator(gateway,transport,async value=>commits.push(value));
+  await coordinator.start({chapter,content:canonicalRemoteContent,contentVersion:1,scalarPosition:0,pauseOnInterruption:false});
+  const requestId=transport.requests.at(-1).requestId;
+  transport.emit({type:'backgroundLeaseRevoked'});await coordinator.whenSettled();
+  assert.equal(coordinator.getState().status,'interrupted');assert.equal(coordinator.getState().pauseReason,'routeBackground');
+  assert.ok(transport.calls.includes('deactivate'),'mandatory background revoke releases audio despite optional pause preference');
+  const cursor=gateway.cursor;transport.emit({type:'complete',requestId,completion:'audio'});await coordinator.whenSettled();
+  assert.equal(gateway.cursor,cursor,'old speech callback cannot advance a revoked background queue');
+  assert.deepEqual(commits,[]);
+  const preview=coordinator.auditionVoice({language:'zh-CN',person:0});await coordinator.whenSettled();
+  transport.emit({type:'backgroundLeaseRevoked'});await preview;await coordinator.whenSettled();
+  assert.ok(['paused','interrupted'].includes(coordinator.getState().status),'revocation never resumes an already paused formal queue after cancelling audition');await coordinator.dispose();
+}
+console.log('reader TTS background admission: pending/admitted/denied/foreground/disabled preference; real coordinator mandatory lease revoke/audition retirement/stale speech callback PASS');

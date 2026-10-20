@@ -1,0 +1,4 @@
+(node:60414) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS progressive source discovery: early rows, live acquisition projection, measured search ordering, stable ties, legacy exclusion and generation-safe cancellation
+PASS manga/text discovery and same-type cached relation filtering; spoofed source rejection; remeasure keeps identities

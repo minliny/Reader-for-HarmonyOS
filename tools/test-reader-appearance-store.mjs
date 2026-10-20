@@ -267,10 +267,11 @@ console.log('appearance Preferences adapter migration and persistence compatibil
   const closeStart = source.indexOf('  private async closeRuntime(): Promise<void>');
   const close = source.slice(closeStart, source.indexOf('\n  private async startRuntime', closeStart));
   let notices = 0, releases = 0;
-  const Runtime = new Function('hilog', 'LOG_DOMAIN', 'errorMessageOf', 'ReadingBodyImageHost', 'ReaderStartupTrace',
+  const Runtime = new Function('hilog', 'LOG_DOMAIN', 'errorMessageOf', 'ReadingBodyImageHost', 'ReaderStartupTrace', 'MangaChapterPreparationCoordinator',
     stripTypeScriptTypes(`class ReaderRuntimeOwner { ${flush} ${close} }`) + ';return ReaderRuntimeOwner;')(
     { warn() { notices++; } }, 0, error => error.message,
-    { instance: { releaseAllDisplayFiles() { releases++; } } }, ReaderStartupTrace);
+    { instance: { releaseAllDisplayFiles() { releases++; } } }, ReaderStartupTrace,
+    { forRuntime: () => ({ close: async () => {} }) });
   const events = [], runtime = new Runtime();
   let failCore = true, failAppearance = false;
   Object.assign(runtime, {
@@ -289,5 +290,11 @@ console.log('appearance Preferences adapter migration and persistence compatibil
   failAppearance = true; runtime.state = 'closing'; await runtime.closeRuntime();
   assert.deepEqual(events.slice(-4), ['appearance', 'tts', 'core', 'closed']);
   assert.equal(runtime.state, 'closed'); assert.equal(releases, 1); assert.equal(notices, 1);
+  const failedTts=Object.assign(new Runtime(),runtime,{state:'closing',appearanceStore:undefined,
+    runtime:{async request(){events.push('failure-core');},close(){events.push('failure-closed');}},
+    ttsHost:{async close(){throw Error('native TTS release failed');}}});
+  await assert.rejects(failedTts.closeRuntime(),/native TTS release failed/);
+  assert.deepEqual(events.slice(-2),['failure-core','failure-closed'],'native optional-resource release failure cannot strand Core teardown');
+  assert.equal(failedTts.runtime,undefined);assert.equal(failedTts.state,'closed');assert.equal(releases,2);
 }
 console.log('application appearance background flush and teardown isolation: PASS');

@@ -3,7 +3,7 @@
 //
 // Pure CPU test: no SDK, no emulator, no hdc. Build & run:
 //   cd entry/src/main/cpp
-//   clang++ -std=c++17 -Wall -Wextra -Werror -I bookturn \
+//   clang++ -std=c++17 -Wall -Wextra -Werror -I bookturn
 //       tests/bookturn_solver_test.cpp bookturn/bookturn_solver.cpp -o /tmp/v2_solver_test
 //   /tmp/v2_solver_test
 //

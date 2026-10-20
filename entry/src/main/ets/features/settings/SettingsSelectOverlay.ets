@@ -1,5 +1,11 @@
+import { ReaderChoiceRow } from '../common/ReaderChoiceRow';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  TYPE_SETTINGS_SELECT_PHONE_CANCEL,
+  TYPE_SETTINGS_SELECT_TITLE,
+} from '../common/ReaderTypography';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 
 export type SettingsSelectField = 'language' | 'startup' | 'animation';
 
@@ -8,9 +14,6 @@ const PHONE_BOTTOM_INSET = 20;
 const PHONE_OPTION_HEIGHT = 52;
 const PHONE_CANCEL_GAP = 10;
 const PHONE_RADIUS = 12;
-const TABLET_PANEL_WIDTH = 160;
-const TABLET_OPTION_HEIGHT = 42;
-const TABLET_ANCHOR_GAP = 6;
 
 /**
  * Settings-only responsive selector.
@@ -30,26 +33,51 @@ export struct SettingsSelectOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop isTablet: boolean = false;
-  @Prop field: SettingsSelectField = 'language';
+  @Prop @Watch('onFieldChanged') field: SettingsSelectField = 'language';
+  @Prop @Watch('onFieldChanged') selectionId: string = '';
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop anchorRight: number = 0;
   @Prop anchorBottom: number = 0;
-  onSelect: (option: string) => void = (_option: string): void => {};
-  onDismiss: () => void = (): void => {};
+  onSelect: (option: string, identity?: string) => void = (_option: string, _identity?: string): void => {};
+  onDismiss: (identity?: string) => void = (_identity?: string): void => {};
+
+  private mounted: boolean = false;
+  private closed: boolean = false;
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.closed = false;
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void { this.mounted = false; this.closed = true; }
+
+  private onFieldChanged(): void { this.closed = false; }
+  private ownsOpening(identity: string): boolean {
+    return this.mounted && !this.closed && identity.length > 0 && identity === this.selectionId;
+  }
+  private dismiss(identity: string): void {
+    if (!this.ownsOpening(identity)) return;
+    this.closed = true;
+    this.onDismiss(identity);
+  }
+  private choose(option: string, identity: string): void {
+    if (!this.ownsOpening(identity) || this.options.indexOf(option) < 0) return;
+    this.closed = true;
+    this.onSelect(option, identity);
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row()
-        .width('100%')
-        .height('100%')
-        .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
-        .hitTestBehavior(HitTestMode.Default)
-        .onClick((): void => this.onDismiss());
+      ForEach([this.selectionId], (identity: string) => {
+        Row()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
+          .hitTestBehavior(HitTestMode.Default)
+          .onClick((): void => this.dismiss(identity));
+      }, (identity: string): string => identity);
 
       if (this.isTablet) {
         this.tabletPanel();
@@ -84,11 +112,11 @@ export struct SettingsSelectOverlay {
 
       Row() {
         Text(this.title())
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
-          .lineHeight(14.4)
-          .letterSpacing(0.48)
+          .fontFamily(TYPE_SETTINGS_SELECT_TITLE.fontFamily)
+          .fontWeight(TYPE_SETTINGS_SELECT_TITLE.fontWeight)
+          .fontSize(TYPE_SETTINGS_SELECT_TITLE.fontSizeFp)
+          .lineHeight(TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number)
+          .letterSpacing(TYPE_SETTINGS_SELECT_TITLE.letterSpacingFp as number)
           .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF1F1B17', this.appThemeScheme));
       }
       .width('100%')
@@ -109,20 +137,22 @@ export struct SettingsSelectOverlay {
 
       Blank().width('100%').height(PHONE_CANCEL_GAP);
 
-      Stack({ alignContent: Alignment.Center }) {
-        Text('取消')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(15)
-          .lineHeight(18)
-          .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
-      }
-      .width('100%')
-      .height(PHONE_OPTION_HEIGHT)
-      .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
-      .borderRadius(PHONE_RADIUS)
-      .onClick((): void => this.onDismiss());
+      ForEach([this.selectionId], (identity: string) => {
+        Stack({ alignContent: Alignment.Center }) {
+          Text('取消')
+            .fontFamily(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontFamily)
+            .fontWeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontWeight)
+            .fontSize(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontSizeFp)
+            .lineHeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number)
+            .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
+        }
+        .width('100%')
+        .height(PHONE_OPTION_HEIGHT)
+        .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
+        .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
+        .borderRadius(PHONE_RADIUS)
+        .onClick((): void => this.dismiss(identity));
+      }, (identity: string): string => identity);
     }
     .width('100%')
     .padding({
@@ -140,43 +170,13 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private phoneOption(option: string, index: number) {
-    Column() {
-      Row() {
-        Text(option)
-          .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(this.isSelected(option) ? FontWeight.Bold : FontWeight.Regular)
-          .fontSize(15)
-          .lineHeight(18)
-          .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17', this.appThemeScheme))
-          .maxLines(1);
-        if (this.isSelected(option)) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.settings_select_check_theme_night') : $r('app.media.settings_select_check')))
-            .width(16)
-            .height(16);
-        }
-      }
-      .width('100%')
-      .height(index < this.options.length - 1 ? PHONE_OPTION_HEIGHT - 1 : PHONE_OPTION_HEIGHT)
-      .padding({ left: 16, right: 16 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E', this.appThemeScheme) : Color.Transparent)
-      .onClick((): void => this.onSelect(option));
-
-      if (index < this.options.length - 1) {
-        Row() {
-          Blank()
-            .layoutWeight(1)
-            .height(1)
-            .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD', this.appThemeScheme));
-        }
-          .width('100%')
-          .height(1)
-          .padding({ left: 16, right: 16 });
-      }
-    }
-    .width('100%')
-    .height(PHONE_OPTION_HEIGHT);
+    ForEach([this.selectionId], (identity: string) => {
+      ReaderChoiceRow({
+        specId: 'settings-phone', label: option, selected: this.isSelected(option),
+        showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
+        onChoose: (value: string): void => this.choose(value, identity),
+      });
+    }, (identity: string): string => identity);
   }
 
   @Builder
@@ -186,57 +186,31 @@ export struct SettingsSelectOverlay {
         this.tabletOption(option, index);
       }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
     }
-    .width(TABLET_PANEL_WIDTH)
-    .backgroundColor(readerAppColor('app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2', this.appThemeScheme))
-    .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD', this.appThemeScheme) })
-    .borderRadius(10)
+    .width(this.tabletSpec().width)
+    .backgroundColor(readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
+    .border({ width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
+    .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
-    .shadow({ radius: 24, color: readerAppColor('app.SettingsSelectOverlay.tabletPanel.color.1F1B171F', this.appThemeScheme), offsetX: 0, offsetY: 8 })
+    .shadow({ radius: this.tabletSpec().shadowRadius, color: readerAppColor(this.tabletSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.tabletSpec().shadowOffsetY })
     .position({
-      x: this.anchorRight - TABLET_PANEL_WIDTH,
-      y: this.anchorBottom + TABLET_ANCHOR_GAP,
+      x: this.anchorRight - this.tabletSpec().width,
+      y: this.anchorBottom + this.tabletSpec().anchorOverlap,
     });
   }
 
   @Builder
   private tabletOption(option: string, index: number) {
-    Column() {
-      Row() {
-        Text(option)
-          .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(this.isSelected(option) ? FontWeight.Bold : FontWeight.Regular)
-          .fontSize(14)
-          .lineHeight(16.8)
-          .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17', this.appThemeScheme))
-          .maxLines(1);
-        if (this.isSelected(option)) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.settings_select_check_theme_night') : $r('app.media.settings_select_check')))
-            .width(14)
-            .height(14);
-        }
-      }
-      .width('100%')
-      .height(index < this.options.length - 1 ? TABLET_OPTION_HEIGHT - 1 : TABLET_OPTION_HEIGHT)
-      .padding({ left: 14, right: 14 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E', this.appThemeScheme) : Color.Transparent)
-      .onClick((): void => this.onSelect(option));
+    ForEach([this.selectionId], (identity: string) => {
+      ReaderChoiceRow({
+        specId: 'settings-tablet', label: option, selected: this.isSelected(option),
+        showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
+        onChoose: (value: string): void => this.choose(value, identity),
+      });
+    }, (identity: string): string => identity);
+  }
 
-      if (index < this.options.length - 1) {
-        Row() {
-          Blank()
-            .layoutWeight(1)
-            .height(1)
-            .backgroundColor(readerAppColor('app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD', this.appThemeScheme));
-        }
-          .width('100%')
-          .height(1)
-          .padding({ left: 14, right: 14 });
-      }
-    }
-    .width('100%')
-    .height(TABLET_OPTION_HEIGHT);
+  private tabletSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('settings-select-tablet');
   }
 
   private isSelected(option: string): boolean {

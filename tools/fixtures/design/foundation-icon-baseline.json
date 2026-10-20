@@ -1,0 +1,61 @@
+{
+  "sourceHead": "e0888374",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+      "sha256": "51b158846ea72a185315b755002d9a0f8cfac49309e11a92487f13420e7bd1df",
+      "names": [
+        "actionTarget",
+        "entrySectionHeader"
+      ],
+      "methods": [
+        "@Builder\n  private actionTarget(label: string, icon: Resource, action: () => void) {\n    Stack({ alignContent: Alignment.Center }) {\n      Row({ space: 5 }) {\n        Image(icon).width(18).height(18);\n        Text(label)\n          .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)\n          .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)\n          .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .height(32)\n      .padding({ left: 9, right: 9 })\n      .alignItems(VerticalAlign.Center)\n      .backgroundColor(readerAppColor('app.RssSourceFeedPage.ACTION_BG', this.appThemeScheme))\n      .borderRadius(999);\n    }\n    .height(44)\n    .onClick((): void => action());\n  }",
+        "@Builder\n  private entrySectionHeader() {\n    Row() {\n      Text('全部条目')\n        .layoutWeight(1)\n        .fontFamily(TYPE_RSS_SECTION_HEADING.fontFamily)\n        .fontWeight(TYPE_RSS_SECTION_HEADING.fontWeight)\n        .fontSize(TYPE_RSS_SECTION_HEADING.fontSizeFp)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .maxLines(1);\n      Row({ space: 5 }) {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'))).width(16).height(16);\n        Text('源操作')\n          .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)\n          .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)\n          .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .height(30)\n      .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })\n      .alignItems(VerticalAlign.Center)\n      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))\n      .borderRadius(999)\n      .responseRegion({ x: 0, y: -7, width: '100%', height: 44 })\n      .onClick((): void => this.onSourceOperations());\n    }\n    .width('100%')\n    .height(34)\n    .padding({ left: 2, right: 2 })\n    .alignItems(VerticalAlign.Center);\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+      "sha256": "e78199afe15a968547fdb8ed14358719631ee26be1a3d85a0c9ecc06b6f81b38",
+      "names": [
+        "actionTarget"
+      ],
+      "methods": [
+        "@Builder\n  private actionTarget(label: string, icon: Resource, action: () => void) {\n    Stack({ alignContent: Alignment.Center }) {\n      Row({ space: 5 }) {\n        Image(icon).width(18).height(18);\n        Text(label)\n          .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)\n          .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)\n          .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('app.RssEntryDetailPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .width('100%')\n      .height(34)\n      .justifyContent(FlexAlign.Center)\n      .alignItems(VerticalAlign.Center)\n      .backgroundColor(readerAppColor('app.RssEntryDetailPage.ACTION_BG', this.appThemeScheme))\n      .borderRadius(999);\n    }\n    .layoutWeight(1)\n    .height(44)\n    .onClick((): void => action());\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+      "sha256": "467fb58fef91810c96c18b2ea27fbd0c09a257cb55bbee7c35e1ab2c96961702",
+      "names": [
+        "actionTarget"
+      ],
+      "methods": [
+        "@Builder\n  private actionTarget(\n    label: string,\n    icon: Resource,\n    danger: boolean,\n    divider: boolean,\n    action: () => void,\n  ) {\n    Row({ space: 5 }) {\n      Image(icon)\n        .width(16)\n        .height(16);\n      Text(label)\n        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)\n        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)\n        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n        .fontColor(danger ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))\n        .maxLines(1);\n    }\n    .layoutWeight(1)\n    .height(44)\n    .justifyContent(FlexAlign.Center)\n    .alignItems(VerticalAlign.Center)\n    .border({ width: { left: divider ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })\n    .onClick((): void => action());\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssPage.ets",
+      "sha256": "82bf907020cd33ed7db901eadcc50a172b898d1d409daa6bd7c01f0d00d09f7b",
+      "names": [
+        "managePill",
+        "recentUnreadHeader",
+        "filterPill"
+      ],
+      "methods": [
+        "@Builder\n  private managePill() {\n    Row({ space: 5 }) {\n      Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage')))\n        .width(16)\n        .height(16);\n      Text('管理')\n        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)\n        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)\n        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)\n        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n        .maxLines(1);\n    }\n    .width(64)\n    .height(34)\n    .justifyContent(FlexAlign.Center)\n    .alignItems(VerticalAlign.Center)\n    .backgroundColor(readerAppColor('app.RssPage.PILL_BG', this.appThemeScheme))\n    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.PILL_BORDER', this.appThemeScheme) })\n    .borderRadius(12)\n    .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })\n    .onClick((): void => this.onManage());\n  }",
+        "@Builder\n  private recentUnreadHeader() {\n    Row() {\n      Text('最近未读')\n        .layoutWeight(1)\n        .fontFamily(TYPE_RSS_SECTION_HEADING.fontFamily)\n        .fontWeight(TYPE_RSS_SECTION_HEADING.fontWeight)\n        .fontSize(TYPE_RSS_SECTION_HEADING.fontSizeFp)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .maxLines(1);\n      Row({ space: 5 }) {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_view_all_theme_night') : $r('app.media.rss_view_all')))\n          .width(20)\n          .height(20);\n        Text('查看全部')\n          .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)\n          .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)\n          .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .height(28)\n      .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })\n      .alignItems(VerticalAlign.Center)\n      .backgroundColor(readerAppColor('app.RssPage.VIEW_ALL_BG', this.appThemeScheme))\n      .borderRadius(999)\n      .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })\n      .onClick((): void => this.onModeRequested('all'));\n    }\n    .width('100%')\n    .height(30)\n    .padding({ left: 2, right: 2 })\n    .alignItems(VerticalAlign.Center);\n  }",
+        "@Builder\n  private filterPill(opt: string) {\n    Stack({ alignContent: Alignment.Center }) {\n      Text(opt)\n        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)\n        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)\n        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)\n        .fontColor(this.filterValue === opt ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.RssPage.filterPill.fontColor.FF564D44', this.appThemeScheme))\n        .textAlign(TextAlign.Center)\n        .maxLines(1);\n    }\n    .height(30)\n    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })\n    .backgroundColor(this.filterValue === opt ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.RssPage.SOFT_PILL_BG', this.appThemeScheme))\n    .borderRadius(999)\n    .margin({ right: 6, bottom: 6 })\n    .onClick((): void => {\n      this.filterValue = opt;\n    });\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "sha256": "645f03ff31d5bf13d064069f8ccd4c42b5208ebe139e5c5fb1ca8c31e2a084a7",
+      "names": [
+        "configActions"
+      ],
+      "methods": [
+        "@Builder\n  private configActions() {\n    Row({ space: TOK_SPACE_XS }) {\n      Stack({ alignContent: Alignment.Center }) {\n        Text('测试网络连通性')\n          .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)\n          .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)\n          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));\n      }\n      .height(42)\n      .layoutWeight(1)\n      .backgroundColor(readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })\n      .borderRadius(8)\n      .enabled(this.canMutate())\n      .onClick((): void => this.onTestConnection(\n        this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(),\n        this.webdavPass, this.effectiveWebdavPath().trim()));\n\n      Stack({ alignContent: Alignment.Center }) {\n        Text('保存配置')\n          .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)\n          .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)\n          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n      }\n      .height(42)\n      .layoutWeight(1)\n      .backgroundColor(readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) })\n      .borderRadius(12)\n      .enabled(this.canMutate())\n      .onClick((): void => this.onSaveConfig(\n        this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass,\n        this.backupPass, this.effectiveWebdavPath().trim()));\n    }\n    .width('100%');\n  }"
+      ]
+    }
+  ]
+}

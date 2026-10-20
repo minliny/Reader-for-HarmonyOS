@@ -1,29 +1,33 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import * as appearanceStyle from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 // Execute production methods and SDK-emitted Builder closures. These assertions
 // concern publication inputs and async ownership, not native paint timing.
 const lreFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const stageFile = new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url);
 const lreSource = readFileSync(lreFile, 'utf8'), stageSource = readFileSync(stageFile, 'utf8');
+const measurementModelsSource = readFileSync(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 function actualClass(source, name, dependencies = {}) {
-  const tree = ts.createSourceFile('/tmp/AppearancePage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const tree = ts.createSourceFile(virtualFilePath('AppearancePage.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const node = tree.statements.find(n => ts.isClassDeclaration(n) && n.name?.getText(tree) === name);
   assert.ok(node, name);
   return new Function(...Object.keys(dependencies), stripTypeScriptTypes(node.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(dependencies));
 }
-const PhysicalReadingPage = actualClass(lreSource, 'PhysicalReadingPage');
+const PhysicalReadingPage = actualClass(measurementModelsSource, 'PhysicalReadingPage');
 const CoreReadingAnchor = actualClass(lreSource, 'CoreReadingAnchor');
 const ReaderPageTurnRenderPage = actualClass(stageSource, 'ReaderPageTurnRenderPage', { ReaderPageChromeSnapshot });
 const snapshot = size => ({ ...createDefaultReaderAppearanceSnapshot(), fontSize: size });
@@ -46,11 +50,13 @@ function fixture({ mode = 'paged', initial = true, queued = false, file = lreFil
   let activeTurn = false;
   const Serial=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts',import.meta.url),['runProgressCommitSerial']);
   const lane=Object.assign(new Serial(),{progressCommitTail:Promise.resolve()});
-  const persistence=new ReadingSessionProgressOwner({captureReadingContentValidity:()=>()=>true},'source','book',fn=>lane.runProgressCommitSerial(fn));
-  const gateway = { runProgressCommitSerial: async fn => { if (queued) await queueGate.promise; return persistence.runSerial(fn); },
+  const persistence=new ReadingSessionProgressOwner({captureReadingContentValidity:()=>()=>true},'source','book',async fn=>{
+    if (queued) await queueGate.promise; return lane.runProgressCommitSerial(fn);
+  });
+  const gateway = { hasPendingSourceSwitch:()=>false, runProgressCommitSerial: async fn => persistence.runSerial(fn),
     resolveAndUpdateProgress: (...args) => { const gate = deferred(); writes.push({ args, gate }); return gate.promise; } };
-  gateway.persistPresentedProgress=(_book,title,anchor,layout)=>persistence.persistPresented(title,anchor,layout,{
-    read:async()=>({kind:'missing'}), write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('book',title,anchor,layout,guard)});
+  gateway.persistPresentedProgress=(_book,title,anchor,layout,admitted)=>persistence.persistPresented(title,anchor,layout,{
+    read:async()=>({kind:'missing'}), write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('book',title,anchor,layout,guard)},admitted);
   gateway.awaitPresentedProgressPersistence=()=>persistence.awaitPersistence();
   Object.assign(owner, {
     mounted: true, exitRequested: false, lifecycleToken: 1, chapterSelectionToken: 2, materializedChapterSelectionToken: 2,
@@ -231,7 +237,7 @@ bound.stage.appearance = snapshot(22); bound.stage.replay(); assert.deepEqual(bo
 bound.pages.a = { fragments: ['22'], appearance: snapshot(22) }; bound.stage.replay(); assert.deepEqual(bound.fonts(), [22, 19]);
 for (const slot of bound.stage.children.values()) {
   const surface = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
-    COVER_OCCLUSION_RADIUS_VP: 16, COVER_OCCLUSION_OFFSET_X_VP: 6 }).owner;
+    COVER_OCCLUSION_RADIUS_VP: 16, COVER_OCCLUSION_OFFSET_X_VP: 6 }, {componentName: 'ReaderPageTurnSurface'}).owner;
   Object.assign(surface, slot.params, { shadowColor: () => '#00000000' }); surface.initialRender();
   assert.equal([...surface.children.values()][0].params.appearance.fontSize, slot.params.appearance.fontSize);
 }
@@ -256,10 +262,15 @@ const bad = stageProbe(oldBinding);
 assert.throws(() => assert.deepEqual(bad.fonts(), [20, 19]), /deep-equal/);
 assert.deepEqual(bad.fonts(), [21, 21], 'negative control reproduces new-font/old-lines mismatch');
 const oldPublication = lreSource.replace('if (measuredLayoutSignature !== this.paginationLayoutSignature()) {', 'if (false) {');
-const mutantFile = '/private/tmp/reader-appearance-obsolete-page-publication.ets'; writeFileSync(mutantFile, oldPublication);
+const scratch = mkdtempSync(join(tmpdir(), 'reader-appearance-'));
+try {
+const mutantFile = join(scratch, 'obsolete-page-publication.ets'); writeFileSync(mutantFile, oldPublication);
 const stale = fixture({ file: mutantFile }); stale.start(21); const pending = stale.finish(21); await settle(); stale.start(22); stale.ack(); await pending;
 assert.notEqual(stale.owner.visiblePage, stale.old, 'negative control exposes obsolete page publication');
 assert.equal(stale.owner.visiblePage.measuredAppearance.fontSize, 21);
+} finally {
+  rmSync(scratch, { recursive: true, force: true });
+}
 cases.push('negative:old-stage-binding', 'negative:obsolete-ACK-publication');
 console.log(JSON.stringify({ passed: true, scenarios: cases.length, cases,
   boundary: 'Actual production methods/classes and SDK Builder closure inputs with controlled Core receipts; no assertion of native reactive scheduling, paint frames, device flicker or user acceptance.' }));

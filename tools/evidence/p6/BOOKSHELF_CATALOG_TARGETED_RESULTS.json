@@ -1,0 +1,197 @@
+{
+  "scope": "candidate code/local/SDK-emitted contracts; no HAP/target/pixels claim",
+  "count": 38,
+  "pass": 38,
+  "results": [
+    {
+      "test": "tools/test-bookshelf-continue-reading-publication.mjs",
+      "code": 0,
+      "last": "Updates\":1,\"actual\":{\"title\":\"长书 B\",\"author\":\"作者 B\",\"clicked\":\"b\"},\"actorCount\":21}]\nPASS actual SDK Index state/Prop -> retained Continue Reading A→B with/without covers, coalesced absent Prop and safe click; native branch removal/pixels unverified\n"
+    },
+    {
+      "test": "tools/test-bookshelf-detail-control-stability.mjs",
+      "code": 0,
+      "last": "PASS 52 production bookshelf timeline/Builder samples; retained detail action actors and real safety gates. Native pixels remain unverified.\n"
+    },
+    {
+      "test": "tools/test-bookshelf-detail-removal.mjs",
+      "code": 0,
+      "last": "bookshelf detail removal: PASS\n"
+    },
+    {
+      "test": "tools/test-bookshelf-detail-scroll-layout.mjs",
+      "code": 0,
+      "last": "PASS SDK detail floating header/actions: 0/1/3/20 chapters, narrow/wide, 0/24/48 vp safe bottom, in-content errors and preserved button callbacks; native geometry remains unverified\n"
+    },
+    {
+      "test": "tools/test-bookshelf-filter-responsibilities.mjs",
+      "code": 0,
+      "last": "PASS shelf filters: state/type dimensions and live chips survive gear removal; shared order, legacy data and hidden batch-selection safety\n"
+    },
+    {
+      "test": "tools/test-bookshelf-host-wiring.mjs",
+      "code": 0,
+      "last": "Bookshelf host wiring: PASS (management intents and snapshot projection retained)\n"
+    },
+    {
+      "test": "tools/test-bookshelf-management-typography.mjs",
+      "code": 0,
+      "last": "PASS bookshelf-management typography uses named ReaderTypography roles without changing tuples\n"
+    },
+    {
+      "test": "tools/test-bookshelf-management.mjs",
+      "code": 0,
+      "last": "bookshelf management Core ownership contract: PASS\n"
+    },
+    {
+      "test": "tools/test-bookshelf-manual-update.mjs",
+      "code": 0,
+      "last": "utable old callbacks\",\"status\":\"PASS\"}\n{\"name\":\"latest automatic intent keeps its own exact binding across same-Runtime reconstruction\",\"status\":\"PASS\"}\nPH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS\n"
+    },
+    {
+      "test": "tools/test-bookshelf-more-layout.mjs",
+      "code": 0,
+      "last": "eserves retry/spinner and live theme\nPASS status failure actual content preserves retry/spinner and live theme\nPASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update\n"
+    },
+    {
+      "test": "tools/test-bookshelf-native-sheet-owner.mjs",
+      "code": 0,
+      "last": "dSheet→identity owner→SDK leaf→shared frame/header/actions: retained host geometry, once-only captured compound entity, new callbacks, close/reopen/late disappear, removed entity and unmount retirement; native scheduling/focus remain target evidence\n"
+    },
+    {
+      "test": "tools/test-bookshelf-paged-projection.mjs",
+      "code": 0,
+      "last": "on/runtime rejection, changed revision refresh and duplicate-page rejection\nPASS 1001-book forward/backward bounded windows, partial-tail alignment and one-query deep anchor\nPASS synchronous native reload cannot overwrite the old visible-book anchor\n"
+    },
+    {
+      "test": "tools/test-bookshelf-physical-feedback.mjs",
+      "code": 0,
+      "last": "s detect (no login)\nPASS source name/category/URL remain distinct and login precedes detect (login)\nPASS single-book sheet matches cover frame and both layers have straight lower corners\nPASS 44vp source SVG stays 44vp in the single-book more action\n"
+    },
+    {
+      "test": "tools/test-bookshelf-projection-index-owner.mjs",
+      "code": 0,
+      "last": "ation without a write\",\n    \"diagnostic failures neither prevent Core read nor rewrite its successful publication\"\n  ],\n  \"scope\": \"whole actual Core/Flow/Source gateways and SDK TS emitted owner/Host + actual Index; native layout/target separate\"\n}\n"
+    },
+    {
+      "test": "tools/test-bookshelf-read-owner-closure.mjs",
+      "code": 0,
+      "last": "FlowGateway -> existing BookshelfHost/read owner -> Index -> SDK Shell/Notice/physical readonly recovery: blank retry, retained refresh, malformed/empty/filter, generation/nav/route/Runtime/close deferred success+failure, no writes, anchors retained\n"
+    },
+    {
+      "test": "tools/test-bookshelf-reading-entry.mjs",
+      "code": 0,
+      "last": "bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)\nReader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS\n"
+    },
+    {
+      "test": "tools/test-bookshelf-reading-feedback.mjs",
+      "code": 0,
+      "last": "PASS after actual shared helper 7f8afaaf/a3e173c9 selected actual Catalog retirement; original pending-switch Back/removal assertions retained."
+    },
+    {
+      "test": "tools/test-bookshelf-settings-layout.mjs",
+      "code": 0,
+      "last": "PASS SDK settings floating shared header/full viewport/content clearance/width/theme; async mode commit/rollback/stale admission and auto-update callbacks preserved\n"
+    },
+    {
+      "test": "tools/test-bookshelf-settings-operation-sdk.mjs",
+      "code": 0,
+      "last": "Bookshelf settings actual Preferences -> Host -> Index -> SDK Page/Notice/Action: PASS (3 groups; unknown, pure read, finite accepted retry, retained Props/nav, physical retirement, exact Runtime).\n"
+    },
+    {
+      "test": "tools/test-bookshelf-shared-scan.mjs",
+      "code": 0,
+      "last": "bookshelf shared scan: PASS (single scan, fallback, revision fencing, bounded retry)\n"
+    },
+    {
+      "test": "tools/test-bookshelf-sheet-shared-composition.mjs",
+      "code": 0,
+      "last": "K leaf→Frame/Header/keyed ActionList, exact original day/night physical properties and AUTO, four operations/once-only dispatch, stale handlers/reopen/retirement/faults, lexical binding and variant isolation; native dismiss/focus/layout remains OPEN\n"
+    },
+    {
+      "test": "tools/test-bookshelf-shell-states.mjs",
+      "code": 0,
+      "last": "rail threshold\nPASS More retains measured global-to-local anchor, live progress and guarded callbacks\nPASS status loading actual content preserves retry/spinner and live theme\nPASS status failure actual content preserves retry/spinner and live theme\n"
+    },
+    {
+      "test": "tools/test-bookshelf-source-name-durability.mjs",
+      "code": 0,
+      "last": "PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection\nshelf source fallback: exact unique identities only, cancellation and foreign-result rejection PASS\n"
+    },
+    {
+      "test": "tools/test-bookshelf-startup-readiness.mjs",
+      "code": 0,
+      "last": "PASS bookshelf startup readiness: authoritative first-page card, global filtered/truncated fallback, delayed/failing reads, acknowledged mode reuse, write/restore context fencing and no duplicate projection\n"
+    },
+    {
+      "test": "tools/test-bookshelf-tablet-navigation.mjs",
+      "code": 0,
+      "last": "bookshelf tablet navigation contract: PASS\n"
+    },
+    {
+      "test": "tools/test-bookshelf-view-and-menu.mjs",
+      "code": 0,
+      "last": "ocal mode migration/failure, shared projection, responsive sizing, history and spinner ownership\nPASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation\n"
+    },
+    {
+      "test": "tools/test-bookshelf-view-handoff.mjs",
+      "code": 0,
+      "last": "PASS bookshelf cover handoff: bidirectional opacity, whole-cover composition, final-frame continuity, retained default/image actors, historical negative controls; native pixels remain separate\n"
+    },
+    {
+      "test": "tools/test-bookshelf-view-mode-receipts.mjs",
+      "code": 0,
+      "last": "ASS bookshelf mode actual preference gateway→one shared feature owner→both SDK consumers→shared recovery native actions: real dispatch/flush ACK, readonly reconciliation, unknown across close/reopen/consumer/runtime, rapid identity and restore gates\n"
+    },
+    {
+      "test": "tools/test-bookshelf-viewport-return.mjs",
+      "code": 0,
+      "last": "PASS bookshelf route return: identity+item offset, list/state/type filters, removed group-filter migration, reordered books, late callback isolation\n"
+    },
+    {
+      "test": "tools/test-bookshelf-write-receipt-consumers.mjs",
+      "code": 0,
+      "last": "st owner → Index → SDK notice/actions: PASS (ACK/read/cleanup/unknown/admission/partial/only-read, close/reopen, same-Runtime Index reconstruction, retired Runtime inspection, concurrency/reentry, actual old physical callbacks and negative control).\n"
+    },
+    {
+      "test": "tools/test-shelf-source-name-resolution.mjs",
+      "code": 0,
+      "last": ",\"status\":\"PASS\"}\n{\"name\":\"source-name-only change invalidates the actual mounted row key while identity stays exact\",\"status\":\"PASS\"}\nPH45 source name projection and actual Host hydration regressions PASS (8 groups); no device identity is inferred.\n"
+    },
+    {
+      "test": "tools/test-surface-repair.mjs",
+      "code": 0,
+      "last": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\n"
+    },
+    {
+      "test": "tools/test-sync-webdav-product.mjs",
+      "code": 0,
+      "last": "WebDAV product boundary/static contract: PASS\n"
+    },
+    {
+      "test": "tools/test-window-flicker-dedup.mjs",
+      "code": 0,
+      "last": "window flicker dedup contracts: PASS\n"
+    },
+    {
+      "test": "tools/test-main-floating-shell-layout.mjs",
+      "code": 0,
+      "last": "PASS floating main shells: full-height scroll/List viewports, content clearances, transparent bar wrappers, safe-bottom updates, stable shelf indices, Settings origin, all RSS states.\n"
+    },
+    {
+      "test": "tools/test-private-typography-budget.mjs",
+      "code": 0,
+      "last": "PASS private Typography budget: real public variants admitted; literals/mixed branches/string tricks/numeric overrides rejected; geometry/comments precise\n"
+    },
+    {
+      "test": "tools/test-architecture-consumer-baseline.mjs",
+      "code": 0,
+      "last": "architecture consumer baseline PASS (100 unchanged business budgets + 8 bounded shared owners + 19 exact retained policies; 123 actual UI files fully registered)\n"
+    },
+    {
+      "test": "tools/test-general-settings-write-confirmation.mjs",
+      "code": 0,
+      "last": "General settings actual Gateway/Host + SDK-source confirmation/admission matrix: PASS (13 cases).\n"
+    }
+  ]
+}

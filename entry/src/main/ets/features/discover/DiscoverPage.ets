@@ -1,13 +1,23 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
+import { ReaderButton } from '../common/ReaderButton';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Discover main page — rebuilt 2026-08-06 against live Figma node 376:2
 // (Reference/Discover/Phone · 390×844).
-// Data honesty: source.explore results do not exist in the app yet, so the
-// source card carries a neutral 书源 label and the result list renders an
-// empty state. No book rows are fabricated.
+// Core owns source.explore data. Retained source/category/page identities
+// remain coherent while a newer read fails; no book rows are fabricated.
 // Icons: existing media only (no new SVG assets).
 
 import { MainTabShell } from '../shell/MainTabShell';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  readerFloatingTabContentInset,
+} from '../common/ReaderFloatingBarMetrics';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -48,41 +58,59 @@ import {
 
 @Component
 export struct DiscoverPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @Prop presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
+  @State private fixedHeaderHeight: number = readerPageContentStartInset();
+  @Prop @Watch('onPresentationChanged') presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
+  onRetryRead: (generation: number) => void = (_generation: number): void => {};
   onRefresh: () => void = (): void => {};
   onCycleSource: () => void = (): void => {};
   onSelectKind: (index: number) => void = (_index: number): void => {};
   onPreviousPage: () => void = (): void => {};
   onNextPage: () => void = (): void => {};
+  private mounted: boolean = false;
+  private lastReadFeedback: string = '';
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.lastReadFeedback = this.readFeedbackIdentity();
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void {
+    this.transientFeedback.reset(); this.mounted = false; }
+
+  private readFeedbackIdentity(): string {
+    return `${this.presentation.operation?.generation ?? 0}:${this.presentation.operation?.fact ?? ''}:${this.presentation.loading ? 1 : 0}`;
+  }
+
+  private onPresentationChanged(): void {
+    const identity = this.readFeedbackIdentity();
+    if (!this.mounted || identity === this.lastReadFeedback) return;
+    this.lastReadFeedback = identity;
+    const operation = this.presentation.operation;
+    if (this.presentation.loading || this.presentation.books.length === 0 ||
+      (operation?.fact !== 'refreshFailed' && operation?.fact !== 'partial')) return;
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery().message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   build() {
     MainTabShell({
-      activeTab: 'discover',
+      activeTab: 'discover', headerKind: 'home',
       onMainTab: (key: string): void => this.onMainTab(key),
-    }) {
-      this.discoverTabContent();
-    }
-  }
-
-  @Builder
-  private discoverTabContent() {
-    Column() {
-      this.homeTopBar();
-      this.discoverContent();
-    }
-    .width('100%')
-    .height('100%');
+      header: (): void => { this.homeTopBar(); },
+      content: (): void => { this.discoverContent(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
+          this.fixedHeaderHeight = height;
+      },
+    });
   }
 
   @Builder
@@ -90,9 +118,9 @@ export struct DiscoverPage {
     AppTopBar({ title: '发现' }) {
       ReaderIconButton({
         icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),
-        boxSize: 44,
-        iconSize: 24,
-        radius: 22,
+        specId: 'toolbar-standard',
+        accessibilityLabel: '刷新',
+        actionEnabled: !this.presentation.loading,
         onTap: (): void => this.onRefresh(),
       });
     }
@@ -102,6 +130,7 @@ export struct DiscoverPage {
   private discoverContent() {
     Scroll() {
       Column({ space: 7 }) {
+        this.operationFeedback();
         this.currentSourceCard();
         this.categoryChips();
         this.filterRow();
@@ -110,13 +139,33 @@ export struct DiscoverPage {
       }
       .width('100%')
       .constraintSize({ maxWidth: this.contentFrame().width })
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
-    .layoutWeight(1)
+    .height('100%')
     .width('100%')
     .align(Alignment.Top)
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
+  }
+
+  private recovery(): ReaderRecoveryView {
+    const operation = this.presentation.operation;
+    if (operation === undefined || (operation.fact !== 'failed' && operation.fact !== 'refreshFailed' &&
+      operation.fact !== 'partial')) return { message: '', visible: false, canRetry: false, generation: 0 };
+    return readerRecoveryView(undefined, operation);
+  }
+
+  @Builder
+  private operationFeedback() {
+    if (this.presentation.books.length > 0 && this.recovery().canRetry) {
+      ReaderRecoveryAction({ label: '刷新内容', generation: this.recovery().generation,
+        onReconcile: (generation: number): void => this.onRetryRead(generation) });
+    }
+  }
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_SM;
+    return readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
   }
 
   @Builder
@@ -133,10 +182,10 @@ export struct DiscoverPage {
       Column({ space: 3 }) {
         Text(this.currentSourceName())
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(18)
+          .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
+          .lineHeight(TYPE_APP_SECTION_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -145,10 +194,10 @@ export struct DiscoverPage {
           `${this.presentation.activeSourceIndex + 1}/${this.presentation.sources.length} · 点击切换书源` :
           '没有已启用发现的书源')
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(600)
-          .fontSize(11)
-          .lineHeight(13.2)
+          .fontFamily(TYPE_DISCOVER_SOURCE_META.fontFamily)
+          .fontWeight(TYPE_DISCOVER_SOURCE_META.fontWeight)
+          .fontSize(TYPE_DISCOVER_SOURCE_META.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_SOURCE_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -173,22 +222,8 @@ export struct DiscoverPage {
     Scroll() {
       Row({ space: 7 }) {
         ForEach(this.kindTitles(), (label: string, index: number) => {
-          Stack({ alignContent: Alignment.Center }) {
-            Text(label)
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(12)
-              .lineHeight(15.6)
-              .fontColor(this.presentation.activeKindIndex === index ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.DiscoverPage.categoryChips.fontColor.FF3F372F', this.appThemeScheme))
-              .maxLines(1);
-          }
-          .height(32)
-          .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-          .backgroundColor(this.presentation.activeKindIndex === index ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
-          .borderRadius(999)
-          .onClick((): void => {
-            this.onSelectKind(index);
-          });
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-category', label,
+            primary: this.presentation.activeKindIndex === index, onAction: (): void => this.onSelectKind(index) });
         }, (label: string): string => `discover-chip-${label}`);
       }
       .height(32)
@@ -207,19 +242,19 @@ export struct DiscoverPage {
       Row() {
         Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_theme_night') : $r('app.media.discover_filter'))).width(20).height(20);
         Text('筛选')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(12)
-          .lineHeight(15.6)
+          .fontFamily(TYPE_DISCOVER_FILTER_LABEL.fontFamily)
+          .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
+          .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('app.DiscoverPage.filterRow.fontColor.FF3F372F', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: 3 });
         Text(this.currentFilterText())
           .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11)
-          .lineHeight(15.56)
+          .fontFamily(TYPE_DISCOVER_FILTER_VALUE.fontFamily)
+          .fontWeight(TYPE_DISCOVER_FILTER_VALUE.fontWeight)
+          .fontSize(TYPE_DISCOVER_FILTER_VALUE.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_FILTER_VALUE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.RIGHT)
           .maxLines(1)
@@ -235,28 +270,8 @@ export struct DiscoverPage {
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.FILTER_BORDER', this.appThemeScheme) })
       .borderRadius(8);
 
-      Row() {
-        Image($r('app.media.discover_apply')).width(20).height(20);
-        Text('应用')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(12)
-          .lineHeight(15.6)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-          .maxLines(1)
-          .margin({ left: TOK_SPACE_ROW_BLOCK });
-      }
-      .width(69.097)
-      .height(34)
-      .padding({ left: TOK_SPACE_CONTROL_INLINE })
-      .alignItems(VerticalAlign.Center)
-      .linearGradient({
-        angle: 270,
-        colors: [[readerAppColor('app.DiscoverPage.filterRow.linearGradient.FF436F88', this.appThemeScheme), 0], [readerAppColor('app.DiscoverPage.filterRow.linearGradient.FF315F78', this.appThemeScheme), 1]],
-      })
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.APPLY_BORDER', this.appThemeScheme) })
-      .borderRadius(8)
-      .onClick((): void => this.onRefresh());
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'discover-apply', label: '应用',
+        icon: $r('app.media.discover_apply'), onAction: (): void => this.onRefresh() });
     }
     .width('100%')
     .height(34)
@@ -267,10 +282,10 @@ export struct DiscoverPage {
   private rankingHeader() {
     Text('排行榜')
       .width('100%')
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(15)
-      .lineHeight(18.75)
+      .fontFamily(TYPE_DISCOVER_RANK_TITLE.fontFamily)
+      .fontWeight(TYPE_DISCOVER_RANK_TITLE.fontWeight)
+      .fontSize(TYPE_DISCOVER_RANK_TITLE.fontSizeFp)
+      .lineHeight(TYPE_DISCOVER_RANK_TITLE.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
       .maxLines(1)
       .padding({ left: 2, right: 2 });
@@ -280,37 +295,20 @@ export struct DiscoverPage {
   private resultList() {
     Column({ space: 0 }) {
       if (this.presentation.books.length === 0) {
-        Stack({ alignContent: Alignment.Center }) {
-          Column({ space: TOK_SPACE_XS }) {
-            Text('暂无发现内容')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(14)
-              .lineHeight(18)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-              .maxLines(1);
-            Text(this.presentation.statusMessage)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(15)
-              .fontColor(readerAppColor('app.DiscoverPage.resultList.fontColor.FFA19A91', this.appThemeScheme))
-              .maxLines(1);
-          }
-          .alignItems(HorizontalAlign.Center);
-        }
-        .width('100%')
-        .height(200);
+        ReaderPageState({ title: this.presentation.loading ? '正在读取发现内容' : this.recovery().canRetry ? '内容读取失败' : '暂无发现内容',
+          message: this.presentation.loading ? '请稍候' : this.presentation.statusMessage,
+          loading: this.presentation.loading, actionLabel: this.recovery().canRetry ? '重试' : '',
+          onAction: (): void => this.onRetryRead(this.recovery().generation) });
       } else {
         ForEach(this.presentation.books, (book: DiscoverBook) => {
           this.resultRow(book);
-        }, (book: DiscoverBook): string => `discover-book-${book.bookId}`);
+        }, (book: DiscoverBook): string => JSON.stringify([book.sourceId, book.bookId]));
       }
       this.paginationRow();
     }
     .width('100%')
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+    .backgroundColor(this.presentation.books.length > 0 ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
+    .border({ width: this.presentation.books.length > 0 ? TOK_BORDER_W : 0, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }
@@ -322,9 +320,9 @@ export struct DiscoverPage {
       Text(`第 ${this.presentation.page} 页`)
         .layoutWeight(1)
         .textAlign(TextAlign.Center)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
+        .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       this.pageAction('下一页', this.presentation.hasNext, (): void => this.onNextPage());
     }
@@ -337,18 +335,8 @@ export struct DiscoverPage {
 
   @Builder
   private pageAction(label: string, enabled: boolean, action: () => void) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(11)
-      .fontColor(enabled ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .backgroundColor(enabled ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })
-      .borderRadius(999)
-      .opacity(this.presentation.loading ? 0.6 : 1)
-      .onClick((): void => {
-        if (enabled && !this.presentation.loading) action();
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-page', label, primary: enabled,
+      actionEnabled: enabled && !this.presentation.loading, isBusy: this.presentation.loading, onAction: action });
   }
 
   @Builder
@@ -373,20 +361,20 @@ export struct DiscoverPage {
       Column({ space: TOK_SPACE_ROW_BLOCK }) {
         Text(book.name)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(18.75)
+          .fontFamily(TYPE_DISCOVER_RANK_TITLE.fontFamily)
+          .fontWeight(TYPE_DISCOVER_RANK_TITLE.fontWeight)
+          .fontSize(TYPE_DISCOVER_RANK_TITLE.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_RANK_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (book.author !== '') {
           Text(book.author)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
-            .lineHeight(15.56)
+            .fontFamily(TYPE_DISCOVER_AUTHOR.fontFamily)
+            .fontWeight(TYPE_DISCOVER_AUTHOR.fontWeight)
+            .fontSize(TYPE_DISCOVER_AUTHOR.fontSizeFp)
+            .lineHeight(TYPE_DISCOVER_AUTHOR.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -394,10 +382,10 @@ export struct DiscoverPage {
         if (book.intro !== '') {
           Text(book.intro)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(17.4)
+            .fontFamily(TYPE_DISCOVER_INTRO.fontFamily)
+            .fontWeight(TYPE_DISCOVER_INTRO.fontWeight)
+            .fontSize(TYPE_DISCOVER_INTRO.fontSizeFp)
+            .lineHeight(TYPE_DISCOVER_INTRO.lineHeightFp as number)
             .fontColor(readerAppColor('app.DiscoverPage.resultRow.fontColor.FF5C554D', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });

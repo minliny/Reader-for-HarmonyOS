@@ -1,72 +1,89 @@
-import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createRequire } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as state from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { readerControlHostVisible } from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
-import { createReaderControlSessionState } from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({"status-band": {"description": "Actual status underlay observation and Shell overlay paint", "resources": []}, "theme-texture": {"description": "Theme changes invalidate textures without repagination", "resources": []}, "launch-work": {"description": "Moving capsule launch blocks captures/preparation until settled", "resources": []}, "volume-policy": {"description": "Actual volume handler policy and InputKit partial cleanup", "resources": []}, "font-import": {"description": "Custom font action, persisted descriptor and file URI registration", "resources": []}});
+async function run(selectedCase){
+const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { createRequire }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
+const state=await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { READER_THEME_DEFINITIONS }=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerControlHostVisible }=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+const { createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { readerWidthClass, resolveReaderReadingLayout }=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp }=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 
 const require = createRequire(import.meta.url);
-const ts = require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
-const syntax = require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js');
+const ts = require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
+const syntax = require(((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js'));
 const statusPaperSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper', new Set([...statusPaperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
 class StatusPaper { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const baseline = process.env.READER_CONTROLS_BASELINE;
-const scratch = baseline ? mkdtempSync(join(tmpdir(), 'reader-controls-baseline-')) : undefined;
-function sourcePath(relative) {
-  if (!baseline) return new URL(`../entry/src/main/ets/${relative}`, import.meta.url);
-  const path = join(scratch, relative.replaceAll('/', '-'));
-  writeFileSync(path, execFileSync('/Library/Developer/CommandLineTools/usr/bin/git',
-    ['show', `${baseline}:entry/src/main/ets/${relative}`], { cwd: new URL('..', import.meta.url) }));
-  return path;
-}
+const sourcePath=relative=>new URL(`../entry/src/main/ets/${relative}`,import.meta.url);
 const lre = sourcePath('features/reading/LocalReadingExperience.ets');
 const results = [];
 async function check(name, run) {
+  const group=name.startsWith('PH108: real SDK')||name.startsWith('PH108: shell')?'status-band':name.startsWith('PH108: every')?'theme-texture':name.startsWith('PH104:')?'launch-work':name.startsWith('PH107:')?'volume-policy':name.startsWith('PH106:')?'font-import':'download-feedback';
+  if(group!==selectedCase)return;
   try { await run(); results.push({ name, status: 'PASS' }); }
   catch (error) { results.push({ name, status: 'FAIL', error: error.message }); }
 }
 function ordinary(file, names, deps = {}) {
   const source = readFileSync(file, 'utf8');
-  return productionMotionMethods(file, names.filter(name => source.includes(`${name}(`)), deps);
+  return productionMotionMethods(file, names, deps);
 }
-const tick = () => new Promise(resolve => setImmediate(resolve));
-async function settled() { for (let i = 0; i < 5; i++) await tick(); }
 
-await check('PH108: real SDK If observes the control visibility edge with extension enabled', () => {
+await check('PH108: real SDK If observes independent status preference and control visibility', () => {
   const source = readFileSync(lre, 'utf8');
-  const stack = [], reads = new Map();
-  const { owner } = createReaderBuilderProbe(source,
-    ['readerStatusBarUnderlay', 'readerStatusBarMetrics', 'controlsPresentedForWindow'], {
-      ...style, readerControlHostVisible, ReaderStatusBarPaper: StatusPaper,
-      ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: { left: 0, top: 0, width: 390 }, statusBarHeight: 48 }) },
-    }, {
-      onObserverEnter: (_owner, id) => { stack.push(id); reads.set(id, new Set()); },
-      onObserverExit: (_owner, id) => assert.equal(stack.pop(), id),
-    });
-  for (const [key, value] of Object.entries({ windowChromeActive: true,
-    readerSettingsSnapshot: { extendIntoCutout: true }, sessionLaunch: undefined,
-    windowControlsPresented: false, controlSession: {}, appearanceSnapshot: { activeTheme: 'greenNight' },
-    readerWindowMetricsRevision: 1 })) {
-    Object.defineProperty(owner, key, { get() {
-      if (stack.length) reads.get(stack.at(-1)).add(key);
-      return value;
-    } });
+  const metrics = new ReaderWindowMetricsSnapshot();
+  Object.assign(metrics, { ready: true, windowRect: new ReaderRectVp(0, 0, 390, 844),
+    statusBarRect: new ReaderRectVp(0, 0, 390, 48), statusBarHeight: 48 });
+  for (const hideStatusBar of [false, true]) for (const controls of [false, true])
+  for (const extendIntoCutout of [false, true]) {
+    const stack = [], reads = new Map();
+    const label = JSON.stringify({ hideStatusBar, controls, extendIntoCutout });
+    const reading = resolveReaderReadingLayout(390, 844, false, metrics, extendIntoCutout);
+    const { owner } = createReaderBuilderProbe(source,
+      ['readerStatusBarUnderlay', 'readerStatusBarMetrics', 'controlsPresentedForWindow'], {
+        ...style, readerControlHostVisible, ReaderStatusBarPaper: StatusPaper,
+        ReaderWindowCoordinator: { metrics: () => metrics },
+      }, {
+        onObserverEnter: (_owner, id) => { stack.push(id); reads.set(id, new Set()); },
+        onObserverExit: (_owner, id) => assert.equal(stack.pop(), id),
+      });
+    for (const [key, value] of Object.entries({ windowChromeActive: true,
+      readerSettingsSnapshot: { extendIntoCutout, hideStatusBar }, sessionLaunch: undefined,
+      windowControlsPresented: controls, controlSession: {}, appearanceSnapshot: { activeTheme: 'greenNight' },
+      readerWindowMetricsRevision: 1 })) {
+      Object.defineProperty(owner, key, { get() {
+        if (stack.length) reads.get(stack.at(-1)).add(key);
+        return value;
+      } });
+    }
+    owner.readingLayout = () => reading;
+    owner.latestControlVisualSession = createReaderControlSessionState();
+    // The old helper reads a deliberately non-observed visual cache.
+    owner.readerStatusBarUnderlay();
+    assert.ok([...reads.values()].some(keys => keys.has('windowControlsPresented') || keys.has('controlSession')),
+      label + ': opening controls must invalidate the native If even when metrics and theme remain equal');
+    if (!controls) assert.ok([...reads.values()].some(keys => keys.has('readerSettingsSnapshot')),
+      label + ': changing the status preference must invalidate the native If while controls are closed');
+    const visible = controls || !hideStatusBar;
+    const rows = [...owner.nodes.values()].filter(node => node.id === 'reader-status-bar-underlay');
+    assert.equal(rows.length, visible ? 1 : 0, label);
+    assert.equal(owner.children.size, visible ? 1 : 0, label);
+    if (visible) {
+      const props = [...owner.children.values()][0].params;
+      assert.deepEqual(props.statusRect, metrics.statusBarRect, label);
+      assert.equal(props.viewportWidth, reading.viewportWidth, label);
+      assert.equal(props.viewportHeight, reading.viewportHeight, label);
+      assert.equal(props.expanded, reading.widthClass === 'expanded', label);
+      assert.equal(rows[0].zIndex, 10, label);
+    }
   }
-  owner.latestControlVisualSession = createReaderControlSessionState();
-  // The old helper reads a deliberately non-observed visual cache.
-  owner.readerStatusBarUnderlay();
-  assert.ok([...reads.values()].some(keys => keys.has('windowControlsPresented') || keys.has('controlSession')),
-    'opening controls must invalidate the native If even when metrics and theme remain equal');
 });
 
 await check('PH108: every theme-only change invalidates page textures without repagination', () => {
@@ -86,7 +103,7 @@ await check('PH108: every theme-only change invalidates page textures without re
   }
 });
 
-if (!baseline) await check('PH108: shell repaints the reader band above directory and source-switch overlays', () => {
+await check('PH108: shell repaints the reader band above directory and source-switch overlays', () => {
   const source = readFileSync(sourcePath('features/shell/ReaderShell.ets'), 'utf8');
   for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading']) {
     const { owner } = createReaderBuilderProbe(source, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
@@ -139,7 +156,7 @@ await check('PH107: native volume subscriptions are absent in controls, overlays
   }
 });
 
-if (!baseline) await check('PH107: actual InputKit host releases partial registrations, deduplicates and disposes', () => {
+await check('PH107: actual InputKit host releases partial registrations, deduplicates and disposes', () => {
   const src = readFileSync(sourcePath('app/ReaderReadingSystemEventHost.ts'), 'utf8');
   const output = ts.transpileModule(src, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
   const listeners = new Set(); let failDown = false, subscriptions = 0;
@@ -159,7 +176,7 @@ if (!baseline) await check('PH107: actual InputKit host releases partial registr
   host.setVolumeKeyHandler(() => {}); assert.equal(listeners.size, 0);
 });
 
-if (!baseline) await check('PH106: import stays an action; a separate selected custom font survives restore and reorder', () => {
+await check('PH106: import stays an action; a separate selected custom font survives restore and reorder', () => {
   const descriptor = new state.ReaderCustomFontDescriptor('测试字体', 'ReaderCustom_aaaaaaaaaaaaaaaa',
     '/data/storage/el2/base/files/reader-fonts/' + 'a'.repeat(64) + '.ttf', 'a'.repeat(64));
   const snapshot = state.setReaderAppearanceCustomFont(state.createDefaultReaderAppearanceSnapshot(), descriptor);
@@ -188,34 +205,9 @@ await check('PH106: actual font Host registers persisted sandbox font through fi
   assert.equal(registered.familySrc, 'file://' + descriptor.filePath);
 });
 
-await check('PH105: download feedback starts immediately, verifies completion and ignores stale owner', async () => {
-  const src = sourcePath('pages/Index.ets');
-  for (const mode of ['complete', 'partial', 'failure', 'stale']) {
-    let resolve, reject, calls = 0;
-    const pending = new Promise((a,b) => { resolve = a; reject = b; });
-    class Gateway { prefetchBook() { calls++; return pending; } async loadProjection() { return []; } }
-    const C = ordinary(src, ['downloadDirectoryBook', 'showOfflineDownloadFeedback'], {
-      ReadingOfflineGateway: Gateway, ReaderRuntimeOwner: { current: () => ({}) }, hilog: { error() {} }, DOMAIN: 0,
-    });
-    const messages = [], errors = [];
-    const p = Object.assign(new C(), { remoteReadingSession: { identity: { sourceId: 's', bookId: 'b' }, entries: [{ url: 'chapter' }] },
-      offlineMutationActiveKey: '', offlineMutationGeneration: 0, detailToc: [{ index: 0 }],
-      getUIContext: () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) }),
-      mergeDirectoryBookmarks: entries => entries, showReadingFailure: (...args) => errors.push(args),
-    });
-    p.downloadDirectoryBook();
-    assert.ok(messages[0]?.includes('开始下载'), 'immediate accepted feedback');
-    assert.equal(calls, 1);
-    if (mode === 'stale') p.remoteReadingSession = undefined;
-    if (mode === 'failure') reject(new Error('offline unavailable'));
-    else resolve([{ index: 0, navigable: true, downloadState: mode === 'partial' ? 'cached' : 'completed' }]);
-    await settled();
-    if (mode === 'complete') assert.ok(messages.at(-1).includes('下载完成'));
-    if (mode === 'partial') assert.ok(messages.at(-1).includes('0/1'));
-    if (mode === 'failure') assert.equal(errors.length, 1);
-    if (mode === 'stale') assert.equal(messages.length, 1);
-    assert.equal(p.offlineMutationActiveKey, '');
-  }
-});
+// Retained PH105 materialization journey is independently selectable in
+// test-reader-chapter-download-feedback.mjs#retained-materialization; never imported here.
 for (const result of results) console.log(JSON.stringify(result));
 assert.equal(results.filter(result => result.status === 'FAIL').length, 0, 'PH104–108 production regression');
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

@@ -112,8 +112,10 @@ function probe(sourceText) {
 }
 
 const result = probe(source);
-assert.throws(() => probe(source.replace('.fontSize(10 + this.p()).lineHeight(this.label(row).height)',
-  '.fontSize(11).lineHeight(16)')), /native label line/,
+const fixedFullText = source.replace('.fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())).lineHeight(this.label(row).height)',
+  '.fontSize(TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp).lineHeight(16)');
+assert.notEqual(fixedFullText, source, 'mutation must replace the actual current typography expression');
+assert.throws(() => probe(fixedFullText), /native label line/,
   'the shipped fixed Full typography in a Quick 12vp mask reproduces PH05');
 const collapsed = source.replace('      .borderRadius(8).clip(true).position({ x: 0, y: 0 });',
   '      .borderRadius(8).clip(true).position({ x: 0, y: 0 }).clipShape(this.sharedClip(row, true));')

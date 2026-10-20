@@ -1,0 +1,5633 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "ceec1eed",
+  "description": "Current app baseline. All business callbacks/layout preserved byte-for-byte after reverting role arguments/imports.",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+      "sha256": "a41d112896dd90cdfdfb9507727ee5d1e553f8dbf8651b4d8cb7a2b0c7903b32",
+      "roleImport": "import { TYPE_FORM_STATE_BODY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.emptyMessage()",
+          "original": {
+            "fontSize": "14",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_STATE_BODY.fontSizeFp",
+            "fontFamily": "TYPE_FORM_STATE_BODY.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookRemovalDialog.ets",
+      "sha256": "602b4ae179788416fea3a4264a3b02191a99f50861c1d0c7f57860114e06a093",
+      "roleImport": "import { TYPE_FORM_BODY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "messageBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.message",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_BODY.fontSizeFp",
+            "fontWeight": "TYPE_FORM_BODY.fontWeight",
+            "fontFamily": "TYPE_FORM_BODY.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets",
+      "sha256": "2a9b71fdc13441f20b7ce65a56da2b52a2ae6de52c7776734893fa14a48fa041",
+      "roleImport": "import { TYPE_FORM_BODY, TYPE_FORM_LABEL_ACTION, TYPE_SHELF_EMPTY_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书架还是空的'",
+          "original": {
+            "fontSize": "19",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SHELF_EMPTY_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_EMPTY_TITLE.fontWeight",
+            "fontFamily": "TYPE_SHELF_EMPTY_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'导入本地书籍或通过搜索加入书架。'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_BODY.fontSizeFp",
+            "fontWeight": "TYPE_FORM_BODY.fontWeight",
+            "fontFamily": "TYPE_FORM_BODY.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'导入本地书籍'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 3,
+          "kind": "Text",
+          "text": "'搜索并加入书架'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+      "sha256": "68aee657d6166b2290f9a59fdf09a3c97df253c744939c80ccff9ca93c35407f",
+      "roleImport": "import { TYPE_APP_SECTION_LABEL } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "sectionHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "'我的书架'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "15",
+            "fontWeight": "700",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECTION_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECTION_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECTION_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SECTION_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfGroupSelector.ets",
+      "sha256": "8f61b378b657cd22cfcc15043a17bc00c8d43e97224c194d6bc8b33e1ebb2de0",
+      "roleImport": "import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.activeGroup.length > 0 ? `分组 · ${this.activeGroup}` : '分组'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'清除'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'默认'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_FILTER_OPTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_FILTER_OPTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_FILTER_OPTION.fontWeight",
+            "fontFamily": "TYPE_APP_FILTER_OPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets",
+      "sha256": "87411fd63f62ce2ef0f1b253894c290aa38d06954660f49b3b197e6b830b1e15",
+      "roleImport": "import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_CHECK, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "selectionTopBar",
+          "index": 0,
+          "kind": "Text",
+          "text": "'取消'",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_SHELF_SELECTION_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_SELECTION_ACTION.fontWeight",
+            "fontFamily": "TYPE_SHELF_SELECTION_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "selectionTopBar",
+          "index": 1,
+          "kind": "Text",
+          "text": "`已选择 ${this.selectedKeys.length} 本`",
+          "original": {
+            "lineHeight": "34.49",
+            "fontSize": "24",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SHELF_SELECTION_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SHELF_SELECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_SELECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_SHELF_SELECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "selectionTopBar",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.allSelected() ? '取消全选' : '全选'",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_SHELF_SELECTION_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_SELECTION_ACTION.fontWeight",
+            "fontFamily": "TYPE_SHELF_SELECTION_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "selectionCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'✓'",
+          "original": {
+            "fontSize": "14",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SHELF_SELECTION_CHECK.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_SELECTION_CHECK.fontWeight",
+            "fontFamily": "TYPE_SHELF_SELECTION_CHECK.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "selectionCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "book.title",
+          "original": {
+            "lineHeight": "this.isWide() ? 19.5 : 16",
+            "fontSize": "this.isWide() ? 16 : 13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "fontFamily": "TYPE_SHELF_SELECTION_TITLE.fontFamily",
+            "fontWeight": "TYPE_SHELF_SELECTION_TITLE.fontWeight",
+            "fontSize": "this.isWide() ? TYPE_SHELF_SELECTION_TITLE_WIDE.fontSizeFp : TYPE_SHELF_SELECTION_TITLE.fontSizeFp",
+            "lineHeight": "this.isWide() ? TYPE_SHELF_SELECTION_TITLE_WIDE.lineHeightFp as number : TYPE_SHELF_SELECTION_TITLE.lineHeightFp as number"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "selectionCard",
+          "index": 2,
+          "kind": "Text",
+          "text": "book.author",
+          "original": {
+            "lineHeight": "this.isWide() ? 16 : 13.5",
+            "fontSize": "this.isWide() ? 13 : 11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontFamily": "TYPE_SHELF_SELECTION_AUTHOR.fontFamily",
+            "fontWeight": "TYPE_SHELF_SELECTION_AUTHOR.fontWeight",
+            "fontSize": "this.isWide() ? TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontSizeFp : TYPE_SHELF_SELECTION_AUTHOR.fontSizeFp",
+            "lineHeight": "this.isWide() ? TYPE_SHELF_SELECTION_AUTHOR_WIDE.lineHeightFp as number : TYPE_SHELF_SELECTION_AUTHOR.lineHeightFp as number"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "removeBar",
+          "index": 0,
+          "kind": "Text",
+          "text": "!this.ready ? '正在读取书架' : this.busy ? '正在移除' : '移除书架'",
+          "original": {
+            "lineHeight": "13.31",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SHELF_SELECTION_REMOVE.lineHeightFp as number",
+            "fontSize": "TYPE_SHELF_SELECTION_REMOVE.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_SELECTION_REMOVE.fontWeight",
+            "fontFamily": "TYPE_SHELF_SELECTION_REMOVE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "selectionBadge",
+          "index": 0,
+          "kind": "Text",
+          "text": "'✓'",
+          "original": {
+            "fontSize": "14",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SHELF_SELECTION_CHECK.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_SELECTION_CHECK.fontWeight",
+            "fontFamily": "TYPE_SHELF_SELECTION_CHECK.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "sha256": "9a151186bb01beaa8f2e9ce1b6bf0738c97a2552941fb1405b52541bbc66f98f",
+      "roleImport": "import { TYPE_APP_COMPACT_BADGE, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_APP_SECTION_LABEL, TYPE_MAIN_TAB_LABEL, TYPE_SECTION_HEADING } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "continueReadingCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'继续阅读'",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SECTION_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bookshelfList",
+          "index": 0,
+          "kind": "Text",
+          "text": "'我的书架'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECTION_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECTION_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECTION_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SECTION_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bookshelfList",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.viewModeError",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "bookshelfList",
+          "index": 2,
+          "kind": "Text",
+          "text": "'没有符合条件的书籍'",
+          "original": {
+            "fontSize": "14"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_STATE.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "bookshelfList",
+          "index": 3,
+          "kind": "Text",
+          "text": "'清除全部条件'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "'筛选'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "'清除'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 2,
+          "kind": "Text",
+          "text": "'阅读状态'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 3,
+          "kind": "Text",
+          "text": "'书籍类型'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "filterChip",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_FILTER_OPTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_FILTER_OPTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_FILTER_OPTION.fontWeight",
+            "fontFamily": "TYPE_APP_FILTER_OPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "projectionBookCoverLayer",
+          "index": 0,
+          "kind": "Text",
+          "text": "`更新 ${book.unreadCount} 章`",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_BADGE.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_BADGE.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_BADGE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "tabletNavigationItem",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_MAIN_TAB_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_MAIN_TAB_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_MAIN_TAB_LABEL.fontWeight",
+            "fontFamily": "TYPE_MAIN_TAB_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+      "sha256": "f02fa3ee20402050264b382421e8438c49e6071d185c0b1fb794b5fe7e0daea1",
+      "roleImport": "import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_LABEL, TYPE_APP_INHERITED_OPTION } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'自动检查更新'",
+          "original": {
+            "fontSize": "15"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_LABEL.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'自动检查书架中书籍的最新章节'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'显示方式'",
+          "original": {
+            "fontSize": "15"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_LABEL.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 3,
+          "kind": "Text",
+          "text": "this.error",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "modeOption",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "13"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_OPTION.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets",
+      "sha256": "ad9d421c2fa2b4ff4db734ebe5fa157233dcf6bb5651ae856c427180ffba20a5",
+      "roleImport": "import { TYPE_APP_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_SHELF_STATE_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书架加载失败'",
+          "original": {
+            "lineHeight": "25.5",
+            "fontSize": "17",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SHELF_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SHELF_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SHELF_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SHELF_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'无法读取书架内容，请重试。'",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'重试'",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_PRIMARY_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 3,
+          "kind": "Text",
+          "text": "'正在加载书架…'",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "sha256": "6506cd802f1f1f7405af004ce8074b7943bc597aa3d6c3b7a3cf8a2e97dc7afe",
+      "roleImport": "import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_INHERITED_BODY, TYPE_APP_SECTION_LABEL, TYPE_BOOK_DETAIL_ACTION, TYPE_BOOK_DETAIL_AUTHOR, TYPE_BOOK_DETAIL_DESCRIPTION, TYPE_BOOK_DETAIL_EMPTY, TYPE_BOOK_DETAIL_META, TYPE_BOOK_DETAIL_SOURCE_ACTION, TYPE_BOOK_DETAIL_TITLE, TYPE_BOOK_DIRECTORY_ENTRY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "detailScroll",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.shelfMessage",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "heroCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.book.title",
+          "original": {
+            "lineHeight": "25.96",
+            "fontSize": "22",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_TITLE.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "heroCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "`作者：${bookAuthorLabel(this.book.author)}`",
+          "original": {
+            "lineHeight": "17.55",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_AUTHOR.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_AUTHOR.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_AUTHOR.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_AUTHOR.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "heroCard",
+          "index": 2,
+          "kind": "Text",
+          "text": "`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`",
+          "original": {
+            "lineHeight": "15",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_META.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_META.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_META.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "heroCard",
+          "index": 3,
+          "kind": "Text",
+          "text": "`书源：${this.book.sourceName}`",
+          "original": {
+            "lineHeight": "15",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_META.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_META.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_META.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "heroCard",
+          "index": 4,
+          "kind": "Text",
+          "text": "'更换书源'",
+          "original": {
+            "lineHeight": "12",
+            "fontSize": "9",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_SOURCE_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_SOURCE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_SOURCE_ACTION.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_SOURCE_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "heroCard",
+          "index": 5,
+          "kind": "Text",
+          "text": "'分组：默认'",
+          "original": {
+            "lineHeight": "15",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_META.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_META.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_META.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "summaryCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'简介'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECTION_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECTION_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECTION_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SECTION_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "summaryCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.displayIntro().length > 0 ? this.displayIntro() : '暂无简介'",
+          "original": {
+            "lineHeight": "21.45",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_DESCRIPTION.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_DESCRIPTION.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_DESCRIPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chapterSection",
+          "index": 0,
+          "kind": "Text",
+          "text": "'章节信息'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECTION_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECTION_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECTION_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SECTION_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chapterSection",
+          "index": 1,
+          "kind": "Text",
+          "text": "'完整目录'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chapterSection",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.chapterEmptyMessage()",
+          "original": {
+            "lineHeight": "21.45",
+            "fontSize": "13",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_EMPTY.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_EMPTY.fontSizeFp",
+            "fontFamily": "TYPE_BOOK_DETAIL_EMPTY.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chapterRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "entry.title",
+          "original": {
+            "fontSize": "14",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_BOOK_DIRECTORY_ENTRY.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DIRECTORY_ENTRY.fontWeight",
+            "fontFamily": "TYPE_BOOK_DIRECTORY_ENTRY.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "actionArea",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.readingActionLabel()",
+          "original": {
+            "lineHeight": "14.3",
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_ACTION.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "actionArea",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.shelfActionLabel()",
+          "original": {
+            "lineHeight": "14.3",
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_BOOK_DETAIL_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_BOOK_DETAIL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_BOOK_DETAIL_ACTION.fontWeight",
+            "fontFamily": "TYPE_BOOK_DETAIL_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+      "sha256": "89ccb4e3eea3ed28c5a365088d0cf61823a7518cc10d796f885a216d94646ab7",
+      "roleImport": "import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_CANCEL, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_TITLE, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "fileSelectionPanel",
+          "index": 0,
+          "kind": "Text",
+          "text": "'导入本地书籍'",
+          "original": {
+            "lineHeight": "24.75",
+            "fontSize": "18",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FILE_IMPORT_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_TITLE.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "fileSelectionPanel",
+          "index": 1,
+          "kind": "Text",
+          "text": "'从系统文件中选择'",
+          "original": {
+            "letterSpacing": "-0.0762",
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_LABEL.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_LABEL.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "fileSelectionPanel",
+          "index": 2,
+          "kind": "Text",
+          "text": "'支持多选 TXT、EPUB、MOBI、AZW3'",
+          "original": {
+            "letterSpacing": "0.0645",
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_HINT.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_HINT.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_HINT.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_HINT.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_HINT.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "fileSelectionPanel",
+          "index": 3,
+          "kind": "Text",
+          "text": "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'",
+          "original": {
+            "letterSpacing": "0.0645",
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_HINT.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_HINT.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_HINT.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_HINT.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_HINT.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "fileSelectionPanel",
+          "index": 4,
+          "kind": "Text",
+          "text": "this.state === 'pickerOpening' ? '正在选择…' : '选择文件'",
+          "original": {
+            "letterSpacing": "-0.0762",
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_ACTION.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_ACTION.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "fileSelectionPanel",
+          "index": 5,
+          "kind": "Text",
+          "text": "'取消'",
+          "original": {
+            "letterSpacing": "-0.0762",
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_CANCEL.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_CANCEL.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_CANCEL.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "importingPanel",
+          "index": 0,
+          "kind": "Text",
+          "text": "'正在导入'",
+          "original": {
+            "lineHeight": "21",
+            "fontSize": "14",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FILE_IMPORT_PROGRESS.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_PROGRESS.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_PROGRESS.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_PROGRESS.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "importingPanel",
+          "index": 1,
+          "kind": "Text",
+          "text": "'请稍候'",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FILE_IMPORT_WAIT.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_WAIT.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_WAIT.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_WAIT.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "'导入结果'",
+          "original": {
+            "lineHeight": "24.75",
+            "fontSize": "18",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FILE_IMPORT_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_TITLE.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultFooter",
+          "index": 0,
+          "kind": "Text",
+          "text": "'完成'",
+          "original": {
+            "letterSpacing": "-0.0762",
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_ACTION.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_ACTION.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultSummary",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.summaryTitle()",
+          "original": {
+            "letterSpacing": "-0.0762",
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_LABEL.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_LABEL.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultSummary",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.resultCountText()",
+          "original": {
+            "letterSpacing": "0.0645",
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_HINT.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_HINT.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_HINT.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_HINT.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_HINT.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultItem",
+          "index": 0,
+          "kind": "Text",
+          "text": "item.fileName",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FILE_IMPORT_NAME.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_NAME.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_NAME.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_NAME.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultItem",
+          "index": 1,
+          "kind": "Text",
+          "text": "item.failure.message",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "resultBadge",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "letterSpacing": "0.3672",
+            "lineHeight": "15",
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_BADGE.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_BADGE.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_BADGE.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_BADGE.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "formatBadge",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "letterSpacing": "0.3672",
+            "lineHeight": "15",
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number",
+            "lineHeight": "TYPE_FILE_IMPORT_BADGE.lineHeightFp as number",
+            "fontSize": "TYPE_FILE_IMPORT_BADGE.fontSizeFp",
+            "fontWeight": "TYPE_FILE_IMPORT_BADGE.fontWeight",
+            "fontFamily": "TYPE_FILE_IMPORT_BADGE.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/NoCoverCover.ets",
+      "sha256": "d16f0ae6e119acd7c961b9a81e66515a66afb4d2dd88aa90845d8cad053c2a7b",
+      "roleImport": "import { TYPE_SHELF_COVER_PLACEHOLDER } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'暂无封面'",
+          "original": {
+            "lineHeight": "18.3 * this.coverWidth / 96.96",
+            "fontSize": "15 * this.coverWidth / 96.96",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "fontFamily": "TYPE_SHELF_COVER_PLACEHOLDER.fontFamily",
+            "fontWeight": "TYPE_SHELF_COVER_PLACEHOLDER.fontWeight",
+            "fontSize": "TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96",
+            "lineHeight": "(TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/common/JsonImportDialog.ets",
+      "sha256": "0b35076aa7e1a0cda33141e3377c8efe0268fff2d14d66e5ed698b33c0d55c92",
+      "roleImport": "import { TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_URL_INPUT, TYPE_JSON_IMPORT_DESCRIPTION } from './ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "formBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.description",
+          "original": {
+            "lineHeight": "19",
+            "fontSize": "12",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_JSON_IMPORT_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_JSON_IMPORT_DESCRIPTION.fontSizeFp",
+            "fontFamily": "TYPE_JSON_IMPORT_DESCRIPTION.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "formBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "'在线链接'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "formBody",
+          "index": 2,
+          "kind": "TextInput",
+          "text": "{\n          text: this.urlDraft,\n          placeholder: 'https://example.com/data.json',\n        }",
+          "original": {
+            "fontSize": "12",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_URL_INPUT.fontSizeFp",
+            "fontFamily": "TYPE_FORM_URL_INPUT.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "formBody",
+          "index": 3,
+          "kind": "Text",
+          "text": "'GitHub 仓库文件请使用 Raw 链接；普通 blob 页面不是 JSON。'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "10",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FORM_NOTE.lineHeightFp as number",
+            "fontSize": "TYPE_FORM_NOTE.fontSizeFp",
+            "fontFamily": "TYPE_FORM_NOTE.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "formBody",
+          "index": 4,
+          "kind": "Text",
+          "text": "this.validationMessage",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "10",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FORM_NOTE.lineHeightFp as number",
+            "fontSize": "TYPE_FORM_NOTE.fontSizeFp",
+            "fontFamily": "TYPE_FORM_NOTE.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "localButton",
+          "index": 0,
+          "kind": "Text",
+          "text": "'选择本地 JSON 文件'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderDialogSurface.ets",
+      "sha256": "3096ade20bfbcfcb0f636114bb2260045ef737c8c9b0b8f9e0e02ee74768ab53",
+      "roleImport": "import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from './ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "header",
+          "index": 0,
+          "kind": "Text",
+          "text": "'关闭'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SELECT_OPTION.fontSizeFp",
+            "fontWeight": "TYPE_SELECT_OPTION.fontWeight",
+            "fontFamily": "TYPE_SELECT_OPTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "actionCell",
+          "index": 0,
+          "kind": "Text",
+          "text": "action.label",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DIALOG_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_DIALOG_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_DIALOG_ACTION.fontWeight",
+            "fontFamily": "TYPE_DIALOG_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSegmentedControl.ets",
+      "sha256": "4cc902db34f2639b9b4e49f739da31b7af5683743b0730dc53e2f6fb89c43a47",
+      "roleImport": "import { TYPE_APP_SEGMENT_LABEL } from './ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "opt",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SEGMENT_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SEGMENT_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SEGMENT_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSelect.ets",
+      "sha256": "69e8e2a168334a2ea6cf35f6b48ba15eb2313d01e34c8479401aed8922888dd6",
+      "roleImport": "import { TYPE_SELECT_LIBRARY_VALUE } from './ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "appearanceLibraryTrigger",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.value",
+          "original": {
+            "fontWeight": "FontWeight.Regular",
+            "lineHeight": "15",
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSCUIRegular'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_SELECT_LIBRARY_VALUE.fontWeight",
+            "lineHeight": "TYPE_SELECT_LIBRARY_VALUE.lineHeightFp as number",
+            "fontSize": "TYPE_SELECT_LIBRARY_VALUE.fontSizeFp",
+            "fontFamily": "TYPE_SELECT_LIBRARY_VALUE.fontFamily"
+          },
+          "extra": {
+            "fontWeight": [],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+      "sha256": "59b68dc30974ea9cf6b2fd7671d4fcbfddf9d95e3aa50ee650ab6932be4d38b6",
+      "roleImport": "import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "currentSourceCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.currentSourceName()",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECTION_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECTION_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECTION_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SECTION_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "currentSourceCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.presentation.sources.length > 0 ?\n          `${this.presentation.activeSourceIndex + 1}/${this.presentation.sources.length} · 点击切换书源` :\n          '没有已启用发现的书源'",
+          "original": {
+            "lineHeight": "13.2",
+            "fontSize": "11",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_SOURCE_META.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_SOURCE_META.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_SOURCE_META.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_SOURCE_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "categoryChips",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "12",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_CATEGORY.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_CATEGORY.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_CATEGORY.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_CATEGORY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "'筛选'",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_FILTER_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_FILTER_LABEL.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_FILTER_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.currentFilterText()",
+          "original": {
+            "lineHeight": "15.56",
+            "fontSize": "11",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_FILTER_VALUE.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_FILTER_VALUE.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_FILTER_VALUE.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_FILTER_VALUE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "filterRow",
+          "index": 2,
+          "kind": "Text",
+          "text": "'应用'",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_FILTER_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_FILTER_LABEL.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_FILTER_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "rankingHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "'排行榜'",
+          "original": {
+            "lineHeight": "18.75",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_RANK_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_RANK_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_RANK_TITLE.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_RANK_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultList",
+          "index": 0,
+          "kind": "Text",
+          "text": "'暂无发现内容'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "14",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultList",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.presentation.statusMessage",
+          "original": {
+            "lineHeight": "15",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_STATUS.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_STATUS.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_STATUS.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "paginationRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "`第 ${this.presentation.page} 页`",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SEGMENT_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SEGMENT_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SEGMENT_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "pageAction",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SMALL_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SMALL_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SMALL_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "book.name",
+          "original": {
+            "lineHeight": "18.75",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_RANK_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_RANK_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_RANK_TITLE.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_RANK_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "book.author",
+          "original": {
+            "lineHeight": "15.56",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_AUTHOR.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_AUTHOR.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_AUTHOR.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_AUTHOR.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultRow",
+          "index": 2,
+          "kind": "Text",
+          "text": "book.intro",
+          "original": {
+            "lineHeight": "17.4",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_DISCOVER_INTRO.lineHeightFp as number",
+            "fontSize": "TYPE_DISCOVER_INTRO.fontSizeFp",
+            "fontWeight": "TYPE_DISCOVER_INTRO.fontWeight",
+            "fontFamily": "TYPE_DISCOVER_INTRO.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+      "sha256": "619cf598db9d2732bbb506ab0d595e2b0b7d787dff2c595c147ce256a24fcfd1",
+      "roleImport": "import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ARTICLE_BODY, TYPE_RSS_ARTICLE_TITLE, TYPE_RSS_BOTTOM_ACTION, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "sourceCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.subscription.title",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SOURCE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SOURCE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_SOURCE_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.itemMeta()",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_META.fontSizeFp",
+            "fontWeight": "TYPE_RSS_META.fontWeight",
+            "fontFamily": "TYPE_RSS_META.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceCard",
+          "index": 2,
+          "kind": "Text",
+          "text": "'查看源'",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_LINK_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_LINK_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_LINK_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "summaryCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.item.title",
+          "original": {
+            "lineHeight": "26",
+            "fontSize": "20",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_ARTICLE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_ARTICLE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ARTICLE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_ARTICLE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "actionTarget",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SMALL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_SMALL_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_SMALL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "summaryBodyCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'摘要'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SOURCE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SOURCE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_SOURCE_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "summaryBodyCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "paragraph",
+          "original": {
+            "lineHeight": "26",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_ARTICLE_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_ARTICLE_BODY.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ARTICLE_BODY.fontWeight",
+            "fontFamily": "TYPE_RSS_ARTICLE_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "originalLinkCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'原文链接'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SOURCE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SOURCE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_SOURCE_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "originalLinkCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "`${this.subscription.title} · 原始条目链接`",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_META.fontSizeFp",
+            "fontWeight": "TYPE_RSS_META.fontWeight",
+            "fontFamily": "TYPE_RSS_META.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "originalLinkCard",
+          "index": 2,
+          "kind": "Text",
+          "text": "'打开'",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_LINK_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_LINK_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_LINK_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bottomActions",
+          "index": 0,
+          "kind": "Text",
+          "text": "'返回列表'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_BOTTOM_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_BOTTOM_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_BOTTOM_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bottomActions",
+          "index": 1,
+          "kind": "Text",
+          "text": "'打开原文'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_BOTTOM_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_BOTTOM_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_BOTTOM_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssPage.ets",
+      "sha256": "024a4abf4a0cfee054bc9bb4ba550cfbba7ce171c48697444668dbba845f05c1",
+      "roleImport": "import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_ERROR_REASON, TYPE_RSS_HOME_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_REFRESH_STATUS, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE, TYPE_RSS_STATE_ACTION, TYPE_RSS_STATE_BODY, TYPE_RSS_STATE_TITLE, TYPE_RSS_UNREAD_COUNT } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "topBar",
+          "index": 0,
+          "kind": "Text",
+          "text": "'RSS'",
+          "original": {
+            "lineHeight": "41",
+            "fontSize": "29",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_HOME_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_HOME_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_HOME_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_HOME_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "refreshPill",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.refreshStatusText()",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "refreshPill",
+          "index": 1,
+          "kind": "Marquee",
+          "text": "{\n          start: true,\n          step: 4,\n          loop: -1,\n          fromStart: true,\n          src: this.refreshStatusText(),\n        }",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "managePill",
+          "index": 0,
+          "kind": "Text",
+          "text": "'管理'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "statusTab",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "refreshingRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "'正在刷新启用订阅源'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_REFRESH_STATUS.fontSizeFp",
+            "fontWeight": "TYPE_RSS_REFRESH_STATUS.fontWeight",
+            "fontFamily": "TYPE_RSS_REFRESH_STATUS.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "subscriptionSection",
+          "index": 0,
+          "kind": "Text",
+          "text": "'订阅源'",
+          "original": {
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_RSS_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "subscriptionSection",
+          "index": 1,
+          "kind": "Text",
+          "text": "'筛选'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "subscriptionSection",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.filterValue",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SMALL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_SMALL_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_SMALL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "filterPill",
+          "index": 0,
+          "kind": "Text",
+          "text": "opt",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceItem",
+          "index": 0,
+          "kind": "Text",
+          "text": "sub.title",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SOURCE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SOURCE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_SOURCE_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceItem",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.sourceSubtitle(sub)",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_META.fontSizeFp",
+            "fontWeight": "TYPE_RSS_META.fontWeight",
+            "fontFamily": "TYPE_RSS_META.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceItem",
+          "index": 2,
+          "kind": "Text",
+          "text": "`${sub.unreadCount}`",
+          "original": {
+            "fontSize": "16",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_UNREAD_COUNT.fontSizeFp",
+            "fontWeight": "TYPE_RSS_UNREAD_COUNT.fontWeight",
+            "fontFamily": "TYPE_RSS_UNREAD_COUNT.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "recentUnreadHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "'最近未读'",
+          "original": {
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_RSS_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "recentUnreadHeader",
+          "index": 1,
+          "kind": "Text",
+          "text": "'查看全部'",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_LINK_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_LINK_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_LINK_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "recentUnreadItem",
+          "index": 0,
+          "kind": "Text",
+          "text": "item.title",
+          "original": {
+            "lineHeight": "16.25",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_ENTRY_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_ENTRY_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ENTRY_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_ENTRY_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "recentUnreadItem",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.itemSubtitle(subscriptions, item)",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_META.fontSizeFp",
+            "fontWeight": "TYPE_RSS_META.fontWeight",
+            "fontFamily": "TYPE_RSS_META.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "recentUnreadItem",
+          "index": 2,
+          "kind": "Text",
+          "text": "item.description",
+          "original": {
+            "lineHeight": "15.95",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_ENTRY_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_ENTRY_DESCRIPTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ENTRY_DESCRIPTION.fontWeight",
+            "fontFamily": "TYPE_RSS_ENTRY_DESCRIPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "stateCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "title",
+          "original": {
+            "lineHeight": "21.25",
+            "fontSize": "17",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "stateCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "body",
+          "original": {
+            "lineHeight": "18.6",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_STATE_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_STATE_BODY.fontSizeFp",
+            "fontWeight": "TYPE_RSS_STATE_BODY.fontWeight",
+            "fontFamily": "TYPE_RSS_STATE_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorSourceRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "source.name",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SEGMENT_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SEGMENT_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SEGMENT_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorSourceRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "source.reason",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_ERROR_REASON.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ERROR_REASON.fontWeight",
+            "fontFamily": "TYPE_RSS_ERROR_REASON.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "stateButtons",
+          "index": 0,
+          "kind": "Text",
+          "text": "primaryLabel",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_STATE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_STATE_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_STATE_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "stateButtons",
+          "index": 1,
+          "kind": "Text",
+          "text": "'订阅管理'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_STATE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_STATE_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_STATE_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+      "sha256": "dcad1be9913d4b83e767ace5841fe78047026c2db047ac45ddf532f525cbc09c",
+      "roleImport": "import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "sourceCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.subscription.title",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SOURCE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SOURCE_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_SOURCE_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.sourceSubtitle()",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_META.fontSizeFp",
+            "fontWeight": "TYPE_RSS_META.fontWeight",
+            "fontFamily": "TYPE_RSS_META.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "actionTarget",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SMALL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_SMALL_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_SMALL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "entrySectionHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "'全部条目'",
+          "original": {
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_RSS_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_RSS_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "entrySectionHeader",
+          "index": 1,
+          "kind": "Text",
+          "text": "'源操作'",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_LINK_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_LINK_ACTION.fontWeight",
+            "fontFamily": "TYPE_RSS_LINK_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "entryRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "item.title",
+          "original": {
+            "lineHeight": "16.25",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_ENTRY_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_ENTRY_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ENTRY_TITLE.fontWeight",
+            "fontFamily": "TYPE_RSS_ENTRY_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "entryRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.itemMeta(item)",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_RSS_META.fontSizeFp",
+            "fontWeight": "TYPE_RSS_META.fontWeight",
+            "fontFamily": "TYPE_RSS_META.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "entryRow",
+          "index": 2,
+          "kind": "Text",
+          "text": "item.description",
+          "original": {
+            "lineHeight": "15.95",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RSS_ENTRY_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_RSS_ENTRY_DESCRIPTION.fontSizeFp",
+            "fontWeight": "TYPE_RSS_ENTRY_DESCRIPTION.fontWeight",
+            "fontFamily": "TYPE_RSS_ENTRY_DESCRIPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+      "sha256": "ed20f4faa53b4a2b11f3f3370f3caab5627f33268f8126087722619c94e1c1f8",
+      "roleImport": "import { TYPE_FORM_HINT, TYPE_FORM_INPUT, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_SECTION_HEADING, TYPE_FORM_STATUS } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.snapshot.statusMessage",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FORM_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_FORM_STATUS.fontSizeFp",
+            "fontFamily": "TYPE_FORM_STATUS.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'启用订阅'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'刷新、解析、未读统计均由 Core 维护'",
+          "original": {
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_HINT.fontSizeFp",
+            "fontFamily": "TYPE_FORM_HINT.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 3,
+          "kind": "Text",
+          "text": "'启用 Cookie 会话'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 4,
+          "kind": "Text",
+          "text": "'由 Host 隔离存储；导出不包含 Cookie 明文'",
+          "original": {
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_HINT.fontSizeFp",
+            "fontFamily": "TYPE_FORM_HINT.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 5,
+          "kind": "Text",
+          "text": "'保存'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 6,
+          "kind": "Text",
+          "text": "'完整来源配置由 Core 归一化并持久化；XML/Atom 与静态 HTML 规则共用同一订阅身份。'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "10",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FORM_NOTE.lineHeightFp as number",
+            "fontSize": "TYPE_FORM_NOTE.fontSizeFp",
+            "fontFamily": "TYPE_FORM_NOTE.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sectionTitle",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "14",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_FORM_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_FORM_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "editorField",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "editorField",
+          "index": 1,
+          "kind": "TextInput",
+          "text": "{ text: value, placeholder }",
+          "original": {
+            "fontSize": "12",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_INPUT.fontSizeFp",
+            "fontFamily": "TYPE_FORM_INPUT.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "sha256": "3ccaf4b9839d320a270fa6c027fe3231acf2f49bcc000eadd9fedeeca9330212",
+      "roleImport": "import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'正在搜索本地与在线书籍…'",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "searchBar",
+          "index": 0,
+          "kind": "Text",
+          "text": "'停止'",
+          "original": {
+            "lineHeight": "this.isTablet ? 14 : 13",
+            "fontSize": "this.isTablet ? 14 : 13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontFamily": "TYPE_SEARCH_FIELD_ACTION.fontFamily",
+            "fontWeight": "TYPE_SEARCH_FIELD_ACTION.fontWeight",
+            "fontSize": "this.isTablet ? TYPE_SEARCH_FIELD_ACTION_WIDE.fontSizeFp : TYPE_SEARCH_FIELD_ACTION.fontSizeFp",
+            "lineHeight": "this.isTablet ? TYPE_SEARCH_FIELD_ACTION_WIDE.lineHeightFp as number : TYPE_SEARCH_FIELD_ACTION.lineHeightFp as number"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "searchBar",
+          "index": 1,
+          "kind": "Text",
+          "text": "'搜索'",
+          "original": {
+            "lineHeight": "this.isTablet ? 14 : 13",
+            "fontSize": "this.isTablet ? 14 : 13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontFamily": "TYPE_SEARCH_FIELD_ACTION.fontFamily",
+            "fontWeight": "TYPE_SEARCH_FIELD_ACTION.fontWeight",
+            "fontSize": "this.isTablet ? TYPE_SEARCH_FIELD_ACTION_WIDE.fontSizeFp : TYPE_SEARCH_FIELD_ACTION.fontSizeFp",
+            "lineHeight": "this.isTablet ? TYPE_SEARCH_FIELD_ACTION_WIDE.lineHeightFp as number : TYPE_SEARCH_FIELD_ACTION.lineHeightFp as number"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "initialContent",
+          "index": 0,
+          "kind": "Text",
+          "text": "'正在读取搜索历史'",
+          "original": {
+            "lineHeight": "20",
+            "fontSize": "13",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_HISTORY_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_HISTORY_STATUS.fontSizeFp",
+            "fontFamily": "TYPE_SEARCH_HISTORY_STATUS.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "initialContent",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败'",
+          "original": {
+            "lineHeight": "20",
+            "fontSize": "13",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_HISTORY_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_HISTORY_STATUS.fontSizeFp",
+            "fontFamily": "TYPE_SEARCH_HISTORY_STATUS.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "initialContent",
+          "index": 2,
+          "kind": "Text",
+          "text": "'最近搜索'",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_HISTORY_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_HISTORY_HEADING.fontWeight",
+            "fontFamily": "TYPE_SEARCH_HISTORY_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "initialContent",
+          "index": 3,
+          "kind": "Text",
+          "text": "'清空记录'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_FILTER_OPTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_FILTER_OPTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_FILTER_OPTION.fontWeight",
+            "fontFamily": "TYPE_APP_FILTER_OPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "initialContent",
+          "index": 4,
+          "kind": "Text",
+          "text": "keyword",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_HISTORY_KEYWORD.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_HISTORY_KEYWORD.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_HISTORY_KEYWORD.fontWeight",
+            "fontFamily": "TYPE_SEARCH_HISTORY_KEYWORD.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "groupScopeChip",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "12",
+            "fontSize": "12",
+            "fontWeight": "this.selectedGroupName === label ? FontWeight.Bold : FontWeight.Medium",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontFamily": "TYPE_SEARCH_SCOPE_LABEL.fontFamily",
+            "fontWeight": "this.selectedGroupName === label ? TYPE_SEARCH_SCOPE_SELECTED.fontWeight : TYPE_SEARCH_SCOPE_LABEL.fontWeight",
+            "fontSize": "TYPE_SEARCH_SCOPE_LABEL.fontSizeFp",
+            "lineHeight": "TYPE_SEARCH_SCOPE_LABEL.lineHeightFp as number"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 0,
+          "kind": "Text",
+          "text": "'找到 '",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_PROGRESS_META.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_PROGRESS_META.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_PROGRESS_META.fontWeight",
+            "fontFamily": "TYPE_SEARCH_PROGRESS_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 1,
+          "kind": "Text",
+          "text": "`${this.visibleGroups.length}`",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_RESULT_COUNT.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_RESULT_COUNT.fontWeight",
+            "fontFamily": "TYPE_SEARCH_RESULT_COUNT.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 2,
+          "kind": "Text",
+          "text": "' 本相关书籍'",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_PROGRESS_META.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_PROGRESS_META.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_PROGRESS_META.fontWeight",
+            "fontFamily": "TYPE_SEARCH_PROGRESS_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 3,
+          "kind": "Text",
+          "text": "this.partialSearchFailure()",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 4,
+          "kind": "Text",
+          "text": "` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_PROGRESS_META.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_PROGRESS_META.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_PROGRESS_META.fontWeight",
+            "fontFamily": "TYPE_SEARCH_PROGRESS_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 5,
+          "kind": "Text",
+          "text": "` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_PROGRESS_META.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_PROGRESS_META.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_PROGRESS_META.fontWeight",
+            "fontFamily": "TYPE_SEARCH_PROGRESS_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultsContent",
+          "index": 6,
+          "kind": "Text",
+          "text": "` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_PROGRESS_META.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_PROGRESS_META.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_PROGRESS_META.fontWeight",
+            "fontFamily": "TYPE_SEARCH_PROGRESS_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "emptyContent",
+          "index": 0,
+          "kind": "Text",
+          "text": "'没有找到相关书籍'",
+          "original": {
+            "lineHeight": "25.5",
+            "fontSize": "17",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SEARCH_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "emptyContent",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.isStoppedEmpty()\n          ? (searchedSourceCount > 0\n            ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`\n            : `已停止搜索,未找到「${keyword}」的相关结果`)\n          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`",
+          "original": {
+            "lineHeight": "21.125",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_STATE_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_STATE_DESCRIPTION.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_STATE_DESCRIPTION.fontWeight",
+            "fontFamily": "TYPE_SEARCH_STATE_DESCRIPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "emptyContent",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.partialSearchFailure()",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "emptyContent",
+          "index": 3,
+          "kind": "Text",
+          "text": "'搜索建议'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_SUGGESTION_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_SUGGESTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_SUGGESTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_SEARCH_SUGGESTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceRequiredContent",
+          "index": 0,
+          "kind": "Text",
+          "text": "reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源'",
+          "original": {
+            "lineHeight": "25.5",
+            "fontSize": "17",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SEARCH_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceRequiredContent",
+          "index": 1,
+          "kind": "Text",
+          "text": "reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :\n        '启用可搜索书籍的书源；本地导入的书仍可在上方搜索'",
+          "original": {
+            "lineHeight": "21.125",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_STATE_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_STATE_DESCRIPTION.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_STATE_DESCRIPTION.fontWeight",
+            "fontFamily": "TYPE_SEARCH_STATE_DESCRIPTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceLoadErrorContent",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书源列表加载失败'",
+          "original": {
+            "lineHeight": "25.5",
+            "fontSize": "17",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SEARCH_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceLoadErrorContent",
+          "index": 1,
+          "kind": "Text",
+          "text": "'在线书源暂不可用；本地导入的书仍可在上方搜索'",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "primaryPill",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_PRIMARY_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "secondaryPill",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECONDARY_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECONDARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECONDARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_SECONDARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "suggestion",
+          "index": 0,
+          "kind": "Text",
+          "text": "'·'",
+          "original": {
+            "lineHeight": "16.5",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_PROGRESS_META.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_PROGRESS_META.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_PROGRESS_META.fontWeight",
+            "fontFamily": "TYPE_SEARCH_PROGRESS_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "suggestion",
+          "index": 1,
+          "kind": "Text",
+          "text": "text",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_SUGGESTION_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_SUGGESTION_BODY.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_SUGGESTION_BODY.fontWeight",
+            "fontFamily": "TYPE_SEARCH_SUGGESTION_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorContent",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.searchFailureTitle()",
+          "original": {
+            "lineHeight": "25.5",
+            "fontSize": "17",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SEARCH_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorContent",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.searchFailureMessage()",
+          "original": {
+            "lineHeight": "19.5",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorContent",
+          "index": 2,
+          "kind": "Text",
+          "text": "'重新搜索'",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "14",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_RETRY_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_RETRY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_RETRY_ACTION.fontWeight",
+            "fontFamily": "TYPE_SEARCH_RETRY_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorContent",
+          "index": 3,
+          "kind": "Text",
+          "text": "'检查书源'",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_SECONDARY_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_APP_SECONDARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_SECONDARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_SECONDARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/CategoryRow.ets",
+      "sha256": "7083fd33eafb2bb0ce50380bc9b8b11bdeb81f73e4983f02ba45e68c89b4a3fd",
+      "roleImport": "import { TYPE_APP_ROW_LABEL } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.label",
+          "original": {
+            "lineHeight": "15.34",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_ROW_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_ROW_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_ROW_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_ROW_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+      "sha256": "7c72e15e67b630a75a6961a3f094e7bb7063e3f894e1c72227de3eae7f16f6e8",
+      "roleImport": "import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_CAPTION, TYPE_FORM_STATUS, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_ENTITY_TITLE, TYPE_RULES_INHERITED_DESCRIPTION, TYPE_RULES_INHERITED_NOTE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "statusCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :\n      '校验、CRUD、导入导出与持久化均由 Rust Core 负责'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FORM_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_FORM_STATUS.fontSizeFp",
+            "fontFamily": "TYPE_FORM_STATUS.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bundleCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'Core schema v1 包含替换、字典、TXT 目录和规则订阅；导入默认合并且同主键覆盖。'",
+          "original": {
+            "lineHeight": "17",
+            "fontSize": "11"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "txtTocCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'启用的规则会在下一次 TXT 导入时由 Core 用于切分章节。'",
+          "original": {
+            "lineHeight": "17",
+            "fontSize": "11"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number",
+            "fontSize": "TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "subscriptionCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'“拉取”会按类型复用书源、RSS 或替换规则的 Core 导入；自动更新仅保存标记，不启动后台调度。'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "10"
+          },
+          "changes": {
+            "lineHeight": "TYPE_RULES_INHERITED_NOTE.lineHeightFp as number",
+            "fontSize": "TYPE_RULES_INHERITED_NOTE.fontSizeFp"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "booleanField",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "entityRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "title.length > 0 ? title : '未命名'",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontWeight": "TYPE_RULES_ENTITY_TITLE.fontWeight as number",
+            "fontSize": "TYPE_RULES_ENTITY_TITLE.fontSizeFp"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "entityRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "detail",
+          "original": {
+            "fontSize": "10"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_CAPTION.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "subscriptionRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "rule.name.length > 0 ? rule.name : '未命名'",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontWeight": "TYPE_RULES_ENTITY_TITLE.fontWeight as number",
+            "fontSize": "TYPE_RULES_ENTITY_TITLE.fontSizeFp"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "subscriptionRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`",
+          "original": {
+            "fontSize": "10"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_CAPTION.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "smallButton",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontWeight": "TYPE_RULES_COMPACT_ACTION.fontWeight as number",
+            "fontSize": "TYPE_RULES_COMPACT_ACTION.fontSizeFp"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "sha256": "f990c180da2071ff7be7f6a79b04a8dcba5ae167b67d18f4cf6df1c22fca10e9",
+      "roleImport": "import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "buildGeneral",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.resetMessage",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "labelColumn",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "15.34",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_ROW_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_ROW_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_ROW_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_ROW_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "cacheActionRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.cacheActionLabel",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SETTINGS_CACHE_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_SETTINGS_CACHE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_SETTINGS_CACHE_ACTION.fontWeight",
+            "fontFamily": "TYPE_SETTINGS_CACHE_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "inlineAction",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SMALL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_SMALL_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_SMALL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "dangerRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "'恢复默认'",
+          "original": {
+            "lineHeight": "19.2",
+            "fontSize": "16",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SETTINGS_DANGER_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_SETTINGS_DANGER_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_SETTINGS_DANGER_LABEL.fontWeight",
+            "fontFamily": "TYPE_SETTINGS_DANGER_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "sha256": "1c10a931a9d5999f4e6de329f1317227d6d576bf5dc4fbe24a3675d19d398a61",
+      "roleImport": "import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "statsRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.statsText()",
+          "original": {
+            "lineHeight": "12.5",
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_MANAGEMENT_COUNT.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_MANAGEMENT_COUNT.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_MANAGEMENT_COUNT.fontWeight",
+            "fontFamily": "TYPE_SOURCE_MANAGEMENT_COUNT.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "statusBanner",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.statusMessage",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_MANAGEMENT_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_MANAGEMENT_STATUS.fontSizeFp",
+            "fontFamily": "TYPE_SOURCE_MANAGEMENT_STATUS.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "statusBanner",
+          "index": 1,
+          "kind": "Text",
+          "text": "'重试'",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+            "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+            "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "categoryFilter",
+          "index": 0,
+          "kind": "Text",
+          "text": "category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory)",
+          "original": {
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_HINT.fontSizeFp",
+            "fontFamily": "TYPE_FORM_HINT.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chip",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "groupFilter",
+          "index": 0,
+          "kind": "Text",
+          "text": "'分组'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceList",
+          "index": 0,
+          "kind": "Text",
+          "text": "'暂无书源'",
+          "original": {
+            "lineHeight": "22",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceList",
+          "index": 1,
+          "kind": "Text",
+          "text": "'点击下方「＋ 新增书源」导入 Legado 书源 JSON'",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number",
+            "fontSize": "TYPE_SEARCH_RESULT_INTRO.fontSizeFp",
+            "fontWeight": "TYPE_SEARCH_RESULT_INTRO.fontWeight",
+            "fontFamily": "TYPE_SEARCH_RESULT_INTRO.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sourceRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "source.name",
+          "original": {
+            "lineHeight": "15.34",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "detectButton",
+          "index": 0,
+          "kind": "Text",
+          "text": "source.checkState === 'checking' ? '检测中' : '检测'",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "loginButton",
+          "index": 0,
+          "kind": "Text",
+          "text": "'登录'",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bottomActionBar",
+          "index": 0,
+          "kind": "Text",
+          "text": "'批量管理'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bottomActionBar",
+          "index": 1,
+          "kind": "Text",
+          "text": "'新增书源'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "sha256": "ec62ffcffb22b33584f7054f90bccf1a8048c9d55b4d0d6faf88bfe5fe2a6abe",
+      "roleImport": "import { TYPE_APP_LOADING_BODY, TYPE_SOURCE_STATE_TITLE, TYPE_SOURCE_SWITCH_COLUMN, TYPE_SOURCE_SWITCH_FOOTER, TYPE_SOURCE_SWITCH_HEADING, TYPE_SOURCE_SWITCH_MESSAGE, TYPE_SOURCE_SWITCH_RECOVERY, TYPE_SOURCE_SWITCH_SORT } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "header",
+          "index": 0,
+          "kind": "Text",
+          "text": "'换源'",
+          "original": {
+            "lineHeight": "12.32",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderNotoSerifSCRegular'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_HEADING.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sortPill",
+          "index": 0,
+          "kind": "Text",
+          "text": "'按延迟排序'",
+          "original": {
+            "lineHeight": "12",
+            "fontSize": "9",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_SORT.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_SORT.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_SORT.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_SORT.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "columnHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书源'",
+          "original": {
+            "fontSize": "8",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_COLUMN.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_COLUMN.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "columnHeader",
+          "index": 1,
+          "kind": "Text",
+          "text": "'延迟'",
+          "original": {
+            "fontSize": "8",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_COLUMN.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_COLUMN.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "columnHeader",
+          "index": 2,
+          "kind": "Text",
+          "text": "'当前章节'",
+          "original": {
+            "fontSize": "8",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_COLUMN.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_COLUMN.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "loadingBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "isSwitching ? '正在切换书源…' : '正在搜索书源…'",
+          "original": {
+            "lineHeight": "20",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_LOADING_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_LOADING_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_LOADING_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_LOADING_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "messageBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "title",
+          "original": {
+            "lineHeight": "22",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "messageBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "subtitle",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_MESSAGE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_MESSAGE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书源搜索失败'",
+          "original": {
+            "lineHeight": "22",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "message",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_MESSAGE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_MESSAGE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "errorBody",
+          "index": 2,
+          "kind": "Text",
+          "text": "'重试'",
+          "original": {
+            "lineHeight": "12",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_RECOVERY.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_RECOVERY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "failureBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "'换源失败'",
+          "original": {
+            "lineHeight": "22",
+            "fontSize": "15",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_STATE_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_STATE_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_STATE_TITLE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_STATE_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "failureBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "message",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_MESSAGE.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_MESSAGE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "failureBody",
+          "index": 2,
+          "kind": "Text",
+          "text": "'撤销切换'",
+          "original": {
+            "lineHeight": "12",
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_RECOVERY.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_RECOVERY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "footer",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.footerText()",
+          "original": {
+            "lineHeight": "12",
+            "fontSize": "8",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SOURCE_SWITCH_FOOTER.lineHeightFp as number",
+            "fontSize": "TYPE_SOURCE_SWITCH_FOOTER.fontSizeFp",
+            "fontWeight": "TYPE_SOURCE_SWITCH_FOOTER.fontWeight",
+            "fontFamily": "TYPE_SOURCE_SWITCH_FOOTER.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "sha256": "96e6b718b31ef1ea1b05ae6c1a0f5644c123772916c3a8dcce9d1453440df4a1",
+      "roleImport": "import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "sectionHeadingDark",
+          "index": 0,
+          "kind": "Text",
+          "text": "title",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SECTION_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "sectionHeadingMuted",
+          "index": 0,
+          "kind": "Text",
+          "text": "title",
+          "original": {
+            "letterSpacing": "1.1",
+            "fontSize": "11",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "letterSpacing": "TYPE_SYNC_MUTED_HEADING.letterSpacingFp as number",
+            "fontSize": "TYPE_SYNC_MUTED_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_MUTED_HEADING.fontWeight",
+            "fontFamily": "TYPE_SYNC_MUTED_HEADING.fontFamily"
+          },
+          "extra": {
+            "letterSpacing": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "webdavSection",
+          "index": 0,
+          "kind": "Text",
+          "text": "'连接信息'",
+          "original": {
+            "lineHeight": "15.6",
+            "fontSize": "13",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SECTION_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_SECTION_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_SECTION_HEADING.fontWeight",
+            "fontFamily": "TYPE_SECTION_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "webdavInputRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "lineHeight": "15.34",
+            "fontSize": "13",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_ROW_LABEL.lineHeightFp as number",
+            "fontSize": "TYPE_APP_ROW_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_ROW_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_ROW_LABEL.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "webdavInputRow",
+          "index": 1,
+          "kind": "TextInput",
+          "text": "{ text: value, placeholder: placeholder }",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_INPUT.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_INPUT.fontWeight",
+            "fontFamily": "TYPE_SYNC_INPUT.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "webdavInputRow",
+          "index": 2,
+          "kind": "TextInput",
+          "text": "{ text: value, placeholder: placeholder }",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_INPUT.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_INPUT.fontWeight",
+            "fontFamily": "TYPE_SYNC_INPUT.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "configActions",
+          "index": 0,
+          "kind": "Text",
+          "text": "'测试网络连通性'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "configActions",
+          "index": 1,
+          "kind": "Text",
+          "text": "'保存配置'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "manualActionsSection",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.snapshot.statusMessage",
+          "original": {
+            "lineHeight": "18",
+            "fontSize": "12",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_FORM_STATUS.lineHeightFp as number",
+            "fontSize": "TYPE_FORM_STATUS.fontSizeFp",
+            "fontFamily": "TYPE_FORM_STATUS.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "manualActionButton",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "900",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "restoreConflictCard",
+          "index": 0,
+          "kind": "Text",
+          "text": "'检测到本机与远端完整备份不同'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_LABEL_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_LABEL_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_LABEL_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "restoreConflictCard",
+          "index": 1,
+          "kind": "Text",
+          "text": "`备份 ${conflict.backupId} · 本机 ${conflict.localChecksum.substring(0, 8)}… · 远端 ${conflict.remoteChecksum.substring(0, 8)}…`",
+          "original": {
+            "lineHeight": "17",
+            "fontSize": "11",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SYNC_CONFLICT_META.lineHeightFp as number",
+            "fontSize": "TYPE_SYNC_CONFLICT_META.fontSizeFp",
+            "fontFamily": "TYPE_SYNC_CONFLICT_META.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "gatedRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_ROW_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_ROW_LABEL.fontWeight",
+            "fontFamily": "TYPE_SYNC_ROW_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "gatedRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "value",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "scopeRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "'备份范围'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_ROW_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_ROW_LABEL.fontWeight",
+            "fontFamily": "TYPE_SYNC_ROW_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "scopeRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.scopeSummary()",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_FORM_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_FORM_ACTION.fontWeight",
+            "fontFamily": "TYPE_FORM_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "emptyState",
+          "index": 0,
+          "kind": "Text",
+          "text": "'暂无备份记录'",
+          "original": {
+            "lineHeight": "20",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_APP_LOADING_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_APP_LOADING_BODY.fontSizeFp",
+            "fontWeight": "TYPE_APP_LOADING_BODY.fontWeight",
+            "fontFamily": "TYPE_APP_LOADING_BODY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "emptyState",
+          "index": 1,
+          "kind": "Text",
+          "text": "'立即备份'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_SYNC_BACKUP_ACTION.lineHeightFp as number",
+            "fontSize": "TYPE_SYNC_BACKUP_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_BACKUP_ACTION.fontWeight",
+            "fontFamily": "TYPE_SYNC_BACKUP_ACTION.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "historyRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "entry.destination",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_SMALL_LABEL.fontSizeFp",
+            "fontWeight": "TYPE_APP_SMALL_LABEL.fontWeight",
+            "fontFamily": "TYPE_APP_SMALL_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "historyRow",
+          "index": 1,
+          "kind": "Text",
+          "text": "entry.timestamp",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_INPUT.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_INPUT.fontWeight",
+            "fontFamily": "TYPE_SYNC_INPUT.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "historyRow",
+          "index": 2,
+          "kind": "Text",
+          "text": "entry.ok ? '成功' : '失败'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_HISTORY_STATUS.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_HISTORY_STATUS.fontWeight",
+            "fontFamily": "TYPE_SYNC_HISTORY_STATUS.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "historyRow",
+          "index": 3,
+          "kind": "Text",
+          "text": "`${(entry.size / 1048576).toFixed(1)} MB`",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_SYNC_INPUT.fontSizeFp",
+            "fontWeight": "TYPE_SYNC_INPUT.fontWeight",
+            "fontFamily": "TYPE_SYNC_INPUT.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "expandRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "'展开'",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_COMPACT_BADGE.fontSizeFp",
+            "fontWeight": "TYPE_APP_COMPACT_BADGE.fontWeight",
+            "fontFamily": "TYPE_APP_COMPACT_BADGE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    }
+  ]
+}

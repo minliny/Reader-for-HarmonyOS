@@ -464,8 +464,12 @@ export function beginReaderControlDragSegment(state: ReaderControlSessionState,
   if (transition !== undefined) {
     const spatiallyStatic = transition.from.expansionProgress === transition.to.expansionProgress &&
       transition.from.visibilityProgress === transition.to.visibilityProgress;
+    // Full -> Quick owns the whole expansion path. Downward travel may enter
+    // MR1 dismissal only after reaching Quick, including when retracing an
+    // automatic expansion. Treating the Full endpoint as a close boundary
+    // made a downward grab fade the whole Full panel within MR1's 18vp travel.
     const morphIntoClose = transition.kind === 'morph' && direction === 'down' &&
-      (frame.expansionProgress === 0 || frame.expansionProgress === 1);
+      frame.expansionProgress === 0;
     const closeIntoMorph = transition.kind === 'dismiss' && direction === 'up' &&
       frame.expansionProgress === 0 && frame.visibilityProgress === transition.from.visibilityProgress;
     const crossesSpatialSegment = morphIntoClose || closeIntoMorph;
@@ -483,11 +487,13 @@ export function beginReaderControlDragSegment(state: ReaderControlSessionState,
   const location = readerControlContentLocation(source);
   if (direction === 'up' && location.level !== 'secondary') return state;
   if (direction === 'up' && location.form === 'full') return state;
-  const target = direction === 'down' ? defaultLocation('hidden') : copyReaderControlLocation(location);
-  if (direction === 'up') target.form = 'full';
-  const next = startTransition(source, target, direction === 'down' ? 'dismiss' : 'morph',
-    direction === 'down' ? 'dismiss' : 'forward', durationMs, false);
-  if (direction === 'down' && transition !== undefined && next.transition !== undefined) {
+  const collapsesFull = direction === 'down' && location.level === 'secondary' && location.form === 'full';
+  const dismisses = direction === 'down' && !collapsesFull;
+  const target = dismisses ? defaultLocation('hidden') : copyReaderControlLocation(location);
+  if (!dismisses) target.form = direction === 'up' ? 'full' : 'quick';
+  const next = startTransition(source, target, dismisses ? 'dismiss' : 'morph',
+    dismisses ? 'dismiss' : collapsesFull ? 'back' : 'forward', durationMs, false);
+  if (dismisses && transition !== undefined && next.transition !== undefined) {
     const interrupted = interruptedOperation(state);
     if (interrupted !== undefined) next.transition.interruptedOperation = interrupted;
   }

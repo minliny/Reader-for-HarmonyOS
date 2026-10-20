@@ -67,14 +67,79 @@ assert.equal(short.topEndX, withoutBookmark.topEndX, 'the bookmark no longer pus
 assert.equal(short.topStartX, withoutBookmark.topStartX, 'the bookmark never shifts the title outer edge');
 assert.ok(short.topAccessoryX + short.topAccessoryWidth < short.topEndX);
 assert.ok(short.topStartX + short.topStartMaxWidth < short.topAccessoryX);
-assert.equal(geometry(36, 24, false).topEndY - short.topEndY, 36,
-  'normal and extended mode move the whole native-height line by one real status region');
+assert.equal(geometry(36, 24, false).topEndY, short.topEndY,
+  'both cutout settings centre the native-height line in the same measured status region');
 
 layout = reading();
 layout.pageChromeStatusMetrics.statusBarRect = new Rect(20, 0, 350, 48);
 const inset = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(100, 21, 40, 21));
 assert.equal(inset.topStartX, 44, 'window-relative status origin participates in the left track');
 assert.equal(inset.topEndX + 40, 346, 'status width participates in the right track');
+
+// Same-device pixel oracle: status 137px, AUTO line 57px, original app digit
+// centre 66.5px vs system 78.5px. Proportional placement moves the line from
+// 40px to 51.4px (within 1px of the observed optical alignment).
+const pixelPage = reading(137 / 3.5);
+const pixelChrome = resolveReaderPageChromeLayout(pixelPage,
+  new ReaderPageChromeMeasurements(100, 57 / 3.5, 40, 57 / 3.5));
+assert.ok(Math.abs(pixelChrome.topEndY * 3.5 - 51.4) < 1e-9);
+assert.ok(Math.abs((pixelChrome.topEndY * 3.5 + 26.5) - 78.5) < 1);
+
+const expectedTextTop = (top, height, text) => top +
+  Math.min(Math.max(0, height - text), Math.max(0, height - text) / 2 + text * 0.2);
+
+// A cutout or measured-text clearance can enlarge the body's top lane. The
+// visible labels still belong to the retained system-status rectangle.
+let proportionalCases = 0;
+for (const statusHeight of [18, 24, 39, 60]) for (const top of [0, 3]) {
+  for (const [titleHeight, clockHeight] of [[10, 16], [21, 21], [40, 60]]) {
+    for (const accessory of [0, 24, 48]) for (const visible of [false, true]) {
+      const metrics = new Metrics();
+      Object.assign(metrics, { ready: true, windowRect: new Rect(0, 0, 390, 844),
+        statusBarHeight: statusHeight, statusBarRect: new Rect(0, top, 390, statusHeight) });
+      metrics.systemInsets.top = visible ? statusHeight : 0;
+      metrics.cutoutInsets.top = statusHeight + 70;
+      const page = resolveReaderReadingLayout(390, 844, false, metrics, true, undefined,
+        Math.max(titleHeight, clockHeight));
+      const actual = resolveReaderPageChromeLayout(page, new ReaderPageChromeMeasurements(
+        100, titleHeight, 40, clockHeight, 0, 0, 0, 0, false, 0, 0, accessory, accessory));
+      assert.equal(actual.topStartY, expectedTextTop(top, statusHeight, titleHeight),
+        'title uses its own measured height against the actual status rectangle');
+      assert.equal(actual.topEndY, expectedTextTop(top, statusHeight, clockHeight),
+        'clock is not displaced by body clearance, a taller title or bookmark');
+      assert.ok(actual.topStartY + titleHeight + 8 <= page.contentTop);
+      assert.ok(actual.topEndY + clockHeight + 8 <= page.contentTop);
+      if (accessory > 0) {
+        assert.ok(actual.topAccessoryHeight <= statusHeight);
+        assert.equal(actual.topAccessoryY, top + (statusHeight - actual.topAccessoryHeight) / 2);
+      }
+      proportionalCases++;
+    }
+  }
+}
+
+const cutoutMetrics = new Metrics();
+Object.assign(cutoutMetrics, { ready: true, windowRect: new Rect(0, 0, 390, 844),
+  statusBarHeight: 24, statusBarRect: new Rect(0, 3, 390, 24),
+  statusBarCutoutRect: new Rect(165, 10, 60, 100) });
+const cutoutPage = resolveReaderReadingLayout(390, 844, false, cutoutMetrics, true, undefined, 16);
+const cutoutChrome = resolveReaderPageChromeLayout(cutoutPage,
+  new ReaderPageChromeMeasurements(200, 16, 40, 10, 0, 0, 0, 0, false, 0, 0, 24, 24));
+assert.equal(cutoutChrome.topStartY, 10.2);
+assert.equal(cutoutChrome.topEndY, 12);
+assert.ok(cutoutChrome.topStartX + cutoutChrome.topStartMaxWidth <= 160,
+  'cutout checks use the newly positioned row rather than the expanded body lane');
+assert.ok(cutoutChrome.topEndX >= 230);
+
+for (const invalidHeight of [0, -1, NaN, Infinity]) {
+  const fallback = reading(0);
+  fallback.pageChromeStatusMetrics.statusBarRect.height = invalidHeight;
+  const actual = resolveReaderPageChromeLayout(fallback,
+    new ReaderPageChromeMeasurements(100, 21, 40, 21, 0, 0, 0, 0, false, 0, 0, 24, 24));
+  assert.equal(actual.topStartY, 26.5, 'unknown/invalid status height retains the authored fallback');
+  assert.equal(actual.topEndY, 26.5);
+}
+console.log(`PASS ${proportionalCases} proportional status positions: expanded clearance, separate text heights, bookmark, visibility, cutout and fallback`);
 
 const TopStyleOwner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url),
   ['topTextStyle'], {readerPageChromeTopTextStyle});

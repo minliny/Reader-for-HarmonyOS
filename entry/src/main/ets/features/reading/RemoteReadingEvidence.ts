@@ -1,4 +1,5 @@
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
+import { mergeRemoteReadingVariables } from './RemoteReadingContract';
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
 import { captureRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 
@@ -24,6 +25,27 @@ export function sameRemoteSessionEvidence(
     return left.catalogVersion === right.catalogVersion && left.contextVersion === right.contextVersion;
   }
   return left.entries === right.entries && left.continuationVariables === right.continuationVariables;
+}
+
+/** A full refreshed catalog may extend a mounted reader only when every
+ * existing chapter still has the same effective chapter.content request.
+ * contextVersion may change for a refreshed token; the merged variables,
+ * rather than their layer/order, decide whether existing bodies stay valid. */
+export function canAppendRemoteReadingCatalog(previous: RemoteReadingSession, next: RemoteReadingSession): boolean {
+  if (previous.identity.sourceId !== next.identity.sourceId || previous.identity.bookId !== next.identity.bookId ||
+    previous.sourceVersion === undefined || previous.sourceVersion !== next.sourceVersion ||
+    next.catalogVersion === undefined || next.contextVersion === undefined ||
+    next.entries.length < previous.entries.length ||
+    (previous.catalogVersion === next.catalogVersion && previous.entries.length !== next.entries.length)) return false;
+  for (let position = 0; position < previous.entries.length; position += 1) {
+    const before = previous.entries[position], after = next.entries[position];
+    if (before.index !== after.index || before.title !== after.title || before.url !== after.url) return false;
+    const oldVariables = mergeRemoteReadingVariables(previous.continuationVariables, before.variables);
+    const newVariables = mergeRemoteReadingVariables(next.continuationVariables, after.variables);
+    if (oldVariables.length !== newVariables.length || oldVariables.some((value, index): boolean =>
+      value.name !== newVariables[index].name || value.value !== newVariables[index].value)) return false;
+  }
+  return true;
 }
 
 export function preparedRemoteChapterMatches(prepared: RemoteReadingPreparedChapter | undefined,

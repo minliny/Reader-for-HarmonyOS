@@ -15,24 +15,45 @@ export struct ReaderDirectoryToolbar {
   onBottom: () => void = (): void => {};
   onToggleSort: () => void = (): void => {};
 
-  private icon(kind: string): Resource {
-    if (kind === 'search') return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search');
-    if (kind === 'top') return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_top_theme_night') : $r('app.media.reader_directory_top');
-    if (kind === 'bottom') return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_bottom_theme_night') : $r('app.media.reader_directory_bottom');
-    if (this.ascending) return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_ascending');
-    return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_sort_descending_theme_night') : $r('app.media.reader_directory_sort_descending');
-  }
-
   @Builder
   private tool(kind: string, title: string, action: () => void) {
-    Stack() { Image(this.icon(kind)).width(16).height(16); }
+    Stack({ alignContent: Alignment.Center }) {
+      // Keep exactly one native image, with explicit resource branches. This
+      // preserves the device-safe lookup without stacking a second copy.
+      if (kind === 'search') {
+        if (this.appThemeScheme === 'night') {
+          Image($r('app.media.reader_directory_search_theme_night')).width(24).height(24);
+        } else {
+          Image($r('app.media.reader_directory_search')).width(24).height(24);
+        }
+      } else if (kind === 'top') {
+        if (this.appThemeScheme === 'night') {
+          Image($r('app.media.reader_directory_top_theme_night')).width(24).height(24);
+        } else {
+          Image($r('app.media.reader_directory_top')).width(24).height(24);
+        }
+      } else if (kind === 'bottom') {
+        if (this.appThemeScheme === 'night') {
+          Image($r('app.media.reader_directory_bottom_theme_night')).width(24).height(24);
+        } else {
+          Image($r('app.media.reader_directory_bottom')).width(24).height(24);
+        }
+      } else if (this.ascending) {
+        if (this.appThemeScheme === 'night') {
+          Image($r('app.media.reader_directory_sort_ascending_theme_night')).width(24).height(24);
+        } else {
+          Image($r('app.media.reader_directory_sort_ascending')).width(24).height(24);
+        }
+      } else {
+        if (this.appThemeScheme === 'night') {
+          Image($r('app.media.reader_directory_sort_descending_theme_night')).width(24).height(24);
+        } else {
+          Image($r('app.media.reader_directory_sort_descending')).width(24).height(24);
+        }
+      }
+    }
       .width(32).height(32).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
-      .accessibilityText(title).onClick(action);
+      .accessibilityText(title).accessibilityRole(AccessibilityRoleType.BUTTON).focusable(true).onClick(action);
   }
 
   build() {

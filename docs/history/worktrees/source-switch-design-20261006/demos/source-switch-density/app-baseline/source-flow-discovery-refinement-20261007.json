@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-07T02:03:52.405Z",
+  "reference": "Selected third source-switch drawer; this discovery-row refinement awaits user visual review",
+  "request": "查找结果与重新查找所在行不明显",
+  "codeFinding": "Transparent toolbar with muted single-line status resembled adjacent column header; completion hid the activity glyph but retained its empty space.",
+  "changes": {
+    "toolbar": {
+      "height": 44,
+      "marginBottom": 6,
+      "radius": 8,
+      "inset": 10,
+      "background": "var(--primary-soft)",
+      "border": "var(--line)"
+    },
+    "count": {
+      "fontSize": 13,
+      "narrowFontSize": 12,
+      "fontWeight": 500,
+      "lineHeight": 20
+    },
+    "phase": {
+      "fontSize": 10,
+      "lineHeight": 14
+    },
+    "action": {
+      "minWidth": 78,
+      "minHeight": 34,
+      "radius": 7,
+      "border": "green at 30 percent",
+      "background": "var(--solid)"
+    },
+    "indicator": "Fixed 18px slot: independent running ring, idle existing search_mag SVG",
+    "update": "Count, phase and accessible status update in place; existing candidate nodes and model owner preserved"
+  },
+  "files": [
+    {
+      "path": "source-flow.css",
+      "sha256": "aea13c30367c1ef65e2b38ccb4fc1da8ba5852c25132d57123c29bc4131846ad",
+      "bytes": 12024
+    },
+    {
+      "path": "source-flow-renderer.mjs",
+      "sha256": "38aa7e8ae2db216d6e8355c8259f83c0089829c4aa11a4d98d55f2f555bdb9e9",
+      "bytes": 3937
+    },
+    {
+      "path": "source-flow.mjs",
+      "sha256": "23c6ebb187e40a7384bf9e4f220fd60667ea9df67c50daaa5d9872c22f1c6d23",
+      "bytes": 11720
+    },
+    {
+      "path": "source-flow.bundle.js",
+      "sha256": "989c8e900c32a892017d6c4250c28be91f64455f2722fc129b247c165409b25f",
+      "bytes": 206420
+    },
+    {
+      "path": "index.html",
+      "sha256": "6915b36b8fc869214586bc931c120080d90d749ba8f4082e0422f617986bae36",
+      "bytes": 3278
+    }
+  ],
+  "verification": {
+    "bundle": "esbuild 0.28.2 PASS",
+    "bundleSyntax": "PASS",
+    "rendererTemplates": 21,
+    "switchTemplates": 3,
+    "pointerContracts": 5,
+    "modelChecks": 11,
+    "resources": "PASS",
+    "browserVisual": "OPEN",
+    "browserBlocker": "Existing file URL was rejected by browser security policy; no alternate HTTP/CDP/browser workaround attempted",
+    "native": "NOT_CHANGED"
+  },
+  "scope": "Independent demo only. Successful candidates and real-model discovery semantics remain unchanged."
+}

@@ -52,7 +52,10 @@ assert.equal(state.writeUncertain, true, 'a failed reconciliation read cannot au
 assert.throws(() => s.beginReaderControlReplaceMutation(state));
 state = s.beginReaderControlReplaceLoad(state);
 state = s.admitReaderControlReplaceLoad(state, s.readerControlReplaceTicket(state), [rule(91)]);
-assert.equal(state.writeUncertain, false, 'fresh canonical facts can be reviewed before a new explicit action');
+assert.equal(state.writeUncertain, true, 'fresh canonical facts cannot settle the original unknown write');
+assert.throws(() => s.beginReaderControlReplaceMutation(state));
+state = s.admitReaderControlReplaceLoad(s.beginReaderControlReplaceLoad(s.createReaderControlReplaceState('independent-runtime')),
+  { sessionKey: 'independent-runtime', revision: 1 }, [rule(91)]);
 
 state = s.beginReaderControlReplaceMutation(state);
 state = s.admitReaderControlReplaceImport(state, s.readerControlReplaceTicket(state));

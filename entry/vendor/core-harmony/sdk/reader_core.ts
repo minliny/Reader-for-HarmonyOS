@@ -7,6 +7,7 @@ export type ReaderCoreAssetBridge = {
   begin(requestId: number, operationId: number, declaredBytes: number): number;
   write(requestId: number, operationId: number, assetId: number, chunk: Uint8Array): number;
   commit(requestId: number, operationId: number, assetId: number): number;
+  read?(requestId: number, operationId: number, assetId: number, offset: number, limit: number): Promise<Uint8Array>;
   release(requestId: number, operationId: number, assetId: number): void;
 };
 
@@ -29,6 +30,7 @@ export type NativeReaderCoreModule = {
   acknowledgeEvent?(runtime: NativeRuntimeHandle, deliveryId: number): void;
   beginAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, declaredBytes: number): number;
   writeAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number, chunk: Uint8Array): number;
+  readAssetAsync?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number, offset: number, limit: number): Promise<Uint8Array>;
   commitAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number): number;
   releaseAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number): void;
   completeHostRequest(
@@ -49,6 +51,50 @@ export type NativeReaderCoreModule = {
 };
 
 export type ReaderCoreLastError = { code: number; message: string };
+
+/** Content-free native terminal observation, never a result or wire copy. */
+export type ReaderCoreTerminalMetadata = {
+  requestId: number;
+  method: string;
+  type: "result" | "error";
+  wireUtf16Units: number;
+};
+
+// Only literal protocol names may enter public diagnostic metadata. Unknown
+// extension methods must not expose caller-controlled strings.
+const TERMINAL_DIAGNOSTIC_METHODS = new Set<string>([
+  "core.info", "runtime.ping", "runtime.hostSmoke", "runtime.status",
+  "runtime.storage.restore", "runtime.storage.flush", "runtime.storage.export", "runtime.storage.apply",
+  "source.list", "source.import", "source.supply", "source.update", "source.delete",
+  "book.search", "book.detail", "book.toc", "chapter.content",
+  "bookshelf.list", "bookshelf.get", "bookshelf.add", "bookshelf.book.update",
+  "local_book.toc", "local_book.content.metrics", "local_book.chapter.content",
+  "local_book.navigation.backfill.v1", "reading.preparation", "reading.entry.prepare",
+  "reading.entry.snapshot", "reading.document.window", "reading.catalog.page",
+  "reading.directory.view.open.v1", "reading.directory.view.page.v1", "reading.directory.view.target.resolve.v1",
+  "reading.directory.view.open.v2", "reading.directory.view.page.v2", "reading.directory.target.resolve.v2",
+  "reading.directory.rules.get.v2", "reading.directory.rules.prepare.v2",
+  "reading.directory.rules.preview.v2", "reading.directory.rules.apply.v2",
+  "reading.progress.get", "reading.progress.update", "reader.location.resolve",
+  "cache.book.status", "cache.book.prefetch", "read-record.accumulate", "read-record.accumulate-receipt",
+  "tts.slice", "tts.chapter.plan", "tts.queue.status", "tts.queue.play", "tts.queue.pause",
+  "tts.queue.resume", "tts.queue.stop", "tts.queue.next", "tts.queue.prev", "tts.queue.seek",
+  "tts.queue.skip", "tts.queue.set-rate", "tts.queue.report-status", "tts.queue.report-callback",
+  "tts.config.get", "tts.config.put",
+]);
+
+// Fixed, non-content-bearing admission diagnostics from capacity.rs/runtime.rs.
+// Do not forward arbitrary native error text: it can contain command data.
+const SAFE_ADMISSION_REASONS = new Set<string>([
+  // Fixed direct-Runtime/legacy bridge reason; current NAPI rejects the wire
+  // length before FFI send, with a different error which must remain unchanged.
+  "command exceeds the wire byte limit",
+  "runtime input byte budget is occupied",
+  "runtime result reservation contract failed; drain and recreate",
+  "runtime input class byte budget is occupied",
+  "runtime request or terminal budget is occupied",
+  "runtime lane is occupied",
+]);
 
 export type ReaderCoreCommand = {
   protocolVersion: 1;
@@ -143,13 +189,17 @@ export type CapabilityCancellationHandler = (
  *     Legado idiom `resp.raw().request().url()`. Omit when no redirect was
  *     observed and Core will fall back to the request URL.
  */
-export interface HttpFetch {
-  fetch(request: {
+export interface HttpFetchRequest {
     url: string;
     method: string;
     headers: Record<string, string>;
     body?: string;
-  }): Promise<JsonObject>;
+    /** Shared transport ceiling, including redirects and retries. */
+    timeoutMs?: number;
+}
+
+export interface HttpFetch {
+  fetch(request: HttpFetchRequest): Promise<JsonObject>;
 }
 
 export class CapabilityRouter {
@@ -226,7 +276,14 @@ export class CapabilityRouter {
       }
     }
     const body = typeof params.body === "string" ? params.body : undefined;
-    return this.httpFetch.fetch({ url, method, headers, body });
+    const request: HttpFetchRequest = { url, method, headers, body };
+    if (params.timeoutMs !== undefined) {
+      if (typeof params.timeoutMs !== "number" || !Number.isSafeInteger(params.timeoutMs) || params.timeoutMs <= 0) {
+        throw new Error("http.execute timeoutMs must be a positive integer");
+      }
+      request.timeoutMs = params.timeoutMs;
+    }
+    return this.httpFetch.fetch(request);
   }
 }
 
@@ -248,6 +305,8 @@ export class ReaderCoreRuntime {
   readonly deliveryMode: "explicitAck" | "legacyCallback";
   private readonly consumedDeliveries = new WeakSet<object>();
   private readonly acceptedRequestIds = new Set<number>();
+  private readonly diagnosticRequestMethods = new Map<number, string>();
+  private readonly terminalMetadata: ReaderCoreTerminalMetadata[] = [];
   // Both indexes own only unread events. Ordered sets let either reader remove
   // a payload from both indexes immediately, without scans or retained tombstones.
   private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();
@@ -318,6 +377,10 @@ export class ReaderCoreRuntime {
         native.writeAsset!(runtime, requestId, operationId, assetId, chunk),
       commit: (requestId, operationId, assetId): number =>
         native.commitAsset!(runtime, requestId, operationId, assetId),
+      read: native.readAssetAsync === undefined ? undefined : (requestId, operationId, assetId, offset, limit): Promise<Uint8Array> => {
+        if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit <= 0 || limit > 1048576) return Promise.reject(new Error('Invalid asset read range'));
+        return native.readAssetAsync!(runtime, requestId, operationId, assetId, offset, limit);
+      },
       release: (requestId, operationId, assetId): void =>
         native.releaseAsset!(runtime, requestId, operationId, assetId),
     };
@@ -326,6 +389,11 @@ export class ReaderCoreRuntime {
   get pendingEventCount(): number {
     this.discardAbandonedPendingEvents();
     return this.pendingEventCountValue + this.native.pendingEventCount(this.runtime);
+  }
+
+  /** Fresh bounded values only; callers cannot mutate or retain Core payloads. */
+  get recentTerminalMetadata(): ReaderCoreTerminalMetadata[] {
+    return this.terminalMetadata.map((item) => ({ ...item }));
   }
 
   close(): void {
@@ -353,6 +421,8 @@ export class ReaderCoreRuntime {
     this.activeHostRequests.clear();
     this.abandonedRequestIds.clear();
     this.acceptedRequestIds.clear();
+    this.diagnosticRequestMethods.clear();
+    this.terminalMetadata.length = 0;
     this.native.releaseRuntime(this.runtime);
   }
 
@@ -397,8 +467,36 @@ export class ReaderCoreRuntime {
       params,
     };
     this.abandonedRequestIds.delete(requestId);
-    this.native.sendCommand(this.runtime, command);
+    try {
+      this.native.sendCommand(this.runtime, command);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Reader-Core command was not admitted") {
+        const code = (error as Error & { code?: string }).code;
+        if (code === "BUSY" || code === "RESOURCE_EXHAUSTED") {
+          try {
+            // Peek immediately, on the throwing thread, before any other
+            // native call can clear its errno-style diagnostic slot.
+            const detail = this.native.lastError();
+            // ABI v1 structured error codes, not RC_SEND_* return statuses.
+            if (detail.code === (code === "BUSY" ? 9 : 10) && SAFE_ADMISSION_REASONS.has(detail.message)) {
+              error.message += `: ${detail.message}`;
+            }
+          } catch (_) {
+            // Older/malformed bridges and failed diagnostics keep the exact
+            // original error. No retry and no fabricated acceptance/result.
+          }
+        }
+      }
+      throw error;
+    }
     if (this.deliveryMode === "explicitAck") this.acceptedRequestIds.add(requestId);
+    this.diagnosticRequestMethods.set(requestId, TERMINAL_DIAGNOSTIC_METHODS.has(method) ? method : "unknown");
+    if (this.diagnosticRequestMethods.size > 256) {
+      for (const oldest of this.diagnosticRequestMethods.keys()) {
+        this.diagnosticRequestMethods.delete(oldest);
+        break;
+      }
+    }
     return requestId;
   }
 
@@ -734,6 +832,13 @@ export class ReaderCoreRuntime {
       // Closing settles waiters and releases the runtime-owned quota.
       if (this.deliveryMode === "explicitAck") this.close();
       throw error;
+    }
+    if (event.type === "result" || event.type === "error") {
+      this.terminalMetadata.push({ requestId: event.requestId,
+        method: this.diagnosticRequestMethods.get(event.requestId) ?? "unknown",
+        type: event.type, wireUtf16Units: raw.length });
+      this.diagnosticRequestMethods.delete(event.requestId);
+      if (this.terminalMetadata.length > 16) this.terminalMetadata.shift();
     }
     return this.discardAbandonedEvent(event) ? null : event;
   }

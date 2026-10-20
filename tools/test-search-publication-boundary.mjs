@@ -1,10 +1,17 @@
-import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
-import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"import-boundary": {"description": "实际纯TS publication模块SDK语义边界与TS→ETS 28017负例", "resources": []}, "progress-publication": {"description": "实际Index→Search SDK标量修订/保留1000rows/0拷贝0list通知及真实deepCopy反例", "resources": []}, "shelf-publication": {"description": "实际Index shelf callback只标量更新membership不替换query payload", "resources": []}, "query-remount": {"description": "实际新query与编译child重建读当前stable publication", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { createHash } = await import('node:crypto');
+const { fileURLToPath } = await import('node:url');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { actualProjectionTypes } = await import('./lib/bookshelf-projection-owner-probe.mjs');
+
 
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
@@ -13,8 +20,7 @@ const read = name => readFileSync(new URL(name, prefix), 'utf8');
 const clean = text => text.replace(/^import[\s\S]*?;\n/gm, '');
 const evaluate = async text => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(text)).toString('base64')}`);
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const compilerOptions = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
@@ -23,6 +29,7 @@ const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 // negative-control declaration keeps the actual SDK-resolved .ets extension.
 const checker = require(`${sdkRoot}/lib/ets_checker.js`);
 const publicationPath = fileURLToPath(new URL('features/search/SearchPublication.ts', prefix));
+const viewStatePath = fileURLToPath(new URL('features/search/SearchViewState.ts', prefix));
 const presentationPath = fileURLToPath(new URL('features/search/SearchPresentation.ts', prefix));
 const pagePath = fileURLToPath(new URL('features/search/SearchPage.ets', prefix));
 const boundaryDiagnostics = previousImport => {
@@ -33,8 +40,11 @@ const boundaryDiagnostics = previousImport => {
     [publicationPath, previousImport ? read('features/search/SearchPublication.ts')
       .replace("from './SearchPresentation'", "from './SearchPage'") : read('features/search/SearchPublication.ts')],
     [presentationPath, read('features/search/SearchPresentation.ts')],
+    [viewStatePath, read('features/search/SearchViewState.ts')],
     [fileURLToPath(new URL('features/search/SearchGateway.ts', prefix)),
       'export interface SearchBook {} export interface SearchResultDelta {} export interface SearchSource {}'],
+    [fileURLToPath(new URL('app/ReaderOperationFacts.ts', prefix)),
+      'export interface OperationFacts<T> {}'],
     [fileURLToPath(new URL('app/ReaderCoreGateway.ts', prefix)), 'export interface ShelfBook {}'],
     [pagePath, 'export type { SearchPresentation } from "./SearchPresentation";'],
   ]);
@@ -48,15 +58,17 @@ const boundaryDiagnostics = previousImport => {
   try {
     compilerOptions.moduleResolution = ts.ModuleResolutionKind.NodeJs;
     host.resolveModuleNames = (names, from) => checker.resolveModuleNames(names, from);
-    const program = ts.createProgram([publicationPath, presentationPath], options, host);
+    const program = ts.createProgram([publicationPath, presentationPath, viewStatePath], options, host);
     return program.getSyntacticDiagnostics().concat(program.getSemanticDiagnostics());
   } finally { compilerOptions.moduleResolution = originalResolution; }
 };
+if(selectedCase==='import-boundary'){
 const formerDiagnostics = boundaryDiagnostics(true);
 assert.equal(formerDiagnostics.length, 1, 'negative control has exactly one SDK diagnostic');
 assert.equal(formerDiagnostics[0].code, 28017, 'SDK rejects TS→ETS type imports');
 assert.deepEqual(boundaryDiagnostics(false), [], 'SDK accepts actual pure-TS publication/presentation modules');
-const parse = source => ts.createSourceFile('/tmp/SearchPublicationBoundary.ets', source,
+return;}
+const parse = source => ts.createSourceFile(virtualFilePath('SearchPublicationBoundary.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, compilerOptions);
 const pageSource = read('features/search/SearchPage.ets'), indexSource = read('pages/Index.ets');
 const pageTree = parse(pageSource), indexTree = parse(indexSource);
@@ -69,13 +81,14 @@ const member = (struct, tree, name) => {
 };
 const runtime = createArkUIPropertyRuntimeProbe();
 const nativeRequests = [];
-globalThis.ReaderRuntimeOwner = { current: () => ({ setReadingPreparationContext() {}, request: async method => {
+const nativeRuntime = { setReadingPreparationContext() {}, request: async method => {
   nativeRequests.push(method); assert.fail(`This boundary test must not request Core/network: ${method}`);
-} }) };
+} };
+globalThis.ReaderRuntimeOwner = { current: () => nativeRuntime };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
 const { SearchOrchestrator, SearchQueryRun } = await evaluate([
   'features/common/BookAuthorMetadata.ts',
-  'app/BookRequestScheduler.ts',
+  'app/BookRequestScheduler.ts', 'app/ReaderOperationFacts.ts',
   'features/source/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/SearchBookProjection.ts',
   'features/search/SearchGateway.ts', 'features/search/SearchOrchestrator.ets',
 ].map(name => clean(read(name))).join('\n') + '\nexport { SearchQueryRun };');
@@ -84,11 +97,8 @@ const { SearchOrchestrator, SearchQueryRun } = await evaluate([
 const { SearchPublication } = await import('../entry/src/main/ets/features/search/SearchPublication.ts');
 const { SearchViewState } = await import('../entry/src/main/ets/features/search/SearchViewState.ts');
 const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
-const classes = pageSource.slice(pageSource.indexOf('@Observed\nclass SearchBookGroup'),
-  pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
-const { SearchBookGroup, SearchResultDataSource } = await evaluate(`
-const DataOperationType = { ADD:'add', DELETE:'delete', CHANGE:'change', RELOAD:'reload', MOVE:'move' };
-${read('features/common/BookAuthorMetadata.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
+const {selectedProductionClasses}=await import('./lib/selected-production-methods.mjs');const author=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts'),media=await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL('features/search/SearchPage.ets',prefix),['SearchBookGroup','SearchResultDataSource'],{...author,...media,DataOperationType:{ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'}});
 let constructedGroups = 0;
 class CountedGroup extends SearchBookGroup {
   constructor(...args) { super(...args); constructedGroups++; }
@@ -96,15 +106,21 @@ class CountedGroup extends SearchBookGroup {
 const nativeStub = name => new Proxy({ name }, { get: (_, key) => key === 'name' ? name : () => {} });
 syntax.componentCollection.customComponents.add('SearchResultCard');
 const childMembers = ['publicationRevision', 'publication', 'presentation', 'shelfBooks', 'viewState',
-  'selectedGroupName', 'visibleGroups', 'acceptedVisibleGroups', 'resultDataSource', 'groupedCategory', 'groupedResultsCache',
+  'selectedGroupName', 'selectedContentType', 'groupedContentType', 'filteredEmptyMessage', 'visibleGroups', 'acceptedVisibleGroups', 'resultDataSource', 'groupedCategory', 'groupedResultsCache',
   'resultProjection', 'projectedGroups', 'projectedGroupKeys', 'projectedGroupIndexes', 'changedGroupKeys',
   'warmupGroups', 'visibleStart', 'visibleEnd', 'viewStateRevision', 'listEpoch', 'restoreEpoch',
-  'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent'];
+  'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent',
+  'operation', 'retryOperation', 'isSweeping', 'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight',
+  'build', 'stateContent', 'searchHeader', 'searchActivity', 'resultStats'];
+const spinnerSource = read('features/search/SearchSpinner.ets');
+class SpinnerBoundary { constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); } }
 const childProbe = createReaderBuilderProbe(pageSource, childMembers, {
   ...runtime.sdk, SearchPublication, SearchViewState, SearchResultProjection,
   SearchBookGroup: CountedGroup, SearchResultDataSource, List: nativeStub('List'), LazyForEach: nativeStub('LazyForEach'),
-  SearchResultCard: class {},
-}, runtime.hooks);
+  SearchResultCard: class {}, SearchSpinner: SpinnerBoundary,
+  readerFloatingBarBottomInset: (_metrics, minimum) => minimum,
+  ReaderWindowCoordinator: { metrics: () => ({}) },
+}, {...runtime.hooks, childSources: {SearchSpinner: spinnerSource}});
 // The parent call is extracted as an actual ArkUI AST expression; argument names
 // and lambdas are never reconstructed in the fixture.
 let searchEntry;
@@ -121,31 +137,67 @@ let initialParams;
 class ActualSearchPage extends childProbe.Component {
   constructor(...args) { initialParams = args[1]; super(...args); }
 }
-const indexMembers = ['searchPublication', 'searchPublicationRevision',
-  'searchOrchestrator', 'getSearchOrchestrator', 'preparePersistedShelfBooks', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
+const indexMembers = ['searchJourneyActive', 'syncSearchDetailCandidates', 'searchHost', 'searchPublicationRevision', 'applyBookshelfState',
+  'getBookshelfProjection', 'applyBookshelfProjection', 'shelfFilter', 'isCurrentRuntime',
+  'searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation'];
 const parentSource = `@Component struct Index {\n${indexMembers.map(name => member(indexStruct, indexTree, name)).join('\n')}
-build() { ${searchEntry}; }\n}`;
+build() { this.searchPageContent(); }\n}`;
+class SearchHostProbe {
+  constructor(onPublicationChanged, isSearchVisible) {
+    this.viewState = new SearchViewState();
+    this.publication = new SearchPublication();
+    this.revision = 0;
+    this.onPublicationChanged = onPublicationChanged;
+    this.isSearchVisible = isSearchVisible;
+    this.orchestrator = undefined;
+  }
+  updateShelf(books) { this.publication.updateShelf(books); this.revision += 1; this.onPublicationChanged(); }
+  sources() { return this.publication.sourcesAt(this.revision); }
+  presentation() { return this.publication.presentationAt(this.revision); }
+  getOrchestrator() {
+    if (this.orchestrator === undefined) {
+      this.orchestrator = new SearchOrchestrator(
+        presentation => { this.publication.publish(presentation); this.revision += 1; this.onPublicationChanged(); },
+        sources => this.publication.updateSources(sources), this.isSearchVisible);
+    }
+    return this.orchestrator;
+  }
+}
+const projectionTypes = actualProjectionTypes(() => nativeRuntime);
 const { owner: host, output: parentOutput } = createReaderBuilderProbe(parentSource,
   [...indexMembers, 'build'], { ...runtime.sdk, SearchPage: ActualSearchPage, LOCAL_SOURCE_ID: 'local', SearchPublication,
-    SearchOrchestrator, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
+    SearchOrchestrator, SearchViewState, SearchHost: SearchHostProbe, ReaderRuntimeOwner: projectionTypes.ReaderRuntimeOwner,
+    hilog: globalThis.hilog, DOMAIN: 0, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
 Object.assign(host, { searchViewState: new SearchViewState(), settingsSnapshot: { reduceMotion: false },
-  route: 'search', searchAppForeground: true, shelfBooks: [], bookshelfLoadGeneration: 1,
-  hydrateShelfSourceNames() {}, scheduleBookshelfBackgroundRefresh() {}, sourceDisplayName: () => '源甲' });
+  route: 'search', searchAppForeground: true, detailReturnRoute: 'search', searchDetailCandidates: [], shelfBooks: [], bookshelfLoadGeneration: 1,
+  mountedRuntimeOwner: nativeRuntime, shelfReceiptRetired: false, navigationGeneration: 1,
+  detailShelfAdmissionMount: 1, rssInstanceIdentity: 'search-publication', shelfReadingFilter: 'all', shelfSourceFilter: 'all', shelfContentFilter: 'all',
+  bookshelfViewState: { anchorKey: '' }, sourceSources: [], sourceToolsSnapshot: { sources: [] },
+  // These preparation/diagnostic leaf notifications are outside this pure
+  // publication boundary. The complete original projection owner, Host and
+  // Index binding perform the shelf/identity/membership transformations.
+  scheduleBookshelfBackgroundRefresh() {}, preparePersistedShelfBooks() {}, traceStartupStage() {} });
+host.bookshelfHost = new projectionTypes.Host(() => {}, () => true, () => nativeRuntime);
 host.initialRender();
 const page = [...host.children.values()][0];
 assert.ok(page instanceof childProbe.Component, 'actual compiled child constructor ran');
-Object.assign(page, { appThemeScheme: 'day', contentFrame: () => ({ width: 390 }), isTablet: false,
+Object.assign(page, { appThemeScheme: 'day', contentFrame: () => ({ width: 390, left: 0, right: 0 }), isTablet: false,
+  groupNames: () => ['本地', '在线'],
+  // Input/filter/activity leaf visuals are outside this publication proof.
+  // The public frame, actual results header/statistics and body remain real.
+  searchBar() {}, groupScopeRow() {}, contentTypeRow() {}, searchActivity() {},
   onVisibleGroups() {}, listMounted: false, pageMounted: true, scrollRestored: true,
   resultScroller: {}, userInteracting: false, userScrolling: false });
 page.acceptPublication();
-assert.equal(page.publication, host.searchPublication);
+assert.equal(page.publication, host.searchHost.publication);
 assert.ok(!('presentation' in initialParams) && !('shelfBooks' in initialParams) && !('sources' in initialParams),
   'initial component arguments carry no full DTO/list payload');
 assert.equal(initialParams.publicationRevision, 0);
-const orchestrator = host.getSearchOrchestrator(); orchestrator.sessionOpen = true;
+const orchestrator = host.searchHost.getOrchestrator(); orchestrator.sessionOpen = true;
 function startRun(keyword, count, suffix) {
   const run = new SearchQueryRun(keyword, `request-${suffix}`);
   run.sources = ['source-a', 'empty-a', 'empty-b'].map(sourceId => ({ sourceId, name: sourceId, enabled: true }));
+  run.totalSourceCount = run.sources.length;
   run.localStatus = 'done'; run.completed.add('source-a');
   const books = Array.from({ length: count }, (_, index) => ({ sourceId: 'source-a', bookId: `${suffix}-${index}`,
     sourceName: '源甲', bookSourceUrl: 'source-a', detailUrl: `${suffix}-${index}`, category: 'novel',
@@ -159,13 +211,16 @@ const first = startRun('当前查询', 1000, 'first');
 assert.equal(page.visibleGroups.length, 1000);
 assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), orchestrator.presentation);
 assert.equal(page.presentation.results, orchestrator.presentation.results);
-page.resultsContent();
-const texts = () => [...page.nodes.values()].filter(node => node.type === 'Text');
-const status = texts().find(node => String(node.create).includes('正在搜索 1/3'));
+page.initialRender();
+const descendants = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? descendants(child) : [])];
+assert.ok(descendants(page).some(child => child.params?.variant === 'search'), 'actual production SearchPage mounts its public Scaffold header/body owners');
+const statusOwner = descendants(page).find(owner => [...owner.nodes.values()].some(node => node.type === 'Text' && String(node.create).includes('正在搜索 1/3')));
+const status = statusOwner && [...statusOwner.nodes.values()].find(node => node.type === 'Text' && String(node.create).includes('正在搜索 1/3'));
 assert.ok(status, 'production progress Text was actually emitted');
-const statusDependencies = runtime.dependencies.get(page).get('presentation');
+const statusDependencies = runtime.dependencies.get(statusOwner).get('presentation');
 assert.ok(statusDependencies.has(status.id), 'actual accepted State.get registers the status observer dependency');
 const retained = page.presentation.results, retainedGroups = page.visibleGroups;
+if(selectedCase==='progress-publication'){
 let listReplacements = 0, listOperations = 0;
 const replace = page.resultDataSource.replace;
 page.resultDataSource.replace = function(...args) { listReplacements++; return replace.apply(this, args); };
@@ -173,7 +228,7 @@ page.resultDataSource.registerDataChangeListener({ onDatasetChange: operations =
 constructedGroups = 0; const copiesBefore = runtime.copies.length, updatesBefore = runtime.updates.length;
 first.sourceResults.set('empty-a', first.admit([])); first.completed.add('empty-a');
 orchestrator.publishRun(first); runtime.flush();
-assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), host.searchPublication.presentationAt(host.searchPublicationRevision));
+assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), host.searchHost.publication.presentationAt(host.searchPublicationRevision));
 assert.equal(page.presentation.results, retained);
 assert.ok(page.presentation.results.every((book, index) => book === retained[index]));
 assert.ok(page.visibleGroups === retainedGroups, 'progress retains the existing State proxy and visible rows');
@@ -188,6 +243,8 @@ assert.equal(progressUpdates.length, 1);
 assert.deepEqual(Object.keys(progressUpdates[0].params).sort(), ['isTablet', 'publicationRevision', 'reduceMotion']);
 assert.equal(progressUpdates[0].params.publicationRevision, host.searchPublicationRevision);
 
+}
+if(selectedCase==='shelf-publication'){
 const beforeShelf = page.presentation;
 host.applyBookshelfState({ kind: 'populated', shelf: { books: [retained[0]] } }); runtime.flush();
 assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), runtime.sdk.ObservedObject.GetRawObject(beforeShelf),
@@ -198,6 +255,8 @@ assert.equal(page.changedGroupKeys.size, 1);
 host.applyBookshelfState({ kind: 'empty', shelf: { books: [] } }); runtime.flush();
 assert.ok(page.visibleGroups.every(group => !group.inBookshelf));
 
+}
+if(selectedCase==='progress-publication'){
 // Preserve the pre-fix counterexample using the same SDK recursive copy and
 // production grouping, not an invented copy/diff algorithm.
 const originalKeys = Object.keys; let copiedObjects = 0, copiedSlots = 0, copied;
@@ -205,10 +264,12 @@ Object.keys = value => { const keys = originalKeys(value); copiedObjects++; copi
 try { copied = runtime.deepCopy(page.presentation); } finally { Object.keys = originalKeys; }
 assert.notEqual(copied.results, page.presentation.results);
 assert.ok(copiedObjects >= 3000); constructedGroups = 0;
-host.searchPublication.publish(copied); host.searchPublicationRevision += 1; runtime.flush();
+host.searchHost.publication.publish(copied); host.searchPublicationRevision += 1; runtime.flush();
 const legacyNewGroups = constructedGroups;
 assert.equal(legacyNewGroups, 1000); assert.equal(page.changedGroupKeys.size, 1000);
 
+}
+if(selectedCase==='query-remount'){
 host.searchViewState.reset('下一查询');
 const second = startRun('下一查询', 2, 'second');
 assert.equal(page.presentation.keyword, '下一查询');
@@ -217,7 +278,7 @@ assert.ok(page.visibleGroups.every(group => group.book.bookId.startsWith('second
 // A real compiled child re-created with current parent arguments reads the
 // stable owner, not a payload captured by the old component constructor.
 const remounted = new childProbe.Component(host, { ...initialParams,
-  publicationRevision: host.searchPublicationRevision, publication: host.searchPublication, viewState: host.searchViewState });
+  publicationRevision: host.searchPublicationRevision, publication: host.searchHost.publication, viewState: host.searchHost.viewState });
 Object.assign(remounted, { onVisibleGroups() {}, listMounted: false, pageMounted: true });
 remounted.acceptPublication();
 assert.equal(runtime.sdk.ObservedObject.GetRawObject(remounted.presentation), orchestrator.presentation);
@@ -225,23 +286,7 @@ assert.equal(runtime.sdk.ObservedObject.GetRawObject(remounted.shelfBooks), host
 assert.equal(remounted.presentation.results.length, 2);
 assert.ok(remounted.presentation.results.every(book => book.searchRequestId === second.requestId));
 assert.deepEqual(nativeRequests, []);
-const report = {
-  scope: runtime.source,
-  sourceSha256: Object.fromEntries(['features/search/SearchPublication.ts', 'features/search/SearchPresentation.ts', 'features/search/SearchPage.ets',
-    'features/search/SearchOrchestrator.ets', 'pages/Index.ets'].map(name => [name, createHash('sha256').update(read(name)).digest('hex')])),
-  queryBooks: 1000, progressOnly: { retainedBookReferences: 1000, newGroups: 0, changedGroups: 0,
-    parentUpdates: progressUpdates.length, copiedObjectProps: progressCopies.filter(copy => copy.object).length,
-    listReplacements: 0, listOperations: 0,
-    status: ' · 正在搜索 2/3 个书源,已返回 1000 个', acceptedStateReadDependencyTracked: true },
-  compiledParentSha256: createHash('sha256').update(parentOutput).digest('hex'),
-  compiledChildSha256: createHash('sha256').update(childProbe.output).digest('hex'),
-  legacyCounterexample: { copiedObjects, copiedSlots, newGroups: legacyNewGroups },
-  shelfPublication: 'add/remove reflected through scalar', newQueryAndRemount: 'current exact payload',
-  nativeFrameStability: 'NOT MEASURED',
-  sdkImportBoundary: { previousTsToEtsRejected: true, productionPureTsAccepted: true },
-};
-if (process.argv.includes('--record')) writeFileSync(process.argv[process.argv.indexOf('--record') + 1], JSON.stringify(report, null, 2) + '\n');
-console.log('PASS PH77/79 actual SDK Index→SearchPage scalar reset→Watch→grouping→tracked status Text: 1000 refs, 0 new/change groups, 0 copied DTO Props');
-console.log(`PASS legacy SDK deep-copy counterexample: ${copiedObjects} objects/${copiedSlots} slots, ${legacyNewGroups} new groups`);
-console.log('PASS actual shelf callback, fresh query and compiled remount retain current payload; native frames are not measured');
-console.log('PASS actual SDK import guard rejects old TS→ETS edge and accepts pure-TS presentation types');
+}
+assert.deepEqual(nativeRequests,[]);
+
+}

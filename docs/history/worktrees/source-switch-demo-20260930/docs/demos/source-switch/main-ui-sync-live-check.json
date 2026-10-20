@@ -1,0 +1,27 @@
+{
+  "patchSha256": "9eb8a196d33ebc624a4e656c2722806f402f98a98477b7641f1ff43d72f7303e",
+  "mainHead": "63a5ab653fb573c5369ea67a4edc12b4a9dffcae",
+  "sourceCommit": "bdf8bcde87f1c547a2cae97ba65351be47825e3d",
+  "candidateTree": "f840dd515c867b9f6b5331dead40511c55c33105",
+  "checkedAtUtc": "2026-09-30T19:22:29.418337+00:00",
+  "applyCheckExit": 0,
+  "applyCheckOutput": "",
+  "mainStatusSnapshot": [],
+  "applied": false,
+  "mainIndexModified": false,
+  "previousFocusedChecks": 18,
+  "phoneSupplementPassed": true,
+  "phoneSupplementSeconds": 0.112,
+  "previousCandidateDelta": [
+    "tools/test-phone-layout-figma-regressions.mjs"
+  ],
+  "productionUnchangedFrom18PassCandidate": true,
+  "mainBuildOrInstall": false,
+  "limits": [
+    "No full gate or HAP built for this main candidate",
+    "SDK property/observer behavior is local evidence; native removal/layout/compositor pixels and VM acceptance are not asserted"
+  ],
+  "finalRootCheckedAtUtc": "2026-09-30T19:44:20.212220+00:00",
+  "finalRootMainHead": "63a5ab653fb573c5369ea67a4edc12b4a9dffcae",
+  "finalRootApplyCheckExit": 0
+}

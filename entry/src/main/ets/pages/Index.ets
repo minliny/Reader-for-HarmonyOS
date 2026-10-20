@@ -1,41 +1,61 @@
+import { ReaderTransientFeedback } from '../features/common/ReaderTransientFeedback';
+import curves from '@ohos.curves';
+import { readBookAuthorIdentity } from '../features/common/BookAuthorMetadata';
+import { SOURCE_SWITCH_VISUAL } from '../features/source/SourceSwitchVisual';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../features/rss/RssMutationRecoveryContract';
+import { RssPresentationProjection } from '../features/rss/RssPresentationProjection';
+import type { RssRouteOperationProjection, RssRouteBinding } from '../features/rss/RssRouteOperationHost';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
+import { SourceSwitchCompletionPresentation } from '../features/source/SourceSwitchCompletionPresentation';
+import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../features/common/ReaderRecoveryNotice';
+import { ReaderRecoveryAction } from '../features/common/ReaderRecoveryAction';
+import { MangaBookPresentation } from '../features/manga/MangaBookPresentation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
+import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
 import { BookshelfSettingsPage } from '../features/bookshelf/BookshelfSettingsPage';
 import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSelector';
-import { BookshelfManagementGateway } from '../features/bookshelf/BookshelfManagementGateway';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderCoreRequestError } from '@reader/core-harmony';
-import { SearchViewState } from '../features/search/SearchViewState';
-import { SearchPublication } from '../features/search/SearchPublication';
+import { SearchHost } from '../features/search/SearchHost';
+import type { SearchPresentation } from '../features/search/SearchPresentation';
 import { resolveBookshelfBook } from '../features/bookshelf/BookshelfBookIdentity';
 import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
-import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
-import { errorMessageOf } from '../app/ErrorMessage';
+import { ReaderSystemFileOpenNavigationHost, type SystemFileOpenNavigationView, type SystemFileOpenReaderIdentity } from '../app/ReaderSystemFileOpenNavigationHost';
+import { errorMessageOf, localReadFailureSummary } from '../app/ErrorMessage';
+import { diagnosticCodeOf } from '../app/LogPrivacy';
+import { readingFailureHint } from '../features/reading/ReadingFailurePresentation';
+import { readingOfflineFailureHint } from '../features/reading/ReadingOfflineFailurePresentation';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
-import {
-  ReaderCoreGateway,
-  type ShelfBook,
-  type BookshelfState,
+import { readerPageInitialHeaderHeight } from '../features/common/ReaderPageShell';
+import type {
+  ShelfBook,
+  BookshelfState,
 } from '../app/ReaderCoreGateway';
 import {
   type BookshelfDataState,
   type BookshelfFilter,
-  BookshelfFlowGateway,
   type BookshelfRemovalTarget,
-  type BookshelfRemoveBatchOutcome,
-  type BookshelfRemoveOutcome,
 } from '../features/bookshelf/BookshelfFlowGateway';
+import { EMPTY_READABLE_ADMISSION, type BookshelfReadableAdmissionSnapshot, type BookshelfReadableAdmissionEffect } from '../features/bookshelf/BookshelfReadableAdmissionOwner';
+import { EMPTY_BOOKSHELF_OPERATION_SNAPSHOT, type BookshelfOperationSnapshot } from '../features/bookshelf/BookshelfOperationOwner';
+import { LOCAL_IMPORT_PRESENTATION_KEY, type LocalImportPresentation } from '../features/bookshelf/LocalImportPresentationOwner';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
+import { BookRemovalDialog } from '../features/bookshelf/BookRemovalDialog';
 import { BookshelfMultiSelectPage } from '../features/bookshelf/BookshelfMultiSelectPage';
 import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
 import {
-  BookshelfManagementOrchestrator,
+  BookshelfHost,
   EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,
   type BookshelfManagementSnapshot,
-} from '../features/bookshelf/BookshelfManagementOrchestrator';
+} from '../features/bookshelf/BookshelfHost';
+import { BookshelfProjectionOwner, type BookshelfProjectionBinding, type BookshelfProjectionSnapshot } from '../features/bookshelf/BookshelfProjectionOwner';
+import { BookshelfCatalogOwner, type BookshelfCatalogBinding, type BookshelfCatalogSnapshot, type BookshelfCatalogSeeds } from '../features/bookshelf/BookshelfCatalogOwner';
+import { bookshelfSourceDisplayName, readableBookshelfSourceName, type BookshelfNamedSource } from '../features/bookshelf/BookshelfSourceNameProjection';
 import { DiscoverPage } from '../features/discover/DiscoverPage';
 import {
   DiscoverOrchestrator,
@@ -43,6 +63,8 @@ import {
   type DiscoverPresentation,
 } from '../features/discover/DiscoverOrchestrator';
 import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';
+import { BookshelfShell } from '../features/bookshelf/BookshelfShell';
+import { BookshelfStatusContent } from '../features/bookshelf/BookshelfStatusContent';
 import { LocalBookDetail } from '../features/bookshelf/LocalBookDetail';
 import {
   LocalImportDialog,
@@ -60,35 +82,47 @@ import {
   readerEntryPresentation,
 } from '../features/reading/LocalReadingExperience';
 import { ReaderShell } from '../features/shell/ReaderShell';
+import { ReaderFullDirectory } from '../features/reading/ReaderFullDirectory';
 import { BookDirectoryPage } from '../features/bookshelf/BookDirectoryPage';
+import { ReaderPageScaffold } from '../features/common/ReaderPageScaffold';
+import { backfillRetainedReaderDirectoryNavigation, readerDirectoryObserveMissingNavigation,
+  readerDirectoryTakeMissingNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import {
-  loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection,
-} from '../features/reading/ReaderControlBookmarkLoad';
-import {
-  LocalReadingFlowGateway,
-  type LocalReadingDownloadState,
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
 import type { BookAcquisitionCandidate, BookAcquisitionChange } from '../app/BookAcquisitionCoordinator';
+import type { BookAcquisitionDetailProjection } from '../app/BookAcquisitionProjectionGateway';
+import { ReadingEntryHost, type ReadingEntrySnapshot, type ReadingEntryLease, type ReadingPreparationContext, type ReadingSharedShelfSeeds } from '../features/reading/ReadingEntryHost';
+import type { BookshelfCatalogProgress } from '../features/bookshelf/BookshelfCatalogUpdate';
 import type { RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';
 import { searchCandidateRank } from '../features/search/SearchCandidatePolicy';
 import {
   RemoteChapterCacheRefreshError,
   RemoteReadingFlowGateway,
   type RemoteReadingBookSeed,
-  type RemoteReadingProgressState,
   type RemoteReadingSession,
+  type RemoteReadingTocEntry,
 } from '../features/reading/RemoteReadingFlowGateway';
-import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, withPreparedRemoteChapter, copyRemoteReadingSession } from '../features/reading/RemoteReadingEvidence';
-import { captureRemotePositionContext, type RemoteReadingPositionContext } from '../features/reading/RemoteReadingPositionMigration';
+import { ReadingSessionFlowGateway } from '../features/reading/ReadingSessionFlowGateway';
+import { sameRemoteSessionEvidence } from '../features/reading/RemoteReadingEvidence';
+import type { RemoteReadingPositionContext } from '../features/reading/RemoteReadingPositionMigration';
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import type { ReadingEntrySeed } from '../features/reading/ReadingEntryPreparation';
-import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
+import { ReadingOfflineHost, type ReadingOfflineBinding, type ReadingOfflineOperation } from '../features/reading/ReadingOfflineHost';
+import { ReaderDirectoryHost, type ReaderDirectoryBinding, type ReaderDirectoryOperation } from '../features/reading/ReaderDirectoryHost';
+import { BookmarkOperationIntentStore, CacheClearOperationIntentStore } from '../features/reading/ReadingOperationIntents';
+import { readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../features/reading/ReadingDirectoryRecovery';
+import { ReadingPrefetchHost, type ReadingPrefetchLease } from '../features/reading/ReadingPrefetchHost';
+import type { ReadingOfflineBookProgress } from '../features/reading/ReadingOfflineGateway';
+import { MangaSourceSwitchGateway, MangaSwitchChapterSelectionRequired,
+  type MangaSwitchProposal } from '../features/manga/MangaSourceSwitchGateway';
+import type { MangaProgressToken } from '../features/manga/MangaContract';
+import { MangaSessionGateway } from '../features/manga/MangaSessionGateway';
+import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/MangaDownloadActionsGateway';
+import { MangaAdmissionGateway } from '../features/manga/MangaAdmissionGateway';
 import {
   isRemoteSourceFailureKind,
-  remoteReadingFailureKindOf,
-  verdictForFailureKind,
   type RemoteContentVerdict,
   type RemoteReadingFailureKind,
 } from '../features/reading/RemoteContentAdmission';
@@ -107,12 +141,9 @@ import type {
 } from '../features/reading/ReaderDirectoryMarkerState';
 import type {
   SearchBook,
-  SearchSource,
 } from '../features/search/SearchGateway';
-import { SearchOrchestrator } from '../features/search/SearchOrchestrator';
 import {
   SearchPage,
-  type SearchPresentation,
 } from '../features/search/SearchPage';
 import {
   RssGateway,
@@ -142,15 +173,23 @@ import {
 import {
   RssOrchestrator,
   type RssEntrySnapshot,
+  type RssManagementOperationProjection,
   type RssSourceSnapshot,
 } from '../features/rss/RssOrchestrator';
+import { projectOperationFacts, type OperationFacts } from '../app/ReaderOperationFacts';
 import {
   RssPage,
   type RssMode,
   type RssPresentation,
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
-import { SettingsOrchestrator } from '../features/settings/SettingsOrchestrator';
+import { SettingsHost } from '../features/settings/SettingsHost';
+import { SharedDownloadPage, type SharedDownloadUiIntent, type SharedDownloadViewState } from '../features/downloads/SharedDownloadPage';
+import { SharedDownloadHost, type SharedDownloadSnapshot } from '../features/downloads/SharedDownloadHost';
+import { SharedDownloadProjectionRefreshError } from '../features/downloads/SharedDownloadCoordinator';
+import { SharedDownloadActionTarget, formatDownloadStorageBytes } from '../features/downloads/SharedDownloadProjection';
+import type { DownloadBookView, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../features/downloads/SharedDownloadProjection';
+import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from '../features/settings/SettingsHost';
 import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { RulesManagementPage } from '../features/settings/RulesManagementPage';
 import {
@@ -165,28 +204,23 @@ import type {
   RuleSubscriptionDraft,
   TxtTocRuleDraft,
 } from '../features/settings/RulesManagementGateway';
-import {
-  SourceGateway,
-  type BookSource,
-} from '../features/source/SourceGateway';
+import type { BookSource } from '../features/source/SourceGateway';
+import { readBookSearchTiming } from '../features/common/BookSearchTiming';
 import { readerSourceCategoryIsText, readerSourceCategoryLabel } from '../features/source/ReaderSourceCategory';
 import {
-  SourceOrchestrator,
+  SourceHost,
   type SourceImportCompletion,
   type SourceManagementStatusKind,
-} from '../features/source/SourceOrchestrator';
+  type SourceManagementProjection,
+} from '../features/source/SourceHost';
 import {
-  buildSourceSwitchCommitParams,
   sourceSwitchCandidateKey,
-  SourceSwitchGateway,
+  type SourceSwitchGateway,
   type SourceSwitchCandidate,
-  type SourceSwitchCommitOutcome,
-  type SourceSwitchDiscoveryOutcome,
-  type PendingSourceSwitch,
   type SourceSwitchProbeQuery,
-  type SourceSwitchRollbackResult,
-  type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
+import { SourceSwitchHost, type SourceSwitchContext, type SourceSwitchSnapshot,
+  type SourceSwitchLease, type SourceSwitchEffect, type SourceSwitchAnchor, type SourceSwitchPendingTransaction } from '../features/source/SourceSwitchHost';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
 import { SourceToolsPage } from '../features/source/SourceToolsPage';
 import {
@@ -203,99 +237,85 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
 import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 import { JsonImportDialog } from '../features/common/JsonImportDialog';
+import { ReaderDialogSurface } from '../features/common/ReaderDialogSurface';
 import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { TOK_GREEN, TOK_INK, TOK_MUTED, TOK_ON_PRIMARY } from '../features/common/ReaderTokens';
+import { ReaderLayoutDebugOverlay } from '../features/common/ReaderLayoutDebugOverlay';
 
 const DOMAIN = 0x5244;
-const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';
-const MAX_IMPORT_RESULT_ITEMS = 50;
+const IMPORT_PRESENTATION_KEY = LOCAL_IMPORT_PRESENTATION_KEY;
 const LOCAL_SOURCE_ID = 'local';
-const READING_CACHE_BEFORE = 2;
-const READING_CACHE_AFTER = 2;
-const CATALOG_REFRESH_NEAR_END = 3;
 const CATALOG_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'bookshelfManagement' | 'bookshelfMultiSelect' | 'bookshelfSettings' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
-  'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync';
+  'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync' | 'downloads';
 type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
 type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
 type JsonImportContext = 'bookSource' | 'ruleBundle' | 'rssMerge' | 'rssReplace';
 type RulesManagementReturnTarget = 'settings' | 'reader';
-type DetailReturnRoute = 'bookshelf' | 'search';
+type DetailOriginRoute = 'bookshelf' | 'search';
+type DetailReturnRoute = DetailOriginRoute | 'reader';
+type DownloadReturnTarget = 'bookshelf' | 'settings' | 'reading' | 'detail' | 'directory';
+interface ReaderReturnContext {
+  owner: ReaderRuntimeOwner;
+  originRoute: 'bookshelf' | 'detail';
+  detailParent: DetailOriginRoute;
+  fromDownloads: boolean;
+  downloadParent?: DownloadReturnContext;
+}
+interface DownloadReturnContext {
+  owner: ReaderRuntimeOwner;
+  target: DownloadReturnTarget;
+  book?: ShelfBook;
+  detailParent: DetailReturnRoute;
+  readerReturn?: ReaderReturnContext;
+  detailReaderReturn?: ReaderReturnContext;
+  viewState: SharedDownloadViewState;
+  snapshot?: SharedDownloadSnapshot;
+  membershipRevision: number;
+}
+interface ReaderBookInfoExitDestination {
+  bookIdentity: string;
+  context: ReaderReturnContext;
+}
 type SourceManagementReturnTarget = 'settings' | 'search';
 
-interface BookshelfBackgroundSeeds {
+type TemporaryBackScope = 'bookshelf' | 'settings' | 'source' | 'downloads';
+interface RssFeedPresentationBinding {
+  current: () => boolean;
+  emit: (subscriptions: RssSubscription[]) => void;
+  emitRead: (facts: OperationFacts<RssSubscription[]>) => void;
+  emitOriginal: (original: RssOriginalMutationProjection | undefined) => void;
+}
+
+interface TemporaryBackLease {
+  scope: TemporaryBackScope;
+  generation: number;
   owner: ReaderRuntimeOwner;
-  revision: string;
-  seeds: Promise<ReadingEntrySeed[] | undefined>;
+  identity: string;
+  handler: () => boolean;
 }
 
-class SourceSwitchAnchor {
-  chapterIndex: number;
-  chapterTitle: string;
-
-  constructor(chapterIndex: number, chapterTitle: string) {
-    this.chapterIndex = chapterIndex;
-    this.chapterTitle = chapterTitle;
-  }
+type BookshelfBackgroundSeeds = BookshelfCatalogSeeds;
+/** The target catalog is a temporary selection owner, never the active reader. */
+interface MangaSourceSwitchSelection {
+  original: ReadingBookDetail;
+  candidate: SourceSwitchCandidate;
+  target: RemoteReadingSession;
+  expectedFrom: MangaProgressToken;
+  entries: LocalReadingTocEntry[];
+  current: () => boolean;
+  assertQualified: () => void;
+  commitStarted: boolean;
 }
 
-class PendingSourceSwitchTransaction {
-  fromSourceId: string;
-  fromBookId: string;
-  targetSourceId: string;
-  targetBookId: string;
-  targetChapterIndex: number;
-  transactionId: string;
+interface MangaDownloadDeleteRequest { session: RemoteReadingSession; chapterIndex: number | undefined; }
+interface ReaderDownloadExitDestination { identity: string; detailKey: string; }
 
-  constructor(
-    fromSourceId: string,
-    fromBookId: string,
-    targetSourceId: string,
-    targetBookId: string,
-    targetChapterIndex: number,
-    transactionId: string,
-  ) {
-    this.fromSourceId = fromSourceId;
-    this.fromBookId = fromBookId;
-    this.targetSourceId = targetSourceId;
-    this.targetBookId = targetBookId;
-    this.targetChapterIndex = targetChapterIndex;
-    this.transactionId = transactionId;
-  }
-}
-
-class RemoteDetailAdmission {
-  session: RemoteReadingSession;
-  refreshInBackground: boolean;
-  backgroundRefresh: Promise<RemoteReadingSession> | undefined;
-
-  constructor(session: RemoteReadingSession, backgroundRefresh?: Promise<RemoteReadingSession>) {
-    this.session = session;
-    this.backgroundRefresh = backgroundRefresh;
-    this.refreshInBackground = backgroundRefresh !== undefined;
-  }
-}
-
-class RemoteSessionAttemptOutcome {
-  index: number;
-  session: RemoteReadingSession | undefined;
-  error: Error | undefined;
-
-  constructor(
-    index: number,
-    session: RemoteReadingSession | undefined = undefined,
-    error: Error | undefined = undefined,
-  ) {
-    this.index = index;
-    this.session = session;
-    this.error = error;
-  }
-}
 
 /** Chinese one-liner for a book-source failure kind (user confirmation UI). */
 function remoteSourceFailureSummary(kind: RemoteReadingFailureKind): string {
@@ -317,34 +337,90 @@ function remoteSourceFailureSummary(kind: RemoteReadingFailureKind): string {
   }
 }
 
-class LocalImportPresentation {
-  state: LocalImportDialogState;
-  batch: LocalImportBatch | undefined;
+class ReaderNavigationBackfillFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
 
-  constructor(state: LocalImportDialogState, batch: LocalImportBatch | undefined = undefined) {
-    this.state = state;
-    this.batch = batch;
-  }
+let sourceToolsIndexInstance: number = 0;
+let rssIndexInstance: number = 0;
+interface MangaPositionProjectionJob {
+  book: ShelfBook;
+  owner: ReaderRuntimeOwner;
+  generation: number;
+  navigationGeneration: number;
+  shelfGeneration: number;
+  route: ReaderRoute;
+  detailIdentity: string;
+}
+
+interface MangaBookIdentity {
+  sourceId: string;
+  bookId: string;
 }
 
 @Entry
 @Component
 struct Index {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
-  private importAttemptId: number = 0;
-  private importBusyAttempt: number = 0;
   private shelfEntryTraceAttempt: number = 0;
   private shelfEntryTraceStartedAt: number = -1;
   private shelfEntryTraceGeneration: number = -1;
   private startupEntryId: number = 0;
-  private readingReadyGeneration: number = 0;
-  @State private importFailureMessage: string = '';
+  @State private readingReadyGeneration: number = 0;
+  private navigationBackfillAttempted: Set<string> = new Set<string>();
+  private navigationBackfillObservedKey: string = '';
+  private navigationBackfillObserverDisposer: (() => void) | undefined;
+  @State private shelfOperation: BookshelfOperationSnapshot = EMPTY_BOOKSHELF_OPERATION_SNAPSHOT;
+  private shelfOperationOwner: ReaderRuntimeOwner | undefined;
+  private shelfReceiptRetired: boolean = false;
+  private nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
+  @State private indexRecoveryNotice: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private indexRecoveryActionLabel: string = '';
+  private indexRecoveryAction: (() => void) | undefined;
+  private indexRecoveryCurrent: (() => boolean) | undefined;
+  private indexRecoveryRevision: number = 0;
+  private shelfFeedbackKey: string = '';
+  private catalogFeedbackKey: string = '';
   @State private editingShelfGroupBook: ShelfBook | undefined = undefined;
   @State private editingShelfGroupBusy: boolean = false;
+  @State private editingShelfGroupPresentation: number = 0;
   private bookshelfSettingsReturnRoute: 'bookshelf' | 'settings' = 'bookshelf';
   @State private shelfBooks: ShelfBook[] = [];
+  @State private shelfHeaderHeight: number = readerPageInitialHeaderHeight('bookshelf');
+  @State private shelfPendingNoticeHeight: number = 0;
+  /**
+   * A confirmed detail-page shelf write can complete while the detail route is
+   * still mounted.  Keep its identity until the bookshelf route performs a
+   * fresh Core readback; the old in-flight detail projection is deliberately
+   * rejected by the navigation binding and must not be reused as shelf state.
+   */
+  private pendingShelfReadbackKey: string = '';
+  @State private downloadBooks: DownloadBookView[] = [];
+  @State private downloadLoading: boolean = false;
+  @State private downloadError: string = '';
+  @State private downloadStorageSummary: DownloadStorageSummary = {};
+  @State private downloadStoragePolicy: DownloadStoragePolicyView | undefined = undefined;
+  @State private downloadPendingMessage: string = '';
+  private downloadHost: SharedDownloadHost | undefined = undefined;
+  private retainedDownloadSnapshot: SharedDownloadSnapshot | undefined = undefined;
+  private retainedDownloadOwner: ReaderRuntimeOwner | undefined = undefined;
+  private downloadMembershipRevision: number = 0;
+  private downloadPresentationIdentity: string = '';
+  private downloadReturnTarget: DownloadReturnTarget = 'settings';
+  private downloadReturnBook: ShelfBook | undefined;
+  private downloadDetailReturnRoute: DetailReturnRoute = 'bookshelf';
+  private downloadReaderReturn: ReaderReturnContext | undefined = undefined;
+  private downloadDetailReaderReturn: ReaderReturnContext | undefined = undefined;
+  private downloadsAfterReaderExit: ReaderDownloadExitDestination | undefined;
+  private readingFromDownloads: boolean = false;
+  private downloadViewState: SharedDownloadViewState = { query: '', type: 'all', state: 'all',
+    sourceId: 'all', sort: 'recent', direction: 'desc', listScroll: 0, detailKey: '' };
   @StorageLink('readerBookshelfReadingFilter') private shelfReadingFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') private shelfSourceFilter: string = 'all';
   @State private shelfProjectionRevision: string = '';
@@ -352,7 +428,6 @@ struct Index {
   private shelfMatchedTotal: number = 0;
   private shelfPageLoading: boolean = false;
   private shelfWindowOffset: number = 0;
-  private shelfMembershipGeneration: number = 0;
   @State private bookshelfSelectionBooks: ShelfBook[] = [];
   @State private bookshelfSelectionReady: boolean = false;
   @State private continueReading: ShelfBook | undefined = undefined;
@@ -362,35 +437,54 @@ struct Index {
   @State private bookshelfUpdateRunning: boolean = false;
   @State private bookshelfUpdateDone: number = 0;
   @State private bookshelfUpdateTotal: number = 0;
+  @State private bookshelfCatalogFacts: OperationFacts<BookshelfCatalogProgress> | undefined = undefined;
+  private bookshelfCatalogHost: BookshelfCatalogOwner | undefined;
+  private bookshelfCatalogBinding: BookshelfCatalogBinding | undefined;
+  private bookshelfCatalogOwner: ReaderRuntimeOwner | undefined = undefined;
+  private bookshelfCatalogReadbackFailed: boolean = false;
   @State private bookshelfManagementSnapshot: BookshelfManagementSnapshot =
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   @State private bookshelfMultiSelectInitialKey: string = '';
-  @State private bookshelfBatchRemovalBusy: boolean = false;
   @State @Watch('onSearchVisibilityChanged') private route: ReaderRoute = 'bookshelf';
   @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportVisible: boolean = false;
+  @State private jsonImportGeneration: number = 0;
   @State private jsonImportContext: JsonImportContext = 'bookSource';
   @State private detailBook: ReadingBookDetail | undefined = undefined;
   @State private detailToc: LocalReadingTocEntry[] = [];
-  @State private directoryBookmarkProjectionFailureMessage: string = '';
-  private directoryBookmarkProjectionFailureKey: string = '';
-  private directoryBookmarkProjectionFailureGeneration: number = -1;
   @State private detailInBookshelf: boolean = true;
   @State private detailLoadingMessage: string = '';
+  @State private detailCatalogBusy: boolean = false;
   /** The visible page that owns entry, exit and first-page failure recovery. */
   private readingOriginRoute: 'bookshelf' | 'detail' = 'detail';
   @State private shelfReadingPreparation: boolean = false;
   @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
+  @State private readingContentKind: 'text' | 'manga' = 'text';
   @State private remoteReadingSeed: RemoteReadingBookSeed | undefined = undefined;
   /** Detail-area diagnostics; never a navigation admission gate. */
   @State private remoteContentVerdict: RemoteContentVerdict = 'readable';
-  private remoteCacheNoticeGeneration: number = -1;
-  private remoteContentProbeGeneration: number = 0;
+  private remoteCacheRefreshConsent: RemoteChapterCacheRefreshError | undefined;
+  /** Projected domain token, never a second session/probe owner. */
   private remoteSessionGeneration: number = 0;
+  private readingEntryHost: ReadingEntryHost | undefined;
+  private readingEntryScopeId: number = -1;
+  private readingPresentedScopeId: number = -1;
+  /** Raw Host references identify actual detail changes before ArkUI wraps
+   * them. A membership publication must not reset book/TOC @State objects. */
+  private readingEntryPublishedSnapshot: ReadingEntrySnapshot | undefined = undefined;
+  private detailShelfRemovalKey: string = '';
+  private detailShelfRemovalGeneration: number = -1;
+  private remoteReadableToc: RemoteReadingTocEntry[] | undefined = undefined;
+  private remoteReadableChapterIndexes: number[] = [];
+  private remoteReadableChapterPositions: Map<number, number> = new Map();
   private remoteReadabilityProjectionRevision: number = -1;
   private pendingRemoteDirectoryProjection: (() => void) | undefined = undefined;
   private pendingLocalDirectoryProjection: (() => void) | undefined = undefined;
   @State private requestedChapterIndex: number | undefined = undefined;
+  @State private mangaChapterRequestGeneration: number = 0;
+  @State private mangaChapterStartRequestGeneration: number = -1;
+  @State private requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
+  private mangaCommittedRequestGeneration: number = -1;
   // 书签 tab 精确锚点: 每次点击递增 requestId, 保证 @Prop @Watch 对连续点击的
   // 同值/等值请求都能重新触发 (deep-equal 相同的两个对象也会下发新实例)。
   @State private requestedBookmarkAnchor: ReaderBookmarkAnchorRequest | undefined = undefined;
@@ -399,9 +493,20 @@ struct Index {
   @State private directoryCurrentChapterIndex: number = -1;
   @State private directoryChapterTitle: string = '';
   @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
-  private searchPublication: SearchPublication = new SearchPublication();
   @State private searchPublicationRevision: number = 0;
+  @State private rssFeedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  @State private rssFeedOriginal: RssOriginalMutationProjection | undefined = undefined;
+  @State private rssSourceOriginal: RssOriginalMutationProjection | undefined = undefined;
+  @State private rssEntryOriginal: RssOriginalMutationProjection | undefined = undefined;
+  @State private rssSourceOperation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
+  @State private rssSourceRead: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+  @State private rssEntryOperation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
+  @State private rssEntryRead: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+  private rssEditorNavigationGeneration: number = 0;
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
+  @State private rssManagementOperation: RssManagementOperationProjection | undefined = undefined;
+  @State private rssManagementRead: OperationFacts<RssSubscription[]> =
+    projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   @State private selectedRssSubscription: RssSubscription | undefined = undefined;
   @State private selectedRssItems: RssItem[] = [];
   @State private selectedRssItem: RssItem | undefined = undefined;
@@ -413,6 +518,13 @@ struct Index {
   @State private sourceSources: BookSource[] = [];
   @State private sourceStatusKind: SourceManagementStatusKind = 'idle';
   @State private sourceStatusMessage: string = '';
+  @State private sourceImportSearchActionLabel: string = '';
+  @State private sourceImportSearchActionRevision: number = 0;
+  private sourceImportSearchAction: (() => void) | undefined;
+  @State private rssOperationResultMessage: string = '';
+  @State private sourceOperation: SourceManagementProjection = { action: 'load', sourceId: '' };
+  @State private settingsOperation: SettingsOperationProjection = { action: 'load' };
+  @State private settingsCacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
@@ -422,6 +534,7 @@ struct Index {
     tapBottomScrollTop: true,
     reduceMotion: false,
     crashLog: true,
+    developerMode: false,
   };
   private applicationSettingsSnapshot: SettingsSnapshot | undefined = undefined;
   private applicationSettingsUnsubscribe: (() => void) | undefined = undefined;
@@ -442,63 +555,165 @@ struct Index {
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
   @State private sourceSwitchFailureMessage: string = '';
+  @State private sourceSwitchScopeId: number = 0;
+  @State private sourceSwitchCompletion: SourceSwitchCompletionPresentation | undefined = undefined;
+  // One admitted row's display metadata, never transaction/progress authority.
+  // Core shelf readback may not persist the source's human-readable name.
+  private sourceSwitchNamedCandidate: SourceSwitchCandidate | undefined = undefined;
+  private sourceSwitchHost: SourceSwitchHost | undefined;
+  @State private mangaSourceSwitchSelectionVisible: boolean = false;
+  @State private mangaSourceSwitchSelectionBusy: boolean = false;
+  @State private mangaSourceSwitchCommitGeneration: number = -1;
+  private mangaSourceSwitchPreparationGeneration: number = 0;
+  private mangaSourceSwitchSelection: MangaSourceSwitchSelection | undefined = undefined;
   private failedSourceSwitchCandidate: SourceSwitchCandidate | undefined = undefined;
   private failedSourceSwitchIdentity: string = '';
-  private sourceSwitchGateway: SourceSwitchGateway | undefined;
   private searchDetailCandidates: SearchBook[] = [];
   /** Retained until the target chapter's first measured progress commit. */
-  private pendingSourceSwitch: PendingSourceSwitchTransaction | undefined = undefined;
-  private sourceSwitchRollbackInFlight: boolean = false;
-  private sourceSwitchReconciliationGeneration: number = 0;
+  private pendingSourceSwitch: SourceSwitchPendingTransaction | undefined = undefined;
   /** The original reader owns loading, layout, errors and first-page commit. */
   @State private readingSessionActive: boolean = false;
-  private navigationGeneration: number = 0;
-  /** Prevents repeated marker taps from issuing duplicate bookmark mutations. */
-  private directoryBookmarkMutationGeneration: number = 0;
-  private directoryBookmarkMutationActiveKey: string = '';
-  /** One UI mutation gate over Core's already-durable download queue. */
-  private offlineMutationGeneration: number = 0;
-  @State private offlineMutationActiveKey: string = '';
+  @State private navigationGeneration: number = 0;
+  /** Display DTOs only; domain owners retain mutex, dispatch, receipts and generations. */
+  @State private directoryOperation: ReaderDirectoryOperation | undefined = undefined;
+  @State private offlineOperation: ReadingOfflineOperation | undefined = undefined;
+  @State private offlineOperationActive: boolean = false;
+  @State private directoryPresentationGeneration: number = 0;
+  private mangaShelfMutationAfterExit: string | undefined = undefined;
+  private shelfContentFilter: string = 'all';
+  private mangaProjectionQueue: MangaPositionProjectionJob[] = [];
+  private mangaProjectionWorkers: number = 0;
+  private mangaProjectionGeneration: number = 0;
+  private mangaProjectionSignature: string = '';
+  private mangaLoginTask: Promise<void> | undefined;
+  /** Presentation gate; ReadingOfflineHost owns accepted queue work. */
+  @State private mangaDownloadActionActiveKey: string = '';
+  private mangaDownloadActionGeneration: number = 0;
+  private mangaDownloadDeleteAfterExit: MangaDownloadDeleteRequest | undefined = undefined;
   /** Serializes the destructive detail-page removal for one exact book. */
-  private bookshelfRemovalGeneration: number = 0;
-  @State private bookshelfRemovalActiveKey: string = '';
-  @State private bookshelfAdditionActiveKey: string = '';
-  @State private bookshelfAdditionCancellingKey: string = '';
-  @State private bookshelfAdditionErrorKey: string = '';
-  @State private bookshelfAdditionError: string = '';
-  private bookshelfAdditionGeneration: number = 0;
-  private bookshelfBatchRemovalGeneration: number = 0;
-  /** Rejects a late shelf read after a newer import/refresh has completed. */
+  @State private detailShelfAdmissionMount: number = 0;
+  @State private readableAdmissions: BookshelfReadableAdmissionSnapshot[] = [];
+  @State private bookRemovalMessage: string = '';
+  private bookRemovalDialogOpen: boolean = false;
+  private bookRemovalConfirmAction: (() => void) | undefined = undefined;
+  private bookRemovalPresentation: number = 0;
+  private bookRemovalDialogController: CustomDialogController | undefined;
+  /** Read generation DTO; the feature-local projection owner owns admission. */
   private bookshelfLoadGeneration: number = 0;
-  private bookshelfSourceNameRequest: number = 0;
   /**
    * The latest bookshelf read failed. On the un-admitted blank home this
    * surfaces a persistent retry entry (a dismissed dialog would leave the
    * session unrecoverable); a successful load always clears it.
    */
   @State private bookshelfLoadFailed: boolean = false;
+  @State private bookshelfReadFacts: OperationFacts<BookshelfDataState> | undefined = undefined;
+  private bookshelfReadOwner: ReaderRuntimeOwner | undefined = undefined;
+  private bookshelfProjectionOwner: BookshelfProjectionOwner | undefined;
+  private bookshelfProjectionBinding: BookshelfProjectionBinding | undefined;
+  private bookshelfReadNavigation: number = 0;
   private bookshelfBackgroundRefreshRunning: boolean = false;
   /** The automatic catalog scan can also supply the idle preparation's identities for this shelf revision. */
   private bookshelfBackgroundSeeds: BookshelfBackgroundSeeds | undefined;
-  private remoteCatalogRefreshAt: Map<string, number> = new Map();
-  private sourceSwitchUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionUnsubscribe: (() => void) | undefined = undefined;
-  private bookProjectionLoading: boolean = false;
-  private bookProjectionAgain: boolean = false;
-  private candidateAdmissionGeneration: number = -1;
-  private candidateAdmissionFailedGeneration: number = -1;
-  private searchViewState: SearchViewState = new SearchViewState();
+  private searchHost: SearchHost = new SearchHost(
+    (): void => {
+      this.searchPublicationRevision += 1;
+      this.syncSearchDetailCandidates(this.searchHost.presentation());
+    },
+    (): boolean => this.searchJourneyActive(),
+  );
   private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState();
-  private searchOrchestrator: SearchOrchestrator | undefined;
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
-  private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
-  private settingsOrchestrator: SettingsOrchestrator | undefined;
+  private discoverPresentationIdentity: string = '';
+  private bookshelfManagementPresentationIdentity: string = '';
+  private bookshelfHost: BookshelfHost = new BookshelfHost(
+    (snapshot: BookshelfManagementSnapshot): void => {
+      this.bookshelfManagementSnapshot = snapshot;
+    },
+    (): boolean => this.route === 'bookshelfManagement',
+    undefined,
+    (snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner): void => {
+      if (!this.isCurrentRuntime(owner)) return;
+      // AppStorage is a platform adapter only. The feature owner creates,
+      // validates and atomically serializes its state/result.
+      AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, snapshot.importSerialized);
+      if (this.shelfReceiptRetired || (snapshot.action === 'import' &&
+        !this.bookshelfHost.operations(owner).isImportPresentationInstance(this.rssInstanceIdentity))) return;
+      if (snapshot.receipt !== undefined && (this.shelfOperation.receipt === undefined || this.shelfOperation.generation !== snapshot.generation))
+        this.invalidateBookshelfProjection();
+      const presentImportResult = snapshot.action === 'import' && snapshot.importPresentation?.state === 'result' &&
+        (this.shelfOperation.importPresentation?.state !== 'result' || this.shelfOperation.receipt !== snapshot.receipt) &&
+        this.route === 'bookshelf' && snapshot.filter.readingState === this.shelfReadingFilter && snapshot.filter.sourceKind === this.shelfSourceFilter &&
+        (snapshot.filter.contentKind ?? 'all') === this.shelfContentFilter;
+      this.shelfOperationOwner = owner; this.shelfOperation = snapshot;
+      if ((this.route === 'bookshelf' || this.route === 'detail') && snapshot.action !== 'import' &&
+        snapshot.receipt?.receipt.confirmation !== 'unknown' && snapshot.removalMutation?.blocked !== true && !snapshot.busy) {
+        const feedback = readerRecoveryView(snapshot.receipt);
+        const message = snapshot.cleanupWarning.length > 0 ? `书籍已移出书架；应用内 EPUB 文件清理未完成：${snapshot.cleanupWarning}` :
+          feedback.visible ? feedback.message : '';
+        const key = `${snapshot.generation}:${message}`;
+        if (message.length === 0) this.shelfFeedbackKey = '';
+        if (message.length > 0 && key !== this.shelfFeedbackKey) {
+          this.shelfFeedbackKey = key;
+          try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner)); } catch (_) {}
+        }
+      }
+
+      if (snapshot.busy || snapshot.reconcileBusy) this.shelfFeedbackKey = '';
+      if (presentImportResult && snapshot.receipt?.value !== undefined) this.applyBookshelfState(snapshot.receipt.value);
+    },
+    (snapshots: BookshelfReadableAdmissionSnapshot[], owner: ReaderRuntimeOwner): void => {
+      if (!this.shelfReceiptRetired && this.isCurrentRuntime(owner)) this.readableAdmissions = snapshots;
+    },
+  );
+  private settingsPresentationIdentity: string = '';
+  private settingsHost: SettingsHost = new SettingsHost(
+    (snapshot: SettingsSnapshot): void => {
+      if (this.isCurrentSettingsPresentation(this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.settingsHost,
+        this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings', this.settingsPresentationIdentity, false)) this.settingsSnapshot = snapshot;
+    },
+    (): SettingsSnapshot => this.settingsSnapshot,
+    (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
+    undefined,
+    (operation: SettingsOperationProjection): void => {
+      if (this.isCurrentSettingsPresentation(this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.settingsHost,
+        this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings', this.settingsPresentationIdentity, false)) this.settingsOperation = operation;
+    },
+    (snapshot: SettingsCacheCleanupSnapshot, owner: ReaderRuntimeOwner): void => {
+      if (this.isCurrentRuntime(owner) && this.route === 'settings') this.settingsCacheCleanup = snapshot;
+    },
+  );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
+  private rulesPresentationIdentity: string = '';
   private syncOrchestrator: SyncOrchestrator | undefined;
-  private sourceOrchestrator: SourceOrchestrator | undefined;
+  private syncPresentationIdentity: string = '';
+  private mountedRuntimeOwner: ReaderRuntimeOwner | undefined;
+  private temporaryBackLease: TemporaryBackLease | undefined;
+  private sourcePresentationIdentity: string = '';
+  private sourceHost: SourceHost = new SourceHost(
+    (sources: BookSource[]): void => { if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
+      this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) this.sourceSources = sources; },
+    (): boolean => this.route === 'source',
+    (kind: SourceManagementStatusKind, message: string): void => {
+      if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) {
+        this.sourceStatusKind = kind; this.sourceStatusMessage = message;
+      }
+    },
+    undefined,
+    (operation: SourceManagementProjection): void => { if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
+      this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) this.sourceOperation = operation; },
+  );
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
+  private readonly sourceToolsInstanceIdentity: number = ++sourceToolsIndexInstance;
+  private sourceToolsPresentationIdentity: string = '';
   private rssOrchestrator: RssOrchestrator | undefined;
+  private readonly rssInstanceIdentity: number = ++rssIndexInstance;
+  private rssPresentationIdentity: string = '';
+  private rssEditorPresentationIdentity: string = '';
   private rssEditorOrchestrator: RssSubscriptionEditorOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
@@ -506,16 +721,11 @@ struct Index {
    * changed back to the bookshelf or explicit Book Detail entry.
    */
   private readingExitRequest: ((intent?: 'navigation') => void) | undefined = undefined;
-  private systemFileOpenUnsubscribe: (() => void) | undefined = undefined;
-  private systemFileOpenExitId: number = 0;
-  private systemFileOpenNoticeId: number = 0;
-  private systemFileOpenApplying: boolean = false;
-  private systemFileOpenMounted: boolean = false;
-  private systemFileOpenChecking: string = '';
-  private systemFileOpenChecked: string = '';
+  private systemFileOpenNavigation: ReaderSystemFileOpenNavigationHost | undefined;
   /** A Back press during hidden first-page preparation still exits serially. */
   private exitToDetailOriginAfterReader: boolean = false;
-  private bookInfoAfterReaderExit: string | undefined = undefined;
+  private bookInfoAfterReaderExit: ReaderBookInfoExitDestination | undefined = undefined;
+  private detailReaderReturn: ReaderReturnContext | undefined = undefined;
   /** A failure-dialog action waits for the reader's serialized exit before changing route. */
   private openRulesManagementAfterReaderExit: boolean = false;
   private rulesManagementReturnTarget: RulesManagementReturnTarget = 'settings';
@@ -537,13 +747,18 @@ struct Index {
   private storedImportPresentation: string = '';
 
   aboutToAppear(): void {
-    this.systemFileOpenMounted = true;
+    this.mountedRuntimeOwner = ReaderRuntimeOwner.current();
+    this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+    this.shelfReceiptRetired = false;
+    this.detailShelfAdmissionMount += 1;
+    this.bookshelfHost.readable(this.mountedRuntimeOwner);
     // Index is mounted after configuration recovery. Reading these settings
     // inside that recovery barrier itself would recursively wait on it.
     this.applicationSettingsUnsubscribe?.();
     const settings = new SettingsGateway(ReaderRuntimeOwner.current().getUIAbilityContext());
     this.applicationSettingsUnsubscribe = settings.subscribe((snapshot: SettingsSnapshot): void => {
       this.applicationSettingsSnapshot = snapshot;
+      AppStorage.setOrCreate<boolean>('readerDeveloperMode', snapshot.developerMode === true);
       if (this.route !== 'settings' && this.route !== 'bookshelfSettings') this.settingsSnapshot = snapshot;
       this.scheduleBookshelfBackgroundRefresh(this.shelfBooks);
     });
@@ -566,28 +781,81 @@ struct Index {
     // actually rolls a transaction back.
     this.refreshBookshelf();
     void this.reconcilePendingSourceSwitches();
-    this.systemFileOpenUnsubscribe?.();
-    this.systemFileOpenUnsubscribe = ReaderSystemFileOpenHost.subscribe((): void => this.consumeSystemFileOpen());
+    this.mountSystemFileOpenNavigation(this.mountedRuntimeOwner);
   }
 
   aboutToDisappear(): void {
-    this.systemFileOpenMounted = false;
-    this.systemFileOpenChecking = '';
-    this.systemFileOpenUnsubscribe?.();
-    this.systemFileOpenUnsubscribe = undefined;
+    this.transientFeedback.reset();
+    this.downloadHost?.retire();
+    this.downloadHost = undefined;
+    this.retainedDownloadSnapshot = undefined;
+    this.retainedDownloadOwner = undefined;
+    this.downloadReaderReturn = undefined;
+    this.downloadDetailReaderReturn = undefined;
+    this.detailReaderReturn = undefined;
+    this.bookInfoAfterReaderExit = undefined;
+    this.downloadPresentationIdentity = '';
+    this.retireSettingsPresentation();
+    this.retireSourceManagementPresentation();
+    this.temporaryBackLease = undefined;
+    this.nativeAlertOwner.retire();
+    this.clearIndexRecoveryNotice();
+    this.sourceImportSearchAction = undefined;
+    this.sourceImportSearchActionLabel = '';
+    this.shelfReceiptRetired = true;
+    this.retireBookshelfCatalogPresentation();
+    this.bookshelfHost.detachManagementPresentation();
+    this.bookshelfManagementPresentationIdentity = '';
+    this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
+    this.discoverPresentationIdentity = '';
+    this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
+    this.rulesPresentationIdentity = '';
+    this.syncOrchestrator?.detachPresentation(this.syncPresentationIdentity);
+    this.syncPresentationIdentity = '';
+    this.bookshelfUpdateRunning = false;
+    this.bookshelfBackgroundRefreshRunning = false;
+    this.dismissBookRemovalDialog();
+    this.bookshelfProjectionOwner?.detach(this.bookshelfProjectionBinding?.identity ?? '');
+    this.bookshelfProjectionBinding = undefined;
+    this.bookshelfHost.detachOperationPresentation();
+    this.bookshelfHost.detachReadablePresentation();
+    this.navigationBackfillObserverDisposer?.();
+    this.navigationBackfillObserverDisposer = undefined;
+    this.navigationBackfillObservedKey = '';
+    this.sourceToolsOrchestrator?.detachPresentation(this.sourceToolsPresentationIdentity);
+    this.sourceToolsPresentationIdentity = '';
+    this.retireRssEditorPresentation();
+    this.retireRssPresentation();
+    this.retireReadingEntryPresentation();
+    this.systemFileOpenNavigation?.dispose();
+    this.systemFileOpenNavigation = undefined;
     this.applicationSettingsUnsubscribe?.();
     this.applicationSettingsUnsubscribe = undefined;
     this.applicationSettingsSnapshot = undefined;
     this.bookProjectionUnsubscribe?.();
     this.bookProjectionUnsubscribe = undefined;
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
-    this.searchOrchestrator?.close();
-    ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
-    ReaderRuntimeOwner.current().readingEntryPreparations().setPaused(true);
+    this.retireSourceSwitchPresentation();
+    this.searchHost.close();
+    // Retire resources only in the owner captured when this Index mounted.
+    // An unavailable/replacement runtime owns its own cleanup and must never
+    // receive the retiring page's endSearch/pause commands.
+    const owner = this.mountedRuntimeOwner;
+    this.mountedRuntimeOwner = undefined;
+    if (this.isCurrentRuntime(owner) && owner !== undefined) {
+      owner.bookAcquisitions().endSearch();
+      owner.readingEntryPreparations().setPaused(true);
+    }
   }
 
   onBackPress(): boolean {
+    if (this.mangaSourceSwitchSelectionVisible) {
+      this.cancelMangaSourceSwitchSelection();
+      return true;
+    }
+    if (this.bookRemovalDialogOpen) {
+      this.dismissBookRemovalDialog();
+      return true;
+    }
     if (this.jsonImportVisible) {
       this.dismissJsonImport();
       return true;
@@ -595,13 +863,23 @@ struct Index {
     if (this.sourceSwitchVisible) {
       // The detail/reading overlay must win over the route-specific exit
       // branch so Back only closes the source-switch panel.
-      this.closeSourceSwitch();
+      if (this.detailBook?.contentKind === 'manga') this.closeSourceSwitch(this.sourceSwitchScopeId);
+      else this.sourceSwitchHost?.consumeBack(this.sourceSwitchScopeId);
       return true;
     }
+    if (this.hasVisibleImportDialog()) {
+      this.closeImportDialog();
+      return true;
+    }
+    if (this.editingShelfGroupBook !== undefined) {
+      if (!this.editingShelfGroupBusy) this.closeShelfGroup();
+      return true;
+    }
+    if (this.consumeTemporaryBackBridge()) return true;
     if (this.route === 'bookshelf' && this.shelfReadingPreparation) {
       // As in closeSourceSwitch, a durable source move must finish its first
       // page or rollback before navigation can abandon the transaction.
-      if (this.currentSourceSwitchTransactionId() !== undefined) return true;
+      if (this.detailBook !== undefined && this.sourceSwitchHost?.blocksExit(this.detailBook) === true) return true;
       // Cancel admission immediately; a hidden reader still settles its own
       // pending progress write through the existing serialized exit.
       this.nextNavigationGeneration();
@@ -642,16 +920,12 @@ struct Index {
       this.returnFromBookshelfSettings();
       return true;
     }
-    if (this.editingShelfGroupBook !== undefined) {
-      if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined;
-      return true;
-    }
     if (this.route === 'bookshelfManagement') {
       this.returnToBookshelf();
       return true;
     }
     if (this.route === 'bookshelfMultiSelect') {
-      if (!this.bookshelfBatchRemovalBusy) {
+      if (!this.shelfOperation.batchRemovalBusy) {
         this.returnToBookshelf();
       }
       return true;
@@ -671,6 +945,10 @@ struct Index {
     }
     if (this.route === 'sync') {
       this.returnToSettings();
+      return true;
+    }
+    if (this.route === 'downloads') {
+      this.returnFromDownloads();
       return true;
     }
     if (this.route === 'directory') {
@@ -705,343 +983,268 @@ struct Index {
       this.returnFromDetail();
       return true;
     }
-    if (this.hasVisibleImportDialog()) {
-      this.closeImportDialog();
-      return true;
-    }
     return false;
+  }
+
+  @Builder
+  private bookshelfContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
+    mounting: number = this.detailShelfAdmissionMount) {
+    if (this.isBookshelfVisualAdmitted) {
+      BookshelfPage({
+        feedbackEnabled: !this.readingSessionActive && !this.shelfReadingPreparation,
+        noticeTopInset: this.shelfPendingNoticeHeight > 0 ? this.shelfPendingNoticeHeight + 8 : 0,
+        headerClearance: this.shelfHeaderHeight + 14,
+        navigationGeneration: this.navigationGeneration,
+        viewState: this.bookshelfViewState,
+        books: this.shelfBooks,
+        serverFiltered: this.shelfProjectionRevision.length > 0,
+        onNextPageRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.loadNextShelfPage(); },
+        onPreviousPageRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.loadPreviousShelfPage(); },
+        onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string, presentedNavigation?: number): void => {
+          if (!this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) return;
+          this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
+          this.shelfContentFilter = contentKind ?? 'all';
+          this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
+          this.refreshBookshelf();
+        },
+        continueReading: this.continueReading,
+        reduceMotion: this.settingsSnapshot.reduceMotion,
+        onRssRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openRss(); },
+        onSettingsRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openSettings(); },
+        onDiscoverRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openDiscover(); },
+        onBookSelected: (book: ShelfBook, presentedNavigation?: number): void => {
+          // Native enabled state updates on the next render. Guard only UI
+          // taps here; a failed source switch still owns its internal reopen.
+          if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting) && !this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBook(book);
+        },
+        onVisibleBooksChanged: (books: ShelfBook[], presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.prepareVisibleReadingBooks(books); },
+        onBookMultiSelectRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openBookshelfMultiSelect(book); },
+        onBookInfoRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openShelfBookInfo(book); },
+        onBookGroupRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openShelfGroup(book); },
+        onBookRemoveRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.requestRemoveShelfBook(book); },
+      })
+        .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
+    } else if (this.isCoreShelfEmpty) {
+      // Core alone admits the true empty shelf. Tablet keeps its phone assembly.
+      BookshelfEmptyPage({
+        onImportRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openImportDialog(); },
+        onSearchRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openSearch(); },
+      });
+    } else {
+      BookshelfStatusContent({
+        failed: this.bookshelfLoadFailed,
+        reduceMotion: this.settingsSnapshot.reduceMotion,
+        onRetry: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.refreshBookshelf(); },
+      });
+    }
+  }
+
+  @Builder
+  private bookshelfShellContent(owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
+    navigation: number = this.navigationGeneration, mounting: number = this.detailShelfAdmissionMount) {
+    BookshelfShell({
+      feedbackEnabled: !this.readingSessionActive && !this.shelfReadingPreparation,
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.shelfHeaderHeight) > .1)
+          this.shelfHeaderHeight = height;
+      },
+      navigationGeneration: this.navigationGeneration,
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number): void => {
+        if (generation !== undefined) this.registerTemporaryBackBridge('bookshelf', generation, owner, handler, identity);
+      },
+      onNoticeHeightChange: (height: number): void => { this.shelfPendingNoticeHeight = height; },
+      populated: this.isBookshelfVisualAdmitted,
+      recovery: this.shelfRecovery(),
+      recoveryBusy: this.shelfOperation.reconcileBusy,
+      canContinueRemoval: this.canContinueShelfRemoval(),
+      removalActionLabel: this.shelfOperation.removalMutation?.confirmation === 'confirmed' ? '完成原删除清理' : '继续原删除操作',
+      onContinueRemoval: (generation: number, presentedNavigation: number): void => {
+        if (this.isCurrentBookshelfPresentation(presentedNavigation, owner, mounting)) void this.continueShelfRemoval(generation);
+      },
+      readRecovery: this.shelfReadRecovery(),
+      onRetryRead: (generation: number, presentedNavigation?: number): void => {
+        if (this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) this.retryBookshelfRead(generation);
+      },
+      onReconcile: (generation: number, presentedNavigation?: number): void => {
+        if (!this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) return;
+        if (generation < 0) void this.reconcileBookshelfCatalogProjection(generation);
+        else void this.reconcileShelfWrite(generation);
+      },
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      canCheckUpdates: this.isBookshelfVisualAdmitted && (this.shelfProjectionRevision.length > 0 ?
+        this.shelfHasOnlineBooks : this.shelfBooks.some((book: ShelfBook): boolean => book.sourceId !== 'local')),
+      updateRunning: this.bookshelfUpdateRunning,
+      backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
+      updateProgressDone: this.bookshelfUpdateDone,
+      updateProgressTotal: this.bookshelfUpdateTotal,
+      onImportRequested: (): void => this.openImportDialog(),
+      onSearchRequested: (presentedNavigation?: number): void => {
+        if (this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) this.openSearch();
+      },
+      onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
+      onDownloadsRequested: (): void => {
+        if (this.isCurrentBookshelfPresentation(navigation, owner, mounting)) this.openDownloads();
+      },
+      onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
+      onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
+      onMainTab: (key: string, presentedNavigation?: number): void => {
+        if (!this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) return;
+        if (key === 'discover') this.openDiscover();
+        else if (key === 'rss') this.openRss();
+        else if (key === 'settings') this.openSettings();
+      },
+    }) {
+      this.bookshelfContent();
+    }
+  }
+
+  @Builder
+  private localImportContent() {
+    ForEach([this.shelfOperation.importIdentity], (identity: number): void => {
+      this.localImportSurface(identity, ReaderRuntimeOwner.current(), this.navigationGeneration);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private localImportSurface(identity: number, owner: ReaderRuntimeOwner, navigation: number) {
+    LocalImportDialog({
+      state: this.visibleImportDialogState(),
+      batch: this.visibleImportBatch(),
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      failureMessage: this.shelfOperation.importFailureMessage,
+      selectionEnabled: !this.shelfOperation.busy && !this.shelfOperation.reconcileBusy && !this.hasUnknownShelfWrite(),
+      selectionBlockedMessage: this.shelfOperation.busy ? '上次书架操作仍在处理中，请稍候。关闭窗口不会取消已开始的导入。' :
+        this.shelfOperation.reconcileBusy ? '正在读取书架状态，请稍候。' : this.hasUnknownShelfWrite() ? '上次操作结果待核对，请先刷新书架。' : '',
+      // Import owns its result/short-feedback split; do not remove confirmed
+      // readback failures before its presentation can emit that feedback.
+      recovery: this.shelfOperation.action === 'import' ? readerRecoveryView(this.shelfOperation.receipt) : this.emptyShelfRecovery(),
+      originalPending: this.shelfOperation.action === 'import' && this.hasUnknownShelfWrite(),
+      onReconcile: (generation: number): void => { if (this.isCurrentImport(identity, navigation, owner)) void this.reconcileShelfWrite(generation); },
+      onSelectFiles: (): void => { if (this.isCurrentImport(identity, navigation, owner)) void this.beginImport(); },
+      onClose: (): void => { if (this.isCurrentImport(identity, navigation, owner)) this.closeImportDialog(); },
+    });
+  }
+
+  @Builder
+  private discoverPageContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.discoverPageSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount, this.discoverOrchestrator);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private discoverPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: DiscoverOrchestrator | undefined) {
+    DiscoverPage({
+      presentation: this.discoverPresentation,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.returnToBookshelf(); },
+      onRssRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openRss(); },
+      onSettingsRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openSettings(); },
+      onRetryRead: (expected: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.retryRead(expected); },
+      onRefresh: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.refresh(); },
+      onCycleSource: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.cycleSource(); },
+      onSelectKind: (index: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.selectKind(index); },
+      onPreviousPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.previousPage(); },
+      onNextPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.nextPage(); },
+    });
+  }
+
+  @Builder
+  private searchPageContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.searchPageSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount, this.searchHost);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private searchPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SearchHost) {
+    // Bind UI intents to this page opening. Search's original task and
+    // publication retain their existing lifetime outside this surface.
+    SearchPage({
+      viewState: host.viewState,
+      publication: host.publication,
+      publicationRevision: this.searchPublicationRevision,
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.returnToBookshelf(); },
+      onSearch: (keyword: string, scopeSourceIds?: string[]): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.performSearch(keyword, scopeSourceIds);
+      },
+      onStop: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.stopSearch(); },
+      onClearHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.clearSearchHistory(); },
+      onRetryHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) host.retryHistory(); },
+      onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.onSearchResultSelected(book, variants, displayCoverUrl);
+      },
+      onVisibleGroups: (groups: SearchBook[][]): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.scheduleSearchDetailWarmups(groups);
+      },
+      onRetry: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.retrySearch(); },
+      onManageSources: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.manageSourcesFromSearch(); },
+    });
+  }
+
+  private isCurrentSearchPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SearchHost): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'search' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) && this.searchHost === host;
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.route === 'bookshelf' && this.isBookshelfVisualAdmitted) {
-        BookshelfPage({
-          viewState: this.bookshelfViewState,
-          books: this.shelfBooks,
-          serverFiltered: this.shelfProjectionRevision.length > 0,
-          unfilteredOnlineBooks: this.shelfHasOnlineBooks,
-          onNextPageRequested: (): void => this.loadNextShelfPage(),
-          onPreviousPageRequested: (): void => this.loadPreviousShelfPage(),
-          onFilterRequested: (readingState: string, sourceKind: string): void => {
-            this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
-            this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
-            this.refreshBookshelf();
-          },
-          continueReading: this.continueReading,
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          onImportRequested: (): void => this.openImportDialog(),
-          onSearchRequested: (): void => this.openSearch(),
-          onRssRequested: (): void => this.openRss(),
-          onSettingsRequested: (): void => this.openSettings(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-          onManageRequested: (): void => this.openBookshelfManagement(),
-          onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
-          onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
-          onBookSelected: (book: ShelfBook): void => {
-            // Native enabled state updates on the next render. Guard only UI
-            // taps here; a failed source switch still owns its internal reopen.
-            if (!this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBook(book);
-          },
-          onVisibleBooksChanged: (books: ShelfBook[]): void => this.prepareVisibleReadingBooks(books),
-          onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
-          onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
-          onBookGroupRequested: (book: ShelfBook): void => { this.editingShelfGroupBook = book; },
-          onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
-          onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
-          updateRunning: this.bookshelfUpdateRunning,
-          backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
-          updateProgressDone: this.bookshelfUpdateDone,
-          updateProgressTotal: this.bookshelfUpdateTotal,
-        })
-          .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
+      if (this.route === 'bookshelf') {
+        Stack() {
+          this.bookshelfShellContent();
+        }
+        .width('100%')
+        .height('100%')
+        .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
       } else if (this.route === 'bookshelfSettings') {
-        BookshelfSettingsPage({
-          autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
-          onBack: (): void => this.returnFromBookshelfSettings(),
-          onAutoCheckUpdate: (value: boolean): void => this.onSettingToggled('autoCheckUpdate', value),
-        });
+        this.bookshelfSettingsContent();
       } else if (this.route === 'bookshelfMultiSelect') {
         BookshelfMultiSelectPage({
           books: this.bookshelfSelectionBooks,
           ready: this.bookshelfSelectionReady,
           initialSelectedKey: this.bookshelfMultiSelectInitialKey,
-          busy: this.bookshelfBatchRemovalBusy,
+          busy: this.shelfOperation.batchRemovalBusy,
           onCancel: (): void => this.returnToBookshelf(),
           onRemoveSelected: (keys: string[]): void => this.requestRemoveShelfBooks(keys),
         });
       } else if (this.route === 'bookshelfManagement') {
-        BookshelfManagementPage({
-          snapshot: this.bookshelfManagementSnapshot,
-          onBack: (): void => this.returnToBookshelf(),
-          onGroupNameChanged: (value: string): void =>
-            this.getBookshelfManagementOrchestrator().updateGroupName(value),
-          onGroupOrderChanged: (value: string): void =>
-            this.getBookshelfManagementOrchestrator().updateGroupOrder(value),
-          onSelectGroup: (groupId: number): void =>
-            this.getBookshelfManagementOrchestrator().selectGroup(groupId),
-          onClearGroupEditor: (): void => this.getBookshelfManagementOrchestrator().clearGroupEditor(),
-          onSaveGroup: (): void => this.getBookshelfManagementOrchestrator().saveGroup(),
-          onToggleGroupShown: (groupId: number): void =>
-            this.getBookshelfManagementOrchestrator().toggleGroupShown(groupId),
-          onDeleteGroup: (groupId: number): void =>
-            this.getBookshelfManagementOrchestrator().deleteGroup(groupId),
-          onSelectBook: (sourceId: string, bookId: string): void =>
-            this.getBookshelfManagementOrchestrator().selectBook(sourceId, bookId),
-          onAssignmentGroupChanged: (value: string): void =>
-            this.getBookshelfManagementOrchestrator().updateAssignmentGroup(value),
-          onAssignBook: (): void => this.getBookshelfManagementOrchestrator().assignSelectedBook(),
-        });
-      } else if (this.route === 'bookshelf' && this.isCoreShelfEmpty) {
-        // H-NOTE-1: Tablet empty has no Figma Final variant. Until Figma
-        // supplies a Tablet-specific empty assembly, mount the Phone
-        // BookshelfEmptyPage on Tablet as well (Figma has not yet defined
-        // the rule, so we reuse the available Phone assembly rather than
-        // leave the Tablet user staring at a blank page).
-        BookshelfEmptyPage({
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          onImportRequested: (): void => this.openImportDialog(),
-          onSearchRequested: (): void => this.openSearch(),
-          onRssRequested: (): void => this.openRss(),
-          onSettingsRequested: (): void => this.openSettings(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-          onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
-          onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
-        });
-      } else if (this.route === 'bookshelf' && this.bookshelfLoadFailed) {
-        // 首次书架加载失败(自动重试一次后仍未成功)的重试入口: 空白首页不可恢复
-        // 不可接受, 该入口常驻直到一次加载成功 (成功即清 bookshelfLoadFailed)。
-        Column({ space: 16 }) {
-          Text('书架加载失败')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(17)
-            .lineHeight(25.5)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          Text('无法读取书架内容，请重试。')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(13)
-            .lineHeight(19.5)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          Text('重试')
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(13)
-            .lineHeight(13)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-            .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-            .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-            .borderRadius(999)
-            .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-            .onClick((): void => this.refreshBookshelf());
-        }
-        .width('100%')
-        .height('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme));
+        this.bookshelfManagementContent();
       } else if (this.route === 'search') {
-        SearchPage({
-          viewState: this.searchViewState,
-          publication: this.searchPublication,
-          publicationRevision: this.searchPublicationRevision,
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToBookshelf(),
-          onSearch: (keyword: string, scopeSourceIds?: string[]): void =>
-            this.performSearch(keyword, scopeSourceIds),
-          onStop: (): void => this.stopSearch(),
-          onClearHistory: (): void => this.clearSearchHistory(),
-          onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
-            this.onSearchResultSelected(book, variants),
-          onVisibleGroups: (groups: SearchBook[][]): void => this.scheduleSearchDetailWarmups(groups),
-          onRetry: (): void => this.retrySearch(),
-          onManageSources: (): void => this.manageSourcesFromSearch(),
-        });
-      } else if (this.route === 'rss') {
-        RssPage({
-          presentation: this.rssPresentation,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          activeMode: 'sources',
-          onBack: (): void => this.returnToBookshelf(),
-          onRefresh: (): void => this.refreshRss(),
-          onManage: (): void => this.onRssManage(),
-          onSelectSubscription: (id: string): void => this.onRssSubscriptionSelected(id),
-          onSelectItem: (subscriptionId: string, guid: string): void =>
-            this.onRssItemSelected(subscriptionId, guid),
-          onModeRequested: (mode: RssMode): void => this.onRssModeRequested(mode),
-          onSettingsRequested: (): void => this.openSettings(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-        });
-      } else if (this.route === 'rssSubscriptionManagement') {
-        RssSubscriptionManagementPage({
-          items: this.rssSubscriptionManagementItems(),
-          isTablet: deviceInfo.deviceType === 'tablet',
-          focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
-          onBack: (): void => this.returnToRss(),
-          onAdd: (): void => this.onRssSubscriptionAddRequested(),
-          onImport: (): void => this.requestRssSourceImport(),
-          onExport: (): void => this.exportRssSources(),
-          onToggle: (id: string, enabled: boolean): void =>
-            this.getRssOrchestrator().toggleSubscription(id, enabled),
-          onViewArticles: (id: string): void => this.onRssManagementViewArticles(id),
-          onEditSource: (id: string): void => this.onRssSubscriptionEditRequested(id),
-          onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
-          onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
-        });
-      } else if (this.route === 'rssSubscriptionEditor') {
-        RssSubscriptionEditorPage({
-          snapshot: this.rssEditorSnapshot,
-          onBack: (): void => this.returnToRssSubscriptionManagement(),
-          onFeedUrlChanged: (value: string): void => this.getRssEditorOrchestrator().updateFeedUrl(value),
-          onTitleChanged: (value: string): void => this.getRssEditorOrchestrator().updateTitle(value),
-          onEnabledChanged: (value: boolean): void => this.getRssEditorOrchestrator().updateEnabled(value),
-          onEnabledCookieJarChanged: (value: boolean): void =>
-            this.getRssEditorOrchestrator().updateEnabledCookieJar(value),
-          onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
-            this.getRssEditorOrchestrator().updateSourceField(field, value),
-          onSave: (): void => this.getRssEditorOrchestrator().save(),
-        });
-      } else if (this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
-        RssSourceFeedPage({
-          subscription: this.selectedRssSubscription,
-          items: this.selectedRssItems,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnFromRssSourceFeed(),
-          onSelectItem: (item: RssItem): void => this.onRssSourceItemSelected(item),
-          onRefresh: (): void => this.refreshRssSourceFeed(),
-          onEditSource: (): void =>
-            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
-          onSourceOperations: (): void =>
-            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
-        });
-      } else if (this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
+        this.searchPageContent();
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rss') {
+        this.rssPageContent();
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionManagement') {
+        this.rssSubscriptionManagementContent();
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionEditor') {
+        this.rssEditorContent();
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
+        this.rssSourceFeedContent();
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
         this.selectedRssItem !== undefined) {
-        RssEntryDetailPage({
-          subscription: this.selectedRssSubscription,
-          item: this.selectedRssItem,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          favoriteState: this.selectedRssFavoriteState,
-          onBack: (): void => this.returnFromRssEntryDetail(),
-          onViewSource: (): void => this.returnToRssSourceFeed(),
-          onFavoriteRequested: (favorite: boolean): void =>
-            this.onRssEntryFavoriteRequested(favorite),
-          onSourceSettings: (): void =>
-            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
-          onOpenOriginal: (): void => this.onRssOpenOriginalRequested(),
-        });
-      } else if (this.route === 'discover') {
-        DiscoverPage({
-          presentation: this.discoverPresentation,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToBookshelf(),
-          onRssRequested: (): void => this.openRss(),
-          onSettingsRequested: (): void => this.openSettings(),
-          onRefresh: (): void => this.getDiscoverOrchestrator().refresh(),
-          onCycleSource: (): void => this.getDiscoverOrchestrator().cycleSource(),
-          onSelectKind: (index: number): void => this.getDiscoverOrchestrator().selectKind(index),
-          onPreviousPage: (): void => this.getDiscoverOrchestrator().previousPage(),
-          onNextPage: (): void => this.getDiscoverOrchestrator().nextPage(),
-        });
+        this.rssEntryDetailContent();
+      } else if (isReaderProductSurfaceEnabled('discover') && this.route === 'discover') {
+        this.discoverPageContent();
       } else if (this.route === 'settings') {
-        SettingsPage({
-          activeSection: this.settingsSection,
-          onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
-          onRestoreDefaults: (): Promise<boolean> => this.getSettingsOrchestrator().restoreDefaults(),
-          snapshot: this.settingsSnapshot,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToBookshelf(),
-          onOpenSourceManagement: (): void => this.openSourceManagement(),
-          onOpenRulesManagement: (): void => this.openRulesManagement(),
-          onOpenSync: (): void => this.openSync(),
-          onOpenBookshelfSettings: (): void => this.openBookshelfSettings(),
-          onRssRequested: (): void => this.openRss(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-          onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-            value: boolean): void => this.onSettingToggled(key, value),
-          onClearCache: (): Promise<boolean> => this.clearTextCache(),
-        });
+        this.settingsContent();
+      } else if (this.route === 'downloads') {
+        this.downloadsContent();
       } else if (this.route === 'rulesManagement') {
-        RulesManagementPage({
-          snapshot: this.rulesManagementSnapshot,
-          onBack: (): void => this.returnFromRulesManagement(),
-          onSaveReplace: (draft: ReplaceRuleDraft): void =>
-            this.getRulesManagementOrchestrator().saveReplaceRule(draft),
-          onDeleteReplace: (id: number): void => this.getRulesManagementOrchestrator().deleteReplaceRule(id),
-          onSaveTxtToc: (draft: TxtTocRuleDraft): void =>
-            this.getRulesManagementOrchestrator().saveTxtTocRule(draft),
-          onDeleteTxtToc: (id: number): void => this.getRulesManagementOrchestrator().deleteTxtTocRule(id),
-          onSaveDict: (draft: DictRuleDraft): void => this.getRulesManagementOrchestrator().saveDictRule(draft),
-          onDeleteDict: (name: string): void => this.getRulesManagementOrchestrator().deleteDictRule(name),
-          onSaveSubscription: (draft: RuleSubscriptionDraft): void =>
-            this.getRulesManagementOrchestrator().saveRuleSubscription(draft),
-          onDeleteSubscription: (id: number): void =>
-            this.getRulesManagementOrchestrator().deleteRuleSubscription(id),
-          onRefreshSubscription: (subscription: ManagedRuleSubscription): void =>
-            this.getRulesManagementOrchestrator().refreshRuleSubscription(subscription),
-          onExportBundle: (): void => this.getRulesManagementOrchestrator().exportBundle(),
-          onImportBundle: (): void => this.openJsonImport('ruleBundle'),
-        });
+        this.rulesManagementContent();
       } else if (this.route === 'source') {
-        SourceManagementPage({
-          sources: this.sourceSources,
-          statusKind: this.sourceStatusKind,
-          statusMessage: this.sourceStatusMessage,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          onBack: (): void => this.returnFromSourceManagement(),
-          onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
-          onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
-          onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
-          onAddSource: (): void => this.openJsonImport('bookSource'),
-          onOpenTools: (): void => this.openSourceTools(),
-          onRetryLoad: (): void => this.getSourceOrchestrator().retryLoad(),
-        });
+        this.sourceManagementContent();
       } else if (this.route === 'sourceTools') {
-        SourceToolsPage({
-          snapshot: this.sourceToolsSnapshot,
-          onSelectAll: (): void => this.selectAllSourceTools(),
-          onClearSelection: (): void => this.updateSourceToolsSelection([]),
-          onToggleSelection: (sourceId: string): void => this.toggleSourceToolsSelection(sourceId),
-          onBack: (): void => this.returnToSourceManagement(),
-          onExportAll: (): void => this.getSourceToolsOrchestrator().exportAll(),
-          onExportSelected: (sourceIds: string[]): void => this.exportSelectedSources(sourceIds),
-          onCheckSelected: (sourceIds: string[]): void => this.checkSelectedSources(sourceIds),
-          onStopCheck: (): void => this.getSourceToolsOrchestrator().stopCheckSelected(),
-          onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void =>
-            this.setSelectedSourcesEnabled(sourceIds, enabled),
-          onDeleteSelected: (sourceIds: string[]): void => this.requestSourceDelete(sourceIds),
-          onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
-          onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
-          onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
-          onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
-          onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
-          onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
-        });
-      } else if (this.route === 'sync') {
+        this.sourceToolsContent();
+      } else if (isReaderProductSurfaceEnabled('sync') && this.route === 'sync') {
         if (this.syncSnapshotReady) {
-          SyncPage({
-            snapshot: this.syncSnapshot,
-            isTablet: deviceInfo.deviceType === 'tablet',
-            onBack: (): void => this.returnToSettings(),
-            onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
-              this.onSyncSaveConfig(url, user, pass, backupPass, path),
-            onTestConnection: (url: string, user: string, pass: string, path: string): void =>
-              this.onSyncTestConnection(url, user, pass, path),
-            onTriggerBackup: (): void => this.onSyncTriggerBackup(),
-            onRestoreLatest: (): void => this.onSyncRestoreLatest(),
-            onResolveRestore: (overwriteLocal: boolean): void => this.onSyncResolveRestore(overwriteLocal),
-          });
+          this.syncContent();
         } else {
-          Column() {
-            Text('正在读取安全配置…');
-          }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(readerAppColor('app.Index.build.backgroundColor.FFF8F4EC', this.appThemeScheme));
+          ReaderPageScaffold({ variant: 'standard', content: (): void => { this.syncPreparingContent(); } });
         }
       } else if (this.detailBook !== undefined && (this.route === 'detail' ||
         (this.route === 'directory' && this.directoryReturnTarget === 'detail') ||
@@ -1053,8 +1256,14 @@ struct Index {
       // keeps the business state and drives it through props + callbacks.
       if (this.readingSessionActive && this.detailBook !== undefined) {
         ReaderShell({
+          contentKind: this.readingContentKind,
+          inBookshelf: this.detailInBookshelf,
+          onToggleShelf: (): void => this.requestMangaShelfMutation(),
+          onMangaLogin: (): Promise<void> => this.loginMangaSource(),
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
+          bookAuthor: this.detailBook.author, bookCoverUrl: this.detailBook.coverUrl ?? this.detailBook.displayCoverUrl ?? '',
+          latestChapterTitle: this.detailBook.lastChapter ?? '',
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
           bookKind: this.detailBook.kind,
@@ -1064,39 +1273,61 @@ struct Index {
             this.detailBook === undefined ? undefined :
               readerEntryPresentation(this.detailBook.sourceId, this.detailBook.bookId),
           sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
-          onRetryFailedSourceSwitch: (): void => this.retryFailedSourceSwitch(),
-          onDismissSourceSwitchFailure: (): void => this.dismissSourceSwitchFailure(),
+          sourceSwitchScopeId: this.sourceSwitchScopeId,
+          sourceSwitchCompletion: this.sourceSwitchCompletion,
+          onRetryFailedSourceSwitch: (scopeId?: number): void => this.retryFailedSourceSwitch(scopeId),
+          onDismissSourceSwitchFailure: (scopeId?: number): void => this.dismissSourceSwitchFailure(scopeId),
           resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
             this.resolveReaderSourceSwitchTransaction(sourceId, bookId),
-          onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
+          onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean): void => this.onRemoteSessionReady(session, refreshDirectoryDisplay),
           sourceSwitchTransactionId: this.currentSourceSwitchTransactionId(),
           totalChapters: this.detailToc.length,
           requestedChapterIndex: this.requestedChapterIndex,
+          mangaChapterRequestGeneration: this.mangaChapterRequestGeneration,
+          mangaStartAtChapterFirst: this.mangaChapterStartRequestGeneration >= 0 &&
+            this.mangaChapterStartRequestGeneration === this.mangaChapterRequestGeneration,
+          requestedMangaDirectoryTargetProof: this.requestedMangaDirectoryTargetProof,
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
-          bookmarkIdentity: this.detailBookmarkIdentity(),
+          bookmarkIdentity: this.detailBookmarkIdentity?.(),
           isTablet: deviceInfo.deviceType === 'tablet',
-          reduceMotion: this.settingsSnapshot.reduceMotion,
+          reduceMotion: this.settingsSnapshot?.reduceMotion ?? false,
           visible: this.route === 'reading' ||
             (this.route === 'directory' && this.directoryReturnTarget === 'readerControl'),
           route: this.route === 'directory' && this.directoryReturnTarget === 'readerControl' ? 'directory' : 'reading',
           tocEntries: this.detailToc,
           catalogMessage: this.detailLoadingMessage,
+          catalogBusy: this.detailCatalogBusy,
           bookmarkLoadMessage: this.controlBookmarkProjectionMessage(),
           directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
           directoryChapterTitle: this.directoryChapterTitle,
+          directoryCurrentPageOrdinal: this.detailBook.mangaPosition?.chapterIndex === this.directoryCurrentChapterIndex ?
+            this.detailBook.mangaPosition?.pageOrdinal ?? -1 : -1,
+          directoryCurrentPageTotal: this.detailBook.mangaPosition?.chapterIndex === this.directoryCurrentChapterIndex ?
+            this.detailBook.mangaPosition?.totalPages ?? -1 : -1,
           directoryOpenedFromControl: this.directoryReturnTarget === 'readerControl',
-          offlineBookOperationActive: this.offlineMutationActiveKey.length > 0,
+          offlineBookOperationActive: this.offlineOperationActive,
+          directoryRecovery: this.directoryRecovery(),
+          onReconcileBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity),
+          onContinueBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity, true),
+          onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
+          onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
+          mangaDownloadEnabled: this.readingContentKind === 'manga' && ReaderRuntimeOwner.current().supportsCoreCapability('manga.offline.v1'),
+          onLoadMangaDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> => this.loadMangaDownloadActions(chapterIndex),
+          onMangaDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> => this.performMangaDownloadAction(action, chapterIndex),
           chapterStartBookmarkCreationEnabled: true,
           sourceSwitchVisible: this.sourceSwitchVisible,
           sourceSwitchState: this.sourceSwitchState,
+          allowCancelSourceSwitchWhilePreparing: this.canCancelMangaSourcePreparation() || this.sourceSwitchHost?.canCancelPreparation(this.sourceSwitchScopeId) === true,
           onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => {
             this.readingExitRequest = requestExit;
             this.consumeSystemFileOpen();
           },
-          onExit: (): void => this.onReaderExited(),
-          onExitCancelled: (): void => this.cancelReaderExitDestination(),
+          onExit: (readerIdentity: string): void => this.onReaderExited(readerIdentity),
+          onExitCancelled: (readerIdentity: string): void => this.cancelReaderExitDestination(readerIdentity),
           onOpenBookInfo: (): void => this.requestReaderBookInfo(),
-          onReadingReady: this.readingReadyCallback(this.detailBook.sourceId, this.detailBook.bookId, this.readingReadyGeneration),
+          readingReadyGeneration: this.readingReadyGeneration,
+          onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number): void =>
+            this.readingReadyCallback(sourceId, bookId, generation)(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
           onReadingFailure: (sourceId: string, bookId: string, message: string,
             failureKind?: RemoteReadingFailureKind): void =>
@@ -1105,10 +1336,16 @@ struct Index {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onAdjacentChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
+            this.applyMangaAdjacentChapter(chapterIndex, chapterTitle),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
+            positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
             this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDownloadBook: (): void => this.downloadDirectoryBook(),
+          onOpenDownloads: (): void => this.requestReaderDownloads(),
           onClearBookOffline: (): void => this.requestClearDirectoryBookOffline(),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.deleteDirectoryBookmarks(bookmarkTimes),
           onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void =>
@@ -1123,68 +1360,36 @@ struct Index {
           onOpenDirectory: (): void => this.openReaderControlDirectory(),
           onSwitchSource: (): void => this.openSourceSwitch(),
           onOpenRulesManagement: (): void => this.requestRulesManagementFromReader(),
-          onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
-          onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
-          onRefreshSourceSwitch: (): void => this.refreshSourceSwitch(),
-          onPickSource: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
-          onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
+          onCloseSourceSwitch: (scopeId?: number): void => this.closeSourceSwitch(scopeId),
+          onRetrySourceSwitch: (scopeId?: number): void => this.retrySourceSwitch(scopeId),
+          onRefreshSourceSwitch: (scopeId?: number): void => this.refreshSourceSwitch(scopeId),
+          onStopSourceSwitch: (scopeId?: number): void => this.stopSourceDiscovery(scopeId),
+          onPickSource: (candidate: SourceSwitchCandidate, scopeId?: number): void => this.onPickSource(candidate, scopeId),
+          onRollbackSourceSwitch: (scopeId?: number): void => this.onRollbackSourceSwitch(scopeId),
         });
       }
       if ((this.route === 'detail' || this.route === 'bookshelf') &&
-        !this.readingSessionActive && this.sourceSwitchVisible && this.detailBook !== undefined) {
-        Stack({ alignContent: Alignment.Center }) {
-          Stack()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(readerAppColor('app.Index.build.backgroundColor.40FFFFFF', this.appThemeScheme))
-            .onClick((): void => this.closeSourceSwitch());
-          SourceSwitchPanel({
-            state: this.sourceSwitchState,
-            currentSourceId: this.detailBook.sourceId,
-            onClose: (): void => this.closeSourceSwitch(),
-            onRetry: (): void => this.retrySourceSwitch(),
-            onRefresh: (): void => this.refreshSourceSwitch(),
-            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
-            onRollback: (): void => this.onRollbackSourceSwitch(),
-          });
-        }
-        .width('100%')
-        .height('100%');
+        !this.readingSessionActive && this.sourceSwitchVisible && !this.mangaSourceSwitchSelectionVisible && this.detailBook !== undefined) {
+        this.sourceSwitchOverlayContent();
+      }
+      if (this.mangaSourceSwitchSelectionVisible && this.mangaSourceSwitchSelection !== undefined) {
+        // This sibling leaves the admitted reading/detail surface and its
+        // source/progress untouched until first-image validation and commit.
+        this.mangaSourceSwitchDirectory();
       }
       if (this.route === 'bookshelf' && this.editingShelfGroupBook !== undefined) {
-        Stack({ alignContent: Alignment.Center }) {
-          Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
-            .onClick((): void => { if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined; });
-          Column({ space: 12 }) {
-            Text('编辑分组').fontSize(17).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            BookshelfGroupSelector({
-              selected: (this.editingShelfGroupBook?.group?.trim() ?? '') === '',
-              busy: this.editingShelfGroupBusy,
-              onSelect: (): void => { void this.assignShelfDefaultGroup(); },
-            });
-          }.padding(20).width('75%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.FFFFFCF8', this.appThemeScheme)).borderRadius(20);
-        }.width('100%').height('100%');
+        this.shelfGroupContent();
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
-        LocalImportDialog({
-          state: this.visibleImportDialogState(),
-          batch: this.visibleImportBatch(),
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          failureMessage: this.importFailureMessage,
-          onSelectFiles: (): void => { void this.beginImport(); },
-          onClose: (): void => this.closeImportDialog(),
-        });
+        this.localImportContent();
       }
       if (this.jsonImportVisible) {
-        JsonImportDialog({
-          title: this.jsonImportTitle(),
-          description: this.jsonImportDescription(),
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onDismiss: (): void => this.dismissJsonImport(),
-          onSelectLocal: (): void => this.selectLocalJsonImport(),
-          onImportOnline: (onlineUrl: string): void => this.importOnlineJson(onlineUrl),
-        });
+        this.jsonImportContent();
       }
+      this.indexRecoveryNoticeContent();
+      // Runtime geometry guide is last so it can outline every mounted page
+      // surface without intercepting input.
+      ReaderLayoutDebugOverlay();
       // Host capability surface only: mounted for ArkWeb controller lifecycle,
       // never used as the reading-body renderer.
       ArkWebExecutionHost()
@@ -1196,39 +1401,279 @@ struct Index {
       // edge-to-edge background and resolves its content/control rects inside
       // ReaderLayoutGeometry, so it must not inherit this App-page padding.
       .padding({ top: this.readerOwnsWindowEdges() ? 0 : this.appContentTopInset() })
-      .expandSafeArea([SafeAreaType.SYSTEM], this.readerOwnsWindowEdges() ?
-        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .expandSafeArea(this.mangaOwnsWindowEdges() ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+        this.mangaOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+          this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea(this.mangaOwnsWindowEdges() ? [LayoutSafeAreaType.SYSTEM] : [],
+        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [])
+  }
+
+  @Builder
+  private syncPreparingContent() {
+    Column() {
+      Text('正在读取安全配置…');
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center);
+  }
+
+  @Builder
+  private syncContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.syncSurface(generation, this.mountedRuntimeOwner, this.getSyncOrchestrator(), this.detailShelfAdmissionMount, this.syncPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private syncSurface(generation: number, owner: ReaderRuntimeOwner | undefined, host: SyncOrchestrator,
+    mounting: number, identity: string) {
+    SyncPage({
+      snapshot: this.syncSnapshot,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) this.returnToSettings(); },
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.reconcile(expected);
+      },
+      onSkipBackupRetention: (expected: number): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.skipBackupRetention(expected);
+      },
+      onContinueConfigSave: (expected: number, url: string, user: string, pass: string, backupPass: string, directory: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity))
+          host.continueConfigSave(expected, url, user, pass, backupPass, directory);
+      },
+      onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.saveConfig(url, user, pass, backupPass, path);
+      },
+      onTestConnection: (url: string, user: string, pass: string, path: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.testConnection(url, user, pass, path);
+      },
+      onTriggerBackup: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.triggerBackup(); },
+      onRestoreLatest: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.restoreLatest(); },
+      onResolveRestore: (overwriteLocal: boolean): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.resolveRestore(overwriteLocal);
+      },
+    });
+  }
+
+  @Builder
+  private rssPageContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssPageSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.rssOrchestrator, this.rssPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string) {
+    RssPage({
+      presentation: this.rssPresentation,
+      original: this.rssFeedOriginal,
+      presentationIdentity: identity,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss'))
+          this.reconcileRssFeedOriginal(expected, generation, owner, mounting, host, identity);
+      },
+      readFacts: this.rssFeedRead,
+      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.loadRss(generation, facts.generation);
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      activeMode: 'sources',
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.returnToBookshelf(); },
+      onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.refreshRss(); },
+      onManage: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssManage(); },
+      onSelectSubscription: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssSubscriptionSelected(id); },
+      onSelectItem: (subscriptionId: string, guid: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssItemSelected(subscriptionId, guid); },
+      onModeRequested: (mode: RssMode): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssModeRequested(mode); },
+      onSettingsRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openSettings(); },
+      onDiscoverRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openDiscover(); },
+    });
+  }
+
+  @Builder
+  private rssEditorContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssEditorSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.rssEditorPresentationIdentity, this.rssEditorOrchestrator);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssEditorSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    identity: string, host: RssSubscriptionEditorOrchestrator | undefined) {
+    RssSubscriptionEditorPage({
+      presentationIdentity: identity,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcileOriginal(expected, identity); },
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.continueOriginal(expected, identity); },
+      snapshot: this.rssEditorSnapshot,
+      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcile(expectedGeneration); },
+      onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.retryLoad(expectedGeneration); },
+      onBack: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) this.returnToRssSubscriptionManagement(); },
+      onFeedUrlChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateFeedUrl(value); },
+      onTitleChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateTitle(value); },
+      onEnabledChanged: (value: boolean): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabled(value); },
+      onEnabledCookieJarChanged: (value: boolean): void =>
+        { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabledCookieJar(value); },
+      onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
+        { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateSourceField(field, value); },
+      onSave: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.save(); },
+    });
+  }
+
+  @Builder
+  private rssSourceFeedContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssSourceFeedSurface(generation, this.mountedRuntimeOwner, this.selectedRssSubscription?.subscriptionId ?? '',
+        this.detailShelfAdmissionMount, this.rssOrchestrator, this.rssPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssSourceFeedSurface(generation: number, owner: ReaderRuntimeOwner | undefined, subscriptionId: string,
+    mounting: number, host: RssOrchestrator | undefined, identity: string) {
+    RssSourceFeedPage({
+      subscription: this.selectedRssSubscription,
+      items: this.selectedRssItems,
+      presentationIdentity: identity,
+      original: this.rssSourceOriginal,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.reconcileSourceOriginal(expected, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting), subscriptionId); },
+      operation: this.rssSourceOperation,
+      readFacts: this.rssSourceRead,
+      onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId) && operation.subscriptionId === subscriptionId) host?.reconcileSourceOperation(operation, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting));
+      },
+      onRetryRead: (facts: OperationFacts<RssSourceSnapshot>): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.retrySourceRead(subscriptionId, facts, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting));
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.returnFromRssSourceFeed(); },
+      onSelectItem: (item: RssItem): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.onRssSourceItemSelected(item); },
+      onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.refreshRssSourceFeed(); },
+      onEditSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+      onSourceOperations: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+    });
+  }
+
+  @Builder
+  private rssEntryDetailContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssEntryDetailSurface(generation, this.mountedRuntimeOwner, this.selectedRssSubscription?.subscriptionId ?? '', this.selectedRssItem?.guid ?? '',
+        this.detailShelfAdmissionMount, this.rssOrchestrator, this.rssPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssEntryDetailSurface(generation: number, owner: ReaderRuntimeOwner | undefined, subscriptionId: string, guid: string,
+    mounting: number, host: RssOrchestrator | undefined, identity: string) {
+    RssEntryDetailPage({
+      subscription: this.selectedRssSubscription,
+      item: this.selectedRssItem,
+      presentationIdentity: identity,
+      original: this.rssEntryOriginal,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.reconcileEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting), subscriptionId, guid); },
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.continueEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting)); },
+      operation: this.rssEntryOperation,
+      readFacts: this.rssEntryRead,
+      onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid) && operation.subscriptionId === subscriptionId && operation.guid === guid) host?.reconcileEntryOperation(operation, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting));
+      },
+      onRetryRead: (facts: OperationFacts<RssEntrySnapshot>): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.retryEntryRead(subscriptionId, guid, facts, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting));
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      favoriteState: this.selectedRssFavoriteState,
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnFromRssEntryDetail(); },
+      onViewSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnToRssSourceFeed(); },
+      onFavoriteRequested: (favorite: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssEntryFavoriteRequested(favorite); },
+      onSourceSettings: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.openRssManagementForSubscription(subscriptionId); },
+      onOpenOriginal: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssOpenOriginalRequested(); },
+    });
+  }
+
+  @Builder
+  private rssSubscriptionManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssSubscriptionManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.rssOrchestrator, this.rssPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssSubscriptionManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string) {
+    RssSubscriptionManagementPage({
+      items: this.rssSubscriptionManagementItems(),
+      isTablet: deviceInfo.deviceType === 'tablet',
+      focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
+      resultMessage: this.rssOperationResultMessage,
+      presentationIdentity: identity,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileOriginal(expected, identity); },
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.continueOriginal(expected, identity); },
+      operation: this.rssManagementOperation,
+      readFacts: this.rssManagementRead,
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.returnToRss(); },
+      onAdd: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionAddRequested(); },
+      onImport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSourceImport(); },
+      onExport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.exportRssSources(); },
+      onToggle: (id: string, enabled: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.toggleSubscription(id, enabled); },
+      onViewArticles: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssManagementViewArticles(id); },
+      onEditSource: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionEditRequested(id); },
+      onRefresh: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.refreshSubscription(id); },
+      onDelete: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSubscriptionDelete(id); },
+      onReconcile: (operation: RssManagementOperationProjection): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileManagementOperation(operation); },
+      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.retryManagementRead(facts); },
+    });
   }
 
   @Builder
   private detailContent() {
     if (this.detailBook !== undefined) {
-      // Keep the admitted detail instance (including its native scroll position)
-      // underneath its catalog. The two surfaces are siblings in the root Stack.
+      // The same admission keeps its native scroll under the directory.
+      // A new admission gets its own ordinary callbacks, never fresh owner state
+      // read through the old native handler.
+      ForEach([this.detailShelfAdmissionIdentity()], (identity: string): void => {
+        this.detailSurface(identity, this.mountedRuntimeOwner);
+      }, (identity: string): string => identity);
+      if (this.route === 'directory' && this.directoryReturnTarget === 'detail') this.externalDirectory();
+    }
+  }
+
+  @Builder
+  private detailSurface(identity: string, owner: ReaderRuntimeOwner | undefined) {
+    if (this.detailBook !== undefined) {
       LocalBookDetail({
         book: this.detailBook,
         toc: this.detailToc,
         sourceSwitchEnabled: this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
-          this.bookshelfRemovalActiveKey.length === 0 &&
-          this.bookshelfAdditionActiveKey !== this.detailBookKey(this.detailBook),
+          this.shelfOperation.removalKey.length === 0 &&
+          !this.detailReadableAdmission(this.detailBook).adding,
         readingEnabled: this.remoteContentVerdict === 'readable',
         readingBlockedReason: this.remoteContentVerdictLabel(this.remoteContentVerdict),
         inBookshelf: this.detailInBookshelf,
         loadingMessage: this.detailLoadingMessage,
+        catalogBusy: this.detailCatalogBusy,
         removalEnabled: !this.readingSessionActive && !this.sourceSwitchVisible &&
-          this.pendingSourceSwitch === undefined && this.offlineMutationActiveKey.length === 0 &&
-          this.bookshelfRemovalActiveKey.length === 0,
-        removing: this.bookshelfRemovalActiveKey.length > 0,
-        adding: this.bookshelfAdditionActiveKey === this.detailBookKey(this.detailBook),
-        cancellingAdd: this.bookshelfAdditionCancellingKey === this.detailBookKey(this.detailBook),
-        shelfMessage: this.bookshelfAdditionErrorKey === this.detailBookKey(this.detailBook) ? this.bookshelfAdditionError : '',
-        onContinue: (): void => this.openReading(undefined),
-        onSelectChapter: (chapterIndex: number): void => this.openReading(chapterIndex),
-        onOpenDirectory: (): void => this.openFullDirectory(),
-        onSwitchSource: (): void => this.openDetailSourceSwitch(),
-        onRemove: (): void => this.requestDetailShelfMutation(),
-        onCancelAdd: (): void => this.cancelDetailBookAddition(),
-        onBack: (): void => this.returnFromDetail(),
+          this.pendingSourceSwitch === undefined && this.sourceSwitchHost?.blocksExit(this.detailBook!) !== true && !this.offlineOperationActive &&
+          this.shelfOperation.removalKey.length === 0 && !this.shelfOperation.busy && !this.hasUnknownShelfWrite(),
+        removing: this.shelfOperation.removalKey.length > 0,
+        adding: this.detailReadableAdmission(this.detailBook).adding,
+        cancellingAdd: this.detailReadableAdmission(this.detailBook).cancelling,
+        shelfMessage: this.detailShelfMessage(this.detailBook),
+        onContinue: (): void => { if (this.isCurrentDetailPresentation(identity, owner)) this.openReading(undefined); },
+        onSelectChapter: (chapterIndex: number): void => { if (this.isCurrentDetailPresentation(identity, owner)) this.openReading(chapterIndex); },
+        onOpenDirectory: (): void => { if (this.isCurrentDetailPresentation(identity, owner)) this.openFullDirectory(); },
+        onSwitchSource: (): void => { if (this.isCurrentDetailPresentation(identity, owner)) this.openDetailSourceSwitch(); },
+        admissionIdentity: identity,
+        onRemove: (identity?: string): void => { if (this.isCurrentDetailShelfAdmission(identity)) this.requestDetailShelfMutation(); },
+        onCancelAdd: (identity?: string): void => { if (this.isCurrentDetailShelfAdmission(identity)) this.cancelDetailBookAddition(); },
+        onBack: (): void => { if (this.isCurrentDetailPresentation(identity, owner)) this.returnFromDetail(); },
       })
         .width('100%').height('100%')
         .visibility(this.route === 'directory' && this.directoryReturnTarget === 'detail' ? Visibility.Hidden : Visibility.Visible)
@@ -1236,36 +1681,129 @@ struct Index {
         .focusable(this.route !== 'directory' || this.directoryReturnTarget !== 'detail')
         .hitTestBehavior(this.route === 'directory' && this.directoryReturnTarget === 'detail' ? HitTestMode.None : HitTestMode.Default)
         .accessibilityLevel(this.route === 'directory' && this.directoryReturnTarget === 'detail' ? 'no-hide-descendants' : 'auto');
-      if (this.route === 'directory' && this.directoryReturnTarget === 'detail') {
-        this.externalDirectory();
-      }
     }
+  }
+
+  private isCurrentDetailPresentation(identity: string, owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      this.isCurrentDetailShelfAdmission(identity);
   }
 
   @Builder
   private externalDirectory() {
     if (this.detailBook !== undefined) {
-      BookDirectoryPage({
+      if (this.detailBook.contentKind === 'manga') {
+        BookDirectoryPage({
         sourceId: this.detailBook.sourceId,
         bookId: this.detailBook.bookId,
+        bookKind: this.detailBook.kind ?? '',
+        contentKind: this.detailBook.contentKind === 'manga' ? 'manga' : 'text',
+        bookTitle: this.detailBook.title,
+        currentChapterIndex: this.detailBook.mangaPosition?.chapterIndex ?? this.directoryCurrentChapterIndex,
+        currentPageOrdinal: this.detailBook.mangaPosition?.pageOrdinal ?? -1,
+        currentPageTotal: this.detailBook.mangaPosition?.totalPages ?? -1,
         entries: this.detailToc,
         catalogMessage: this.detailLoadingMessage,
+        catalogBusy: this.detailCatalogBusy,
+        directoryRecovery: this.directoryRecovery(),
+        onReconcileBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity),
+        onContinueBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity, true),
+        onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
+        onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
         chapterStartBookmarkCreationEnabled: true,
+        mangaDownloadEnabled: this.detailBook.contentKind === 'manga' && ReaderRuntimeOwner.current().supportsCoreCapability('manga.offline.v1'),
+        onLoadDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> => this.loadMangaDownloadActions(chapterIndex),
+        onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> => this.performMangaDownloadAction(action, chapterIndex),
         onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
+        onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
+          positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+          this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
         onDownloadChapter: (index: number): void => this.downloadDirectoryChapter(index),
         onDeleteBookmarks: (times: number[]): void => this.deleteDirectoryBookmarks(times),
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
           this.createDirectoryChapterStartBookmark(request),
+        onRetryCatalog: (): void => this.retryDirectoryCatalog(),
         onBack: (): void => this.closeDirectory(),
+        }).width('100%').height('100%');
+      } else {
+        // Text detail owns the same complete directory surface as the reader:
+        // ReaderFullDirectory -> FullDirectoryPanel. The manga detail catalog
+        // remains its dedicated image directory with manga-only controls.
+        ReaderFullDirectory({
+          bookTitle: this.detailBook.title,
+          catalogContext: 'detail',
+          chapterTitle: this.directoryChapterTitle,
+          entries: this.detailToc,
+          catalogMessage: this.detailLoadingMessage,
+          catalogBusy: this.detailCatalogBusy,
+          directoryRecovery: this.directoryRecovery(),
+          onReconcileBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity),
+          onContinueBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity, true),
+          onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
+          onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
+          currentChapterIndex: this.directoryCurrentChapterIndex,
+          sourceId: this.detailBook.sourceId,
+          reduceMotion: this.settingsSnapshot?.reduceMotion ?? false,
+          offlineBookOperationActive: this.offlineOperationActive,
+          onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
+            positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
+            this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
+          bookmarkIdentity: this.detailBookmarkIdentity?.(),
+          onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
+          onDownloadBook: (): void => this.downloadDirectoryBook(),
+          onClearBookOffline: (): void => this.requestClearDirectoryBookOffline(),
+          onDeleteBookmarks: (times: number[]): void => this.deleteDirectoryBookmarks(times),
+          chapterStartBookmarkCreationEnabled: true,
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.createDirectoryChapterStartBookmark(request),
+          onRetryCatalog: (): void => this.retryDirectoryCatalog(),
+          onSwitchSource: (): void => this.openDetailSourceSwitch(),
+          onExit: (): void => this.closeDirectory(),
+        }).width('100%').height('100%');
+      }
+    }
+  }
+
+  @Builder
+  private mangaSourceSwitchDirectory() {
+    if (this.mangaSourceSwitchSelection !== undefined) {
+      BookDirectoryPage({
+        sourceId: this.mangaSourceSwitchSelection.target.identity.sourceId,
+        bookId: this.mangaSourceSwitchSelection.target.identity.bookId,
+        bookKind: this.mangaSourceSwitchSelection.target.book.kind ?? '',
+        contentKind: 'manga',
+        bookTitle: this.mangaSourceSwitchSelection.target.book.title,
+        currentChapterIndex: -1,
+        currentPageOrdinal: -1,
+        currentPageTotal: -1,
+        entries: this.mangaSourceSwitchSelection.entries,
+        catalogMessage: '请选择目标章节继续换源',
+        chapterStartBookmarkCreationEnabled: false,
+        onSelectChapter: this.mangaSourceSwitchDirectorySelection(this.mangaSourceSwitchSelection),
+        onSelectNavigationTarget: this.mangaSourceSwitchDirectorySelection(this.mangaSourceSwitchSelection),
+        onBack: this.mangaSourceSwitchDirectoryBack(this.mangaSourceSwitchSelection),
       }).width('100%').height('100%');
     }
   }
 
   private readerOwnsWindowEdges(): boolean {
+    if (this.mangaSourceSwitchSelectionVisible) return true;
+    // New floating detail/catalog owns its single safe-top inset inside the
+    // full-viewport surface, exactly as the image reader does.
+    if (this.detailBook !== undefined && (this.route === 'detail' ||
+      (this.route === 'directory' && this.directoryReturnTarget === 'detail' && this.detailBook.contentKind === 'manga'))) return true;
     // Only a visible reader/control owns edge-to-edge geometry. Detail's
     // ordinary catalog inherits the same single App safe-top inset as Detail.
     return this.readingSessionActive && (this.route === 'reading' ||
       (this.route === 'directory' && this.directoryReturnTarget === 'readerControl'));
+  }
+
+  private mangaOwnsWindowEdges(): boolean {
+    if (this.mangaSourceSwitchSelectionVisible) return true;
+    return this.readingSessionActive && this.readingContentKind === 'manga' && this.readerOwnsWindowEdges();
   }
 
   private appContentTopInset(): number {
@@ -1282,7 +1820,7 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.selectedRssSubscription = undefined;
@@ -1292,34 +1830,38 @@ struct Index {
     this.rssDetailReturnTarget = 'rss';
     this.rssSourceFeedReturnTarget = 'rss';
     this.rssManagementFocusSubscriptionId = '';
-    this.rssPresentation = this.feedPresentation([], []);
     this.route = 'rss';
     void this.loadRss(generation);
   }
 
-  private async loadRss(generation: number): Promise<void> {
-    const gateway = new RssGateway(ReaderRuntimeOwner.current());
-    try {
-      const subscriptions = await gateway.loadSubscriptions();
-      if (!this.isCurrentRoute(generation, 'rss')) {
-        return;
-      }
-      // A true "recent unread" list requires one Core-owned, globally ordered
-      // subscription-scoped query. Keep the slot empty until rss.entries.query
-      // is formally admitted; do not fan out per-source reads and present the
-      // concatenation as a global recent result.
-      this.rssPresentation = this.feedPresentation(subscriptions, []);
-    } catch (error) {
-      // Partial/Fatal error visuals remain blocked in Figma. Preserve the
-      // admitted RSS shell instead of presenting the obsolete full-page
-      // error capture as a new route.
-      if (this.isCurrentRoute(generation, 'rss')) {
-        this.rssPresentation = this.feedPresentation([], []);
-      }
-      const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader',
-        'RSS subscription projection failed: %{private}s', message);
-    }
+  private loadRss(generation: number, expectedGeneration?: number): void {
+    if (!isReaderProductSurfaceEnabled('rss')) return;
+    const host = this.getRssOrchestrator();
+    const binding = this.rssFeedBinding(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+      host, this.rssPresentationIdentity);
+    if (!binding.current()) return;
+    host.loadFeed(binding.emit, binding.emitRead, binding.current, expectedGeneration, binding.emitOriginal);
+  }
+
+  private rssFeedBinding(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string): RssFeedPresentationBinding {
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss');
+    return { current,
+      emit: (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+      emitRead: (facts: OperationFacts<RssSubscription[]>): void => {
+        if (!current()) return;
+        this.rssFeedRead = facts;
+        if (facts.value !== undefined) this.rssPresentation = this.feedPresentation(facts.value, []);
+      },
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssFeedOriginal = original; },
+    };
+  }
+
+  private reconcileRssFeedOriginal(expected: RssOriginalMutationIdentity, generation: number,
+    owner: ReaderRuntimeOwner | undefined, mounting: number, host: RssOrchestrator | undefined, identity: string): void {
+    const binding = this.rssFeedBinding(generation, owner, mounting, host, identity);
+    if (!binding.current()) return;
+    host?.reconcileFeedOriginal(expected, binding.emit, binding.emitRead, binding.current, binding.emitOriginal);
   }
 
   private openDiscover(): void {
@@ -1327,40 +1869,336 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'discover';
     this.getDiscoverOrchestrator().open();
   }
 
+  private isCurrentDiscoverPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: DiscoverOrchestrator | undefined, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'discover' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      host !== undefined && this.discoverOrchestrator === host && host.owns(owner) &&
+      (!attached || host.isPresentationCurrent(JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'discover'])));
+  }
+
   private getDiscoverOrchestrator(): DiscoverOrchestrator {
-    if (this.discoverOrchestrator === undefined) {
-      this.discoverOrchestrator = new DiscoverOrchestrator(
-        (presentation: DiscoverPresentation): void => {
-          this.discoverPresentation = presentation;
-        },
-        (): boolean => this.route === 'discover',
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'discover')
+      throw new Error('发现页面已退役');
+    const host = DiscoverOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('发现 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'discover']);
+    if (this.discoverOrchestrator !== host || this.discoverPresentationIdentity !== identity) {
+      this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
+      this.discoverOrchestrator = host; this.discoverPresentationIdentity = identity;
+      const current = (): boolean => this.discoverPresentationIdentity === identity &&
+        this.isCurrentDiscoverPresentation(generation, owner, mounting, host, false);
+      host.attachPresentation(identity, (presentation: DiscoverPresentation): void => {
+        if (current()) this.discoverPresentation = presentation;
+      }, current);
     }
-    return this.discoverOrchestrator;
+    return host;
   }
 
   private openSettings(): void {
     this.settingsSection = 'home';
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
-    this.getSettingsOrchestrator().open();
+    if (this.bindSettingsPresentation()) {
+      this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+      void this.reconcileSettingsCache(undefined);
+      this.settingsHost.open(this.settingsPresentationIdentity);
+    }
+  }
+
+  private openDownloads(detailKey: string = '', preserveReturn: boolean = false, resumeLoaded: boolean = false): void {
+    const owner = this.mountedRuntimeOwner;
+    if (this.readingSessionActive || owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
+    if (!preserveReturn) {
+      this.downloadReturnTarget = this.route === 'bookshelf' ? 'bookshelf' :
+        this.route === 'detail' || this.route === 'directory' ? this.route : 'settings';
+      this.downloadReturnBook = this.downloadReturnTarget === 'settings' || this.downloadReturnTarget === 'bookshelf' ?
+        undefined : this.currentDownloadBook();
+      this.downloadDetailReturnRoute = this.detailReturnRoute;
+      this.downloadReaderReturn = undefined;
+      this.downloadDetailReaderReturn = this.detailReturnRoute === 'reader' ? this.detailReaderReturn : undefined;
+    }
+    if (detailKey.length > 0 || !preserveReturn) {
+      const retained = this.downloadViewState;
+      this.downloadViewState = { query: retained.query, type: retained.type, state: retained.state,
+        sourceId: retained.sourceId, sort: retained.sort, direction: retained.direction,
+        listScroll: retained.listScroll, chapterScroll: retained.detailKey === detailKey ? retained.chapterScroll : 0, detailKey };
+    }
+    const retained = resumeLoaded && this.retainedDownloadOwner === owner &&
+      this.retainedDownloadSnapshot?.loading === false ? this.retainedDownloadSnapshot : undefined;
+    const generation = this.nextNavigationGeneration();
+    const identity = JSON.stringify([this.rssInstanceIdentity, this.detailShelfAdmissionMount, generation, 'downloads']);
+    this.route = 'downloads';
+    this.downloadPresentationIdentity = identity;
+    this.downloadBooks = retained?.books ?? [];
+    this.downloadLoading = retained === undefined;
+    this.downloadError = retained?.error ?? '';
+    this.downloadStorageSummary = retained?.storageSummary ?? {};
+    this.downloadStoragePolicy = retained?.storagePolicy;
+    if (retained === undefined) {
+      this.retainedDownloadSnapshot = undefined;
+      this.retainedDownloadOwner = undefined;
+    }
+    this.downloadPendingMessage = '';
+    const current = (): boolean => this.isCurrentDownloadPresentation(generation, owner, identity);
+    const host = new SharedDownloadHost(owner, (snapshot: SharedDownloadSnapshot): void => {
+      if (!current() || this.downloadHost !== host) return;
+      this.retainedDownloadSnapshot = snapshot;
+      this.retainedDownloadOwner = owner;
+      this.downloadBooks = snapshot.books;
+      this.downloadLoading = snapshot.loading;
+      this.downloadError = snapshot.error;
+      this.downloadStorageSummary = snapshot.storageSummary;
+      this.downloadStoragePolicy = snapshot.storagePolicy;
+    });
+    this.downloadHost = host;
+    if (retained !== undefined) {
+      host.resume(retained, current);
+      const readingBook = this.detailBook;
+      if (readingBook !== undefined) {
+        // The saved reader exit has already confirmed progress. Refresh only
+        // this book's shelf metadata; chapters and the rest of the list stay.
+        void host.refreshReadingMetadata(readingBook.sourceId, readingBook.bookId, current)
+          .catch((): void => {
+            if (current() && this.downloadHost === host) this.showOfflineDownloadFeedback('阅读位置暂未刷新，请稍后重试');
+          });
+      }
+    } else void host.reload(current);
+  }
+
+  private currentDownloadBook(): ShelfBook | undefined {
+    const book = this.detailBook;
+    if (book === undefined) return undefined;
+    const shelf = this.shelfBooks.find((row: ShelfBook): boolean => row.sourceId === book.sourceId && row.bookId === book.bookId);
+    return { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId,
+      title: book.title, author: book.author, kind: book.kind, contentKind: book.contentKind,
+      coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
+      addedAt: shelf?.addedAt ?? 0, lastReadAt: shelf?.lastReadAt, group: shelf?.group,
+      sortIndex: shelf?.sortIndex, unreadCount: shelf?.unreadCount, lastCheckAt: shelf?.lastCheckAt,
+      currentChapterTitle: shelf?.currentChapterTitle, currentChapterIndex: shelf?.currentChapterIndex,
+      chapterCount: shelf?.chapterCount, readProgress: shelf?.readProgress, readingPosition: shelf?.readingPosition };
+  }
+
+  private requestReaderDownloads(detailKey: string = ''): void {
+    const book = this.currentDownloadBook();
+    if (book === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner)) return;
+    if (!this.readingSessionActive) { this.openDownloads(detailKey); return; }
+    const exit = this.readingExitRequest;
+    if (exit === undefined) { this.showOfflineDownloadFeedback('阅读位置尚未就绪，请稍后打开下载管理'); return; }
+    const context = this.captureReaderReturnContext();
+    this.downloadReturnTarget = 'reading'; this.downloadReturnBook = book;
+    this.downloadReaderReturn = context;
+    this.downloadsAfterReaderExit = { identity: this.currentReaderPresentationIdentity(), detailKey };
+    exit('navigation');
+  }
+
+  private returnFromDownloads(): void {
+    const target = this.downloadReturnTarget, book = this.downloadReturnBook;
+    this.readingFromDownloads = false;
+    if (target === 'bookshelf') { this.returnToBookshelf(); return; }
+    if (target === 'settings' || book === undefined) { this.returnToSettings(); return; }
+    if (target === 'reading') {
+      const context = this.downloadReaderReturn;
+      this.downloadReaderReturn = undefined;
+      if (!this.restoreReaderReturnContext(context)) this.readingOriginRoute = 'detail';
+      this.openShelfBook(book);
+      this.restoreReaderReturnContext(context);
+      return;
+    }
+    this.detailReaderReturn = this.downloadDetailReaderReturn;
+    this.openShelfBookInfo(book, this.downloadDetailReturnRoute);
+    if (target === 'directory') { this.directoryReturnTarget = 'detail'; this.route = 'directory'; }
+  }
+
+  private async submitReaderDownload(owner: ReaderRuntimeOwner, session: RemoteReadingSession,
+    chapterIndexes: number[] | undefined, openProgress: boolean): Promise<void> {
+    const generation = this.navigationGeneration;
+    const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && generation === this.navigationGeneration && this.remoteReadingSession === session;
+    try {
+      const receipt = await owner.getDownloadCoordinator().submit(session, chapterIndexes);
+      if (!current()) return;
+      if (!receipt.accepted) { this.showOfflineDownloadFeedback('下载请求尚未确认，请重试'); return; }
+      if (openProgress) this.requestReaderDownloads(receipt.key);
+      else this.showOfflineDownloadFeedback(receipt.alreadyRunning ? '本章已在下载中' : '已加入下载，可在下载管理查看进度');
+    } catch (error) {
+      if (current()) this.showOfflineDownloadFeedback(`下载失败：${readingOfflineFailureHint(error as Error) || '请重试。'}`);
+      hilog.warn(DOMAIN, 'Reader', 'Download admission: %{private}s', errorMessageOf(error));
+    }
+  }
+
+  private isCurrentDownloadPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, identity: string): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && this.route === 'downloads' && generation === this.navigationGeneration &&
+      identity.length > 0 && identity === this.downloadPresentationIdentity;
+  }
+
+  @Builder
+  private downloadsContent() {
+    ForEach([this.navigationGeneration], (generation: number): void => {
+      this.downloadsSurface(generation, this.mountedRuntimeOwner, this.downloadPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private downloadsSurface(generation: number, owner: ReaderRuntimeOwner | undefined, identity: string) {
+    SharedDownloadPage({
+      books: this.downloadBooks, loading: this.downloadLoading, error: this.downloadError,
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      storageSummary: this.downloadStorageSummary, storagePolicy: this.downloadStoragePolicy,
+      pendingMessage: this.downloadPendingMessage, presentationIdentity: identity, initialViewState: this.downloadViewState,
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          this.registerTemporaryBackBridge('downloads', generation, owner, handler, bridgeIdentity);
+      },
+      onViewStateChanged: (state: SharedDownloadViewState): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.downloadViewState = state;
+      },
+      onBack: (): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.returnFromDownloads();
+      },
+      onRefresh: (): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          void this.downloadHost?.reload((): boolean => this.isCurrentDownloadPresentation(generation, owner, identity));
+      },
+      onOpenBook: (book: DownloadBookView): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          void this.downloadHost?.refreshBook(book, (): boolean => this.isCurrentDownloadPresentation(generation, owner, identity));
+      },
+      onReadTarget: (target: DownloadReadingTarget): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          void this.openDownloadReadingTarget(target, generation, owner, identity);
+      },
+      onIntent: (intent: SharedDownloadUiIntent): void => {
+        if (!this.isCurrentDownloadPresentation(generation, owner, identity)) return;
+        if (intent.action === 'cleanup') void this.clearDownloadRebuildableCache(generation, owner, identity);
+        else this.markDownloadIntentPending(intent);
+      },
+    });
+  }
+
+  private markDownloadIntentPending(intent: SharedDownloadUiIntent): void {
+    if (this.route !== 'downloads') return;
+    if (intent.action === 'cleanup') return;
+    if (intent.books.some((target): boolean => !this.downloadBooks.some((book: DownloadBookView): boolean =>
+      book.sourceId === target.sourceId && book.bookId === target.bookId))) return;
+    const owner = this.mountedRuntimeOwner;
+    const host = this.downloadHost;
+    if (owner === undefined || host === undefined) return;
+    const generation = this.navigationGeneration;
+    const identity = this.downloadPresentationIdentity;
+    const current = (): boolean => this.isCurrentDownloadPresentation(generation, owner, identity);
+    const targets: SharedDownloadActionTarget[] = intent.books.map((target): SharedDownloadActionTarget =>
+      new SharedDownloadActionTarget(target.sourceId, target.bookId, target.chapterIndices));
+    void (async (): Promise<void> => {
+      try {
+        const feedback = await host.runAction(intent.action, targets, current,
+          intent.cacheLimitMb, intent.cleanupAfterDays);
+        if (!current()) return;
+        const label = intent.action === 'download' ? '下载任务已提交' : intent.action === 'pause' ? '下载已暂停' :
+          intent.action === 'cancel' ? '下载任务已取消' : intent.action === 'deleteLocal' ? '本地内容已删除' : '存储设置已保存';
+        this.showOfflineDownloadFeedback(feedback ?? label);
+        await host.reload(current);
+      } catch (error) {
+        if (current()) {
+          if (error instanceof SharedDownloadProjectionRefreshError) {
+            this.showOfflineDownloadFeedback('下载状态已保存，列表刷新失败');
+          } else this.showOfflineDownloadFeedback(`下载操作未完成：${readingOfflineFailureHint(error as Error) || '请稍后重试。'}`);
+        }
+        hilog.warn(DOMAIN, 'Reader', 'Download-page action failed: %{private}s', errorMessageOf(error));
+      }
+    })();
+  }
+
+  private async openDownloadReadingTarget(target: DownloadReadingTarget, generation: number,
+    owner: ReaderRuntimeOwner | undefined, identity: string): Promise<void> {
+    if (!this.isCurrentDownloadPresentation(generation, owner, identity) || owner === undefined ||
+      target.route === 'unavailable' || target.chapterIndex === undefined) return;
+    const book = this.downloadBooks.find((entry: DownloadBookView): boolean =>
+      entry.sourceId === target.sourceId && entry.bookId === target.bookId);
+    if (book === undefined || book.contentKind === undefined || book.projectionStatus !== 'ready') return;
+    const chapter = book.chapters.find(row => row.navigable && row.index === target.chapterIndex &&
+      (book.sourceId === LOCAL_SOURCE_ID || row.chapterId === target.chapterId));
+    if (chapter === undefined) { this.showOfflineDownloadFeedback('目录已变化，请刷新下载页后重新选择'); return; }
+    const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && this.route === 'downloads' && generation === this.navigationGeneration &&
+      identity === this.downloadPresentationIdentity;
+    try {
+      owner.setDownloadReadingProtection(book.sourceId, book.bookId, chapter.index);
+      if (book.sourceId === LOCAL_SOURCE_ID) {
+        this.readingOriginRoute = 'detail';
+        this.openLocalBookDetail(book.shelfBook, true);
+        this.requestedChapterIndex = chapter.index;
+        this.readingFromDownloads = true;
+        return;
+      }
+      const seed: RemoteReadingBookSeed = {
+        sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
+        title: book.title, author: book.author, coverUrl: book.coverUrl,
+        contentKind: book.contentKind === 'manga' ? 'manga' : 'text',
+      };
+      const session = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession(
+        seed, current, false, book.contentKind === 'manga');
+      if (!current()) return;
+      // A download entry is a reader entry, so reuse the same admission path
+      // as bookshelf resume. The validated cached session prevents a network
+      // detail request and preserves the selected chapter index.
+      if (!session.entries.some(row => row.navigable !== false && row.index === chapter.index && row.url === chapter.chapterId))
+        throw new Error('目录已变化，请刷新下载页后重新选择');
+      this.readingOriginRoute = 'detail';
+      this.openRemoteBookDetail(seed, book.sourceLabel, book.shelfBook, true, [], [], undefined, session);
+      if (this.readingSessionActive && this.detailBook?.sourceId === target.sourceId && this.detailBook?.bookId === target.bookId)
+        this.requestedChapterIndex = target.chapterIndex;
+      this.readingFromDownloads = true;
+    } catch (error) {
+      if (current()) owner.setDownloadReadingProtection();
+      if (current()) this.showOfflineDownloadFeedback(`无法打开阅读页：${readingOfflineFailureHint(error as Error) || '本地目录尚未完整，请先重新校验下载。'}`);
+      hilog.warn(DOMAIN, 'Reader', 'Download reading admission failed: %{private}s', errorMessageOf(error));
+    }
+  }
+
+  /** Download-page cleanup is a user-confirmed cache operation. Core remains
+   * the durable cache authority; Runtime then applies the same manga policy,
+   * preserving permanent downloads and active reading leases. */
+  private async clearDownloadRebuildableCache(generation: number, owner: ReaderRuntimeOwner | undefined,
+    identity: string): Promise<void> {
+    if (!this.isCurrentDownloadPresentation(generation, owner, identity) || owner === undefined) return;
+    try {
+      const cleanup = await owner.clearDownloadRebuildableCache();
+      if (!this.isCurrentDownloadPresentation(generation, owner, identity)) return;
+      const contentBytes = typeof cleanup['removedContentBytes'] === 'number' ? cleanup['removedContentBytes'] as number : 0;
+      const imageBytes = typeof cleanup['deletedBytes'] === 'number' ? cleanup['deletedBytes'] as number : 0;
+      const files = typeof cleanup['deletedFiles'] === 'number' ? cleanup['deletedFiles'] as number : 0;
+      const partial = typeof cleanup['cleanupError'] === 'string';
+      this.showOfflineDownloadFeedback(contentBytes > 0 || imageBytes > 0 || files > 0 ?
+        `已清理正文缓存 ${formatDownloadStorageBytes(contentBytes)}，回收图片 ${formatDownloadStorageBytes(imageBytes)}（${files} 个文件）${partial ? '；部分清理未完成，请重试' : ''}` :
+        partial ? '缓存清理未完成，请重试；已下载与受保护内容保留' : '当前没有可清理的缓存；已下载与受保护内容保留');
+      await this.downloadHost?.reload((): boolean => this.isCurrentDownloadPresentation(generation, owner, identity));
+    } catch (error) {
+      if (!this.isCurrentDownloadPresentation(generation, owner, identity)) return;
+      this.showOfflineDownloadFeedback(`缓存清理未完成：${readingOfflineFailureHint(error as Error) || '请稍后重试。'}`);
+      hilog.warn(DOMAIN, 'Reader', 'Download cache cleanup failed: %{private}s', errorMessageOf(error));
+    }
   }
 
   private openBookshelfSettings(): void {
     this.bookshelfSettingsReturnRoute = this.route === 'settings' ? 'settings' : 'bookshelf';
     this.nextNavigationGeneration();
     this.route = 'bookshelfSettings';
-    this.getSettingsOrchestrator().open();
+    if (this.bindSettingsPresentation()) this.settingsHost.open(this.settingsPresentationIdentity);
   }
 
   private returnFromBookshelfSettings(): void {
@@ -1368,50 +2206,452 @@ struct Index {
     else this.returnToBookshelf();
   }
 
-  private async assignShelfDefaultGroup(): Promise<void> {
-    const book = this.editingShelfGroupBook;
-    if (book === undefined || this.editingShelfGroupBusy) return;
+  private openShelfGroup(book: ShelfBook): void {
+    if (this.editingShelfGroupBusy) return;
+    this.editingShelfGroupPresentation += 1;
+    this.editingShelfGroupBook = book;
+    this.bindBookshelfManagement(this.editingShelfGroupPresentation, book);
+    if (this.bookshelfManagementPresentationIdentity.length > 0)
+      this.bookshelfHost.openManagement(this.bookshelfManagementPresentationIdentity);
+  }
+
+  @Builder
+  private shelfGroupContent() {
+    ForEach([this.editingShelfGroupPresentation], (presentation: number) => {
+      this.shelfGroupSurface(presentation, this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.editingShelfGroupBook!);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private shelfGroupSurface(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook) {
+    Stack({ alignContent: Alignment.Center }) {
+      Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
+        .onClick((): void => {
+          if (!this.editingShelfGroupBusy && this.isCurrentShelfGroup(presentation, generation, owner, mounting, book))
+            this.closeShelfGroup(presentation);
+        });
+      ReaderDialogSurface({
+        specId: 'shelf-group',
+        title: '编辑分组',
+        actions: [],
+        body: (): void => this.shelfGroupBody(presentation, generation, owner, mounting, book),
+      });
+      Column() {
+    if (this.bookshelfManagementSnapshot.receipt !== undefined) {
+      ForEach([this.bookshelfManagementSnapshot.receipt.facts.generation], (expected: number) => {
+        this.shelfGroupRecoveryContent(presentation, generation, owner, mounting, book, expected);
+      }, (identity: number): string => identity.toString());
+    }
+      }.width('100%').padding({ left: 16, right: 16, top: this.messageSafeTop() + 12 })
+        .align(Alignment.Top).zIndex(1).hitTestBehavior(HitTestMode.Transparent);
+    }.width('100%').height('100%');
+  }
+
+  @Builder
+  private shelfGroupBody(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook) {
+    BookshelfGroupSelector({
+      selected: (book.group?.trim() ?? '') === '',
+      busy: this.editingShelfGroupBusy || this.bookshelfManagementSnapshot.busy || this.bookshelfManagementSnapshot.mutationBlocked === true,
+      onSelect: (): void => { void this.assignShelfDefaultGroup(presentation, generation, owner, mounting, book); },
+    });
+  }
+
+  @Builder
+  private shelfGroupRecoveryContent(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook, expected: number) {
+    ReaderRecoveryNotice({
+      view: this.shelfGroupRecovery(expected), tag: '分组', actionLabel: '核对分组',
+      busy: this.bookshelfManagementSnapshot.busy,
+      secondaryActionLabel: this.canContinueShelfGroup(book, expected) ? '继续原分组操作' : '',
+      onReconcile: (_expected: number): void => {
+        if (this.isCurrentShelfGroup(presentation, generation, owner, mounting, book))
+          this.bookshelfHost.reconcileManagement(expected, this.bookshelfManagementIdentity(generation, mounting, presentation));
+      },
+      onSecondaryAction: (_expected: number): void => {
+        if (this.isCurrentShelfGroup(presentation, generation, owner, mounting, book) && this.canContinueShelfGroup(book, expected))
+          this.bookshelfHost.continueOriginalManagement(expected, this.bookshelfManagementIdentity(generation, mounting, presentation));
+      },
+    });
+  }
+
+  private canContinueShelfGroup(book: ShelfBook, expected: number): boolean {
+    const mutation = this.bookshelfManagementSnapshot.managementMutation;
+    return this.bookshelfManagementSnapshot.receipt?.facts.generation === expected && !this.bookshelfManagementSnapshot.busy &&
+      mutation?.canContinueOriginal === true && mutation.method === 'bookshelf.group.assign' &&
+      mutation.sourceId === book.sourceId && mutation.bookId === book.bookId && mutation.group === '';
+  }
+  private shelfGroupRecovery(expected: number): ReaderRecoveryView {
+    const receipt = this.bookshelfManagementSnapshot.receipt;
+    if (receipt === undefined || receipt.facts.generation !== expected)
+      return { message: '', visible: false, canRetry: false, generation: expected };
+    if (receipt.receipt.confirmation === 'confirmed' && this.bookshelfManagementSnapshot.managementMutation?.blocked !== true)
+      return this.emptyShelfRecovery();
+    const view = readerRecoveryView(receipt, this.bookshelfManagementSnapshot.readFacts);
+    const mutation = this.bookshelfManagementSnapshot.managementMutation;
+    if (mutation?.blocked === true && mutation.message.length > 0)
+      return { message: `${view.message}：${mutation.message}`, visible: true,
+        canRetry: view.canRetry || !this.bookshelfManagementSnapshot.busy, generation: expected };
+    return view;
+  }
+  private closeShelfGroup(presentation: number = this.editingShelfGroupPresentation): void {
+    if (presentation !== this.editingShelfGroupPresentation) return;
+    this.editingShelfGroupBook = undefined;
+    this.bookshelfHost.detachManagementPresentation(); this.bookshelfManagementPresentationIdentity = '';
+  }
+
+  private isCurrentShelfGroup(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook): boolean {
+    return this.isCurrentBookshelfPresentation(generation, owner, mounting) &&
+      presentation === this.editingShelfGroupPresentation && this.editingShelfGroupBook !== undefined &&
+      this.shelfBookKey(this.editingShelfGroupBook) === this.shelfBookKey(book) &&
+      owner !== undefined && this.bookshelfHost.isManagementPresentationCurrent(owner,
+        this.bookshelfManagementIdentity(generation, mounting, presentation));
+  }
+
+  private async assignShelfDefaultGroup(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook): Promise<void> {
+    const current = (): boolean => this.isCurrentShelfGroup(presentation, generation, owner, mounting, book);
+    if (!current() || this.editingShelfGroupBusy) return;
     this.editingShelfGroupBusy = true;
     try {
-      await new BookshelfManagementGateway(ReaderRuntimeOwner.current()).assignGroup(book, '');
-      this.bookshelfLoadGeneration += 1;
-      if (this.route === 'bookshelf') this.refreshBookshelf();
-      this.editingShelfGroupBook = undefined;
+      const result = await this.bookshelfHost.assignDefaultGroup(book,
+        this.bookshelfManagementIdentity(generation, mounting, presentation));
+      if (!current()) return;
+      if (result?.receipt?.receipt.confirmation === 'confirmed' && result.managementMutation?.blocked !== true) {
+        this.invalidateBookshelfProjection(); this.refreshBookshelf();
+        if (result.receipt.receipt.fact === 'confirmedRefreshFailed')
+          this.transientFeedback.show(() => this.getUIContext(), { message: '分组已保存，列表刷新失败', duration: 2200 }, (): boolean => this.searchAppForeground && (current()));
+        this.closeShelfGroup(presentation);
+      }
     } catch (error) {
+      if (!current()) return;
       hilog.error(DOMAIN, 'Reader', 'Group selection failed: %{private}s', errorMessageOf(error));
-      this.getUIContext().getPromptAction().showToast({ message: '分组保存失败，请重试' });
-    } finally { this.editingShelfGroupBusy = false; }
+      this.transientFeedback.show(() => this.getUIContext(), { message: '分组操作暂不可用，请重新打开核对' }, (): boolean => this.searchAppForeground && (current()));
+    } finally {
+      if (presentation === this.editingShelfGroupPresentation) this.editingShelfGroupBusy = false;
+    }
+  }
+
+  @Builder
+  private bookshelfSettingsContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.bookshelfSettingsSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.settingsHost, this.settingsPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+  @Builder
+  private bookshelfSettingsSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SettingsHost, identity: string) {
+    BookshelfSettingsPage({
+      navigationGeneration: generation,
+      autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
+      operation: this.settingsOperation,
+      onReconcile: (expected: number, navigation?: number): void => {
+        if ((navigation === undefined || navigation === generation) &&
+          this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) host.reconcile(expected, identity);
+      },
+      onRetryAccepted: (expected: number, navigation?: number): void => {
+        if ((navigation === undefined || navigation === generation) &&
+          this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) host.retryAccepted(expected, identity);
+      },
+      onBack: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) this.returnFromBookshelfSettings(); },
+      onAutoCheckUpdate: (value: boolean): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) host.toggle('autoCheckUpdate', value, identity);
+      },
+    });
+  }
+
+  @Builder
+  private settingsContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.settingsSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.settingsHost, this.settingsPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+  @Builder
+  private settingsSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SettingsHost, identity: string) {
+    SettingsPage({
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity))
+          this.registerTemporaryBackBridge('settings', generation, owner, handler, bridgeIdentity);
+      },
+      activeSection: this.settingsSection,
+      onSectionChange: (section: 'home' | 'general'): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.settingsSection = section;
+      },
+      onRestoreDefaults: (): Promise<boolean> => this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity) ? host.restoreDefaults(identity) : Promise.resolve(false),
+      snapshot: this.settingsSnapshot,
+      operation: this.settingsOperation,
+      cacheCleanup: this.settingsCacheCleanup,
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) host.reconcile(expected, identity);
+      },
+      onRetryAccepted: (expected: number): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) host.retryAccepted(expected, identity);
+      },
+      onReconcileCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, false, identity); },
+      onContinueCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, true, identity); },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.returnToBookshelf(); },
+      onOpenSourceManagement: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openSourceManagement(); },
+      onOpenRulesManagement: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openRulesManagement(); },
+      onOpenSync: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openSync(); },
+      onOpenBookshelfSettings: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openBookshelfSettings(); },
+      onOpenDownloads: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openDownloads(); },
+      onRssRequested: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openRss(); },
+      onDiscoverRequested: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openDiscover(); },
+      onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
+        value: boolean): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) host.toggle(key, value, identity); },
+      onClearCache: (): Promise<SettingsCacheCleanupSnapshot | undefined> => this.clearTextCache(generation, owner, mounting, host, identity),
+    });
+  }
+
+  @Builder
+  private sourceToolsContent() {
+    ForEach([this.navigationGeneration], (generation: number): void => {
+      this.sourceToolsSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.sourceToolsOrchestrator, this.sourceToolsPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private sourceToolsSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceToolsOrchestrator | undefined, identity: string) {
+    SourceToolsPage({
+      snapshot: this.sourceToolsSnapshot,
+      onReconcile: (expected: number): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.reconcile(expected); },
+      onContinueOriginal: (expected: number): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.continueOriginal(expected); },
+      onSelectAll: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.selectAll(); },
+      onClearSelection: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.setSelection([]); },
+      onToggleSelection: (sourceId: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.toggleSelection(sourceId); },
+      onBack: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) this.returnToSourceManagement(); },
+      onExportAll: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.exportAll(); },
+      onExportSelected: (sourceIds: string[]): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.exportSelected(host.consumeSelection(sourceIds)); },
+      onCheckSelected: (sourceIds: string[]): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.checkSelected(sourceIds); },
+      onStopCheck: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.stopCheckSelected(); },
+      onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void => {
+        if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.setSelectedEnabled(host.consumeSelection(sourceIds), enabled);
+      },
+      onDeleteSelected: (sourceIds: string[]): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) this.requestSourceDelete(sourceIds, host, identity); },
+      onOpenEditor: (sourceId: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.openEditor(sourceId); },
+      onEditorDraftChanged: (text: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.updateEditorDraft(text); },
+      onSaveEditor: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.saveEditor(); },
+      onReconcileEditor: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.reconcileEditor(); },
+      onCancelEditor: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.cancelEditor(); },
+      onDebugKeyChanged: (value: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.updateDebugKey(value); },
+      onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void => {
+        if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.updateCheckSelection(mode, depth);
+      },
+      onDebugSource: (sourceId: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity)) host?.debugSource(sourceId); },
+    });
+  }
+
+  @Builder
+  private sourceManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.sourceManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.sourceHost, this.sourcePresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+  @Builder
+  private sourceManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceHost, identity: string) {
+    SourceManagementPage({
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity))
+          this.registerTemporaryBackBridge('source', generation, owner, handler, bridgeIdentity);
+      },
+      sources: this.sourceSources,
+      operation: this.sourceOperation,
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.reconcile(expected, identity);
+      },
+      onContinueOriginal: (expected: number): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.continueOriginal(expected, identity);
+      },
+      statusKind: this.sourceStatusKind,
+      statusMessage: this.sourceStatusMessage,
+      statusActionLabel: this.sourceImportSearchActionLabel,
+      statusActionGeneration: this.sourceImportSearchActionRevision,
+      onStatusAction: (revision: number): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.runSourceImportSearchAction(revision);
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      onBack: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.returnFromSourceManagement(); },
+      onToggleSource: (id: string, enabled: boolean): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.toggleSource(id, enabled, identity);
+      },
+      onDetectSource: (id: string): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.checkSource(id, identity); },
+      onLoginSource: (id: string): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.loginSource(id, identity); },
+      onAddSource: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.openJsonImport('bookSource'); },
+      onOpenTools: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.openSourceTools(); },
+      onRetryLoad: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.retryLoad(identity); },
+    });
+  }
+  private bindSourceManagement(): boolean {
+    const owner = this.mountedRuntimeOwner, host = this.sourceHost;
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    if (owner === undefined || !this.isCurrentSourceManagement(generation, owner, mounting, host, '', false)) return false;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'source']);
+    if (identity === this.sourcePresentationIdentity) return host.isPresentationCurrent(owner, identity);
+    host.detachPresentation(this.sourcePresentationIdentity); this.sourcePresentationIdentity = identity;
+    return host.bindPresentation(owner, identity,
+      (): boolean => this.isCurrentSourceManagement(generation, owner, mounting, host, identity, false));
+  }
+  private isCurrentSourceManagement(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceHost, identity: string, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'source' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      owner === this.mountedRuntimeOwner && this.isCurrentRuntime(owner) && host === this.sourceHost &&
+      (!attached || (identity.length > 0 && identity === this.sourcePresentationIdentity && host.isPresentationCurrent(owner, identity)));
+  }
+  private retireSourceManagementPresentation(): void {
+    this.sourceHost.detachPresentation(this.sourcePresentationIdentity); this.sourcePresentationIdentity = '';
+  }
+
+  @Builder
+  private bookshelfManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.bookshelfManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.bookshelfHost, this.bookshelfManagementPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+  @Builder
+  private bookshelfManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: BookshelfHost, identity: string) {
+    BookshelfManagementPage({
+      snapshot: this.bookshelfManagementSnapshot,
+      onBack: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) this.returnToBookshelf(); },
+      onGroupNameChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateGroupName(value, identity); },
+      onGroupOrderChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateGroupOrder(value, identity); },
+      onSelectGroup: (groupId: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.selectGroup(groupId, identity); },
+      onClearGroupEditor: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.clearGroupEditor(identity); },
+      onSaveGroup: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.saveGroup(identity); },
+      onToggleGroupShown: (groupId: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.toggleGroupShown(groupId, identity); },
+      onDeleteGroup: (groupId: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.deleteGroup(groupId, identity); },
+      onSelectBook: (sourceId: string, bookId: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.selectBook(sourceId, bookId, identity); },
+      onAssignmentGroupChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateAssignmentGroup(value, identity); },
+      onAssignBook: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.assignSelectedBook(identity); },
+      onReconcile: (expected: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.reconcileManagement(expected, identity); },
+      onContinueOriginal: (expected: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.continueOriginalManagement(expected, identity); },
+    });
+  }
+
+  @Builder
+  private rulesManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rulesManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.getRulesManagementOrchestrator(), this.rulesPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rulesManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: RulesManagementOrchestrator, identity: string) {
+    RulesManagementPage({
+      snapshot: this.rulesManagementSnapshot,
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.reconcile(expected, identity);
+      },
+      onBack: (): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) this.returnFromRulesManagement();
+      },
+      onSaveReplace: (draft: ReplaceRuleDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveReplaceRule(draft, identity);
+      },
+      onDeleteReplace: (id: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteReplaceRule(id, identity);
+      },
+      onSaveTxtToc: (draft: TxtTocRuleDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveTxtTocRule(draft, identity);
+      },
+      onDeleteTxtToc: (id: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteTxtTocRule(id, identity);
+      },
+      onSaveDict: (draft: DictRuleDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveDictRule(draft, identity);
+      },
+      onDeleteDict: (name: string): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteDictRule(name, identity);
+      },
+      onSaveSubscription: (draft: RuleSubscriptionDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveRuleSubscription(draft, identity);
+      },
+      onDeleteSubscription: (id: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteRuleSubscription(id, identity);
+      },
+      onRefreshSubscription: (subscription: ManagedRuleSubscription): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.refreshRuleSubscription(subscription, identity);
+      },
+      onExportBundle: (): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.exportBundle(identity);
+      },
+      onImportBundle: (): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) this.openJsonImport('ruleBundle');
+      },
+    });
+  }
+
+  private bookshelfManagementIdentity(generation: number, mounting: number, opening?: number): string {
+    return JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'bookshelfManagement', opening ?? 'page']);
+  }
+  private isCurrentBookshelfManagement(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: BookshelfHost, identity: string, attached: boolean = true, opening?: number, book?: ShelfBook): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      (opening === undefined ? this.route === 'bookshelfManagement' :
+        this.route === 'bookshelf' && this.editingShelfGroupPresentation === opening &&
+        this.editingShelfGroupBook !== undefined && book !== undefined &&
+        this.shelfBookKey(this.editingShelfGroupBook) === this.shelfBookKey(book)) &&
+      host === this.bookshelfHost && identity.length > 0 && this.bookshelfManagementPresentationIdentity === identity &&
+      (!attached || host.isManagementPresentationCurrent(owner, identity));
+  }
+  private bindBookshelfManagement(opening?: number, book?: ShelfBook): void {
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    if (owner === undefined) return;
+    const host = this.bookshelfHost, identity = this.bookshelfManagementIdentity(generation, mounting, opening);
+    if (this.bookshelfManagementPresentationIdentity === identity) return;
+    this.bookshelfManagementPresentationIdentity = identity;
+    const current = (): boolean => this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity, false, opening, book);
+    if (!host.bindManagement(owner, identity, current)) this.bookshelfManagementPresentationIdentity = '';
   }
 
   private openBookshelfManagement(): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'bookshelfManagement';
-    this.getBookshelfManagementOrchestrator().open();
+    this.bindBookshelfManagement();
+    this.bookshelfHost.openManagement(this.bookshelfManagementPresentationIdentity);
   }
 
   private openBookshelfMultiSelect(initialBook?: ShelfBook): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.bookshelfBatchRemovalBusy = false;
     this.bookshelfMultiSelectInitialKey = initialBook === undefined ? '' : this.shelfBookKey(initialBook);
     this.route = 'bookshelfMultiSelect';
     this.bookshelfSelectionBooks = this.shelfBooks;
     this.bookshelfSelectionReady = false;
     const generation = this.navigationGeneration;
     const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => generation === this.navigationGeneration && this.route === 'bookshelfMultiSelect' && owner === ReaderRuntimeOwner.current();
-    void new BookshelfFlowGateway(owner).loadAll(current).then((shelf: BookshelfState | undefined): void => {
-      if (!current() || shelf === undefined) return;
-      this.bookshelfSelectionBooks = shelf.books;
+    const current = (): boolean => generation === this.navigationGeneration && this.route === 'bookshelfMultiSelect' && this.isCurrentRuntime(owner);
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection === undefined || binding === undefined) return;
+    void projection.selection(binding).then((books: ShelfBook[] | undefined): void => {
+      if (!current() || books === undefined) return;
+      this.bookshelfSelectionBooks = books;
       this.bookshelfSelectionReady = true;
     }).catch((error: Error): void => {
       if (!current()) return;
-      this.getUIContext().getPromptAction().showToast({ message: '书架读取失败，请重试' });
+      this.transientFeedback.show(() => this.getUIContext(), { message: '书架读取失败，请重试' }, (): boolean => this.searchAppForeground && (current()));
       this.returnToBookshelf();
     });
   }
@@ -1419,11 +2659,11 @@ struct Index {
   private openRulesManagement(): void {
     this.nextNavigationGeneration();
     this.rulesManagementReturnTarget = 'settings';
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
-    this.getRulesManagementOrchestrator().open();
+    this.getRulesManagementOrchestrator().open(this.rulesPresentationIdentity);
   }
 
   private requestRulesManagementFromReader(): void {
@@ -1442,224 +2682,272 @@ struct Index {
   private presentRulesManagementFromReader(): void {
     this.nextNavigationGeneration();
     this.rulesManagementReturnTarget = 'reader';
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
-    this.getRulesManagementOrchestrator().open();
+    this.getRulesManagementOrchestrator().open(this.rulesPresentationIdentity);
+  }
+
+  private isCurrentRulesPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: RulesManagementOrchestrator, identity: string, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'rulesManagement' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      this.rulesManagementOrchestrator === host && host.owns(owner) && identity.length > 0 &&
+      this.rulesPresentationIdentity === identity && (!attached || host.isPresentationCurrent(identity));
   }
 
   private getRulesManagementOrchestrator(): RulesManagementOrchestrator {
-    if (this.rulesManagementOrchestrator === undefined) {
-      this.rulesManagementOrchestrator = new RulesManagementOrchestrator(
-        (snapshot: RulesManagementSnapshot): void => {
-          this.rulesManagementSnapshot = snapshot;
-        },
-        (): boolean => this.route === 'rulesManagement',
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'rulesManagement')
+      throw new Error('规则页面已退役');
+    const host = RulesManagementOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('规则 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'rulesManagement']);
+    if (this.rulesManagementOrchestrator !== host || this.rulesPresentationIdentity !== identity) {
+      this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
+      this.rulesManagementOrchestrator = host; this.rulesPresentationIdentity = identity;
+      const current = (): boolean => this.isCurrentRulesPresentation(generation, owner, mounting, host, identity, false);
+      host.attachPresentation(identity, (snapshot: RulesManagementSnapshot): void => {
+        if (current()) this.rulesManagementSnapshot = snapshot;
+      }, current);
     }
-    return this.rulesManagementOrchestrator;
-  }
-
-  private getBookshelfManagementOrchestrator(): BookshelfManagementOrchestrator {
-    if (this.bookshelfManagementOrchestrator === undefined) {
-      this.bookshelfManagementOrchestrator = new BookshelfManagementOrchestrator(
-        (snapshot: BookshelfManagementSnapshot): void => {
-          this.bookshelfManagementSnapshot = snapshot;
-        },
-        (): boolean => this.route === 'bookshelfManagement',
-      );
-    }
-    return this.bookshelfManagementOrchestrator;
+    return host;
   }
 
   private onSettingToggled(
-    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
     value: boolean,
   ): void {
-    this.getSettingsOrchestrator().toggle(key, value);
+    if (this.isCurrentSettingsPresentation(this.navigationGeneration, this.mountedRuntimeOwner))
+      this.settingsHost.toggle(key, value, this.settingsPresentationIdentity);
   }
 
-  private async clearTextCache(): Promise<boolean> {
-    try {
-      const result = await ReaderRuntimeOwner.current().request('cache.clear', { scope: 'cache' });
-      if (result.data['scope'] !== 'cache') {
-        throw new Error('cache.clear returned an unexpected scope');
-      }
-      hilog.info(DOMAIN, 'Reader',
-        'Text cache cleanup completed: cache=%{private}s chapters=%{private}s queue=%{private}s',
-        `${result.data['cacheEntriesRemoved'] ?? 0}`,
-        `${result.data['chapterEntriesRemoved'] ?? 0}`,
-        `${result.data['queueEntriesRemoved'] ?? 0}`);
-      return true;
-    } catch (error) {
-      const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader', 'Text cache cleanup failed: %{private}s', message);
-      return false;
-    }
+  private bindSettingsPresentation(): boolean {
+    const owner = this.mountedRuntimeOwner, host = this.settingsHost;
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const route: 'settings' | 'bookshelfSettings' = this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings';
+    if (owner === undefined || !this.isCurrentSettingsPresentation(generation, owner, mounting, host, route, '', false)) return false;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, route]);
+    if (identity === this.settingsPresentationIdentity) return host.isPresentationCurrent(owner, identity);
+    host.detachPresentation(this.settingsPresentationIdentity); this.settingsPresentationIdentity = identity;
+    return host.bindPresentation(owner, identity,
+      (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host, route, identity, false));
+  }
+  private retireSettingsPresentation(): void {
+    this.settingsHost.detachPresentation(this.settingsPresentationIdentity); this.settingsPresentationIdentity = '';
+  }
+  private isCurrentSettingsPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost,
+    route: 'settings' | 'bookshelfSettings' = this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings',
+    identity: string = this.settingsPresentationIdentity, attached: boolean = true): boolean {
+    return owner !== undefined && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.route === route && !this.shelfReceiptRetired && host === this.settingsHost &&
+      (!attached || (identity.length > 0 && identity === this.settingsPresentationIdentity && host.isPresentationCurrent(owner, identity)));
+  }
+  private async reconcileSettingsCache(expected: number | undefined, generation: number = this.navigationGeneration,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
+    host: SettingsHost = this.settingsHost, continuing: boolean = false, identity: string = this.settingsPresentationIdentity): Promise<void> {
+    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity);
+    if (owner === undefined || !current()) return;
+    const previous = host.cacheCleanupSnapshot(owner);
+    if (expected !== undefined && previous?.operation.generation !== expected) return;
+    const snapshot = continuing && expected !== undefined ? await host.continueOriginalCacheCleanup(owner, expected, current) :
+      await host.reconcileCacheCleanup(owner, current);
+    if (current()) this.settingsCacheCleanup = snapshot;
   }
 
-  private getSettingsOrchestrator(): SettingsOrchestrator {
-    if (this.settingsOrchestrator === undefined) {
-      this.settingsOrchestrator = new SettingsOrchestrator(
-        (snapshot: SettingsSnapshot): void => {
-          this.settingsSnapshot = snapshot;
-        },
-        (): SettingsSnapshot => this.settingsSnapshot,
-        (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
-        ReaderRuntimeOwner.current().getUIAbilityContext(),
-      );
-    }
-    return this.settingsOrchestrator;
+  private async clearTextCache(generation: number = this.navigationGeneration,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
+    host: SettingsHost = this.settingsHost, identity: string = this.settingsPresentationIdentity): Promise<SettingsCacheCleanupSnapshot | undefined> {
+    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity);
+    if (owner === undefined || !current()) return undefined;
+    return host.clearCache(owner, current);
   }
 
   private onSyncSaveConfig(url: string, user: string, pass: string, backupPass: string, path: string): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().saveConfig(url, user, pass, backupPass, path);
   }
 
   private onSyncTestConnection(url: string, user: string, pass: string, path: string): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().testConnection(url, user, pass, path);
   }
 
   private onSyncTriggerBackup(): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().triggerBackup();
   }
 
   private onSyncRestoreLatest(): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().restoreLatest();
   }
 
   private onSyncResolveRestore(overwriteLocal: boolean): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().resolveRestore(overwriteLocal);
   }
 
-  private getSyncOrchestrator(): SyncOrchestrator {
-    if (this.syncOrchestrator === undefined) {
-      this.syncOrchestrator = new SyncOrchestrator(
-        (snapshot: SyncSnapshot): void => {
-          this.syncSnapshot = snapshot;
-          this.syncSnapshotReady = true;
-        },
-        (): SyncSnapshot => this.syncSnapshot,
-      );
+  private registerTemporaryBackBridge(
+    scope: TemporaryBackScope,
+    generation: number,
+    owner: ReaderRuntimeOwner | undefined,
+    handler: (() => boolean) | undefined,
+    identity: string,
+  ): void {
+    if (identity.length === 0 || this.shelfReceiptRetired || owner === undefined ||
+      this.mountedRuntimeOwner !== owner || !this.isCurrentRuntime(owner) ||
+      generation !== this.navigationGeneration || this.route !== scope) return;
+    if (handler === undefined) {
+      const lease = this.temporaryBackLease;
+      if (lease !== undefined && lease.scope === scope && lease.owner === owner &&
+        lease.generation === generation && lease.identity === identity) this.temporaryBackLease = undefined;
+      return;
     }
-    return this.syncOrchestrator;
+    this.temporaryBackLease = { scope, generation, owner, identity, handler };
+  }
+
+  private consumeTemporaryBackBridge(): boolean {
+    const lease = this.temporaryBackLease;
+    if (lease === undefined) return false;
+    if (this.shelfReceiptRetired || this.mountedRuntimeOwner !== lease.owner ||
+      !this.isCurrentRuntime(lease.owner) || lease.generation !== this.navigationGeneration ||
+      this.route !== lease.scope) {
+      if (this.temporaryBackLease === lease) this.temporaryBackLease = undefined;
+      return false;
+    }
+    try { return lease.handler(); } catch (error) {
+      // A failing close cannot prove that the temporary surface has gone.
+      // Keep this Back inside the current page instead of exiting under it.
+      try { hilog.error(DOMAIN, 'Reader', 'Temporary surface Back failed: %{private}s', errorMessageOf(error)); } catch (_) {}
+      return true;
+    }
+  }
+
+  private isCurrentRuntime(owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && ReaderRuntimeOwner.isCurrent(owner);
+  }
+
+  private isCurrentSyncOwner(owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && isReaderProductSurfaceEnabled('sync') &&
+      this.route === 'sync' && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner);
+  }
+
+  private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    host: SyncOrchestrator | undefined = this.syncOrchestrator, mounting: number = this.detailShelfAdmissionMount,
+    identity: string = this.syncPresentationIdentity, attached: boolean = true): boolean {
+    return owner !== undefined && this.isCurrentRoute(generation, 'sync') && this.isCurrentSyncOwner(owner) &&
+      mounting === this.detailShelfAdmissionMount && host !== undefined && this.syncOrchestrator === host &&
+      host.ownedBy(owner) && identity.length > 0 && this.syncPresentationIdentity === identity &&
+      (!attached || host.isPresentationCurrent(identity));
+  }
+
+  private getSyncOrchestrator(): SyncOrchestrator {
+    const owner = this.mountedRuntimeOwner;
+    if (!this.isCurrentSyncOwner(owner) || owner === undefined) throw new Error('同步页面已退役');
+    const host = SyncOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('同步 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'sync']);
+    if (this.syncOrchestrator !== host || this.syncPresentationIdentity !== identity) {
+      this.syncOrchestrator?.detachPresentation(this.syncPresentationIdentity);
+      this.syncOrchestrator = host; this.syncPresentationIdentity = identity;
+      const current = (): boolean => this.isCurrentSyncPresentation(generation, owner, host, mounting, identity, false);
+      host.attachPresentation(identity, (snapshot: SyncSnapshot): void => {
+        if (!current()) return;
+        this.syncSnapshot = snapshot; this.syncSnapshotReady = true;
+      }, (): SyncSnapshot => this.syncSnapshot, current);
+    }
+    return host;
   }
 
   private openSourceManagement(returnTarget: SourceManagementReturnTarget = 'settings',
     searchKeyword: string = ''): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.sourceManagementReturnTarget = returnTarget;
     this.sourceManagementSearchKeyword = searchKeyword;
     this.route = 'source';
-    this.getSourceOrchestrator().open();
+    if (this.bindSourceManagement()) this.sourceHost.open(this.sourcePresentationIdentity);
   }
 
   /** Enter Source Management from the Search page's add/manage-source intents. */
   private manageSourcesFromSearch(): void {
-    const presentation = this.searchPublication.presentationAt(this.searchPublicationRevision);
+    const presentation = this.searchHost.presentation();
     const keyword = presentation.kind === 'loading' || presentation.kind === 'results' ||
       presentation.kind === 'empty' || presentation.kind === 'error' ? presentation.keyword : '';
     this.openSourceManagement('search', keyword);
   }
 
-  private getSourceOrchestrator(): SourceOrchestrator {
-    if (this.sourceOrchestrator === undefined) {
-      this.sourceOrchestrator = new SourceOrchestrator(
-        (sources: BookSource[]): void => {
-          this.sourceSources = sources;
-        },
-        (): boolean => this.route === 'source',
-        (kind: SourceManagementStatusKind, message: string): void => {
-          this.sourceStatusKind = kind;
-          this.sourceStatusMessage = message;
-        },
-      );
-    }
-    return this.sourceOrchestrator;
+  private isCurrentSourceToolsPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceToolsOrchestrator | undefined = this.sourceToolsOrchestrator,
+    identity: string = this.sourceToolsPresentationIdentity, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'sourceTools' && this.navigationGeneration === generation &&
+      mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      host !== undefined && this.sourceToolsOrchestrator === host && host.owns(owner) &&
+      (!attached || (identity.length > 0 && this.sourceToolsPresentationIdentity === identity && host.isPresentationCurrent(identity)));
   }
 
   private getSourceToolsOrchestrator(): SourceToolsOrchestrator {
-    if (this.sourceToolsOrchestrator === undefined) {
-      this.sourceToolsOrchestrator = new SourceToolsOrchestrator(
-        (snapshot: SourceToolsSnapshot): void => {
-          this.sourceToolsSnapshot = snapshot;
-        },
-        (): boolean => this.route === 'sourceTools',
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired || this.route !== 'sourceTools')
+      throw new Error('书源工具页面已退役');
+    const host = SourceToolsOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('书源工具 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.sourceToolsInstanceIdentity, mounting, generation]);
+    if (this.sourceToolsOrchestrator !== host || this.sourceToolsPresentationIdentity !== identity) {
+      this.sourceToolsOrchestrator?.detachPresentation(this.sourceToolsPresentationIdentity);
+      this.sourceToolsOrchestrator = host; this.sourceToolsPresentationIdentity = identity;
+      const current = (): boolean => this.sourceToolsPresentationIdentity === identity &&
+        this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity, false);
+      host.attachPresentation(identity, (snapshot: SourceToolsSnapshot): void => {
+        if (current()) this.sourceToolsSnapshot = snapshot;
+      }, current);
     }
-    return this.sourceToolsOrchestrator;
+    return host;
   }
 
   private openSourceTools(): void {
-    this.nextNavigationGeneration();
-    this.readingSessionActive = false;
-    this.readingExitRequest = undefined;
-    this.exitToDetailOriginAfterReader = false;
-    this.updateSourceToolsSelection([]);
-    this.route = 'sourceTools';
+    this.nextNavigationGeneration(); this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(); this.readingExitRequest = undefined;
+    this.exitToDetailOriginAfterReader = false; this.route = 'sourceTools';
     this.getSourceToolsOrchestrator().open(this.sourceSources);
-  }
-
-  private updateSourceToolsSelection(sourceIds: string[]): void {
-    this.getSourceToolsOrchestrator().setSelection(sourceIds);
-  }
-
-  private selectAllSourceTools(): void {
-    this.updateSourceToolsSelection(this.sourceToolsSnapshot.sources.map(
-      (source: BookSource): string => source.sourceId,
-    ));
-  }
-
-  private toggleSourceToolsSelection(sourceId: string): void {
-    const selection = this.sourceToolsSnapshot.selectedSourceIds;
-    if (selection.indexOf(sourceId) >= 0) {
-      this.updateSourceToolsSelection(selection.filter(
-        (candidate: string): boolean => candidate !== sourceId,
-      ));
-      return;
-    }
-    this.updateSourceToolsSelection(selection.concat([sourceId]));
-  }
-
-  private consumeSourceToolsSelection(sourceIds: string[]): string[] {
-    const available = new Set(this.sourceToolsSnapshot.sources.map(
-      (source: BookSource): string => source.sourceId,
-    ));
-    const selection = sourceIds.filter((sourceId: string): boolean => available.has(sourceId));
-    this.updateSourceToolsSelection([]);
-    return selection;
-  }
-
-  private exportSelectedSources(sourceIds: string[]): void {
-    this.getSourceToolsOrchestrator().exportSelected(this.consumeSourceToolsSelection(sourceIds));
-  }
-
-  private checkSelectedSources(sourceIds: string[]): void {
-    // Keep the checked rows selected so a long-running batch always retains
-    // its visible scope and can be inspected or rerun after completion.
-    this.getSourceToolsOrchestrator().checkSelected(sourceIds);
-  }
-
-  private setSelectedSourcesEnabled(sourceIds: string[], enabled: boolean): void {
-    this.getSourceToolsOrchestrator().setSelectedEnabled(this.consumeSourceToolsSelection(sourceIds), enabled);
   }
 
   private returnToSourceManagement(): void {
     this.nextNavigationGeneration();
     this.route = 'source';
-    this.getSourceOrchestrator().open();
+    if (this.bindSourceManagement()) this.sourceHost.open(this.sourcePresentationIdentity);
   }
 
   private returnToSettings(): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
+    if (this.bindSettingsPresentation()) {
+      this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+      void this.reconcileSettingsCache(undefined);
+      this.settingsHost.open(this.settingsPresentationIdentity);
+    }
   }
 
   private returnFromRulesManagement(): void {
@@ -1688,39 +2976,118 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
-    const orchestrator = this.getSearchOrchestrator();
     if (autoSearch && keyword.length > 0) {
       // A fresh entry reloads sources; the search itself re-checks the enabled
       // set, so a still-disabled configuration lands on sourceRequired instead
       // of firing doomed requests.
-      orchestrator.open();
-      orchestrator.search(keyword);
+      this.searchHost.open();
+      this.searchHost.search(keyword);
       return;
     }
-    orchestrator.refreshSources();
+    this.searchHost.refreshSources();
     // Restore the same query after source management; only autoSearch replaces it.
-    orchestrator.resume();
+    this.searchHost.resume();
   }
 
   private onSourceToggled(id: string, enabled: boolean): void {
     // SS-SOURCE-TOGGLE-01 orchestration (serial chain, Core-idle retry, session
     // guards) lives in SourceOrchestrator; Index only forwards the intent.
-    this.getSourceOrchestrator().toggleSource(id, enabled);
+    const owner = this.mountedRuntimeOwner;
+    if (this.isCurrentSourceManagement(this.navigationGeneration, owner, this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity))
+      this.sourceHost.toggleSource(id, enabled, this.sourcePresentationIdentity);
   }
 
   private onSourceDetectionRequested(id: string): void {
-    this.getSourceOrchestrator().checkSource(id);
+    const owner = this.mountedRuntimeOwner;
+    if (this.isCurrentSourceManagement(this.navigationGeneration, owner, this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity))
+      this.sourceHost.checkSource(id, this.sourcePresentationIdentity);
   }
 
   private onSourceLoginRequested(id: string): void {
-    this.getSourceOrchestrator().loginSource(id);
+    const owner = this.mountedRuntimeOwner;
+    if (this.isCurrentSourceManagement(this.navigationGeneration, owner, this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity))
+      this.sourceHost.loginSource(id, this.sourcePresentationIdentity);
+  }
+
+  @Builder
+  private jsonImportContent() {
+    ForEach([this.jsonImportGeneration], (presentation: number) => {
+      this.jsonImportSurface(presentation, this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.jsonImportContext, this.rulesManagementOrchestrator, this.rulesPresentationIdentity,
+        this.sourceHost, this.sourcePresentationIdentity, this.rssOrchestrator, this.rssPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private jsonImportSurface(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string,
+    source: SourceHost, sourceIdentity: string, rss: RssOrchestrator | undefined, rssIdentity: string) {
+    JsonImportDialog({
+      title: this.jsonImportTitle(),
+      description: this.jsonImportDescription(),
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onDismiss: (): void => {
+        if (this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity, rss, rssIdentity)) this.dismissJsonImport();
+      },
+      onSelectLocal: (): void => {
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity, rss, rssIdentity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, undefined, rules, identity, source, sourceIdentity, rss, rssIdentity);
+      },
+      onImportOnline: (url: string): void => {
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity, rss, rssIdentity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, url, rules, identity, source, sourceIdentity, rss, rssIdentity);
+      },
+    });
+  }
+
+  private isCurrentJsonImportPresentation(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string,
+    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity,
+    rss: RssOrchestrator | undefined = this.rssOrchestrator, rssIdentity: string = this.rssPresentationIdentity): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.jsonImportVisible &&
+      presentation === this.jsonImportGeneration && generation === this.navigationGeneration &&
+      mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      context === this.jsonImportContext && (context !== 'bookSource' ||
+        this.isCurrentSourceManagement(generation, owner, mounting, source, sourceIdentity)) && (context !== 'ruleBundle' || (rules !== undefined &&
+        this.isCurrentRulesPresentation(generation, owner, mounting, rules, identity))) &&
+      ((context !== 'rssMerge' && context !== 'rssReplace') ||
+        this.isCurrentRssHostPresentation(generation, owner, mounting, rss, rssIdentity, 'rssSubscriptionManagement'));
+  }
+
+  /** A reader-owned explicit login keeps the current manga and its anchor. */
+  private async loginMangaSource(): Promise<void> {
+    if (this.mangaLoginTask !== undefined) throw new Error('MANGA_LOGIN_IN_PROGRESS');
+    const book = this.detailBook;
+    if (book === undefined || this.readingContentKind !== 'manga' || !this.readingSessionActive) {
+      throw new Error('MANGA_SESSION_CANCELLED');
+    }
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) throw new Error('MANGA_SESSION_CANCELLED');
+    const generation = this.navigationGeneration;
+    const current = (): boolean => generation === this.navigationGeneration && this.isCurrentRuntime(owner) &&
+      this.readingContentKind === 'manga' && this.readingSessionActive && this.detailBook?.sourceId === book.sourceId &&
+      this.detailBook?.bookId === book.bookId;
+    const task = (async (): Promise<void> => {
+      const sources = await this.sourceHost.loadSourcesForIds([book.sourceId], current);
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+      const source = sources.find((candidate: BookSource): boolean => candidate.sourceId === book.sourceId);
+      if (source === undefined || !source.enabled || source.loginUrl === undefined || source.loginUrl.trim().length === 0) {
+        throw new Error('MANGA_SOURCE_LOGIN_UNAVAILABLE');
+      }
+      await owner.openSourceLogin(source.sourceId, source.loginUrl, source.name);
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    })();
+    this.mangaLoginTask = task;
+    try { await task; }
+    finally { if (this.mangaLoginTask === task) this.mangaLoginTask = undefined; }
   }
 
   private openJsonImport(context: JsonImportContext): void {
+    this.jsonImportGeneration += 1;
     this.jsonImportContext = context;
     this.jsonImportVisible = true;
   }
@@ -1741,31 +3108,40 @@ struct Index {
     this.executeJsonImport(context, onlineUrl);
   }
 
-  private executeJsonImport(context: JsonImportContext, onlineUrl?: string): void {
+  private executeJsonImport(context: JsonImportContext, onlineUrl?: string,
+    rules: RulesManagementOrchestrator | undefined = this.rulesManagementOrchestrator, identity: string = this.rulesPresentationIdentity,
+    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity,
+    rss: RssOrchestrator | undefined = this.rssOrchestrator, rssIdentity: string = this.rssPresentationIdentity): void {
     if (context === 'bookSource' && this.route === 'source') {
-      this.getSourceOrchestrator().importBookSources(
+      const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+      const current = (): boolean => this.isCurrentSourceManagement(generation, owner, mounting, source, sourceIdentity);
+      if (!current()) return;
+      source.importBookSources(
         onlineUrl,
         (completion: SourceImportCompletion): void => {
+          if (!current()) return;
           const base = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源`;
           const message = completion.failureSummary === undefined ?
             `${base}。` : `${base}，${completion.failureSummary}`;
           if (this.sourceManagementReturnTarget === 'search') {
-            this.showSourceImportResultFromSearch('书源导入完成', message);
+            this.showSourceImportResultFromSearch('书源导入完成', message, current);
             return;
           }
-          this.showSourceImportResult('书源导入完成', message);
+          this.showSourceImportResult('书源导入完成', message, current);
         },
-        (error: Error): void => this.showSourceImportResult('书源导入失败', error.message),
+        (error: Error): void => { if (current()) this.showSourceImportResult('书源导入失败', error.message, current); },
+        sourceIdentity,
       );
       return;
     }
     if (context === 'ruleBundle' && this.route === 'rulesManagement') {
-      this.getRulesManagementOrchestrator().importBundle(onlineUrl);
+      if (rules !== undefined && rules === this.rulesManagementOrchestrator && rules.isPresentationCurrent(identity))
+        rules.importBundle(onlineUrl, identity);
       return;
     }
     if ((context === 'rssMerge' || context === 'rssReplace') &&
       this.route === 'rssSubscriptionManagement') {
-      this.importRssSources(context === 'rssReplace', onlineUrl);
+      this.importRssSources(context === 'rssReplace', onlineUrl, rss, rssIdentity);
     }
   }
 
@@ -1788,66 +3164,96 @@ struct Index {
     return '支持 Legado 书源 JSON；本地文件和在线链接共用 Core 导入校验。';
   }
 
-  private showSourceImportResult(title: string, message: string): void {
-    if (this.route !== 'source') {
+  private showIndexAlert(spec: ReaderNativeAlertSpecId, options: ReaderNativeAlertOptions,
+    isCurrent: () => boolean = (): boolean => true): ReaderNativeAlertLease | undefined {
+    if (this.shelfReceiptRetired) return undefined;
+    try {
+      const owner = ReaderRuntimeOwner.current();
+      const generation = this.navigationGeneration;
+      const route = this.route;
+      const current = (): boolean => {
+        if (this.shelfReceiptRetired) return false;
+        try { return this.isCurrentRuntime(owner) && generation === this.navigationGeneration &&
+          this.route === route && isCurrent(); }
+        catch (_) { return false; }
+      };
+      return this.nativeAlertOwner.present(
+        (native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), spec, options, current);
+    } catch (error) {
+      // The native notice is a separate platform outcome. A durable import,
+      // deletion or read ACK must survive a synchronous presentation failure.
+      try { hilog.warn(DOMAIN, 'Reader', 'Native Alert presentation failed: %{private}s', errorMessageOf(error)); }
+      catch (_) {}
+      return undefined;
+    }
+  }
+
+  private showSourceImportResult(title: string, message: string, current: () => boolean = (): boolean => true): void {
+    if (this.route !== 'source' || this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) || !current()) {
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title,
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '知道了',
-        action: (): void => {},
-      },
-    });
+    this.sourceImportSearchAction = undefined;
+    this.sourceImportSearchActionLabel = '';
+    this.sourceImportSearchActionRevision += 1;
+    this.sourceStatusKind = title.includes('失败') ? 'error' :
+      this.sourceStatusKind === 'warning' ? 'warning' : 'success';
+    this.sourceStatusMessage = `${title}：${message}`;
   }
 
   /**
    * P0 add-source flow: after an import that started from Search, offer the
-   * one-tap re-search with the original keyword. With no keyword recorded
-   * (entry from a sourceRequired state) the plain result dialog applies.
+   * optional inline re-search with the original keyword. Completion never
+   * takes focus away from the source list or changes the active route.
    */
-  private showSourceImportResultFromSearch(title: string, message: string): void {
-    if (this.route !== 'source') {
+  private showSourceImportResultFromSearch(title: string, message: string, current: () => boolean = (): boolean => true): void {
+    if (this.route !== 'source' || this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) || !current()) {
       return;
     }
     const keyword = this.sourceManagementSearchKeyword;
+    this.showSourceImportResult(title, message, current);
     if (keyword.length === 0) {
-      this.showSourceImportResult(title, message);
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title,
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '继续管理',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: `用新书源搜索「${keyword}」`,
-        action: (): void => {
-          if (this.route === 'source') {
-            this.returnFromSourceManagement(true);
-          }
-        },
-      },
-    });
+    const returnTarget = this.sourceManagementReturnTarget;
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner;
+    const mounting = this.detailShelfAdmissionMount;
+    this.sourceImportSearchActionLabel = '重新搜索';
+    this.sourceImportSearchActionRevision += 1;
+    this.sourceImportSearchAction = (): void => {
+      if (current() && !this.shelfReceiptRetired && this.route === 'source' &&
+        generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+        owner === this.mountedRuntimeOwner && this.isCurrentRuntime(owner) &&
+        this.sourceManagementSearchKeyword === keyword && this.sourceManagementReturnTarget === returnTarget) {
+        this.returnFromSourceManagement(true);
+      }
+    };
   }
 
-  private requestSourceDelete(sourceIds: string[]): void {
-    if (this.route !== 'sourceTools' || sourceIds.length === 0) {
+  private runSourceImportSearchAction(revision: number): void {
+    if (revision !== this.sourceImportSearchActionRevision) return;
+    const action = this.sourceImportSearchAction;
+    this.sourceImportSearchAction = undefined;
+    this.sourceImportSearchActionLabel = '';
+    this.sourceImportSearchActionRevision += 1;
+    action?.();
+  }
+
+  private requestSourceDelete(sourceIds: string[], host: SourceToolsOrchestrator | undefined = this.sourceToolsOrchestrator,
+    identity: string = this.sourceToolsPresentationIdentity): void {
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => this.isCurrentSourceToolsPresentation(generation, owner, mounting, host, identity);
+    if (!current() || sourceIds.length === 0 || host === undefined) {
       return;
     }
-    const selection = this.consumeSourceToolsSelection(sourceIds);
+    const selection = host.consumeSelection(sourceIds);
     if (selection.length === 0) {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const listRevision = this.sourceToolsSnapshot.sourceListRevision;
+    const selectionRevision = this.sourceToolsSnapshot.selectionRevision;
+    this.showIndexAlert('confirmation-cancelable', {
       title: '删除书源',
       message: `确定删除所选 ${selection.length} 个书源吗？相关 Host 登录会话也会清除，删除后无法恢复。`,
-      autoCancel: true,
       primaryButton: {
         value: '取消',
         action: (): void => {},
@@ -1856,12 +3262,15 @@ struct Index {
         value: '删除',
         fontColor: readerAppColor('app.Index.requestSourceDelete.showAlertDialog.FFB42318', this.appThemeScheme),
         action: (): void => {
-          if (this.route === 'sourceTools') {
-            this.getSourceToolsOrchestrator().deleteSelected(selection);
+          if (current()) {
+            host.deleteSelected(selection);
           }
         },
       },
-    });
+    }, (): boolean => current() && !this.sourceToolsSnapshot.busy &&
+      this.sourceToolsSnapshot.sourceListRevision === listRevision &&
+      this.sourceToolsSnapshot.selectionRevision === selectionRevision && selection.every((id: string): boolean =>
+        this.sourceToolsSnapshot.sources.some((source: BookSource): boolean => source.sourceId === id)));
   }
 
   private openSync(): void {
@@ -1869,7 +3278,7 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.syncSnapshotReady = false;
@@ -1878,6 +3287,9 @@ struct Index {
   }
 
   private refreshRss(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     // The registered Figma boundary keeps RSS as a placeholder-only page.
     // Do not start a real rss.subscription.refresh transaction and then label
     // its stale/cache outcome as a user-visible refresh.
@@ -1885,6 +3297,9 @@ struct Index {
   }
 
   private onRssManage(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
@@ -1897,32 +3312,83 @@ struct Index {
     this.getRssOrchestrator().open();
   }
 
-  private getRssOrchestrator(): RssOrchestrator {
-    if (this.rssOrchestrator === undefined) {
-      this.rssOrchestrator = new RssOrchestrator(
-        (subscriptions: RssSubscription[]): void => {
-          this.rssPresentation = this.feedPresentation(subscriptions, []);
-        },
-        (): boolean => this.route === 'rssSubscriptionManagement',
-      );
-    }
-    return this.rssOrchestrator;
+  private retireRssPresentation(): void {
+    this.rssOrchestrator?.detachPresentation(this.rssPresentationIdentity);
+    this.rssPresentationIdentity = '';
   }
 
-  private getRssEditorOrchestrator(): RssSubscriptionEditorOrchestrator {
-    if (this.rssEditorOrchestrator === undefined) {
-      this.rssEditorOrchestrator = new RssSubscriptionEditorOrchestrator(
-        (snapshot: RssSubscriptionEditorSnapshot): void => {
-          this.rssEditorSnapshot = snapshot;
-        },
-        (subscriptionId: string): void => this.finishRssSubscriptionEdit(subscriptionId),
-        (): boolean => this.route === 'rssSubscriptionEditor',
-      );
+  private getRssOrchestrator(): RssOrchestrator {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner))
+      throw new Error('RSS 页面已退役');
+    const host = RssOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('RSS Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation]);
+    if (this.rssOrchestrator !== host || this.rssPresentationIdentity !== identity) {
+      this.retireRssPresentation();
+      if (this.rssOrchestrator !== host) {
+        this.rssManagementOperation = undefined;
+        this.rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+      }
+      this.rssOrchestrator = host;
+      this.rssPresentationIdentity = identity;
+      const admitted = (): boolean => this.rssOrchestrator === host && this.rssPresentationIdentity === identity &&
+        this.mountedRuntimeOwner === owner && !this.shelfReceiptRetired && this.detailShelfAdmissionMount === mounting &&
+        this.navigationGeneration === generation && this.isCurrentRuntime(owner);
+      const current = (): boolean => admitted() && this.route === 'rssSubscriptionManagement';
+      if (!host.attachPresentation(identity,
+        (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+        current,
+        (operation: RssManagementOperationProjection): void => { if (current()) this.rssManagementOperation = operation; },
+        (facts: OperationFacts<RssSubscription[]>): void => { if (current()) this.rssManagementRead = facts; },
+        admitted)) {
+        this.rssPresentationIdentity = '';
+        throw new Error('RSS 展示已退役');
+      }
     }
-    return this.rssEditorOrchestrator;
+    return host;
+  }
+
+  private retireRssEditorPresentation(): void {
+    this.rssEditorOrchestrator?.detachPresentation(this.rssEditorPresentationIdentity);
+    this.rssEditorPresentationIdentity = '';
+  }
+  private isCurrentRssEditorPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, identity: string, host: RssSubscriptionEditorOrchestrator | undefined, attached: boolean = true): boolean {
+    return owner !== undefined && host !== undefined && identity.length > 0 && this.rssEditorOrchestrator === host &&
+      this.rssEditorPresentationIdentity === identity && (!attached || host.ownsPresentation(identity)) && host.owns(owner) && this.mountedRuntimeOwner === owner &&
+      this.detailShelfAdmissionMount === mounting && this.navigationGeneration === generation &&
+      !this.shelfReceiptRetired && this.route === 'rssSubscriptionEditor' && this.isCurrentRuntime(owner);
+  }
+  private getRssEditorOrchestrator(): RssSubscriptionEditorOrchestrator {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'rssSubscriptionEditor')
+      throw new Error('RSS 编辑页面已退役');
+    const shared = this.getRssOrchestrator();
+    const host = RssSubscriptionEditorOrchestrator.forRuntime(owner, (task: () => Promise<void>): Promise<void> => shared.runSerialized(task));
+    if (host === undefined) throw new Error('RSS 编辑 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'editor']);
+    if (this.rssEditorOrchestrator !== host || this.rssEditorPresentationIdentity !== identity) {
+      this.retireRssEditorPresentation();
+      this.rssEditorOrchestrator = host; this.rssEditorPresentationIdentity = identity;
+      const current = (): boolean => this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host);
+      const admitted = (): boolean => this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host, false);
+      if (!host.attachPresentation(identity,
+        (snapshot: RssSubscriptionEditorSnapshot): void => { if (current()) this.rssEditorSnapshot = snapshot; },
+        (subscriptionId: string): void => { if (current()) this.finishRssSubscriptionEdit(subscriptionId); }, current, admitted)) {
+        this.rssEditorPresentationIdentity = '';
+        throw new Error('RSS 编辑展示已退役');
+      }
+    }
+    return host;
   }
 
   private onRssManagementViewArticles(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.onRssSubscriptionSelected(subscriptionId, 'rssSubscriptionManagement');
   }
 
@@ -1930,6 +3396,9 @@ struct Index {
     subscriptionId: string,
     returnTarget: RssSourceFeedReturnTarget = 'rss',
   ): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscription = this.rssSubscriptions().find(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     );
@@ -1939,6 +3408,9 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
+    this.rssSourceOriginal = undefined;
+    this.rssSourceOperation = undefined;
+    this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
     this.selectedRssItems = [];
     this.selectedRssItem = undefined;
@@ -1949,23 +3421,32 @@ struct Index {
   }
 
   private onRssSubscriptionAddRequested(): void {
-    this.nextNavigationGeneration();
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
+    this.rssEditorNavigationGeneration = this.nextNavigationGeneration();
     this.route = 'rssSubscriptionEditor';
     this.getRssEditorOrchestrator().openCreate();
   }
 
   private onRssSubscriptionEditRequested(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (!this.rssSubscriptions().some(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     )) {
       return;
     }
-    this.nextNavigationGeneration();
+    this.rssEditorNavigationGeneration = this.nextNavigationGeneration();
     this.route = 'rssSubscriptionEditor';
     this.getRssEditorOrchestrator().openEdit(subscriptionId);
   }
 
   private finishRssSubscriptionEdit(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.route !== 'rssSubscriptionEditor') {
       return;
     }
@@ -1976,12 +3457,18 @@ struct Index {
   }
 
   private returnToRssSubscriptionManagement(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.route = 'rssSubscriptionManagement';
     this.getRssOrchestrator().open();
   }
 
   private requestRssSubscriptionDelete(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscription = this.rssSubscriptions().find(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     );
@@ -1990,55 +3477,73 @@ struct Index {
         'RSS delete confirmation ignored stale subscriptionId=%{private}s', subscriptionId);
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const host = this.rssOrchestrator, identity = this.rssPresentationIdentity;
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement') &&
+      this.rssSubscriptions().find((candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId) === subscription;
+    if (!current()) return;
+    this.showIndexAlert('confirmation-cancelable', {
       title: '删除订阅源',
       message: `确定删除“${subscription.title}”吗？删除后无法恢复。`,
-      autoCancel: true,
       primaryButton: {
         value: '取消',
         action: (): void => {},
       },
       secondaryButton: {
         value: '删除',
-        action: (): void => this.confirmRssSubscriptionDelete(subscriptionId),
+        action: (): void => { if (current()) this.confirmRssSubscriptionDelete(subscriptionId, generation, owner, mounting, host, identity); },
       },
-    });
+    }, current);
   }
 
   private requestRssSourceImport(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.route !== 'rssSubscriptionManagement') {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const host = this.rssOrchestrator, identity = this.rssPresentationIdentity;
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const importVisible = this.jsonImportVisible;
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement') && this.jsonImportVisible === importVisible;
+    if (!current()) return;
+    this.showIndexAlert('confirmation-cancelable', {
       title: '导入 RSS 源',
       message: '“合并导入”保留现有来源；“覆盖全部”会原子替换当前 RSS 来源与阅读状态。',
-      autoCancel: true,
       primaryButton: {
         value: '合并导入',
-        action: (): void => this.openJsonImport('rssMerge'),
+        action: (): void => { if (current()) this.openJsonImport('rssMerge'); },
       },
       secondaryButton: {
         value: '覆盖全部',
         fontColor: readerAppColor('app.Index.requestRssSourceImport.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => this.openJsonImport('rssReplace'),
+        action: (): void => { if (current()) this.openJsonImport('rssReplace'); },
       },
-    });
+    }, current);
   }
 
-  private importRssSources(replaceExisting: boolean, onlineUrl?: string): void {
-    this.getRssOrchestrator().importSources(
+  private importRssSources(replaceExisting: boolean, onlineUrl?: string,
+    host: RssOrchestrator | undefined = this.rssOrchestrator, identity: string = this.rssPresentationIdentity): void {
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement');
+    if (!current() || host === undefined) return;
+    host.importSources(
       replaceExisting,
       (result: RssSourceImportResult | undefined): void => {
-        if (result !== undefined) {
+        if (result !== undefined && current()) {
           this.showRssOperationResult('RSS 源导入完成', `Core 已原子导入 ${result.imported} 个来源。`);
         }
       },
-      (error: Error): void => this.showRssOperationResult('RSS 源导入失败', error.message),
+      (error: Error): void => { if (current()) this.showRssOperationResult('RSS 源导入失败', error.message); },
       onlineUrl,
     );
   }
 
   private exportRssSources(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.getRssOrchestrator().exportSources(
       (result: RssSourceExportResult): void => {
         if (result.destination !== undefined) {
@@ -2050,73 +3555,116 @@ struct Index {
   }
 
   private showRssOperationResult(title: string, message: string): void {
-    if (this.route !== 'rssSubscriptionManagement') {
+    if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title,
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '知道了',
-        action: (): void => {},
-      },
-    });
+    if (this.route !== 'rssSubscriptionManagement' || this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner)) {
+      return;
+    }
+    this.rssOperationResultMessage = `${title}：${message}`;
   }
 
-  private confirmRssSubscriptionDelete(subscriptionId: string): void {
+  private confirmRssSubscriptionDelete(subscriptionId: string, generation: number = this.navigationGeneration,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
+    host: RssOrchestrator | undefined = this.rssOrchestrator, identity: string = this.rssPresentationIdentity): void {
     const stillPresent = this.rssSubscriptions().some(
-      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
-    );
-    if (this.route !== 'rssSubscriptionManagement' || !stillPresent) {
-      return;
-    }
-    this.getRssOrchestrator().removeSubscription(subscriptionId);
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId);
+    if (stillPresent && this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement'))
+      host?.removeSubscription(subscriptionId);
+  }
+
+  private isCurrentRssHostPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string, route: ReaderRoute, subscriptionId: string = '', guid: string = ''): boolean {
+    return owner !== undefined && host !== undefined && host === this.rssOrchestrator && host.owns(owner) &&
+      identity.length > 0 && identity === this.rssPresentationIdentity && host.isPresentationCurrent(identity) &&
+      owner === this.mountedRuntimeOwner && mounting === this.detailShelfAdmissionMount &&
+      isReaderProductSurfaceEnabled('rss') && this.isCurrentRssPresentation(generation, owner, route, subscriptionId, guid);
+  }
+
+  private isCurrentRssPresentation(generation: number, owner: ReaderRuntimeOwner, route: ReaderRoute,
+    subscriptionId: string = '', guid: string = ''): boolean {
+    if (this.shelfReceiptRetired || !this.isCurrentRoute(generation, route)) return false;
+    try {
+      if (!this.isCurrentRuntime(owner)) return false;
+      if (route === 'rssSourceFeed') return this.selectedRssSubscription?.subscriptionId === subscriptionId;
+      if (route === 'rssEntryDetail') return this.selectedRssItem?.subscriptionId === subscriptionId && this.selectedRssItem?.guid === guid;
+      return true;
+    } catch (_) { return false; }
+  }
+
+  private rssSourceBinding(generation: number, subscriptionId: string,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, host: RssOrchestrator | undefined = this.rssOrchestrator,
+    identity: string = this.rssPresentationIdentity, mounting: number = this.detailShelfAdmissionMount): RssRouteBinding<RssSourceSnapshot> {
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId);
+    return { current,
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssSourceOriginal = original; },
+      emit: (snapshot: RssSourceSnapshot): void => { if (current()) this.applyRssSourceSnapshot(snapshot); },
+      failed: (error: Error): void => { if (current()) hilog.error(DOMAIN, 'Reader', 'RSS source read failed: %{private}s', error.message); },
+      emitOperation: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
+        if (current() && operation.subscriptionId === subscriptionId) this.rssSourceOperation = operation;
+      },
+      emitRead: (facts: OperationFacts<RssSourceSnapshot>): void => { if (current()) this.rssSourceRead = facts; },
+    };
+  }
+
+  private rssEntryBinding(generation: number, subscriptionId: string, guid: string,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, host: RssOrchestrator | undefined = this.rssOrchestrator,
+    identity: string = this.rssPresentationIdentity, mounting: number = this.detailShelfAdmissionMount): RssRouteBinding<RssEntrySnapshot> {
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid);
+    return { current,
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssEntryOriginal = original; },
+      emit: (snapshot: RssEntrySnapshot): void => { if (current()) this.applyRssEntrySnapshot(snapshot); },
+      failed: (error: Error): void => { if (current()) this.failRssEntryOperation('read', error); },
+      emitOperation: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
+        if (current() && operation.subscriptionId === subscriptionId && operation.guid === guid) this.rssEntryOperation = operation;
+      },
+      emitRead: (facts: OperationFacts<RssEntrySnapshot>): void => { if (current()) this.rssEntryRead = facts; },
+    };
   }
 
   private loadRssSourceItems(generation: number, subscriptionId: string): void {
-    const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
-    this.getRssOrchestrator().loadSourceFeed(
-      subscriptionId,
-      (snapshot: RssSourceSnapshot): void => this.applyRssSourceSnapshot(snapshot),
-      (error: Error): void => {
-        hilog.error(DOMAIN, 'Reader',
-          'RSS SourceFeed cached read failed: %{private}s', error.message);
-      },
-      isCurrent,
-    );
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
+    const host = this.getRssOrchestrator();
+    const binding = this.rssSourceBinding(generation, subscriptionId);
+    host.loadSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private refreshRssSourceFeed(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscriptionId = this.selectedRssSubscription?.subscriptionId;
     if (subscriptionId === undefined || this.route !== 'rssSourceFeed') {
       return;
     }
     const generation = this.navigationGeneration;
-    const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
-    this.getRssOrchestrator().refreshSourceFeed(
-      subscriptionId,
-      (snapshot: RssSourceSnapshot): void => this.applyRssSourceSnapshot(snapshot),
-      (error: Error): void => {
-        hilog.error(DOMAIN, 'Reader',
-          'RSS SourceFeed refresh failed; cached projection retained: %{private}s', error.message);
-      },
-      isCurrent,
-    );
+    const host = this.getRssOrchestrator();
+    const binding = this.rssSourceBinding(generation, subscriptionId);
+    host.refreshSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private isCurrentRssSourceFeed(generation: number, subscriptionId: string): boolean {
-    return this.isCurrentRoute(generation, 'rssSourceFeed') &&
+    return !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'rssSourceFeed') &&
       this.selectedRssSubscription?.subscriptionId === subscriptionId;
   }
 
   private applyRssSourceSnapshot(snapshot: RssSourceSnapshot): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
     this.selectedRssSubscription = snapshot.subscription;
     this.selectedRssItems = snapshot.items;
   }
 
   private onRssItemSelected(subscriptionId: string, guid: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const item = this.rssRecentUnread().find(
       (candidate: RssItem): boolean => candidate.subscriptionId === subscriptionId &&
         candidate.guid === guid,
@@ -2130,6 +3678,9 @@ struct Index {
   }
 
   private onRssSourceItemSelected(item: RssItem): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const selected = this.selectedRssItems.find(
       (candidate: RssItem): boolean => candidate.subscriptionId === item.subscriptionId &&
         candidate.guid === item.guid,
@@ -2140,6 +3691,9 @@ struct Index {
   }
 
   private openRssEntryDetail(item: RssItem, returnTarget: RssDetailReturnTarget): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscription = this.selectedRssSubscription?.subscriptionId === item.subscriptionId
       ? this.selectedRssSubscription
       : this.rssSubscriptions().find(
@@ -2151,6 +3705,9 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
+    this.rssEntryOriginal = undefined;
+    this.rssEntryOperation = undefined;
+    this.rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
     this.selectedRssItem = item;
     this.selectedRssFavoriteState = 'loading';
@@ -2158,19 +3715,16 @@ struct Index {
     this.route = 'rssEntryDetail';
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
-    const isCurrent = (): boolean => this.isCurrentRssEntryDetail(
-      generation, subscriptionId, guid,
-    );
-    this.getRssOrchestrator().openEntry(
-      subscriptionId,
-      guid,
-      (snapshot: RssEntrySnapshot): void => this.applyRssEntrySnapshot(snapshot),
-      (error: Error): void => this.failRssEntryOperation('read', error),
-      isCurrent,
-    );
+    const host = this.getRssOrchestrator();
+    const binding = this.rssEntryBinding(generation, subscriptionId, guid);
+    host.openEntry(subscriptionId, guid, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private onRssEntryFavoriteRequested(favorite: boolean): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const item = this.selectedRssItem;
     if (item === undefined || this.route !== 'rssEntryDetail' ||
       (this.selectedRssFavoriteState !== 'favorited' &&
@@ -2180,18 +3734,10 @@ struct Index {
     const generation = this.navigationGeneration;
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
-    this.selectedRssFavoriteState = 'loading';
-    const isCurrent = (): boolean => this.isCurrentRssEntryDetail(
-      generation, subscriptionId, guid,
-    );
-    this.getRssOrchestrator().setEntryFavorite(
-      subscriptionId,
-      guid,
-      favorite,
-      (snapshot: RssEntrySnapshot): void => this.applyRssEntrySnapshot(snapshot),
-      (error: Error): void => this.failRssEntryOperation('favorite', error),
-      isCurrent,
-    );
+    const host = this.getRssOrchestrator();
+    const binding = this.rssEntryBinding(generation, subscriptionId, guid);
+    host.setEntryFavorite(subscriptionId, guid, favorite, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private isCurrentRssEntryDetail(
@@ -2199,12 +3745,15 @@ struct Index {
     subscriptionId: string,
     guid: string,
   ): boolean {
-    return this.isCurrentRoute(generation, 'rssEntryDetail') &&
+    return !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'rssEntryDetail') &&
       this.selectedRssItem?.subscriptionId === subscriptionId &&
       this.selectedRssItem?.guid === guid;
   }
 
   private applyRssEntrySnapshot(snapshot: RssEntrySnapshot): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
     this.selectedRssSubscription = snapshot.subscription;
     this.selectedRssItems = snapshot.items;
@@ -2213,6 +3762,9 @@ struct Index {
   }
 
   private failRssEntryOperation(action: string, error: Error): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.selectedRssFavoriteState = 'unavailable';
     hilog.error(DOMAIN, 'Reader',
       'RSS EntryDetail %{private}s failed; no optimistic state applied: %{private}s',
@@ -2220,6 +3772,9 @@ struct Index {
   }
 
   private returnFromRssEntryDetail(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.rssDetailReturnTarget === 'rssSourceFeed') {
       this.returnToRssSourceFeed();
       return;
@@ -2228,12 +3783,18 @@ struct Index {
   }
 
   private returnToRssSourceFeed(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.selectedRssSubscription === undefined) {
       this.returnToRss();
       return;
     }
     const subscriptionId = this.selectedRssSubscription.subscriptionId;
     const generation = this.nextNavigationGeneration();
+    this.rssSourceOriginal = undefined;
+    this.rssSourceOperation = undefined;
+    this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
     this.selectedRssItem = undefined;
     this.selectedRssFavoriteState = 'loading';
     this.rssDetailReturnTarget = 'rssSourceFeed';
@@ -2242,6 +3803,9 @@ struct Index {
   }
 
   private returnFromRssSourceFeed(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.rssSourceFeedReturnTarget === 'rssSubscriptionManagement') {
       const focusedSubscriptionId = this.selectedRssSubscription?.subscriptionId ?? '';
       this.nextNavigationGeneration();
@@ -2260,6 +3824,9 @@ struct Index {
   }
 
   private returnToRss(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
@@ -2269,9 +3836,13 @@ struct Index {
     this.rssSourceFeedReturnTarget = 'rss';
     this.rssManagementFocusSubscriptionId = '';
     this.route = 'rss';
+    this.loadRss(this.navigationGeneration);
   }
 
   private openRssManagementForSubscription(subscriptionId: string | undefined): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (subscriptionId === undefined || !this.rssSubscriptions().some(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     )) {
@@ -2290,6 +3861,9 @@ struct Index {
   }
 
   private onRssOpenOriginalRequested(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.selectedRssItem?.link === undefined ||
       this.selectedRssItem.link.trim().length === 0) {
       hilog.warn(DOMAIN, 'Reader', 'RSS original link intent ignored because the entry has no link');
@@ -2300,6 +3874,9 @@ struct Index {
   }
 
   private onRssModeRequested(mode: RssMode): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (mode === 'sources') {
       return;
     }
@@ -2310,240 +3887,124 @@ struct Index {
       'FIGMA_VISUAL_GAP: RSS mode %{private}s has no admitted data contract', mode);
   }
 
-  private feedPresentation(
-    subscriptions: RssSubscription[],
-    recentUnread: RssItem[],
-  ): RssPresentation {
-    const presentation: RssPresentation = {
-      kind: 'feed', subscriptions: subscriptions, recentUnread: recentUnread,
-    };
-    return presentation;
+  private feedPresentation(subscriptions: RssSubscription[], recentUnread: RssItem[]): RssPresentation {
+    return RssPresentationProjection.feed(subscriptions, recentUnread);
   }
 
   private rssSubscriptions(): RssSubscription[] {
-    if (this.rssPresentation.kind === 'fatalError') {
-      return [];
-    }
-    return this.rssPresentation.subscriptions;
+    return RssPresentationProjection.subscriptions(this.rssPresentation);
   }
 
   private rssRecentUnread(): RssItem[] {
-    if (this.rssPresentation.kind === 'feed' || this.rssPresentation.kind === 'refreshing') {
-      return this.rssPresentation.recentUnread;
-    }
-    return [];
+    return RssPresentationProjection.recentUnread(this.rssPresentation);
   }
 
   private rssSubscriptionManagementItems(): RssSubscriptionManagementItem[] {
-    return this.rssSubscriptions().map(
-      (subscription: RssSubscription): RssSubscriptionManagementItem => ({
-        subscriptionId: subscription.subscriptionId,
-        title: subscription.title,
-        meta: this.rssSubscriptionManagementMeta(subscription),
-        enabled: subscription.enabled,
-      }),
-    );
-  }
-
-  /** Management metadata is a projection of Core fields only. */
-  private rssSubscriptionManagementMeta(subscription: RssSubscription): string {
-    const parts: string[] = [];
-    if (subscription.sourceGroup !== undefined && subscription.sourceGroup.trim().length > 0) {
-      parts.push(subscription.sourceGroup);
-    }
-    if (subscription.customOrder !== undefined) {
-      parts.push(`排序 ${subscription.customOrder}`);
-    }
-    if (subscription.ruleArticles !== undefined && subscription.ruleArticles.trim().length > 0) {
-      parts.push('规则型');
-    }
-    const siteUrl = subscription.siteUrl;
-    parts.push(siteUrl !== undefined && siteUrl.trim().length > 0 ? siteUrl : subscription.feedUrl);
-    if (subscription.lastFetchAt !== undefined && subscription.lastFetchAt > 0) {
-      parts.push(`上次刷新 ${this.formatRssManagementTime(subscription.lastFetchAt)}`);
-    }
-    if (!subscription.enabled) {
-      parts.push('已停用');
-    }
-    return parts.join(' · ');
-  }
-
-  private formatRssManagementTime(timestamp: number): string {
-    const date = new Date(timestamp);
-    return `${date.getFullYear()}-${this.twoDigit(date.getMonth() + 1)}-${this.twoDigit(date.getDate())} ` +
-      `${this.twoDigit(date.getHours())}:${this.twoDigit(date.getMinutes())}`;
-  }
-
-  private twoDigit(value: number): string {
-    return value < 10 ? `0${value}` : `${value}`;
+    return RssPresentationProjection.managementItems(this.rssPresentation);
   }
 
   private onSearchVisibilityChanged(): void {
-    ReaderRuntimeOwner.current().setReadingPreparationContext(this.searchAppForeground,
-      !this.readingSessionActive && this.route === 'bookshelf');
-    ReaderRuntimeOwner.current().readingEntryPreparations().setPaused(
-      this.route !== 'bookshelf' || !this.searchAppForeground);
-    this.preparePersistedShelfBooks();
-    ReaderRuntimeOwner.current().bookAcquisitions().visibilityChanged();
-    ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(this.route === 'search' && this.searchAppForeground);
-    this.searchOrchestrator?.visibilityChanged();
+    this.transientFeedback.reset();
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    ReadingEntryHost.forRuntime(owner).preparationVisibilityChanged(this.readingPreparationContext(owner),
+      this.sharedReadingPreparationSeeds(owner));
+    owner.bookAcquisitions().visibilityChanged();
+    owner.bookAcquisitions().setPreparationVisible(this.route === 'search' && this.searchAppForeground);
+    this.searchHost.visibilityChanged();
     void this.refreshDetailAcquisitionProjection();
     this.consumeSystemFileOpen();
   }
 
+
+
   private async refreshDetailAcquisitionProjection(): Promise<void> {
-    // One selection owns its body verdict. Durable catalog notifications must
-    // neither launch a second probe nor automatically retry its terminal failure.
-    if (this.candidateAdmissionGeneration === this.navigationGeneration ||
-      this.candidateAdmissionFailedGeneration === this.navigationGeneration) return;
-    const book = this.detailBook;
-    if (this.route !== 'detail' || this.readingSessionActive ||
-      book === undefined || book.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) return;
-    if (this.bookProjectionLoading) { this.bookProjectionAgain = true; return; }
-    this.bookProjectionAgain = false;
-    this.bookProjectionLoading = true;
-    const generation = this.navigationGeneration;
-    const sessionGeneration = this.remoteSessionGeneration;
-    const current = (): boolean => generation === this.navigationGeneration && !this.readingSessionActive &&
-      sessionGeneration === this.remoteSessionGeneration &&
-      this.route === 'detail' && this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
-    try {
-      const owner = ReaderRuntimeOwner.current();
-      const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
-      const result = await owner.request('search-book.get', { origin: book.sourceId, bookUrl: book.bookId });
-      const row = result.data['book'] as JsonObject | undefined;
-      if (!current() || row === undefined || row === null) return;
-      if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
-        this.bookProjectionAgain = true;
-        return;
-      }
-      const facts = row['acquisition'] as JsonObject | undefined;
-      if (facts === undefined) return;
-      if (facts['stale'] === true) {
-        const admitted = this.remoteReadingSession;
-        // A completed cache-first readmission may legitimately retain an old
-        // catalog for offline reading. Repeated stale notifications must not
-        // reopen that already validated body in a loop.
-        if (admitted !== undefined && preparedRemoteChapterMatches(admitted.preparedChapter, admitted,
-          undefined, projectionRevision) && (admitted.acquisitionMode === 'offline' ||
-          admitted.sourceVersion !== facts['sourceVersion'])) return;
-        const shelfSnapshot = this.shelfBooks.find((item: ShelfBook): boolean =>
-          item.sourceId === book.sourceId && item.bookId === book.bookId);
-        this.openRemoteBookDetail({ sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
-          title: book.title, author: book.author, intro: book.intro, coverUrl: book.coverUrl,
-          kind: book.kind, lastChapter: book.lastChapter }, book.sourceName, shelfSnapshot,
-          false, [], [], this.detailReturnRoute, undefined, true);
-        // The existing entry owns completion/failure and clears this marker.
-        // Suppress projection notifications while its single probe is active.
-        this.candidateAdmissionGeneration = this.navigationGeneration;
-        return;
-      }
-      const title = typeof row['name'] === 'string' ? row['name'] as string : book.title;
-      const author = typeof row['author'] === 'string' ? row['author'] as string : book.author;
-      this.detailBook = { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
-        intro: typeof row['intro'] === 'string' ? row['intro'] as string : book.intro,
-        coverUrl: typeof row['coverUrl'] === 'string' ? row['coverUrl'] as string : book.coverUrl,
-        kind: typeof row['kind'] === 'string' ? row['kind'] as string : book.kind,
-        lastChapter: typeof row['latestChapterTitle'] === 'string' ? row['latestChapterTitle'] as string : book.lastChapter };
-      const previous = this.remoteReadingSession;
-      if (previous !== undefined && previous.catalogVersion !== undefined && previous.contextVersion !== undefined &&
-        facts['catalogVersion'] === previous.catalogVersion && facts['contextVersion'] === previous.contextVersion &&
-        facts['sourceVersion'] === previous.sourceVersion) {
-        const merged = copyRemoteReadingSession(previous);
-        merged.book = { title, author, intro: this.detailBook.intro,
-          coverUrl: this.detailBook.coverUrl, kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
-        const wasReadable = this.remoteContentVerdict === 'readable';
-        // Core has just validated the canonical source/catalog/body/processing
-        // snapshot. Preserve that verdict across metadata notifications without
-        // relabelling an old materialized chapter as current.
-        const readableRevision = wasReadable && facts['schemaVersion'] === 2 &&
-          facts['verificationCurrent'] === true ? projectionRevision : undefined;
-        this.installRemoteReadingSession(merged, readableRevision, row);
-        if (wasReadable && this.remoteContentVerdict === 'verifying') {
-          await this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession ?? previous, current);
-        }
-        return;
-      }
-      if (typeof facts['catalogAt'] !== 'number') return;
-      const session = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession({ sourceId: book.sourceId,
-        bookId: book.bookId, detailUrl: book.bookId, title, author,
-        sourceVersion: typeof facts['sourceVersion'] === 'string' ? facts['sourceVersion'] as string : undefined }, current, true);
-      if (!current()) return;
-      const entries = await this.loadRemoteDirectoryProjection(new ReadingOfflineGateway(owner), owner, session, current);
-      if (!current()) return;
-      if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
-        this.bookProjectionAgain = true;
-        return;
-      }
-      const merged = copyRemoteReadingSession(session);
-      merged.book = { title, author, intro: this.detailBook.intro, coverUrl: this.detailBook.coverUrl,
-        kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
-      const readableRevision = this.remoteContentVerdict === 'readable' ? projectionRevision : undefined;
-      this.installRemoteReadingSession(merged, readableRevision, row);
-      this.detailToc = entries;
-      this.detailLoadingMessage = '';
-      if (this.remoteContentVerdict !== 'readable') {
-        const installed = this.remoteReadingSession;
-        if (installed !== undefined) await this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), installed,
-          (): boolean => generation === this.navigationGeneration && this.route === 'detail' && !this.readingSessionActive);
-      }
-    } catch (_error) { /* The current detail survives a failed background projection. */ }
-    finally {
-      this.bookProjectionLoading = false;
-      if (this.bookProjectionAgain) void this.refreshDetailAcquisitionProjection();
-    }
+    if (this.route !== 'detail' || this.readingSessionActive || this.detailBook === undefined ||
+      this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) return;
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    if (host.snapshot().scopeId !== this.readingEntryScopeId) this.bindReadingEntryReader();
+    await host.refreshProjection();
   }
 
   private openSearch(): void {
-    this.searchViewState.reset();
-    this.searchViewState.requestInputFocus();
+    this.searchHost.prepareEntry();
     this.nextNavigationGeneration();
     this.resetSearchDetailWarmups();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
     this.refreshSearchShelfMembership();
-    this.getSearchOrchestrator().open();
+    this.searchHost.open();
   }
 
   private performSearch(keyword: string, scopeSourceIds?: string[]): void {
-    this.searchViewState.reset(keyword);
     this.nextNavigationGeneration();
     this.resetSearchDetailWarmups();
-    this.getSearchOrchestrator().search(keyword, scopeSourceIds);
+    this.searchHost.search(keyword, scopeSourceIds);
   }
 
   private stopSearch(): void {
-    this.getSearchOrchestrator().stop();
+    this.searchHost.stop();
     ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
   }
 
-  private getSearchOrchestrator(): SearchOrchestrator {
-    if (this.searchOrchestrator === undefined) {
-      this.searchOrchestrator = new SearchOrchestrator(
-        (presentation: SearchPresentation): void => {
-          this.searchPublication.publish(presentation);
-          this.searchPublicationRevision += 1;
-        },
-        (sources: SearchSource[]): void => {
-          this.searchPublication.updateSources(sources);
-        },
-        (): boolean => this.route === 'search' && this.searchAppForeground,
-      );
+  /**
+   * A search query owns one navigation journey until its origin is closed.
+   * Detail, reader, and directory are still allowed to consume late search
+   * results and source-health projections, while bookshelf/settings remain a
+   * hard cancellation boundary.
+   */
+  private searchJourneyActive(): boolean {
+    if (!this.searchAppForeground) return false;
+    if (this.route === 'search') return true;
+    return this.detailReturnRoute === 'search' &&
+      (this.route === 'detail' || this.route === 'reading' || this.route === 'directory');
+  }
+
+  /** Merge late search publications into the selected same-book candidate set. */
+  private syncSearchDetailCandidates(presentation: SearchPresentation): void {
+    if (presentation.kind !== 'results' || this.searchDetailCandidates.length === 0) return;
+    // A prior preview can leave its candidate list alive while Search is
+    // visible again.  Only the mounted detail/reader journey may reconcile
+    // that list; a new Search query must never inherit the old group.
+    if (this.detailReturnRoute !== 'search' ||
+      (this.route !== 'detail' && this.route !== 'reading' && this.route !== 'directory')) return;
+    const anchor = this.searchDetailCandidates[0];
+    if (anchor === undefined) return;
+    const sameGroup = (candidate: SearchBook): boolean =>
+      (anchor.groupKey !== undefined && candidate.groupKey === anchor.groupKey) ||
+      (candidate.title === anchor.title && candidate.author === anchor.author);
+    const latest = new Map<string, SearchBook>();
+    for (const candidate of presentation.results) {
+      if (sameGroup(candidate)) latest.set(`${candidate.sourceId}\u0000${candidate.bookId}`, candidate);
     }
-    return this.searchOrchestrator;
+    if (latest.size === 0) return;
+    const merged: SearchBook[] = [];
+    const seen = new Set<string>();
+    for (const previous of this.searchDetailCandidates) {
+      const key = `${previous.sourceId}\u0000${previous.bookId}`;
+      const next = latest.get(key) ?? previous;
+      if (!seen.has(key)) { merged.push(next); seen.add(key); }
+    }
+    latest.forEach((candidate: SearchBook, key: string): void => {
+      if (!seen.has(key)) { merged.push(candidate); seen.add(key); }
+    });
+    const changed = merged.length !== this.searchDetailCandidates.length ||
+      merged.some((candidate: SearchBook, index: number): boolean => candidate !== this.searchDetailCandidates[index]);
+    if (changed) this.searchDetailCandidates = merged;
   }
 
   private retrySearch(): void {
     this.resetSearchDetailWarmups();
-    this.getSearchOrchestrator().retry();
+    this.searchHost.retry();
   }
 
   private clearSearchHistory(): void {
     this.nextNavigationGeneration();
     ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
-    this.getSearchOrchestrator().clearHistory();
+    this.searchHost.clearHistory();
   }
 
   private resetSearchDetailWarmups(): void {
@@ -2569,6 +4030,7 @@ struct Index {
 
   private remoteSeedForSearchBook(candidate: SearchBook): RemoteReadingBookSeed {
     return {
+      contentKind: candidate.category === 'comic' ? 'manga' : 'text',
       sourceId: candidate.sourceId,
       sourceVersion: candidate.sourceRuleVersion,
       bookId: candidate.bookId,
@@ -2588,8 +4050,9 @@ struct Index {
   }
 
 
-  private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = []): void {
+  private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = [], displayCoverUrl?: string): void {
     this.searchDetailCandidates = [book, ...variants.filter((candidate: SearchBook): boolean =>
+      candidate.category === book.category &&
       (candidate.sourceId !== book.sourceId || candidate.bookId !== book.bookId) &&
       (book.groupKey !== undefined && candidate.groupKey === book.groupKey ||
         candidate.title === book.title && candidate.author === book.author))];
@@ -2606,8 +4069,8 @@ struct Index {
         const candidates = this.searchDetailCandidates;
         const current = (): boolean => generation === this.navigationGeneration &&
           this.route === 'search' && this.searchDetailCandidates === candidates &&
-          owner === ReaderRuntimeOwner.current();
-        void new ReaderCoreGateway(owner).loadShelfBook(LOCAL_SOURCE_ID, book.bookId)
+          this.isCurrentRuntime(owner);
+        void this.bookshelfHost.loadShelfBook(LOCAL_SOURCE_ID, book.bookId)
           .then((stored: ShelfBook | undefined): void => {
             if (!current()) return;
             if (stored === undefined) {
@@ -2618,7 +4081,7 @@ struct Index {
             this.openLocalBookDetail(stored);
           })
           .catch((error: Error): void => {
-            if (current()) this.showReadingFailure('打开本地书籍失败', error.message);
+            if (current()) this.showReadingFailure('打开本地书籍失败', readingFailureHint(diagnosticCodeOf(errorMessageOf(error))));
           });
       }
       return;
@@ -2626,7 +4089,8 @@ struct Index {
     // The search badge describes a saved work, not just this source URL. Keep
     // its exact durable identity so changing source owns the existing row.
     const shelfMatch = resolveBookshelfBook(book.sourceId, book.bookId, book.title, book.author,
-      this.searchPublication.shelfAt(this.searchPublicationRevision).concat(this.shelfBooks),
+      this.searchHost.publication.shelfAt(this.searchPublicationRevision).concat(this.shelfBooks)
+        .filter((saved: ShelfBook): boolean => (saved.contentKind === 'manga') === (book.category === 'comic')),
       book.authorIdentity, book.sourceRuleVersion);
     if (shelfMatch.kind === 'ambiguous') {
       this.showReadingFailure('书架中有多个版本', '请从书架选择要阅读或换源的版本，已有书籍不会自动合并。');
@@ -2635,9 +4099,11 @@ struct Index {
     if (shelfMatch.kind === 'matched') {
       const saved = shelfMatch.book;
       const seed: RemoteReadingBookSeed = { sourceId: saved.sourceId, bookId: saved.bookId,
+        contentKind: saved.contentKind,
         detailUrl: saved.bookId, title: saved.title, author: saved.author, coverUrl: saved.coverUrl,
         intro: saved.intro, kind: saved.kind, lastChapter: saved.lastChapter };
-      this.openRemoteBookDetail(seed, saved.sourceName ?? this.sourceDisplayName(saved.sourceId), saved);
+      this.openRemoteBookDetail(seed, saved.sourceName ?? this.sourceDisplayName(saved.sourceId), saved,
+        false, [], [], undefined, undefined, false, displayCoverUrl);
       return;
     }
     // Unsaved works retain every source candidate. The shared scheduler bounds concurrency.
@@ -2666,10 +4132,15 @@ struct Index {
     const shelfSnapshot = this.shelfBooks.find((item: ShelfBook): boolean =>
       item.sourceId === book.sourceId && item.bookId === book.bookId);
     this.openRemoteBookDetail(seeds[0], sourceNames[0], shelfSnapshot, false,
-      seeds.slice(1), sourceNames.slice(1));
+      seeds.slice(1), sourceNames.slice(1), undefined, undefined, false, displayCoverUrl);
   }
 
   private openShelfBook(selection: ShelfBook): void {
+    if (selection.contentKind === 'audio') {
+      this.showReadingFailure('暂不支持此类阅读', '书籍和已下载内容仍保留。');
+      return;
+    }
+    ReaderRuntimeOwner.current().selectMangaOfflineProbe?.(selection.sourceId, selection.bookId, selection.contentKind === 'manga');
     if (this.route === 'bookshelf') {
       this.beginReadingStartupTrace?.();
       this.shelfEntryTraceAttempt += 1;
@@ -2682,8 +4153,10 @@ struct Index {
       this.openLocalBookDetail(selection, true);
       return;
     }
-    ReaderRuntimeOwner.current().noteReadingPreparationIntent(selection.sourceId, selection.bookId);
+    if (ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(selection.sourceId, selection.bookId) !== true)
+      ReaderRuntimeOwner.current().noteReadingPreparationIntent(selection.sourceId, selection.bookId);
     this.openRemoteBookDetail({
+      contentKind: selection.contentKind,
       sourceId: selection.sourceId,
       bookId: selection.bookId,
       detailUrl: selection.bookId,
@@ -2695,53 +4168,207 @@ struct Index {
     }, this.sourceDisplayName(selection.sourceId, selection.sourceName), selection, true);
   }
 
+  private getReadingEntryHost(): ReadingEntryHost | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    const host = ReadingEntryHost.forRuntime(owner);
+    this.readingEntryHost = host;
+    return host;
+  }
+
+  private readingEntryLease(owner: ReaderRuntimeOwner): ReadingEntryLease {
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const host = this.readingEntryHost;
+    const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount;
+    return { isCurrent: current,
+      projectionAllowed: (): boolean => {
+        const book = host?.snapshot().book, shown = this.detailBook;
+        return current() && host !== undefined && this.readingEntryHost === host && this.route === 'detail' &&
+          !this.readingSessionActive && !this.sourceSwitchVisible && book !== undefined && shown !== undefined &&
+          book.sourceId === shown.sourceId && book.bookId === shown.bookId;
+      },
+      currentDirectory: (): LocalReadingTocEntry[] => this.detailToc,
+      offlineGeneration: (): number => this.offlineOperation?.generation ?? 0,
+      membership: () => {
+        const admission = this.detailBook === undefined ? EMPTY_READABLE_ADMISSION : this.detailReadableAdmission(this.detailBook);
+        return { generation: JSON.stringify([this.shelfOperation.generation, admission.generation]),
+          blocked: this.shelfOperation.busy || this.shelfOperation.removalKey.length > 0 || admission.adding || admission.cancelling ||
+            admission.confirmation === 'unknown', value: this.detailInBookshelf };
+      },
+      changed: (snapshot: ReadingEntrySnapshot): void => { if (current()) this.applyReadingEntrySnapshot(snapshot); },
+      cacheDecision: (error: RemoteChapterCacheRefreshError, guard: () => boolean): Promise<boolean> =>
+        this.chooseCachedChapterRefresh(error, (): boolean => current() && guard()),
+      notice: (title: string, message: string): void => { if (current()) this.showReadingFailure(title, message); },
+      refreshShelf: (): void => { if (current()) this.refreshBookshelf(); },
+      diagnostic: (stage: string, message: string): void => {
+        if (current()) hilog.warn(DOMAIN, 'Reader', 'Reading entry %{public}s: %{private}s', stage, message);
+      },
+    };
+  }
+
+  private applyReadingEntrySnapshot(snapshot: ReadingEntrySnapshot): void {
+    const previous = this.readingEntryPublishedSnapshot;
+    const changedScope = previous?.scopeId !== snapshot.scopeId;
+    this.readingEntryPublishedSnapshot = snapshot;
+    this.readingEntryScopeId = snapshot.scopeId;
+    if (changedScope || previous?.book !== snapshot.book) this.detailBook = snapshot.book;
+    this.readingContentKind = (snapshot.session?.contentKind ?? snapshot.book?.contentKind ?? snapshot.seed?.contentKind) === 'manga' ? 'manga' : 'text';
+    if (changedScope || previous?.session !== snapshot.session) this.remoteReadingSession = snapshot.session;
+    this.remoteSessionGeneration = snapshot.sessionGeneration;
+    if (changedScope || previous?.seed !== snapshot.seed || previous?.book !== snapshot.book ||
+      previous?.session?.sourceVersion !== snapshot.session?.sourceVersion) {
+      this.remoteReadingSeed = snapshot.seed ?? (snapshot.book !== undefined && snapshot.book.sourceId !== LOCAL_SOURCE_ID ?
+        { sourceId: snapshot.book.sourceId, bookId: snapshot.book.bookId, detailUrl: snapshot.book.bookId,
+          title: snapshot.book.title, author: snapshot.book.author, kind: snapshot.book.kind, coverUrl: snapshot.book.coverUrl,
+          intro: snapshot.book.intro, lastChapter: snapshot.book.lastChapter, sourceVersion: snapshot.session?.sourceVersion } : undefined);
+    }
+    if (changedScope || previous?.toc !== snapshot.toc) this.detailToc = snapshot.toc;
+    this.detailInBookshelf = snapshot.inBookshelf;
+    this.detailLoadingMessage = snapshot.loadingMessage;
+    this.detailCatalogBusy = snapshot.catalogLoading === true;
+    this.remoteContentVerdict = snapshot.verdict;
+  }
+
+  private bindReadingEntryReader(): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    const host = this.getReadingEntryHost();
+    if (owner === undefined || book === undefined || host === undefined) return;
+    const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
+      this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
+    host.bindReader(book, session, this.detailToc, this.detailInBookshelf, this.readingEntryLease(owner));
+  }
+
+  private retireReadingEntryPresentation(): void {
+    const host = this.readingEntryHost;
+    if (host !== undefined && host.snapshot().scopeId === this.readingEntryScopeId) host.retire();
+    this.readingEntryScopeId = -1;
+    this.readingPresentedScopeId = -1;
+    this.readingEntryPublishedSnapshot = undefined;
+    this.pendingRemoteDirectoryProjection = undefined;
+    this.pendingLocalDirectoryProjection = undefined;
+  }
+
+  private readingPreparationContext(owner: ReaderRuntimeOwner): ReadingPreparationContext {
+    const mounting = this.detailShelfAdmissionMount;
+    return {
+      isCurrent: (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+        this.isCurrentRuntime(owner) && mounting === this.detailShelfAdmissionMount,
+      foreground: (): boolean => this.searchAppForeground,
+      shelfVisible: (): boolean => this.route === 'bookshelf',
+      readingActive: (): boolean => this.readingSessionActive,
+      settingsAvailable: (): boolean => this.applicationSettingsSnapshot !== undefined,
+      revision: (): string | undefined => this.shelfProjectionRevision,
+      diagnostic: (message: string): void => { hilog.warn(DOMAIN, 'Reader', 'Persistent shelf preparation: %{private}s', message); },
+    };
+  }
+
+  private sharedReadingPreparationSeeds(owner: ReaderRuntimeOwner): ReadingSharedShelfSeeds | undefined {
+    const shared = this.bookshelfBackgroundSeeds;
+    return shared?.owner === owner ? { runtime: owner, revision: shared.revision, seeds: shared.seeds } : undefined;
+  }
+
   private preparePersistedShelfBooks(): void {
-    ReaderRuntimeOwner.current().setReadingPreparationContext(this.searchAppForeground,
-      !this.readingSessionActive && this.route === 'bookshelf');
-    if (this.shelfProjectionRevision === undefined || this.shelfProjectionRevision.length === 0) return;
-    if (this.route !== 'bookshelf' || this.readingSessionActive || !this.searchAppForeground) return;
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    ReadingEntryHost.forRuntime(owner).preparePersisted(this.readingPreparationContext(owner),
+      this.sharedReadingPreparationSeeds(owner));
+  }
+
+  private hydrateMangaPositions(books: ShelfBook[]): void {
+    if (this.readingSessionActive || this.sourceSwitchVisible ||
+      !['bookshelf', 'detail', 'directory'].includes(this.route)) return;
     const owner = ReaderRuntimeOwner.current();
-    const revision = this.shelfProjectionRevision;
-    const allowed = (): boolean => owner === ReaderRuntimeOwner.current() && this.route === 'bookshelf' &&
-      !this.readingSessionActive && this.searchAppForeground && this.applicationSettingsSnapshot !== undefined &&
-      revision === this.shelfProjectionRevision;
-    void owner.readingEntryPreparations().preparePersistedShelf(revision,
-      async (current: () => boolean): Promise<ReadingEntrySeed[] | undefined> => {
-        const shared = this.bookshelfBackgroundSeeds;
-        if (shared !== undefined && shared.owner === owner && shared.revision === revision) {
-          const seeds = await shared.seeds;
-          if (!current()) return undefined;
-          if (seeds !== undefined) return seeds;
-        }
-        const shelf = await new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current, true);
-        if (shelf !== undefined && shelf.projectionRevision !== revision) return undefined;
-        return shelf?.books.map((book: ShelfBook): ReadingEntrySeed => ({ sourceId: book.sourceId, bookId: book.bookId }));
-      }, allowed).catch((error: Error): void => {
-        if (allowed()) hilog.warn(DOMAIN, 'Reader', 'Persistent shelf preparation: %{private}s', error.message);
+    const before = MangaBookPresentation.revision;
+    MangaBookPresentation.useOwner(owner);
+    if (before !== MangaBookPresentation.revision) this.mangaProjectionSignature = '';
+    const retained: MangaBookIdentity[] = this.shelfBooks.slice(0, 144).map((book: ShelfBook): MangaBookIdentity =>
+      ({ sourceId: book.sourceId, bookId: book.bookId }));
+    if (this.continueReading?.contentKind === 'manga') retained.push({ sourceId: this.continueReading.sourceId,
+      bookId: this.continueReading.bookId });
+    if (this.detailBook?.contentKind === 'manga') retained.push({ sourceId: this.detailBook.sourceId,
+      bookId: this.detailBook.bookId });
+    MangaBookPresentation.retainIdentities(retained);
+    if (before !== MangaBookPresentation.revision) AppStorage.setOrCreate('readerMangaPresentationRevision',
+      MangaBookPresentation.revision);
+    this.refreshDetailMangaPosition();
+    const candidates = books.filter((book: ShelfBook): boolean => book.contentKind === 'manga').slice(0, 24);
+    const detailIdentity = this.detailBook === undefined ? '' : JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId]);
+    const signature = JSON.stringify([this.navigationGeneration, this.bookshelfLoadGeneration, this.route,
+      detailIdentity, candidates.map((book: ShelfBook): string[] => [book.sourceId, book.bookId])]);
+    if (this.mangaProjectionSignature === signature) return;
+    this.mangaProjectionSignature = signature;
+    const generation = ++this.mangaProjectionGeneration;
+    this.mangaProjectionQueue = candidates.map((book: ShelfBook): MangaPositionProjectionJob => ({ book, owner,
+      generation, navigationGeneration: this.navigationGeneration, shelfGeneration: this.bookshelfLoadGeneration,
+      route: this.route, detailIdentity }));
+    this.pumpMangaPositionProjections();
+  }
+
+  private mangaPositionProjectionCurrent(job: MangaPositionProjectionJob): boolean {
+    return job.generation === this.mangaProjectionGeneration && this.isCurrentRuntime(job.owner) &&
+      job.navigationGeneration === this.navigationGeneration && job.shelfGeneration === this.bookshelfLoadGeneration &&
+      job.route === this.route && !this.readingSessionActive && !this.sourceSwitchVisible &&
+      (job.route === 'bookshelf' || job.detailIdentity === (this.detailBook === undefined ? '' :
+        JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId])));
+  }
+
+  private pumpMangaPositionProjections(): void {
+    while (this.mangaProjectionWorkers < 2 && this.mangaProjectionQueue.length > 0) {
+      const job = this.mangaProjectionQueue.shift();
+      if (job === undefined || !this.mangaPositionProjectionCurrent(job)) continue;
+      this.mangaProjectionWorkers += 1;
+      void this.projectMangaPosition(job).finally((): void => {
+        this.mangaProjectionWorkers -= 1;
+        this.pumpMangaPositionProjections();
       });
+    }
+  }
+
+  private async projectMangaPosition(job: MangaPositionProjectionJob): Promise<void> {
+    const current = (): boolean => this.mangaPositionProjectionCurrent(job);
+    const book = job.book;
+    const gateway = new MangaSessionGateway(job.owner);
+    try {
+      const entry = await gateway.entry(book.sourceId, book.bookId, undefined, current);
+      if (!current()) return;
+      const before = MangaBookPresentation.revision;
+      const accepted = MangaBookPresentation.admitEntry(book.sourceId, book.bookId, entry);
+      if (!accepted) {
+        const progress = await gateway.progress(book.sourceId, book.bookId, current);
+        if (!current()) return;
+        MangaBookPresentation.admitProgress(book.sourceId, book.bookId, progress);
+      }
+      if (!current()) return;
+      if (before !== MangaBookPresentation.revision)
+        AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
+      // Reader save may have already admitted these facts. The mounted detail
+      // owns a separate snapshot and still needs the confirmed position.
+      this.refreshDetailMangaPosition();
+    } catch (_error) { /* Optional display projection; unknown remains unknown. */ }
+  }
+
+  private refreshDetailMangaPosition(): void {
+    const book = this.detailBook;
+    if (book?.contentKind !== 'manga') return;
+    const position = MangaBookPresentation.get(book.sourceId, book.bookId);
+    if (book.mangaPosition !== position) {
+      this.detailBook = {
+        sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId,
+        title: book.title, author: book.author, kind: book.kind, contentKind: book.contentKind,
+        mangaPosition: position, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
+      };
+    }
   }
 
   private prepareVisibleReadingBooks(books: ShelfBook[]): void {
-    if (this.route !== 'bookshelf' || this.readingSessionActive || !this.searchAppForeground) return;
-    const owner = ReaderRuntimeOwner.current();
-    const entries: ReadingEntrySeed[] = books.map((book: ShelfBook): ReadingEntrySeed => {
-      if (book.sourceId === LOCAL_SOURCE_ID) return { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind };
-      return { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind,
-        remoteBookSeed: {
-        sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
-        title: book.title, author: book.author, coverUrl: book.coverUrl,
-        intro: book.intro, lastChapter: book.lastChapter,
-      } };
-    });
-    owner.readingEntryPreparations().setVisibleBooks(entries);
-    owner.readingEntryPreparations().setPaused(false);
-    this.preparePersistedShelfBooks();
-    // Shared appearance storage can be opened while the shelf remains usable.
-    // The reader still registers its own custom font and admits window facts.
-    void owner.getAppearanceStore().load().catch((): void => {});
+    this.hydrateMangaPositions(books);
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    ReadingEntryHost.forRuntime(owner).prepareVisible(books, this.readingPreparationContext(owner),
+      this.sharedReadingPreparationSeeds(owner));
   }
 
-  /** Cumulative milestones; parallel phases must not be added together. */
   private beginReadingStartupTrace(): void {
     this.readingReadyGeneration += 1;
     this.startupEntryId = ReaderStartupTrace.current()?.beginEntry() ?? 0;
@@ -2770,9 +4397,9 @@ struct Index {
     } catch (_) { /* Diagnostics never own navigation or admission. */ }
   }
 
-  private openShelfBookInfo(selection: ShelfBook): void {
+  private openShelfBookInfo(selection: ShelfBook, retainedParent?: DetailReturnRoute): void {
     if (selection.sourceId === LOCAL_SOURCE_ID) {
-      this.openLocalBookDetail(selection, false);
+      this.openLocalBookDetail(selection, false, retainedParent);
       return;
     }
     this.openRemoteBookDetail({
@@ -2784,94 +4411,37 @@ struct Index {
       coverUrl: selection.coverUrl,
       intro: selection.intro,
       lastChapter: selection.lastChapter,
-    }, this.sourceDisplayName(selection.sourceId, selection.sourceName), selection, false);
+    }, this.sourceDisplayName(selection.sourceId, selection.sourceName), selection, false, [], [], retainedParent);
   }
 
-  private openLocalBookDetail(selection: ShelfBook, resumeImmediately: boolean = false): void {
-    if (selection.sourceId !== LOCAL_SOURCE_ID) {
-      hilog.error(DOMAIN, 'Reader',
-        'Local detail dispatcher received remote sourceId=%{private}s', selection.sourceId);
-      return;
-    }
-    const originRoute = this.route;
-    const generation = this.nextNavigationGeneration();
+  private openLocalBookDetail(selection: ShelfBook, resumeImmediately: boolean = false, retainedParent?: DetailReturnRoute): void {
+    this.readingContentKind = 'text';
+    const owner = this.mountedRuntimeOwner;
+    if (selection.sourceId !== LOCAL_SOURCE_ID || owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
+    this.readingFromDownloads = false;
+    if (retainedParent !== 'reader') this.detailReaderReturn = undefined;
+    const originRoute = this.route, generation = this.nextNavigationGeneration();
     const entryRoute = resumeImmediately ? this.readingOriginRoute : 'detail';
     if (resumeImmediately && entryRoute === 'bookshelf') this.shelfEntryTraceGeneration = generation;
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
-    this.detailReturnRoute = originRoute === 'search' ? 'search' : 'bookshelf';
-    this.readingSessionActive = false;
-    this.installRemoteReadingSession(undefined);
-    this.remoteReadingSeed = undefined;
+    this.detailReturnRoute = retainedParent ?? (originRoute === 'search' ? 'search' : 'bookshelf');
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.sourceSwitchFailureMessage = '';
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    // Reuse the Core shelf projection. A shelf tap immediately mounts reading;
-    // only an explicit info action requests this detail-page projection.
-    this.detailBook = this.readingDetailForShelf(selection);
-    this.detailToc = [];
-    this.detailInBookshelf = true;
-    this.detailLoadingMessage = '正在读取本地目录…';
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     this.route = entryRoute;
-    ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(false);
-    if (resumeImmediately) {
-      this.openReading(undefined);
-      return;
-    }
-    const owner = ReaderRuntimeOwner.current();
-    const reading = new LocalReadingFlowGateway(owner);
-    reading.loadToc(selection.bookId)
-      .then((toc): void => {
-        if (generation !== this.navigationGeneration) {
-          return;
-        }
-        if (!this.hasDeclaredCoverUrl(selection)) {
-          // N-COVER-REMAP-01: Figma NoCover variant `3612:1796` exists.
-          // Admit the route and let the detail/result pages use the shared
-          // NoCover gradient placeholder. We only log a soft notice.
-          hilog.info(DOMAIN, 'Reader',
-            'No declared coverUrl for bookId=%{private}s; using NoCover placeholder',
-            selection.bookId);
-        }
-        this.detailToc = toc.entries;
-        this.detailLoadingMessage = '';
-        // Keep late optional marker reads scoped to this detail admission.
-        const projectionGeneration = this.navigationGeneration;
-        const projectionCurrent = (): boolean => projectionGeneration === this.navigationGeneration &&
-          this.detailBook?.sourceId === selection.sourceId && this.detailBook?.bookId === selection.bookId;
-        const projectDirectory = (): void => {
-          if (!projectionCurrent()) return;
-          const bookmarkGeneration = this.directoryBookmarkMutationGeneration;
-          void reading.loadDirectoryProjection(
-            selection.bookId, selection.title, selection.author, toc.entries, projectionCurrent,
-          )
-            .then((entries: LocalReadingTocEntry[]): void => {
-              if (!projectionCurrent()) return;
-              const bookmarksCurrent = bookmarkGeneration === this.directoryBookmarkMutationGeneration &&
-                this.directoryBookmarkMutationActiveKey.length === 0;
-              this.detailToc = bookmarksCurrent ? entries : this.mergeDirectoryBookmarks(entries, this.detailToc);
-            })
-            .catch((error: Error): void => {
-              if (projectionCurrent()) hilog.error(DOMAIN, 'Reader',
-                'Directory bookmark/cache projection failed: %{private}s', error.message);
-            });
-        };
-        projectDirectory();
-      })
-      .catch((error: Error): void => {
-        if (generation !== this.navigationGeneration) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Local Book Detail state failed to load: %{private}s', error.message);
-        this.detailToc = [];
-        this.detailLoadingMessage = error.message;
-        this.shelfReadingPreparation = false;
-        this.route = 'detail';
-      });
+    this.searchHost.visibilityChanged();
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    void host.openLocal(selection, this.readingEntryLease(owner), resumeImmediately);
+    if (resumeImmediately) this.openReading(undefined);
   }
 
   private openRemoteBookDetail(
@@ -2884,510 +4454,193 @@ struct Index {
     retainedDetailReturnRoute: DetailReturnRoute | undefined = undefined,
     validatedSession: RemoteReadingSession | undefined = undefined,
     retainAdmissionThroughProbe: boolean = false,
+    displayCoverUrl?: string,
   ): void {
-    this.pendingRemoteDirectoryProjection = undefined;
-    const reusableRemoteSession = shelfSnapshot !== undefined &&
-      this.remoteReadingSession?.identity.sourceId === seed.sourceId &&
-      this.remoteReadingSession?.identity.bookId === seed.bookId ? this.remoteReadingSession : undefined;
-    const originRoute = this.route;
-    const generation = this.nextNavigationGeneration();
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    const contentKind = shelfSnapshot?.contentKind ?? seed.contentKind;
+    if (contentKind === 'audio') {
+      this.showReadingFailure('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
+      return;
+    }
+    this.readingFromDownloads = false;
+    if (retainedDetailReturnRoute !== 'reader') this.detailReaderReturn = undefined;
+    const retainedSession = this.remoteReadingSession;
+    const originRoute = this.route, generation = this.nextNavigationGeneration();
     const entryRoute = resumeImmediately ? this.readingOriginRoute : 'detail';
     if (resumeImmediately && entryRoute === 'bookshelf') this.shelfEntryTraceGeneration = generation;
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
-    // Replacing the source inside an existing preview retains that preview's
-    // parent. Its current `detail` route is not a new bookshelf entry.
     this.detailReturnRoute = retainedDetailReturnRoute ?? (originRoute === 'search' ? 'search' : 'bookshelf');
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.installRemoteReadingSession(reusableRemoteSession);
-    this.remoteReadingSeed = seed;
     this.sourceSwitchFailureMessage = '';
-    // The selected item is enough to show its reading or detail surface.
-    // Body/catalog acquisition belongs to whichever surface the user opens.
-    this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
-    this.detailToc = [];
-    this.detailInBookshelf = shelfSnapshot !== undefined;
-    this.detailLoadingMessage = shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…';
+    this.readingContentKind = (shelfSnapshot?.contentKind ?? validatedSession?.contentKind ?? seed.contentKind) === 'manga' ? 'manga' : 'text';
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
-    // Readability is reported within the surface, never on its entry button.
-    this.remoteContentVerdict = 'verifying';
     this.route = entryRoute;
-    ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(false);
-    if (resumeImmediately) {
-      if (validatedSession !== undefined && validatedSession.identity.sourceId === seed.sourceId &&
-        validatedSession.identity.bookId === seed.bookId) {
-        this.installRemoteReadingSession(validatedSession);
-        this.detailToc = validatedSession.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-          title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
-      }
-      this.openReading(undefined);
-      return;
-    }
-    if (shelfSnapshot?.lastCheckAt !== undefined) {
-      const catalogKey = `${seed.sourceId}\u0000${seed.bookId}`;
-      const persistedRefreshAt = shelfSnapshot.lastCheckAt * 1000;
-      const processRefreshAt = this.remoteCatalogRefreshAt.get(catalogKey) ?? 0;
-      this.remoteCatalogRefreshAt.set(catalogKey, Math.max(processRefreshAt, persistedRefreshAt));
-    }
-    const owner = ReaderRuntimeOwner.current();
-    const gateway = new RemoteReadingFlowGateway(owner);
-    const offline = new ReadingOfflineGateway(owner);
-    const bookshelf = new ReaderCoreGateway(owner);
-    const isCurrent = (): boolean => generation === this.navigationGeneration;
-    this.offlineMutationGeneration += 1;
-    this.offlineMutationActiveKey = '';
-    // A session that just drove this exact shelf book already carries the
-    // parsed detail, full TOC, continuation variables, and per-chapter
-    // variables. Reusing it avoids throwing that proven work away on an
-    // immediate shelf round-trip. Search results probe Core's exact durable
-    // catalog first; no second cache or persisted UI session is introduced.
-    const candidateSeeds: RemoteReadingBookSeed[] = [seed, ...fallbackSeeds];
-    const candidateNames: string[] = [sourceName, ...fallbackSourceNames];
-    const detailAdmissionStartedAt = Date.now();
-    // The coordinator validates the source and its durable cache together.
-    // A deleted/disabled source must not hide already downloaded chapters.
-    let allowGroupFallback = false;
-    const candidates = candidateSeeds.map((candidate: RemoteReadingBookSeed): BookAcquisitionCandidate => {
+    this.searchHost.visibilityChanged();
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    const candidates = [seed, ...fallbackSeeds].map((candidate: RemoteReadingBookSeed): BookAcquisitionCandidate => {
       const row = this.searchDetailCandidates.find((book: SearchBook): boolean =>
         book.sourceId === candidate.sourceId && book.bookId === candidate.bookId);
       return row === undefined ? { seed: candidate, catalogReady: false, failed: false } : this.searchAcquisitionCandidate(row);
     });
-    const suppliedSession = validatedSession !== undefined &&
-      validatedSession.identity.sourceId === seed.sourceId && validatedSession.identity.bookId === seed.bookId &&
-      preparedRemoteChapterMatches(validatedSession.preparedChapter, validatedSession, undefined,
-        owner.bookAcquisitions().readingProjectionRevision()) ? validatedSession : undefined;
-    const showCandidateCatalog = (session: RemoteReadingSession): void => {
-      if (!isCurrent()) return;
-      const index = candidateSeeds.findIndex((candidate: RemoteReadingBookSeed): boolean =>
-        candidate.sourceId === session.identity.sourceId && candidate.bookId === session.identity.bookId);
-      this.installRemoteReadingSession(session);
-      this.remoteReadingSeed = candidateSeeds[index] ?? seed;
-      this.detailBook = {
-        sourceId: session.identity.sourceId,
-        sourceName: candidateNames[index] ?? session.identity.sourceId,
-        bookId: session.identity.bookId,
-        title: session.book.title,
-        author: session.book.author,
-        kind: session.book.kind,
-        coverUrl: session.book.coverUrl,
-        intro: session.book.intro,
-        lastChapter: session.book.lastChapter,
-      };
-      this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-        title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
-      this.detailLoadingMessage = '';
-      this.remoteContentVerdict = 'verifying';
-    };
-    const sessionAdmission: Promise<RemoteDetailAdmission> = (async (): Promise<RemoteDetailAdmission> => {
-      // A thin/filtered shelf cannot prove absence. Resolve this one identity
-      // before permitting source fallback; the detail surface is already shown.
-      if (originRoute === 'search' && shelfSnapshot === undefined) {
-        shelfSnapshot = await bookshelf.loadShelfBook(seed.sourceId, seed.bookId);
-        if (!isCurrent()) throw new Error('REMOTE_DETAIL_ADMISSION_CANCELLED');
-        this.detailInBookshelf = shelfSnapshot !== undefined;
-      }
-      allowGroupFallback = shelfSnapshot === undefined && originRoute === 'search' &&
-        this.pendingSourceSwitch === undefined;
-      if (allowGroupFallback) this.candidateAdmissionGeneration = generation;
-      if (suppliedSession !== undefined) return new RemoteDetailAdmission(suppliedSession);
-      const admission = allowGroupFallback ? await owner.bookAcquisitions()
-        .acquireCandidateGroup(candidates, { isCurrent, requireReadable: true, onCatalog: showCandidateCatalog }) :
-        await owner.bookAcquisitions().acquireBookWithBackgroundRefresh(seed, { isCurrent });
-      return new RemoteDetailAdmission(admission.session, admission.backgroundRefresh);
-    })();
-    void sessionAdmission
-      .then((admission: RemoteDetailAdmission): void | Promise<void> => {
-        if (!isCurrent()) {
-          return;
-        }
-        const session = admission.session;
-        hilog.info(DOMAIN, 'Reader',
-          'PERF search-detail-admission source=%{private}s book=%{private}s mode=%{private}s durationMs=%{public}d',
-          session.identity.sourceId, session.identity.bookId, session.acquisitionMode,
-          Date.now() - detailAdmissionStartedAt);
-        // Search opens a preview. Joining the shelf is an explicit user
-        // mutation and must not be coupled to reading-session acquisition.
-        let suppliedShelfBook = shelfSnapshot?.sourceId === session.identity.sourceId &&
-          shelfSnapshot?.bookId === session.identity.bookId ? shelfSnapshot : undefined;
-        if (suppliedShelfBook === undefined) {
-          for (const shelfBook of this.shelfBooks) {
-            if (shelfBook.sourceId === session.identity.sourceId &&
-              shelfBook.bookId === session.identity.bookId) {
-              suppliedShelfBook = shelfBook;
-              break;
-            }
-          }
-        }
-        const projectedInBookshelf = suppliedShelfBook !== undefined;
-        this.detailInBookshelf = projectedInBookshelf;
-        const admittedIndex = Math.max(0, candidateSeeds.findIndex((candidate: RemoteReadingBookSeed): boolean =>
-          candidate.sourceId === session.identity.sourceId &&
-          candidate.bookId === session.identity.bookId));
-        const admittedSeedName = candidateNames.length > admittedIndex ? candidateNames[admittedIndex] : '';
-        const admittedSourceName = admittedSeedName.trim().length > 0 ?
-          admittedSeedName.trim() : session.identity.sourceId;
-        this.installRemoteReadingSession(session);
-        this.remoteReadingSeed = candidateSeeds[admittedIndex] ?? seed;
-        const contentProbe: Promise<number | undefined> = this.probeRemoteContentVerdict(gateway, session, isCurrent);
-        this.detailBook = {
-          sourceId: session.identity.sourceId,
-          sourceName: admittedSourceName.length > 0 ? admittedSourceName : session.identity.sourceId,
-          bookId: session.identity.bookId,
-          title: session.book.title,
-          author: session.book.author,
-          kind: session.book.kind,
-          coverUrl: session.book.coverUrl,
-          intro: session.book.intro,
-          lastChapter: session.book.lastChapter,
-        };
-        this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({
-          index: entry.index,
-          title: entry.title,
-          navigable: entry.url.trim().length > 0,
-          downloadState: 'unknown',
-        }));
-        this.detailLoadingMessage = '';
-        this.requestedChapterIndex = undefined;
-        this.preparedReaderRoute = 'reading';
-        this.directoryCurrentChapterIndex = -1;
-        this.directoryChapterTitle = '';
-        if (suppliedShelfBook === undefined) {
-          // Shelf membership does not gate the visible detail/TOC. Reconcile
-          // the durable row afterwards, and never overwrite a newer explicit
-          // add/remove mutation or a different admitted session.
-          void bookshelf.loadShelfBook(session.identity.sourceId, session.identity.bookId)
-            .then((storedBook: ShelfBook | undefined): void => {
-              const stillSame = isCurrent() && this.bookshelfRemovalActiveKey.length === 0 &&
-                this.detailInBookshelf === projectedInBookshelf &&
-                this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-                this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-              if (stillSame) {
-                this.detailInBookshelf = storedBook !== undefined;
-              }
-            })
-            .catch((error: Error): void => {
-              if (isCurrent()) {
-                hilog.warn(DOMAIN, 'Reader',
-                  'Remote detail shelf reconciliation failed: %{private}s', error.message);
-              }
-            });
-        }
-        if (admittedSourceName === session.identity.sourceId) {
-          void this.resolveRemoteDetailSourceName(owner, session, isCurrent);
-        }
-        const projectionSessionGeneration = this.remoteSessionGeneration;
-        const projectDirectory = (): void => {
-          const bookmarkGeneration = this.directoryBookmarkMutationGeneration;
-          const offlineGeneration = this.offlineMutationGeneration;
-          const projectionCurrent = (): boolean => isCurrent() &&
-            projectionSessionGeneration === this.remoteSessionGeneration &&
-            sameRemoteSessionEvidence(this.remoteReadingSession, session) &&
-            this.detailBook?.title === session.book.title && this.detailBook?.author === session.book.author;
-          if (!projectionCurrent()) return;
-          void this.loadRemoteDirectoryProjection(offline, owner, session, projectionCurrent)
-            .then((entries: LocalReadingTocEntry[]): void => {
-              if (!projectionCurrent() || offlineGeneration !== this.offlineMutationGeneration) return;
-              // A later bookmark mutation owns its newer markers. Preserve
-              // those while accepting this still-current download projection.
-              const bookmarksCurrent = bookmarkGeneration === this.directoryBookmarkMutationGeneration &&
-                (this.directoryBookmarkMutationActiveKey ?? '').length === 0;
-              this.detailToc = bookmarksCurrent ? entries : this.mergeDirectoryBookmarks(entries, this.detailToc);
-            }).catch((error: Error): void => {
-              if (projectionCurrent()) hilog.error(DOMAIN, 'Reader',
-                'Remote download projection failed: %{private}s', error.message);
-            });
-        };
-        projectDirectory();
-        if (admission.refreshInBackground) {
-          const admittedSeed = candidateSeeds[admittedIndex];
-          if (admittedSeed !== undefined) {
-            this.refreshCachedSearchDetailInBackground(
-              admittedSeed,
-              admittedSourceName,
-              session,
-              generation,
-              admission.backgroundRefresh,
-            );
-          }
-        }
-        // Automatic stale-detail readmission owns its body probe as well as
-        // its catalog, so durable notifications cannot restart that recovery.
-        if (retainAdmissionThroughProbe && contentProbe !== undefined) return contentProbe.then((chapterIndex: number | undefined): void => {
-          if (chapterIndex === undefined && isCurrent()) this.candidateAdmissionFailedGeneration = generation;
-        });
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          if (error instanceof RemoteChapterCacheRefreshError) {
-            this.shelfReadingPreparation = false;
-            void this.refreshCachedChapterFromPrompt(error, isCurrent);
-            return;
-          }
-          if (allowGroupFallback || retainAdmissionThroughProbe) this.candidateAdmissionFailedGeneration = generation;
-          if (error instanceof RemoteReadingGatewayError) {
-            hilog.error(DOMAIN, 'Reader', 'Remote detail failure: %{public}s',
-              JSON.stringify(remoteReadingFailureRecord(error, generation)));
-          }
-          hilog.warn(DOMAIN, 'Reader', 'Recent acquisition failures: %{public}s',
-            JSON.stringify(owner.bookAcquisitions().recentFailures().slice(-4)));
-          hilog.warn(DOMAIN, 'Reader',
-            'PERF search-detail-admission-failed source=%{private}s book=%{private}s durationMs=%{public}d',
-            seed.sourceId, seed.bookId, Date.now() - detailAdmissionStartedAt);
-          const catalogAvailable = allowGroupFallback && this.remoteReadingSession !== undefined && this.detailToc.length > 0;
-          if (!catalogAvailable) {
-            this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
-            this.detailToc = [];
-            this.installRemoteReadingSession(undefined);
-          }
-          this.detailLoadingMessage = error.message;
-          this.remoteContentVerdict = verdictForFailureKind(remoteReadingFailureKindOf(error));
-          this.shelfReadingPreparation = false;
-          this.route = 'detail';
-        }
-      }).finally((): void => {
-        if (this.candidateAdmissionGeneration === generation) this.candidateAdmissionGeneration = -1;
-      });
+    void host.openRemote({ seed, sourceName, shelfSnapshot, shelfBooks: this.shelfBooks,
+      fromSearch: originRoute === 'search', sourceSwitchPending: this.pendingSourceSwitch !== undefined,
+      resumeImmediately, fallbackSeeds, fallbackSourceNames, candidates, validatedSession, retainedSession,
+      retainAdmissionThroughProbe, displayCoverUrl }, this.readingEntryLease(owner));
+    if (resumeImmediately) this.openReading(undefined);
   }
 
-  private refreshCachedSearchDetailInBackground(
-    seed: RemoteReadingBookSeed,
-    sourceName: string,
-    cachedSession: RemoteReadingSession,
-    generation: number,
-    backgroundRefresh?: Promise<RemoteReadingSession>,
-  ): void {
-    const owner = ReaderRuntimeOwner.current();
-    let displayedSession = cachedSession;
-    const isCurrent = (): boolean => generation === this.navigationGeneration &&
-      this.route === 'detail' && !this.readingSessionActive &&
-      this.bookshelfRemovalActiveKey.length === 0 &&
-      sameRemoteSessionEvidence(this.remoteReadingSession, displayedSession);
-    void (backgroundRefresh ?? owner.bookAcquisitions().acquireBook(seed, { forceRefresh: true }))
-      .then((refreshed: RemoteReadingSession): void => {
-        if (!isCurrent() || refreshed.identity.sourceId !== cachedSession.identity.sourceId ||
-          refreshed.identity.bookId !== cachedSession.identity.bookId) {
-          return;
-        }
-        const changed = !sameRemoteSessionEvidence(this.remoteReadingSession, refreshed);
-        this.installRemoteReadingSession(refreshed);
-        displayedSession = refreshed;
-        const refreshedCurrent = (): boolean => isCurrent() && sameRemoteSessionEvidence(this.remoteReadingSession, refreshed);
-        if (changed || this.remoteContentVerdict !== 'readable') {
-          void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), refreshed, refreshedCurrent);
-        }
-        this.detailBook = {
-          sourceId: refreshed.identity.sourceId,
-          sourceName: sourceName.trim().length > 0 ? sourceName.trim() : refreshed.identity.sourceId,
-          bookId: refreshed.identity.bookId,
-          title: refreshed.book.title,
-          author: refreshed.book.author,
-          kind: refreshed.book.kind,
-          coverUrl: refreshed.book.coverUrl,
-          intro: refreshed.book.intro,
-          lastChapter: refreshed.book.lastChapter,
-        };
-        this.detailToc = refreshed.entries.map((entry): LocalReadingTocEntry => ({
-          index: entry.index,
-          title: entry.title,
-          navigable: entry.url.trim().length > 0,
-          downloadState: 'unknown',
-        }));
-        void this.loadRemoteDirectoryProjection(
-          new ReadingOfflineGateway(owner),
-          owner,
-          refreshed,
-          refreshedCurrent,
-        )
-          .then((entries: LocalReadingTocEntry[]): void => {
-            if (refreshedCurrent()) {
-              this.detailToc = entries;
-            }
-          })
-          .catch((error: Error): void => {
-            if (isCurrent()) {
-              hilog.warn(DOMAIN, 'Reader',
-                'Background search detail projection failed: %{private}s', error.message);
-            }
-          });
-        if (sourceName.trim().length === 0 || sourceName === refreshed.identity.sourceId) {
-          void this.resolveRemoteDetailSourceName(owner, refreshed, isCurrent);
-        }
-        if (this.detailInBookshelf) {
-          this.refreshBookshelf();
-        }
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          // Cached detail and TOC stay actionable. An unavailable refresh is a
-          // background freshness failure, not a detail-navigation failure.
-          hilog.warn(DOMAIN, 'Reader',
-            'Background search detail refresh failed: %{private}s', error.message);
-        }
-      });
-  }
 
-  private resolveRemoteDetailSourceName(
-    owner: ReaderRuntimeOwner,
-    session: RemoteReadingSession,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    return new SourceGateway(owner).loadSources()
-      .then((sources: BookSource[]): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        for (const source of sources) {
-          if (source.sourceId !== session.identity.sourceId) {
-            continue;
-          }
-          const current = this.detailBook;
-          if (current !== undefined && current.sourceId === session.identity.sourceId &&
-            current.bookId === session.identity.bookId) {
-            this.detailBook = {
-              sourceId: current.sourceId,
-              sourceName: source.name,
-              bookId: current.bookId,
-              title: current.title,
-              author: current.author,
-              kind: current.kind,
-              coverUrl: current.coverUrl,
-              intro: current.intro,
-              lastChapter: current.lastChapter,
-            };
-          }
-          return;
-        }
-      })
-      .catch((): void => {
-        // The stable source id remains a valid display fallback. Optional name
-        // projection must never delay or fail detail/reader readiness.
-      });
-  }
+
+
 
   private downloadDirectoryChapter(chapterIndex: number): void {
+    const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
-    if (session === undefined || !this.isKnownDetailChapter(chapterIndex) ||
-      this.offlineMutationActiveKey.length > 0) {
-      return;
+    if (owner === undefined || session === undefined || !this.isKnownDetailChapter(chapterIndex)) return;
+    if (session.contentKind === 'manga' && !owner.supportsCoreCapability('manga.offline.v1')) {
+      this.showOfflineDownloadFeedback('漫画离线下载尚未开放'); return;
     }
-    const generation = ++this.offlineMutationGeneration;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000${chapterIndex}`;
-    this.offlineMutationActiveKey = key;
-    this.updateDirectoryChapterDownloadState(chapterIndex, 'queued');
-    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
-      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    void new ReadingOfflineGateway(ReaderRuntimeOwner.current())
-      .prefetchChapter(session, chapterIndex, isCurrent)
-      .then((entries: LocalReadingTocEntry[]): void => {
-        if (isCurrent()) {
-          // Download owns offline facts, never a delayed bookmark snapshot.
-          this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-        }
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          this.updateDirectoryChapterDownloadState(chapterIndex, 'failed');
-          hilog.error(DOMAIN, 'Reader', 'Chapter offline download failed: %{private}s', error.message);
-        }
-      })
-      .finally((): void => {
-        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
-          this.offlineMutationActiveKey = '';
-        }
-      });
+    void this.submitReaderDownload(owner, session, [chapterIndex], false);
+  }
+
+  private async loadMangaDownloadActions(chapterIndex?: number): Promise<MangaDownloadAction[]> {
+    const owner = this.mountedRuntimeOwner, session = this.remoteReadingSession;
+    if (owner === undefined || session?.contentKind !== 'manga') return [];
+    const host = this.getReadingOfflineHost(owner);
+    return host === undefined ? [] : host.loadMangaActions(chapterIndex, this.offlineBinding(owner, session));
+  }
+
+  private async performMangaDownloadAction(action: MangaDownloadActionId, chapterIndex?: number): Promise<void> {
+    const owner = this.mountedRuntimeOwner, session = this.remoteReadingSession;
+    if (owner === undefined || session?.contentKind !== 'manga') return;
+    const binding = this.offlineBinding(owner, session);
+    if (!binding.current()) return;
+    if (action === 'downloadChapter') { if (chapterIndex !== undefined) this.downloadDirectoryChapter(chapterIndex); return; }
+    if (action === 'downloadBook') { this.downloadDirectoryBook(); return; }
+    if (action === 'clearCache') { this.requestClearDirectoryBookOffline(); return; }
+    if (action === 'deleteDownloads' && this.readingSessionActive) {
+      if (this.readingExitRequest === undefined) { this.showOfflineDownloadFeedback('请先退出漫画阅读后再删除下载'); return; }
+      this.mangaDownloadDeleteAfterExit = { session, chapterIndex };
+      this.requestReaderBookInfo(); return;
+    }
+    const host = this.getReadingOfflineHost(owner);
+    if (host === undefined || this.mangaDownloadActionActiveKey.length > 0) return;
+    const generation = ++this.mangaDownloadActionGeneration;
+    this.mangaDownloadActionActiveKey = `${session.identity.sourceId}\u0000${session.identity.bookId}`;
+    try {
+      const outcome = await host.operateManga(action, chapterIndex, binding);
+      if (!binding.current() || generation !== this.mangaDownloadActionGeneration) return;
+      if (action === 'releaseRetention') this.showOfflineDownloadFeedback('已解除永久保留，现有阅读缓存仍可使用');
+      else if (action === 'pause') this.showOfflineDownloadFeedback('下载已暂停，已获取的内容保留');
+      else if (action === 'cancel') this.showOfflineDownloadFeedback('下载任务已取消，已获取的下载内容保留');
+      else if (action === 'deleteDownloads' && outcome !== undefined) this.showOfflineDownloadFeedback(outcome.protectedVersions > 0 ?
+        '部分内容仍在使用，已解除保留，退出使用后可清理普通缓存' :
+        outcome.removedVersions > 0 ? '下载内容已删除' : '没有可删除的下载内容');
+    } catch (error) {
+      if (binding.current() && generation === this.mangaDownloadActionGeneration) {
+        if (error instanceof SharedDownloadProjectionRefreshError) {
+          this.showOfflineDownloadFeedback('下载状态已保存，列表刷新失败');
+        } else this.showOfflineDownloadFeedback('下载操作未完成，请重新读取状态后重试');
+      }
+      hilog.warn(DOMAIN, 'Reader', 'Manga download operation failed: %{private}s', errorMessageOf(error));
+    } finally { if (generation === this.mangaDownloadActionGeneration) this.mangaDownloadActionActiveKey = ''; }
   }
 
   private downloadDirectoryBook(): void {
+    const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
-    if (this.offlineMutationActiveKey.length > 0) {
-      this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度');
-      return;
+    if (owner === undefined || session === undefined) return;
+    if (session.contentKind === 'manga' && !owner.supportsCoreCapability('manga.offline.v1')) {
+      this.showOfflineDownloadFeedback('漫画离线下载尚未开放'); return;
     }
-    if (session === undefined || !session.entries.some(entry => entry.url.trim().length > 0)) {
-      this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节');
-      return;
-    }
-    const total = session.entries.filter(entry => entry.url.trim().length > 0).length;
-    const generation = ++this.offlineMutationGeneration;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000all`;
-    this.offlineMutationActiveKey = key;
-    this.showOfflineDownloadFeedback(`开始下载 ${total} 章，可在目录查看进度`);
-    this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry =>
-      entry.navigable === false || entry.downloadState === 'completed' ? entry : {
-        index: entry.index,
-        title: entry.title,
-        navigable: entry.navigable,
-        downloadState: 'queued',
-        bookmarks: entry.bookmarks,
-      });
-    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
-      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    const gateway = new ReadingOfflineGateway(ReaderRuntimeOwner.current());
-    let lastFeedbackAt = Date.now();
-    void gateway.prefetchBook(session, isCurrent, (progress): void => {
-      if (isCurrent()) {
-        this.detailToc = this.mergeDirectoryBookmarks(progress.entries, this.detailToc);
-        if (Date.now() - lastFeedbackAt >= 5000 && progress.completedChapters < progress.totalChapters) {
-          lastFeedbackAt = Date.now();
-          const completed = progress.entries.filter(entry => entry.navigable !== false && entry.downloadState === 'completed').length;
-          this.showOfflineDownloadFeedback(`正在下载：已完成 ${completed}/${total} 章`);
-        }
+    const total = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
+    if (total === 0) { this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节'); return; }
+    void this.submitReaderDownload(owner, session, undefined, true);
+  }
+
+  private offlineBinding(owner: ReaderRuntimeOwner, session: RemoteReadingSession): ReadingOfflineBinding {
+    const identity = this.directoryOperationBindingId();
+    const current = (): boolean => this.isCurrentDirectoryOperationBinding(identity, owner) &&
+      this.remoteReadingSession === session;
+    return { session, current, currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
+      emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
+      emitOperation: (operation: ReadingOfflineOperation): void => {
+        this.offlineOperation = { action: operation.action, sourceId: operation.sourceId, bookId: operation.bookId,
+          chapterIndex: operation.chapterIndex, generation: operation.generation, materialization: operation.materialization,
+          materializationFailure: operation.materializationFailure, operationFailure: operation.operationFailure,
+          canContinueOriginal: operation.canContinueOriginal, blockingClear: operation.blockingClear,
+          progress: operation.progress, projection: operation.projection };
+        this.offlineOperationActive = operation.materialization === 'running';
+      },
+      onProgress: (progress: ReadingOfflineBookProgress, finished: boolean): void => {
+        // emitOperation already publishes live progress to the existing
+        // directory/download state. Only the current terminal result is brief feedback.
+        if (!finished || !current()) return;
+        this.showOfflineDownloadFeedback(this.offlineDownloadFeedback(session, progress, true));
+      },
+      failed: (error: Error): void => {
+        if (!current()) return;
+        if (readingOfflineFailureHint(error).length === 0) return;
+        const operation = this.offlineOperation;
+        if (operation?.projection.receipt.confirmation === 'unknown') {
+          this.showOfflineDownloadFeedback(operation.action === 'clear' ? '缓存清理结果尚未确认，请重试核对' : '下载结果尚未确认，请在目录中重试核对');
+        } else if (operation?.action === 'clear') {
+          this.showOfflineDownloadFeedback(`缓存清理未完成：${readingOfflineFailureHint(error)}`);
+        } else this.showChapterDownloadFailure(error);
+        hilog.error(DOMAIN, 'Reader', 'Offline operation/projection: %{private}s', error.message);
+      } };
+  }
+
+  private offlineDownloadFeedback(session: RemoteReadingSession, progress: ReadingOfflineBookProgress, finished: boolean): string {
+    const total = progress.totalChapters;
+    if (finished && progress.completedChapters === total) return `全部 ${total} 章下载完成`;
+    let message = `${finished ? '下载结果' : '正在下载'}：已完成 ${progress.completedChapters}/${total} 章`;
+    if (progress.cachedChapters > 0) message += `，另有 ${progress.cachedChapters} 章正文已缓存`;
+    if (progress.failedChapters > 0) {
+      message += `，${progress.failedChapters} 章失败`;
+      if (progress.firstFailure !== undefined) {
+        const title = session.entries.find(entry => entry.index === progress.firstFailure?.chapterIndex)?.title.trim();
+        const label = title === undefined || title.length === 0 ? `目录第 ${progress.firstFailure.chapterIndex + 1} 项` :
+          (title.length > 32 ? `${title.slice(0, 32)}…` : title);
+        message += `（${label}：${progress.firstFailure.reason}）`;
       }
-    })
-      .then((entries: LocalReadingTocEntry[]): void => {
-        if (isCurrent()) {
-          this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-          const completed = entries.filter(entry => entry.navigable !== false && entry.downloadState === 'completed').length;
-          this.showOfflineDownloadFeedback(completed === total ? `全部 ${total} 章下载完成` :
-            `已下载 ${completed}/${total} 章，未完成的章节可重试`);
-        }
-      })
-      .catch((error: Error): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        this.showReadingFailure('整书离线失败', error.message);
-        void gateway.loadProjection(session, isCurrent)
-          .then((entries: LocalReadingTocEntry[]): void => {
-            if (isCurrent()) {
-              this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-            }
-          })
-          .catch((projectionError: Error): void => {
-            hilog.error(DOMAIN, 'Reader', 'Whole-book offline projection refresh failed: %{private}s',
-              projectionError.message);
-          });
-      })
-      .finally((): void => {
-        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
-          this.offlineMutationActiveKey = '';
-        }
-      });
+    } else if (finished) message += '，其余章节尚未完成';
+    return message;
+  }
+
+  private showChapterDownloadFailure(error: Error): void {
+    const hint = readingOfflineFailureHint(error);
+    if (hint.length === 0) return;
+    this.showOfflineDownloadFeedback(error.message === 'MANGA_DOWNLOAD_PAUSED_RESUME_REQUIRED' ? hint : `本章下载失败：${hint}`);
   }
 
   private showOfflineDownloadFeedback(message: string): void {
     try {
-      this.getUIContext().getPromptAction().showToast({ message });
+      this.transientFeedback.show(() => this.getUIContext(), { message }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner)));
     } catch (_) {
       // Presentation must not cancel the durable Core download operation.
     }
   }
 
   private requestClearDirectoryBookOffline(): void {
-    if (this.remoteReadingSession === undefined || this.offlineMutationActiveKey.length > 0) {
+    if (this.remoteReadingSession === undefined || this.offlineOperationActive) {
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title: '清除本书离线内容',
-      message: '将删除本书已下载的正文和图片，书架、阅读进度与书签不会受影响。',
-      autoCancel: true,
+    const session = this.remoteReadingSession;
+    const generation = this.remoteSessionGeneration;
+    this.showIndexAlert('confirmation-cancelable', {
+      title: session.contentKind === 'manga' ? '清除本书普通阅读缓存' : '清除本书离线内容',
+      message: session.contentKind === 'manga' ? '清除可清理的普通漫画缓存；永久保留的下载及正在使用的内容会保留，书架、阅读进度与书签不会受影响。' : '将删除本书已下载的正文和图片，书架、阅读进度与书签不会受影响。',
       primaryButton: {
         value: '取消',
         action: (): void => {},
@@ -3397,42 +4650,16 @@ struct Index {
         fontColor: readerAppColor('app.Index.requestClearDirectoryBookOffline.showAlertDialog.FFB42318', this.appThemeScheme),
         action: (): void => this.clearDirectoryBookOffline(),
       },
-    });
+    }, (): boolean => this.remoteReadingSession === session && this.remoteSessionGeneration === generation &&
+      !this.offlineOperationActive);
   }
 
   private clearDirectoryBookOffline(): void {
+    const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
-    if (session === undefined || this.offlineMutationActiveKey.length > 0) {
-      return;
-    }
-    const generation = ++this.offlineMutationGeneration;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000clear`;
-    this.offlineMutationActiveKey = key;
-    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
-      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    void new ReadingOfflineGateway(ReaderRuntimeOwner.current()).clearBook(session, isCurrent)
-      .then((): void => {
-        if (isCurrent()) {
-          this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-            index: entry.index,
-            title: entry.title,
-            navigable: entry.navigable,
-            downloadState: 'missing',
-            bookmarks: entry.bookmarks,
-          }));
-        }
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          this.showReadingFailure('清除离线失败', error.message);
-        }
-      })
-      .finally((): void => {
-        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
-          this.offlineMutationActiveKey = '';
-        }
-      });
+    if (owner === undefined || session === undefined) return;
+    const host = this.getReadingOfflineHost(owner);
+    if (host !== undefined) void host.clearBook(this.offlineBinding(owner, session));
   }
 
   private detailBookKey(book: ReadingBookDetail): string {
@@ -3469,9 +4696,11 @@ struct Index {
 
   private canRemoveDetailBook(book: ReadingBookDetail): boolean {
     return this.route === 'detail' && this.isSameDetailBook(book) && !this.readingSessionActive &&
+      (book.sourceId !== LOCAL_SOURCE_ID || this.detailInBookshelf) &&
       !this.sourceSwitchVisible && this.pendingSourceSwitch === undefined &&
-      this.offlineMutationActiveKey.length === 0 &&
-      this.bookshelfRemovalActiveKey.length === 0;
+      this.sourceSwitchHost?.blocksExit(book) !== true &&
+      !this.offlineOperationActive &&
+      this.shelfOperation.removalKey.length === 0 && !this.shelfOperation.busy && !this.hasUnknownShelfWrite();
   }
 
   private requestDetailShelfMutation(): void {
@@ -3482,103 +4711,179 @@ struct Index {
     this.addDetailBook();
   }
 
+  private detailShelfAdmissionIdentity(): string {
+    const book = this.detailBook;
+    return book === undefined ? '' : `${this.detailShelfAdmissionMount}:${this.navigationGeneration}:${JSON.stringify([book.sourceId, book.bookId])}`;
+  }
+
+  private isCurrentDetailShelfAdmission(identity: string | undefined): boolean {
+    return identity !== undefined && identity === this.detailShelfAdmissionIdentity() && !this.shelfReceiptRetired &&
+      this.isCurrentRuntime(this.mountedRuntimeOwner) && this.route === 'detail';
+  }
+
+  private detailReadableAdmission(book: ReadingBookDetail): BookshelfReadableAdmissionSnapshot {
+    return this.readableAdmissions.find((snapshot: BookshelfReadableAdmissionSnapshot): boolean => snapshot.key === this.detailBookKey(book)) ?? EMPTY_READABLE_ADMISSION;
+  }
+
+  @Builder
+  private detailOperationNoticeContent() {
+    if (this.route === 'detail' && this.detailBook !== undefined) {
+      Column({ space: 8 }) {
+        if (this.detailReadableAdmission(this.detailBook).confirmation === 'unknown') {
+          ReaderRecoveryNotice({ tag: '书架', actionLabel: '', view: {
+            message: this.detailReadableAdmission(this.detailBook).message,
+            visible: true, canRetry: false, generation: this.detailReadableAdmission(this.detailBook).generation } });
+        }
+        if (this.detailShelfRemovalKey === this.detailBookKey(this.detailBook) &&
+          this.detailShelfRemovalGeneration === this.shelfOperation.generation && this.hasUnknownShelfWrite()) {
+          ForEach([this.detailShelfAdmissionIdentity()], (identity: string): void => {
+            ForEach([this.shelfOperation.generation], (expected: number): void => {
+              ReaderRecoveryNotice({ tag: '书架', view: this.shelfRecovery(), actionLabel: '核对原操作',
+                busy: this.shelfOperation.reconcileBusy,
+                onReconcile: (): void => { void this.reconcileDetailShelfWrite(expected, identity); } });
+            }, (generation: number): string => generation.toString());
+          }, (identity: string): string => identity);
+        }
+      }.width('100%');
+    }
+  }
+
+  private async reconcileDetailShelfWrite(expected: number, identity: string): Promise<void> {
+    const owner = this.shelfOperationOwner, book = this.detailBook, navigation = this.navigationGeneration;
+    if (!this.isCurrentDetailShelfAdmission(identity) || owner === undefined || book === undefined || !this.hasUnknownShelfWrite() ||
+      expected !== this.shelfOperation.generation || this.detailShelfRemovalKey !== this.detailBookKey(book)) return;
+    const current = (): boolean => this.isCurrentDetailShelfAdmission(identity) && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && this.route === 'detail' && this.detailBookKey(book) ===
+      (this.detailBook === undefined ? '' : this.detailBookKey(this.detailBook)) && expected === this.shelfOperation.generation;
+    const read = await this.bookshelfHost.operations(owner).reconcile(expected, this.shelfFilter(), current);
+    if (current() && read?.value !== undefined) this.applyBookshelfState(read.value);
+  }
+
+  private detailShelfMessage(book: ReadingBookDetail): string {
+    if (this.detailReadableAdmission(book).confirmation === 'unknown') return '';
+    if (this.detailShelfRemovalKey === this.detailBookKey(book) && this.shelfOperation.action === 'remove' &&
+      this.detailShelfRemovalGeneration === this.shelfOperation.generation &&
+      this.isCurrentRuntime(this.shelfOperationOwner)) {
+      const recovery = this.shelfRecovery();
+      if (recovery.visible) return '';
+    }
+    if (book.sourceId === LOCAL_SOURCE_ID && !this.detailInBookshelf) return '本地书已移除，如需继续阅读，请重新导入文件。';
+    return this.detailReadableAdmission(book).message;
+  }
+
+  private readableAdmissionCurrent(identity: RemoteReadingIdentity, owner: ReaderRuntimeOwner, navigation: number): boolean {
+    return !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.navigationGeneration === navigation &&
+      this.route === 'detail' && this.detailBook?.sourceId === identity.sourceId && this.detailBook?.bookId === identity.bookId;
+  }
+
+  private publishReadableAdmission(effect: BookshelfReadableAdmissionEffect): void {
+    if (effect.snapshot.membership !== undefined) {
+      this.detailInBookshelf = effect.snapshot.membership;
+      if (effect.snapshot.membership) {
+        this.pendingShelfReadbackKey = effect.snapshot.key;
+        this.refreshBookshelf(); this.refreshSearchShelfMembership();
+      } else if (effect.snapshot.key === this.pendingShelfReadbackKey) {
+        this.pendingShelfReadbackKey = '';
+      }
+    } else if (effect.duplicate) this.refreshSearchShelfMembership();
+  }
+
   private addDetailBook(): void {
     const book = this.detailBook;
     const session = this.remoteReadingSession;
-    if (book === undefined || session === undefined || book.sourceId === LOCAL_SOURCE_ID ||
-      !this.canRemoveDetailBook(book) || this.bookshelfAdditionActiveKey === this.detailBookKey(book)) {
-      return;
+    if (book === undefined || book.sourceId === LOCAL_SOURCE_ID || !this.canRemoveDetailBook(book)) return;
+    if (session !== undefined && (session.identity.sourceId !== book.sourceId || session.identity.bookId !== book.bookId)) {
+      this.showReadingFailure('加入书架失败', '书籍详情已变更，请重新打开详情后再加入书架。'); return;
     }
-    if (session.identity.sourceId !== book.sourceId || session.identity.bookId !== book.bookId) {
-      this.showReadingFailure('加入书架失败', '书籍详情已变更，请重新打开详情后再加入书架。');
-      return;
-    }
-    const generation = ++this.bookshelfAdditionGeneration;
-    const key = this.detailBookKey(book);
-    this.bookshelfAdditionActiveKey = key;
-    this.bookshelfAdditionCancellingKey = '';
-    this.bookshelfAdditionErrorKey = '';
-    this.bookshelfAdditionError = '';
-    const owner = ReaderRuntimeOwner.current();
-    const isCurrent = (): boolean => generation === this.bookshelfAdditionGeneration &&
-      this.bookshelfAdditionActiveKey === key;
-    void new ReaderCoreGateway(owner).upsertBook({
-      sourceId: session.identity.sourceId,
-      bookId: session.identity.bookId,
-      title: session.book.title,
-      author: session.book.author,
-      coverUrl: session.book.coverUrl,
-      intro: session.book.intro,
-      kind: session.book.kind,
-      lastChapter: session.book.lastChapter,
-    })
-      .then((): void => {
-        this.refreshBookshelf();
-        if (!isCurrent()) {
-          return;
-        }
-        if (this.isSameDetailBook(book)) {
-          this.detailInBookshelf = true;
-        }
-        // Core reports success only after the first readable entry is durable.
-        // The application owner resumes the remaining chapter window later.
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          if (error instanceof ReaderCoreRequestError && error.event.error.code === 'BOOK_ALREADY_ON_SHELF') {
-            this.refreshSearchShelfMembership();
-            this.bookshelfAdditionError = '这本书已加入书架，请从书架打开已有书籍后换源。';
-          } else {
-            this.bookshelfAdditionError = `加入书架未完成：${error.message}`;
-          }
-          this.bookshelfAdditionErrorKey = key;
-        }
-      })
-      .finally((): void => {
-        // Pending admission is scoped to its detail button. It must never
-        // hold the global removal gate while another shelf book is opened.
-        if (generation === this.bookshelfAdditionGeneration &&
-          this.bookshelfAdditionActiveKey === key) {
-          this.bookshelfAdditionActiveKey = '';
-        }
-      });
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const navigation = this.navigationGeneration;
+    this.detailShelfRemovalKey = '';
+    const identity: RemoteReadingIdentity = {sourceId: book.sourceId, bookId: book.bookId};
+    // The add owner prepares and verifies readability itself. A displayed
+    // search detail must not silently reject clicks while its catalog loads.
+    const metadata = session?.book ?? book;
+    void this.bookshelfHost.readable(owner).add({
+      sourceId: book.sourceId, bookId: book.bookId, title: metadata.title,
+      author: metadata.author, coverUrl: metadata.coverUrl, intro: metadata.intro,
+      kind: metadata.kind, lastChapter: metadata.lastChapter,
+    }, (): boolean => this.readableAdmissionCurrent(identity, owner, navigation),
+      (effect: BookshelfReadableAdmissionEffect): void => this.publishReadableAdmission(effect));
   }
 
   private cancelDetailBookAddition(): void {
-    const book = this.detailBook;
-    if (book === undefined) return;
-    const key = this.detailBookKey(book);
-    if (this.bookshelfAdditionActiveKey !== key || this.bookshelfAdditionCancellingKey === key) return;
-    const generation = ++this.bookshelfAdditionGeneration;
-    this.bookshelfAdditionCancellingKey = key;
-    this.bookshelfAdditionError = '';
-    this.bookshelfAdditionErrorKey = key;
-    const owner = ReaderRuntimeOwner.current();
-    const isCurrent = (): boolean => generation === this.bookshelfAdditionGeneration &&
-      this.bookshelfAdditionActiveKey === key;
-    let settled = false;
-    void owner.bookAcquisitions().cancelReadableBook(book.sourceId, book.bookId)
-      .then(async (): Promise<void> => {
-        // Strict admission may win the cancellation race. Reconcile that
-        // committed fact without deleting the book or its reading position.
-        const saved = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
-        if (saved !== undefined) {
-          this.refreshBookshelf();
-          this.refreshSearchShelfMembership();
-        }
-        settled = true;
-        if (!isCurrent()) return;
-        if (this.isSameDetailBook(book)) this.detailInBookshelf = saved !== undefined;
-        this.bookshelfAdditionError = saved === undefined ? '已取消加入书架' : '';
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) this.bookshelfAdditionError = `取消状态未确认，请重试：${error.message}`;
-      })
-      .finally((): void => {
-        if (!isCurrent()) return;
-        this.bookshelfAdditionCancellingKey = '';
-        if (settled) this.bookshelfAdditionActiveKey = '';
-      });
+    const book = this.detailBook; const owner = this.mountedRuntimeOwner;
+    if (book === undefined || owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const navigation = this.navigationGeneration;
+    const identity: RemoteReadingIdentity = {sourceId: book.sourceId, bookId: book.bookId};
+    void this.bookshelfHost.readable(owner).cancel(book.sourceId, book.bookId,
+      (): boolean => this.readableAdmissionCurrent(identity, owner, navigation),
+      (effect: BookshelfReadableAdmissionEffect): void => this.publishReadableAdmission(effect));
+  }
+
+  private isCurrentBookRemoval(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.bookRemovalDialogOpen &&
+      presentation === this.bookRemovalPresentation && generation === this.navigationGeneration &&
+      mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner);
+  }
+
+  private openBookRemovalDialog(message: string, action: () => void): void {
+    const owner = this.mountedRuntimeOwner;
+    if (this.bookRemovalDialogOpen || owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const presentation = ++this.bookRemovalPresentation;
+    this.bookRemovalMessage = message;
+    this.bookRemovalConfirmAction = (): void => {
+      if (presentation === this.bookRemovalPresentation && generation === this.navigationGeneration &&
+        mounting === this.detailShelfAdmissionMount && !this.shelfReceiptRetired &&
+        this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner)) action();
+    };
+    this.bookRemovalDialogOpen = true;
+    // Native controller and its temporary child are created for this opening.
+    // An old physical callback never reads the next opening's action/controller.
+    let controller: CustomDialogController | undefined;
+    controller = new CustomDialogController({
+      builder: (): void => this.bookRemovalDialogContent(message, presentation, generation, owner, mounting, controller!),
+      alignment: DialogAlignment.Center,
+      customStyle: true,
+      autoCancel: true,
+      cancel: (): void => {
+        if (this.isCurrentBookRemoval(presentation, generation, owner, mounting)) this.dismissBookRemovalDialog(presentation);
+      },
+    });
+    this.bookRemovalDialogController = controller;
+    controller.open();
+  }
+
+  @Builder
+  private bookRemovalDialogContent(message: string, presentation: number, generation: number, owner: ReaderRuntimeOwner,
+    mounting: number, controller: CustomDialogController) {
+    BookRemovalDialog({
+      controller,
+      message,
+      onCancel: (): void => {
+        if (this.isCurrentBookRemoval(presentation, generation, owner, mounting)) this.dismissBookRemovalDialog(presentation);
+      },
+      onConfirm: (): void => {
+        if (this.isCurrentBookRemoval(presentation, generation, owner, mounting)) this.confirmBookRemovalDialog(presentation);
+      },
+    });
+  }
+
+  private dismissBookRemovalDialog(presentation: number = this.bookRemovalPresentation): void {
+    if (presentation !== this.bookRemovalPresentation) return;
+    const wasOpen = this.bookRemovalDialogOpen, controller = this.bookRemovalDialogController;
+    this.bookRemovalDialogOpen = false; this.bookRemovalConfirmAction = undefined;
+    this.bookRemovalDialogController = undefined;
+    if (wasOpen) controller?.close();
+  }
+
+  private confirmBookRemovalDialog(presentation: number = this.bookRemovalPresentation): void {
+    if (!this.bookRemovalDialogOpen || presentation !== this.bookRemovalPresentation) return;
+    const action = this.bookRemovalConfirmAction;
+    this.dismissBookRemovalDialog(presentation);
+    action?.();
   }
 
   private requestRemoveDetailBook(): void {
@@ -3589,23 +4894,10 @@ struct Index {
     const message = book.sourceId === LOCAL_SOURCE_ID ?
       `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
       `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveDetailBook.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.canRemoveDetailBook(book)) {
-            this.removeDetailBook(book);
-          }
-        },
-      },
+    this.openBookRemovalDialog(message, (): void => {
+      if (this.canRemoveDetailBook(book)) {
+        this.removeDetailBook(book);
+      }
     });
   }
 
@@ -3616,28 +4908,15 @@ struct Index {
     const message = book.sourceId === LOCAL_SOURCE_ID ?
       `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
       `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveShelfBook.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.canRemoveShelfBook(book)) {
-            this.removeShelfBook(book);
-          }
-        },
-      },
+    this.openBookRemovalDialog(message, (): void => {
+      if (this.canRemoveShelfBook(book)) {
+        this.removeShelfBook(book);
+      }
     });
   }
 
   private requestRemoveShelfBooks(keys: string[]): void {
-    if (this.route !== 'bookshelfMultiSelect' || this.bookshelfBatchRemovalBusy) {
+    if (this.route !== 'bookshelfMultiSelect' || this.shelfOperation.batchRemovalBusy) {
       return;
     }
     if (!this.bookshelfSelectionReady) return;
@@ -3645,281 +4924,122 @@ struct Index {
     if (selected.length === 0) {
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message: `确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveShelfBooks.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.route === 'bookshelfMultiSelect' && !this.bookshelfBatchRemovalBusy) {
-            this.removeShelfBooks(selected);
-          }
-        },
-      },
+    this.openBookRemovalDialog(`确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`, (): void => {
+      if (this.route === 'bookshelfMultiSelect' && !this.shelfOperation.batchRemovalBusy) {
+        this.removeShelfBooks(selected);
+      }
     });
   }
 
   private removeShelfBooks(books: ShelfBook[]): void {
-    if (this.route !== 'bookshelfMultiSelect' || this.bookshelfBatchRemovalBusy || books.length === 0) {
-      return;
-    }
-    const generation = ++this.bookshelfBatchRemovalGeneration;
-    const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter());
-    const targets: BookshelfRemovalTarget[] = books.map((book: ShelfBook): BookshelfRemovalTarget => ({
-      sourceId: book.sourceId,
-      bookId: book.bookId,
-    }));
-    this.bookshelfBatchRemovalBusy = true;
-    const isCurrent = (): boolean => generation === this.bookshelfBatchRemovalGeneration &&
-      this.route === 'bookshelfMultiSelect';
-    void gateway.removeMany(targets)
-      .then((outcome: BookshelfRemoveBatchOutcome): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        this.applyBookshelfState(outcome.shelf);
-        this.bookshelfMultiSelectInitialKey = '';
-        this.nextNavigationGeneration();
-        this.route = 'bookshelf';
-      })
-      .catch((error: Error): Promise<void> =>
-        this.reconcileShelfBookBatchRemovalFailure(error, gateway, isCurrent))
-      .finally((): void => {
-        if (generation === this.bookshelfBatchRemovalGeneration) {
-          this.bookshelfBatchRemovalBusy = false;
-        }
-      });
-  }
-
-  private async reconcileShelfBookBatchRemovalFailure(
-    error: Error,
-    gateway: BookshelfFlowGateway,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    try {
-      const shelf = await gateway.load();
-      if (!isCurrent()) {
-        return;
-      }
-      this.applyBookshelfState(shelf);
-      this.bookshelfMultiSelectInitialKey = '';
-      this.nextNavigationGeneration();
-      this.route = 'bookshelf';
-      this.showReadingFailure('批量移除未完全完成', error.message);
-    } catch (reloadError) {
-      if (!isCurrent()) {
-        return;
-      }
-      const message = reloadError instanceof Error ? reloadError.message : `${reloadError}`;
-      this.showReadingFailure('批量移除失败', `${error.message}；书架刷新失败：${message}`);
-    }
+    if (this.route !== 'bookshelfMultiSelect' || this.shelfOperation.busy || books.length === 0 || this.hasUnknownShelfWrite()) return;
+    const owner = ReaderRuntimeOwner.current(); const navigation = this.navigationGeneration;
+    const current = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && this.route === 'bookshelfMultiSelect';
+    const targets = books.map((book: ShelfBook): BookshelfRemovalTarget => ({ sourceId: book.sourceId, bookId: book.bookId }));
+    void this.bookshelfHost.operations(owner).remove(targets, true, this.shelfFilter(), current).then((outcome): void => {
+      if (outcome === undefined || !current()) return;
+      if (outcome.shelf !== undefined) this.applyBookshelfState(outcome.shelf);
+      this.bookshelfMultiSelectInitialKey = ''; this.nextNavigationGeneration(); this.route = 'bookshelf';
+    });
   }
 
   private canRemoveShelfBook(book: ShelfBook): boolean {
     return this.route === 'bookshelf' && !this.readingSessionActive &&
-      this.bookshelfRemovalActiveKey.length === 0 &&
+      this.shelfOperation.removalKey.length === 0 && !this.shelfOperation.busy && !this.hasUnknownShelfWrite() &&
       this.shelfBooks.some((candidate: ShelfBook): boolean =>
         candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
   }
 
   private removeShelfBook(book: ShelfBook): void {
-    if (!this.canRemoveShelfBook(book)) {
-      return;
-    }
-    const generation = ++this.bookshelfRemovalGeneration;
-    const key = `${book.sourceId}\u0000${book.bookId}`;
-    this.bookshelfRemovalActiveKey = key;
-    const owner = ReaderRuntimeOwner.current();
-    const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    const isCurrent = (): boolean => generation === this.bookshelfRemovalGeneration &&
-      this.bookshelfRemovalActiveKey === key;
-    void gateway.remove(book.sourceId, book.bookId)
-      .then((outcome: BookshelfRemoveOutcome): void => {
-        if (isCurrent()) {
-          this.applyShelfBookRemoval(outcome.shelf);
-        }
-      })
-      .catch((error: Error): Promise<void> =>
-        this.reconcileShelfBookRemovalFailure(book, error, owner, gateway, isCurrent))
-      .finally((): void => {
-        if (isCurrent()) {
-          this.bookshelfRemovalActiveKey = '';
-        }
-      });
-  }
-
-  private async reconcileShelfBookRemovalFailure(
-    book: ShelfBook,
-    originalError: Error,
-    owner: ReaderRuntimeOwner,
-    gateway: BookshelfFlowGateway,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    try {
-      const stored = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
-      if (!isCurrent()) {
-        return;
-      }
-      if (stored !== undefined) {
-        this.showReadingFailure('移除书架失败', originalError.message);
-        return;
-      }
-
-      let cleanupError: Error | undefined = undefined;
-      if (book.sourceId === LOCAL_SOURCE_ID) {
-        try {
-          await owner.releaseLocalBookAsset(book.bookId);
-        } catch (error) {
-          cleanupError = error instanceof Error ? error : new Error(errorMessageOf(error));
-        }
-      }
-      try {
-        const shelf = await gateway.load();
-        if (!isCurrent()) {
-          return;
-        }
-        this.applyShelfBookRemoval(shelf);
-      } catch (loadError) {
-        if (!isCurrent()) {
-          return;
-        }
-        this.refreshBookshelf();
-        const loadMessage = loadError instanceof Error ? loadError.message : `${loadError}`;
-        this.showReadingFailure('已移出书架', `书籍已移除，但书架状态刷新未完成：${loadMessage}`);
-      }
-      if (cleanupError !== undefined && isCurrent()) {
-        this.showReadingFailure('已移出书架',
-          `书籍已移除，但应用内 EPUB 文件清理未完成：${cleanupError.message}`);
-      }
-    } catch (probeError) {
-      if (isCurrent()) {
-        const probeMessage = probeError instanceof Error ? probeError.message : `${probeError}`;
-        hilog.error(DOMAIN, 'Reader',
-          'Shelf book removal reconciliation failed: %{private}s', probeMessage);
-        this.showReadingFailure('移除书架失败', originalError.message);
-      }
-    }
+    if (!this.canRemoveShelfBook(book)) return;
+    const owner = ReaderRuntimeOwner.current(); const navigation = this.navigationGeneration;
+    const current = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && this.route === 'bookshelf';
+    void this.bookshelfHost.operations(owner).remove([{ sourceId: book.sourceId, bookId: book.bookId }], false, this.shelfFilter(), current)
+      .then((outcome): void => { if (outcome !== undefined && current() && outcome.shelf !== undefined) this.applyShelfBookRemoval(outcome.shelf); });
   }
 
   private applyShelfBookRemoval(shelf: BookshelfDataState): void {
-    this.bookshelfLoadGeneration += 1;
+    this.invalidateBookshelfProjection();
     if (this.route === 'bookshelf') {
       this.applyBookshelfState(shelf);
     }
   }
 
   private removeDetailBook(book: ReadingBookDetail): void {
-    if (!this.canRemoveDetailBook(book)) {
-      return;
-    }
-    const generation = ++this.bookshelfRemovalGeneration;
-    const key = this.detailBookKey(book);
-    this.bookshelfRemovalActiveKey = key;
-    const owner = ReaderRuntimeOwner.current();
-    const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    const isCurrent = (): boolean => generation === this.bookshelfRemovalGeneration &&
-      this.bookshelfRemovalActiveKey === key;
-    void gateway.remove(book.sourceId, book.bookId)
-      .then((outcome: BookshelfRemoveOutcome): void => {
-        if (isCurrent()) {
-          this.applyDetailBookRemoval(book, outcome.shelf);
-        }
-      })
-      .catch((error: Error): Promise<void> =>
-        this.reconcileDetailBookRemovalFailure(book, error, owner, gateway, isCurrent))
-      .finally((): void => {
-        if (isCurrent()) {
-          this.bookshelfRemovalActiveKey = '';
-        }
+    if (!this.canRemoveDetailBook(book)) return;
+    const owner = ReaderRuntimeOwner.current(); const navigation = this.navigationGeneration;
+    const current = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && this.route === 'detail' && this.isSameDetailBook(book);
+    this.detailShelfRemovalKey = this.detailBookKey(book);
+    const operations = this.bookshelfHost.operations(owner);
+    const removal = operations.remove([{ sourceId: book.sourceId, bookId: book.bookId }], false, this.shelfFilter(), current);
+    this.detailShelfRemovalGeneration = operations.current().generation;
+    void removal
+      .then((outcome): void => {
+        if (outcome === undefined || !current()) return;
+        if (outcome.receipt.receipt.confirmation === 'confirmed') {
+          this.detailInBookshelf = false;
+          if (outcome.shelf !== undefined) this.applyDetailBookRemoval(book, outcome.shelf);
+          else this.refreshBookshelf();
+          this.refreshSearchShelfMembership();
+        } else if (outcome.shelf !== undefined) this.applyBookshelfState(outcome.shelf);
       });
   }
 
-  /**
-   * `removeBook` commits Core before releasing a retained local EPUB. If the
-   * Host cleanup or the following shelf read fails, query the exact composite
-   * key before deciding whether the destructive command itself failed.
-   */
-  private async reconcileDetailBookRemovalFailure(
-    book: ReadingBookDetail,
-    originalError: Error,
-    owner: ReaderRuntimeOwner,
-    gateway: BookshelfFlowGateway,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    try {
-      const stored = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
-      if (!isCurrent()) {
-        return;
-      }
-      if (stored !== undefined) {
-        this.showReadingFailure('移除书架失败', originalError.message);
-        return;
-      }
+  private emptyShelfRecovery(): ReaderRecoveryView {
+    return { message: '', visible: false, canRetry: false, generation: 0 };
+  }
 
-      let cleanupError: Error | undefined = undefined;
-      if (book.sourceId === LOCAL_SOURCE_ID) {
-        try {
-          // Idempotent retry for the Core-committed / Host-cleanup-failed window.
-          await owner.releaseLocalBookAsset(book.bookId);
-        } catch (error) {
-          cleanupError = error instanceof Error ? error : new Error(errorMessageOf(error));
-        }
-      }
-      let shelf: BookshelfDataState;
-      try {
-        shelf = await gateway.load();
-      } catch (loadError) {
-        if (!isCurrent()) {
-          return;
-        }
-        // The exact key already proved the destructive Core commit. Never
-        // leave a deleted book open or relabel that committed fact as failure.
-        if (this.route === 'detail' && this.isSameDetailBook(book)) {
-          this.returnFromDetail();
-        } else if (this.route === 'bookshelf') {
-          this.refreshBookshelf();
-        }
-        const loadMessage = loadError instanceof Error ? loadError.message : `${loadError}`;
-        this.showReadingFailure('已移出书架',
-          `书籍已从书架移除，但书架状态刷新未完成：${loadMessage}`);
-        if (cleanupError !== undefined) {
-          hilog.error(DOMAIN, 'Reader',
-            'Local EPUB cleanup also failed after bookshelf removal: %{private}s', cleanupError.message);
-        }
-        return;
-      }
-      if (!isCurrent()) {
-        return;
-      }
-      this.applyDetailBookRemoval(book, shelf);
-      if (cleanupError !== undefined) {
-        this.showReadingFailure('已移出书架',
-          `书籍已从书架移除，但应用内 EPUB 文件清理未完成：${cleanupError.message}`);
-      }
-    } catch (probeError) {
-      if (isCurrent()) {
-        const probeMessage = probeError instanceof Error ? probeError.message : `${probeError}`;
-        hilog.error(DOMAIN, 'Reader',
-          'Bookshelf removal reconciliation failed: %{private}s', probeMessage);
-        this.showReadingFailure('移除书架失败', originalError.message);
-      }
-    }
+  private hasUnknownShelfWrite(): boolean {
+    return this.isCurrentRuntime(this.shelfOperationOwner) &&
+      (this.shelfOperation.receipt?.receipt.confirmation === 'unknown' || this.shelfOperation.removalMutation?.blocked === true);
+  }
+
+  private canContinueShelfRemoval(): boolean {
+    const original = this.shelfOperation.removalMutation;
+    return this.isCurrentRuntime(this.shelfOperationOwner) && !this.shelfOperation.busy && !this.shelfOperation.reconcileBusy &&
+      original?.blocked === true && original.canContinueOriginal &&
+      (original.method === 'bookshelf.remove' || original.method === 'bookshelf.removeBatch');
+  }
+
+  private shelfRecovery(): ReaderRecoveryView {
+    if (!this.isCurrentRuntime(this.shelfOperationOwner)) return this.emptyShelfRecovery();
+    const original = this.shelfOperation.removalMutation;
+    if (original?.blocked) return { message: original.message || '原书架操作尚待核对，已保留原内容', visible: true,
+      canRetry: (original.method === 'bookshelf.remove' || original.method === 'bookshelf.removeBatch') &&
+        !this.shelfOperation.busy && !this.shelfOperation.reconcileBusy, generation: this.shelfOperation.generation };
+    if (this.shelfOperation.receipt?.receipt.confirmation !== 'unknown') return this.emptyShelfRecovery();
+    return readerRecoveryView(this.shelfOperation.receipt);
+  }
+
+  private async reconcileShelfWrite(generation: number): Promise<void> {
+    const owner = this.shelfOperationOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'bookshelf') return;
+    const navigation = this.navigationGeneration; const identity = this.shelfOperation.importIdentity;
+    const dialogVisible = this.hasVisibleImportDialog();
+    const current = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && navigation === this.navigationGeneration &&
+      this.route === 'bookshelf' && (!dialogVisible || identity === this.shelfOperation.importIdentity);
+    const read = await this.bookshelfHost.operations(owner).reconcile(generation, this.shelfFilter(), current);
+    if (read !== undefined && current() && read.value !== undefined) { this.invalidateBookshelfProjection(); this.applyBookshelfState(read.value); }
+  }
+
+  private async continueShelfRemoval(generation: number): Promise<void> {
+    const owner = this.shelfOperationOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'bookshelf' ||
+      generation !== this.shelfOperation.generation || !this.canContinueShelfRemoval()) return;
+    const navigation = this.navigationGeneration; const mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => this.isCurrentBookshelfPresentation(navigation, owner, mounting);
+    const read = await this.bookshelfHost.operations(owner).continueRemoval(generation, this.shelfFilter(), current);
+    if (current() && read?.value !== undefined) { this.invalidateBookshelfProjection(); this.applyBookshelfState(read.value); }
   }
 
   private applyDetailBookRemoval(book: ReadingBookDetail, shelf: BookshelfDataState): void {
     // The mutation result is newer than every shelf read already in flight.
-    this.bookshelfLoadGeneration += 1;
+    this.invalidateBookshelfProjection();
     if (this.route === 'detail' && this.isSameDetailBook(book)) {
-      this.returnFromDetail();
-      // `returnToBookshelf` starts its own read; prefer the exact state already
-      // returned by the completed mutation and invalidate that redundant read.
-      this.bookshelfLoadGeneration += 1;
+      this.detailInBookshelf = false;
       this.applyBookshelfState(shelf);
       return;
     }
@@ -3928,12 +5048,16 @@ struct Index {
     }
   }
 
-  private openReading(chapterIndex: number | undefined): void {
+  private openReading(chapterIndex: number | undefined, mangaDirectoryTargetProof?: JsonObject): void {
     const book = this.detailBook;
     if (book === undefined || (chapterIndex !== undefined && !this.isKnownDetailChapter(chapterIndex)) ||
-      this.bookshelfRemovalActiveKey.length > 0) {
+      this.shelfOperation.removalKey.length > 0) {
       return;
     }
+    // Detail opened from the reader is a child excursion, not a replacement
+    // for that reader's own parent (shelf/search detail/downloads).
+    if (this.detailReturnRoute === 'reader' && this.restoreReaderReturnContext(this.detailReaderReturn))
+      this.detailReaderReturn = undefined;
     const traceShelfEntry = this.shelfReadingPreparation &&
       this.shelfEntryTraceGeneration === this.navigationGeneration;
     if (!traceShelfEntry) this.beginReadingStartupTrace?.();
@@ -3943,19 +5067,21 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = chapterIndex;
+    this.requestedMangaDirectoryTargetProof = this.readingContentKind === 'manga' ? mangaDirectoryTargetProof : undefined;
     this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     // The existing reader owns chapter acquisition, loading and recovery.
     // Neither a catalog nor a successful body is a navigation prerequisite.
-    this.readingSessionActive = true;
+    this.readingSessionActive = true; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId);
     this.route = 'reading';
+    this.bindReadingEntryReader();
     this.shelfReadingPreparation = false;
     if (traceShelfEntry) this.traceShelfEntryPhase?.('reader-mount-request');
   }
 
-  private onDirectoryChapterSelected(chapterIndex: number): void {
+  private onDirectoryChapterSelected(chapterIndex: number, directoryTargetProof?: JsonObject): void {
     // R-LOCAL-TOC-01: tapping a chapter in Full Directory returns the user
     // to that chapter's reading flow (the same path used by the Detail
     // chapter rows). The Reader Control Home top-bar target is still gated
@@ -3965,30 +5091,32 @@ struct Index {
     }
     this.requestedBookmarkAnchor = undefined;
     if (!this.readingSessionActive) {
-      this.openReading(chapterIndex);
+      this.openReading(chapterIndex, directoryTargetProof);
       return;
     }
-    if (chapterIndex === this.directoryCurrentChapterIndex) {
+    this.requestedMangaDirectoryTargetProof = this.readingContentKind === 'manga' ? directoryTargetProof : undefined;
+    if (directoryTargetProof === undefined && chapterIndex === this.directoryCurrentChapterIndex &&
+      (this.readingContentKind !== 'manga' || (this.mangaCommittedRequestGeneration === this.mangaChapterRequestGeneration &&
+        (this.requestedChapterIndex === undefined || this.requestedChapterIndex === chapterIndex)))) {
       // `directoryCurrentChapterIndex` is written only by the reader's
       // committed-first-page callback, never by a merely loaded chapter. It is
       // therefore safe to reveal the existing page without exposing a blank
-      // ReadingSurface.
+      // ReadingSurface, provided the manga child has not been replaced by
+      // another chapter that is still preparing.
       this.route = 'reading';
       return;
     }
     this.nextNavigationGeneration();
+    if (this.readingContentKind === 'manga') this.mangaChapterRequestGeneration += 1;
     this.requestedChapterIndex = chapterIndex;
     this.preparedReaderRoute = 'reading';
-    // Keep the existing Figma Full Directory static state visible while the
-    // reader loads, measures, and persists the new chapter's first page. The
-    // route changes only from ReadingExperience.onReadingReady, so a
-    // directory pick cannot expose an empty PaperLayer or old chapter body.
-    // Full Directory has no approved loading/selection variant and its panel
-    // is not opaque. Keep the last committed row/header/body snapshot visible
-    // until `onChapterCommitted` reports the new chapter.
+    if (this.readingContentKind !== 'manga') this.route = 'reading';
+    this.bindReadingEntryReader();
+    // Navigation acknowledges the selection immediately. The reader owns its
+    // loading surface; only its admitted first page can commit new progress.
   }
 
-  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
+  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
     // 书签 tab 的精确锚点回流, 镜像 onDirectoryChapterSelected 的准入与路由语义。
     if (!this.isKnownDetailChapter(chapterIndex)) {
       return;
@@ -4001,15 +5129,19 @@ struct Index {
       // An unresolved historical mark must not start a reader that immediately
       // fails. Keep the directory and original record available to the user.
       try {
-        this.getUIContext().getPromptAction().showToast({
+        this.transientFeedback.show(() => this.getUIContext(), {
           message: '该书签的位置暂时无法恢复，原摘录和备注仍保留，请从目录打开章节。',
-        });
+        }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && this.detailBook === book));
       } catch (_) {}
       return;
     }
     if (!this.readingSessionActive) {
       this.openReading(chapterIndex);
       if (!this.readingSessionActive) return;
+      // The exact anchor below owns the initial chapter admission. Leaving
+      // the chapter-start prop set would race its @Watch against the anchor.
+      this.requestedChapterIndex = undefined;
+      this.requestedMangaDirectoryTargetProof = undefined;
     } else if (chapterIndex === this.directoryCurrentChapterIndex) {
       // 已提交章内的书签: 不重复准入, 只露出阅读区。精确偏移完全由下面的
       // requestedBookmarkAnchor 通道承载 (selectChapterAnchor 处理同章偏移跳转)。
@@ -4020,16 +5152,40 @@ struct Index {
       // openChapter(chapterIndex, offset) 就是一次完整的跨章准入。
       this.nextNavigationGeneration();
       this.preparedReaderRoute = 'reading';
+      if (this.readingContentKind !== 'manga') this.route = 'reading';
       this.requestedChapterIndex = undefined;
+      this.bindReadingEntryReader();
+      this.requestedMangaDirectoryTargetProof = undefined;
     }
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
-      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope);
+      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope, directoryTargetProof);
+  }
+
+  private onDirectoryNavigationTargetSelected(chapterIndex: number, chapterOffsetScalar: number,
+    positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
+    const book = this.detailBook;
+    if (book === undefined || !Number.isSafeInteger(chapterOffsetScalar) || chapterOffsetScalar < 0) return;
+    if (positionScope !== undefined && (positionScope.sourceId !== book.sourceId ||
+      positionScope.bookId !== book.bookId || positionScope.chapterIndex !== chapterIndex)) return;
+    if (directoryTargetProof !== undefined && (directoryTargetProof['sourceId'] !== book.sourceId ||
+      directoryTargetProof['bookId'] !== book.bookId)) return;
+    if (positionScope === undefined && directoryTargetProof === undefined) return;
+    if (this.readingContentKind === 'manga') {
+      // v2 resolves chapter starts for manga. A text scalar/position scope is
+      // never interpreted as an image anchor. Core revalidates this exact
+      // directory proof before either cached-entry or chapter acquisition.
+      if (chapterOffsetScalar !== 0 || positionScope !== undefined || directoryTargetProof === undefined ||
+        directoryTargetProof['chapterIndex'] !== chapterIndex) return;
+      this.onDirectoryChapterSelected(chapterIndex, directoryTargetProof);
+      return;
+    }
+    this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
   }
 
   private openFullDirectory(): void {
     if (this.route !== 'detail' || this.readingSessionActive || this.detailBook === undefined ||
-      this.bookshelfRemovalActiveKey.length > 0) {
+      this.shelfOperation.removalKey.length > 0) {
       return;
     }
     // This is a view of the admitted detail catalog, not a reader launch.
@@ -4037,12 +5193,40 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryReturnTarget = 'detail';
-    this.directoryCurrentChapterIndex = -1;
-    this.directoryChapterTitle = '';
+    this.directoryCurrentChapterIndex = this.detailBook.mangaPosition?.chapterIndex ?? -1;
+    this.directoryChapterTitle = this.detailBook.mangaPosition?.chapterTitle ?? '';
     this.route = 'directory';
+    this.directoryPresentationGeneration += 1;
+    this.loadDirectoryOperationProjections();
+    if (this.detailBook.contentKind === 'manga') return;
+    // Text detail has no reader instance to emit a chapter callback. Reuse
+    // only its exact Core shelf projection, then refresh the display anchor
+    // from the canonical read-only progress row without selecting or saving.
+    const sourceId = this.detailBook.sourceId, bookId = this.detailBook.bookId;
+    const shelf = this.shelfBooks?.find((book: ShelfBook): boolean => book.sourceId === sourceId && book.bookId === bookId);
+    const initialIndex = shelf?.readingPosition?.chapterIndex ?? shelf?.currentChapterIndex;
+    this.directoryCurrentChapterIndex = initialIndex !== undefined && Number.isSafeInteger(initialIndex) && initialIndex >= 0 ? initialIndex : -1;
+    this.directoryChapterTitle = this.detailToc.find((entry: LocalReadingTocEntry): boolean => entry.index === this.directoryCurrentChapterIndex)?.title ?? '';
+    const owner = this.mountedRuntimeOwner, navigation = this.navigationGeneration,
+      mounting = this.detailShelfAdmissionMount, presentation = this.directoryPresentationGeneration;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const current = (): boolean => this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) && !this.shelfReceiptRetired &&
+      this.navigationGeneration === navigation && this.detailShelfAdmissionMount === mounting &&
+      this.directoryPresentationGeneration === presentation && this.route === 'directory' && this.directoryReturnTarget === 'detail' &&
+      !this.readingSessionActive && this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
+      this.detailBook.contentKind !== 'manga';
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    void host.loadDirectoryChapterIndex(sourceId, bookId, current).then((chapterIndex: number | undefined): void => {
+      if (!current() || chapterIndex === undefined) return;
+      this.directoryCurrentChapterIndex = chapterIndex;
+      this.directoryChapterTitle = this.detailToc.find((entry: LocalReadingTocEntry): boolean => entry.index === this.directoryCurrentChapterIndex)?.title ?? '';
+    }).catch((): void => { /* Optional display refresh retains the last exact Core shelf projection. */ });
   }
 
   private openReaderControlDirectory(): void {
@@ -4050,17 +5234,76 @@ struct Index {
       this.route !== 'reading') {
       return;
     }
+    if (this.readingContentKind === 'manga') this.refreshDetailMangaPosition();
     this.directoryReturnTarget = 'readerControl';
     this.preparedReaderRoute = 'directory';
     this.route = 'directory';
+    this.directoryPresentationGeneration += 1;
+    this.loadDirectoryOperationProjections();
+  }
+
+  private retryDirectoryCatalog(): void {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.detailBook === undefined || this.shelfReceiptRetired ||
+      !this.isCurrentRuntime(owner) || this.route !== 'directory') return;
+    const host = this.getReadingEntryHost();
+    if (host !== undefined) void host.retryCatalog();
   }
 
   private readingReadyCallback(sourceId: string, bookId: string, generation: number): (chapterIndex: number) => void {
     return (chapterIndex: number): void => {
       if (!this.readingSessionActive || this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
         this.readingReadyGeneration !== generation) return;
+      this.mountedRuntimeOwner?.setDownloadReadingProtection?.(sourceId, bookId, chapterIndex);
       this.presentPreparedReading(chapterIndex);
+      this.scheduleNavigationBackfillAfterReady(sourceId, bookId, generation);
     };
+  }
+
+  private scheduleNavigationBackfillAfterReady(sourceId: string, bookId: string, generation: number): void {
+    // This callback is emitted only after ReadingExperience owns a stable,
+    // visible page. Never parse a retained EPUB on shelf click or while the
+    // readable first frame is being admitted.
+    if (!this.readingSessionActive || this.route !== 'reading' || sourceId !== LOCAL_SOURCE_ID ||
+      this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
+      !['epub', 'txt', 'local', 'mobi', 'azw', 'azw3', 'kf8'].includes(this.detailBook.kind?.trim().toLowerCase() ?? '')) return;
+    const navigationGeneration = this.navigationGeneration;
+    const key = `${sourceId}\u0000${bookId}\u0000${generation}\u0000${navigationGeneration}`;
+    if (this.navigationBackfillObservedKey === key) return;
+    this.navigationBackfillObservedKey = key;
+    hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=queued generation=%{public}d', generation);
+    const owner = ReaderRuntimeOwner.current();
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && this.readingSessionActive &&
+      this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
+      this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
+      this.isCurrentRuntime(owner);
+    try {
+      this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
+        if (!isCurrent()) {
+          if (this.navigationBackfillObservedKey === key) this.navigationBackfillObservedKey = '';
+          return;
+        }
+        hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=frame generation=%{public}d', generation);
+        this.navigationBackfillObserverDisposer?.();
+        this.navigationBackfillObserverDisposer = readerDirectoryObserveMissingNavigation(bookId, (): void => {
+          if (!isCurrent() || this.navigationBackfillAttempted.has(key) ||
+            !readerDirectoryTakeMissingNavigation(bookId)) return;
+          hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=missing generation=%{public}d', generation);
+          this.navigationBackfillAttempted.add(key);
+          if (this.navigationBackfillAttempted.size > 16) {
+            this.navigationBackfillAttempted.delete(this.navigationBackfillAttempted.values().next().value as string);
+          }
+          void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent, this.detailBook?.kind?.trim().toLowerCase() ?? '')
+            .then((status: string): void => {
+              hilog.info(DOMAIN, 'Reader', 'Directory backfill result=%{public}s current=%{public}d', status, isCurrent() ? 1 : 0);
+            }).catch((_error: Error): void => {
+              hilog.warn(DOMAIN, 'Reader', 'Directory backfill result=error current=%{public}d', isCurrent() ? 1 : 0);
+            });
+        });
+      }));
+    } catch (_error) {
+      this.navigationBackfillObservedKey = '';
+    }
   }
 
   private presentPreparedReading(chapterIndex: number): void {
@@ -4086,12 +5329,20 @@ struct Index {
     this.shelfEntryTraceStartedAt = -1;
     this.shelfReadingPreparation = false;
     this.route = this.preparedReaderRoute;
+    const firstPresentation = this.readingPresentedScopeId !== this.readingEntryScopeId;
+    this.readingPresentedScopeId = this.readingEntryScopeId;
     const projectDirectory = this.pendingRemoteDirectoryProjection;
     this.pendingRemoteDirectoryProjection = undefined;
     projectDirectory?.();
     const projectLocalDirectory = this.pendingLocalDirectoryProjection;
     this.pendingLocalDirectoryProjection = undefined;
     projectLocalDirectory?.();
+    // A validated quick entry can already carry a catalog without its marker
+    // projection. Admit that optional read once, after the first visible page.
+    if (firstPresentation && projectDirectory === undefined && projectLocalDirectory === undefined &&
+      this.detailToc.some((entry: LocalReadingTocEntry): boolean => entry.bookmarks === undefined)) {
+      this.getReadingEntryHost()?.deferredDirectoryProjection()?.();
+    }
   }
 
   private returnToReadingOrigin(): void {
@@ -4102,55 +5353,167 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     // Keep the admitted identity for detail and ordinary back navigation.
     this.route = this.readingOriginRoute;
+    this.bindReadingEntryReader();
+    if (this.detailBook.contentKind === 'manga') this.hydrateMangaPositions([{ sourceId: this.detailBook.sourceId,
+      bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author,
+      contentKind: 'manga', addedAt: 0 }]);
     void this.refreshDetailAcquisitionProjection();
     if (this.route === 'bookshelf') {
       this.refreshBookshelf();
     }
   }
 
+  private requestMangaShelfMutation(): void {
+    if (this.readingContentKind !== 'manga' || !this.readingSessionActive || this.detailBook === undefined) return;
+    this.mangaShelfMutationAfterExit = `${this.detailBook.sourceId}\u0000${this.detailBook.bookId}`;
+    this.requestReaderBookInfo();
+  }
+
   private requestReaderBookInfo(): void {
     const book = this.detailBook;
     const requestExit = this.readingExitRequest;
     if (!this.readingSessionActive || book === undefined || requestExit === undefined) return;
-    this.bookInfoAfterReaderExit = `${book.sourceId}\u0000${book.bookId}`;
+    const context = this.captureReaderReturnContext();
+    if (context === undefined) return;
+    this.bookInfoAfterReaderExit = { bookIdentity: `${book.sourceId}\u0000${book.bookId}`, context };
     requestExit('navigation');
   }
 
-  private cancelReaderExitDestination(): void {
-    if (this.systemFileOpenExitId > 0) ReaderSystemFileOpenHost.acknowledge(this.systemFileOpenExitId);
-    this.systemFileOpenExitId = 0;
+  private captureReaderReturnContext(): ReaderReturnContext | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    if (this.detailReturnRoute === 'reader' && this.detailReaderReturn?.owner === owner)
+      return this.detailReaderReturn;
+    return { owner, originRoute: this.readingOriginRoute,
+      detailParent: this.detailReturnRoute === 'reader' ? this.detailReaderReturn?.detailParent ?? 'bookshelf' : this.detailReturnRoute,
+      fromDownloads: this.readingFromDownloads,
+      downloadParent: this.readingFromDownloads ? this.captureDownloadReturnContext(owner) : undefined };
+  }
+
+  private captureDownloadReturnContext(owner: ReaderRuntimeOwner): DownloadReturnContext {
+    return { owner, target: this.downloadReturnTarget, book: this.downloadReturnBook,
+      detailParent: this.downloadDetailReturnRoute, readerReturn: this.downloadReaderReturn,
+      detailReaderReturn: this.downloadDetailReaderReturn, viewState: this.copyDownloadViewState(this.downloadViewState),
+      snapshot: this.retainedDownloadOwner === owner ? this.retainedDownloadSnapshot : undefined,
+      membershipRevision: this.downloadMembershipRevision };
+  }
+
+  private restoreDownloadReturnContext(context: DownloadReturnContext | undefined): void {
+    if (context === undefined || this.shelfReceiptRetired || this.mountedRuntimeOwner !== context.owner ||
+      !this.isCurrentRuntime(context.owner)) return;
+    this.downloadReturnTarget = context.target;
+    this.downloadReturnBook = context.book;
+    this.downloadDetailReturnRoute = context.detailParent;
+    this.downloadReaderReturn = context.readerReturn;
+    this.downloadDetailReaderReturn = context.detailReaderReturn;
+    this.downloadViewState = this.copyDownloadViewState(context.viewState);
+    const snapshot = context.membershipRevision === this.downloadMembershipRevision ? context.snapshot : undefined;
+    this.retainedDownloadSnapshot = snapshot;
+    this.retainedDownloadOwner = snapshot === undefined ? undefined : context.owner;
+  }
+
+  private copyDownloadViewState(state: SharedDownloadViewState): SharedDownloadViewState {
+    return { query: state.query, type: state.type, state: state.state, sourceId: state.sourceId,
+      sort: state.sort, direction: state.direction, listScroll: state.listScroll,
+      chapterScroll: state.chapterScroll, detailKey: state.detailKey };
+  }
+
+  private invalidateDownloadMembershipForBook(book: ShelfBook): void {
+    if (this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId) return;
+    // A confirmed source switch changes shelf membership. Ordinary reader
+    // returns retain rows; this exceptional return must read the new members.
+    this.downloadMembershipRevision += 1;
+    this.retainedDownloadSnapshot = undefined;
+    this.retainedDownloadOwner = undefined;
+  }
+
+  private restoreReaderReturnContext(context: ReaderReturnContext | undefined): boolean {
+    if (context === undefined || this.shelfReceiptRetired || this.mountedRuntimeOwner !== context.owner ||
+      !this.isCurrentRuntime(context.owner)) return false;
+    this.readingOriginRoute = context.originRoute;
+    this.detailReturnRoute = context.detailParent;
+    this.readingFromDownloads = context.fromDownloads;
+    if (context.fromDownloads) this.restoreDownloadReturnContext(context.downloadParent);
+    return true;
+  }
+
+  private currentReaderPresentationIdentity(): string {
+    return JSON.stringify([this.detailBook?.sourceId, this.detailBook?.bookId, this.readingReadyGeneration]);
+  }
+
+  private cancelReaderExitDestination(readerIdentity: string): void {
+    if (this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) ||
+      readerIdentity !== this.currentReaderPresentationIdentity()) return;
+    this.systemFileOpenNavigation?.cancelExit(readerIdentity);
     this.bookInfoAfterReaderExit = undefined;
+    this.downloadsAfterReaderExit = undefined;
+    this.mangaShelfMutationAfterExit = undefined;
+    this.mangaDownloadDeleteAfterExit = undefined;
     this.openRulesManagementAfterReaderExit = false;
     this.exitToDetailOriginAfterReader = false;
   }
 
-  private onReaderExited(): void {
+  private onReaderExited(readerIdentity: string): void {
+    if (this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) ||
+      readerIdentity !== this.currentReaderPresentationIdentity()) return;
+    if (this.readingContentKind === 'manga' && this.detailBook !== undefined)
+      this.mountedRuntimeOwner?.finishMangaOfflineProbe?.(this.detailBook.sourceId, this.detailBook.bookId);
+    this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
-    if (this.systemFileOpenExitId > 0) {
-      this.systemFileOpenExitId = 0;
+    if (this.systemFileOpenNavigation?.readerExited(readerIdentity) === true) {
       this.bookInfoAfterReaderExit = undefined;
+      this.mangaDownloadDeleteAfterExit = undefined;
       this.openRulesManagementAfterReaderExit = false;
+      this.downloadsAfterReaderExit = undefined; this.readingFromDownloads = false;
       this.returnToBookshelf();
       this.consumeSystemFileOpen();
       return;
     }
-    const bookInfoIdentity = this.bookInfoAfterReaderExit;
+    const downloadDestination = this.downloadsAfterReaderExit;
+    this.downloadsAfterReaderExit = undefined;
+    if (downloadDestination?.identity === readerIdentity) {
+      this.bookInfoAfterReaderExit = undefined;
+      this.readingSessionActive = false;
+      this.openDownloads(downloadDestination.detailKey, true);
+      return;
+    }
+    if (this.readingFromDownloads && this.bookInfoAfterReaderExit === undefined && !this.openRulesManagementAfterReaderExit) {
+      this.readingFromDownloads = false; this.readingSessionActive = false;
+      this.openDownloads(this.downloadViewState.detailKey ?? '', true, true);
+      return;
+    }
+    const bookInfoDestination = this.bookInfoAfterReaderExit;
+    const bookInfoIdentity = bookInfoDestination?.bookIdentity;
     this.bookInfoAfterReaderExit = undefined;
-    if (bookInfoIdentity !== undefined && this.detailBook !== undefined &&
+    if (bookInfoIdentity !== undefined && bookInfoDestination?.context.owner === this.mountedRuntimeOwner && this.detailBook !== undefined &&
       bookInfoIdentity === `${this.detailBook.sourceId}\u0000${this.detailBook.bookId}`) {
       // Reuse the admitted book/session/directory. Normal serialized exit owns
       // the visible-page commit; viewing information does not acquire a book.
       this.readingOriginRoute = 'detail';
       this.returnToReadingOrigin();
+      this.detailReaderReturn = bookInfoDestination?.context;
+      this.detailReturnRoute = 'reader';
+      const shelfMutation = this.mangaShelfMutationAfterExit;
+      this.mangaShelfMutationAfterExit = undefined;
+      if (shelfMutation === bookInfoIdentity) this.requestDetailShelfMutation();
+      const deletion = this.mangaDownloadDeleteAfterExit;
+      this.mangaDownloadDeleteAfterExit = undefined;
+      if (deletion !== undefined && deletion.session.identity.sourceId === this.detailBook?.sourceId &&
+        deletion.session.identity.bookId === this.detailBook?.bookId) {
+        void this.performMangaDownloadAction('deleteDownloads', deletion.chapterIndex);
+      }
       return;
     }
+    this.mangaDownloadDeleteAfterExit = undefined;
     if (this.openRulesManagementAfterReaderExit) {
       this.openRulesManagementAfterReaderExit = false;
       this.presentRulesManagementFromReader();
@@ -4183,608 +5546,297 @@ struct Index {
     }
   }
 
-  private deleteDirectoryBookmarks(bookmarkTimes: number[]): void {
-    const book = this.detailBook;
-    if (book === undefined || bookmarkTimes.length === 0) {
-      return;
-    }
-    const uniqueTimes: number[] = [];
-    for (const time of bookmarkTimes) {
-      if (!Number.isSafeInteger(time) || uniqueTimes.indexOf(time) >= 0) {
-        continue;
-      }
-      uniqueTimes.push(time);
-    }
-    if (uniqueTimes.length === 0) {
-      return;
-    }
-    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) {
-      return;
-    }
-    const mutationKey = this.directoryBookmarkMutationKey(book);
-    const navigationGeneration = this.navigationGeneration;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    const isCurrent = (): boolean => navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === book.sourceId &&
-      this.detailBook?.bookId === book.bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
-    void this.performDirectoryBookmarkDeletion(
-      gateway,
-      book,
-      uniqueTimes,
-      isCurrent,
-      mutationGeneration,
-      mutationKey,
-    );
+  private getReaderDirectoryHost(owner: ReaderRuntimeOwner): ReaderDirectoryHost | undefined {
+    const current = (): boolean => this.isCurrentRuntime(owner);
+    const host = ReaderDirectoryHost.forRuntime(owner, current, (error: Error): void => {
+      try { hilog.error(DOMAIN, 'Reader', 'Directory delivery failed: %{private}s', error.message); } catch (_) {}
+    }, new BookmarkOperationIntentStore(owner, current));
+    this.directoryOperation = host?.snapshot();
+    return host;
   }
 
-  private createDirectoryChapterStartBookmark(
-    request: ReaderDirectoryChapterStartBookmarkRequest,
-  ): void {
+  private directoryOperationBindingId(): string {
     const book = this.detailBook;
-    if (book === undefined ||
-      !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
-      request.chapterTitle.trim().length === 0) {
-      return;
-    }
-    let knownChapter = false;
-    for (const entry of this.detailToc) {
-      if (entry.index === request.chapterIndex && entry.title === request.chapterTitle) {
-        knownChapter = true;
-        break;
-      }
-    }
-    if (!knownChapter) {
-      return;
-    }
-    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) {
-      return;
-    }
-    const mutationKey = this.directoryBookmarkMutationKey(book);
-    const navigationGeneration = this.navigationGeneration;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    const isCurrent = (): boolean => navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === book.sourceId &&
-      this.detailBook?.bookId === book.bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
-    void this.performDirectoryChapterStartBookmarkCreation(
-      gateway,
-      book,
-      request,
-      isCurrent,
-      mutationGeneration,
-      mutationKey,
-    );
+    return JSON.stringify([this.detailShelfAdmissionMount, this.navigationGeneration,
+      book?.sourceId ?? '', book?.bookId ?? '', this.remoteSessionGeneration]);
+  }
+
+  private directoryOperationPresentationId(): string {
+    return JSON.stringify([this.directoryOperationBindingId(), this.directoryPresentationGeneration]);
+  }
+
+  private isCurrentDirectoryOperationBinding(identity: string, owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      !this.shelfReceiptRetired && identity === this.directoryOperationBindingId() && this.detailBook !== undefined &&
+      (this.route === 'detail' || this.route === 'reading' || this.route === 'directory');
+  }
+
+  private isCurrentDirectoryOperationPresentation(identity: string, owner: ReaderRuntimeOwner | undefined): boolean {
+    return this.route === 'directory' && identity === this.directoryOperationPresentationId() &&
+      this.isCurrentDirectoryOperationBinding(this.directoryOperationBindingId(), owner);
+  }
+
+  private applyOwnedDirectoryEntries(entries: LocalReadingTocEntry[]): void {
+    this.detailToc = entries;
+    const entryHost = this.getReadingEntryHost();
+    if (entryHost !== undefined) entryHost.replaceDirectory(this.readingEntryScopeId, entries);
+  }
+
+  private directoryBinding(owner: ReaderRuntimeOwner, book: ReadingBookDetail,
+    isRequestCurrent?: () => boolean, onSettled?: (confirmed: boolean) => void): ReaderDirectoryBinding {
+    const identity = this.directoryOperationBindingId();
+    return { book, current: (): boolean => this.isCurrentDirectoryOperationBinding(identity, owner) &&
+      (isRequestCurrent?.() ?? true) && this.detailBook?.title === book.title && this.detailBook?.author === book.author,
+      currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
+      emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
+      emitOperation: (operation: ReaderDirectoryOperation): void => { this.directoryOperation = { action: operation.action, book: operation.book, generation: operation.generation,
+        requestedCount: operation.requestedCount, confirmedCount: operation.confirmedCount, completion: operation.completion,
+        canContinueOriginal: operation.canContinueOriginal, projection: operation.projection }; },
+      failed: (error: Error): void => { hilog.error(DOMAIN, 'Reader', 'Bookmark operation/projection: %{private}s', error.message); },
+      onSettled };
+  }
+
+  private deleteDirectoryBookmarks(bookmarkTimes: number[]): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (owner === undefined || book === undefined) return;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host !== undefined) void host.deleteBookmarks(bookmarkTimes, this.directoryBinding(owner, book));
+  }
+
+  private createDirectoryChapterStartBookmark(request: ReaderDirectoryChapterStartBookmarkRequest): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (owner === undefined || book === undefined || !this.detailToc.some(entry =>
+      entry.index === request.chapterIndex && entry.title === request.chapterTitle)) return;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host !== undefined) void host.createChapterStart(request.chapterIndex, this.directoryBinding(owner, book));
   }
 
   private toggleReaderPageBookmark(request: ReaderPageBookmarkToggleRequest): void {
-    const book = this.detailBook;
-    if (book === undefined || !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
-      !Number.isSafeInteger(request.chapterOffset) || request.chapterOffset < 0 ||
-      request.chapterTitle.trim().length === 0) { request.onSettled?.(false); return; }
-    let entry: LocalReadingTocEntry | undefined = undefined;
-    for (const candidate of this.detailToc) {
-      if (candidate.index === request.chapterIndex && candidate.title === request.chapterTitle) {
-        entry = candidate;
-        break;
-      }
-    }
-    if (entry === undefined || entry.bookmarks === undefined) { request.onSettled?.(false); return; }
-    const admittedTimes: number[] = [];
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    const entry = this.detailToc.find(candidate => candidate.index === request.chapterIndex && candidate.title === request.chapterTitle);
+    if (owner === undefined || book === undefined || entry?.bookmarks === undefined ||
+      !Number.isSafeInteger(request.chapterOffset) || request.chapterOffset < 0) { request.onSettled?.(false); return; }
+    const times: number[] = [];
     for (const time of request.bookmarkTimes) {
-      if (!Number.isSafeInteger(time) || admittedTimes.indexOf(time) >= 0) continue;
-      for (const bookmark of entry.bookmarks) {
-        if (bookmark.time === time) {
-          admittedTimes.push(time);
-          break;
-        }
+      if (!Number.isSafeInteger(time) || times.indexOf(time) >= 0 || !entry.bookmarks.some(mark => mark.time === time)) {
+        request.onSettled?.(false); return;
       }
+      times.push(time);
     }
-    if (admittedTimes.length !== request.bookmarkTimes.length) { request.onSettled?.(false); return; }
-    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) { request.onSettled?.(false); return; }
-    const mutationKey = this.directoryBookmarkMutationKey(book);
-    const navigationGeneration = this.navigationGeneration;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    const isCurrent = (): boolean => navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === book.sourceId &&
-      this.detailBook?.bookId === book.bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
-    if (admittedTimes.length > 0) {
-      void this.performDirectoryBookmarkDeletion(
-        gateway, book, admittedTimes, isCurrent, mutationGeneration, mutationKey, request.onSettled,
-      );
-      return;
-    }
-    void this.performReaderPageBookmarkCreation(
-      gateway, book, request, isCurrent, mutationGeneration, mutationKey,
-    );
-  }
-
-  private directoryBookmarkMutationKey(book: ReadingBookDetail): string {
-    return `${book.sourceId.length}:${book.sourceId}:${book.bookId}`;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host === undefined) { request.onSettled?.(false); return; }
+    const binding = this.directoryBinding(owner, book, undefined, request.onSettled);
+    if (times.length > 0) { void host.deleteBookmarks(times, binding); return; }
+    void host.createPosition({ bookName: book.title, bookAuthor: book.author, chapterIndex: request.chapterIndex,
+      chapterOffset: request.chapterOffset, chapterTitle: request.chapterTitle, bookText: request.bookText,
+      positionScope: request.positionScope }, binding);
   }
 
   private controlBookmarkProjectionMessage(): string {
+    const operation = this.directoryOperation;
+    // The persistent bookmark control needs an actual unavailable/stale list,
+    // not a partial batch result whose canonical list has already refreshed.
+    return operation !== undefined && (operation.projection.receipt.confirmation === 'unknown' ||
+      operation.projection.receipt.fact === 'confirmedRefreshFailed') ? this.directoryRecovery().bookmarks.message : '';
+  }
+
+  private directoryRecovery(): ReadingDirectoryRecovery {
     const book = this.detailBook;
-    return book !== undefined &&
-      this.directoryBookmarkProjectionFailureKey === this.directoryBookmarkMutationKey(book) &&
-      this.directoryBookmarkProjectionFailureGeneration === this.navigationGeneration ?
-      this.directoryBookmarkProjectionFailureMessage : '';
+    if (book === undefined) return EMPTY_READING_DIRECTORY_RECOVERY;
+    return readingDirectoryRecovery(this.directoryOperationPresentationId(), book, this.directoryOperation, this.offlineOperation);
   }
 
-  private failDirectoryBookmarkProjection(
-    book: ReadingBookDetail, outcome: 'confirmed' | 'partial' | 'uncertain',
-  ): void {
-    this.directoryBookmarkProjectionFailureKey = this.directoryBookmarkMutationKey(book);
-    this.directoryBookmarkProjectionFailureGeneration = this.navigationGeneration;
-    // Report the write and read separately. Never replay/rollback a write whose
-    // reply is uncertain. Only a fresh canonical list can restore CRUD admission.
-    this.directoryBookmarkProjectionFailureMessage = outcome === 'confirmed' ?
-      '书签已更新，但列表载入失败，请重新载入核对' : outcome === 'partial' ?
-      '部分书签已更新，剩余结果未确认，请重新载入核对，不要重复操作' :
-      '书签操作结果未确认，请重新载入核对，不要重复操作';
-    this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-      index: entry.index, title: entry.title, navigable: entry.navigable, downloadState: entry.downloadState,
-      bookmarks: undefined,
-    }));
-  }
-
-  private clearDirectoryBookmarkProjectionFailure(): void {
-    this.directoryBookmarkProjectionFailureMessage = '';
-    this.directoryBookmarkProjectionFailureKey = '';
-    this.directoryBookmarkProjectionFailureGeneration = -1;
-  }
-
-  /** Returns -1 when the same book already owns an unfinished mutation. */
-  private beginDirectoryBookmarkMutation(book: ReadingBookDetail): number {
-    const key = this.directoryBookmarkMutationKey(book);
-    if (this.directoryBookmarkMutationActiveKey === key || this.controlBookmarkProjectionMessage().length > 0) {
-      return -1;
-    }
-    this.directoryBookmarkMutationGeneration = this.directoryBookmarkMutationGeneration >=
-      Number.MAX_SAFE_INTEGER ? 1 : this.directoryBookmarkMutationGeneration + 1;
-    this.directoryBookmarkMutationActiveKey = key;
-    return this.directoryBookmarkMutationGeneration;
-  }
-
-  private finishDirectoryBookmarkMutation(generation: number, key: string): void {
-    if (this.isDirectoryBookmarkMutationCurrent(generation, key)) {
-      this.directoryBookmarkMutationActiveKey = '';
+  private reconcileDirectoryOperation(generation: number, identity: string, continueOriginal: boolean = false): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (this.route !== 'directory' || !this.isCurrentDirectoryOperationPresentation(identity, owner) || owner === undefined || book === undefined) return;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host !== undefined) {
+      const binding = this.directoryBinding(owner, book);
+      if (continueOriginal) void host.continueOriginal(generation, binding).catch((): void => {});
+      else void host.reconcile(generation, binding).catch((): void => {});
     }
   }
 
-  private isDirectoryBookmarkMutationCurrent(generation: number, key: string): boolean {
-    return generation === this.directoryBookmarkMutationGeneration &&
-      key === this.directoryBookmarkMutationActiveKey;
-  }
-
-  private async performDirectoryChapterStartBookmarkCreation(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    request: ReaderDirectoryChapterStartBookmarkRequest,
-    isCurrent: () => boolean,
-    mutationGeneration: number,
-    mutationKey: string,
-  ): Promise<void> {
-    let writeConfirmed = false;
-    try {
-      await gateway.createChapterStartBookmark({
-        bookName: book.title,
-        bookAuthor: book.author,
-        chapterIndex: request.chapterIndex,
-        chapterTitle: request.chapterTitle,
-      }, isCurrent, book.sourceId === LOCAL_SOURCE_ID ? undefined : { sourceId: book.sourceId, bookId: book.bookId });
-      writeConfirmed = true;
-      if (!isCurrent()) {
-        return;
-      }
-      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
-      if (isCurrent()) {
-        this.detailToc = mergeReaderControlBookmarkProjection(this.detailToc, entries);
-        this.clearDirectoryBookmarkProjectionFailure();
-      }
-    } catch (error) {
-      if (isCurrent()) {
-        this.failDirectoryBookmarkProjection(book, writeConfirmed ? 'confirmed' : 'uncertain');
-        hilog.error(DOMAIN, 'Reader', 'Directory bookmark create/projection needs verification: %{private}s',
-          (error as Error).message);
-      }
-    } finally {
-      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
+  private reconcileOfflineOperation(generation: number, identity: string, continueOriginal: boolean = false): void {
+    const owner = this.mountedRuntimeOwner, session = this.remoteReadingSession;
+    if (this.route !== 'directory' || !this.isCurrentDirectoryOperationPresentation(identity, owner) || owner === undefined || session === undefined) return;
+    const host = this.getReadingOfflineHost(owner);
+    if (host !== undefined) {
+      const binding = this.offlineBinding(owner, session);
+      if (continueOriginal) void host.continueOriginal(generation, binding).catch((): void => {});
+      else void host.reconcile(generation, binding).catch((): void => {});
     }
   }
 
-  private async performReaderPageBookmarkCreation(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    request: ReaderPageBookmarkToggleRequest,
-    isCurrent: () => boolean,
-    mutationGeneration: number,
-    mutationKey: string,
-  ): Promise<void> {
-    let writeConfirmed = false;
-    try {
-      await gateway.createPositionBookmark({
-        bookName: book.title,
-        bookAuthor: book.author,
-        chapterIndex: request.chapterIndex,
-        chapterOffset: request.chapterOffset,
-        chapterTitle: request.chapterTitle,
-        bookText: request.bookText,
-        positionScope: request.positionScope,
-      }, isCurrent);
-      writeConfirmed = true;
-      if (!isCurrent()) return;
-      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
-      if (isCurrent()) {
-        this.detailToc = mergeReaderControlBookmarkProjection(this.detailToc, entries);
-        this.clearDirectoryBookmarkProjectionFailure();
-      }
-    } catch (error) {
-      if (isCurrent()) {
-        this.failDirectoryBookmarkProjection(book, writeConfirmed ? 'confirmed' : 'uncertain');
-        hilog.error(DOMAIN, 'Reader', 'Reader page bookmark create/projection needs verification: %{private}s',
-          (error as Error).message);
-      }
-    } finally {
-      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
-      request.onSettled?.(writeConfirmed);
-    }
+  private loadDirectoryOperationProjections(): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook, session = this.remoteReadingSession;
+    if (owner === undefined || book === undefined) return;
+    if (session?.contentKind === 'manga') void this.getReadingEntryHost()?.refreshMangaDirectoryDisplay(true, !this.readingSessionActive);
+    const directory = this.getReaderDirectoryHost(owner);
+    if (directory !== undefined) void directory.load(this.directoryBinding(owner, book)).catch((): void => {});
+    const offline = this.getReadingOfflineHost(owner);
+    if (offline !== undefined && session !== undefined) void offline.load(this.offlineBinding(owner, session)).catch((): void => {});
   }
 
-  private async performDirectoryBookmarkDeletion(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    bookmarkTimes: number[],
-    isCurrent: () => boolean,
-    mutationGeneration: number,
-    mutationKey: string,
-    onSettled?: (success: boolean) => void,
-  ): Promise<void> {
-    let confirmedDeletes = 0;
-    try {
-      for (const time of bookmarkTimes) {
-        const deleted = await gateway.deleteBookmark(time, isCurrent);
-        if (!isCurrent()) {
-          return;
+  private loadControlBookmarks(sourceId: string, bookId: string, isRequestCurrent: () => boolean): Promise<void> {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (owner === undefined || book === undefined || book.sourceId !== sourceId || book.bookId !== bookId ||
+      !this.readingSessionActive || !isRequestCurrent()) return Promise.reject(new Error('Bookmark projection session superseded'));
+    const host = this.getReaderDirectoryHost(owner);
+    if (host === undefined) return Promise.reject(new Error('Bookmark projection Runtime retired'));
+    return host.load(this.directoryBinding(owner, book, isRequestCurrent));
+  }
+
+  @Builder
+  private sourceSwitchOverlayContent() {
+        ForEach([this.sourceSwitchScopeId], (scopeId: number) => {
+        Stack({ alignContent: Alignment.Bottom }) {
+          Stack()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(readerAppColor('TOK_SS_DRAWER_SCRIM', this.appThemeScheme))
+            .transition(this.settingsSnapshot.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
+              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs,
+                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
+              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs,
+                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) })))
+            .onClick((): void => this.closeSourceSwitch(scopeId));
+          SourceSwitchPanel({
+            state: this.sourceSwitchState,
+            currentSourceId: this.detailBook?.sourceId ?? '',
+            bookTitle: this.detailBook?.title ?? '', author: this.detailBook?.author ?? '',
+            coverUrl: this.detailBook?.coverUrl ?? '', currentSourceName: this.detailBook?.sourceName ?? '',
+            latestChapterTitle: this.detailBook?.lastChapter ?? '',
+            currentChapterTitle: this.directoryChapterTitle || this.detailBook?.mangaPosition?.chapterTitle || '',
+            contentKind: this.detailBook?.contentKind ?? 'text',
+            allowCancelWhileSwitching: this.canCancelMangaSourcePreparation() || this.sourceSwitchHost?.canCancelPreparation(this.sourceSwitchScopeId) === true,
+            reduceMotion: this.settingsSnapshot.reduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
+            onStop: (): void => this.stopSourceDiscovery(scopeId),
+            onClose: (): void => this.closeSourceSwitch(scopeId),
+            onRetry: (): void => this.retrySourceSwitch(scopeId),
+            onRefresh: (): void => this.refreshSourceSwitch(scopeId),
+            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate, scopeId),
+            onRollback: (): void => this.onRollbackSourceSwitch(scopeId),
+          });
         }
-        if (!deleted) {
-          throw new Error(`bookmark.delete did not delete ${time}`);
-        }
-        confirmedDeletes++;
-      }
-      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
-      if (isCurrent()) {
-        this.detailToc = mergeReaderControlBookmarkProjection(this.detailToc, entries);
-        this.clearDirectoryBookmarkProjectionFailure();
-      }
-    } catch (error) {
-      if (isCurrent()) {
-        this.failDirectoryBookmarkProjection(book, confirmedDeletes === bookmarkTimes.length ? 'confirmed' :
-          confirmedDeletes > 0 ? 'partial' : 'uncertain');
-        hilog.error(DOMAIN, 'Reader', 'Directory bookmark delete/projection needs verification: %{private}s',
-          (error as Error).message);
-      }
-    } finally {
-      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
-      onSettled?.(confirmedDeletes === bookmarkTimes.length);
-    }
+        .width('100%')
+        .height('100%');
+        }, (scopeId: number): string => scopeId.toString());
   }
 
-  private loadControlBookmarks(
-    sourceId: string, bookId: string, isRequestCurrent: () => boolean,
-  ): Promise<void> {
-    const book = this.detailBook;
-    if (book === undefined || book.sourceId !== sourceId || book.bookId !== bookId ||
-      !this.readingSessionActive || !isRequestCurrent()) {
-      return Promise.reject(new Error('Bookmark projection session superseded'));
-    }
-    const navigationGeneration = this.navigationGeneration;
-    const mutationGeneration = this.directoryBookmarkMutationGeneration;
-    const key = this.directoryBookmarkMutationKey(book);
-    const isCurrent = (): boolean => isRequestCurrent() && this.readingSessionActive &&
-      navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      mutationGeneration === this.directoryBookmarkMutationGeneration &&
-      this.directoryBookmarkMutationActiveKey !== key;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    return loadReaderControlBookmarkProjection({
-      isCurrent,
-      currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
-      read: (entries: LocalReadingTocEntry[], guard: () => boolean): Promise<LocalReadingTocEntry[]> =>
-        gateway.loadBookmarkProjection(book.title, book.author, entries, guard),
-      commit: (entries: LocalReadingTocEntry[]): void => {
-        this.detailToc = entries;
-        this.clearDirectoryBookmarkProjectionFailure();
+  private getSourceSwitchHost(): SourceSwitchHost | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    if (this.sourceSwitchHost?.owns(owner) !== true) this.sourceSwitchHost = SourceSwitchHost.forRuntime(owner);
+    return this.sourceSwitchHost;
+  }
+
+  private sourceSwitchContext(): SourceSwitchContext {
+    const query = this.sourceSwitchProbeQuery();
+    return { query, inBookshelf: this.detailInBookshelf,
+      toc: this.detailToc.map((entry: LocalReadingTocEntry): SourceSwitchAnchor => ({ chapterIndex: entry.index, chapterTitle: entry.title })),
+      shelfBook: this.shelfBooks.find((book: ShelfBook): boolean => book.sourceId === query.sourceId && book.bookId === query.bookId),
+      knownCandidates: this.knownSearchSourceCandidates(query),
+      readKnownCandidates: (): SourceSwitchCandidate[] => this.knownSearchSourceCandidates(query), searchedSourceIds: this.detailReturnRoute === 'search' ? this.searchHost.searchedSourceIds() : [] };
+  }
+
+  private sourceSwitchLease(host: SourceSwitchHost): SourceSwitchLease {
+    const owner = this.mountedRuntimeOwner, navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const current = (identity: RemoteReadingIdentity): boolean => owner !== undefined && !this.shelfReceiptRetired &&
+      this.sourceSwitchHost === host && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.detailBook?.sourceId === identity.sourceId && this.detailBook?.bookId === identity.bookId;
+    return { isCurrent: current,
+      changed: (snapshot: SourceSwitchSnapshot): void => {
+        const book = this.detailBook;
+        if (book !== undefined && current(book)) this.applySourceSwitchSnapshot(snapshot);
       },
-    }).catch((error: Error): void => {
-      // A later bookmark write or navigation owns its own projection/result.
-      // An obsolete read must not mark that newer list as failed.
-      if (isCurrent()) throw error;
-    });
+      effect: (effect: SourceSwitchEffect): void => {
+        const book = this.detailBook;
+        if (book !== undefined && current(book)) this.applySourceSwitchEffect(host, effect);
+      } };
   }
 
-  private reloadDirectoryBookmarkProjection(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    isCurrent: () => boolean,
-  ): Promise<LocalReadingTocEntry[]> {
-    if (book.sourceId === LOCAL_SOURCE_ID) {
-      return gateway.loadDirectoryProjection(
-        book.bookId,
-        book.title,
-        book.author,
-        this.detailToc,
-        isCurrent,
-      );
-    }
-    return gateway.loadBookmarkProjection(book.title, book.author, this.detailToc, isCurrent);
+  /** These fields are the current presentation DTO, not independent authority. */
+  private applySourceSwitchSnapshot(snapshot: SourceSwitchSnapshot): void {
+    this.sourceSwitchScopeId = snapshot.scopeId;
+    this.sourceSwitchVisible = snapshot.visible;
+    this.sourceSwitchState = snapshot.state;
+    this.sourceSwitchFailureMessage = snapshot.failureMessage;
+    this.pendingSourceSwitch = snapshot.pending;
   }
 
-  private async loadRemoteDirectoryProjection(
-    offline: ReadingOfflineGateway,
-    owner: ReaderRuntimeOwner,
-    session: RemoteReadingSession,
-    isCurrent: () => boolean,
-  ): Promise<LocalReadingTocEntry[]> {
-    let entries: LocalReadingTocEntry[] = session.entries.map((entry): LocalReadingTocEntry => ({
-      index: entry.index,
-      title: entry.title,
-      navigable: entry.url.trim().length > 0,
-      downloadState: 'unknown',
-    }));
-    try {
-      entries = await offline.loadProjection(session, isCurrent);
-    } catch (error) {
-      hilog.error(DOMAIN, 'Reader', 'Remote download projection failed: %{private}s',
-        (error as Error).message);
-    }
-    try {
-      return await new LocalReadingFlowGateway(owner).loadBookmarkProjection(
-        session.book.title,
-        session.book.author,
-        entries,
-        isCurrent,
-      );
-    } catch (error) {
-      hilog.error(DOMAIN, 'Reader', 'Remote bookmark projection failed: %{private}s',
-        (error as Error).message);
-      return entries;
-    }
+  private retireSourceSwitchPresentation(): void {
+    const host = this.sourceSwitchHost;
+    if (host !== undefined && host.current().scopeId === this.sourceSwitchScopeId) host.retire();
+    this.sourceSwitchVisible = false;
   }
 
-  private mergeDirectoryBookmarks(
-    entries: LocalReadingTocEntry[],
-    source: LocalReadingTocEntry[],
-  ): LocalReadingTocEntry[] {
-    const sourceByChapter = new Map<number, LocalReadingTocEntry>();
-    for (const entry of source) {
-      sourceByChapter.set(entry.index, entry);
-    }
-    return entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
-      const previous = sourceByChapter.get(entry.index);
-      return {
-        index: entry.index,
-        title: entry.title,
-        navigable: entry.navigable,
-        downloadState: entry.downloadState,
-        bookmarks: previous?.bookmarks,
-      };
-    });
+  private bindSourceSwitchReader(host: SourceSwitchHost): void {
+    if (!this.readingSessionActive || this.detailBook === undefined || this.sourceSwitchHost !== host) return;
+    host.bindReader(this.sourceSwitchContext(), this.sourceSwitchLease(host));
   }
 
-  private updateDirectoryChapterDownloadState(
-    chapterIndex: number,
-    downloadState: LocalReadingDownloadState,
-  ): void {
-    const position = this.detailToc.findIndex((entry: LocalReadingTocEntry): boolean =>
-      entry.index === chapterIndex);
-    if (position < 0) {
-      return;
-    }
-    const entry = this.detailToc[position];
-    if (entry.downloadState === downloadState) {
-      return;
-    }
-    this.detailToc.splice(position, 1, {
-      index: entry.index,
-      title: entry.title,
-      navigable: entry.navigable,
-      downloadState,
-      bookmarks: entry.bookmarks,
-    });
-  }
-
-  private getSourceSwitchGateway(): SourceSwitchGateway {
-    if (this.sourceSwitchGateway === undefined) {
-      this.sourceSwitchGateway = new SourceSwitchGateway(ReaderRuntimeOwner.current());
-    }
-    return this.sourceSwitchGateway;
-  }
-
-  private isSourceSwitchActive(generation: number): boolean {
-    return generation === this.navigationGeneration && this.sourceSwitchVisible;
+  private applySourceSwitchEffect(host: SourceSwitchHost, effect: SourceSwitchEffect): void {
+    if (effect.kind === 'previewReady') {
+      const parent = this.detailReturnRoute;
+      const context = this.captureReaderReturnContext();
+      this.openRemoteBookDetail(effect.seed, effect.candidate.sourceName ?? effect.candidate.sourceId,
+        undefined, true, [], [], parent, effect.session);
+      this.restoreReaderReturnContext(context);
+    } else if (effect.kind === 'targetReady') {
+      this.performSourceSwitchSeam(effect.book, effect.session, effect.chapterIndex);
+      this.bindSourceSwitchReader(host);
+    } else if (effect.kind === 'rollbackReady' || effect.kind === 'canonicalReady') {
+      this.refreshBookshelf(); this.reopenSwitchedBook(effect.book);
+    } else if (effect.kind === 'restoredForNextChoice') {
+      this.invalidateDownloadMembershipForBook(effect.book);
+      const previous = this.detailBook;
+      this.detailBook = this.readingDetailForShelf(effect.book);
+      this.remoteReadingSeed = { sourceId: effect.book.sourceId, bookId: effect.book.bookId, detailUrl: effect.book.bookId,
+        title: effect.book.title, author: effect.book.author, coverUrl: effect.book.coverUrl, intro: effect.book.intro };
+      if (previous?.sourceId !== effect.book.sourceId || previous?.bookId !== effect.book.bookId) {
+        this.detailToc = []; this.installRemoteReadingSession(undefined);
+        this.requestedChapterIndex = undefined; this.requestedBookmarkAnchor = undefined; this.readingExitRequest = undefined;
+      }
+      this.readingSessionActive = true; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId); this.preparedReaderRoute = 'reading'; this.route = 'reading'; this.refreshBookshelf();
+    } else if (effect.kind === 'acquisitionFailed') {
+      if (this.detailBook?.sourceId !== effect.identity.sourceId || this.detailBook?.bookId !== effect.identity.bookId) return;
+      if (!this.readingSessionActive) this.openReading(undefined);
+      this.route = 'reading'; this.bindSourceSwitchReader(host);
+    } else if (effect.kind === 'closed') this.consumeSystemFileOpen();
   }
 
   private openSourceSwitch(): void {
-    if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) {
-      return;
-    }
-    if (!this.readingSessionActive) {
-      // A failure dialog can outlive the reader that produced it. Route that
-      // late action through the origin screen overlay; `reading` without an
-      // active ReaderShell has no render owner and previously caused P0 blank.
-      this.returnToReadingOrigin();
-      this.openDetailSourceSwitch();
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.exitToDetailOriginAfterReader = false;
-    // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
-    // 3572:41345), so close the directory and let the surface be the backdrop.
-    this.preparedReaderRoute = 'reading';
-    this.route = 'reading';
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation);
+    if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) return;
+    if (!this.readingSessionActive) { this.returnToReadingOrigin(); this.openDetailSourceSwitch(); return; }
+    const host = this.getSourceSwitchHost(); if (host === undefined) return;
+    this.nextNavigationGeneration(); this.exitToDetailOriginAfterReader = false;
+    this.preparedReaderRoute = 'reading'; this.route = 'reading';
+    this.bindReadingEntryReader();
+    host.open(this.sourceSwitchContext(), this.sourceSwitchLease(host));
   }
 
   private openDetailSourceSwitch(): void {
-    if (this.route !== this.readingOriginRoute || this.detailBook === undefined ||
-      this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible ||
-      this.bookshelfRemovalActiveKey.length > 0) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.exitToDetailOriginAfterReader = false;
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation);
+    if (this.route !== this.readingOriginRoute || this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID ||
+      this.sourceSwitchVisible || this.shelfOperation.removalKey.length > 0) return;
+    const host = this.getSourceSwitchHost(); if (host === undefined) return;
+    this.nextNavigationGeneration(); this.exitToDetailOriginAfterReader = false;
+    this.bindReadingEntryReader();
+    host.open(this.sourceSwitchContext(), this.sourceSwitchLease(host));
   }
 
-  private retrySourceSwitch(): void {
-    const kind = this.sourceSwitchState.kind;
-    if (!this.sourceSwitchVisible || (kind !== 'discoveryError' && kind !== 'empty')) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation, false, true);
-  }
+  private stopSourceDiscovery(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.stop(scopeId); }
 
-  private refreshSourceSwitch(): void {
-    if (!this.sourceSwitchVisible || this.sourceSwitchState.kind !== 'candidates' ||
-      this.sourceSwitchState.refreshing === true) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.startSourceDiscovery(generation, false, true);
-  }
-
-  private startSourceDiscovery(
-    generation: number,
-    autoPickFirst: boolean = false,
-    forceRefresh: boolean = false,
-  ): void {
-    if (this.detailBook === undefined) {
-      return;
-    }
-    let query: SourceSwitchProbeQuery;
-    try {
-      query = this.sourceSwitchProbeQuery();
-    } catch (error) {
-      const message = errorMessageOf(error);
-      this.sourceSwitchState = { kind: 'discoveryError', message };
-      return;
-    }
-    const gateway = this.getSourceSwitchGateway();
-    const known = this.knownSearchSourceCandidates(query);
-    if (!forceRefresh && known.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: known, refreshing: false };
-    }
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
-    this.sourceSwitchUnsubscribe?.();
-    // Serialize dirty publications behind the initial snapshot as well; a
-    // slow first read must not overwrite a newer candidate update.
-    let refreshingProjection = true;
-    let refreshProjectionAgain = false;
-    let projectionReset = false;
-    const projectionDirty = new Map<string, RemoteReadingIdentity>();
-    const refreshProjection = (change: BookAcquisitionChange): void => {
-      if (!isCurrent()) return;
-      projectionReset = projectionReset || change.reset;
-      for (const identity of change.identities) projectionDirty.set(
-        sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
-      if (!projectionReset && projectionDirty.size === 0) return;
-      if (refreshingProjection) { refreshProjectionAgain = true; return; }
-      if (this.sourceSwitchState.kind !== 'candidates' &&
-        this.sourceSwitchState.kind !== 'empty' && this.sourceSwitchState.kind !== 'discovering') return;
-      refreshProjectionAgain = false;
-      refreshingProjection = true;
-      const batch: BookAcquisitionChange = { reset: projectionReset, identities: Array.from(projectionDirty.values()) };
-      projectionReset = false;
-      projectionDirty.clear();
-      void gateway.loadCachedCandidates(query, isCurrent, known, batch).then((candidates: SourceSwitchCandidate[]): void => {
-        if (!isCurrent()) return;
-        if (candidates.length > 0) this.sourceSwitchState = { kind: 'candidates', candidates,
-          refreshing: this.sourceSwitchState.kind === 'candidates' && this.sourceSwitchState.refreshing === true };
-        else if (this.sourceSwitchState.kind !== 'candidates' || this.sourceSwitchState.refreshing !== true) {
-          this.sourceSwitchState = { kind: 'empty' };
-        }
-      }).catch((): void => {
-        if (!isCurrent()) return;
-        // Keep failed work for the next real publication. A transient read
-        // must not lose identities/reset consumed before the await, and must
-        // not manufacture an unbounded automatic retry loop.
-        projectionReset = projectionReset || batch.reset;
-        for (const identity of batch.identities) projectionDirty.set(
-          sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
-      }).finally((): void => {
-        refreshingProjection = false;
-        if (refreshProjectionAgain) refreshProjection({ reset: false, identities: [] });
-      });
-    };
-    this.sourceSwitchUnsubscribe = ReaderRuntimeOwner.current().bookAcquisitions().subscribe(refreshProjection);
-    const previousCandidates = this.sourceSwitchState.kind === 'candidates'
-      ? this.sourceSwitchState.candidates
-      : [];
-    if (forceRefresh && previousCandidates.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates, refreshing: true };
-    }
-    const load = forceRefresh
-      ? gateway.refreshCandidates(query, isCurrent)
-      : gateway.loadCachedCandidates(query, isCurrent, known)
-        .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
-          SourceSwitchDiscoveryOutcome => cached.length > 0
-          ? { kind: 'sources', candidates: cached }
-          : gateway.refreshCandidates(query, isCurrent,
-            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : []));
-    load
-      .then((outcome: SourceSwitchDiscoveryOutcome): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        if (outcome.kind === 'noSources' || outcome.candidates.length === 0) {
-          this.sourceSwitchState = { kind: 'empty' };
-          return;
-        }
-        this.sourceSwitchState = { kind: 'candidates', candidates: outcome.candidates, refreshing: false };
-        if (autoPickFirst) {
-          const candidate = outcome.candidates.find((value: SourceSwitchCandidate): boolean =>
-            value.isCurrent !== true && value.offline !== true && value.timeout !== true);
-          if (candidate !== undefined) {
-            this.onPickSource(candidate);
-          }
-        }
-      })
-      .catch((error: Error): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        // change.bookSource is remote. Any Host transport constraint is
-        // surfaced through the admitted discovery failure state.
-        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: candidate discovery failed: %{private}s', error.message);
-        if (forceRefresh && previousCandidates.length > 0) {
-          this.sourceSwitchState = {
-            kind: 'candidates',
-            candidates: previousCandidates,
-            refreshing: false,
-            refreshError: error.message,
-          };
-        } else {
-          this.sourceSwitchState = { kind: 'discoveryError', message: error.message };
-        }
-      }).finally((): void => {
-        refreshingProjection = false;
-        if (refreshProjectionAgain) refreshProjection({ reset: false, identities: [] });
-      });
+  private retrySourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.retry(scopeId); }
+  private refreshSourceSwitch(scopeId?: number): void {
+    const host = this.sourceSwitchHost;
+    if (scopeId === undefined || scopeId !== this.sourceSwitchScopeId || host === undefined || !this.sourceSwitchVisible) return;
+    // Manga preparation retires discovery while its resource owner runs. A
+    // failed detail preparation must establish a fresh lease for re-search.
+    if (this.detailBook?.contentKind === 'manga' && !host.current().visible && this.sourceSwitchState.kind === 'candidates') {
+      host.open(this.sourceSwitchContext(), this.sourceSwitchLease(host), true);
+    } else host.refresh(scopeId);
   }
 
   private sourceSwitchProbeQuery(): SourceSwitchProbeQuery {
@@ -4792,8 +5844,14 @@ struct Index {
     if (book === undefined) throw new Error('换源需要当前书籍');
     const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
       this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
+    const seed = this.remoteReadingSeed?.sourceId === book.sourceId &&
+      this.remoteReadingSeed?.bookId === book.bookId ? this.remoteReadingSeed : undefined;
+    const authorIdentity = readBookAuthorIdentity(session?.book.authorIdentity, book.author, session?.sourceVersion) ??
+      readBookAuthorIdentity(seed?.authorIdentity, book.author, seed?.sourceVersion) ??
+      readBookAuthorIdentity(book.authorIdentity, book.author, book.sourceVersion);
+    const sourceVersion = authorIdentity?.sourceVersion ?? session?.sourceVersion ?? seed?.sourceVersion ?? book.sourceVersion;
     if (this.detailToc.length === 0) {
-      return { sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
+      return { contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text', sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity, sourceVersion,
         currentChapterIndex: 0, currentChapterTitle: '' };
     }
     let anchor = this.detailToc[this.detailToc.length - 1];
@@ -4809,11 +5867,12 @@ struct Index {
       }
     }
     return {
+      contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text',
       sourceId: book.sourceId,
       bookId: book.bookId,
       bookName: book.title,
       author: book.author,
-      authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
+      authorIdentity, sourceVersion,
       currentChapterIndex: anchor.index,
       currentChapterTitle: anchor.title,
     };
@@ -4821,149 +5880,376 @@ struct Index {
 
   private knownSearchSourceCandidates(query: SourceSwitchProbeQuery): SourceSwitchCandidate[] {
     if (this.detailReturnRoute !== 'search') return [];
-    return this.searchDetailCandidates.map((book: SearchBook): SourceSwitchCandidate => {
+    return this.searchDetailCandidates.filter((book: SearchBook): boolean =>
+      (book.category === 'comic') === (query.contentKind === 'manga')).map((book: SearchBook): SourceSwitchCandidate => {
       const rank = searchCandidateRank(book);
+      const timing = readBookSearchTiming(book.acquisition, book.sourceRuleVersion);
       return { sourceId: book.sourceId, sourceName: book.sourceName, sourceVersion: book.sourceRuleVersion,
         searchVariables: book.variables, authorIdentity: book.authorIdentity,
         bookUrl: book.bookId, bookName: book.title, author: book.author, coverUrl: book.coverUrl,
         latestChapterTitle: book.latestChapterTitle, category: book.category,
+        latencyMs: timing?.latencyMs, latencyKind: timing?.latencyKind, latencyMeasuredAt: timing?.latencyMeasuredAt,
         acquisitionState: rank === 0 ? 'readable' : rank === 1 ? 'catalogReady' : rank === 3 ? 'failed' : 'discovered',
         isCurrent: query.sourceId === book.sourceId && query.bookId === book.bookId };
     });
   }
 
-  private onPickSource(candidate: SourceSwitchCandidate): void {
-    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined) {
-      return;
-    }
-    let book = this.detailBook;
-    if (sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) ===
-      sourceSwitchCandidateKey(book.sourceId, book.bookId)) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchState = { kind: 'switching', targetSourceId: candidate.sourceId };
-    const gateway = this.getSourceSwitchGateway();
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
-    this.sourceSwitchFailureMessage = '';
-    this.failedSourceSwitchCandidate = undefined;
-    let targetSession: RemoteReadingSession | undefined = undefined;
-    let restoredBook: ShelfBook | undefined = undefined;
-    let commitStarted = false;
-    if (!this.detailInBookshelf) {
-      void this.switchPreviewSource(candidate, isCurrent).catch((error: Error): void => {
-        if (isCurrent()) this.presentSourceSwitchAcquisitionFailure(book, candidate, error.message);
-      });
-      return;
-    }
-    this.preparePendingSourceSwitchForNextChoice(book, generation)
-      .then((restored: ShelfBook | undefined): Promise<SourceSwitchTargetToc> => {
-        if (!isCurrent()) throw new Error('source switch aborted');
-        restoredBook = restored;
-        if (restored !== undefined) book = this.readingDetailForShelf(restored);
-        return gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, isCurrent, candidate);
-      })
-      .then(async (toc: SourceSwitchTargetToc): Promise<SourceSwitchCommitOutcome> => {
-        if (!isCurrent()) {
-          return Promise.reject(new Error('source switch aborted'));
+  private async switchMangaSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean,
+    capturedQuery?: SourceSwitchProbeQuery): Promise<void> {
+    const original = this.detailBook;
+    if (original === undefined) return;
+    const originRoute = this.route;
+    const current = (): boolean => isCurrent() && this.route === originRoute &&
+      this.detailBook?.sourceId === original.sourceId && this.detailBook?.bookId === original.bookId;
+    let previous = this.remoteReadingSession?.identity.sourceId === original.sourceId &&
+      this.remoteReadingSession?.identity.bookId === original.bookId ? this.remoteReadingSession : undefined;
+    const owner = ReaderRuntimeOwner.current();
+    const registryRevision = owner.bookAcquisitions?.().sourceRegistryRevision?.();
+    let observedToken: MangaProgressToken | undefined = undefined;
+    let assertQualified: () => void = (): void => {};
+    try {
+      if (candidate.category !== 'comic') throw new Error('漫画只能切换至漫画书源');
+      const rawQuery = capturedQuery ?? this.sourceSwitchProbeQuery();
+      const sourceGateway = this.getSourceSwitchGateway();
+      // Qualification belongs to this click, including cold Core-only proof.
+      // Keep the same resolved query after retiring the discovery overlay.
+      const query = await sourceGateway.resolveProbeQueryIdentity(rawQuery, current, candidate);
+      if (!current()) return;
+      assertQualified = (): void => {
+        if (registryRevision !== owner.bookAcquisitions?.().sourceRegistryRevision?.()) {
+          throw new Error('书源配置已变更，请重新查找书源');
         }
-        targetSession = toc.readingSession;
-        let anchor: SourceSwitchAnchor;
-        try {
-          const progress = await new RemoteReadingFlowGateway(ReaderRuntimeOwner.current()).loadProgress(
-            { sourceId: book.sourceId, bookId: book.bookId }, isCurrent);
-          if (!isCurrent()) throw new Error('source switch aborted');
-          anchor = this.resolveSourceSwitchAnchor(progress, restoredBook);
-        } catch (error) {
-          if (!isCurrent() || remoteReadingFailureKindOf(error) !== 'POSITION_CONTEXT_STALE') throw error as Error;
-          // Switching needs the durable chapter, not an old body's processing
-          // seal or scalar offset. Core's shelf projection exposes that chapter
-          // even when settings made the old precise anchor unavailable.
-          const canonical = await new ReaderCoreGateway(ReaderRuntimeOwner.current())
-            .loadShelfBook(book.sourceId, book.bookId);
-          if (!isCurrent()) throw new Error('source switch aborted');
-          if (canonical?.sourceId !== book.sourceId || canonical.bookId !== book.bookId ||
-            canonical.currentChapterIndex === undefined || !Number.isSafeInteger(canonical.currentChapterIndex) ||
-            canonical.currentChapterIndex < 0) throw error as Error;
-          const entry = this.detailToc.find((item: LocalReadingTocEntry): boolean =>
-            item.index === canonical.currentChapterIndex);
-          // A shelf title can lag its durable chapter. Without an admitted TOC
-          // title, pass empty text so Core's existing index matcher owns fallback.
-          anchor = new SourceSwitchAnchor(canonical.currentChapterIndex, entry?.title ?? '');
+        if (query.sourceId !== original.sourceId || query.bookId !== original.bookId ||
+          query.bookName !== rawQuery.bookName || query.author !== rawQuery.author ||
+          this.detailBook?.title !== rawQuery.bookName || this.detailBook?.author !== rawQuery.author ||
+          !sourceGateway.admitsCandidate(candidate, query)) {
+          throw new Error('书籍身份已变更，请重新查找书源');
         }
-        const params = buildSourceSwitchCommitParams(
-          { sourceId: book.sourceId, bookId: book.bookId },
-          candidate,
-          toc,
-          anchor.chapterTitle,
-          anchor.chapterIndex,
-          Math.floor(Date.now() / 1000),
-        );
-        commitStarted = true;
-        return gateway.commitSwitch(params, isCurrent);
-      })
-      .then((outcome: SourceSwitchCommitOutcome): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        if (outcome.status === 'success') {
-          this.pendingSourceSwitch = new PendingSourceSwitchTransaction(
-            book.sourceId,
-            book.bookId,
-            outcome.book.sourceId,
-            outcome.book.bookId,
-            outcome.matchedChapter.order,
-            outcome.transactionId,
-          );
-          this.sourceSwitchState = { kind: 'success' };
-          this.performSourceSwitchSeam(outcome.book, targetSession, outcome.matchedChapter.order);
-          return;
-        }
-        if (outcome.transactionId !== undefined) {
-          this.sourceSwitchState = {
-            kind: 'failure',
-            message: outcome.error,
-            transactionId: outcome.transactionId,
-          };
-          return;
-        }
-        void this.reconcileUnknownSourceSwitchCommit(book, candidate, outcome.error, generation);
-      })
-      .catch((error: Error): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: source switch failed: %{private}s', error.message);
-        if (commitStarted) {
-          void this.reconcileUnknownSourceSwitchCommit(book, candidate, error.message, generation);
+      };
+      const qualifiedCurrent = (): boolean => {
+        if (!current()) return false;
+        try { assertQualified(); return true; } catch (_) { return false; }
+      };
+      assertQualified();
+      if (!this.detailInBookshelf && !this.readingSessionActive) {
+        const host = this.getSourceSwitchHost();
+        if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+        const target = await host.prepareMangaPreview(candidate, qualifiedCurrent, query);
+        if (!current()) return;
+        assertQualified();
+        const first = target.entries.find(row => row.navigable !== false && row.url.trim().length > 0);
+        if (first === undefined) throw new Error('漫画目标目录没有可读章节');
+        this.performMangaPreviewSourceSwitch(candidate, target, first.index);
+        return;
+      }
+      if (previous === undefined) {
+        previous = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession({ contentKind: 'manga',
+          sourceId: original.sourceId, bookId: original.bookId, detailUrl: original.bookId,
+          title: original.title, author: original.author, authorIdentity: query.authorIdentity,
+          sourceVersion: query.sourceVersion, coverUrl: original.coverUrl, intro: original.intro }, qualifiedCurrent);
+        if (!current()) return;
+        assertQualified();
+      }
+      if (previous.contentKind !== 'manga' || previous.identity.sourceId !== original.sourceId ||
+        previous.identity.bookId !== original.bookId) throw new Error('当前漫画目录尚未就绪，请打开章节后重试');
+      const saved = await new MangaSessionGateway(owner).progress(original.sourceId, original.bookId, qualifiedCurrent);
+      if (!current()) return;
+      assertQualified();
+      observedToken = saved.token;
+      const entry = previous.entries.find(row => row.url === saved.location?.chapter.chapterId);
+      if (entry === undefined) throw new Error('当前漫画阅读位置尚未保存，请先打开对应章节后重试');
+      const toc = await sourceGateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, qualifiedCurrent, candidate);
+      if (!current()) return;
+      assertQualified();
+      const target = toc.readingSession;
+      sourceGateway.assertAcquiredBook(candidate, target, query);
+      const gateway = new MangaSourceSwitchGateway(owner);
+      const proposal = await gateway.prepare(original.sourceId, original.bookId, target, entry.title, entry.index, qualifiedCurrent);
+      if (!current()) return;
+      assertQualified();
+      if (proposal.expectedFrom.epoch !== saved.token.epoch || proposal.expectedFrom.revision !== saved.token.revision) {
+        throw new Error('阅读位置已变化，请重新选择书源');
+      }
+      await this.commitMangaSourceSwitch(original, candidate, target, proposal, current, undefined, assertQualified);
+    } catch (error) {
+      if (!current()) return;
+      if (registryRevision !== owner.bookAcquisitions?.().sourceRegistryRevision?.()) {
+        this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, '书源配置已变更，请重新查找书源');
+        return;
+      }
+      if (error instanceof MangaSwitchChapterSelectionRequired) {
+        if (observedToken?.epoch !== error.expectedFrom.epoch ||
+          observedToken?.revision !== error.expectedFrom.revision) {
+          this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, '阅读位置已变化，请重新选择书源');
         } else {
-          this.presentSourceSwitchAcquisitionFailure(book, candidate, error.message);
+          this.presentMangaSourceSwitchSelection(original, candidate, error, current, assertQualified);
         }
-      });
+        return;
+      }
+      this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, this.mangaSourceSwitchFailureMessage(error));
+    }
   }
 
-  private async switchPreviewSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<void> {
+  private presentMangaSourceSwitchSelection(original: ReadingBookDetail, candidate: SourceSwitchCandidate,
+    selection: MangaSwitchChapterSelectionRequired, current: () => boolean, assertQualified: () => void): void {
+    if (!current()) return;
+    const target = selection.targetSession;
+    if (selection.fromSourceId !== original.sourceId || selection.fromBookId !== original.bookId ||
+      this.detailBook?.sourceId !== original.sourceId || this.detailBook?.bookId !== original.bookId ||
+      target.contentKind !== 'manga' || target.identity.sourceId !== candidate.sourceId ||
+      target.identity.bookId !== candidate.bookUrl) {
+      this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, '漫画目标目录已变化，请重新选择书源');
+      return;
+    }
+    // The target's Core-derived readability and volume levels remain separate
+    // from the original detail TOC, current chapter and active reading session.
+    this.mangaSourceSwitchSelection = {
+      original, candidate, target, expectedFrom: {
+        epoch: selection.expectedFrom.epoch, revision: selection.expectedFrom.revision,
+      },
+      entries: target.entries.map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => ({
+        index: entry.index, title: entry.title, level: entry.level,
+        navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown',
+      })),
+      current, assertQualified, commitStarted: false,
+    };
+    this.mangaSourceSwitchSelectionBusy = false;
+    this.mangaSourceSwitchSelectionVisible = true;
+  }
+
+  private mangaSourceSwitchFailureMessage(error: Object): string {
+    const message = errorMessageOf(error);
+    switch (message) {
+      case 'MANGA_SWITCH_PROGRESS_CHANGED':
+        return '阅读位置已变化，请重新选择书源';
+      case 'MANGA_SWITCH_SELECTED_CHAPTER_INVALID':
+        return '目标章节不可用，请重新选择章节';
+      case 'MANGA_SWITCH_SOURCE_CHANGED':
+        return '目标书源已更新，请重新选择书源';
+      case 'MANGA_SWITCH_CATALOG_CHANGED':
+        return '目标目录已更新，请重新选择章节';
+      case 'MANGA_SWITCH_RECEIPT_INVALID':
+        return '换源结果需要重新读取，请重试';
+      case 'MANGA_SWITCH_LANDING_INVALID':
+        return '目标阅读位置不可用，请重新选择章节';
+      case 'MANGA_SWITCH_INVALID':
+        return '请选择漫画书源';
+      default:
+        return message.startsWith('MANGA_') ? '漫画换源失败，请重试' : message;
+    }
+  }
+
+  private isMangaSourceSwitchSelectionCurrent(selection: MangaSourceSwitchSelection): boolean {
+    return this.mangaSourceSwitchSelectionVisible && this.mangaSourceSwitchSelection === selection &&
+      selection.current() && this.detailBook?.sourceId === selection.original.sourceId &&
+      this.detailBook?.bookId === selection.original.bookId;
+  }
+
+  private mangaSourceSwitchDirectorySelection(selection: MangaSourceSwitchSelection):
+    (chapterIndex: number, chapterOffsetScalar?: number, positionScope?: RemoteReadingPositionScope,
+      directoryTargetProof?: JsonObject) => void {
+    // Bind to this exact target catalog owner, including legacy flat rows. A
+    // late event from an old directory cannot select a new target's same index.
+    return (chapterIndex: number, _chapterOffsetScalar?: number, _positionScope?: RemoteReadingPositionScope,
+      directoryTargetProof?: JsonObject): void => {
+      if (!this.isMangaSourceSwitchSelectionCurrent(selection)) return;
+      // A source change always starts at the chosen chapter's first image.
+      void this.selectMangaSourceSwitchChapter(chapterIndex, directoryTargetProof);
+    };
+  }
+
+  private mangaSourceSwitchDirectoryBack(selection: MangaSourceSwitchSelection): () => void {
+    return (): void => {
+      if (this.mangaSourceSwitchSelection === selection) this.cancelMangaSourceSwitchSelection();
+    };
+  }
+
+  private clearMangaSourceSwitchSelection(): void {
+    this.mangaSourceSwitchSelectionVisible = false;
+    this.mangaSourceSwitchSelectionBusy = false;
+    this.mangaSourceSwitchSelection = undefined;
+  }
+
+  private cancelMangaSourceSwitchSelection(): void {
+    const selection = this.mangaSourceSwitchSelection;
+    if (selection === undefined || selection.commitStarted) return;
+    const current = selection.current();
+    this.clearMangaSourceSwitchSelection();
+    // Cancel only this catalog choice, keeping the source picker and the
+    // original reading context. A late first-image load no longer owns it.
+    if (current) this.sourceSwitchState = { kind: 'candidates', candidates: [selection.candidate] };
+  }
+
+  private async selectMangaSourceSwitchChapter(chapterIndex: number, directoryTargetProof?: JsonObject): Promise<void> {
+    const selection = this.mangaSourceSwitchSelection;
+    if (selection === undefined || this.mangaSourceSwitchSelectionBusy ||
+      !this.isMangaSourceSwitchSelectionCurrent(selection)) return;
+    this.mangaSourceSwitchSelectionBusy = true;
+    const current = (): boolean => this.isMangaSourceSwitchSelectionCurrent(selection);
+    const qualifiedCurrent = (): boolean => {
+      if (!current()) return false;
+      try { selection.assertQualified(); return true; } catch (_) { return false; }
+    };
+    try {
+      selection.assertQualified();
+      const gateway = new MangaSourceSwitchGateway(ReaderRuntimeOwner.current());
+      const proposal = await gateway.prepareSelected(selection.original.sourceId, selection.original.bookId,
+        selection.target, chapterIndex, qualifiedCurrent, selection.expectedFrom, directoryTargetProof);
+      if (!current()) return;
+      selection.assertQualified();
+      await this.commitMangaSourceSwitch(selection.original, selection.candidate, selection.target,
+        proposal, current, selection);
+    } catch (error) {
+      if (current()) {
+        let failure: Object = error;
+        try { selection.assertQualified(); } catch (qualifiedError) { failure = qualifiedError; }
+        this.presentMangaSourceSwitchAcquisitionFailure(selection.original,
+          selection.candidate, this.mangaSourceSwitchFailureMessage(failure));
+      }
+    } finally {
+      if (this.mangaSourceSwitchSelection === selection) {
+        this.mangaSourceSwitchSelectionBusy = false;
+        if (!selection.current()) this.clearMangaSourceSwitchSelection();
+      }
+    }
+  }
+
+  private async commitMangaSourceSwitch(original: ReadingBookDetail, candidate: SourceSwitchCandidate,
+    target: RemoteReadingSession, proposal: MangaSwitchProposal, current: () => boolean,
+    selection?: MangaSourceSwitchSelection, assertQualified?: () => void): Promise<void> {
+    if (!current()) return;
+    const qualify = selection?.assertQualified ?? assertQualified;
+    qualify?.();
+    const qualifiedCurrent = (): boolean => {
+      if (!current()) return false;
+      try { qualify?.(); return true; } catch (_) { return false; }
+    };
+    if (!this.detailInBookshelf) {
+      // Preparation already validated the explicitly selected first image.
+      // Transfer a one-entry chapter-start intent. Progress is saved only by
+      // the reader after actual visibility, never speculatively in this switch.
+      this.performMangaPreviewSourceSwitch(candidate, target, proposal.firstImage.chapterIndex);
+      return;
+    }
+    const host = this.getSourceSwitchHost();
+    if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+    const chapterIndex = proposal.firstImage.chapterIndex;
+    if (host.hasUnconfirmedMangaWrite(original)) {
+      this.presentMangaSourceSwitchCommitRecovery(original, candidate, host, false);
+      return;
+    }
+    // Candidate or explicit target chapter selection supplies the intent. Core
+    // verifies first-image evidence and both progress CAS tokens atomically.
+    if (selection !== undefined) selection.commitStarted = true;
+    const commitGeneration = this.navigationGeneration;
+    this.mangaSourceSwitchCommitGeneration = commitGeneration;
+    let confirmed = false;
+    try {
+      await new MangaSourceSwitchGateway(ReaderRuntimeOwner.current()).commitPrepared(proposal, qualifiedCurrent);
+      confirmed = true;
+      this.refreshBookshelf();
+      if (!current()) return;
+      const committed = await host.readMangaShelf(candidate.sourceId, candidate.bookUrl, current);
+      if (!current()) return;
+      if (committed?.contentKind !== 'manga') throw new Error('漫画换源已提交，书架状态需要重新读取');
+      this.performSourceSwitchSeam(committed, target, chapterIndex);
+    } catch (error) {
+      if (!confirmed && host.mangaWriteWasNotDispatched(error)) {
+        let failure: Object = error;
+        try { qualify?.(); } catch (qualifiedError) { failure = qualifiedError; }
+        if (current()) this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, this.mangaSourceSwitchFailureMessage(failure));
+        return;
+      }
+      // A strict ACK is the only success proof. A missing/invalid ACK must
+      // survive page teardown and may not be promoted by shelf membership.
+      if (!confirmed) host.retainUnconfirmedMangaWrite(original);
+      this.refreshBookshelf();
+      if (current()) this.presentMangaSourceSwitchCommitRecovery(original, candidate, host, confirmed);
+    } finally {
+      if (this.mangaSourceSwitchCommitGeneration === commitGeneration) {
+        this.mangaSourceSwitchCommitGeneration = -1;
+      }
+    }
+  }
+
+  private presentMangaSourceSwitchCommitRecovery(original: ReadingBookDetail, candidate: SourceSwitchCandidate,
+    host: SourceSwitchHost, confirmed: boolean): void {
+    this.clearMangaSourceSwitchSelection();
+    host.retire(); this.sourceSwitchVisible = false; this.sourceSwitchState = { kind: 'discovering' };
+    this.failedSourceSwitchCandidate = undefined; this.failedSourceSwitchIdentity = ''; this.sourceSwitchFailureMessage = '';
+    const navigation = this.navigationGeneration;
+    const current = (): boolean => navigation === this.navigationGeneration && this.sourceSwitchHost === host &&
+      this.detailBook?.sourceId === original.sourceId && this.detailBook?.bookId === original.bookId;
+    if (confirmed) {
+      // The strict ACK already settled the write. The ordinary bookshelf
+      // entry reads its current progress; no stale proposal is replayed.
+      try { this.transientFeedback.show(() => this.getUIContext(), {
+        message: '换源已保存，书架信息读取失败，请从书架重新打开。', duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && current())); } catch (_) {}
+      return;
+    }
+    const message = '换源结果尚未确认，当前版本无法核对原操作。可刷新书架查看当前书籍，或返回退出；请勿重复换源。';
+    const refresh = (): void => {
+      if (!current()) return;
+      this.refreshBookshelf();
+      // This is a list refresh, never confirmation of the original write.
+      this.showIndexRecoveryNotice(message, '刷新书架', refresh, current);
+    };
+    this.showIndexRecoveryNotice(message, '刷新书架', refresh, current);
+  }
+
+  private performMangaPreviewSourceSwitch(candidate: SourceSwitchCandidate,
+    session: RemoteReadingSession, chapterIndex: number): void {
     const detailReturnRoute = this.detailReturnRoute;
-    const owner = ReaderRuntimeOwner.current();
-    const seed: RemoteReadingBookSeed = { sourceId: candidate.sourceId, bookId: candidate.bookUrl,
-      detailUrl: candidate.bookUrl, title: candidate.bookName, author: candidate.author ?? '',
-      sourceVersion: candidate.sourceVersion, authorIdentity: candidate.authorIdentity,
-      coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
-    const session = await owner.bookAcquisitions().acquireBook(seed, { isCurrent });
-    if (!isCurrent()) return;
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
+    const context = this.captureReaderReturnContext();
+    const seed: RemoteReadingBookSeed = { contentKind: 'manga', sourceId: session.identity.sourceId,
+      bookId: session.identity.bookId, detailUrl: session.detailUrl, title: session.book.title,
+      author: session.book.author, coverUrl: session.book.coverUrl, intro: session.book.intro,
+      lastChapter: session.book.lastChapter, sourceVersion: session.sourceVersion,
+      searchVariables: session.continuationVariables };
+    this.clearMangaSourceSwitchSelection();
+    this.sourceSwitchHost?.retire();
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
+    this.failedSourceSwitchCandidate = undefined;
     this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId,
       undefined, true, [], [], detailReturnRoute, session);
+    this.restoreReaderReturnContext(context);
+    this.requestedChapterIndex = chapterIndex;
+    this.mangaChapterRequestGeneration += 1;
+    this.mangaChapterStartRequestGeneration = this.mangaChapterRequestGeneration;
+    this.requestedMangaDirectoryTargetProof = undefined;
+    this.requestedBookmarkAnchor = undefined;
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: '已从本章开头继续' }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && this.detailBook?.sourceId === session.identity.sourceId && this.detailBook?.bookId === session.identity.bookId)); }
+    catch (_) { /* Feedback never owns a prepared trial switch. */ }
   }
 
-  private presentSourceSwitchAcquisitionFailure(book: ReadingBookDetail,
+  private canCancelMangaSourcePreparation(): boolean {
+    return this.sourceSwitchState.kind === 'switching' && this.detailBook?.contentKind === 'manga' &&
+      this.mangaSourceSwitchCommitGeneration !== this.navigationGeneration;
+  }
+
+  private getSourceSwitchGateway(): SourceSwitchGateway {
+    const host = this.getSourceSwitchHost();
+    if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+    return host.mangaPreparationGateway();
+  }
+
+  private presentMangaSourceSwitchAcquisitionFailure(book: ReadingBookDetail,
     candidate: SourceSwitchCandidate, message: string): void {
     if (this.detailBook?.sourceId !== book.sourceId || this.detailBook?.bookId !== book.bookId) return;
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
+    if (book.contentKind === 'manga' && !this.readingSessionActive) {
+      // An unread detail must remain a detail on failed or cancelled target
+      // preparation. Reuse the picker error/row action rather than starting
+      // the old reader merely to display a source-switch failure.
+      this.clearMangaSourceSwitchSelection();
+      this.sourceSwitchHost?.retire();
+      this.sourceSwitchState = { kind: 'candidates', candidates: [candidate], stopped: true, refreshError: message };
+      return;
+    }
+    this.mangaSourceSwitchSelectionVisible = false;
+    this.mangaSourceSwitchSelectionBusy = false;
+    this.mangaSourceSwitchSelection = undefined;
+    this.sourceSwitchHost?.retire();
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
     this.failedSourceSwitchCandidate = candidate;
@@ -4973,194 +6259,74 @@ struct Index {
     this.sourceSwitchFailureMessage = message;
   }
 
-  private retryFailedSourceSwitch(): void {
-    const book = this.detailBook;
-    const candidate = this.failedSourceSwitchCandidate;
-    if (book === undefined || candidate === undefined || this.sourceSwitchVisible ||
-      this.failedSourceSwitchIdentity !== `${book.sourceId}\u0000${book.bookId}`) return;
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'candidates', candidates: [candidate] };
-    this.onPickSource(candidate);
-  }
-
-  private dismissSourceSwitchFailure(): void {
-    this.sourceSwitchFailureMessage = '';
-    this.failedSourceSwitchCandidate = undefined;
-    this.failedSourceSwitchIdentity = '';
-  }
-
-  private async preparePendingSourceSwitchForNextChoice(book: ReadingBookDetail,
-    generation: number): Promise<ShelfBook | undefined> {
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation) &&
-      this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
-    const gateway = this.getSourceSwitchGateway();
-    let pending = this.pendingSourceSwitch;
-    if (pending?.targetSourceId !== book.sourceId || pending.targetBookId !== book.bookId) {
-      const records = await gateway.listPendingSwitches(isCurrent);
-      if (!isCurrent()) throw new Error('source switch aborted');
-      const matches = records.filter((record: PendingSourceSwitch): boolean =>
-        record.targetSourceId === book.sourceId && record.targetBookId === book.bookId);
-      if (matches.length > 1) throw new Error('当前书籍存在多个未完成的换源记录，请重试');
-      if (matches.length === 0) return undefined;
-      const record = matches[0];
-      pending = new PendingSourceSwitchTransaction(record.fromSourceId, record.fromBookId,
-        record.targetSourceId, record.targetBookId, -1, record.transactionId);
-      this.pendingSourceSwitch = pending;
-    }
-    const transaction = pending;
-    const ownsRollback = (): boolean => isCurrent() && this.pendingSourceSwitch === transaction;
-    let restored: ShelfBook;
-    try {
-      const outcome = await gateway.rollbackSwitch(transaction.transactionId, ownsRollback);
-      if (!ownsRollback()) throw new Error('source switch aborted');
-      restored = outcome.restoredBook;
-    } catch (error) {
-      if (!ownsRollback()) throw error as Error;
-      if (!(error instanceof ReaderCoreRequestError) ||
-        error.event.error.details?.['reason'] !== 'already_finalized' ||
-        error.event.error.details?.['transactionId'] !== transaction.transactionId) throw error as Error;
-      const records = await gateway.listPendingSwitches(ownsRollback);
-      if (!ownsRollback() || records.some((record: PendingSourceSwitch): boolean =>
-        record.transactionId === transaction.transactionId)) throw error;
-      const canonical = await new ReaderCoreGateway(ReaderRuntimeOwner.current())
-        .loadShelfBook(transaction.targetSourceId, transaction.targetBookId);
-      if (!ownsRollback() || canonical === undefined) throw error;
-      restored = canonical;
-    }
-    if (!ownsRollback()) throw new Error('source switch aborted');
-    this.pendingSourceSwitch = undefined;
-    // Reconcile the exact Core shelf identity inside the current reading route;
-    // never open a detail page or finalize an unmeasured target merely to switch.
-    this.detailBook = this.readingDetailForShelf(restored);
-    this.remoteReadingSeed = { sourceId: restored.sourceId, bookId: restored.bookId, detailUrl: restored.bookId,
-      title: restored.title, author: restored.author, coverUrl: restored.coverUrl, intro: restored.intro };
-    if (restored.sourceId !== book.sourceId || restored.bookId !== book.bookId) {
-      this.installRemoteReadingSession(undefined);
-      this.detailToc = [];
-      this.requestedChapterIndex = undefined;
-      this.requestedBookmarkAnchor = undefined;
-      this.readingExitRequest = undefined;
-    }
-    this.readingSessionActive = true;
-    this.preparedReaderRoute = 'reading';
-    this.route = 'reading';
-    this.refreshBookshelf();
-    return restored;
-  }
-
-  private async reconcileUnknownSourceSwitchCommit(
-    book: ReadingBookDetail,
-    candidate: SourceSwitchCandidate,
-    message: string,
-    generation: number,
-  ): Promise<void> {
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
-    const gateway = this.getSourceSwitchGateway();
-    try {
-      const pending = await gateway.listPendingSwitches(isCurrent);
-      if (!isCurrent()) {
-        return;
-      }
-      const matches = pending.filter((transaction: PendingSourceSwitch): boolean =>
-        transaction.fromSourceId === book.sourceId && transaction.fromBookId === book.bookId &&
-        transaction.targetSourceId === candidate.sourceId && transaction.targetBookId === candidate.bookUrl);
-      if (matches.length !== 1) {
-        this.sourceSwitchState = { kind: 'failure', message };
-        return;
-      }
-      const transaction = matches[0];
-      await gateway.rollbackSwitch(transaction.transactionId, isCurrent);
-      if (!isCurrent()) {
-        return;
-      }
-      this.refreshBookshelf();
-      this.sourceSwitchState = { kind: 'failure', message };
-    } catch (error) {
-      if (!isCurrent()) {
-        return;
-      }
-      const failure = errorMessageOf(error);
-      this.sourceSwitchState = { kind: 'failure', message: failure };
-    }
-  }
-
-  private resolveSourceSwitchAnchor(progress: RemoteReadingProgressState,
-    restoredBook?: ShelfBook): SourceSwitchAnchor {
-    if (restoredBook?.currentChapterTitle !== undefined && restoredBook.currentChapterIndex !== undefined &&
-      (progress.kind === 'missing' || progress.progress.chapterIndex === restoredBook.currentChapterIndex)) {
-      return new SourceSwitchAnchor(restoredBook.currentChapterIndex, restoredBook.currentChapterTitle);
-    }
-    if (this.detailToc.length === 0) {
-      const stored = this.shelfBooks.find((book: ShelfBook): boolean =>
-        book.sourceId === this.detailBook?.sourceId && book.bookId === this.detailBook?.bookId);
-      if (stored?.currentChapterTitle !== undefined && stored.currentChapterIndex !== undefined &&
-        (progress.kind === 'missing' || progress.progress.chapterIndex === stored.currentChapterIndex)) {
-        return new SourceSwitchAnchor(stored.currentChapterIndex, stored.currentChapterTitle);
-      }
-      if (progress.kind === 'restored' && Number.isSafeInteger(progress.progress.chapterIndex) &&
-        progress.progress.chapterIndex >= 0) return new SourceSwitchAnchor(progress.progress.chapterIndex, '');
-      throw new Error('当前目录不可用，且没有可核对的阅读位置，请先恢复目录');
-    }
-    const index = progress.kind === 'restored' ? progress.progress.chapterIndex : this.detailToc[0].index;
-    for (const entry of this.detailToc) {
-      if (entry.index === index) {
-        return new SourceSwitchAnchor(entry.index, entry.title);
-      }
-    }
-    if (progress.kind === 'restored' && Number.isSafeInteger(index) && index >= 0) return new SourceSwitchAnchor(index, '');
-    throw new Error('Core progress chapter is absent from the admitted current TOC');
-  }
-
-  private onRollbackSourceSwitch(): void {
-    if (this.sourceSwitchState.kind !== 'failure' || this.sourceSwitchState.transactionId === undefined) {
+  private onPickSource(candidate: SourceSwitchCandidate, scopeId?: number): void {
+    if (scopeId !== undefined && scopeId !== this.sourceSwitchScopeId) return;
+    const book = this.detailBook, owner = this.mountedRuntimeOwner;
+    if (book?.contentKind === 'manga') {
+      if (owner === undefined || !this.isCurrentRuntime(owner) || !this.sourceSwitchVisible ||
+        this.sourceSwitchState.kind !== 'candidates' || this.mangaSourceSwitchSelectionVisible ||
+        sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) === sourceSwitchCandidateKey(book.sourceId, book.bookId)) return;
+      const canonical = this.sourceSwitchState.candidates.find((value: SourceSwitchCandidate): boolean =>
+        sourceSwitchCandidateKey(value.sourceId, value.bookUrl) === sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) &&
+        value.sourceVersion === candidate.sourceVersion);
+      if (canonical === undefined) return;
+      candidate = canonical;
+      const query = this.sourceSwitchProbeQuery();
+      const generation = this.navigationGeneration, preparation = ++this.mangaSourceSwitchPreparationGeneration;
+      this.sourceSwitchHost?.retire();
+      this.sourceSwitchState = { kind: 'switching', targetSourceId: candidate.sourceId };
+      const current = (): boolean => this.sourceSwitchVisible && !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+        this.navigationGeneration === generation && this.mangaSourceSwitchPreparationGeneration === preparation &&
+        this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
+      void this.switchMangaSource(candidate, current, query);
       return;
     }
-    const transactionId = this.sourceSwitchState.transactionId;
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchState = { kind: 'switching', targetSourceId: '' };
-    const gateway = this.getSourceSwitchGateway();
-    gateway.rollbackSwitch(transactionId, (): boolean => this.isSourceSwitchActive(generation))
-      .then((result: SourceSwitchRollbackResult): void => {
-        if (!this.isSourceSwitchActive(generation)) {
-          return;
-        }
-        this.performSourceSwitchSeam(result.restoredBook);
-      })
-      .catch((error: Error): void => {
-        if (!this.isSourceSwitchActive(generation)) {
-          return;
-        }
-        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: rollback failed: %{private}s', error.message);
-        this.sourceSwitchState = { kind: 'failure', message: error.message, transactionId };
-      });
+    if (scopeId !== undefined) {
+      if (this.sourceSwitchVisible && this.sourceSwitchState.kind === 'candidates') {
+        const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
+        const admitted = this.sourceSwitchState.candidates.find((row: SourceSwitchCandidate): boolean =>
+          sourceSwitchCandidateKey(row.sourceId, row.bookUrl) === key);
+        if (admitted !== undefined) this.sourceSwitchNamedCandidate = admitted;
+      }
+      void this.sourceSwitchHost?.pick(candidate, scopeId);
+    }
   }
-
-  private closeSourceSwitch(): void {
-    if (!this.sourceSwitchVisible) {
+  private retryFailedSourceSwitch(scopeId?: number): void {
+    const book = this.detailBook, candidate = this.failedSourceSwitchCandidate;
+    if (book?.contentKind === 'manga' && candidate !== undefined && !this.sourceSwitchVisible &&
+      this.failedSourceSwitchIdentity === `${book.sourceId}\u0000${book.bookId}`) {
+      this.sourceSwitchVisible = true;
+      this.sourceSwitchState = { kind: 'candidates', candidates: [candidate] };
+      this.onPickSource(candidate, this.sourceSwitchScopeId);
+    } else if (scopeId !== undefined) this.sourceSwitchHost?.retryFailed(scopeId);
+  }
+  private dismissSourceSwitchFailure(scopeId?: number): void {
+    if (this.detailBook?.contentKind === 'manga') {
+      this.sourceSwitchFailureMessage = ''; this.failedSourceSwitchCandidate = undefined; this.failedSourceSwitchIdentity = '';
+    } else if (scopeId !== undefined) this.sourceSwitchHost?.dismissFailure(scopeId);
+  }
+  private onRollbackSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.rollback(scopeId); }
+  private closeSourceSwitch(scopeId?: number): void {
+    if (scopeId !== undefined && scopeId !== this.sourceSwitchScopeId) return;
+    if (this.detailBook?.contentKind === 'manga') {
+      if (this.mangaSourceSwitchSelectionVisible) { this.cancelMangaSourceSwitchSelection(); return; }
+      if (!this.sourceSwitchVisible || (this.sourceSwitchState.kind === 'switching' && !this.canCancelMangaSourcePreparation())) return;
+      this.mangaSourceSwitchPreparationGeneration += 1;
+      this.sourceSwitchHost?.retire();
+      this.sourceSwitchVisible = false;
+      this.sourceSwitchState = { kind: 'discovering' };
+      this.consumeSystemFileOpen();
       return;
     }
-    if (this.sourceSwitchState.kind === 'switching' ||
-      (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined)) {
-      // Closing after Core has entered the durable commit, or while its opaque
-      // transaction still needs rollback, could strand a pending shelf move.
-      return;
-    }
-    this.nextNavigationGeneration();
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
-    this.sourceSwitchVisible = false;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.consumeSystemFileOpen();
+    if (scopeId !== undefined) this.sourceSwitchHost?.close(scopeId);
   }
 
   private performSourceSwitchSeam(book: ShelfBook, session?: RemoteReadingSession,
     chapterIndex?: number): void {
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
+    this.invalidateDownloadMembershipForBook(book);
+    this.retireSourceSwitchPresentation();
+    this.clearMangaSourceSwitchSelection();
     this.sourceSwitchVisible = false;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.sourceSwitchFailureMessage = '';
-    this.failedSourceSwitchCandidate = undefined;
     if (session === undefined || session.identity.sourceId !== book.sourceId ||
       session.identity.bookId !== book.bookId) {
       this.reopenSwitchedBook(book);
@@ -5169,12 +6335,13 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.detailBook = this.readingDetailForShelf(book);
-    this.remoteReadingSeed = { sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
+    this.remoteReadingSeed = { contentKind: session.contentKind, sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
       title: book.title, author: book.author, coverUrl: book.coverUrl, intro: book.intro,
       lastChapter: book.lastChapter, sourceVersion: session.sourceVersion };
-    this.readingSessionActive = true;
+    this.readingContentKind = session.contentKind === 'manga' ? 'manga' : 'text';
+    this.readingSessionActive = true; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId);
     const committedSession: RemoteReadingSession = {
-      sourceVersion: session.sourceVersion, catalogAt: session.catalogAt,
+      contentKind: session.contentKind, sourceVersion: session.sourceVersion, catalogAt: session.catalogAt,
       catalogVersion: session.catalogVersion, contextVersion: session.contextVersion,
       preparedChapter: session.preparedChapter, acquisitionMode: session.acquisitionMode,
       identity: session.identity, detailUrl: session.detailUrl, tocUrl: session.tocUrl,
@@ -5185,14 +6352,21 @@ struct Index {
       hostRequirements: session.hostRequirements, requiresContextRefresh: session.requiresContextRefresh,
       refreshRecommended: session.refreshRecommended,
     };
+    // The old source's displayed index cannot trigger near-end work for this
+    // new catalog. Its own chapter/commit callbacks establish the next owner.
+    this.directoryCurrentChapterIndex = -1;
+    this.directoryChapterTitle = '';
     this.onRemoteSessionReady(committedSession);
     this.detailInBookshelf = true;
     this.requestedChapterIndex = chapterIndex;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.requestedBookmarkAnchor = undefined;
-    this.directoryCurrentChapterIndex = -1;
-    this.directoryChapterTitle = '';
     this.preparedReaderRoute = 'reading';
     this.route = 'reading';
+    if (session.contentKind === 'manga') {
+      try { this.transientFeedback.show(() => this.getUIContext(), { message: '已从本章开头继续' }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && this.readingSessionActive)); }
+      catch (_) { /* Feedback never owns an already committed source switch. */ }
+    }
   }
 
   private onReadingFailure(sourceId: string, bookId: string, message: string,
@@ -5202,201 +6376,94 @@ struct Index {
     // The mounted reader owns its typed error, settings and retry actions.
     // Body failure never compensates a committed source switch or exits.
     this.detailLoadingMessage = message;
+    this.detailCatalogBusy = false;
     hilog.warn(DOMAIN, 'Reader', 'Reading error retained in reader: %{private}s %{private}s',
       failureKind ?? 'RENDER_FAILED', message);
   }
 
-  private onRemoteSessionReady(session: RemoteReadingSession): void {
+  private onRemoteSessionReady(session: RemoteReadingSession, refreshDirectoryDisplay: boolean = false): void {
     const book = this.detailBook;
     if (!this.readingSessionActive || book === undefined ||
       book.sourceId !== session.identity.sourceId || book.bookId !== session.identity.bookId) return;
-    this.installRemoteReadingSession(session);
-    this.detailBook = { sourceId: session.identity.sourceId, bookId: session.identity.bookId,
-      sourceName: book.sourceName, title: session.book.title, author: session.book.author,
-      kind: session.book.kind, coverUrl: session.book.coverUrl, intro: session.book.intro,
-      lastChapter: session.book.lastChapter };
-    this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-      title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
-    this.detailLoadingMessage = '';
-    const generation = this.navigationGeneration;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.readingSessionActive && generation === this.navigationGeneration &&
-      this.detailBook?.sourceId === session.identity.sourceId && this.detailBook?.bookId === session.identity.bookId &&
-      sameRemoteSessionEvidence(this.remoteReadingSession, session);
-    this.pendingRemoteDirectoryProjection = (): void => {
-      if (!current()) return;
-      const bookmarks = this.directoryBookmarkMutationGeneration;
-      const offline = this.offlineMutationGeneration;
-      void this.loadRemoteDirectoryProjection(new ReadingOfflineGateway(owner), owner, session, current)
-        .then((entries: LocalReadingTocEntry[]): void => {
-          if (!current() || offline !== this.offlineMutationGeneration) return;
-          this.detailToc = bookmarks === this.directoryBookmarkMutationGeneration &&
-            this.directoryBookmarkMutationActiveKey.length === 0 ? entries : this.mergeDirectoryBookmarks(entries, this.detailToc);
-        }).catch((error: Error): void => {
-          if (current()) hilog.warn(DOMAIN, 'Reader', 'Reader directory projection failed: %{private}s', error.message);
-        });
-    };
-  }
-
-  /** All semantic session replacement passes this boundary. */
-  private installRemoteReadingSession(session: RemoteReadingSession | undefined,
-    readableProjectionRevision?: number, readableProjection?: JsonObject): void {
-    const previous = this.remoteReadingSession;
-    const same = sameRemoteSessionEvidence(previous, session);
-    if (!same) {
-      this.remoteSessionGeneration += 1;
-      this.remoteContentProbeGeneration += 1;
-    }
-    if (session === undefined) {
-      this.remoteReadingSession = undefined;
-      this.remoteReadabilityProjectionRevision = -1;
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    if (host.snapshot().scopeId !== this.readingEntryScopeId) this.bindReadingEntryReader();
+    if (refreshDirectoryDisplay) {
+      // A Quick-open intent comes from ArkUI's copied @Prop. Refresh the
+      // already owned session without reinstalling that DTO or invalidating
+      // the same in-flight full/reader directory projection.
+      void host.refreshMangaDirectoryDisplay(true, false);
       return;
     }
-    const revision = ReaderRuntimeOwner.current().bookAcquisitions().readingProjectionRevision();
-    const prepared = session.preparedChapter ?? (same ? previous?.preparedChapter : undefined);
-    const valid = preparedRemoteChapterMatches(prepared, session, undefined, revision);
-    if (prepared !== session.preparedChapter || (!valid && session.preparedChapter !== undefined)) {
-      const installed = copyRemoteReadingSession(session);
-      installed.preparedChapter = valid ? prepared : undefined;
-      this.remoteReadingSession = installed;
-    } else {
-      this.remoteReadingSession = session;
-    }
-    const facts = readableProjection?.['acquisition'] as JsonObject | undefined;
-    // Only a stable Core projection for this exact canonical session can
-    // preserve the gate. It supplies no reusable materialized chapter.
-    const confirmed = readableProjectionRevision === revision && facts?.['schemaVersion'] === 2 &&
-      facts['verificationCurrent'] === true && facts['stale'] !== true &&
-      readableProjection?.['origin'] === session.identity.sourceId &&
-      readableProjection?.['bookUrl'] === session.identity.bookId &&
-      session.sourceVersion !== undefined && session.catalogVersion !== undefined && session.contextVersion !== undefined &&
-      facts['sourceVersion'] === session.sourceVersion && facts['catalogVersion'] === session.catalogVersion &&
-      facts['contextVersion'] === session.contextVersion && session.requiresContextRefresh !== true;
-    if (valid || confirmed) {
-      this.remoteReadabilityProjectionRevision = revision;
-      this.remoteContentVerdict = 'readable';
-    } else if (!same || previous?.preparedChapter !== undefined ||
-      (this.remoteReadabilityProjectionRevision >= 0 && this.remoteReadabilityProjectionRevision !== revision)) {
-      this.remoteContentVerdict = 'verifying';
-    }
+    if (!host.readerSessionReady(session, refreshDirectoryDisplay)) return;
+    if (this.directoryCurrentChapterIndex >= 0 && this.isRemoteCatalogNearEnd(session, this.directoryCurrentChapterIndex))
+      this.refreshRemoteCatalogNearEnd(session);
+    const projectDirectory = host.deferredDirectoryProjection();
+    if (this.readingPresentedScopeId === this.readingEntryScopeId) {
+      this.pendingRemoteDirectoryProjection = undefined;
+      projectDirectory?.();
+    } else this.pendingRemoteDirectoryProjection = projectDirectory;
   }
 
-  /**
-   * Reuse the admitted session to probe the leading chapter bodies (no second
-   * openSession). The verdict only gates the "start reading" action: the
-   * detail stays browsable and a failed probe never clears the admitted
-   * detailBook, matching the retain-the-admitted-cache contract.
-   */
+  private installRemoteReadingSession(session: RemoteReadingSession | undefined,
+    readableProjectionRevision?: number, readableProjection?: BookAcquisitionDetailProjection): void {
+    if (this.detailBook === undefined) {
+      // A retained route DTO is optional input for a later owner admission.
+      // It is not revalidated or declared readable when leaving the page.
+      this.remoteReadingSession = session;
+      return;
+    }
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    const admitted = host.snapshot();
+    if (admitted.scopeId !== this.readingEntryScopeId || admitted.book?.sourceId !== this.detailBook.sourceId ||
+      admitted.book?.bookId !== this.detailBook.bookId) this.bindReadingEntryReader();
+    host.acceptSession(session, readableProjectionRevision, readableProjection);
+  }
+
   private async probeRemoteContentVerdict(
-    gateway: RemoteReadingFlowGateway,
+    _gateway: RemoteReadingFlowGateway,
     session: RemoteReadingSession,
     isCurrent: () => boolean,
     preferredChapterIndex?: number,
     positionContext?: RemoteReadingPositionContext,
   ): Promise<number | undefined> {
-    positionContext = captureRemotePositionContext(positionContext);
-    if (!isCurrent() || !sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
-      return undefined;
-    }
-    const generation = ++this.remoteContentProbeGeneration;
-    const coordinator = ReaderRuntimeOwner.current().bookAcquisitions();
-    const projectionRevision = coordinator.readingProjectionRevision();
-    const ownerCurrent = (): boolean => isCurrent() && generation === this.remoteContentProbeGeneration &&
-      sameRemoteSessionEvidence(this.remoteReadingSession, session);
-    const probeCurrent = (): boolean => ownerCurrent() && projectionRevision === coordinator.readingProjectionRevision();
-    const prepared = this.remoteReadingSession?.preparedChapter;
-    if (preparedRemoteChapterMatches(prepared, session, preferredChapterIndex, projectionRevision) &&
-      preparedRemoteChapterPositionMatches(prepared, positionContext)) {
-      this.remoteContentVerdict = 'readable';
-      return prepared?.chapter.chapterIndex;
-    }
-    this.remoteContentVerdict = 'verifying';
-    const readableEntries = session.entries.filter((entry): boolean => entry.url.trim().length > 0);
-    let start = 0;
-    let limit = Math.min(3, readableEntries.length);
-    if (preferredChapterIndex !== undefined) {
-      const preferredPosition = readableEntries.findIndex((entry): boolean => entry.index === preferredChapterIndex);
-      if (preferredPosition < 0) {
-        this.remoteContentVerdict = 'contentUnavailable';
-        return undefined;
-      }
-      start = preferredPosition;
-      limit = preferredPosition + 1;
-    }
-    for (let attempt = start; attempt < limit; attempt += 1) {
-      try {
-        const chapter = await gateway.loadChapter(session, readableEntries[attempt].index, probeCurrent, false, positionContext);
-        if (!probeCurrent()) {
-          return undefined;
-        }
-        this.installRemoteReadingSession(withPreparedRemoteChapter(this.remoteReadingSession ?? session, chapter, projectionRevision, positionContext));
-        this.remoteContentVerdict = 'readable';
-        return readableEntries[attempt].index;
-      } catch (error) {
-        if (!probeCurrent()) {
-          return undefined;
-        }
-        if (error instanceof RemoteChapterCacheRefreshError) {
-          return this.refreshCachedChapterFromPrompt(error, ownerCurrent);
-        }
-        const kind = remoteReadingFailureKindOf(error);
-        // Only a new book may skip a blank leading announcement. A resume
-        // probes its exact persisted chapter and never jumps progress silently.
-        if (preferredChapterIndex === undefined && kind === 'SOURCE_CONTENT_EMPTY' && attempt + 1 < limit) {
-          continue;
-        }
-        this.remoteContentVerdict = verdictForFailureKind(kind);
-        return undefined;
-      }
-    }
-    if (probeCurrent()) {
-      this.remoteContentVerdict = 'contentUnavailable';
-    }
-    return undefined;
+    if (!isCurrent() || !sameRemoteSessionEvidence(this.remoteReadingSession, session)) return undefined;
+    const host = this.getReadingEntryHost();
+    if (host === undefined || host.snapshot().scopeId !== this.readingEntryScopeId) return undefined;
+    return host.probe(this.readingEntryScopeId, preferredChapterIndex, positionContext);
   }
 
   private async refreshCachedChapterFromPrompt(error: RemoteChapterCacheRefreshError,
     isCurrent: () => boolean): Promise<number | undefined> {
     if (!isCurrent()) return undefined;
-    this.remoteContentVerdict = 'contentUnavailable';
-    this.remoteCacheNoticeGeneration = this.navigationGeneration;
-    if (error.refreshPreserved) {
-      this.showReadingFailure('正文未更新', error.message);
-      return undefined;
-    }
-    const accepted = await new Promise<boolean>((resolve): void => {
-      this.getUIContext().showAlertDialog({ title: '需要重新验证本章缓存', message: error.message,
-        autoCancel: false,
-        primaryButton: { value: '刷新本章', action: (): void => resolve(true) },
-        secondaryButton: { value: '保留缓存', action: (): void => resolve(false) },
+    const host = this.getReadingEntryHost();
+    if (host === undefined || host.snapshot().scopeId !== this.readingEntryScopeId) return undefined;
+    return host.recoverCachedChapter(this.readingEntryScopeId, error, isCurrent);
+  }
+
+  private async chooseCachedChapterRefresh(error: RemoteChapterCacheRefreshError, current: () => boolean): Promise<boolean> {
+    if (!current()) return false;
+    // One explicit inline action authorizes this exact error/session only.
+    // A background probe never waits for a modal or refreshes a body itself.
+    if (this.remoteCacheRefreshConsent === error) return true;
+    this.showIndexRecoveryNotice('本章缓存需要重新验证，请刷新本章。', '刷新本章', (): void => {
+      this.remoteCacheRefreshConsent = error;
+      const work = this.refreshCachedChapterFromPrompt(error, current);
+      this.remoteCacheRefreshConsent = undefined;
+      void work.catch((failure: Error): void => {
+        if (current()) {
+          try { this.transientFeedback.show(() => this.getUIContext(), {
+            message: readingFailureHint(diagnosticCodeOf(errorMessageOf(failure))), duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && current())); } catch (_) {}
+          // The one-shot host retires its physical action before dispatch.
+          // Keep this exact cache decision available after a failed attempt.
+          void this.chooseCachedChapterRefresh(error, current);
+        }
       });
-    }).catch((): boolean => false);
-    if (!accepted || !isCurrent()) return undefined;
-    this.remoteContentVerdict = 'verifying';
-    try {
-      const owner = ReaderRuntimeOwner.current();
-      const coordinator = owner.bookAcquisitions();
-      const revision = coordinator.readingProjectionRevision();
-      // This forceRefresh itself advances the projection revision at dispatch
-      // and completion. A guard pinned to its predecessor cancels its own RPC.
-      // Admit only those two changes; concurrent projection mutations still
-      // invalidate the handoff, while Core also validates its publication CAS.
-      const refreshCurrent = (): boolean => isCurrent() && coordinator.readingProjectionRevision() <= revision + 2;
-      const chapter = await new RemoteReadingFlowGateway(owner).loadChapter(error.session,
-        error.chapterIndex, refreshCurrent, true, error.positionContext);
-      if (!isCurrent()) return undefined;
-      const completedRevision = coordinator.readingProjectionRevision();
-      if (completedRevision !== revision + 2) throw new Error('正文配置已变化，请重新读取本章');
-      this.installRemoteReadingSession(withPreparedRemoteChapter(error.session, chapter, completedRevision));
-      this.remoteContentVerdict = 'readable';
-      this.detailLoadingMessage = '';
-      return chapter.chapterIndex;
-    } catch (failure) {
-      if (!isCurrent()) return undefined;
-      this.remoteContentVerdict = verdictForFailureKind(remoteReadingFailureKindOf(failure));
-      this.showReadingFailure('正文未更新', errorMessageOf(failure));
-      return undefined;
-    }
+    }, current);
+    // ReadingEntryHost keeps the current detail/TOC and its old version. It
+    // publishes contentUnavailable, then finishes the background attempt.
+    return false;
   }
 
   private remoteContentVerdictLabel(verdict: RemoteContentVerdict): string {
@@ -5420,111 +6487,124 @@ struct Index {
   }
 
   private showReadingFailure(title: string, message: string): void {
-    this.getUIContext().showAlertDialog({
-      title,
-      message: message.trim().length > 0 ? message : '阅读会话未能继续，请稍后重试。',
-      autoCancel: true,
-      primaryButton: {
-        value: '知道了',
-        action: (): void => {},
-      },
-    });
+    const detail = message.trim().length > 0 ? message : '阅读会话未能继续，请稍后重试。';
+    const host = this.readingEntryHost, scope = this.readingEntryScopeId;
+    const canRetryDetail = this.route === 'detail' && !this.readingSessionActive && host !== undefined &&
+      host.snapshot().scopeId === scope && host.snapshot().book?.sourceId === this.detailBook?.sourceId &&
+      host.snapshot().book?.bookId === this.detailBook?.bookId;
+    if (canRetryDetail) { this.detailLoadingMessage = detail; this.detailCatalogBusy = false; }
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: `${title}：${detail}`, duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner))); }
+    catch (_) {}
+  }
+
+  private messageSafeTop(): number {
+    // Ordinary App pages already inherit Index's safe-top padding.
+    return this.readerOwnsWindowEdges() ? readerContentSafeTop(ReaderWindowCoordinator.metrics()) : 0;
+  }
+
+  private showIndexRecoveryNotice(message: string, actionLabel: string = '', action?: () => void,
+    admitted: () => boolean = (): boolean => true): void {
+    if (this.shelfReceiptRetired || !admitted()) return;
+    const generation = this.navigationGeneration, route = this.route;
+    const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => !this.shelfReceiptRetired && generation === this.navigationGeneration &&
+      route === this.route && owner === this.mountedRuntimeOwner && mounting === this.detailShelfAdmissionMount &&
+      this.isCurrentRuntime(owner) && admitted();
+    if (!current()) return;
+    this.indexRecoveryCurrent = current;
+    this.indexRecoveryAction = action;
+    this.indexRecoveryActionLabel = actionLabel;
+    this.indexRecoveryRevision += 1;
+    this.indexRecoveryNotice = { message, visible: true, canRetry: action !== undefined,
+      generation: this.indexRecoveryRevision };
+  }
+
+  private clearIndexRecoveryNotice(): void {
+    this.indexRecoveryAction = undefined;
+    this.indexRecoveryCurrent = undefined;
+    this.remoteCacheRefreshConsent = undefined;
+    this.indexRecoveryNotice = { message: '', visible: false, canRetry: false, generation: this.indexRecoveryRevision };
+    this.indexRecoveryActionLabel = '';
+  }
+
+  private runIndexRecoveryAction(generation: number): void {
+    if (generation !== this.indexRecoveryNotice.generation || this.indexRecoveryCurrent?.() !== true) return;
+    const action = this.indexRecoveryAction;
+    this.clearIndexRecoveryNotice();
+    action?.();
+  }
+
+  private detailPendingNoticeVisible(): boolean {
+    const book = this.detailBook;
+    return this.route === 'detail' && book !== undefined &&
+      (this.detailReadableAdmission(book).confirmation === 'unknown' ||
+        (this.detailShelfRemovalKey === this.detailBookKey(book) &&
+          this.detailShelfRemovalGeneration === this.shelfOperation.generation && this.hasUnknownShelfWrite()));
+  }
+
+  @Builder
+  private indexRecoveryNoticeContent() {
+    if ((this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true) || this.detailPendingNoticeVisible()) {
+      Column({ space: 8 }) {
+        if (this.detailPendingNoticeVisible()) { this.detailOperationNoticeContent(); }
+        if (this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true) {
+          ForEach([this.indexRecoveryNotice.generation], (generation: number): void => {
+            ReaderRecoveryNotice({ view: this.indexRecoveryNotice, actionLabel: this.indexRecoveryActionLabel,
+              onReconcile: (_expected: number): void => this.runIndexRecoveryAction(generation) });
+          }, (generation: number): string => generation.toString());
+        }
+      }
+      .width('100%').padding({ left: 16, right: 16, top: this.messageSafeTop() + 12 })
+      .align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent);
+    }
   }
 
   /** Startup observes durable pending facts; opening a target resumes its id. */
   private async reconcilePendingSourceSwitches(): Promise<void> {
-    const generation = ++this.sourceSwitchReconciliationGeneration;
-    try {
-      const records = await this.getSourceSwitchGateway().listPendingSwitches(
-        (): boolean => generation === this.sourceSwitchReconciliationGeneration);
-      if (generation !== this.sourceSwitchReconciliationGeneration) return;
-      hilog.info(DOMAIN, 'Reader', 'Retained pending source switches: %{public}d', records.length);
-    } catch (error) {
-      hilog.warn(DOMAIN, 'Reader', 'Pending source switch read failed: %{private}s', errorMessageOf(error));
-    }
+    const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => owner !== undefined && !this.shelfReceiptRetired &&
+      this.mountedRuntimeOwner === owner && mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner);
+    if (!current()) return;
+    const host = this.getSourceSwitchHost(); if (host === undefined) return;
+    try { const records = await host.inspectPending(current); if (current()) hilog.info(DOMAIN, 'Reader', 'Retained pending source switches: %{public}d', records?.length ?? 0); }
+    catch (error) { if (current()) hilog.warn(DOMAIN, 'Reader', 'Pending source switch read failed: %{private}s', errorMessageOf(error)); }
   }
 
   private async resolveReaderSourceSwitchTransaction(sourceId: string, bookId: string): Promise<string | undefined> {
     if (sourceId === LOCAL_SOURCE_ID) return undefined;
-    const current = (): boolean => this.readingSessionActive &&
-      this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId;
+    const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount, navigation = this.navigationGeneration;
+    const current = (): boolean => owner !== undefined && !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && mounting === this.detailShelfAdmissionMount && navigation === this.navigationGeneration &&
+      this.readingSessionActive && this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId;
     if (!current()) return undefined;
-    const active = this.pendingSourceSwitch;
-    if (active?.targetSourceId === sourceId && active.targetBookId === bookId) return active.transactionId;
-    const records = await this.getSourceSwitchGateway().listPendingSwitches(current);
+    const host = this.getSourceSwitchHost(); if (host === undefined) return undefined;
+    const transactionId = await host.resolveTransaction({ sourceId, bookId }, current);
     if (!current()) return undefined;
-    const matches = records.filter((record: PendingSourceSwitch): boolean =>
-      record.targetSourceId === sourceId && record.targetBookId === bookId);
-    if (matches.length > 1) throw new Error('当前书籍存在多个未完成的换源记录，请重试');
-    if (matches.length === 0) return undefined;
-    const record = matches[0];
-    // Core alone validates the eventual chapter/anchor. -1 is Host bookkeeping,
-    // never a requested chapter or a value supplied to Core progress methods.
-    this.pendingSourceSwitch = new PendingSourceSwitchTransaction(record.fromSourceId, record.fromBookId,
-      record.targetSourceId, record.targetBookId, -1, record.transactionId);
-    return record.transactionId;
-  }
-
-  private rollbackPendingSourceSwitch(reason: string): void {
-    const pending = this.pendingSourceSwitch;
-    if (pending === undefined || this.sourceSwitchRollbackInFlight) {
-      return;
-    }
-    this.sourceSwitchRollbackInFlight = true;
-    hilog.warn(DOMAIN, 'Reader',
-      'Source switch target admission failed; rolling back: %{private}s', reason);
-    const gateway = this.getSourceSwitchGateway();
-    void gateway.rollbackSwitch(
-      pending.transactionId,
-      (): boolean => this.pendingSourceSwitch === pending,
-    )
-      .then((result: SourceSwitchRollbackResult): void => {
-        if (this.pendingSourceSwitch !== pending) {
-          return;
-        }
-        this.pendingSourceSwitch = undefined;
-        this.sourceSwitchUnsubscribe?.();
-        this.sourceSwitchUnsubscribe = undefined;
-        this.sourceSwitchVisible = false;
-        this.sourceSwitchState = { kind: 'discovering' };
-        this.refreshBookshelf();
-        this.reopenSwitchedBook(result.restoredBook);
-      })
-      .catch((error: Error): void => {
-        if (this.pendingSourceSwitch !== pending) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Source switch automatic rollback failed: %{private}s', error.message);
-        // Core rejects finalized/stale compensation rather than overwriting
-        // newer progress. Return to the canonical shelf projection; retain
-        // only the opaque transaction id for an explicit retry.
-        this.sourceSwitchUnsubscribe?.();
-        this.sourceSwitchUnsubscribe = undefined;
-        this.sourceSwitchVisible = false;
-        this.sourceSwitchState = {
-          kind: 'failure',
-          message: error.message,
-          transactionId: pending.transactionId,
-        };
-        this.returnToBookshelf();
-      })
-      .finally((): void => {
-        this.sourceSwitchRollbackInFlight = false;
-      });
+    this.bindSourceSwitchReader(host);
+    return transactionId;
   }
 
   private reopenSwitchedBook(book: ShelfBook): void {
     // Re-admit the committed source identity through its transaction guards.
+    const context = this.captureReaderReturnContext();
+    const parent = this.detailReturnRoute;
+    this.invalidateDownloadMembershipForBook(book);
     if (book.sourceId === LOCAL_SOURCE_ID) {
-      this.openLocalBookDetail(book, true);
+      this.openLocalBookDetail(book, true, parent);
     } else {
       this.openRemoteBookDetail({ sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
         title: book.title, author: book.author, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter },
-        this.sourceDisplayName(book.sourceId, book.sourceName), book, true);
+        this.sourceDisplayName(book.sourceId, book.sourceName), book, true, [], [], parent);
     }
+    this.restoreReaderReturnContext(context);
   }
 
   private returnFromDetail(): void {
+    if (this.detailReturnRoute === 'reader' && this.detailReaderReturn !== undefined &&
+      this.mountedRuntimeOwner === this.detailReaderReturn.owner && this.isCurrentRuntime(this.detailReaderReturn.owner)) {
+      this.openReading(undefined);
+      return;
+    }
     if (this.detailReturnRoute === 'search') {
       this.returnToSearch();
       return;
@@ -5533,6 +6613,8 @@ struct Index {
   }
 
   private returnToSearch(): void {
+    this.readingFromDownloads = false;
+    this.detailReaderReturn = undefined;
     const retainedRemoteSession = this.detailBook !== undefined &&
       this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
       this.remoteReadingSession?.identity.sourceId === this.detailBook.sourceId &&
@@ -5540,8 +6622,10 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -5554,12 +6638,14 @@ struct Index {
     // must not call open() because that would reset them to the Initial state.
     this.route = 'search';
     // Restore the original queue, including sources completed while hidden.
-    this.getSearchOrchestrator().resume();
+    this.searchHost.resume();
   }
 
   private returnToBookshelf(): void {
+    this.readingFromDownloads = false;
+    this.detailReaderReturn = undefined;
     this.searchDetailCandidates = [];
-    this.searchOrchestrator?.close();
+    this.searchHost.close();
     const retainedRemoteSession = this.detailBook !== undefined &&
       this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
       this.remoteReadingSession?.identity.sourceId === this.detailBook.sourceId &&
@@ -5567,8 +6653,10 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -5587,10 +6675,24 @@ struct Index {
     this.sourceManagementReturnTarget = 'settings';
     this.sourceManagementSearchKeyword = '';
     this.bookshelfMultiSelectInitialKey = '';
-    this.bookshelfBatchRemovalBusy = false;
     ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
     this.route = 'bookshelf';
     this.refreshBookshelf();
+    // The refresh launched from detail is bound to the old route/generation
+    // and is intentionally discarded.  Re-read once after the bookshelf
+    // binding is mounted so a confirmed add is visible immediately on return.
+    const readbackKey = this.pendingShelfReadbackKey;
+    if (readbackKey.length > 0) {
+      const generation = this.navigationGeneration;
+      const owner = this.mountedRuntimeOwner;
+      this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
+        if (this.route !== 'bookshelf' || generation !== this.navigationGeneration ||
+          owner === undefined || owner !== this.mountedRuntimeOwner || this.shelfReceiptRetired) return;
+        this.invalidateBookshelfProjection();
+        this.refreshBookshelf();
+        this.pendingShelfReadbackKey = '';
+      }));
+    }
   }
 
   private applyReadingCommit(commit: ReadingCommit): void {
@@ -5598,22 +6700,19 @@ struct Index {
       this.detailBook?.sourceId !== commit.sourceId || this.detailBook?.bookId !== commit.bookId) {
       return;
     }
-    const pending = this.pendingSourceSwitch;
-    if (pending !== undefined && pending.targetSourceId === commit.sourceId &&
-      pending.targetBookId === commit.bookId) {
-      this.pendingSourceSwitch = undefined;
-      this.sourceSwitchRollbackInFlight = false;
-      // The gateway finalized this transaction with the actual first committed
-      // chapter, which may differ from the original matched chapter after retry.
-      // The target has now loaded, paginated, and durably committed its first
-      // canonical scalar anchor. Old per-book body/image caches are no longer
-      // reachable and can be cleared without touching the source-wide cookie
-      // session that other books may share.
-      void new ReadingOfflineGateway(ReaderRuntimeOwner.current())
-        .clearBookIdentity(pending.fromSourceId, pending.fromBookId)
-        .catch((error: Error): void => {
-          hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{private}s', error.message);
-        });
+    if (commit.sourceSwitchTransactionId !== undefined) {
+      const finalized = this.getSourceSwitchHost()?.targetCommitted(
+        { sourceId: commit.sourceId, bookId: commit.bookId }, commit.sourceSwitchTransactionId);
+      if (finalized !== undefined) {
+        this.cleanupRetiredSourceCache(finalized);
+        // The existing exact Core-confirmed producer owns completion. This
+        // receipt only decorates its already-ready current novel page.
+        if (this.readingContentKind === 'text' && this.readingSessionActive) {
+          this.sourceSwitchCompletion = new SourceSwitchCompletionPresentation(
+            commit.sourceSwitchTransactionId, commit.sourceId, commit.bookId, this.readingReadyGeneration,
+            this.sourceDisplayName(commit.sourceId, this.detailBook?.sourceName ?? ''), commit.chapterIndex, commit.chapterOffset);
+        }
+      }
     }
     const session = this.remoteReadingSession;
     if (session !== undefined && session.identity.sourceId === commit.sourceId &&
@@ -5622,96 +6721,63 @@ struct Index {
         .catch((error: Error): void => {
           hilog.warn(DOMAIN, 'Reader', 'Rolling chapter cache incomplete: %{private}s', error.message);
         });
-      if (session.entries.length - commit.chapterIndex - 1 <= CATALOG_REFRESH_NEAR_END) {
+      if (this.isRemoteCatalogNearEnd(session, commit.chapterIndex)) {
         this.refreshRemoteCatalogNearEnd(session);
       }
     }
     this.consumeSystemFileOpen();
   }
 
-  private consumeSystemFileOpen(): void {
-    if (!this.systemFileOpenMounted || !this.searchAppForeground || this.systemFileOpenApplying) return;
-    const result = ReaderSystemFileOpenHost.peek();
-    if (result === undefined) return;
-    if (result.failure !== undefined || result.book === undefined) {
-      try { this.getUIContext().getPromptAction().showToast({
-        message: result.failure?.message ?? '文件暂时无法打开，请从文件管理器重试',
-      }); } catch (_) {}
-      ReaderSystemFileOpenHost.acknowledge(result.id);
-      return;
-    }
-    // External file opening cannot finalize or abandon an uncommitted source
-    // switch. The durable local import is safe on the shelf while it waits.
-    const pendingSwitch = this.pendingSourceSwitch;
-    const activeSwitch = this.readingSessionActive && pendingSwitch !== undefined &&
-      this.detailBook?.sourceId === pendingSwitch.targetSourceId && this.detailBook?.bookId === pendingSwitch.targetBookId;
-    if (activeSwitch || this.sourceSwitchRollbackInFlight ||
-      (this.sourceSwitchVisible && (this.sourceSwitchState.kind === 'switching' ||
-        (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined)))) {
-      if (this.systemFileOpenNoticeId !== result.id) {
-        this.systemFileOpenNoticeId = result.id;
-        try { this.getUIContext().getPromptAction().showToast({
-          message: '文件已保存到书架，当前换源完成后打开',
-        }); } catch (_) {}
-      }
-      return;
-    }
-    if (this.readingSessionActive) {
-      const book = this.detailBook;
-      const identity = book === undefined ? '' : JSON.stringify([result.id, this.navigationGeneration, book.sourceId, book.bookId]);
-      if (book !== undefined && book.sourceId !== LOCAL_SOURCE_ID && this.systemFileOpenChecked !== identity) {
-        // A cold-resumed reader may not yet have discovered its durable
-        // source-switch journal. Resolve that existing guard before exit.
-        if (this.systemFileOpenChecking !== identity) {
-          this.systemFileOpenChecking = identity;
-          void this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId)
-            .then((): void => {
-              if (this.systemFileOpenChecking !== identity) return;
-              this.systemFileOpenChecking = '';
-              this.systemFileOpenChecked = identity;
-              this.consumeSystemFileOpen();
-            }).catch((): void => {
-              if (this.systemFileOpenChecking !== identity) return;
-              this.systemFileOpenChecking = '';
-              if (!this.systemFileOpenMounted || ReaderSystemFileOpenHost.peek()?.id !== result.id) return;
-              try { this.getUIContext().getPromptAction().showToast({
-                message: '文件已保存到书架，当前阅读状态未能确认，请稍后打开',
-              }); } catch (_) {}
-              ReaderSystemFileOpenHost.acknowledge(result.id);
-            });
-        }
-        return;
-      }
-      const requestExit = this.readingExitRequest;
-      if (requestExit !== undefined && this.systemFileOpenExitId !== result.id) {
-        this.systemFileOpenExitId = result.id;
-        requestExit('navigation');
-      }
-      return;
-    }
-    this.systemFileOpenApplying = true;
-    try {
-      this.sourceSwitchUnsubscribe?.();
-      this.sourceSwitchUnsubscribe = undefined;
-      this.sourceSwitchVisible = false;
-      this.closeImportDialog();
-      this.jsonImportVisible = false;
-      this.returnToBookshelf();
-      this.openShelfBook(result.book);
-      ReaderSystemFileOpenHost.acknowledge(result.id);
-    } finally {
-      this.systemFileOpenApplying = false;
-    }
+  private getReadingOfflineHost(owner: ReaderRuntimeOwner): ReadingOfflineHost | undefined {
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(owner);
+    const host = ReadingOfflineHost.forRuntime(owner, current,
+      (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Offline presentation delivery failed: %{private}s', error.message),
+      new CacheClearOperationIntentStore(owner, current));
+    this.offlineOperation = host?.snapshot();
+    this.offlineOperationActive = host?.busy() ?? false;
+    return host;
   }
 
+  private cleanupRetiredSourceCache(finalized: SourceSwitchPendingTransaction): void {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    // This cleanup belongs to the existing offline owner; its exact receipt is independent of the finalized source move.
+    void this.getReadingOfflineHost(owner)?.cleanupRetiredSource({ sourceId: finalized.fromSourceId, bookId: finalized.fromBookId })
+      .catch((error: Error): void => {
+        hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{private}s', error.message);
+      });
+  }
+
+  private mountSystemFileOpenNavigation(owner: ReaderRuntimeOwner): void {
+    this.systemFileOpenNavigation?.dispose();
+    const mounting = this.detailShelfAdmissionMount;
+    const host: ReaderSystemFileOpenNavigationHost = new ReaderSystemFileOpenNavigationHost(owner, {
+      isCurrent: (): boolean => this.systemFileOpenNavigation === host && !this.shelfReceiptRetired &&
+        mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner),
+      view: (): SystemFileOpenNavigationView => this.systemFileOpenNavigationView(),
+      resolveReaderTransaction: async (book: SystemFileOpenReaderIdentity): Promise<void> => {
+        await this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId);
+      },
+      notice: (message: string): void => { this.transientFeedback.show(() => this.getUIContext(), {message}, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.systemFileOpenNavigation === host && mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner))); },
+      open: (book: ShelfBook): void => {
+        this.retireSourceSwitchPresentation();
+        this.closeImportDialog(); this.jsonImportVisible = false;
+        this.returnToBookshelf(); this.openShelfBook(book);
+      },
+    });
+    this.systemFileOpenNavigation = host;
+    host.mount();
+  }
+
+  private systemFileOpenNavigationView(): SystemFileOpenNavigationView {
+    const book = this.detailBook;
+    return { foreground: this.searchAppForeground, reading: this.readingSessionActive, navigationGeneration: this.navigationGeneration,
+      readerIdentity: this.currentReaderPresentationIdentity(), book: book === undefined ? undefined : { sourceId: book.sourceId, bookId: book.bookId },
+      switchBlocked: book !== undefined && this.sourceSwitchHost?.blocksExit(book) === true, requestExit: this.readingExitRequest };
+  }
+  private consumeSystemFileOpen(): void { this.systemFileOpenNavigation?.consume(); }
   private currentSourceSwitchTransactionId(): string | undefined {
-    const pending = this.pendingSourceSwitch;
-    const detail = this.detailBook;
-    if (pending === undefined || detail === undefined || pending.targetSourceId !== detail.sourceId ||
-      pending.targetBookId !== detail.bookId) {
-      return undefined;
-    }
-    return pending.transactionId;
+    const book = this.detailBook; return book === undefined ? undefined : this.sourceSwitchHost?.currentTransactionId(book);
   }
 
   private readingDetailForShelf(book: ShelfBook): ReadingBookDetail {
@@ -5722,6 +6788,8 @@ struct Index {
       title: book.title,
       author: book.author,
       kind: book.kind,
+      contentKind: book.contentKind,
+      mangaPosition: book.contentKind === 'manga' ? MangaBookPresentation.get(book.sourceId, book.bookId) : undefined,
       coverUrl: book.coverUrl,
       intro: book.intro,
       lastChapter: book.lastChapter,
@@ -5729,25 +6797,13 @@ struct Index {
   }
 
   private sourceDisplayName(sourceId: string, persistedName: string = ''): string {
-    if (sourceId === LOCAL_SOURCE_ID) return '本地书籍';
-    const savedName = persistedName.trim();
-    // Only Core's exact persisted-source lookup can establish absence. Empty
-    // in-memory lists may simply be unready, failed, or from another route.
-    if (savedName === '书源已移除') return savedName;
-    const readable = (name: string): boolean => name.length > 0 && name !== sourceId.trim() &&
-      name !== '书源名称暂不可用' && name !== '书源已移除' &&
-      !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name);
-    if (readable(savedName)) return savedName;
-    for (const source of this.searchPublication.sourcesAt(this.searchPublicationRevision)) {
-      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
-    }
-    for (const source of this.sourceSources) {
-      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
-    }
-    for (const source of this.sourceToolsSnapshot.sources) {
-      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
-    }
-    return '书源名称暂不可用';
+    const saved = persistedName.trim();
+    const candidate = this.sourceSwitchNamedCandidate;
+    const candidateName = candidate?.sourceId === sourceId ? (candidate.sourceName ?? '').trim() : '';
+    const name = saved === '书源已移除' || readableBookshelfSourceName(sourceId, saved) ? saved :
+      (readableBookshelfSourceName(sourceId, candidateName) ? candidateName : saved);
+    return bookshelfSourceDisplayName(sourceId, name,
+      [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources]);
   }
 
   private readingDetailForRemoteSeed(seed: RemoteReadingBookSeed, sourceName: string): ReadingBookDetail {
@@ -5758,7 +6814,11 @@ struct Index {
       bookId: seed.bookId,
       title: seed.title,
       author: seed.author,
+      authorIdentity: seed.authorIdentity,
+      sourceVersion: seed.sourceVersion,
       kind: seed.kind,
+      contentKind: seed.contentKind ?? (this.readingContentKind === 'manga' ? 'manga' : 'text'),
+      mangaPosition: this.readingContentKind === 'manga' ? MangaBookPresentation.get(seed.sourceId, seed.bookId) : undefined,
       coverUrl: seed.coverUrl,
       intro: seed.intro,
       lastChapter: seed.lastChapter,
@@ -5766,89 +6826,96 @@ struct Index {
   }
 
   private applyDirectoryChapter(chapterIndex: number, chapterTitle: string): void {
-    if (!this.readingSessionActive || !this.isKnownDetailChapter(chapterIndex)) {
+    const mangaBeforeCatalog = this.readingContentKind === 'manga' && this.detailToc.length === 0 &&
+      Number.isSafeInteger(chapterIndex) && chapterIndex >= 0;
+    const mangaHistoricalResume = this.readingContentKind === 'manga' && this.requestedChapterIndex === undefined &&
+      this.remoteReadingSession?.entries.some(entry => entry.index === chapterIndex && entry.resumeOnly === true) === true;
+    if (!this.readingSessionActive || (!mangaBeforeCatalog && !mangaHistoricalResume && !this.isKnownDetailChapter(chapterIndex))) {
       return;
     }
+    if (chapterIndex !== this.directoryCurrentChapterIndex) this.transientFeedback.reset();
     this.directoryCurrentChapterIndex = chapterIndex;
+    if (this.readingSessionActive) this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId, chapterIndex);
     this.directoryChapterTitle = chapterTitle;
+    if (this.readingContentKind === 'manga') this.mangaCommittedRequestGeneration = this.mangaChapterRequestGeneration;
   }
 
-  private async prefetchReadingWindow(
-    session: RemoteReadingSession,
-    preferredChapterIndex: number | undefined = undefined,
-  ): Promise<void> {
-    let chapterIndex = preferredChapterIndex;
-    if (chapterIndex === undefined) {
-      const progress = await new RemoteReadingFlowGateway(ReaderRuntimeOwner.current())
-        .loadProgress(session.identity);
-      chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : 0;
+  private applyMangaAdjacentChapter(chapterIndex: number, chapterTitle: string): void {
+    if (!this.readingSessionActive || this.readingContentKind !== 'manga' || !this.isKnownDetailChapter(chapterIndex)) return;
+    this.requestedChapterIndex = chapterIndex;
+    this.requestedMangaDirectoryTargetProof = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.applyDirectoryChapter(chapterIndex, chapterTitle);
+  }
+
+  private readingPrefetchLease(session: RemoteReadingSession, owner: ReaderRuntimeOwner,
+    readerOwned: boolean, shelfCurrent?: () => boolean): ReadingPrefetchLease {
+    const navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const sessionGeneration = this.remoteSessionGeneration;
+    const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner) && navigation === this.navigationGeneration &&
+      shelfCurrent?.() !== false && (!readerOwned || (sessionGeneration === this.remoteSessionGeneration &&
+        this.readingSessionActive && this.detailBook?.sourceId === session.identity.sourceId &&
+        this.detailBook?.bookId === session.identity.bookId && sameRemoteSessionEvidence(this.remoteReadingSession, session)));
+    return { isCurrent: current,
+      displayedSession: (): RemoteReadingSession | undefined => this.remoteReadingSession,
+      directory: (): LocalReadingTocEntry[] => this.detailToc,
+      projected: (entries: LocalReadingTocEntry[]): void => { if (current()) this.detailToc = entries; },
+      refreshed: (refreshed: RemoteReadingSession): void => {
+        if (!current()) return;
+        this.onRemoteSessionReady(refreshed);
+        this.refreshBookshelf();
+      },
+      diagnostic: (stage: 'window' | 'catalog', message: string): void => {
+        if (current()) hilog.warn(DOMAIN, 'Reader', stage === 'catalog' ?
+          'Near-end catalog refresh failed: %{private}s' : 'Rolling chapter cache incomplete: %{private}s', message);
+      },
+    };
+  }
+
+  private async prefetchReadingWindow(session: RemoteReadingSession, preferredChapterIndex?: number,
+    shelfCurrent?: () => boolean, capturedOwner?: ReaderRuntimeOwner): Promise<void> {
+    const owner = capturedOwner ?? this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    const readerOwned = shelfCurrent === undefined && preferredChapterIndex !== undefined;
+    const lease = this.readingPrefetchLease(session, owner, readerOwned, shelfCurrent);
+    if (!lease.isCurrent()) return;
+    await ReadingPrefetchHost.forRuntime(owner).prefetch(session, preferredChapterIndex, lease,
+      shelfCurrent !== undefined ? 'shelf' : readerOwned ? 'reader' : 'opportunistic');
+  }
+
+  private isRemoteCatalogNearEnd(session: RemoteReadingSession, chapterIndex: number): boolean {
+    const owner = this.mountedRuntimeOwner;
+    return owner !== undefined && this.isCurrentRuntime(owner) &&
+      ReadingPrefetchHost.forRuntime(owner).nearEnd(session, chapterIndex);
+  }
+
+  /** Rebuilt only when an admitted session supplies a different TOC array. */
+  private updateRemoteReadableChapterOrder(session: RemoteReadingSession | undefined): void {
+    if (this.remoteReadableToc === session?.entries) return;
+    this.remoteReadableToc = session?.entries;
+    this.remoteReadableChapterIndexes = [];
+    this.remoteReadableChapterPositions = new Map();
+    if (session === undefined) return;
+    for (const entry of session.entries) {
+      if (entry.navigable === false || entry.url.trim().length === 0) continue;
+      this.remoteReadableChapterPositions.set(entry.index, this.remoteReadableChapterIndexes.length);
+      this.remoteReadableChapterIndexes.push(entry.index);
     }
-    const boundedIndex = Math.min(Math.max(chapterIndex, 0), session.entries.length - 1);
-    const startInclusive = Math.max(0, boundedIndex - READING_CACHE_BEFORE);
-    const endExclusive = Math.min(session.entries.length, boundedIndex + READING_CACHE_AFTER + 1);
-    const entries = await new ReadingOfflineGateway(ReaderRuntimeOwner.current())
-      .prefetchRange(session, startInclusive, endExclusive);
-    if (sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
-      this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-    }
+  }
+
+  private remoteReadableChapterPosition(session: RemoteReadingSession, chapterIndex: number): number | undefined {
+    // Narrow/unknown catalog positions cannot be clamped to an unrelated row.
+    if (this.remoteReadableToc !== session.entries) return undefined;
+    return this.remoteReadableChapterPositions.get(chapterIndex);
   }
 
   private refreshRemoteCatalogNearEnd(session: RemoteReadingSession): void {
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}`;
-    const now = Date.now();
-    const lastRefresh = this.remoteCatalogRefreshAt.get(key) ?? 0;
-    if (now - lastRefresh < CATALOG_REFRESH_INTERVAL_MS) {
-      return;
-    }
-    this.remoteCatalogRefreshAt.set(key, now);
-    const detail = this.detailBook;
-    if (detail === undefined || detail.sourceId !== session.identity.sourceId ||
-      detail.bookId !== session.identity.bookId) {
-      return;
-    }
-    const seed: RemoteReadingBookSeed = {
-      sourceId: session.identity.sourceId,
-      bookId: session.identity.bookId,
-      detailUrl: session.detailUrl,
-      title: session.book.title,
-      author: session.book.author,
-      coverUrl: session.book.coverUrl,
-      intro: session.book.intro,
-      kind: session.book.kind,
-      lastChapter: session.book.lastChapter,
-      searchVariables: session.continuationVariables,
-    };
-    const isCurrent = (): boolean => this.remoteReadingSession?.identity.sourceId ===
-      session.identity.sourceId && this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    const owner = ReaderRuntimeOwner.current();
-    void new RemoteReadingFlowGateway(owner).openSession(seed, { isCurrent })
-      .then((refreshed: RemoteReadingSession): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        this.installRemoteReadingSession(refreshed);
-        this.detailToc = refreshed.entries.map((entry): LocalReadingTocEntry => ({
-          index: entry.index,
-          title: entry.title,
-          navigable: entry.url.trim().length > 0,
-          downloadState: 'unknown',
-        }));
-        this.detailBook = {
-          sourceId: refreshed.identity.sourceId,
-          sourceName: detail.sourceName.length > 0 ? detail.sourceName : refreshed.identity.sourceId,
-          bookId: refreshed.identity.bookId,
-          title: refreshed.book.title,
-          author: refreshed.book.author,
-          kind: refreshed.book.kind,
-          coverUrl: refreshed.book.coverUrl,
-          intro: refreshed.book.intro,
-          lastChapter: refreshed.book.lastChapter,
-        };
-        this.refreshBookshelf();
-      })
-      .catch((error: Error): void => {
-        hilog.warn(DOMAIN, 'Reader', 'Near-end catalog refresh failed: %{private}s', error.message);
-      });
+    const owner = this.mountedRuntimeOwner, detail = this.detailBook;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || !this.readingSessionActive || detail === undefined ||
+      detail.sourceId !== session.identity.sourceId || detail.bookId !== session.identity.bookId ||
+      !sameRemoteSessionEvidence(this.remoteReadingSession, session)) return;
+    void ReadingPrefetchHost.forRuntime(owner).refreshNearEnd(session, this.readingPrefetchLease(session, owner, true));
   }
 
   private applyReaderDirectoryProjection(entries: LocalReadingTocEntry[]): void {
@@ -5864,25 +6931,19 @@ struct Index {
       projected.set(entry.index, entry);
     }
     const book = this.detailBook;
-    if (book?.sourceId === LOCAL_SOURCE_ID && this.detailToc.length === 0 && entries.length > 0) {
+    if (book !== undefined && this.detailToc.length === 0 && entries.length > 0) {
       this.detailToc = entries;
       this.detailLoadingMessage = '';
-      const generation = this.navigationGeneration;
-      const current = (): boolean => this.readingSessionActive && generation === this.navigationGeneration &&
-        this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
-      this.pendingLocalDirectoryProjection = (): void => {
-        if (!current()) return;
-        const bookmarks = this.directoryBookmarkMutationGeneration;
-        void new LocalReadingFlowGateway(ReaderRuntimeOwner.current()).loadDirectoryProjection(
-          book.bookId, book.title, book.author, entries, current)
-          .then((projection: LocalReadingTocEntry[]): void => {
-            if (!current()) return;
-            this.detailToc = bookmarks === this.directoryBookmarkMutationGeneration &&
-              this.directoryBookmarkMutationActiveKey.length === 0 ? projection : this.mergeDirectoryBookmarks(projection, this.detailToc);
-          }).catch((error: Error): void => {
-            if (current()) hilog.warn(DOMAIN, 'Reader', 'Local reader directory projection failed: %{private}s', error.message);
-          });
-      };
+      this.detailCatalogBusy = false;
+      const host = this.getReadingEntryHost();
+      host?.replaceDirectory(this.readingEntryScopeId, entries);
+      const projectDirectory = host?.deferredDirectoryProjection();
+      // A persisted entry publishes its catalog after the first visible page.
+      // That reader-ready boundary has already passed; do not wait for another
+      // page or an explicit directory open to resolve canonical bookmarks.
+      if (this.readingPresentedScopeId === this.readingEntryScopeId) projectDirectory?.();
+      else if (book.sourceId === LOCAL_SOURCE_ID) this.pendingLocalDirectoryProjection = projectDirectory;
+      else this.pendingRemoteDirectoryProjection = projectDirectory;
       return;
     }
     if (entries.length !== this.detailToc.length) return;
@@ -5895,129 +6956,121 @@ struct Index {
       next.push({
         index: entry.index,
         title: titleProjection.title,
+        level: entry.level,
         navigable: entry.navigable,
         downloadState: entry.downloadState,
         bookmarks: entry.bookmarks,
       });
     }
     this.detailToc = next;
+    this.getReadingEntryHost()?.replaceDirectory(this.readingEntryScopeId, next);
   }
 
   private shelfFilter(): BookshelfFilter {
-    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter };
+    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter, contentKind: this.shelfContentFilter };
+  }
+
+  private isCurrentBookshelfPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number): boolean {
+    return owner !== undefined && owner === this.mountedRuntimeOwner && !this.shelfReceiptRetired &&
+      this.route === 'bookshelf' && generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner);
   }
 
   private refreshSearchShelfMembership(): void {
-    const generation = ++this.shelfMembershipGeneration;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => generation === this.shelfMembershipGeneration && owner === ReaderRuntimeOwner.current();
-    void new BookshelfFlowGateway(owner).loadAll(current, true).then((shelf: BookshelfState | undefined): void => {
-      if (!current() || shelf === undefined) return;
-      this.searchPublication.updateShelf(shelf.books);
-      this.searchPublicationRevision += 1;
-    }).catch((error: Error): void => {
-      if (current()) hilog.warn(DOMAIN, 'Reader', 'Search shelf membership: %{private}s', error.message);
-    });
+    const projection = this.getBookshelfProjection();
+    const binding = this.bookshelfProjectionBinding;
+    if (projection !== undefined && binding !== undefined) void projection.refreshMembership(binding);
   }
 
   private loadNextShelfPage(): void { this.loadShelfWindowPage(false); }
-
   private loadPreviousShelfPage(): void { this.loadShelfWindowPage(true); }
-
   private loadShelfWindowPage(previous: boolean): void {
-    const start = this.shelfWindowOffset, count = this.shelfBooks.length;
-    if (this.route !== 'bookshelf' || this.shelfPageLoading || this.shelfProjectionRevision.length === 0 ||
-      (previous ? start === 0 : start + count >= this.shelfMatchedTotal)) return;
-    this.shelfPageLoading = true;
-    const generation = this.bookshelfLoadGeneration, revision = this.shelfProjectionRevision;
-    const offset = previous ? Math.max(0, start - 48) : start + count;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.route === 'bookshelf' && generation === this.bookshelfLoadGeneration &&
-      owner === ReaderRuntimeOwner.current() && revision === this.shelfProjectionRevision &&
-      start === this.shelfWindowOffset && count === this.shelfBooks.length;
-    void new BookshelfFlowGateway(owner, this.shelfFilter()).loadPage(offset, revision, false, current).then((page: BookshelfState): void => {
-      if (!current()) return;
-      if (page.changed) { this.refreshBookshelf(); return; }
-      if (page.projectionRevision !== revision || page.total !== this.shelfMatchedTotal || page.books.length === 0 ||
-        (page.offset !== undefined && page.offset !== offset) || (previous && page.books.length !== start - offset))
-        throw new Error('BOOKSHELF_PAGE_INCONSISTENT');
-      const identities = new Set(this.shelfBooks.map((book: ShelfBook): string => this.shelfBookKey(book)));
-      if (page.books.some((book: ShelfBook): boolean => identities.has(this.shelfBookKey(book))))
-        throw new Error('BOOKSHELF_PAGE_DUPLICATE');
-      const combined = previous ? page.books.concat(this.shelfBooks) : this.shelfBooks.concat(page.books);
-      const drop = Math.ceil(Math.max(0, combined.length - 144) / 48) * 48;
-      this.shelfWindowOffset = previous ? offset : start + drop;
-      this.shelfBooks = previous ? combined.slice(0, 144) : combined.slice(drop);
-    }).catch((error: Error): void => {
-      if (current()) hilog.warn(DOMAIN, 'Reader', 'Bookshelf window: %{private}s', error.message);
-    }).finally((): void => { if (generation === this.bookshelfLoadGeneration) this.shelfPageLoading = false; });
+    if (this.route !== 'bookshelf') return;
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection !== undefined && binding !== undefined) void projection.page(previous, binding);
   }
 
   private refreshBookshelf(): void {
-    this.shelfPageLoading = false;
-    const loadGeneration = this.bookshelfLoadGeneration + 1;
-    this.bookshelfLoadGeneration = loadGeneration;
-    const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter());
-    const startedAt = this.beginStartupStage?.('shelf.query') ?? -1;
-    gateway.load()
-      .then((state: BookshelfDataState): void => {
-        if (loadGeneration !== this.bookshelfLoadGeneration) {
-          this.endStartupStage?.('shelf.query', startedAt, 'superseded');
-          return;
-        }
-        this.endStartupStage?.('shelf.query', startedAt, 'ready');
-        this.bookshelfLoadFailed = false;
-        this.applyBookshelfState(state, true);
-      })
-      .catch((error: Error): void => {
-        this.endStartupStage?.('shelf.query', startedAt, 'failed');
-        if (loadGeneration !== this.bookshelfLoadGeneration) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Bookshelf state failed to refresh: %{private}s', error.message);
-        this.onBookshelfLoadFailed(error, false);
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection === undefined || binding === undefined) return;
+    let startedAt = -1;
+    try { startedAt = this.beginStartupStage?.('shelf.query') ?? -1; }
+    catch (_diagnostic) { /* Diagnostics cannot prevent the read. */ }
+    void projection.refresh(this.shelfFilter(), binding,
+      this.route === 'bookshelf' && !this.isBookshelfVisualAdmitted && !this.isCoreShelfEmpty)
+      .then((result): void => {
+        if (!binding.current()) return;
+        try {
+          if (result?.facts.fact === 'current' || result?.facts.fact === 'empty') this.endStartupStage?.('shelf.query', startedAt, 'ready');
+          else if (result?.facts.fact === 'failed' || result?.facts.fact === 'refreshFailed') this.endStartupStage?.('shelf.query', startedAt, 'failed');
+        } catch (_diagnostic) { /* Diagnostics cannot rewrite the completed read. */ }
       });
   }
 
-  /**
-   * A failed first load used to leave the session on a blank unrecoverable
-   * home page: the error was only logged and nothing re-read the shelf. The
-   * blank home retries once automatically; if that also fails, a persistent
-   * user-facing retry entry stays until a load succeeds.
-   */
-  private onBookshelfLoadFailed(error: Error, isRetry: boolean): void {
-    if (!isRetry && this.route === 'bookshelf' && !this.isBookshelfVisualAdmitted &&
-      !this.isCoreShelfEmpty) {
-      // First failure on the un-admitted blank home: one automatic retry.
-      const retryGeneration = this.bookshelfLoadGeneration + 1;
-      this.bookshelfLoadGeneration = retryGeneration;
-      const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter());
-      gateway.load()
-        .then((state: BookshelfDataState): void => {
-          if (retryGeneration !== this.bookshelfLoadGeneration) {
-            return;
-          }
-          this.bookshelfLoadFailed = false;
-          // Single-arg call: the auto retry only runs on the un-admitted blank
-          // home, so the refresh-only hysteresis branch is unreachable anyway.
-          this.applyBookshelfState(state);
-        })
-        .catch((retryError: Error): void => {
-          if (retryGeneration !== this.bookshelfLoadGeneration) {
-            return;
-          }
-          hilog.error(DOMAIN, 'Reader',
-            'Bookshelf auto retry failed: %{private}s', retryError.message);
-          this.onBookshelfLoadFailed(retryError, true);
-        });
-      return;
+  private getBookshelfProjection(): BookshelfProjectionOwner | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    const projection = this.bookshelfHost.projection(owner);
+    if (projection === undefined) return undefined;
+    const navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount, route = this.route;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, navigation, route, 'shelf-projection']);
+    if (this.bookshelfProjectionOwner !== projection || this.bookshelfProjectionBinding?.identity !== identity) {
+      this.bookshelfProjectionOwner?.detach(this.bookshelfProjectionBinding?.identity ?? '');
+      const binding: BookshelfProjectionBinding = { identity,
+        current: (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+          owner === this.mountedRuntimeOwner && navigation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount && route === this.route,
+        anchorKey: (): string => this.bookshelfViewState.anchorKey,
+        sources: (): BookshelfNamedSource[][] => [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources],
+        emit: (snapshot: BookshelfProjectionSnapshot): void => this.applyBookshelfProjection(snapshot, owner, navigation),
+        membership: (books: ShelfBook[]): void => this.searchHost.updateShelf(books),
+        membershipNeeded: (): boolean => this.route === 'search',
+        accepted: (state: BookshelfDataState): void => {
+          if (state.kind === 'populated') { this.scheduleBookshelfBackgroundRefresh(state.shelf.books); this.preparePersistedShelfBooks(); }
+          else this.traceStartupStage?.('shelf.empty-model-ready', 'ready');
+        },
+        failed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Bookshelf projection: %{private}s', error.message),
+        readFailure: (error: Object, attempt: number): void => hilog.error(DOMAIN, 'Reader',
+          'Bookshelf main read failed attempt=%{public}d summary=%{public}s detail=%{private}s',
+          attempt, localReadFailureSummary(error), errorMessageOf(error)) };
+      this.bookshelfProjectionOwner = projection; this.bookshelfProjectionBinding = binding;
+      projection.attach(binding);
     }
-    this.bookshelfLoadFailed = true;
+    return projection;
+  }
+
+  private applyBookshelfProjection(snapshot: BookshelfProjectionSnapshot, owner: ReaderRuntimeOwner, navigation: number): void {
+    if (snapshot.filter.readingState !== this.shelfReadingFilter || snapshot.filter.sourceKind !== this.shelfSourceFilter ||
+      (snapshot.filter.contentKind ?? 'all') !== this.shelfContentFilter) return;
+    const wasAdmitted = this.isBookshelfVisualAdmitted;
+    this.bookshelfLoadGeneration = snapshot.generation;
+    this.shelfBooks = snapshot.books; this.shelfProjectionRevision = snapshot.revision;
+    this.shelfMatchedTotal = snapshot.matchedTotal; this.shelfWindowOffset = snapshot.offset;
+    this.shelfHasOnlineBooks = snapshot.hasOnlineBooks; this.continueReading = snapshot.continueReading;
+    this.shelfPageLoading = snapshot.pageLoading; this.isCoreShelfEmpty = snapshot.coreEmpty;
+    this.isBookshelfVisualAdmitted = snapshot.visualAdmitted;
+    this.bookshelfReadOwner = owner; this.bookshelfReadNavigation = navigation; this.bookshelfReadFacts = snapshot.facts;
+    this.bookshelfLoadFailed = snapshot.facts?.fact === 'failed' || (snapshot.facts?.fact === 'partial' && !snapshot.visualAdmitted);
+    if (!wasAdmitted && snapshot.visualAdmitted) this.traceStartupStage?.('shelf.model-ready', 'ready');
+  }
+
+  private invalidateBookshelfProjection(): void { this.getBookshelfProjection()?.invalidate(); }
+
+  private shelfReadRecovery(): ReaderRecoveryView {
+    if (!this.isCurrentRuntime(this.bookshelfReadOwner) || !this.isBookshelfVisualAdmitted ||
+      this.bookshelfReadNavigation !== this.navigationGeneration || this.route !== 'bookshelf' || this.shelfReceiptRetired ||
+      (this.bookshelfReadFacts?.fact !== 'refreshFailed' && this.bookshelfReadFacts?.fact !== 'partial')) return this.emptyShelfRecovery();
+    return readerRecoveryView(undefined, this.bookshelfReadFacts);
+  }
+
+  private retryBookshelfRead(generation: number): void {
+    if (generation !== this.bookshelfReadFacts?.generation || generation !== this.bookshelfLoadGeneration ||
+      this.bookshelfReadFacts?.canRetry !== true || !this.isCurrentRuntime(this.bookshelfReadOwner) ||
+      this.bookshelfReadNavigation !== this.navigationGeneration || this.route !== 'bookshelf' || this.shelfReceiptRetired) return;
+    this.refreshBookshelf();
   }
 
   private isKnownDetailChapter(chapterIndex: number | undefined): boolean {
     if (this.detailBook?.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession !== undefined) {
-      return this.remoteReadingSession.entries.some((entry): boolean => entry.url.trim().length > 0 &&
+      return this.remoteReadingSession.entries.some((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0 &&
         (chapterIndex === undefined || entry.index === chapterIndex));
     }
     return this.detailToc.some((entry: LocalReadingTocEntry): boolean =>
@@ -6025,6 +7078,35 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.transientFeedback.reset();
+    this.downloadHost?.retire();
+    this.downloadHost = undefined;
+    this.downloadPresentationIdentity = '';
+    this.sourceSwitchCompletion = undefined;
+    this.retireSettingsPresentation();
+    this.retireSourceManagementPresentation();
+    this.retireSourceSwitchPresentation();
+    this.retireRssEditorPresentation();
+    this.retireRssPresentation();
+    this.retireReadingEntryPresentation();
+    this.retireBookshelfCatalogPresentation();
+    this.bookshelfHost.detachManagementPresentation();
+    this.bookshelfManagementPresentationIdentity = '';
+    this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
+    this.discoverPresentationIdentity = '';
+    this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
+    this.rulesPresentationIdentity = '';
+    this.syncOrchestrator?.detachPresentation(this.syncPresentationIdentity);
+    this.syncPresentationIdentity = '';
+    this.bookshelfUpdateRunning = false;
+    this.bookshelfBackgroundRefreshRunning = false;
+    this.temporaryBackLease = undefined;
+    this.jsonImportVisible = false;
+    this.nativeAlertOwner.retire();
+    this.clearIndexRecoveryNotice();
+    this.sourceImportSearchAction = undefined;
+    this.sourceImportSearchActionLabel = '';
+    this.rssOperationResultMessage = '';
     this.shelfReadingPreparation = false;
     this.pendingLocalDirectoryProjection = undefined;
     this.navigationGeneration += 1;
@@ -6036,320 +7118,79 @@ struct Index {
   }
 
   private applyBookshelfState(state: BookshelfDataState, refreshOnly: boolean = false, preserveAnchor: boolean = true): void {
-    const anchor = state.shelf.projectionRevision === undefined ? '' : this.bookshelfViewState.anchorKey;
-    if (preserveAnchor && state.kind === 'populated' && state.shelf.projectionRevision !== undefined &&
-      anchor.length > 0 &&
-      this.shelfBooks.some((book: ShelfBook): boolean => JSON.stringify([book.sourceId, book.bookId]) === anchor) &&
-      !state.shelf.books.some((book: ShelfBook): boolean => JSON.stringify([book.sourceId, book.bookId]) === anchor)) {
-      const generation = this.bookshelfLoadGeneration, owner = ReaderRuntimeOwner.current();
-      const current = (): boolean => generation === this.bookshelfLoadGeneration && owner === ReaderRuntimeOwner.current();
-      const book = this.shelfBooks.find((item: ShelfBook): boolean => JSON.stringify([item.sourceId, item.bookId]) === anchor);
-      if (book === undefined) return;
-      void new BookshelfFlowGateway(owner, this.shelfFilter()).loadAnchor({ sourceId: book.sourceId, bookId: book.bookId }, this.shelfWindowOffset, current)
-        .then((shelf: BookshelfState | undefined): void => {
-          if (current() && shelf !== undefined) this.applyBookshelfState({ kind: 'populated', shelf, continueReading: state.continueReading }, refreshOnly, false);
-        }).catch((error: Error): void => {
-          if (current()) hilog.warn(DOMAIN, 'Reader', 'Bookshelf anchor refresh: %{private}s', error.message);
-        });
-      return;
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection !== undefined && binding !== undefined)
+      projection.accept(state, this.shelfFilter(), binding, refreshOnly, preserveAnchor);
+  }
+
+  private getBookshelfCatalogOwner(): BookshelfCatalogOwner | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    const catalog = this.bookshelfHost.catalog(owner);
+    if (catalog === undefined) return undefined;
+    const navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, navigation, 'shelf-catalog']);
+    if (this.bookshelfCatalogHost !== catalog || this.bookshelfCatalogBinding?.identity !== identity) {
+      this.retireBookshelfCatalogPresentation();
+      const binding: BookshelfCatalogBinding = { identity,
+        current: (): boolean => this.isCurrentBookshelfPresentation(navigation, owner, mounting),
+        automaticAllowed: (): boolean => this.canRunBookshelfBackgroundRefresh(),
+        revision: (): string => this.shelfProjectionRevision ?? '',
+        filter: (): BookshelfFilter => this.shelfFilter(),
+        emit: (snapshot: BookshelfCatalogSnapshot): void => this.applyBookshelfCatalogSnapshot(snapshot, owner),
+        project: (state: BookshelfDataState): void => { this.invalidateBookshelfProjection(); this.applyBookshelfState(state, true); },
+        prefetch: (session: RemoteReadingSession, current: () => boolean): Promise<void> => this.prefetchReadingWindow(session, undefined, current, owner),
+        diagnostic: (message: string): void => hilog.warn(DOMAIN, 'Reader', '%{private}s', message) };
+      this.bookshelfCatalogHost = catalog; this.bookshelfCatalogBinding = binding; catalog.attach(binding);
     }
-    if (refreshOnly && state.kind !== 'populated' && this.isBookshelfVisualAdmitted) {
-      // A refresh-only read that lost the populated shelf while the admitted
-      // tree is mounted is treated as a transient Core read: keep the last
-      // projection mounted instead of unmounting the whole route (flicker).
-      // Genuine user mutations (removal/import) always reset admission.
-      return;
-    }
-    this.isCoreShelfEmpty = state.kind === 'empty';
-    this.shelfProjectionRevision = state.shelf.projectionRevision ?? '';
-    this.shelfMatchedTotal = state.shelf.total;
-    this.shelfWindowOffset = state.shelf.offset ?? 0;
-    this.shelfHasOnlineBooks = (state.shelf.unfilteredOnlineTotal ?? 0) > 0;
-    // Keep the source's own display name with the shelf projection. The
-    // source id remains the stable identity; the label is resolved from the
-    // admitted source registry and never replaced with a generic "网络书".
-    const cachedNames = new Map<string, string>();
-    for (const previous of this.shelfBooks) {
-      const name = previous.sourceName?.trim() ?? '';
-      if (name.length > 0 && name !== previous.sourceId.trim() && name !== '书源名称暂不可用' &&
-        name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
-        cachedNames.set(previous.sourceId, name);
+    return catalog;
+  }
+
+  private applyBookshelfCatalogSnapshot(snapshot: BookshelfCatalogSnapshot, owner: ReaderRuntimeOwner): void {
+    this.bookshelfCatalogOwner = owner;
+    this.bookshelfUpdateRunning = snapshot.manualRunning;
+    this.bookshelfBackgroundRefreshRunning = snapshot.automaticRunning;
+    this.bookshelfUpdateDone = snapshot.done; this.bookshelfUpdateTotal = snapshot.total;
+    this.bookshelfCatalogFacts = snapshot.facts; this.bookshelfCatalogReadbackFailed = snapshot.readbackFailed;
+    this.bookshelfBackgroundSeeds = snapshot.seeds;
+    const facts = snapshot.facts;
+    if (snapshot.manualRunning || snapshot.automaticRunning || facts === undefined || facts.fact === 'current') this.catalogFeedbackKey = '';
+    if (this.route === 'bookshelf' && !snapshot.manualRunning && !snapshot.automaticRunning &&
+      facts !== undefined && (facts.fact === 'refreshFailed' || facts.fact === 'failed' || facts.fact === 'partial')) {
+      const message = facts.message ?? '刷新失败，保留已有书架';
+      const key = `${facts.generation}:${message}`;
+      if (key !== this.catalogFeedbackKey) {
+        this.catalogFeedbackKey = key;
+        try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner && this.route === 'bookshelf')); } catch (_) {}
       }
     }
-    this.shelfBooks = state.shelf.books.map((book: ShelfBook): ShelfBook => {
-      const savedName = book.sourceName?.trim() ?? '';
-      // Core's confirmed deletion wins; an unavailable label cannot erase a
-      // known exact-source name. Never borrow names by book title or bookId.
-      const persisted = savedName.length > 0 && savedName !== book.sourceId.trim() &&
-        savedName !== '书源名称暂不可用' && !/^[a-z][a-z0-9+.-]*:/i.test(savedName) && !/^www\./i.test(savedName);
-      const name = persisted ? savedName :
-        (cachedNames.get(book.sourceId) ?? this.sourceDisplayName(book.sourceId));
-      return this.copyShelfBookWithSourceName(book, name);
-    });
-    // Current Core projects names in the shelf query. Only legacy/incomplete
-    // rows need the compatibility lookup of only their exact source identities.
-    if (state.shelf.books.some((book: ShelfBook): boolean =>
-      book.sourceId !== LOCAL_SOURCE_ID && (book.sourceName === undefined ||
-        book.sourceName.trim().length === 0 || book.sourceName === '书源名称暂不可用'))) {
-      this.hydrateShelfSourceNames(this.bookshelfLoadGeneration);
-    }
-    if (this.shelfProjectionRevision.length === 0 ||
-      (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && this.shelfBooks.length === this.shelfMatchedTotal)) {
-      this.shelfMembershipGeneration += 1;
-      this.searchPublication.updateShelf(this.shelfBooks);
-      this.searchPublicationRevision += 1;
-    } else if (this.route === 'search') this.refreshSearchShelfMembership();
-    this.continueReading = state.continueReading;
-    if (state.kind !== 'populated') {
-      this.traceStartupStage?.('shelf.empty-model-ready', 'ready');
-      this.isBookshelfVisualAdmitted = false;
-      return;
-    }
-    // N-COVER-REMAP-01: Figma `Library/BookCover` `3612:1796` supplies a
-    // `Book=NoCover` variant, so a Core book without a coverUrl is no longer
-    // a missing visual. Re-admit no-cover books and let the detail/result
-    // pages use the shared NoCover gradient placeholder rather than
-    // silently dropping the entire shelf.
-    if (!this.isBookshelfVisualAdmitted) this.traceStartupStage?.('shelf.model-ready', 'ready');
-    this.isBookshelfVisualAdmitted = true;
-    this.scheduleBookshelfBackgroundRefresh(state.shelf.books);
-    this.preparePersistedShelfBooks();
+
   }
 
-  private hydrateShelfSourceNames(generation: number): void {
-    const request = ++this.bookshelfSourceNameRequest;
-    const owner = ReaderRuntimeOwner.current();
-    const admittedBooks = this.shelfBooks;
-    const isCurrent = (): boolean => request === this.bookshelfSourceNameRequest && owner === ReaderRuntimeOwner.current() &&
-      generation === this.bookshelfLoadGeneration && admittedBooks === this.shelfBooks && this.shelfBooks.length > 0;
-    void new SourceGateway(owner).loadSourcesForIds(admittedBooks.map((book: ShelfBook): string => book.sourceId), isCurrent)
-      .then((sources: BookSource[]): void => {
-        if (!isCurrent()) return;
-        const names = new Map<string, string>();
-        for (const source of sources) {
-          const name = source.name.trim();
-          if (name.length > 0 && name !== source.sourceId.trim() && name !== '书源名称暂不可用' &&
-            name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
-            names.set(source.sourceId, name);
-          }
-        }
-        let changed = false;
-        const projected = this.shelfBooks.map((book: ShelfBook): ShelfBook => {
-          // A source.list projection can omit malformed rows. Its absence is
-          // not deletion, and it cannot revive Core's confirmed missing row.
-          if (book.sourceName === '书源已移除') return book;
-          const name = book.sourceId === LOCAL_SOURCE_ID ? '本地书籍' : names.get(book.sourceId);
-          if (name === undefined || book.sourceName === name) return book;
-          changed = true;
-          return this.copyShelfBookWithSourceName(book, name);
-        });
-        if (changed) {
-          this.shelfBooks = projected;
-          // Name hydration owns visible rows only. It cannot replace the
-          // complete search membership with a filtered or partial page.
-          if (this.shelfProjectionRevision === undefined || this.shelfProjectionRevision.length === 0 ||
-            (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && projected.length === this.shelfMatchedTotal)) {
-            this.searchPublication.updateShelf(projected);
-            this.searchPublicationRevision += 1;
-          }
-        }
-      })
-      .catch((): void => {
-        // A transient source.list failure preserves Core's persisted name.
-      });
-  }
-
-  /**
-   * ArkTS does not support object spread for structural records. Keep the
-   * bookshelf projection immutable while copying every optional field
-   * explicitly, so source-name hydration cannot drop read progress or other
-   * Core-owned metadata.
-   */
-  private copyShelfBookWithSourceName(book: ShelfBook, sourceName: string): ShelfBook {
-    const copy: ShelfBook = {
-      sourceId: book.sourceId,
-      sourceName,
-      bookId: book.bookId,
-      title: book.title,
-      author: book.author,
-      addedAt: book.addedAt,
-    };
-    if (book.kind !== undefined) copy.kind = book.kind;
-    if (book.coverUrl !== undefined) copy.coverUrl = book.coverUrl;
-    if (book.intro !== undefined) copy.intro = book.intro;
-    if (book.lastChapter !== undefined) copy.lastChapter = book.lastChapter;
-    if (book.lastReadAt !== undefined) copy.lastReadAt = book.lastReadAt;
-    if (book.group !== undefined) copy.group = book.group;
-    if (book.sortIndex !== undefined) copy.sortIndex = book.sortIndex;
-    if (book.unreadCount !== undefined) copy.unreadCount = book.unreadCount;
-    if (book.lastCheckAt !== undefined) copy.lastCheckAt = book.lastCheckAt;
-    if (book.currentChapterTitle !== undefined) copy.currentChapterTitle = book.currentChapterTitle;
-    if (book.currentChapterIndex !== undefined) copy.currentChapterIndex = book.currentChapterIndex;
-    if (book.chapterCount !== undefined) copy.chapterCount = book.chapterCount;
-    if (book.readProgress !== undefined) copy.readProgress = book.readProgress;
-    if (book.readingPosition !== undefined) copy.readingPosition = book.readingPosition;
-    return copy;
+  private retireBookshelfCatalogPresentation(): void {
+    this.bookshelfCatalogHost?.detach(this.bookshelfCatalogBinding?.identity ?? '');
+    this.bookshelfCatalogBinding = undefined;
   }
 
   private scheduleBookshelfBackgroundRefresh(books: ShelfBook[], revisionRetry: boolean = false): void {
-    if (this.bookshelfBackgroundRefreshRunning || this.bookshelfUpdateRunning ||
-      !this.canRunBookshelfBackgroundRefresh()) {
-      return;
-    }
-    const owner = ReaderRuntimeOwner.current();
-    const revision = this.shelfProjectionRevision;
-    let ownPublishedRevision: string | undefined;
-    const current = (): boolean => owner === ReaderRuntimeOwner.current() &&
-      revision === this.shelfProjectionRevision && this.canRunBookshelfBackgroundRefresh();
-    this.bookshelfBackgroundRefreshRunning = true;
-    // Visible rows may be filtered or only the first page. Establish the
-    // complete revision before writes invalidate its cursor. This background
-    // read never gates admission and stops between pages when reading starts.
-    const targets = revision !== undefined && revision.length > 0 ?
-      new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current) : Promise.resolve({ books, total: books.length } as BookshelfState);
-    if (revision !== undefined && revision.length > 0) {
-      // A full automatic scan already includes the identities requested by
-      // persistent preparation. Keep only identities, and share only an exact
-      // Core revision; a failed or superseded scan leaves the normal fallback.
-      this.bookshelfBackgroundSeeds = { owner, revision, seeds: targets.then((shelf: BookshelfState | undefined): ReadingEntrySeed[] | undefined =>
-        shelf !== undefined && shelf.projectionRevision === revision ? shelf.books.map((book: ShelfBook): ReadingEntrySeed =>
-          ({ sourceId: book.sourceId, bookId: book.bookId })) : undefined).catch((): undefined => undefined) };
-    }
-    void targets.then(async (shelf: BookshelfState | undefined): Promise<void> => {
-      if (!current() || shelf === undefined ||
-        (revision !== undefined && revision.length > 0 && shelf.projectionRevision !== revision)) return;
-      const now = Date.now();
-      const candidates = shelf.books.filter((book: ShelfBook): boolean => book.sourceId !== LOCAL_SOURCE_ID &&
-        (book.lastCheckAt === undefined || now - book.lastCheckAt * 1000 >= CATALOG_REFRESH_INTERVAL_MS));
-      if (candidates.length > 0) await this.refreshBookshelfCatalogBatch(candidates, undefined, true, current,
-        (publishedRevision: string): void => { ownPublishedRevision = publishedRevision; });
-    }).catch((error: Error): void => {
-      if (current()) hilog.warn(DOMAIN, 'Reader', 'Background bookshelf targets: %{private}s', error.message);
-    })
-      .finally((): void => {
-        this.bookshelfBackgroundRefreshRunning = false;
-        // applyBookshelfState can publish a newer revision while this scan is
-        // running. It cannot start another scan until the flag is released.
-        // Retry the latest revision once; a continuously changing shelf must
-        // not create an unbounded chain of background reads.
-        if (!revisionRetry && owner === ReaderRuntimeOwner.current() &&
-          revision !== this.shelfProjectionRevision && ownPublishedRevision !== this.shelfProjectionRevision &&
-          this.canRunBookshelfBackgroundRefresh()) {
-          this.scheduleBookshelfBackgroundRefresh(this.shelfBooks, true);
-        }
-      });
+    const catalog = this.getBookshelfCatalogOwner(), binding = this.bookshelfCatalogBinding;
+    if (catalog !== undefined && binding !== undefined)
+      catalog.automatic(books, binding, CATALOG_REFRESH_INTERVAL_MS, revisionRetry);
   }
 
-  private async refreshBookshelfCatalogBatch(books: ShelfBook[],
-    onProgress?: (done: number, total: number) => void, automatic: boolean = false,
-    automaticCurrent?: () => boolean, onAutomaticProjectionApplied?: (revision: string) => void): Promise<void> {
-    // Keep source I/O bounded like Legado's bookshelf updater. Two concurrent
-    // books avoid serial stalls without flooding all enabled sources.
-    let completed = 0;
-    for (let start = 0; start < books.length; start += 2) {
-      if (automatic && !(automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh())) return;
-      const batch = books.slice(start, Math.min(books.length, start + 2));
-      await Promise.all(batch.map((book: ShelfBook): Promise<void> => this.refreshOneShelfBook(book, automatic, automaticCurrent)));
-      completed += batch.length;
-      if (onProgress !== undefined) {
-        onProgress(completed, books.length);
-      }
-    }
-    if (automatic && !(automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh())) return;
-    try {
-      const state = await new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter()).load();
-      if (this.route === 'bookshelf' && (!automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh()))) {
-        this.bookshelfLoadGeneration += 1;
-        this.applyBookshelfState(state, true);
-        const appliedRevision = this.shelfProjectionRevision;
-        if (automatic && appliedRevision !== undefined) onAutomaticProjectionApplied?.(appliedRevision);
-      }
-    } catch (error) {
-      hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{private}s',
-        (error as Error).message);
-    }
-  }
-
-  /**
-   * SHF-03: user-triggered foreground sweep. Deliberately ignores the
-   * background lastCheckAt throttle (the user asked for the check now) and
-   * keeps no scheduler behind it: the sweep only lives while this process
-   * runs, concurrency stays at the shared batch limit of two.
-   */
   private startManualBookshelfUpdate(): void {
-    if (this.bookshelfUpdateRunning || this.bookshelfBackgroundRefreshRunning) {
-      return;
-    }
-    if (this.shelfProjectionRevision !== undefined && this.shelfProjectionRevision.length > 0) {
-      const owner = ReaderRuntimeOwner.current();
-      this.bookshelfUpdateRunning = true;
-      this.bookshelfUpdateDone = 0;
-      this.bookshelfUpdateTotal = 0;
-      void new BookshelfFlowGateway(owner).loadAll((): boolean => owner === ReaderRuntimeOwner.current()).then(async (shelf: BookshelfState | undefined): Promise<void> => {
-        if (shelf === undefined) return;
-        const targets = shelf.books.filter((book: ShelfBook): boolean => book.sourceId !== LOCAL_SOURCE_ID);
-        this.bookshelfUpdateTotal = targets.length;
-        await this.refreshBookshelfCatalogBatch(targets, (done: number, total: number): void => {
-          this.bookshelfUpdateDone = done; this.bookshelfUpdateTotal = total;
-        });
-      }).catch((error: Error): void => { hilog.warn(DOMAIN, 'Reader', 'Manual bookshelf targets: %{private}s', error.message); })
-        .finally((): void => { if (owner === ReaderRuntimeOwner.current()) this.bookshelfUpdateRunning = false; });
-      return;
-    }
-    const candidates = this.shelfBooks.filter((book: ShelfBook): boolean =>
-      book.sourceId !== LOCAL_SOURCE_ID);
-    if (candidates.length === 0) {
-      hilog.info(DOMAIN, 'Reader', 'Manual bookshelf update: no network books to check');
-      return;
-    }
-    this.bookshelfUpdateRunning = true;
-    this.bookshelfUpdateDone = 0;
-    this.bookshelfUpdateTotal = candidates.length;
-    hilog.info(DOMAIN, 'Reader', 'Manual bookshelf update sweep: %{public}d books', candidates.length);
-    void this.refreshBookshelfCatalogBatch(candidates,
-      (done: number, total: number): void => {
-        this.bookshelfUpdateDone = done;
-        this.bookshelfUpdateTotal = total;
-      })
-      .finally((): void => {
-        this.bookshelfUpdateRunning = false;
-      });
+    const catalog = this.getBookshelfCatalogOwner(), binding = this.bookshelfCatalogBinding;
+    if (catalog !== undefined && binding !== undefined) catalog.manual(this.shelfBooks, binding, CATALOG_REFRESH_INTERVAL_MS);
+  }
+
+  private async reconcileBookshelfCatalogProjection(generation: number): Promise<void> {
+    const catalog = this.getBookshelfCatalogOwner(), binding = this.bookshelfCatalogBinding;
+    if (catalog !== undefined && binding !== undefined) await catalog.reconcile(generation, binding);
   }
 
   private canRunBookshelfBackgroundRefresh(): boolean {
     return this.applicationSettingsSnapshot?.autoCheckUpdate === true && this.settingsSnapshot.autoCheckUpdate &&
       this.route === 'bookshelf' && !this.readingSessionActive && this.searchAppForeground;
-  }
-
-  private async refreshOneShelfBook(book: ShelfBook, automatic: boolean = false,
-    automaticCurrent?: () => boolean): Promise<void> {
-    const seed: RemoteReadingBookSeed = {
-      sourceId: book.sourceId,
-      bookId: book.bookId,
-      detailUrl: book.bookId,
-      title: book.title,
-      author: book.author,
-      coverUrl: book.coverUrl,
-      intro: book.intro,
-      lastChapter: book.lastChapter,
-    };
-    try {
-      // Both the explicit action and already-throttled automatic candidates
-      // require a fresh catalog, never a prepared/offline admission shortcut.
-      const owner = ReaderRuntimeOwner.current();
-      const isCurrent = (): boolean => !automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh());
-      const session = await owner.bookAcquisitions().acquireBook(seed,
-        { forceRefresh: true, isCurrent, canDispatch: isCurrent }, automatic ? 'background' : 'foreground');
-      // Automatic update checks catalogs only. Reader/add/search preparation
-      // owns body acquisition; a shelf sweep must not compete for all bodies.
-      if (!automatic) await this.prefetchReadingWindow(session);
-    } catch (error) {
-      // Per-book failures do not abort remaining bookshelf updates. Existing
-      // local TOC/bodies stay authoritative and the next interval retries.
-      hilog.warn(DOMAIN, 'Reader',
-        'Bookshelf catalog update failed for %{private}s: %{private}s',
-        book.bookId, (error as Error).message);
-    }
   }
 
   private hasDeclaredCoverUrl(book: ShelfBook): boolean {
@@ -6360,173 +7201,46 @@ struct Index {
   }
 
   private openImportDialog(): void {
-    this.importAttemptId += 1;
-    this.importBusyAttempt = 0;
-    this.importFailureMessage = '';
-    this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
+    if (this.shelfReceiptRetired || this.route !== 'bookshelf') return;
+    const owner = ReaderRuntimeOwner.current(); const navigation = this.navigationGeneration;
+    this.bookshelfHost.operations(owner).openImport((): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+      this.route === 'bookshelf' && navigation === this.navigationGeneration, this.rssInstanceIdentity);
   }
 
   private closeImportDialog(): void {
-    this.importAttemptId += 1;
-    this.importBusyAttempt = 0;
-    this.importFailureMessage = '';
-    this.writeImportPresentation(undefined);
+    const owner = this.shelfOperationOwner;
+    if (owner !== undefined && this.isCurrentRuntime(owner)) this.bookshelfHost.operations(owner).closeImport(this.rssInstanceIdentity);
   }
 
   private async beginImport(): Promise<void> {
-    const presentation = this.currentImportPresentation();
-    if (this.route !== 'bookshelf' || presentation === undefined ||
-      presentation.state !== 'fileSelection' || this.importBusyAttempt !== 0) return;
-    const attemptId = ++this.importAttemptId;
-    this.importBusyAttempt = attemptId;
-    this.importFailureMessage = '';
-    const navigationGeneration = this.navigationGeneration;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.isCurrentImport(attemptId, navigationGeneration, owner);
-    const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    this.writeImportPresentation(new LocalImportPresentation('pickerOpening'));
-    try {
-      const selections = await gateway.selectLocalBookInputs();
-      if (!current()) {
-        await gateway.releaseUnusedSelections(selections);
-        return;
-      }
-      if (selections.length === 0) {
-        this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
-        return;
-      }
-      this.writeImportPresentation(new LocalImportPresentation('importing'));
-      const outcome = await gateway.importPreparedSelections(selections);
-      // A committed import always invalidates earlier shelf reads, regardless
-      // of whether its presentation owner is still visible.
-      this.bookshelfLoadGeneration += 1;
-      if (!current()) return;
-      if (outcome.batch.state === 'cancelled') {
-        this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
-        return;
-      }
-      this.applyBookshelfState(outcome.shelf);
-      this.writeImportPresentation(new LocalImportPresentation('result', outcome.batch));
-    } catch (error) {
-      // The shelf reload may fail after Core committed; never undo those books.
-      this.bookshelfLoadGeneration += 1;
-      hilog.error(DOMAIN, 'Reader', 'Local import failed: %{private}s', errorMessageOf(error));
-      if (current()) {
-        this.importFailureMessage = '导入未完成，请重试；已成功保存的书籍会保留';
-        this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
-      }
-    } finally {
-      if (this.importBusyAttempt === attemptId) this.importBusyAttempt = 0;
-    }
+    const owner = this.shelfOperationOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.route !== 'bookshelf') return;
+    const identity = this.shelfOperation.importIdentity; const navigation = this.navigationGeneration;
+    const current = (): boolean => this.isCurrentImport(identity, navigation, owner);
+    await this.bookshelfHost.operations(owner).importFiles(this.shelfFilter(), current);
   }
 
-  private isCurrentImport(attemptId: number, navigationGeneration: number, owner: ReaderRuntimeOwner): boolean {
-    if (this.importAttemptId !== attemptId || this.navigationGeneration !== navigationGeneration ||
-      this.route !== 'bookshelf') return false;
-    // Runtime owner identity is its process generation; replacement never
-    // transfers a pending picker/import's right to present into a new runtime.
-    try { return ReaderRuntimeOwner.current() === owner; } catch (_) { return false; }
-  }
-
-  private writeImportPresentation(presentation: LocalImportPresentation | undefined): void {
-    if (presentation === undefined) {
-      AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, '');
-      return;
-    }
-    if (presentation.state !== 'result') {
-      AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY,
-        JSON.stringify(new LocalImportPresentation(presentation.state)));
-      return;
-    }
-    if (presentation.batch === undefined || !this.isValidImportBatch(presentation.batch)) {
-      hilog.error(DOMAIN, 'Reader', 'Refusing to present an invalid local import batch');
-      AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, '');
-      return;
-    }
-    try {
-      // A single JSON value prevents a reconstructed page from observing a
-      // result state before its real Core-derived per-file batch.
-      AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, JSON.stringify(presentation));
-    } catch (error) {
-      const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader', 'Failed to save local import presentation: %{private}s', message);
-      AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, '');
-    }
+  private isCurrentImport(identity: number, navigationGeneration: number, owner: ReaderRuntimeOwner): boolean {
+    return !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+      this.bookshelfHost.operations(owner).isImportPresentationInstance(this.rssInstanceIdentity) &&
+      this.shelfOperation.importIdentity === identity && this.hasVisibleImportDialog() &&
+      this.navigationGeneration === navigationGeneration && this.route === 'bookshelf' && this.isCurrentRuntime(owner);
   }
 
   private reconcileImportPresentation(): void {
-    if (this.storedImportPresentation !== '' && this.currentImportPresentation() === undefined) {
-      hilog.warn(DOMAIN, 'Reader', 'Discarding an invalid restored local import result');
-      this.writeImportPresentation(undefined);
-    }
+    const owner = ReaderRuntimeOwner.current();
+    const navigation = this.navigationGeneration;
+    const operation = this.bookshelfHost.operations(owner); operation.restoreImport(this.storedImportPresentation,
+      (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.route === 'bookshelf' && navigation === this.navigationGeneration, this.rssInstanceIdentity);
+    if (!operation.isImportPresentationInstance(this.rssInstanceIdentity)) return;
+    this.shelfOperationOwner = owner; this.shelfOperation = operation.current();
+    const mounting = this.detailShelfAdmissionMount;
+    void operation.recoverRemoval(this.shelfFilter(), (): boolean =>
+      this.isCurrentBookshelfPresentation(navigation, owner, mounting));
   }
 
-  private hasVisibleImportDialog(): boolean {
-    return this.currentImportPresentation() !== undefined;
-  }
-
-  private visibleImportDialogState(): LocalImportDialogState {
-    const presentation = this.currentImportPresentation();
-    return presentation === undefined ? 'fileSelection' : presentation.state;
-  }
-
-  private visibleImportBatch(): LocalImportBatch | undefined {
-    const presentation = this.currentImportPresentation();
-    return presentation === undefined ? undefined : presentation.batch;
-  }
-
-  private currentImportPresentation(): LocalImportPresentation | undefined {
-    if (this.storedImportPresentation.length === 0) {
-      return undefined;
-    }
-    try {
-      const presentation = JSON.parse(this.storedImportPresentation) as LocalImportPresentation;
-      if (presentation === null) {
-        return undefined;
-      }
-      if (presentation.state === 'fileSelection' || presentation.state === 'pickerOpening' || presentation.state === 'importing') {
-        return presentation.batch === undefined
-          ? new LocalImportPresentation(presentation.state)
-          : undefined;
-      }
-      if (presentation.state !== 'result') {
-        return undefined;
-      }
-      const batch = this.parseImportBatch(presentation.batch);
-      return batch === undefined ? undefined : new LocalImportPresentation('result', batch);
-    } catch (_) {
-      return undefined;
-    }
-  }
-
-  private parseImportBatch(batch: LocalImportBatch | undefined): LocalImportBatch | undefined {
-    if (batch === undefined || batch === null || !this.isValidImportBatch(batch)) {
-      return undefined;
-    }
-    return batch;
-  }
-
-  private isValidImportBatch(batch: LocalImportBatch): boolean {
-    if (batch.state !== 'completed' || !this.isNonNegativeInteger(batch.imported)
-      || !this.isNonNegativeInteger(batch.failed) || !Array.isArray(batch.items)
-      || batch.items.length !== batch.imported + batch.failed
-      || batch.items.length > MAX_IMPORT_RESULT_ITEMS) {
-      return false;
-    }
-    let completed = 0;
-    for (const item of batch.items) {
-      if (item === null || typeof item.fileName !== 'string' || item.fileName.trim().length === 0
-        || (item.state !== 'success' && item.state !== 'failed')) {
-        return false;
-      }
-      if (item.state === 'success') {
-        completed += 1;
-      }
-    }
-    return completed === batch.imported;
-  }
-
-  private isNonNegativeInteger(value: number): boolean {
-    return Number.isSafeInteger(value) && value >= 0;
-  }
+  private hasVisibleImportDialog(): boolean { return this.shelfOperation.importPresentation !== undefined; }
+  private visibleImportDialogState(): LocalImportDialogState { return this.shelfOperation.importPresentation?.state ?? 'fileSelection'; }
+  private visibleImportBatch(): LocalImportBatch | undefined { return this.shelfOperation.importPresentation?.batch; }
+  private currentImportPresentation(): LocalImportPresentation | undefined { return this.shelfOperation.importPresentation; }
 }

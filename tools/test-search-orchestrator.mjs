@@ -1,9 +1,272 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+  "history-retry": {
+    "description": "history: history-retry actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "history-clear-late": {
+    "description": "history: history-clear-late actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "history-recovery-owner": {
+    "description": "history: history-recovery-owner actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "history-active-query": {
+    "description": "history: history-active-query actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "history-reopen-clear": {
+    "description": "history: history-reopen-clear actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "worker-concurrency-dedup": {
+    "description": "worker-lifecycle: worker-concurrency-dedup actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-health-admission": {
+    "description": "source-health: source-health-admission actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-cooldown-retry": {
+    "description": "source-health: source-cooldown-retry actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "page-retry-admission": {
+    "description": "source-health: page-retry-admission actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof; selected actual SDK/AST page consumer",
+    "resources": []
+  },
+  "source-failure-isolation": {
+    "description": "source-health: source-failure-isolation actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "all-source-failure": {
+    "description": "worker-lifecycle: all-source-failure actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "all-source-empty": {
+    "description": "worker-lifecycle: all-source-empty actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "superseded-query": {
+    "description": "worker-lifecycle: superseded-query actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-no-source": {
+    "description": "worker-lifecycle: local-no-source actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-gap-entry": {
+    "description": "source-health: source-gap-entry actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-history-arrival": {
+    "description": "source-health: source-history-arrival actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-list-recovery": {
+    "description": "source-health: source-list-recovery actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "all-disabled-entry": {
+    "description": "source-health: all-disabled-entry actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-list-error-entry": {
+    "description": "source-health: source-list-error-entry actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-refresh-retained": {
+    "description": "source-health: source-refresh-retained actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-refresh-resolved": {
+    "description": "source-health: source-refresh-resolved actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-refresh-removed": {
+    "description": "source-health: source-refresh-removed actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-refresh-stale": {
+    "description": "source-health: source-refresh-stale actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-refresh-failure": {
+    "description": "source-health: source-refresh-failure actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "streaming-results": {
+    "description": "worker-lifecycle: streaming-results actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "streaming-failure": {
+    "description": "worker-lifecycle: streaming-failure actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "route-retained-work": {
+    "description": "worker-lifecycle: route-retained-work actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "route-live-return": {
+    "description": "worker-lifecycle: route-live-return actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "route-settled-return": {
+    "description": "worker-lifecycle: route-settled-return actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "stop-loading": {
+    "description": "worker-lifecycle: stop-loading actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "stop-streaming": {
+    "description": "worker-lifecycle: stop-streaming actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "explicit-source-scope": {
+    "description": "worker-lifecycle: explicit-source-scope actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "empty-source-scope": {
+    "description": "worker-lifecycle: empty-source-scope actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "stop-settled": {
+    "description": "worker-lifecycle: stop-settled actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "retry-source-scope": {
+    "description": "worker-lifecycle: retry-source-scope actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "log-privacy": {
+    "description": "worker-lifecycle: log-privacy actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-online-merge": {
+    "description": "worker-lifecycle: local-online-merge actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "foreground-paused-cursor": {
+    "description": "worker-lifecycle: foreground-paused-cursor actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "foreground-release": {
+    "description": "worker-lifecycle: foreground-release actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-snapshot-overlap": {
+    "description": "metadata-delta: delta-snapshot-overlap actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "eligible-late-title": {
+    "description": "worker-lifecycle: eligible-late-title actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-live-merge": {
+    "description": "metadata-delta: delta-live-merge actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-superseded": {
+    "description": "metadata-delta: delta-superseded actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-counter-update": {
+    "description": "metadata-delta: delta-counter-update actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-failure-hidden": {
+    "description": "metadata-delta: delta-failure-hidden actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-busy-union": {
+    "description": "metadata-delta: delta-busy-union actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "delta-stopped-query": {
+    "description": "metadata-delta: delta-stopped-query actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "independent-branches": {
+    "description": "worker-lifecycle: independent-branches actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "stop-flush-pending": {
+    "description": "worker-lifecycle: stop-flush-pending actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "retry-failed-source": {
+    "description": "worker-lifecycle: retry-failed-source actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "retry-failed-local": {
+    "description": "worker-lifecycle: retry-failed-local actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "empty-source-sdk-publication": {
+    "description": "worker-lifecycle: empty-source-sdk-publication actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof; selected actual SDK/AST page consumer",
+    "resources": []
+  },
+  "branch-failure-recovery": {
+    "description": "worker-lifecycle: branch-failure-recovery actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "branch-failure-stale": {
+    "description": "worker-lifecycle: branch-failure-stale actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "source-failure-association": {
+    "description": "source-health: source-failure-association actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-dense-pages": {
+    "description": "local-scan: local-dense-pages actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-unicode": {
+    "description": "local-scan: local-unicode actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-sparse-hydration": {
+    "description": "local-scan: local-sparse-hydration actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-density-switch": {
+    "description": "local-scan: local-density-switch actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-hydration-revision": {
+    "description": "local-scan: local-hydration-revision actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-page-revision": {
+    "description": "local-scan: local-page-revision actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-full-revision": {
+    "description": "local-scan: local-full-revision actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-unstable-retry": {
+    "description": "local-scan: local-unstable-retry actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-legacy-core": {
+    "description": "local-scan: local-legacy-core actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  },
+  "local-cancelled-pages": {
+    "description": "local-scan: local-cancelled-pages actual SearchGateway/Orchestrator with controlled Core and virtual time; local shelf is an explicit port model, not SQLite proof",
+    "resources": []
+  }
+};
+async function runCase(id){
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -26,8 +289,15 @@ const sourceCategoryModule = stripTypeScriptTypes(
 const sourceCategoryImport =
   /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const sourceCategorySingleImport =
-  /^import \{ readerSourceCategoryIsText \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
+  /^import \{ readerSourceCategoryIsReadable \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
+const operationFactsModule = stripTypeScriptTypes(
+  read('entry/src/main/ets/app/ReaderOperationFacts.ts'),
+).replace(/^export /gm, '');
+const operationFactsImport =
+  /^import \{ projectOperationFacts \} from ['"][^'"]*ReaderOperationFacts['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
+  .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () =>
+    read('entry/src/main/ets/features/common/BookSearchTiming.ts'))
   .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
   .replace(errorMessageImport, '')
@@ -38,10 +308,11 @@ const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrches
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
   .replace(errorMessageImport, '')
   .replace(sourceCategorySingleImport, '')
+  .replace(operationFactsImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
 const combined = stripTypeScriptTypes(
-  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`
+  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${operationFactsModule}\n${gatewaySource}\n${orchestratorSource}`
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
@@ -50,7 +321,9 @@ globalThis.hilog = {
   warn() {}, error() {}, info() {}, debug() {}, fatal() {},
 };
 
-const { SearchGateway, SearchOrchestrator } = await import(moduleUrl);
+const { SearchGateway, SearchOrchestrator: ProductionSearchOrchestrator } = await import(moduleUrl);
+const ownedSearches=new Set();
+class SearchOrchestrator extends ProductionSearchOrchestrator {constructor(...args){super(...args);ownedSearches.add(this);}}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -73,6 +346,7 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
     failList: false, localBooks: [], historyKeywords: [] };
   return {
     state,
+    supportsCoreCapability: (capability) => capability === 'source.check.report.v2',
     request: async (command, params, options) => {
       if (command === 'bookshelf.list') return { data: { books: state.localBooks, total: state.localBooks.length } };
       if (command === 'source.list') {
@@ -138,6 +412,8 @@ function capture() {
 async function settle(state, expectedCalls) {
   for (let i = 0; i < 300; i += 1) {
     if (state.calls.length >= expectedCalls && state.inFlight === 0) {
+      // Give the actual worker promise continuation its own controlled turn.
+      await sleep(0);
       return;
     }
     await sleep(10);
@@ -157,8 +433,194 @@ async function waitUntil(state, predicate) {
 
 const last = (presentations) => presentations[presentations.length - 1];
 
-// 1. Bounded concurrency, stable source order, first-occurrence dedup.
-{
+function localShelfOwner(initialRows, mutate) {
+  let rows = initialRows;
+  let revision = 1;
+  const calls = [];
+  const owner = {
+    calls,
+    supportsCoreCapability: (name) => name === 'bookshelf.pageProjection.v1',
+    request: async (method, params) => {
+      calls.push({ method, ...params });
+      if (method === 'bookshelf.get') {
+        assert.equal(params.sourceId, 'local');
+        const book = rows.find(row => row.sourceId === params.sourceId && row.bookId === params.bookId) ?? null;
+        const data = { book };
+        if (mutate !== undefined) {
+          const next = mutate({ method, params, revision, rows });
+          if (next !== undefined) { rows = next; revision += 1; }
+        }
+        return { data };
+      }
+      assert.equal(method, 'bookshelf.list');
+      assert.equal(params.sourceKind, 'local');
+      let selected = rows.filter(row => row.sourceId === 'local');
+      if (params.keyword !== undefined) {
+        // SQLite lower() folds only ASCII; its keyword also matches bookId.
+        const needle = params.keyword.toLowerCase();
+        selected = selected.filter(row => [row.title, row.author, row.bookId]
+          .some(value => value.replace(/[A-Z]/g, c => c.toLowerCase()).includes(needle)));
+      }
+      if (params.pageProjection) {
+        assert.equal(params.membershipOnly, true);
+        assert.ok(params.limit > 0 && params.limit <= 128);
+        if (params.projectionRevision !== undefined && params.projectionRevision !== `local/${revision}`) {
+          return { data: { books: [], total: 0, offset: params.offset,
+            projectionRevision: `local/${revision}`, changed: true } };
+        }
+        const data = { books: selected.slice(params.offset, params.offset + params.limit).map(({sourceId,bookId,title,author}) =>
+          ({sourceId,bookId,title,author})), total: selected.length,
+          offset: params.offset, projectionRevision: `local/${revision}`, changed: false };
+        if (mutate !== undefined) {
+          const next = mutate({ method, params, revision, rows });
+          if (next !== undefined) { rows = next; revision += 1; }
+        }
+        return { data };
+      }
+      assert.ok(params.limit > 0 && params.limit <= 128);
+      const data = { books: selected.slice(params.offset, params.offset + params.limit), total: selected.length };
+      if (mutate !== undefined) {
+        const next = mutate({ method, params, revision, rows });
+        if (next !== undefined) { rows = next; revision += 1; }
+      }
+      return { data };
+    },
+  };
+  return owner;
+}
+
+try {switch(id){
+case "history-retry": for (const sources of [[], makeSources(1), [{ ...makeSources(1)[0], enabled: false }]]) {
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  const request = owner.request;
+  let failHistory = true, reads = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list') {
+      reads += 1;
+      if (failHistory) throw Error('history fixture failed https://private.invalid/token');
+    }
+    return request(method, params, options);
+  };
+  owner.state.historyKeywords = ['保留的历史'];
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await sleep(20);
+  assert.equal(last(presentations).historyStatus, 'loadFailed');
+  assert.ok(!JSON.stringify(last(presentations)).includes('private.invalid'));
+  search.retryHistory();
+  await sleep(20);
+  assert.equal(last(presentations).historyStatus, 'loadFailed');
+  failHistory = false;
+  const sourceReads = owner.state.sourceLoads, work = search.work;
+  search.retryHistory(); search.retryHistory();
+  await sleep(20);
+  assert.equal(reads, 3, 'repeated retry joins the pending read');
+  assert.equal(last(presentations).historyStatus, 'ready');
+  assert.deepEqual(last(presentations).history, ['保留的历史']);
+  assert.equal(owner.state.sourceLoads, sourceReads);
+  assert.equal(owner.state.historyWrites, 0);
+  assert.equal(search.work, work);
+  search.close();
+};break;
+case "history-clear-late": {
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  const request = owner.request;
+  let releaseOld, reads = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list' && ++reads === 1)
+      return new Promise(resolve => { releaseOld = resolve; });
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10);
+  search.clearHistory(); await sleep(10);
+  assert.equal(last(presentations).historyStatus, 'ready');
+  releaseOld({ data: { keywords: ['已清除的旧记录'], count: 1 } });
+  await sleep(10);
+  assert.deepEqual(last(presentations).history, [], 'a pre-clear response must never resurrect cleared history');
+  search.close();
+};break;
+case "history-recovery-owner": {
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  const request = owner.request;
+  let releaseOld, reads = 0, clears = 0, failClear = true, failRead = false;
+  owner.state.historyKeywords = ['历史'];
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list') {
+      if (++reads === 1) return new Promise(resolve => { releaseOld = resolve; });
+      if (failRead) throw Error('read failed');
+    }
+    if (method === 'search.history.clear') {
+      clears += 1;
+      if (failClear) throw Error('clear failed');
+    }
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); search.close(); search.open(); await sleep(20);
+  releaseOld({ data: { keywords: ['旧会话'], count: 1 } }); await sleep(10);
+  assert.deepEqual(last(presentations).history, ['历史']);
+  search.clearHistory(); search.clearHistory(); await sleep(10);
+  assert.equal(clears, 1);
+  assert.equal(last(presentations).historyStatus, 'clearFailed');
+  assert.deepEqual(last(presentations).history, ['历史']);
+  failClear = false; failRead = true;
+  search.retryHistory(); await sleep(10);
+  assert.equal(last(presentations).historyStatus, 'loadFailed', 'successful clear is not repeated after a read failure');
+  assert.deepEqual(last(presentations).history, []);
+  failRead = false; search.retryHistory(); await sleep(10);
+  assert.equal(last(presentations).historyStatus, 'ready');
+  assert.equal(clears, 2);
+  search.close();
+  const count = presentations.length;
+  search.retryHistory(); search.clearHistory(); await sleep(10);
+  assert.equal(presentations.length, count, 'closed entry cannot issue recovery work');
+};break;
+case "history-active-query": {
+  const owner = fakeOwner({ sources: makeSources(1), resultsFor: () => [], delayForSource: () => 50 });
+  const request = owner.request;
+  let failed = true;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list' && failed) throw Error('history unavailable');
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10); search.search('正在搜索', ['source-0']); await sleep(10);
+  const run = search.run, work = search.work, calls = owner.state.calls.length;
+  failed = false; search.retryHistory(); await sleep(10);
+  assert.equal(search.run, run); assert.equal(search.work, work);
+  assert.equal(owner.state.calls.length, calls); assert.equal(owner.state.historyWrites, 1);
+  assert.equal(last(presentations).kind, 'loading', 'history recovery cannot replace an active query');
+  await settle(owner.state, 1); search.close();
+};break;
+case "history-reopen-clear": {
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  owner.state.historyKeywords = ['清空前'];
+  const request = owner.request;
+  let releaseClear, reads = 0, clears = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list') reads += 1;
+    if (method === 'search.history.clear') {
+      clears += 1;
+      await new Promise(resolve => { releaseClear = resolve; });
+    }
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10); search.clearHistory(); search.close(); search.open(); await sleep(10);
+  assert.equal(reads, 1, 'reopened entry waits for the pending durable clear before reading');
+  releaseClear(); await sleep(10);
+  assert.equal(clears, 1); assert.equal(reads, 2);
+  assert.equal(last(presentations).historyStatus, 'ready');
+  assert.deepEqual(last(presentations).history, []);
+  search.close();
+};break;
+case "worker-concurrency-dedup": {
   const sources = makeSources(8);
   const owner = fakeOwner({
     sources,
@@ -189,6 +651,8 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(present.totalSourceCount, 8);
   assert.equal(present.completedSourceCount, 8);
   assert.equal(present.failedSourceCount, 0, 'a fully healthy sweep reports zero failed sources');
+  assert.equal(present.operation.fact, 'current');
+  assert.equal(present.operation.value.resultCount, present.results.length);
   assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
     'every result of one sweep carries the same searchRequestId');
   assert.match(present.results[0].searchRequestId, /^search-/,
@@ -213,10 +677,92 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(
     present.results.filter((r) => r.bookId === '/cross').length, 2,
     'same bookId under different sourceIds is not merged');
-}
-
-// 2. One broken source is isolated; healthy sources still finish and display.
-{
+};break;
+case "source-health-admission": {
+  const now = Date.now();
+  const checkedFailure = (sourceVersion) => ({ checkedAtMs: now, stale: false, report: {
+    mode: 'search', ruleDigest: sourceVersion,
+    steps: [{ level: 'L1', requested: true, status: 'fail' }, { level: 'L2', requested: true, status: 'fail' }],
+  } });
+  const sources = [
+    { ...makeSources(1)[0], sourceId: 'known-failed', baseUrl: 'https://failed.example', sourceVersion: 'v-known', checkReports: [checkedFailure('v-known')] },
+    { ...makeSources(1)[0], sourceId: 'unknown', sourceVersion: 'v-unknown' },
+  ];
+  const owner = fakeOwner({ sources, resultsFor: (sourceId) => [{ bookId: `/${sourceId}`, title: '可用书', author: '作者' }] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner); search.open(); search.search('健康筛选'); await settle(owner.state, 1);
+  assert.deepEqual(owner.state.calls.map((call) => call.sourceId), ['unknown']);
+  assert.equal(last(presentations).totalSourceCount, 2);
+  assert.equal(last(presentations).skippedSourceCount, 1);
+  assert.deepEqual(last(presentations).skippedSources, [{ sourceId: 'known-failed', baseUrl: 'https://failed.example', reason: 'healthFailed' }]);
+  search.retry(); await settle(owner.state, 2);
+  assert.deepEqual(owner.state.calls.map((call) => call.sourceId), ['unknown', 'known-failed'],
+    'explicit retry bypasses health admission');
+  search.close();
+};break;
+case "source-cooldown-retry": {
+  let shouldFail = true;
+  const owner = fakeOwner({ sources: makeSources(1), failFor: () => shouldFail, resultsFor: () => [] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner); search.open(); search.search('冷却一'); await settle(owner.state, 1);
+  shouldFail = false; search.search('冷却二'); await sleep(30);
+  assert.equal(owner.state.calls.length, 1, 'a failed source is cooled down for the next query');
+  assert.equal(last(presentations).skippedSourceCount, 1);
+  search.retry(); await settle(owner.state, 2);
+  assert.equal(owner.state.calls.length, 2, 'manual retry bypasses the cooldown');
+  search.close();
+};break;
+case "page-retry-admission": {
+  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+  const Retry=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',['retryOperation']);const retryPage=Retry.prototype.retryOperation;
+  for (const reason of ['healthFailed', 'cooldown']) {
+    const checkedAtMs = Date.now();
+    const sources = makeSources(2).map((source) => ({ ...source, sourceVersion: `v-${source.sourceId}`,
+      ...(reason === 'healthFailed' ? { checkReports: [{ checkedAtMs, stale: false, report: {
+        mode: 'search', ruleDigest: `v-${source.sourceId}`,
+        steps: [{ level: 'L1', requested: true, status: 'fail' }, { level: 'L2', requested: true, status: 'fail' }],
+      } }] } : {}) }));
+    let shouldFail = reason === 'cooldown';
+    const owner = fakeOwner({ sources, failFor: () => shouldFail,
+      resultsFor: (sourceId) => [{ bookId: `/${sourceId}`, title: '大明望族', author: '雁九' }] });
+    const { orchestrator, presentations } = capture();
+    const search = orchestrator(owner); search.open();
+    let priorCalls = 0;
+    if (reason === 'cooldown') {
+      search.search('旧关键词');
+      await waitUntil(owner.state, () => last(presentations).kind === 'error');
+      priorCalls = owner.state.calls.length;
+      assert.equal(priorCalls, 2);
+      shouldFail = false;
+    }
+    search.search('大明望族');
+    await waitUntil(owner.state, () => last(presentations).kind === 'empty');
+    const skipped = last(presentations);
+    assert.equal(owner.state.calls.length, priorCalls, 'skipped sources issue no live request');
+    assert.equal(skipped.searchedSourceCount, 0);
+    assert.equal(skipped.failedSourceCount, 0, 'a skip must not fabricate a failed live request');
+    assert.equal(skipped.localSearchFailed, false);
+    assert.equal(skipped.skippedSourceCount, 2);
+    assert.ok(skipped.skippedSources.every((source) => source.reason === reason));
+    assert.equal(skipped.operation.fact, 'empty');
+    assert.equal(skipped.operation.canRetry, true);
+    let invocations = 0;
+    const page = { operation: () => last(presentations).operation,
+      onRetry: () => { invocations += 1; search.retry(); } };
+    retryPage.call(page);
+    assert.equal(invocations, 1, 'the mounted page must reach explicit retry');
+    assert.equal(last(presentations).operation.canRetry, false, 'running retry cannot be duplicated');
+    retryPage.call(page);
+    assert.equal(invocations, 1);
+    await waitUntil(owner.state, () => last(presentations).kind === 'results' && !last(presentations).searching);
+    assert.equal(owner.state.calls.length, priorCalls + 2, 'explicit retry dispatches each skipped source once');
+    assert.equal(last(presentations).skippedSourceCount, undefined);
+    assert.equal(last(presentations).operation.canRetry, false, 'healthy success does not claim failure recovery');
+    assert.equal(last(presentations).results.length, 2);
+    search.close();
+  }
+};break;
+case "source-failure-isolation": {
   const sources = makeSources(4);
   const owner = fakeOwner({
     sources,
@@ -235,15 +781,15 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(present.searching, false);
   assert.equal(present.completedSourceCount, 4, 'failures count as completed sources');
   assert.equal(present.failedSourceCount, 1, 'the isolated failure is reported to the surface');
+  assert.equal(present.operation.fact, 'partial');
+  assert.equal(present.operation.canRetry, true);
   assert.equal(owner.state.calls.length, 4, 'a broken source must not cancel later sources');
   assert.deepEqual(
     present.results.map((result) => result.sourceId),
     ['source-0', 'source-1', 'source-3'],
     'only the failed source is absent and healthy-source order stays stable');
-}
-
-// 3. Only an all-source failure yields the whole-search error surface.
-{
+};break;
+case "all-source-failure": {
   const sources = makeSources(4);
   const owner = fakeOwner({
     sources,
@@ -260,14 +806,14 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(last(presentations).kind, 'error', 'all failing sources yield whole-search error');
   assert.equal(last(presentations).searchedSourceCount, 4, 'error carries the attempted source count');
   assert.equal(last(presentations).failedSourceCount, 4, 'error carries every failed source count');
+  assert.equal(last(presentations).operation.fact, 'failed');
+  assert.equal(last(presentations).operation.canRetry, true);
   assert.equal(owner.state.calls.length, 4, 'every enabled source is attempted before the error surface');
   assert.ok(
     !presentations.some((p) => p.kind === 'results'),
     'a sweep with zero successful sources never shows partial results');
-}
-
-// 4. All sources empty yields the empty surface.
-{
+};break;
+case "all-source-empty": {
   const owner = fakeOwner({
     sources: makeSources(3),
     delayForSource: () => 10,
@@ -281,13 +827,12 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   assert.equal(last(presentations).kind, 'empty', 'all-success-with-no-results is empty');
   assert.equal(last(presentations).searchedSourceCount, 3, 'empty carries the attempted source count');
+  assert.equal(last(presentations).operation.fact, 'empty');
   assert.ok(
     !presentations.some((p) => p.kind === 'results'),
     'a zero-result sweep keeps the loading surface until the sweep completes');
-}
-
-// 5. A newer search supersedes an older one; late results never overwrite.
-{
+};break;
+case "superseded-query": {
   const owner = fakeOwner({
     sources: makeSources(4),
     delayForSource: (_sourceId, keyword) => (keyword === '旧' ? 60 : 10),
@@ -312,10 +857,8 @@ const last = (presentations) => presentations[presentations.length - 1];
     `late older results must not overwrite: ${JSON.stringify(present.results.map((r) => r.bookId))}`);
   assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
     'the settled list only carries one sweep id: late old-sweep results are rejected');
-}
-
-// Local import search remains usable without online sources and when source.list fails.
-for (const failList of [false, true]) {
+};break;
+case "local-no-source": for (const failList of [false, true]) {
   const owner = fakeOwner({ sources: [], resultsFor: () => [] });
   owner.state.failList = failList;
   owner.state.localBooks = [
@@ -329,11 +872,8 @@ for (const failList of [false, true]) {
   assert.deepEqual(last(presentations).results.map(book => book.bookId), ['import-one']);
   assert.equal(last(presentations).sourceListFailed, failList);
   assert.equal(owner.state.calls.length, 0);
-}
-
-// The entry state must explain why online search is unavailable before a
-// keyword is submitted. Its search field remains live for imported books.
-for (const [sources, reason] of [
+};break;
+case "source-gap-entry": for (const [sources, reason] of [
   [[], 'noSources'],
   [makeSources(2).map((source) => ({ ...source, enabled: false })), 'allDisabled'],
   [[{ sourceId: 'music', name: '音乐', enabled: true, bookSource: { bookSourceType: 1 } }], 'allDisabled'],
@@ -350,12 +890,8 @@ for (const [sources, reason] of [
   assert.deepEqual(last(presentations).results.map((book) => book.bookId), ['import-one']);
   assert.equal(owner.state.calls.length, 0, 'no ineligible online source receives book.search');
   search.close();
-}
-
-// Source availability and search history are independent reads. Both arrival
-// orders retain the same tappable history on the no-source entry, and clearing
-// history does not turn a confirmed gap back into an ordinary Initial state.
-for (const delayed of ['history', 'sources']) {
+};break;
+case "source-history-arrival": for (const delayed of ['history', 'sources']) {
   const owner = fakeOwner({ sources: [], resultsFor: () => [] });
   owner.state.historyKeywords = ['本地书', '旧关键词'];
   const request = owner.request;
@@ -385,11 +921,8 @@ for (const delayed of ['history', 'sources']) {
     last(presentations).history.length === 0);
   assert.equal(last(presentations).reason, 'noSources');
   search.close();
-}
-
-// A failed source-list read is distinct from a confirmed empty list. Local
-// search remains available, and an explicit retry can recover the entry.
-{
+};break;
+case "source-list-recovery": {
   const sources = makeSources(1);
   const owner = fakeOwner({ sources, resultsFor: () => [] });
   owner.state.failList = true;
@@ -405,15 +938,15 @@ for (const delayed of ['history', 'sources']) {
   await waitUntil(owner.state, () => last(presentations).kind === 'initial' && owner.state.sourceLoads >= 2);
   assert.equal(last(presentations).kind, 'initial');
   search.close();
-}
-{
+};break;
+case "all-disabled-entry": {
   const owner = fakeOwner({ sources: makeSources(2).map(source => ({...source, enabled:false})), resultsFor: () => [] });
   const { orchestrator, presentations } = capture();
   const search = orchestrator(owner); search.open(); search.search('missing');
   await waitUntil(owner.state, () => last(presentations).kind === 'empty');
   assert.equal(owner.state.calls.length, 0);
-}
-{
+};break;
+case "source-list-error-entry": {
   const owner = fakeOwner({ sources: makeSources(2), resultsFor: () => [] });
   owner.state.failList = true;
   const { orchestrator, presentations } = capture();
@@ -421,11 +954,8 @@ for (const delayed of ['history', 'sources']) {
   await waitUntil(owner.state, () => last(presentations).kind === 'error');
   owner.state.failList = false; search.retry();
   await waitUntil(owner.state, () => last(presentations).kind === 'empty');
-}
-
-// 9. refreshSources preserves a non-config presentation (empty) but refreshes
-// the source chips projection.
-{
+};break;
+case "source-refresh-retained": {
   const sources = makeSources(3);
   const owner = fakeOwner({ sources, delayForSource: () => 5, resultsFor: () => [] });
   const { orchestrator, presentations, sourcesSnapshots } = capture();
@@ -442,11 +972,8 @@ for (const delayed of ['history', 'sources']) {
 
   assert.equal(last(presentations).kind, 'empty', 'refreshSources keeps the current surface');
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 4, 'chips projection refreshed');
-}
-
-// 10. refreshSources resolves a resolved configuration gap: allDisabled list
-// that becomes usable re-enters the Initial surface via the normal entry reset.
-{
+};break;
+case "source-refresh-resolved": {
   const sources = makeSources(2).map((source) => ({ ...source, enabled: false }));
   const owner = fakeOwner({ sources, resultsFor: () => [] });
   const { orchestrator, presentations, sourcesSnapshots } = capture();
@@ -463,11 +990,8 @@ for (const delayed of ['history', 'sources']) {
 
   assert.equal(last(presentations).kind, 'initial', 'usable list after allDisabled re-enters Initial');
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 2, 'refreshed sources are projected');
-}
-
-// Source Management can also remove the last usable source. A plain return
-// must expose the management entry while preserving the search history.
-{
+};break;
+case "source-refresh-removed": {
   const sources = makeSources(2);
   const owner = fakeOwner({ sources, resultsFor: () => [] });
   owner.state.historyKeywords = ['本地书'];
@@ -489,11 +1013,8 @@ for (const delayed of ['history', 'sources']) {
     last(presentations).reason === 'noSources');
   assert.deepEqual(last(presentations).history, ['本地书']);
   search.close();
-}
-
-// A source load started before Source Management must not overwrite a newer
-// refresh in the same search session when its failure arrives late.
-{
+};break;
+case "source-refresh-stale": {
   const owner = fakeOwner({ sources: makeSources(1), resultsFor: () => [] });
   const originalRequest = owner.request;
   let rejectOldLoad;
@@ -513,11 +1034,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(last(presentations).kind, 'initial', 'stale source failure cannot replace newer entry');
   assert.equal(sourcesSnapshots.at(-1).length, 1, 'stale source failure cannot clear current chips');
   search.close();
-}
-
-// A failed refresh must replace a stale no-source verdict; after recovery,
-// refresh returns to the confirmed no-source state until a source is added.
-{
+};break;
+case "source-refresh-failure": {
   const owner = fakeOwner({ sources: [], resultsFor: () => [] });
   const { orchestrator, presentations } = capture();
   const search = orchestrator(owner);
@@ -531,12 +1049,8 @@ for (const delayed of ['history', 'sources']) {
   await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
   assert.equal(last(presentations).reason, 'noSources');
   search.close();
-}
-
-// 11. Streaming results: the first successful source publishes partial
-// results immediately (searching=true) while slower sources are still
-// running; the sweep settles to searching=false with all counters.
-{
+};break;
+case "streaming-results": {
   const sources = makeSources(2);
   const owner = fakeOwner({
     sources,
@@ -553,6 +1067,9 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(partial.searching, true, 'the first landing publishes a streaming snapshot');
   assert.equal(partial.totalSourceCount, 2, 'streaming snapshot carries the sweep total');
   assert.equal(partial.completedSourceCount, 1, 'only the landed source is completed so far');
+  assert.equal(partial.operation.fact, 'partial');
+  assert.equal(partial.operation.hasValue, true);
+  assert.equal(partial.operation.canCancel, true);
   assert.deepEqual(partial.results.map((r) => r.bookId), ['/b-source-0'],
     'partial results already carry the first source books');
   assert.equal(last(presentations).kind, 'results', 'no empty/error clobbers a running sweep');
@@ -562,13 +1079,11 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(final.kind, 'results');
   assert.equal(final.searching, false, 'the sweep settles to a closed streaming slot');
   assert.equal(final.completedSourceCount, 2);
+  assert.equal(final.operation.fact, 'current');
+  assert.equal(final.operation.canCancel, false);
   assert.equal(final.results.length, 2, 'late books join the final list');
-}
-
-// 12. A failed source never publishes partial results on its own: the
-// loading surface holds until the first book lands, and its completion is
-// still reflected in the streaming counters.
-{
+};break;
+case "streaming-failure": {
   const sources = makeSources(2);
   const owner = fakeOwner({
     sources,
@@ -592,14 +1107,13 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(emits[0].searching, true);
   assert.equal(emits[0].completedSourceCount, 2, 'the failure counts as completed');
   assert.equal(emits[0].failedSourceCount, 1, 'the streamed snapshot carries the failure count');
+  assert.equal(emits[0].operation.fact, 'partial');
   assert.deepEqual(emits[0].results.map((r) => r.bookId), ['/b-source-1'],
     'only the healthy source contributes books');
   assert.equal(last(presentations).searching, false, 'the sweep settles to closed');
-}
-
-// 13. Leaving mid-sweep retains completed work. Restoring the route wakes the
-// same query without repeating source requests or publishing another loading state.
-{
+  assert.equal(last(presentations).operation.fact, 'partial');
+};break;
+case "route-retained-work": {
   const sources = makeSources(2);
   const owner = fakeOwner({
     sources,
@@ -629,11 +1143,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(final.kind, 'results');
   assert.equal(final.searching, false, 'the retained sweep settles to a closed slot');
   assert.equal(final.completedSourceCount, 2);
-}
-
-// 14. A sweep that is still alive when the route returns keeps its course:
-// resume must not restart it, and it settles on its own.
-{
+};break;
+case "route-live-return": {
   const sources = makeSources(2);
   const owner = fakeOwner({
     sources,
@@ -660,10 +1171,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(final.kind, 'results');
   assert.equal(final.searching, false, 'the surviving sweep settles alone');
   assert.equal(owner.state.calls.length, 2, 'no source request is re-issued');
-}
-
-// 15. A settled (searching:false) surface never re-sweeps on restore.
-{
+};break;
+case "route-settled-return": {
   const owner = fakeOwner({
     sources: makeSources(2),
     delayForSource: () => 10,
@@ -681,11 +1190,8 @@ for (const delayed of ['history', 'sources']) {
   search.resume();
   assert.equal(presentations.length, presentationsBefore, 'a settled surface never re-sweeps');
   assert.equal(owner.state.calls.length, callsBefore, 'a settled surface issues no requests');
-}
-
-// 16. ACQ-02: stop() during a live loading sweep settles to a stopped empty
-// surface, and the superseded sweep issues no further source requests.
-{
+};break;
+case "stop-loading": {
   const sources = makeSources(6);
   const owner = fakeOwner({
     sources,
@@ -703,6 +1209,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(stopped.kind, 'empty', 'a stop before any results lands settles to empty');
   assert.equal(stopped.stopped, true, 'the stopped empty verdict is marked as user-stopped');
   assert.equal(stopped.searchedSourceCount, 0, 'no source had returned when the sweep stopped');
+  assert.equal(stopped.operation.fact, 'cancelled');
+  assert.equal(stopped.operation.canRetry, true);
 
   const callsAtStop = owner.state.calls.length;
   const presentationsAtStop = presentations.length;
@@ -718,11 +1226,9 @@ for (const delayed of ['history', 'sources']) {
   await settle(owner.state, callsAtStop + 6);
   assert.equal(last(presentations).kind, 'empty');
   assert.equal(last(presentations).stopped, undefined, 'a fresh retry is not marked stopped');
-}
-
-// 17. ACQ-02: stop() during a streaming results sweep keeps the partial
-// results, closes the in-progress slot, and stops issuing requests.
-{
+  assert.equal(last(presentations).operation.fact, 'empty');
+};break;
+case "stop-streaming": {
   const sources = makeSources(4);
   const owner = fakeOwner({
     sources,
@@ -741,6 +1247,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(stopped.kind, 'results', 'a stop with partial results stays on results');
   assert.equal(stopped.searching, false, 'the stop closes the streaming in-progress slot');
   assert.equal(stopped.stopped, true, 'the partial results are marked as user-stopped');
+  assert.equal(stopped.operation.fact, 'cancelled');
+  assert.equal(stopped.operation.hasValue, true);
   assert.deepEqual(stopped.results.map((r) => r.bookId), ['/b-source-0'],
     'the partial results stay on the surface');
 
@@ -756,10 +1264,8 @@ for (const delayed of ['history', 'sources']) {
   search.resume();
   assert.equal(presentations.length, presentationsBefore,
     'a user-stopped sweep is not resurrected by resume');
-}
-
-// 18. ACQ-02: an explicit scope restricts the sweep to the selected subset.
-{
+};break;
+case "explicit-source-scope": {
   const sources = makeSources(4);
   const owner = fakeOwner({
     sources,
@@ -781,11 +1287,8 @@ for (const delayed of ['history', 'sources']) {
     owner.state.calls.map((c) => c.sourceId).sort(), ['source-1', 'source-2']);
   assert.deepEqual(
     present.results.map((r) => r.bookId).sort(), ['/b-source-1', '/b-source-2']);
-}
-
-// 19. ACQ-02: a scope that excludes every usable source is an honest empty
-// verdict with zero attempted sources, not a sourceRequired configuration gap.
-{
+};break;
+case "empty-source-scope": {
   const sources = makeSources(2);
   const owner = fakeOwner({ sources, resultsFor: () => [] });
   const { orchestrator, presentations } = capture();
@@ -798,10 +1301,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(present.kind, 'empty', 'an exhausted scope reads as empty, not missing-source');
   assert.equal(present.searchedSourceCount, 0, 'nothing was searched for an exhausted scope');
   assert.equal(owner.state.calls.length, 0, 'no book.search fires for an exhausted scope');
-}
-
-// 20. ACQ-02: stop() on a settled surface is a no-op.
-{
+};break;
+case "stop-settled": {
   const owner = fakeOwner({
     sources: makeSources(2),
     delayForSource: () => 10,
@@ -818,10 +1319,8 @@ for (const delayed of ['history', 'sources']) {
   search.stop();
   assert.equal(presentations.length, presentationsBefore,
     'stopping a settled sweep publishes nothing');
-}
-
-// 21. ACQ-02: retry() after a scoped search re-runs the same scope subset.
-{
+};break;
+case "retry-source-scope": {
   const sources = makeSources(3);
   const owner = fakeOwner({
     sources,
@@ -840,12 +1339,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(owner.state.calls.length, 2, 'the retry re-runs exactly one scoped source');
   assert.ok(owner.state.calls.every((c) => c.sourceId === 'source-1'),
     'the retry keeps the retained scope instead of widening to all sources');
-}
-
-// 22. P2-9 log hygiene: hilog never carries raw keywords or source URLs —
-// source identities reduce to the host, Core error URLs reduce to [host:…],
-// and stop-log keywords are truncated.
-{
+};break;
+case "log-privacy": {
   const logged = [];
   const originalHilog = globalThis.hilog;
   const keyword = '一个特别特别特别长的搜索关键词';
@@ -909,10 +1404,8 @@ for (const delayed of ['history', 'sources']) {
   assert.ok(!logged.some((entry) => entry.args.some((arg) =>
     typeof arg === 'string' && arg.includes('secret-source.example/search'))),
     'no raw source URL may reach hilog');
-}
-
-// Local and online results belong to the same request, including a shared title.
-{
+};break;
+case "local-online-merge": {
   const owner = fakeOwner({sources: makeSources(1), delayForSource:()=>30,
     resultsFor:()=>[{bookId:'/remote',title:'同名',author:'作者'}]});
   owner.state.localBooks=[{sourceId:'local',bookId:'local-one',title:'同名',author:'作者'}];
@@ -923,11 +1416,8 @@ for (const delayed of ['history', 'sources']) {
   assert.deepEqual(result.map(book=>book.sourceId),['local','source-0']);
   assert.equal(new Set(result.map(book=>book.searchRequestId)).size,1);
   assert.ok(presentations.some(p=>p.kind==='results' && p.searching && p.results[0]?.sourceId==='local'));
-}
-
-// Foreground policy: admitted requests finish while hidden; the remaining
-// cursor pauses, then resumes once without recording history or starting over.
-{
+};break;
+case "foreground-paused-cursor": {
   let visible = true;
   const owner = fakeOwner({ sources: makeSources(9), delayForSource: () => 60,
     resultsFor: (sourceId) => [{ bookId: `/book-${sourceId}`, title: sourceId, author: '作者' }] });
@@ -955,11 +1445,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(last(presentations).searching, false);
   assert.ok(last(presentations).results.every(book => book.searchRequestId === queryId));
   search.close();
-}
-
-// Hiding before any result does not strand Loading. Closing or stopping while
-// paused releases the workers, and a later foreground event cannot revive them.
-for (const action of ['resume', 'close', 'stop']) {
+};break;
+case "foreground-release": for (const action of ['resume', 'close', 'stop']) {
   let visible = false;
   const owner = fakeOwner({ sources: makeSources(6), delayForSource: () => 5,
     resultsFor: sourceId => [{ bookId: `/book-${sourceId}`, title: sourceId }] });
@@ -980,11 +1467,8 @@ for (const action of ['resume', 'close', 'stop']) {
     assert.equal(owner.state.calls.length, 0, `${action} must release without dispatch`);
   }
   search.close();
-}
-
-// A canonical notification can overlap an older snapshot read. The final
-// update is replayed after that read, even if no source search remains active.
-{
+};break;
+case "delta-snapshot-overlap": {
   const owner = fakeOwner({ sources: [{ ...makeSources(1)[0], sourceVersion: 'v1' }],
     resultsFor: () => [{ bookId: '/book', title: '搜索书名', author: '作者' }] });
   const originalRequest = owner.request;
@@ -1016,11 +1500,8 @@ for (const action of ['resume', 'close', 'stop']) {
   assert.equal(last(presentations).searching, false);
   assert.equal(last(presentations).results[0].groupKey, '搜索书名\u0000作者');
   search.close();
-}
-
-// PH25: every eligible source is queried despite early fan-fiction matches; a
-// late exact title is retained with source identity even if another source fails.
-{
+};break;
+case "eligible-late-title": {
   const sources = makeSources(7);
   sources.push({ sourceId: 'disabled', name: '停用', enabled: false });
   sources.push({ sourceId: 'audio', name: '音频', enabled: true, category: 'audio' });
@@ -1039,12 +1520,8 @@ for (const action of ['resume', 'close', 'stop']) {
   assert.ok(exact); assert.equal(exact.sourceId, 'source-6'); assert.equal(exact.bookId, '/source-6');
   assert.ok(exact.searchRequestId); assert.equal(final.results.length, 6);
   search.close();
-}
-
-console.log('search orchestrator bounded concurrency and retained lifecycle: PASS');
-
-// PH65: cache enrichment must become visible while later sources keep landing.
-{
+};break;
+case "delta-live-merge": {
   let finish;
   let reads = 0;
   const gate = new Promise(resolve => { finish = resolve; });
@@ -1068,11 +1545,8 @@ console.log('search orchestrator bounded concurrency and retained lifecycle: PAS
   assert.equal(orches.presentation.searching, true, 'merge is visible before all remaining sources finish');
   assert.equal(emitted.length, 1, 'one completed projection is published, not discarded and restarted');
   orches.close();
-}
-console.log('PH65 in-flight canonical merge becomes visible before sweep completion PASS');
-
-// PH65: the same merge must not overwrite a later payload or leak into a new keyword.
-for (const superseded of [false, true]) {
+};break;
+case "delta-superseded": for (const superseded of [false, true]) {
   let finish;
   const gate = new Promise(resolve => { finish = resolve; });
   const emitted = [];
@@ -1092,8 +1566,8 @@ for (const superseded of [false, true]) {
   assert.equal(o.presentation.completedSourceCount, 3);
   if (superseded) assert.equal(emitted.length, 0);
   o.close();
-}
-{
+};break;
+case "delta-counter-update": {
   let reads = 0;
   const o = new SearchOrchestrator(() => {}, () => {}, () => true, {});
   Object.assign(o, { sessionOpen: true, unsubscribeBooks: () => {},
@@ -1113,12 +1587,8 @@ for (const superseded of [false, true]) {
   o.present({ ...p, results: [book, { ...book, sourceId: 'b', bookId: '/b' }] });
   assert.equal(o.presentation.results[0], canonical, 'later raw source batch retains established canonical grouping even without acquisition');
   o.close();
-}
-console.log('PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS');
-
-// PH68: a failed incremental read is retained until a later event; unrelated
-// changes must not permanently lose the earlier book's update or spin retries.
-{
+};break;
+case "delta-failure-hidden": {
   let visible=true,fail=true;const deltas=[];
   const a={sourceId:'a',bookId:'/a',title:'鸣龙',author:'关关公子'};
   const o=new SearchOrchestrator(()=>{},()=>{},()=>visible,{});
@@ -1137,9 +1607,8 @@ console.log('PH65 stale metadata/work guards, 39 counter updates and canonical g
   assert.equal(deltas.length,2,'hidden route retains changes without IO');
   visible=true;o.visibilityChanged();await sleep(10);
   assert.deepEqual(deltas[2],{reset:true,identities:[{sourceId:'c',bookId:'/c'}]});o.close();
-}
-// PH68: busy reads union multiple delta notifications into one following pass.
-{
+};break;
+case "delta-busy-union": {
   let finish;const gate=new Promise(r=>{finish=r;});const deltas=[];
   const a={sourceId:'a',bookId:'/a',title:'鸣龙',author:'关关公子'};
   const o=new SearchOrchestrator(()=>{},()=>{},()=>true,{});
@@ -1152,12 +1621,8 @@ console.log('PH65 stale metadata/work guards, 39 counter updates and canonical g
   finish();await first;await sleep(10);
   assert.equal(deltas.length,2);assert.deepEqual(deltas[1],{reset:false,identities:[{sourceId:'b',bookId:'/b'},{sourceId:'c',bookId:'/c'}]});
   o.close();
-}
-console.log('PH68 incremental deltas: failure retention without retry loop, hidden IO pause/resume, and busy union PASS');
-
-// PH68: stop halts source dispatch, but retains this query and its outstanding
-// metadata projection. A late success must enrich the stopped visible results.
-{
+};break;
+case "delta-stopped-query": {
   let finish;const gate=new Promise(r=>{finish=r;});
   const a={sourceId:'a',bookId:'/a',title:'旧标题',author:'关关公子'};
   const o=new SearchOrchestrator(()=>{},()=>{},()=>true,{});
@@ -1168,11 +1633,8 @@ console.log('PH68 incremental deltas: failure retention without retry loop, hidd
   o.stop();finish([{...a,title:'已确认标题'}]);await pending;
   assert.equal(o.presentation.stopped,true);assert.equal(o.presentation.searching,false);
   assert.equal(o.presentation.results[0].title,'已确认标题');o.close();
-}
-console.log('PH68 stopped query retains completed metadata without restarting source search PASS');
-
-// R3: local and online completion are independent; a blocked branch is not a terminal verdict.
-{
+};break;
+case "independent-branches": {
   const deferred=()=>{let release;const promise=new Promise(r=>{release=r;});return {promise,release};};
   for(const blocked of ['bookshelf.list','source.list']) {
     const gate=deferred();const owner=fakeOwner({sources:makeSources(1),resultsFor:()=>[{bookId:'/remote',title:'目标',author:'作者'}]});
@@ -1185,9 +1647,8 @@ console.log('PH68 stopped query retains completed metadata without restarting so
     gate.release();await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
     assert.equal(last(presentations).results.length,2);search.close();
   }
-}
-// R3: stop synchronously flushes an admitted source that has not reached its publication timer.
-{
+};break;
+case "stop-flush-pending": {
   const gates=Array.from({length:3},()=>{let release;const promise=new Promise(r=>{release=r;});return {promise,release};});
   const owner=fakeOwner({sources:makeSources(3),resultsFor:id=>[{bookId:'/'+id,title:id,author:'作者'}]});
   const request=owner.request;owner.request=async(method,params,...rest)=>{
@@ -1204,9 +1665,8 @@ console.log('PH68 stopped query retains completed metadata without restarting so
   assert.equal(search.run.localFailureReason,'local read unavailable');
   assert.equal(last(presentations).localFailureMessage,'读取未完成，请稍后重试');
   gates[2].release();await sleep(130);assert.equal(last(presentations).results.length,2);search.close();
-}
-// R3: failure recovery retains successful identities/query/history and retries only failed work.
-{
+};break;
+case "retry-failed-source": {
   let failing=true;let localReads=0;
   const owner=fakeOwner({sources:makeSources(2),failFor:id=>failing&&id==='source-1',resultsFor:id=>[{bookId:'/'+id,title:'书',author:'作者'}]});
   const request=owner.request;owner.request=async(method,...args)=>{if(method==='bookshelf.list'){localReads++;if(failing)throw Error('local read unavailable');}return request(method,...args);};
@@ -1215,6 +1675,8 @@ console.log('PH68 stopped query retains completed metadata without restarting so
   const first=last(presentations).results[0], query=first.searchRequestId;
   assert.equal(last(presentations).localSearchFailed,true);assert.equal(last(presentations).failedSourceCount,1);
   failing=false;search.retry();
+  assert.equal(last(presentations).operation.fact, 'refreshing');
+  assert.equal(last(presentations).operation.canCancel, true);
   assert.equal(search.run.localFailureReason,'local read unavailable','retry keeps the last cause until this branch succeeds');
   await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
   assert.equal(search.run.localFailureReason,undefined);assert.equal(last(presentations).localFailureMessage,undefined);
@@ -1223,11 +1685,8 @@ console.log('PH68 stopped query retains completed metadata without restarting so
   assert.equal(owner.state.calls.filter(c=>c.sourceId==='source-1').length,2);
   assert.equal(localReads,2);assert.equal(owner.state.historyWrites,1);
   assert.ok(last(presentations).results.every(b=>b.searchRequestId===query));search.close();
-}
-console.log('R3 independent branches, stop pending-delta flush, retained failure recovery and query/history identity PASS');
-
-// Retry a failed local branch while an online source still owns its request.
-{
+};break;
+case "retry-failed-local": {
   let release;const gate=new Promise(r=>release=r);let localReads=0;
   const owner=fakeOwner({sources:makeSources(1),resultsFor:()=>[{bookId:'/remote',title:'书',author:'作者'}]});
   owner.state.localBooks=[{sourceId:'local',bookId:'local',title:'书',author:'作者'}];
@@ -1243,21 +1702,14 @@ console.log('R3 independent branches, stop pending-delta flush, retained failure
   assert.equal(search.work,work,'retry does not supersede the still-running healthy branch');
   release();await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
   assert.equal(last(presentations).results.length,2);assert.equal(owner.state.calls.length,1);search.close();
-}
-console.log('R3 failed local branch retries while online remains active; repeated retry does not duplicate work PASS');
-
-// R6: exercise an actual successful empty source through the live worker,
-// publication, page projection, and native-notification preparation boundary.
-{
+};break;
+case "empty-source-sdk-publication": {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
   const execute = source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
   const pageSource = read('entry/src/main/ets/features/search/SearchPage.ets');
-  const classes = pageSource.slice(pageSource.indexOf('@Observed\nclass SearchBookGroup'),
-    pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
-  const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await execute(`
-    const DataOperationType = {ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};
-    ${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}
-    export { SearchBookGroup, SearchResultDataSource };`);
+  const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts}=installedEtsCompiler();const tree=ts.createSourceFile('SearchPage.ets',pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
+  const classes=tree.statements.filter(n=>ts.isClassDeclaration(n)&&['SearchBookGroup','SearchResultDataSource'].includes(n.name?.text)).map(n=>n.getText(tree).replace('@Observed','')).join('\n');assert.equal(tree.statements.filter(n=>ts.isClassDeclaration(n)&&['SearchBookGroup','SearchResultDataSource'].includes(n.name?.text)).length,2);
+  const {SearchBookGroup,SearchResultDataSource,SearchViewState}=await execute(`const DataOperationType={ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`);
   const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
   let counting = false;let groupBuilds = 0;let rowUpdates = 0;let notices = 0;let flattenRows = 0;let identityLookups = 0;
   class CountedGroup extends SearchBookGroup { constructor(...args){super(...args);if(counting)groupBuilds++;} }
@@ -1294,12 +1746,8 @@ console.log('R3 failed local branch retries while online remains active; repeate
   const previous=run.sourceResults.get('source-0');run.sourceResults.set('source-0',run.admit([],previous));
   assert.equal(run.revision,revision+1);assert.equal(run.results().length,0);
   search.publishRun(run);assert.equal(search.presentation.kind,'empty');search.close();
-}
-console.log('R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS');
-
-// R3: preserve typed/opaque source-list cause through stop, classify UI text,
-// and clear only the recovered branch. Late failures cannot pollute a new run.
-{
+};break;
+case "branch-failure-recovery": {
   let releaseLocal;const localGate=new Promise(r=>releaseLocal=r);let failSources=true;
   const cause={message:'SQLITE_BUSY https://private.example/read?token=secret-response'};
   const owner=fakeOwner({sources:makeSources(1),resultsFor:()=>[{bookId:'/book',title:'书',author:'作者'}]});
@@ -1319,8 +1767,8 @@ console.log('R6 actual empty source → publication → page/list: 1000 retained
   await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
   assert.equal(search.run.sourceListFailureReason,undefined);
   assert.equal(last(presentations).sourceListFailureMessage,undefined);search.close();
-}
-{
+};break;
+case "branch-failure-stale": {
   let rejectOld;const oldGate=new Promise((_r,reject)=>rejectOld=reject);let localReads=0;
   const owner=fakeOwner({sources:makeSources(1),resultsFor:(_s,k)=>[{bookId:'/book-'+k,title:k,author:'作者'}]});
   const request=owner.request;owner.request=async(method,...args)=>{
@@ -1336,12 +1784,8 @@ console.log('R6 actual empty source → publication → page/list: 1000 retained
   assert.equal(search.branchFailureMessage('TIMEOUT token=secret'),'读取超时，请重试');
   assert.equal(search.branchFailureMessage('NETWORK_ERROR cookie=secret'),'连接暂时不可用，请稍后重试');
   assert.equal(search.branchFailureMessage('runtime closed'),'读取已中断，可重试');search.close();
-}
-console.log('R3 branch causes survive stop/retry, safe classified UI, successful recovery and old-run rejection PASS');
-
-// A source's safe operation association survives publication without changing
-// visible failure text, suppressing other sources or exposing request values.
-{
+};break;
+case "source-failure-association": {
  const sources=makeSources(2),owner=fakeOwner({sources,delayForSource:()=>5,
   resultsFor:sourceId=>[{bookId:`/b-${sourceId}`,title:'鸣龙',author:'关关公子',variables:{}}]});
  const original=owner.request;
@@ -1364,68 +1808,8 @@ console.log('R3 branch causes survive stop/retry, safe classified UI, successful
   assert.ok(!JSON.stringify(summary).includes('PRIVATE_'));assert.equal(last(presentations).failedSourceCount,1);
   assert.equal(last(presentations).results[0].sourceId,'source-1');
  } finally {hilog.warn=priorWarn;search.close();}
-}
-console.log('PASS actual search failure state and log retain safe request/operation/code summary while healthy sources and visible copy remain unchanged');
-
-// A local search keeps Full DTO metadata while paging only local rows. The
-// projection probes bracket the scan, so a concurrent import cannot combine
-// two shelf revisions into one published result.
-function localShelfOwner(initialRows, mutate) {
-  let rows = initialRows;
-  let revision = 1;
-  const calls = [];
-  const owner = {
-    calls,
-    supportsCoreCapability: (name) => name === 'bookshelf.pageProjection.v1',
-    request: async (method, params) => {
-      calls.push({ method, ...params });
-      if (method === 'bookshelf.get') {
-        assert.equal(params.sourceId, 'local');
-        const book = rows.find(row => row.sourceId === params.sourceId && row.bookId === params.bookId) ?? null;
-        const data = { book };
-        if (mutate !== undefined) {
-          const next = mutate({ method, params, revision, rows });
-          if (next !== undefined) { rows = next; revision += 1; }
-        }
-        return { data };
-      }
-      assert.equal(method, 'bookshelf.list');
-      assert.equal(params.sourceKind, 'local');
-      let selected = rows.filter(row => row.sourceId === 'local');
-      if (params.keyword !== undefined) {
-        // SQLite lower() folds only ASCII; its keyword also matches bookId.
-        const needle = params.keyword.toLowerCase();
-        selected = selected.filter(row => [row.title, row.author, row.bookId]
-          .some(value => value.replace(/[A-Z]/g, c => c.toLowerCase()).includes(needle)));
-      }
-      if (params.pageProjection) {
-        assert.equal(params.membershipOnly, true);
-        assert.ok(params.limit > 0 && params.limit <= 128);
-        if (params.projectionRevision !== undefined && params.projectionRevision !== `local/${revision}`) {
-          return { data: { books: [], total: 0, offset: params.offset,
-            projectionRevision: `local/${revision}`, changed: true } };
-        }
-        const data = { books: selected.slice(params.offset, params.offset + params.limit).map(({sourceId,bookId,title,author}) =>
-          ({sourceId,bookId,title,author})), total: selected.length,
-          offset: params.offset, projectionRevision: `local/${revision}`, changed: false };
-        if (mutate !== undefined) {
-          const next = mutate({ method, params, revision, rows });
-          if (next !== undefined) { rows = next; revision += 1; }
-        }
-        return { data };
-      }
-      assert.ok(params.limit > 0 && params.limit <= 128);
-      const data = { books: selected.slice(params.offset, params.offset + params.limit), total: selected.length };
-      if (mutate !== undefined) {
-        const next = mutate({ method, params, revision, rows });
-        if (next !== undefined) { rows = next; revision += 1; }
-      }
-      return { data };
-    },
-  };
-  return owner;
-}
-{
+};break;
+case "local-dense-pages": {
   const rows = Array.from({length: 260}, (_, i) => ({sourceId:'local',bookId:`id-${i}`,
     title:`目标书${i}`,author:'作者',intro:`简介${i}`}));
   rows.push({sourceId:'local',bookId:'目标书-id',title:'其他作品',author:'另一作者',intro:'不可展示'});
@@ -1437,8 +1821,8 @@ function localShelfOwner(initialRows, mutate) {
   assert.equal(owner.calls.filter(call=>call.pageProjection).length,2);
   assert.ok(owner.calls.every(call=>call.keyword==='目标书'));
   assert.ok(found.every(book=>book.sourceId==='local'&&book.searchRequestId==='query-1'));
-}
-{
+};break;
+case "local-unicode": {
   const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:`other ${i}`,author:'作者',intro:`简介${i}`}));
   rows[129]={sourceId:'local',bookId:'kelvin',title:'汉Kelvin',author:'作者',intro:'Unicode 简介'};
@@ -1452,8 +1836,8 @@ function localShelfOwner(initialRows, mutate) {
   assert.deepEqual(mixed.map(book=>book.bookId),['kelvin']);
   assert.ok(owner.calls.every(call=>call.keyword==='汉'),
     'a case-invariant Han substring is safe to push down');
-}
-{
+};break;
+case "local-sparse-hydration": {
   const rows=Array.from({length:513},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:`unrelated ${i}`,author:'作者',intro:`简介${i}`}));
   rows[4]={...rows[4],author:'KELVIN 作者'};
@@ -1471,8 +1855,8 @@ function localShelfOwner(initialRows, mutate) {
     ['id-4','unicode-match'], 'only exact title/author matches receive Full DTOs');
   assert.equal(owner.calls.filter(call=>call.method==='bookshelf.list'&&!call.pageProjection).length,0,
     'nonmatches and remote rows never receive Full DTOs');
-}
-{
+};break;
+case "local-density-switch": {
   const rows=Array.from({length:260},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:i<40||i===259?`needle ${i}`:`unrelated ${i}`,author:'作者',intro:`简介${i}`}));
   const owner=localShelfOwner(rows);
@@ -1483,8 +1867,8 @@ function localShelfOwner(initialRows, mutate) {
     .map(call=>call.offset),[0], 'a high-hit page uses one bounded Full DTO page');
   assert.deepEqual(owner.calls.filter(call=>call.method==='bookshelf.get').map(call=>call.bookId),
     ['id-259'], 'a sparse page still hydrates only its match');
-}
-{
+};break;
+case "local-hydration-revision": {
   const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:i===0?'Kelvin':'unrelated',author:'作者',intro:'旧简介'}));
   let mutated=false;
@@ -1497,8 +1881,8 @@ function localShelfOwner(initialRows, mutate) {
   assert.deepEqual(found.map(book=>book.bookId),['id-0']);
   assert.equal(found[0].intro,'新简介', 'mutation during exact hydration restarts the whole scan');
   assert.equal(owner.calls.filter(call=>call.method==='bookshelf.get').length,2);
-}
-{
+};break;
+case "local-page-revision": {
   const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:i===129?'Kelvin':'unrelated',author:'作者',intro:'旧简介'}));
   let mutated=false;
@@ -1514,8 +1898,8 @@ function localShelfOwner(initialRows, mutate) {
     'a changed lightweight page restarts the whole revision-bound scan');
   assert.equal(owner.calls.filter(call=>call.method==='bookshelf.get').length,1,
     'stale page candidates are never hydrated');
-}
-{
+};break;
+case "local-full-revision": {
   const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:`目标书${i}`,author:'作者',intro:`旧简介${i}`}));
   let mutated=false;
@@ -1528,16 +1912,16 @@ function localShelfOwner(initialRows, mutate) {
   assert.equal(found.length,130);assert.equal(found[0].intro,'新简介');
   assert.equal(owner.calls.filter(call=>!call.pageProjection&&call.offset===0).length,2,
     'a changed revision must restart at the first page');
-}
-{
+};break;
+case "local-unstable-retry": {
   const rows=[{sourceId:'local',bookId:'one',title:'目标书',author:'作者',intro:'简介'}];
   const owner=localShelfOwner(rows,({rows:current})=>current.slice());
   await assert.rejects(new SearchGateway(owner).searchLocalBooks('目标书','unstable'),
     /shelf changed while reading/);
   assert.equal(owner.calls.filter(call=>!call.pageProjection).length,2,
     'an unstable shelf gets a bounded retry, not partial publication or an endless loop');
-}
-{
+};break;
+case "local-legacy-core": {
   const calls=[];
   const owner={request:async(method,params)=>{
     calls.push({method,params});
@@ -1551,8 +1935,8 @@ function localShelfOwner(initialRows, mutate) {
     'legacy Core receives the original request without unsupported filters');
   assert.deepEqual(found.map(book=>book.bookId),['local']);
   assert.equal(found[0].intro,'旧版简介');
-}
-{
+};break;
+case "local-cancelled-pages": {
   const rows=Array.from({length:300},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
     title:i===0?'新书':'unrelated',author:'作者',intro:`简介${i}`}));
   const shelf=localShelfOwner(rows);
@@ -1590,5 +1974,18 @@ function localShelfOwner(initialRows, mutate) {
   assert.equal(shelf.calls.filter(call=>call.pageProjection&&call.limit===128).length,1,
     'new Han query leaves the cancelled ASCII page scan stopped');
   search.close();
+};break;
+default:throw Error('unknown case');}}finally{for(const search of ownedSearches)search.close();}
 }
-console.log('PASS local search uses sparse exact DTOs, dense bounded pages, revision retries, and stops stale pagination');
+// Controlled upstream Node MockTimers drive both production timers and fixture
+// waits. Wall time is only a deadlock diagnostic, never a performance oracle.
+async function execute(id){
+ const {mock}=await import('node:test');const {setImmediate:realImmediate}=await import('node:timers');
+ const {performance}=await import('node:perf_hooks');const prior=globalThis.hilog;
+ mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:1750000000000});
+ let settled=false,failure;const started=performance.now();
+ const work=runCase(id).then(()=>{settled=true;},error=>{failure=error;settled=true;});
+ try{let ticks=0;while(!settled){await new Promise(realImmediate);mock.timers.tick(1);if(++ticks>20000||performance.now()-started>30000)throw Error('selected virtual search case failed to settle: '+id);}await work;if(failure)throw failure;}
+ finally{mock.timers.reset();if(prior===undefined)delete globalThis.hilog;else globalThis.hilog=prior;}
+}
+for(const id of selectContractCases(definitions)){await execute(id);recordContractCasePass(id);}

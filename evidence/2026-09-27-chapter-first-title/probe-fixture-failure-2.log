@@ -1,0 +1,17 @@
+<anonymous_script>:523
+                    }, Canvas);
+                       ^
+
+ReferenceError: Canvas is not defined
+    at eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:153:21), <anonymous>:523:24)
+    at ReaderBuilderProbe.ifElseBranchUpdateFunction (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:124:71)
+    at Array.eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:153:21), <anonymous>:510:22)
+    at ReaderBuilderProbe.runObserver (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:105:31)
+    at ReaderBuilderProbe.observeComponentCreation2 (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:100:12)
+    at ReaderBuilderProbe.initialRender (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:153:21), <anonymous>:504:14)
+    at surface (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-reader-chapter-first-title-publication.mjs:49:9)
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-reader-chapter-first-title-publication.mjs:69:15
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+
+Node.js v26.0.0

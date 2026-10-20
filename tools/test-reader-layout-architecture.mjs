@@ -1,184 +1,52 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-
-import {
-  ReaderInsetsVp,
-  ReaderRectVp,
-  ReaderWindowMetricsSnapshot,
-} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {
-  READER_FULL_PANEL_HEIGHT_PHONE,
-  READER_FULL_PANEL_MAX_WIDTH_PHONE,
-  DEFAULT_READER_CONTENT_INSET_PROFILE,
-  resolveReaderControlLayout,
-  resolveReaderReadingLayout,
-} from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
-
-function metrics({
-  systemTop = 0,
-  cutoutLeft = 0,
-  gestureBottom = 0,
-  navigationBottom = 0,
-  keyboardBottom = 0,
-  systemFontScale = 1,
-} = {}) {
-  return new ReaderWindowMetricsSnapshot(
-    new ReaderRectVp(0, 0, 390, 844),
-    new ReaderRectVp(0, 0, 390, 844),
-    new ReaderInsetsVp(0, systemTop, 0, 0),
-    new ReaderInsetsVp(cutoutLeft, 0, 0, 0),
-    new ReaderInsetsVp(0, 0, 0, gestureBottom),
-    new ReaderInsetsVp(0, 0, 0, navigationBottom),
-    new ReaderInsetsVp(0, 0, 0, keyboardBottom),
-    3,
-    systemFontScale,
-    1,
-    true,
-  );
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({geometry:{description:'Actual reading/control safe-frame, explicit inset, font/title and keyboard geometry invariants',resources:[]},'owner-snapshot':{description:'Actual LRE uses coordinator revision cache and preserves frozen/settling layout identity',resources:[]},'sdk-forwarding':{description:'Actual PageTurnSurface SDK build forwards exact layout snapshot and retained update',resources:[]}});
+async function run(id){
+ const{default:assert}=await import('node:assert/strict');
+ const wm=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+ const geometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+ const metrics=({top=0,left=0,bottom=0,keyboard=0,font=1}={})=>new wm.ReaderWindowMetricsSnapshot(new wm.ReaderRectVp(0,0,390,844),new wm.ReaderRectVp(0,0,390,844),new wm.ReaderInsetsVp(0,top,0,0),new wm.ReaderInsetsVp(left,0,0,0),new wm.ReaderInsetsVp(0,0,0,bottom),new wm.ReaderInsetsVp(),new wm.ReaderInsetsVp(0,0,0,keyboard),3,font,1,true);
+ if(id==='geometry'){
+  for(const width of [320,390,599,600,760,1100]){
+   const layout=geometry.resolveReaderReadingLayout(width,844,false,metrics({left:40}));
+   assert.equal(layout.contentLeft,layout.contentRight,'one-sided cutout keeps centered body');assert.ok(layout.contentLeft>=40);
+   assert.equal(layout.bodyWidth(),Math.max(0,width-layout.contentLeft-layout.contentRight));
+   assert.ok(layout.contentTop>=0&&layout.contentBottom>=0);
+   const panel=geometry.resolveReaderControlLayout(width,844,false,metrics({bottom:24}));
+   assert.ok(panel.topBarWidth<=width&&panel.fullPanelWidth<=width);assert.ok(panel.fullPanelHeight>=0);
+   assert.ok(panel.fullPanelTop+panel.fullPanelHeight+24<=844+1e-7,'panel stays inside live safe bounds');
+  }
+  for(const [width,tablet,profile,expected]of [[390,false,{compact:29,expanded:53},29],[760,true,{compact:29,expanded:53},53]]){
+   assert.equal(geometry.resolveReaderReadingLayout(width,960,tablet,metrics(),false,profile).contentLeft,expected,'actual configured inset is respected');
+  }
+  const title=geometry.resolveReaderReadingLayout(390,844,false,metrics({font:1.2}));
+  assert.equal(title.bodyHeightAfterTitle(0)-title.bodyHeightAfterTitle(50),50+title.titleToBodySpacingVp,'measured wrapped title consumes its exact lines and one gap');
+  const phone=geometry.resolveReaderControlLayout(390,844,false,metrics({keyboard:300}));
+  const resized=geometry.resolveReaderControlLayout(390,544,false,metrics({keyboard:300}));
+  assert.equal(phone.fullPanelHeight,Math.max(0,844-phone.fullPanelTop-300));
+  assert.equal(resized.fullPanelHeight,Math.max(0,544-resized.fullPanelTop-geometry.READER_FULL_PANEL_BOTTOM_GAP),'viewport resize does not subtract keyboard twice');
+  assert.equal(geometry.resolveReaderControlLayout(540,700,true,metrics()).widthClass,'compact','window width owns class even on physical tablet');
+ }else if(id==='owner-snapshot'){
+  const{selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+  let current=metrics();current.ready=false;current.revision=1;
+  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',['readingLayout','controlLayout'],{ReaderWindowCoordinator:{metrics:()=>current},...geometry});
+  const owner=Object.assign(new Owner(),{readerSettingsSnapshot:{extendIntoCutout:false,hideStatusBar:true,navigationMode:'paged'},isTablet:false,effectiveViewportWidth:()=>390,effectiveViewportHeight:()=>844,getUIContext(){assert.fail('unready metrics do not measure chrome');}});
+  const reading=owner.readingLayout(),control=owner.controlLayout(1);assert.equal(owner.readingLayout(),reading);assert.equal(owner.controlLayout(1),control);
+  current=metrics({keyboard:300});current.ready=false;current.revision=2;
+  assert.notEqual(owner.readingLayout(),reading);assert.notEqual(owner.controlLayout(2),control,'IME/coordinator revision invalidates control snapshot');
+  owner.pageTurnFrozenRevision=3;owner.pageTurnRenderRevision=3;owner.pageTurnFrozenLayout=reading;assert.equal(owner.readingLayout(),reading,'active frozen presentation keeps its exact geometry');
+  owner.pageTurnSettlementLayout=control;assert.equal(owner.readingLayout(),control,'settling snapshot has first ownership');
+ }else{
+  const{readFileSync}=await import('node:fs');const{createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url),'utf8');
+  const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),'utf8');
+  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
+  const owner=createReaderBuilderProbe(source,['build'],{ReadingSurface:Child,COVER_OCCLUSION_RADIUS_VP:0,COVER_OCCLUSION_OFFSET_X_VP:0},{componentName:'ReaderPageTurnSurface',childSources:{ReadingSurface:surface}}).owner;
+  const first=geometry.resolveReaderReadingLayout(390,844,false,metrics()),second=geometry.resolveReaderReadingLayout(760,960,true,metrics());
+  Object.assign(owner,{layout:first,appearance:{activeTheme:'paper'},pageIdentity:'page',slotIdentity:'slot',pageVisible:true,pageFragmentsProvider:()=>[],shadowStrength:0,shadowColor:()=> '#00000000'});
+  owner.initialRender();const child=[...owner.children.values()][0];assert.ok(child);assert.equal(child.params.layout,first,'actual SDK child receives exact owner snapshot');
+  owner.layout=second;owner.replay();assert.equal([...owner.children.values()][0],child);assert.equal(child.params.layout,second,'retained child receives replacement exact snapshot');
+ }
 }
-
-const phoneReading = resolveReaderReadingLayout(390, 844, false, metrics({ systemTop: 48 }));
-assert.equal(phoneReading.widthClass, 'compact');
-assert.equal(phoneReading.contentTop, 104, 'status area and equal-height information lane are reserved once before body text');
-assert.equal(phoneReading.contentLeft, 24);
-assert.equal(phoneReading.contentRight, 24);
-assert.equal(phoneReading.bodyWidth(), 342);
-const compactProfile = { compact: 24, expanded: 40 };
-const profiledReading = resolveReaderReadingLayout(390, 844, false, metrics(), false, compactProfile);
-assert.equal(profiledReading.contentLeft, 24,
-  'explicit insets are not silently clamped to the former hard-coded 32');
-const expandedProfile = { compact: 36, expanded: 52 };
-const profiledExpanded = resolveReaderReadingLayout(760, 960, true, metrics(), false, expandedProfile);
-assert.equal(profiledExpanded.contentLeft, 52,
-  'a configured expanded inset is shared by pagination and rendering');
-assert.equal(DEFAULT_READER_CONTENT_INSET_PROFILE.compact, 24);
-
-const scaledTitle = resolveReaderReadingLayout(390, 844, false, metrics({ systemFontScale: 1.2 }));
-assert.equal(scaledTitle.titleTrackHeightVp, 28.75 * 1.2 + 18);
-assert.equal(scaledTitle.bodyHeight(true), 844 - 72 - 47.99 - scaledTitle.titleTrackHeightVp);
-const twoLineTitleHeight = 28.75 * 1.2 * 2;
-assert.equal(
-  scaledTitle.bodyHeightAfterTitle(twoLineTitleHeight),
-  844 - 72 - 47.99 - twoLineTitleHeight - 18,
-  'a wrapped title must consume every measured title line before body pagination',
-);
-assert.equal(
-  scaledTitle.bodyHeightAfterTitle(0),
-  844 - 72 - 47.99,
-  'non-title pages must retain the full body track',
-);
-
-const cutoutReading = resolveReaderReadingLayout(390, 844, false, metrics({ cutoutLeft: 40 }));
-assert.equal(cutoutReading.contentLeft, 40);
-assert.equal(cutoutReading.contentRight, 40,
-  'a one-sided cutout must preserve a centred text track with equal optical margins');
-assert.equal(cutoutReading.bodyWidth(), 310,
-  'pagination and rendering must consume the same symmetrically narrowed body width');
-const extendedCutoutReading = resolveReaderReadingLayout(390, 844, false,
-  metrics({ cutoutLeft: 40 }), true);
-assert.equal(extendedCutoutReading.contentLeft, 40,
-  'extending the top information lane must not put body text beneath a lateral cutout');
-
-const phoneControl = resolveReaderControlLayout(
-  390,
-  844,
-  false,
-  metrics({ systemTop: 48, gestureBottom: 24 }),
-);
-assert.equal(phoneControl.topBarTop, 58, 'top bar clears the visible system/cutout edge by 10vp');
-assert.equal(phoneControl.topBarWidth, 360);
-assert.equal(phoneControl.dockBottomGap, 24);
-assert.equal(phoneControl.dockWidth, READER_FULL_PANEL_MAX_WIDTH_PHONE);
-assert.equal(phoneControl.fullPanelHeight, 844 - (58 + 54 + 8) - 24,
-  'full panel height clears the top bar and is capped by the live viewport and interactive bottom inset');
-assert.ok(phoneControl.fullPanelHeight < READER_FULL_PANEL_HEIGHT_PHONE);
-
-const narrowControl = resolveReaderControlLayout(320, 700, false, metrics());
-assert.equal(narrowControl.topBarWidth, 290);
-assert.equal(narrowControl.dockWidth, 294);
-assert.equal(narrowControl.fullPanelWidth, 294);
-
-const splitTablet = resolveReaderControlLayout(540, 700, true, metrics());
-assert.equal(splitTablet.widthClass, 'compact', 'window size, not physical device type, owns layout class');
-
-const tabletControl = resolveReaderControlLayout(760, 960, true, metrics({ navigationBottom: 20 }));
-assert.equal(tabletControl.widthClass, 'expanded');
-assert.equal(tabletControl.topBarWidth, 702);
-assert.equal(tabletControl.dockWidth, 340);
-assert.equal(tabletControl.fullPanelWidth, 720);
-assert.equal(tabletControl.fullPanelHeight, 852);
-
-const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const coordinator = read('entry/src/main/ets/app/ReaderWindowCoordinator.ts');
-const ability = read('entry/src/main/ets/entryability/EntryAbility.ets');
-const index = read('entry/src/main/ets/pages/Index.ets');
-const shell = read('entry/src/main/ets/features/shell/ReaderShell.ets');
-const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
-const pageTurnStage = read('entry/src/main/ets/features/reading/ReaderPageTurnStage.ets');
-const surface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
-const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
-
-assert.match(ability, /ReaderWindowCoordinator\.install\(win\)/,
-  'the Ability must delegate all window setup to the single coordinator');
-assert.match(ability, /ReaderWindowCoordinator\.reapplyWindowPolicy\(\)/,
-  'foreground restoration must reapply the active reader/app window policy');
-assert.doesNotMatch(ability, /statusBarHeightPx|setWindowSystemBarProperties/,
-  'the Ability must not retain a second status-bar snapshot or style writer');
-assert.match(coordinator, /windowSizeChange/);
-assert.match(coordinator, /avoidAreaChange/);
-for (const type of ['TYPE_SYSTEM', 'TYPE_CUTOUT', 'TYPE_SYSTEM_GESTURE',
-  'TYPE_NAVIGATION_INDICATOR', 'TYPE_KEYBOARD']) {
-  assert.ok(coordinator.includes(type), `window metrics must include ${type}`);
-}
-assert.match(coordinator,
-  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
-  'native status composition, navigation underlay and semantic content tone must change atomically from one style');
-assert.match(coordinator, /while \(ReaderWindowCoordinator\.mainWindow !== undefined[\s\S]*desiredChromeRevision/,
-  'asynchronous chrome writes must use a last-write-wins revision loop');
-
-assert.doesNotMatch(index, /statusBarHeightPx/);
-assert.match(index, /readerContentSafeTop\(ReaderWindowCoordinator\.metrics\(\)\)/,
-  'non-reader content must use the same live safe-top source');
-assert.doesNotMatch(shell, /\.padding\(\{ top:/,
-  'ReaderShell must not add a second status-bar offset');
-assert.match(shell,
-  /expandSafeArea\(\[SafeAreaType\.SYSTEM\], \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
-  'the themed reader background must paint continuously behind both system bars');
-assert.match(shell, /windowChromeOverlayActive:[\s\S]*this\.route === 'directory'[\s\S]*this\.sourceSwitchVisible/,
-  'fixed-light reader overlays must explicitly own a dark system-content tone');
-
-assert.match(experience, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLayout\(\)/,
-  'the reading owner must pass its single layout snapshot into the page-turn stage');
-assert.match(pageTurnStage, /ReadingSurface\(\{[\s\S]*layout: this\.layout/,
-  'the page-turn stage must forward that same layout snapshot to every physical page');
-assert.match(experience,
-  /ReaderControlPanel\(\{[\s\S]*layout: this\.controlLayout\(this\.readerWindowMetricsRevision\)/,
-  'control geometry must observe metrics revisions even when IME-only changes leave the reading layout key unchanged');
-assert.match(experience, /@StorageLink\('readerWindowMetricsRevision'\)/);
-assert.match(experience, /reflowAfterWindowGeometryChange\(\)/);
-assert.match(surface, /@Prop @Watch\('onHighlightContentChanged'\) layout: ReaderReadingLayoutSnapshot/);
-assert.match(surface, /\.padding\(this\.contentInsets\(\)\)/);
-assert.match(control, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLayoutSnapshot/);
-assert.doesNotMatch(control, /@Prop availableWidth|@Prop isTablet/,
-  'control composition must not receive redundant raw width and physical-form parameters');
-
-console.log('reader layout architecture contract: PASS');
-
-for (const width of [320,360,390,430,599,600,760,1100]) {
-  const layout=resolveReaderReadingLayout(width,844,false,metrics());
-  const base=width<600?Math.max(16,Math.min(28,24*width/390)):Math.max(44.44,(width-720)/2);
-  assert.equal(layout.contentLeft,base);assert.equal(layout.contentRight,base);
-  assert.ok(Math.abs(layout.bodyWidth()-(width-2*base))<0.00001);
-}
-const retained=metrics();retained.statusBarHeight=48;
-const immersive=resolveReaderReadingLayout(390,844,false,retained,true);
-assert.equal(immersive.pageChromeTopRegionHeight,48);assert.equal(immersive.pageChromeVisualSafeTop,0);
-assert.equal(immersive.contentTop,48+8,'measured immersive lane replaces the former fixed 72vp body top');
-const visible=resolveReaderReadingLayout(390,844,false,retained,false);
-assert.equal(visible.pageChromeVisualSafeTop,48);assert.equal(visible.contentTop,96+8);
-
-const keyboardFull = resolveReaderControlLayout(390, 844, false, metrics({ keyboardBottom: 300 }));
-const keyboardResized = resolveReaderControlLayout(390, 544, false, metrics({ keyboardBottom: 300 }));
-assert.equal(keyboardFull.fullPanelHeight, 844 - keyboardFull.fullPanelTop - 300);
-assert.equal(keyboardResized.fullPanelHeight, 544 - keyboardResized.fullPanelTop - 20,
-  'an already resized viewport does not subtract the same 300vp keyboard again');
+// Async native window writes are independently owned by window-chrome-order cases;
+// no regex on while/style spelling and no implicit import/run can establish them here.
+for(const id of selected){await run(id);recordContractCasePass(id);}

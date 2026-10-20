@@ -1,0 +1,21 @@
+## Change And Evidence
+
+- Scope and affected behavior:
+- Exact source / dependency revisions:
+- Tests executed, failures and untested layers:
+- Data preservation and rollback:
+
+## Review
+
+Request a review with: `@codex review using .github/CODE_REVIEW.md`.
+Repeat after substantive code changes. Resolve findings against the current revision.
+
+- [ ] Applicable required checks passed; skipped or missing tests are not PASS.
+- [ ] FnOS compatibility/build evidence identifies exact candidate SHAs where applicable; no raw private evidence or signing material is uploaded.
+- [ ] An independent human reviewed the latest substantive change.
+- [ ] No production release, signing change or device operation is implied.
+
+CODEOWNERS is routing, not approval. Authors cannot approve their own PR.
+Codex findings do not substitute for tests or independent human approval.
+
+Repository-only CI does not certify the FnOS full SDK/Native/HAP gate or device acceptance.

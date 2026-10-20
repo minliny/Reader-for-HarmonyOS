@@ -99,11 +99,11 @@ export struct ReaderPageChrome {
 
       if (this.bottomStartText.length > 0) {
         Text(this.bottomStartText)
-          .fontFamily(TYPE_READER_IMMERSIVE_PROGRESS.fontFamily)
-          .fontWeight(TYPE_READER_IMMERSIVE_PROGRESS.fontWeight)
-          .fontSize(TYPE_READER_IMMERSIVE_PROGRESS.fontSizeFp)
-          .lineHeight(TYPE_READER_IMMERSIVE_PROGRESS.lineHeightFp)
-          .letterSpacing(TYPE_READER_IMMERSIVE_PROGRESS.letterSpacingFp)
+          .fontFamily(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.fontFamily)
+          .fontWeight(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.fontWeight)
+          .fontSize(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.fontSizeFp)
+          .lineHeight(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.lineHeightFp)
+          .letterSpacing(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.letterSpacingFp)
           .fontColor(this.metaColor())
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -113,11 +113,11 @@ export struct ReaderPageChrome {
 
       if (this.bottomEndText.length > 0 && this.chromeLayout().bottomEndMaxWidth > 0) {
         Text(this.bottomEndText)
-          .fontFamily(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.fontFamily)
-          .fontWeight(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.fontWeight)
-          .fontSize(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.fontSizeFp)
-          .lineHeight(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.lineHeightFp)
-          .letterSpacing(TYPE_READER_IMMERSIVE_PAGE_ORDINAL.letterSpacingFp)
+          .fontFamily(TYPE_READER_IMMERSIVE_PROGRESS.fontFamily)
+          .fontWeight(TYPE_READER_IMMERSIVE_PROGRESS.fontWeight)
+          .fontSize(TYPE_READER_IMMERSIVE_PROGRESS.fontSizeFp)
+          .lineHeight(TYPE_READER_IMMERSIVE_PROGRESS.lineHeightFp)
+          .letterSpacing(TYPE_READER_IMMERSIVE_PROGRESS.letterSpacingFp)
           .fontColor(this.metaColor())
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -149,8 +149,8 @@ export struct ReaderPageChrome {
     if (key === this.chromeLayoutCacheKey && this.chromeLayoutCache !== undefined) return this.chromeLayoutCache;
     const topStart = this.textMeasure(this.topStartText, topStyle);
     const topEnd = this.textMeasure(this.topEndText, topStyle);
-    const bottomStart = this.textMeasure(this.bottomStartText, TYPE_READER_IMMERSIVE_PROGRESS);
-    const bottomEnd = this.textMeasure(this.bottomEndText, TYPE_READER_IMMERSIVE_PAGE_ORDINAL);
+    const bottomStart = this.textMeasure(this.bottomStartText, TYPE_READER_IMMERSIVE_PAGE_ORDINAL);
+    const bottomEnd = this.textMeasure(this.bottomEndText, TYPE_READER_IMMERSIVE_PROGRESS);
     const result = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(
       topStart.width,
       topStart.height,

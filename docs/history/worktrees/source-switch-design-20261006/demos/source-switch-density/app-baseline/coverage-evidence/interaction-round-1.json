@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-05T06:09:21.701Z",
+  "scope": "Browser fixture actions, navigation, dismissal and disabled controls only",
+  "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+  "designSourceSha256": "2dd1e85c29e9c1ae10684d46a5b54b25180f4d06bf55646ffed44cf27a55dedb",
+  "logicSha256": "65a932da9b20e45df80d25c5995d6b8721be257a858e276397f59445a4723822",
+  "checks": [
+    "shelf-removal-preserves-origin-and-cancel-closes-only-confirmation",
+    "detail-busy-source-switch-is-disabled",
+    "independent-directory-is-detail-page-not-reading-sheet",
+    "removed-dormant-directory-menu-not-registered",
+    "tts-configuration-routes-by-field",
+    "appearance-select-is-temporary-and-retains-full",
+    "tts-audition-closes-with-original-full-module",
+    "directory-rules-apply-gated-by-preview-and-back-kept-available",
+    "directory-rule-edit-invalidates-preview-and-keeps-rule-count",
+    "full-collapse-preserves-directory-and-tts-content-state",
+    "actual-noncancelable-reading-alerts-block-dismissal",
+    "source-operation-consumes-selection-and-freezes-scope",
+    "dispatched-source-confirmation-is-not-restored-by-back",
+    "switching-editor-source-retains-draft-until-read-success",
+    "source-check-result-keeps-execution-mode-and-depth",
+    "login-completion-returns-without-new-login-back-entry",
+    "json-import-system-back-closes-to-source-origin",
+    "json-import-blank-url-keeps-dialog-and-explicit-selection-closes-it",
+    "source-result-search-action-consumes-source-return-frame",
+    "settings-reset-ui-and-system-back-are-distinct",
+    "login-container-has-current-url-row"
+  ],
+  "failures": [
+    {
+      "name": "all-registered-actions-have-valid-targets",
+      "error": "Error: shelf-more/default: missing variant:cover"
+    },
+    {
+      "name": "replace-quick-preview-returns-to-same-form",
+      "error": "Error: preview back lost Quick"
+    },
+    {
+      "name": "runner",
+      "error": "Error: Page errors: Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?; Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?; Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?"
+    }
+  ],
+  "pageErrors": [
+    "Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?",
+    "Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?",
+    "Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?"
+  ],
+  "native": false,
+  "backend": false
+}

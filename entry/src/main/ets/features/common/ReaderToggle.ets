@@ -1,33 +1,48 @@
 import { readerAppColor } from './ReaderThemeRegistry';
-import {
-  TOK_BORDER,
-  TOK_PRIMARY_DARK,
-} from './ReaderTokens';
+import { ReaderPressFeedback } from './ReaderPressFeedback';
+import { ReaderToggleSpecId, resolveReaderToggleSpec } from './ReaderSwitchSpecs';
 
-// 44×24 开关:20 白旋钮在 24 高的轨道上左右滑动。选中态为深绿 #1F3528。
-// 全站统一胶囊圆角 999 (Settings/SourceManagement 两处调用点均显式传 999)。
+/** Controlled value: clicking emits an intent; only the original owner can
+ * publish the accepted/draft value. Native ArkUI owns press/release/cancel. */
 @Component
 export struct ReaderToggle {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-
+  @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
-  /** 轨道外圆角:统一 999(胶囊)。 */
-  @Prop radius: number = 999;
-  onToggle: () => void = (): void => {};
-
+  @Prop actionEnabled: boolean = true;
+  @Prop isBusy: boolean = false;
+  @Prop inputIdentity: string = '';
+  @Prop accessibilityLabel: string = '';
+  onToggle: (next: boolean) => void = (_next: boolean): void => {};
+  private mounted: boolean = false;
+  aboutToAppear(): void { this.mounted = true; }
+  aboutToDisappear(): void { this.mounted = false; }
   build() {
-    Stack({ alignContent: Alignment.Center }) {
-      Text('')
-        .width(20)
-        .height(20)
-        .borderRadius(10)
-        .backgroundColor(readerAppColor('app.ReaderToggle.build.backgroundColor.FFFFFFFF', this.appThemeScheme))
-        .position({ x: this.value ? 22 : 2, y: 2 });
-    }
-    .width(44)
-    .height(24)
-    .borderRadius(this.radius)
-    .backgroundColor(this.value ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.toggle.offTrack', this.appThemeScheme))
-    .onClick((): void => this.onToggle());
+    ForEach([this.inputIdentity], (identity: string): void => {
+      Stack({ alignContent: Alignment.Center }) {
+        Text('')
+          .width(resolveReaderToggleSpec(this.specId).thumbSize)
+          .height(resolveReaderToggleSpec(this.specId).thumbSize)
+          .borderRadius(resolveReaderToggleSpec(this.specId).thumbRadius)
+          .backgroundColor(readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme))
+          .position({ x: this.value ? resolveReaderToggleSpec(this.specId).thumbOnX : resolveReaderToggleSpec(this.specId).thumbOffX,
+            y: resolveReaderToggleSpec(this.specId).thumbY });
+      }
+      .width(resolveReaderToggleSpec(this.specId).width)
+      .height(resolveReaderToggleSpec(this.specId).height)
+      .attributeModifier(new ReaderPressFeedback(readerAppColor(this.value ? resolveReaderToggleSpec(this.specId).checkedColor :
+        resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme), this.appThemeScheme,
+        resolveReaderToggleSpec(this.specId).radius, resolveReaderToggleSpec(this.specId).pressedRadius, this.canAct(identity)))
+      .responseRegion({ x: 0, y: resolveReaderToggleSpec(this.specId).responseY,
+        width: resolveReaderToggleSpec(this.specId).width, height: resolveReaderToggleSpec(this.specId).responseHeight })
+      .enabled(this.canAct(identity)).focusable(this.canAct(identity))
+      .accessibilityRole(AccessibilityRoleType.SWITCH).accessibilityChecked(this.value)
+      .accessibilityText(this.accessibilityLabel)
+      .onClick((): void => this.toggle(identity));
+    }, (identity: string): string => identity);
   }
+  private canAct(identity: string): boolean {
+    return this.mounted && identity.length > 0 && this.actionEnabled && !this.isBusy && identity === this.inputIdentity;
+  }
+  private toggle(identity: string): void { if (this.canAct(identity)) this.onToggle(!this.value); }
 }

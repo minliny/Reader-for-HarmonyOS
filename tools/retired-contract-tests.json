@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "reason": "2026-10-20 用户授权 CLOSE 全量退出；本清单只保留不可执行的退役身份，禁止注册或调用。",
+  "entries": [
+    {
+      "id": "H-navigation-performance",
+      "file": "test-navigation-performance.mjs"
+    },
+    {
+      "id": "H-performance-regressions",
+      "file": "test-performance-regressions.mjs"
+    },
+    {
+      "id": "H-platform-paragraph-fixture-isolation",
+      "file": "test-platform-paragraph-fixture-isolation.mjs"
+    },
+    {
+      "id": "H-reader-appearance-motion-driver",
+      "file": "test-reader-appearance-motion-driver.mjs"
+    },
+    {
+      "id": "H-reader-appearance-motion-fixture",
+      "file": "test-reader-appearance-motion-fixture.mjs"
+    },
+    {
+      "id": "H-reader-appearance-motion-gesture",
+      "file": "test-reader-appearance-motion-gesture.mjs"
+    },
+    {
+      "id": "H-reader-appearance-motion-sampler",
+      "file": "test-reader-appearance-motion-sampler.mjs"
+    },
+    {
+      "id": "H-reader-appearance-motion-state",
+      "file": "test-reader-appearance-motion-state.mjs"
+    },
+    {
+      "id": "H-reader-brightness-control",
+      "file": "test-reader-brightness-control.mjs"
+    },
+    {
+      "id": "H-reader-content-business",
+      "file": "test-reader-content-business.mjs"
+    },
+    {
+      "id": "H-reader-control-narrow-widths",
+      "file": "test-reader-control-narrow-widths.mjs"
+    },
+    {
+      "id": "H-reader-control-quick-full-follow",
+      "file": "test-reader-control-quick-full-follow.mjs"
+    },
+    {
+      "id": "H-reader-control-stage-composition",
+      "file": "test-reader-control-stage-composition.mjs"
+    },
+    {
+      "id": "H-reader-directory-markers",
+      "file": "test-reader-directory-markers.mjs"
+    },
+    {
+      "id": "H-reader-page-turn-pipeline",
+      "file": "test-reader-page-turn-pipeline.mjs"
+    },
+    {
+      "id": "H-reader-platform-paragraph-probe",
+      "file": "test-reader-platform-paragraph-probe.mjs"
+    },
+    {
+      "id": "H-reader-replace-quick",
+      "file": "test-reader-replace-quick.mjs"
+    },
+    {
+      "id": "H-reader-static-chrome-typography",
+      "file": "test-reader-static-chrome-typography.mjs"
+    },
+    {
+      "id": "H-reader-tts-lifecycle",
+      "file": "test-reader-tts-lifecycle.mjs"
+    },
+    {
+      "id": "H-reader-tts-product-surface",
+      "file": "test-reader-tts-product-surface.mjs"
+    },
+    {
+      "id": "H-reader-tts-state",
+      "file": "test-reader-tts-state.mjs"
+    },
+    {
+      "id": "H-reader-typography-architecture",
+      "file": "test-reader-typography-architecture.mjs"
+    },
+    {
+      "id": "H-reading-owner-sdk",
+      "file": "test-reading-owner-sdk.mjs"
+    },
+    {
+      "id": "H-reading-pagination-integration",
+      "file": "test-reading-pagination-integration.mjs"
+    },
+    {
+      "id": "H-reading-phone-tablet-shared-architecture",
+      "file": "test-reading-phone-tablet-shared-architecture.mjs"
+    },
+    {
+      "id": "H-reading-record-accumulation",
+      "file": "test-reading-record-accumulation.mjs"
+    },
+    {
+      "id": "H-rss-page-architecture",
+      "file": "test-rss-page-architecture.mjs"
+    },
+    {
+      "id": "H-rss-persisted-refresh-projection",
+      "file": "test-rss-persisted-refresh-projection.mjs"
+    },
+    {
+      "id": "H-rule-entity-management",
+      "file": "test-rule-entity-management.mjs"
+    },
+    {
+      "id": "H-search-host-wiring",
+      "file": "test-search-host-wiring.mjs"
+    },
+    {
+      "id": "H-search-publication-state",
+      "file": "test-search-publication-state.mjs"
+    },
+    {
+      "id": "H-search-result-typography",
+      "file": "test-search-result-typography.mjs"
+    },
+    {
+      "id": "H-search-settings-physical-feedback",
+      "file": "test-search-settings-physical-feedback.mjs"
+    },
+    {
+      "id": "H-select-semantics",
+      "file": "test-select-semantics.mjs"
+    },
+    {
+      "id": "H-settings-cache-cleanup",
+      "file": "test-settings-cache-cleanup.mjs"
+    },
+    {
+      "id": "H-settings-host-wiring",
+      "file": "test-settings-host-wiring.mjs"
+    },
+    {
+      "id": "H-settings-select-overlay",
+      "file": "test-settings-select-overlay.mjs"
+    },
+    {
+      "id": "H-source-host-wiring",
+      "file": "test-source-host-wiring.mjs"
+    },
+    {
+      "id": "H-surface-transition-p0",
+      "file": "test-surface-transition-p0.mjs"
+    }
+  ]
+}

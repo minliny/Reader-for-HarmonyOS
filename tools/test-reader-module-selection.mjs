@@ -1,48 +1,41 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (path) => readFileSync(resolve(repo, path), 'utf8');
-
-const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
-const directory = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
-const provenance = read('tools/svg-provenance.config.mjs');
-const Control = productionMotionMethods(resolve(repo, 'entry/src/main/ets/features/reading/ReaderControlPanel.ets'), ['moduleIcon']);
-const selected = new Control();
-selected.isActiveModule = () => true;
-
-for (const [module, asset] of [
-  ['directory', 'reader_directory_list_active'],
-  ['tts', 'reader_tts_nav_active'],
-  ['appearance', 'reader_appearance_nav_active'],
-  ['settings', 'reader_settings_nav_active'],
-]) {
-  selected.appScheme = 'day';
-  assert.equal(selected.moduleIcon('', module), asset, `${module}: authored Day active outline`);
-  selected.appScheme = 'night';
-  assert.equal(selected.moduleIcon('', module), `${asset}_theme_night`, `${module}: Night active outline`);
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({
+ 'icon-map':{description:'Actual current module icon map active/inactive/unknown across day/night',resources:[]},
+ 'outline-assets':{description:'Current SVG XML painted paths have outline-only semantic fill/stroke; no Figma visual parity claim',resources:[]}
+});
+async function runCase(selectedCase){
+ const {default:assert}=await import('node:assert/strict');
+ const assets=[['directory','reader_directory_list_active','rc_list','rc_list'],['tts','reader_tts_nav_active','rc_headphones','rc_headphones'],['appearance','reader_appearance_nav_active','rc_palette','rc_palette'],['settings','reader_settings_nav_active','rc_settings','rc_settings']];
+ if(selectedCase==='icon-map'){
+  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+  const Control=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets',import.meta.url),'ReaderControlPanel',['moduleIcon']);
+  const owner=new Control();
+  for(const [module,active,fallback,nightInactive] of assets)for(const enabled of [true,false])for(const scheme of ['day','night']){
+   owner.appScheme=scheme;owner.isActiveModule=()=>enabled;
+   const expected=enabled?active+(scheme==='night'?'_theme_night':''):scheme==='night'?nightInactive+'_theme_night':fallback;
+   assert.equal(owner.moduleIcon(fallback,module),expected);
+  }
+  for(const scheme of ['day','night']){owner.appScheme=scheme;assert.equal(owner.moduleIcon('custom-icon','unknown'),'custom-icon');}
+  return;
+ }
+ const {fileURLToPath}=await import('node:url');const {spawnSync}=await import('node:child_process');
+ const files=assets.flatMap(([,asset])=>['day','night'].map(scheme=>({scheme,path:fileURLToPath(new URL(`../entry/src/main/resources/base/media/${asset}${scheme==='night'?'_theme_night':''}.svg`,import.meta.url))})));
+ const script=`import json,sys,xml.etree.ElementTree as ET
+items=json.load(sys.stdin)
+output=[]
+for item in items:
+ root=ET.parse(item['path']).getroot(); paths=[]
+ def visit(node,fill='black',stroke='none'):
+  tag=node.tag.split('}')[-1]
+  if tag in ('defs','clipPath','mask'):return
+  if tag=='style' or 'style' in node.attrib:raise ValueError('inline/CSS style needs explicit fixture review')
+  fill=node.get('fill',fill);stroke=node.get('stroke',stroke)
+  if tag=='path':paths.append({'fill':fill,'stroke':stroke})
+  for child in node:visit(child,fill,stroke)
+ visit(root)
+ output.append({'scheme':item['scheme'],'paths':paths})
+json.dump(output,sys.stdout)`;
+ const result=spawnSync('python3',['-c',script],{input:JSON.stringify(files),encoding:'utf8',timeout:10000});assert.ifError(result.error);assert.equal(result.status,0,result.stderr);
+ for(const item of JSON.parse(result.stdout)){assert.ok(item.paths.length>0);for(const path of item.paths){assert.equal(path.fill,'none');assert.equal(path.stroke,item.scheme==='day'?'#FFFAF4':'#1C1A18');}}
 }
-assert.doesNotMatch(control, /module === 'appearance'[\s\S]*?\.fillColor\('#FFFAF4'\)/,
-  'module selection must not depend on runtime tinting of hard-coded SVG strokes');
-for (const [asset, component] of [
-  ['reader_directory_list_active', 'ReaderModuleDirectory'],
-  ['reader_tts_nav_active', 'ReaderModuleTts'],
-  ['reader_appearance_nav_active', 'ReaderModuleAppearance'],
-  ['reader_settings_nav_active', 'ReaderModuleSettings'],
-]) {
-  assert.match(provenance,
-    new RegExp(`${asset}[\\s\\S]*?'${component}'[\\s\\S]*?#FFFAF4`),
-    `${component} active navigation must use the Figma white outline component`);
-}
-assert.doesNotMatch(provenance, /reader_(?:directory_list|tts_nav|appearance_nav|settings_nav)_active[\s\S]*?Filled\/ReaderModule/,
-  'Figma final Reader module navigation never uses filled active glyphs');
-
-const directoryTab = directory.match(/private directoryTab\(\)[\s\S]*?private bookmarkTab\(\)/)?.[0] ?? '';
-assert.ok(directoryTab.length > 0, 'directory tab builder must remain present');
-assert.doesNotMatch(directoryTab, /Image\(/,
-  'the Figma final active directory tab contains text and underline, not an extra directory icon');
-
-console.log('reader module selection contract: PASS');
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

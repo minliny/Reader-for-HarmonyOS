@@ -1,9 +1,17 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import * as selectionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
-import { wholeBookAnchorForPercent } from '../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts';
-import { ReaderTtsPageFollow, readerTtsFollowActive } from '../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'internal-reflow':{description:'Automatic TTS/reflow internal -1 owner, delayed commit and two negative mutations',resources:[]},
+ 'user-selection':{description:'Discrete pick versus continuous scrub, stale commit/reopen and exact recovery callback owner',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const selectionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { wholeBookAnchorForPercent }=await import('../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts');
+const { ReaderTtsPageFollow, readerTtsFollowActive }=await import('../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts');
+const { installReaderLayoutOwners }=await import('./lib/reader-measurement-owner-fixture.mjs');
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
@@ -27,16 +35,16 @@ const deferredClass = balanced(source.indexOf('class ReaderDeferredChapterSelect
 const names = ['isUnknownCatalogEdge', 'entryChapterPosition', 'ttsFollowScope', 'isTtsFollowLeaseCurrent', 'positionContextForScope', 'loadNextTtsChapter', 'clearTtsChapterEndTimer', 'reloadCurrentChapterAfterContentProjectionChange', 'reloadMigratedContentPosition', 'selectChapterAnchor',
   'onRequestedBookmarkAnchorChanged', 'selectSearchResult', 'selectBookmarkAnchor', 'selectControlChapter',
   'stepControlChapter', 'readingTocEntries', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
-  'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork'];
+  'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork','showControlSelectionFailure'];
 function Host(mutate = code => code) {
-  const deps = { ...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
+  const deps = { readingFailureHint:()=> 'hint',remoteReadingFailureKindOf:()=> 'UNKNOWN',hilog:{error(){}},...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
   const code = mutate(names.map(method).join('\n'));
   return new Function(...Object.keys(deps), stripTypeScriptTypes(deferredClass +
-    '\nclass InternalSelectionProbe {' + code + '}') + ';return InternalSelectionProbe;')(
+    '\nclass InternalSelectionProbe { nativeAlertOwner = {retire(){}};' + code + '}') + ';return InternalSelectionProbe;')(
       ...Object.values(deps));
 }
 function owner(Type = Host()) {
-  const host = new Type();
+  const host = installReaderLayoutOwners(new Type());
   Object.assign(host, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
     exitRequested: false, controlOpenRevision: 41, chapterSelectionToken: 10,
     materializedChapterSelectionToken: 10, visiblePageSelectionToken: 10,
@@ -44,7 +52,7 @@ function owner(Type = Host()) {
     phase: 'ready', sessionGateway: {}, contentMetrics: undefined, knownContentVersions: [1],
     pendingControlSelection: undefined, hideCalls: 0, stops: 0, opens: [],
     tocEntries: [{ index: 2 }, { index: 3 }, { index: 4 }],
-    controlVisible: () => true, controlShellExitArmed: () => false,
+    controlsShown: true, controlVisible() { return this.controlsShown; }, controlShellExitArmed: () => false,
     isKnownControlChapter: index => [2, 3, 4].includes(index),
     isSessionActive(token) { return this.mounted && !this.exitRequested && this.lifecycleToken === token; },
     isSelectionActive(token, selection) { return this.isSessionActive(token) && this.chapterSelectionToken === selection; },
@@ -62,7 +70,7 @@ function owner(Type = Host()) {
     ttsCoordinator: { stop: async () => { host.stops++; }, setTimer: value => { host.timerSet = value; } },
     logTtsFailure() {}, resetForChapterSelection() {}, armFirstPageReadyDeadline() {},
     openChapter: async (...args) => { host.opens.push(args); },
-    hideControl() { this.hideCalls++; },
+    hideControl() { this.hideCalls++; this.controlsShown = false; },
     invalidatePageTurnRuntime() {}, paginationIndex: { invalidateBook() {} }, resetPaginationDraft() {},
   });
   host.clearDeferredPageTurnWork();
@@ -90,6 +98,7 @@ async function checkTts(Type = Host()) {
   commit(host, 3);
   assert.equal(host.hideCalls, 0);
 }
+if(selectedCase==='internal-reflow'){
 {
   const host = owner();
   host.ttsTimerMode = 'chapterEnd';
@@ -177,8 +186,11 @@ await assert.rejects(checkProjection(Host(oldProjection)), /internal conversion\
   commit(host, 2, 70); assert.equal(host.hideCalls, 0);
 }
 
+}
+if(selectedCase==='user-selection'){
 const scope = { sourceId: 'source', bookId: 'book', chapterIndex: 3, bodyVersion: 'body', processingVersion: 'processing' };
-// Discrete list/bookmark/search picks retain close AFTER the real commit.
+// Discrete list/bookmark/search picks enter the reader before body admission.
+// The reading ticket and stored progress still wait for a real page commit.
 // Progress scrubbing is a continuous control and keeps the same panel open.
 const picks = [
   ['directory', host => host.selectControlChapter(3)],
@@ -199,15 +211,20 @@ const picks = [
 for (const [name, pick] of picks) {
   const host = owner(); pick(host);
   assert.equal(host.pendingControlSelection?.controlOpenRevision, 41, name);
-  assert.equal(host.hideCalls, 0, name + ' must not close on download/start');
+  const immediateCloses = name.startsWith('progress') ? 0 : 1;
+  assert.equal(host.hideCalls, immediateCloses, name + ' immediately exposes reader loading for a discrete selection');
+  assert.equal(host.chapter.chapterIndex, 2, name + ' loading cannot publish an uncommitted chapter');
+  assert.equal(host.visiblePageSelectionToken, 10, name + ' old page stays private until a new page commits');
   commit(host, host.pendingControlSelection.targetChapterIndex, 0);
   assert.equal(host.hideCalls, name.startsWith('progress') ? 0 : 1,
-    name + ' applies its explicitly chosen close policy after real commit');
+    name + ' never closes twice after real commit');
 
   const newer = owner(); pick(newer);
   newer.controlOpenRevision = 42;
+  newer.controlsShown = true;
   commit(newer, newer.pendingControlSelection.targetChapterIndex, 0);
-  assert.equal(newer.hideCalls, 0, name + ' cannot close a later reopening');
+  assert.equal(newer.hideCalls, immediateCloses, name + ' cannot close a later reopening');
+  assert.equal(newer.controlsShown, true, name + ' preserves a later reopening');
 }
 for (const deferred of [false, true]) {
   const host = owner(); host.pageTurnSettlementActive = deferred;
@@ -230,8 +247,7 @@ for (const deferred of [false, true]) {
   host.seekControlProgress(40); commit(host, host.pendingControlSelection.targetChapterIndex, 0);
   assert.equal(host.hideCalls, 0, 'a third continuous adjustment remains available');
 }
-assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision, retry\.closeControlOnCommit/,
-  'a failed scrub retry preserves its no-close policy and recoverable selection owner');
+
 {
   const host = owner();
   host.pageTurnSettlementActive = true;
@@ -244,9 +260,7 @@ assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision
     'deferred user choice reuses the origin owner instead of capturing a new opening');
   commit(host, 3, 70); assert.equal(host.hideCalls, 0);
 }
-assert.match(method('showControlSelectionFailure'),
-  /retry\.stopTts, retry\.requestedProgress, retry\.controlOwnerRevision/,
-  'explicit retry also preserves the original selection owner');
+
 // An already committed directory chapter uses the existing safe no-load close.
 {
   const host = owner();
@@ -255,3 +269,16 @@ assert.match(method('showControlSelectionFailure'),
   assert.equal(host.hideCalls, 1); assert.equal(host.opens.length, 0);
 }
 console.log('PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance');
+
+{
+ const host=owner();host.seekControlProgress(25);const ticket=host.pendingControlSelection,retry=host.pendingControlSelectionRetry;
+ let action;const selections=[];Object.assign(host,{errorMessage:e=>e.message,finishPageTurnPerf(){},showReaderRecovery:(_message,_label,callback)=>{action=callback;},selectChapterAnchor:(...args)=>selections.push(args)});
+ host.showControlSelectionFailure(ticket,Error('failed'),'selected retry fixture');assert.equal(typeof action,'function');action();
+ assert.deepEqual(selections[0],[retry.chapterIndex,retry.chapterOffset,retry.requireChapterStart,retry.stopTts,retry.requestedProgress,retry.controlOwnerRevision,retry.closeControlOnCommit,retry.refreshContent,retry.positionContext,retry.ttsOwner]);
+ assert.equal(selections[0][5],41);assert.equal(selections[0][6],false,'retry retains scrub no-close policy');
+ host.bookId='successor';action();assert.equal(selections.length,1,'old recovery action cannot select successor reading owner');
+}
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

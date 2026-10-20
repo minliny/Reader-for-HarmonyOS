@@ -1,13 +1,13 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
-const sourcePath = new URL('../entry/src/main/ets/pages/ReaderParagraphDiagnostic.ets', import.meta.url).pathname;
+const sourcePath = localFilePath(new URL('../entry/src/main/ets/pages/ReaderParagraphDiagnostic.ets', import.meta.url));
 const source = readFileSync(sourcePath, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const sdkRoot = `${sdk}/../..`;
 const ts = require(`${sdk}/node_modules/typescript`);
 const eraseTypes = value => ts.transpileModule(value, { compilerOptions: {

@@ -1,0 +1,9 @@
+# Index / Bookshelf ArkTS contract repair
+
+Input: root `sdk-candidate-2137/ARKTS_ERRORS.json`, source candidate `8d0e6037`, Core `e551` (intermediate, not acceptance). This isolated candidate follows the warm management `db31d35b` lineage; the authoritative whole-app compiler must rerun against integrated source.
+
+The eight Index diagnostics are fixed without changing layout or business ownership: alias the actual CatalogSeeds DTO; use a typed initial shelf snapshot; retain shallow independent UI Directory/Offline DTOs through explicit typed literals (direct assignment was tested and rejected because it made retired UI observe owner changes without legal delivery); use the optional detail identity at the temporary SourceSwitch surface; await the original transaction resolver to satisfy the platform adapter's Promise<void>; admit actual SearchSource/BookSource metadata through a finite named union instead of inventing enabledExplore; and use that same metadata contract for the shelf projection.
+
+BookshelfHost's no-RPC catalog seed is an explicitly typed BookshelfState. Operation/ViewMode's unsupported notStarted/notRequested readback phases are mapped to the existing idle contract. LocalImport's repeated item accessor uses the optional failure message within the existing failure branch.
+
+Local passes: existing Bookshelf view-mode receipts, Bookshelf write/import receipts, all 19 Projection/Index matrices, actual SystemFileOpen NavigationHost/SDK, shared Management 15 groups, Typography budget, and Directory/Offline 12 actual Core SQLite/Index/SDK consumer matrices. SourceSwitch consumer invocation reached an older shared fixture's missing actual BookshelfHost initialization after warm management added detach on navigation; this is a fixture integration requirement, not a reason to weaken production detach or any original assertion. Whole ArkTS/HAP/target are root integration exits and remain unclaimed here.

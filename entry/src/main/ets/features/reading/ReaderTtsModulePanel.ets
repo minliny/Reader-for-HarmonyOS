@@ -1,3 +1,4 @@
+import { TYPE_READER_TTS_QUICK_COMPAT_PLAYBACK_ROW_VALUE, TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_LABEL, TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_VALUE, TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_LABEL, TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   READER_TTS_RATE_MAX,
@@ -98,10 +99,10 @@ export struct ReaderTtsModulePanel {
           .height(20);
         Text(this.playbackLabel())
           .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .lineHeight(12)
+          .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_PLAYBACK_ROW_VALUE.fontFamily)
+          .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_PLAYBACK_ROW_VALUE.fontWeight)
+          .fontSize(TYPE_READER_TTS_QUICK_COMPAT_PLAYBACK_ROW_VALUE.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_QUICK_COMPAT_PLAYBACK_ROW_VALUE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1);
       }
@@ -152,7 +153,7 @@ export struct ReaderTtsModulePanel {
           Row().width(3).height(13).backgroundColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).borderRadius(1);
         }
       } else {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_play_theme_night') : $r('app.media.reader_tts_play')))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_auto_full_play_theme_night') : $r('app.media.reader_auto_full_play')))
           .width(21)
           .height(21);
       }
@@ -221,10 +222,10 @@ export struct ReaderTtsModulePanel {
           .width(20)
           .height(20);
         Text('定时')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .lineHeight(12)
+          .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_LABEL.fontWeight)
+          .fontSize(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_LABEL.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
@@ -233,9 +234,9 @@ export struct ReaderTtsModulePanel {
       Row() {
         Text(`${this.timerMinutes}min`)
           .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
+          .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontFamily)
+          .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontWeight)
+          .fontSize(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontSizeFp)
           .fontColor(readerAppColor('app.ReaderTtsModulePanel.timerRow.fontColor.FF41484C', this.appThemeScheme));
         Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
           .width(12)
@@ -270,10 +271,10 @@ export struct ReaderTtsModulePanel {
           .width(20)
           .height(20);
         Text('语速')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .lineHeight(12)
+          .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_LABEL.fontWeight)
+          .fontSize(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_LABEL.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .width(TTS_MODULE_RATE_LABEL_WIDTH)
@@ -283,10 +284,10 @@ export struct ReaderTtsModulePanel {
 
       Text(`${this.effectiveRate().toFixed(2)}x`)
         .width(this.rateValueWidth())
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .lineHeight(12)
+        .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_VALUE.fontWeight)
+        .fontSize(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_VALUE.fontSizeFp)
+        .lineHeight(TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.End);
     }

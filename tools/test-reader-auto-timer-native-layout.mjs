@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,7 +10,7 @@ import * as auto from '../entry/src/main/ets/features/reading/ReaderAutoPageFull
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
 const wheelSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('ReaderControlTimerWheel');
 syntax.propCollection.set('ReaderControlTimerWheel', new Set([...wheelSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
@@ -49,7 +50,8 @@ function validate(owner) {
   assert.equal(s.colon.position.x, s.minute.wheelWidth + 8);
   assert.equal(s.placements[1].x, s.minute.wheelWidth + 24);
   assert.equal(s.placements[1].x + s.second.wheelWidth, s.group.width);
-  assert.equal(s.minute.selectedSize, 17); assert.equal(s.minute.neighbourSize, 11);
+  assert.equal(Object.hasOwn(s.minute, 'selectedSize'), false);
+  assert.equal(Object.hasOwn(s.minute, 'neighbourSize'), false, 'parent cannot override the shared wheel typography');
   assert.equal(s.minute.rowHeight, 34); assert.equal(s.group.height, 114); assert.equal(s.card.height, 138);
   return s;
 }
@@ -78,7 +80,7 @@ const wheelBuilderSource = wheelSource.replace('  build() {',
   '  build() { Column() {} }\n  @Builder private paintWheel() {');
 const wheel = createReaderBuilderProbe(wheelBuilderSource, ['offsets', 'valid', 'label', 'step', 'paintWheel']).owner;
 Object.assign(wheel, { value: 15, minimum: 0, maximum: 180, wheelWidth: 76, rowHeight: 34, neighbours: 1,
-  selectedSize: 17, neighbourSize: 11, unit: '分', interactionEnabled: true, appThemeScheme: 'day' });
+  unit: '分', interactionEnabled: true, appThemeScheme: 'day' });
 wheel.paintWheel();
 for (const s of samples) {
   wheel.wheelWidth = s.minute.wheelWidth; wheel.replay();

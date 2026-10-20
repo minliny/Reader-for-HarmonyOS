@@ -34,6 +34,16 @@ export class ReadingSessionDocuments {
     } else this.currentIndex = -1;
   }
 
+  /** A first remote session can extend one cold reader's catalog without
+   * granting its old speculative bodies new request-context proof. Another
+   * book's process window is outside that reader's ownership. */
+  configureOwnedCatalogWithoutBodies(sourceId: string, bookId: string, order: number[], valid: () => boolean): void {
+    if (this.sourceId !== sourceId || this.bookId !== bookId) return;
+    this.window.clear();
+    this.currentIndex = -1;
+    this.configure(sourceId, bookId, order, valid);
+  }
+
   read(sourceId: string, bookId: string, chapterIndex: number,
     context?: RemoteReadingPositionContext): ReadingSessionChapter | undefined {
     if (!this.matches(sourceId, bookId)) return undefined;

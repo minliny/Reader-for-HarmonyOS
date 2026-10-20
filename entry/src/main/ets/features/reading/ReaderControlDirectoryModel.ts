@@ -13,6 +13,7 @@ export interface ReaderControlDirectoryRow {
 export interface ReaderControlDirectorySnapshot {
   rows: ReaderControlDirectoryRow[];
   loading: boolean;
+  catalogState: 'ready' | 'partial' | 'loading' | 'failed';
   currentTitle: string;
   currentPosition: string;
   targetRow: number;
@@ -22,11 +23,15 @@ export interface ReaderControlDirectoryCatalog {
   complete: boolean;
   chapterCount: number;
   currentPosition: number;
+  readableChapterCount?: number;
+  readablePosition?: number;
+  loading?: boolean;
+  loadFailed?: boolean;
 }
 
 export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], tab: string,
   query: string, ascending: boolean, currentChapter: number,
-  identity?: ReaderBookIdentity, catalog?: ReaderControlDirectoryCatalog): ReaderControlDirectorySnapshot {
+  identity?: ReaderBookIdentity, catalog?: ReaderControlDirectoryCatalog, mangaSearch: boolean = false): ReaderControlDirectorySnapshot {
   const currentOrdinal = entries.findIndex((entry: LocalReadingTocEntry): boolean => entry.index === currentChapter);
   const rows: ReaderControlDirectoryRow[] = [];
   let targetRow = -1;
@@ -42,16 +47,20 @@ export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], 
     }));
     targetRow = readerControlNearestBookmarkRow(positions, currentOrdinal) ?? -1;
   } else {
-    for (const entry of projectReaderDirectoryEntries(entries, query, ascending)) {
+    for (const entry of projectReaderDirectoryEntries(entries, query, ascending, mangaSearch)) {
       if (entry.index === currentChapter) targetRow = rows.length;
       rows.push({ key: `chapter:${entry.index}`, chapter: entry, bookmark: undefined });
     }
   }
-  const currentPosition = catalog?.complete === false ?
-    (catalog.currentPosition >= 0 && catalog.currentPosition < catalog.chapterCount ?
-      `${catalog.currentPosition + 1} / ${catalog.chapterCount}` : '') :
-    (currentOrdinal < 0 ? '' : `${currentOrdinal + 1} / ${entries.length}`);
-  return { rows: rows, loading: entries.length === 0 ||
+  const readable = entries.filter((entry): boolean => entry.navigable !== false);
+  const readableOrdinal = readable.findIndex((entry): boolean => entry.index === currentChapter);
+  const count = catalog?.complete === false ? catalog.readableChapterCount : readable.length;
+  const position = catalog?.complete === false ? catalog.readablePosition : readableOrdinal;
+  const currentPosition = count !== undefined && position !== undefined && position >= 0 && position < count ?
+    `${position + 1} / ${count}` : '';
+  const catalogState = catalog?.complete === false ?
+    (catalog.loading === true ? 'loading' : catalog.loadFailed === true ? 'failed' : 'partial') : 'ready';
+  return { rows: rows, catalogState, loading: entries.length === 0 ||
     (tab === 'bookmarks' && readerBookmarkLoadState(entries) === 'loading'), targetRow: targetRow,
     currentTitle: currentOrdinal < 0 ? '' : entries[currentOrdinal].title,
     currentPosition };

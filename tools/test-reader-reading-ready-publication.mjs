@@ -1,18 +1,20 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as selection from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { readerTextSelectionEnabled } from '../entry/src/main/ets/features/reading/ReaderTextSelectionPolicy.ts';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 const sourceFile=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
 const source=readFileSync(sourceFile,'utf8');
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree=ts.createSourceFile('/tmp/ReaderReadyClasses.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const tree=ts.createSourceFile(virtualFilePath('ReaderReadyClasses.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const classNames=['ReadingCommit','CoreReadingAnchor','PreparedReaderPageTurn','ReaderControlSelectionCandidate'];
 const classes=Object.fromEntries(classNames.map(name=>{
   const node=tree.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.getText(tree)===name);assert.ok(node,name);
@@ -41,13 +43,16 @@ function fixture({file=sourceFile,mode='paged',storedIndex=0,storedOffset=0}={})
   const writeOwners=[];
   const runtime={captureReadingContentValidity:()=>()=>true};
   const persistence=new ReadingSessionProgressOwner(runtime,'s','b',operation=>serial.runProgressCommitSerial(operation));
-  const gateway={canPersistPresentedProgress:()=>true,runProgressCommitSerial:operation=>persistence.runSerial(operation),resolveAndUpdateProgress:async(...args)=>{
+  const gateway={hasPendingSourceSwitch:()=>owner.sourceSwitchTransactionId!==undefined,canPersistPresentedProgress:()=>true,runProgressCommitSerial:operation=>persistence.runSerial(operation),resolveAndUpdateProgress:async(...args)=>{
     writeOwners.push(args.at(-1));writes++;if(rejectWrite)throw Error('WRITE_REJECTED');if(hold)await gate.promise;return stored;
   },loadProgress:async()=>{reads++;return{kind:'restored',progress:stored};},
     prefetchChapter:(_book,index,isCurrent)=>{loads.push({index,isCurrent});return new Promise(()=>{});}};
-  gateway.persistPresentedProgress=(_book,title,anchor,layout)=>persistence.persistPresented(title,anchor,layout,{
-    read:guard=>gateway.loadProgress('b',guard),write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('b',title,anchor,layout,guard)});
+  gateway.persistPresentedProgress=(_book,title,anchor,layout,admitted)=>persistence.persistPresented(title,anchor,layout,{
+    read:guard=>gateway.loadProgress('b',guard),write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('b',title,anchor,layout,guard)},admitted);
   gateway.awaitPresentedProgressPersistence=()=>persistence.awaitPersistence();
+  // The source transaction path reaches its own canonical-write transport seam;
+  // this presentation test controls its ACK, not the Core receipt algorithm.
+  gateway.persistCanonicalProgress=(...args)=>gateway.resolveAndUpdateProgress(...args);
   Object.assign(owner,{mounted:true,exitRequested:false,lifecycleToken:1,sourceId:'s',bookId:'b',chapter,
     chapterSelectionToken:2,materializedChapterSelectionToken:2,visiblePageSelectionToken:2,
     measurementGeneration:3,measurementSelectionToken:2,measurementCompleting:true,phase:'measuring',visibleFragments:[],
@@ -205,12 +210,22 @@ for(const path of ['first','recover','promote'])for(const hook of ['commit','cha
 }
 // Counterfactuals change only the relevant production order in temporary source,
 // exercising the same assertions instead of weakening them to follow the implementation.
+const firstMember=tree.statements.find(node=>node.name?.getText(tree)==='ReadingExperience')
+  .members.find(node=>node.name?.getText(tree)==='completeFirstPage').getText(tree);
 const firstNeedle='        this.schedulePageTurnPreparation();\n        this.admitCommittedProgress(stored);';
-assert.equal(source.split(firstNeedle).length,2);
-const firstMutant=source.replace(firstNeedle,'        this.admitCommittedProgress(stored);')
-  .replace('        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);',
-    '        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.schedulePageTurnPreparation();');
-const firstFile='/private/tmp/reader-ready-before-first-publication.ets';writeFileSync(firstFile,firstMutant);
+const firstPublicationNeedle="        this.pageTurnRenderRevision += 1;\n        this.traceInitialReadingPhase?.('presentation-submit', lifecycleToken);";
+const firstLatePreparationNeedle='        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.completeRapidPageTurnTransaction();';
+for(const needle of [firstNeedle,firstPublicationNeedle,firstLatePreparationNeedle])assert.equal(firstMember.split(needle).length,2);
+// Both current publication paths now invalidate before durable observers.
+// Recreate the original incomplete ordering only in this canonical member:
+// remove explicit first publication and move preparation after the observers.
+const firstBadMember=firstMember.replace(firstPublicationNeedle,"        this.traceInitialReadingPhase?.('presentation-submit', lifecycleToken);")
+  .replace(firstNeedle,'        this.admitCommittedProgress(stored);')
+  .replace(firstLatePreparationNeedle,'        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.schedulePageTurnPreparation();\n        this.completeRapidPageTurnTransaction();');
+const firstMutant=source.replace(firstMember,firstBadMember);
+const scratch=mkdtempSync(join(tmpdir(),'reader-ready-publication-'));
+try {
+const firstFile=join(scratch,'first.ets');writeFileSync(firstFile,firstMutant);
 const firstBad=fixture({file:firstFile});firstBad.owner.visiblePage={startScalar:9,fragments:[]};await firstBad.first();assert.throws(()=>expectPublished(firstBad,'negative first'),/publish revision/);
 // The publication counterfactual still fails above; body-only preparation
 // intentionally has no dependency on texture generation changes.
@@ -219,17 +234,20 @@ assert.equal(source.split(recoverNeedle).length,2);
 const recoverMutant=source.replace(recoverNeedle,"    this.phase = 'ready';\n    this.admitCommittedProgress(stored);")
   .replace('      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;\n    this.releaseUnretainedReadingImages();',
     '      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;\n    this.schedulePageTurnPreparation();\n    this.releaseUnretainedReadingImages();');
-const recoverFile='/private/tmp/reader-ready-before-recovery-publication.ets';writeFileSync(recoverFile,recoverMutant);
+const recoverFile=join(scratch,'recovery.ets');writeFileSync(recoverFile,recoverMutant);
 const recoverBad=fixture({file:recoverFile});await recoverBad.recover('origin');assert.throws(()=>expectPublished(recoverBad,'negative recovery'),/publish revision/);
 const slotLine="    this.pageTurnCurrentSlot = this.pageTurnCurrentSlot === 'a' ? 'b' : 'a';";
 assert.equal(source.split(slotLine).length,2);
 const promoteMutant=source.replace(slotLine,'')
   .replace('    this.onAutoPagePageCommitted();\n  }\n\n  private requestPageTurn',
     `    this.onAutoPagePageCommitted();\n${slotLine}\n  }\n\n  private requestPageTurn`);
-const promoteFile='/private/tmp/reader-ready-before-slot-publication.ets';writeFileSync(promoteFile,promoteMutant);
+const promoteFile=join(scratch,'slot.ets');writeFileSync(promoteFile,promoteMutant);
 const promoteBad=fixture({file:promoteFile});promoteBad.promote();
 assert.equal(expectPublished(promoteBad,'negative promotion').slot,'a','negative control exposes the original incomplete slot publication');
 report.push('negative:first-order','negative:recovery-order','negative:promotion-slot-order');
+} finally {
+  rmSync(scratch,{recursive:true,force:true});
+}
 for(const outcome of ['old-success','old-failure','unmount-success','unmount-failure']){
   const f=fixture();f.hold();const writing=f.first();await settle();
   const newer={startScalar:50,fragments:[{text:'newer page'}]};

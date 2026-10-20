@@ -1,17 +1,40 @@
-import { installContentSearchOwnerProbe } from './lib/reader-content-search-owner-probe.mjs';
-import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['error-classification','Gateway typed stale/cancel classification without durable fixture'],['search-publication','LRE first/more/retry/new query publication'],['conversion-invalidation','Existing Core conversion ACK invalidates only current search'],['replacement-invalidation','Replacement ACK and settlement retain/invalidate search; lightweight actual error class']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {installContentSearchOwnerProbe}=await import('./lib/reader-content-search-owner-probe.mjs');
+const {default:assert}=await import('node:assert/strict');
+const {registerHooks}=await import('node:module');
+const resolution=registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;
 }}});
+let cleanupDurableFixtures;
+try {
 const { ReadingSessionFlowGateway }=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const { RemoteReadingGatewayError, isRemoteReadingCacheFallbackEligible }=
   await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
 const { remoteReadingFailureKindOf }=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const replaceState=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
 const replaceQuick=await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
-const {ReaderControlReplaceGatewayError}=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
+let rulesSdkFixture,rulesCompile,until;
+if(selectedCase==='conversion-invalidation'){
+ const durable=await import('./lib/rules-mutation-durable-probe.mjs');
+ ({fixture:rulesSdkFixture,compile:rulesCompile,until,cleanupDurableFixtures}=durable);
+ console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durable.durableFixtureToolEvidence()}));
+}
+let ReaderControlReplaceGatewayError;
+if(selectedCase==='replacement-invalidation'){
+ const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
+ const {readFileSync}=await import('node:fs');const {ts,options}=installedEtsCompiler();
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts',import.meta.url),'utf8');
+ const tree=ts.createSourceFile('ReaderControlReplaceGateway.ts',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+ assert.deepEqual(tree.parseDiagnostics,[]);
+ const klass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='ReaderControlReplaceGatewayError');assert.ok(klass);
+ const emitted=ts.transpileModule(klass.getText(tree),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);
+ const exports={};new Function('exports',emitted.outputText)(exports);ReaderControlReplaceGatewayError=exports.ReaderControlReplaceGatewayError;
+}
+const capturedReaderRuntime={captureReadingContentValidity:()=>()=>true,waitForReadingContentIdle:async()=>{}};
+const readerRuntimeAuthority={current:()=>capturedReaderRuntime,isCurrent:owner=>owner===capturedReaderRuntime};
 const failure=(reason,code='INVALID_PARAMS')=>Object.assign(new Error(reason==='CONTENT_SEARCH_STALE'
   ? 'Cached content or processing settings changed during search; retry the search'
   : 'text processing settings changed; original reading positions were preserved; restore the previous Chinese conversion or text replacement settings and retry'),
@@ -26,6 +49,7 @@ function fixture(local=false){
     {kind:'remote',session:{identity:{sourceId,bookId},book:{title:'书'},entries:[],acquisitionMode:'cache'}},runtime);
   return{gateway,requests,sourceId,bookId,setResponse:value=>{respond=value;}};
 }
+if(selectedCase==='error-classification'){
 for(const local of [false,true])for(const reason of ['PROCESSING_CONTEXT_STALE','POSITION_CONTEXT_STALE','CONTENT_SEARCH_STALE']){
   const f=fixture(local),original=failure(reason);let current=true;
   f.setResponse(async()=>{throw original;});
@@ -57,8 +81,11 @@ for(const local of [false,true])for(const reason of ['PROCESSING_CONTEXT_STALE',
     assert.equal(isRemoteReadingCacheFallbackEligible(error),false);return true;
   });
 }
+}
+if(selectedCase!=='error-classification'){
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
-  ['runQuickSearch','loadMoreQuickSearch','updateQuickSearchQuery','publishQuickSearchState'],{READER_CONTENT_SEARCH_PAGE_SIZE:50});
+  ['runQuickSearch','loadMoreQuickSearch','updateQuickSearchQuery','publishQuickSearchState'],{READER_CONTENT_SEARCH_PAGE_SIZE:50,ReaderRuntimeOwner:readerRuntimeAuthority});
 function reader(f){
   const publications=[];
   const owner=Object.assign(new Reader(),{sourceId:f.sourceId,bookId:f.bookId,lifecycleToken:1,searchGeneration:0,
@@ -70,6 +97,7 @@ function reader(f){
 }
 const match=(f,index)=>({sourceId:f.sourceId,bookId:f.bookId,bookName:'书',chapterIndex:index,chapterOffset:3,
   matchLength:3,snippetStart:0,chapterTitle:`第${index}章`,snippet:'包含关键词的正文'});
+if(selectedCase==='search-publication'){
 for(const reason of ['PROCESSING_CONTEXT_STALE','CONTENT_SEARCH_STALE']){
   // The actual first-page catch receives the classified message; manual retry owns the next request.
   const f=fixture(),{owner,publications}=reader(f);
@@ -102,12 +130,15 @@ for(const more of [false,true])for(const code of ['INVALID_PARAMS','CANCELLED'])
   late.reject(failure('CONTENT_SEARCH_STALE',code));await settle();
   assert.deepEqual(owner.quickSearchState,{kind:'idle'});assert.equal(publications.length,count,'an obsolete error/cancel cannot publish into a new query');
 }
+}
+if(selectedCase==='conversion-invalidation'||selectedCase==='replacement-invalidation'){
 // Successful processing changes invalidate same-control-session results even
 // when body reloading must wait for an in-flight page settlement.
 const processingMethods=['changeChineseConversionMode','reloadCurrentPageAfterReplacePersist',
-  'runControlReplaceMutation','beginReplaceMutation','isReplaceMutationCurrent','finishReplaceMutation'];
+  'runControlReplaceMutation','beginReplaceMutation','isReplaceMutationCurrent','finishReplaceMutation',
+  'readerReplaceRuntimeCurrent','projectReaderReplaceWriteFacts'];
 const Processing=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
-  processingMethods,{...replaceState,...replaceQuick,ReaderControlReplaceGatewayError});
+  processingMethods,{...replaceState,...replaceQuick,ReaderControlReplaceGatewayError,ReaderRuntimeOwner:readerRuntimeAuthority});
 function processingFixture(settling=false){
   const f=fixture(),r=reader(f),owner=r.owner,reloads=[];
   for(const name of processingMethods)owner[name]=Processing.prototype[name];
@@ -126,18 +157,32 @@ function processingFixture(settling=false){
     quickSearchState:{kind:'results',keyword:'关键词',results:[match(f,0)],offset:1,hasMore:true,loadingMore:false}});
   return{...f,...r,reloads};
 }
-for(const outcome of ['success','failure','stale-generation','unmounted']){
+async function actualConversion(f) {
+  const rules = await rulesSdkFixture(true);
+  const Gateway = rulesCompile('features/reading/ReaderChineseConversionGateway.ts', 'ReaderChineseConversionGateway',
+    { RulesMutationOwner: rules.Owner, RulesManagementGateway: rules.Gateway, ReaderRuntimeOwner: rules.Runtime }, true);
+  f.owner.chineseConversionGateway = new Gateway(rules.runtime);
+  f.owner.chineseConversionOperationId = '';
+  f.owner.notices = [];
+  f.owner.getUIContext = () => ({ getPromptAction: () => ({ showToast: value => f.owner.notices.push(value) }) });
+  return rules;
+}
+for(const outcome of selectedCase==='conversion-invalidation'?['success','failure','stale-generation','unmounted']:[]){
   const f=processingFixture(),write=deferred(),prior=f.owner.quickSearchState;
-  f.owner.chineseConversionGateway={putMode:()=>write.promise};f.owner.changeChineseConversionMode('t2s');await Promise.resolve();
+  const rules = await actualConversion(f);
+  rules.options.pauseMethod = 'rules.mutation.apply'; rules.options.gate = write;
+  f.owner.changeChineseConversionMode('t2s'); await until(() => rules.writes().length === 1);
   assert.equal(f.owner.quickSearchState,prior,'an unacknowledged conversion must retain current search results');
   if(outcome==='stale-generation')f.owner.chineseConversionMutationGeneration++;
   if(outcome==='unmounted')f.owner.mounted=false;
-  if(outcome==='failure')write.reject(Error('save failed'));else write.resolve('t2s');await settle();
+  if(outcome==='failure')write.reject(Error('save failed'));else write.resolve();
+  await until(() => !f.owner.chineseConversionGateway.snapshot().busy); await settle();
+  if (outcome === 'failure') assert.equal(f.owner.chineseConversionGateway.snapshot().confirmation, 'unknown');
   assert.equal(f.owner.searchGeneration,outcome==='success'?1:0);
   assert.deepEqual(f.owner.quickSearchState,outcome==='success'?{kind:'idle'}:prior);
   assert.equal(f.owner.quickSearchQuery,'关键词','successful conversion keeps the query for a fresh search');
 }
-for(const settling of [false,true])for(const outcome of ['success','unchanged','failure','stale-book','unmounted']){
+for(const settling of selectedCase==='replacement-invalidation'?[false,true]:[])for(const outcome of ['success','unchanged','failure','stale-book','unmounted']){
   const f=processingFixture(settling),write=deferred(),prior=f.owner.quickSearchState;
   const save=f.owner.runControlReplaceMutation(4,()=>write.promise);await Promise.resolve();
   assert.equal(f.owner.quickSearchState,prior,'a pending rule write cannot clear results');
@@ -151,12 +196,12 @@ for(const settling of [false,true])for(const outcome of ['success','unchanged','
   if(changed&&settling){assert.equal(f.owner.pageTurnPendingReplaceReload,true);assert.deepEqual(f.reloads,[]);}
   if(!changed)assert.deepEqual(f.reloads,[],'failed/obsolete/unchanged rule writes retain the current projection');
 }
-for(const processing of ['conversion','replacement']){
+for(const processing of [selectedCase==='conversion-invalidation'?'conversion':'replacement']){
   const f=processingFixture(true),late=deferred();f.setResponse(()=>late.promise);
   f.owner.loadMoreQuickSearch();assert.equal(f.requests.length,1);
   if(processing==='conversion'){
-    f.owner.chineseConversionGateway={putMode:async()=> 't2s'};
-    f.owner.changeChineseConversionMode('t2s');await settle();
+    await actualConversion(f);
+    f.owner.changeChineseConversionMode('t2s');await until(() => f.owner.chineseConversionLoaded);await settle();
   }else await f.owner.runControlReplaceMutation(4,async()=>({changed:true,needsReload:false}));
   assert.deepEqual(f.owner.quickSearchState,{kind:'idle'});
   assert.equal(f.requests[0].options.shouldCancel(),true,'successful processing change revokes the old search page');
@@ -171,7 +216,7 @@ for(const processing of ['conversion','replacement']){
 }
 // Wrong-owner reloads do nothing; an eventual valid drain can clear already
 // empty results again without restoring rows or losing the query.
-{
+if(selectedCase==='replacement-invalidation'){
   const f=processingFixture(true),prior=f.owner.quickSearchState;
   f.owner.reloadCurrentPageAfterReplacePersist(0,f.bookId);f.owner.reloadCurrentPageAfterReplacePersist(1,'other');
   assert.equal(f.owner.quickSearchState,prior);assert.equal(f.owner.searchGeneration,0);
@@ -179,4 +224,10 @@ for(const processing of ['conversion','replacement']){
   f.owner.pageTurnSettlementActive=false;f.owner.reloadCurrentPageAfterReplacePersist(1,f.bookId);
   assert.deepEqual(f.owner.quickSearchState,{kind:'idle'});assert.equal(f.owner.quickSearchQuery,'关键词');
 }
-console.log('PH117 actual content-search Gateway/LRE typed errors, retry/cancel, and processing-ACK retained-row invalidation PASS');
+}
+}
+console.log(`PASS content-search ${selectedCase}: actual typed errors/publication or selected processing ACK boundary`);
+} finally { if(cleanupDurableFixtures)await cleanupDurableFixtures();resolution.deregister(); }
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

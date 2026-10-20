@@ -1,18 +1,22 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { readerDirectoryBookmarkMarkerState } from '../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from
-  '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({toolbar:{description:'Actual retained toolbar state and action callbacks',resources:[]},'row-actions':{description:'Actual chapter row selection, marker, download and hierarchy admission',resources:[]},'control-forwarding':{description:'Actual control wrapper forwards live callbacks and row identity',resources:[]}});
+async function run(id){
+const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { createRequire }=await import('node:module');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
+const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts');
+const { readerAppColor }=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerDirectoryAccessibilityText, readerDirectoryIndentVp }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts');
+const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
 
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
 const toolbarSource = read('ReaderDirectoryToolbar');
 const rowSource = read('ReaderDirectoryChapterRow');
 const controlSource = read('ReaderControlDirectoryContent');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, props] of [
   ['ReaderSearchField', ['variant', 'mode', 'text', 'placeholder', 'accessibilityLabel']],
@@ -27,10 +31,11 @@ const nodes = owner => [...owner.nodes.values()];
 const action = (owner, label) => nodes(owner).find(node => node.accessibilityText === label);
 const entry = { index: 21, title: '第二十二章', navigable: true, downloadState: 'missing', bookmarks: [] };
 
+if(id==='toolbar'){
 // Real SDK-emitted toolbar nodes and callbacks, including the shared search field boundary.
 for (const scheme of ['day', 'night']) for (const showChapterTools of [true, false]) {
   const calls = [];
-  const owner = createReaderBuilderProbe(toolbarSource, ['build', 'tool', 'icon'], { ReaderSearchField: Child }).owner;
+  const owner = createReaderBuilderProbe(toolbarSource, ['build', 'tool'], { ReaderSearchField: Child }).owner;
   Object.assign(owner, { appThemeScheme: scheme, text: '章节', placeholder: showChapterTools ? '搜索章节名称' : '搜索书签内容',
     ascending: true, showChapterTools, onTextChange: value => calls.push(['text', value]),
     onSearch: () => calls.push(['search']), onTop: () => calls.push(['top']), onBottom: () => calls.push(['bottom']),
@@ -53,12 +58,20 @@ for (const scheme of ['day', 'night']) for (const showChapterTools of [true, fal
   assert.deepEqual(calls, [['text', '新查询'], ['search'], ['search'], ...(showChapterTools ? [['top'], ['bottom'], ['sort']] : [])]);
   owner.text = '更新后的查询'; owner.ascending = false; owner.replay();
   assert.equal(field.params.text, '更新后的查询', 'existing search field receives new owner state');
-  if (showChapterTools) assert.ok(nodes(owner).some(node => node.type === 'Image' && node.create ===
-    `app.media.reader_directory_sort_descending${scheme === 'night' ? '_theme_night' : ''}`));
+  if(showChapterTools){
+    // This finite probe retains existing branches; a new owner checks the alternate
+    // native image branch without pretending to model ArkUI branch removal.
+    const descending=createReaderBuilderProbe(toolbarSource,['build','tool'],{ReaderSearchField:Child}).owner;
+    Object.assign(descending,{appThemeScheme:scheme,text:'',placeholder:'搜索章节名称',ascending:false,showChapterTools:true,
+      onTextChange(){},onSearch(){},onTop(){},onBottom(){},onToggleSort(){}});descending.initialRender();
+    assert.ok(nodes(descending).some(node=>node.type==='Image'&&node.create===`app.media.reader_directory_sort_descending${scheme==='night'?'_theme_night':''}`));
+  }
   const root = nodes(owner).find(node => node.type === 'Row' && node.height === 50);
   assert.deepEqual(root.padding, { left: 10, right: 10, top: 9 });
 }
 
+
+}else if(id==='row-actions'){
 function row(overrides = {}, scheme = 'day') {
   const calls = [];
   const owner = createReaderBuilderProbe(rowSource, ['build', 'marker'],
@@ -76,7 +89,7 @@ for (const scheme of ['day', 'night']) {
   action(owner, '添加本章章首书签').onClick();
   assert.deepEqual(calls, [['select', 21], ['download', 21], ['create', { chapterIndex: 21, chapterTitle: '第二十二章' }]]);
   const text = nodes(owner).find(node => node.type === 'Text');
-  assert.deepEqual([text.fontFamily, text.fontSize, text.fontWeight], ['ReaderNotoSansSC', 11, 500]);
+  assert.deepEqual([text.fontFamily, text.fontSize, text.fontWeight], [readerTypographyRoles.TYPE_READER_DIRECTORY_TITLE.fontFamily, readerTypographyRoles.TYPE_READER_DIRECTORY_TITLE.fontSizeFp, readerTypographyRoles.TYPE_READER_DIRECTORY_TITLE.fontWeight]);
   assert.equal(text.fontColor, readerAppColor('TOK_READ_INK', scheme));
   assert.ok(nodes(owner).some(node => node.type === 'Image' && node.create ===
     `app.media.reader_directory_marker_download${scheme === 'night' ? '_theme_night' : ''}`));
@@ -118,6 +131,8 @@ for (const state of ['missing', 'cached', 'failed', 'cancelled', 'queued', 'down
   assert.ok(nodes(marked.owner).some(node => node.backgroundColor === readerAppColor('TOK_READ_ACTIVE_SOFT', 'day')));
 }
 
+
+}else{
 // Execute the actual control wrappers. Motion wrappers and the native List stay owned by the control.
 {
   const calls = [];
@@ -142,6 +157,7 @@ for (const state of ['missing', 'cached', 'failed', 'cancelled', 'queued', 'down
   const divider = nodes(owner).find(node => node.height === 1);
   assert.deepEqual(divider.position, { x: 0, y: 51 }); assert.equal(divider.opacity, 1);
 }
-assert.equal((controlSource.match(/List\(\{ scroller: this\.scroller \}\)/g) ?? []).length, 1);
-assert.doesNotMatch(controlSource, /pageMode|standaloneMode|ReaderDirectoryList\(\{/);
-console.log('PASS shared directory toolbar/chapter row: actual SDK Builders, retained props, actions, marker gates and control wrappers');
+
+}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

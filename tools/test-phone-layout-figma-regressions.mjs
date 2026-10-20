@@ -1,52 +1,27 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"live-width-safe-frame": {"description": "实际detail text/manga安全frame与Shelf Area解析", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const horizontal = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const {MANGA_DIRECTORY_VISUAL: visual} = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
 
-const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const tokens = read('entry/src/main/ets/features/common/ReaderTokens.ets');
-const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
-const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
+let metrics={windowRect:{width:390,height:844},left:40,right:7};
+const deps={...horizontal,visual,ReaderWindowCoordinator:{metrics:()=>metrics},readerVisualSafeLeft:m=>m.left,readerVisualSafeRight:m=>m.right};
+const Detail=selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/LocalBookDetail.ets',import.meta.url),'LocalBookDetail',['contentFrame','dockFrame','liveWidth','safeLeft','safeRight'],deps);
+for(const contentKind of ['text','manga']) {
+ const owner=Object.assign(new Detail(),{book:{contentKind},viewportWidth:0,readerWindowMetricsRevision:1});
+ for(const width of [0,160,320,390,800]) {metrics={...metrics,windowRect:{width,height:844}};
+  for(const method of ['contentFrame','dockFrame']) {const frame=owner[method]();assert.ok(frame.width>=0&&Number.isFinite(frame.width));assert.ok(frame.left+frame.width<=width);assert.ok(frame.right+frame.width<=width);if(width>=metrics.left+metrics.right){assert.ok(frame.left>=metrics.left);assert.ok(frame.right>=metrics.right);}}
+ }
+ metrics={...metrics,windowRect:{width:800,height:844}};owner.viewportWidth=320;assert.equal(owner.liveWidth(),320,'real measured area wins over old window width');
+ owner.viewportWidth=0;owner.readerWindowMetricsRevision=-1;assert.equal(owner.liveWidth(),0,'no invented 390/352 before live metrics');
+}
+const Shelf=selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url),'BookshelfPage',['numericAreaLength']),shelf=new Shelf();
+for(const[value,expected]of[[24,24],['24vp',24],['75.5vp',75.5],[NaN,0],['invalid',0],[{},0]])assert.equal(shelf.numericAreaLength(value),expected);
 
-assert.match(tokens, /TOK_SCREEN_INSET = 19;/,
-  'Figma phone content must retain the measured 19vp screen inset');
-assert.match(tokens, /TOK_CONTENT_MAX_W_PHONE = 352;/,
-  'Figma 390vp phone content must retain its 352vp maximum width');
-
-assert.match(shelf, /@State private viewportWidth: number = 0;/,
-  'bookshelf must observe the width of its real viewport');
-assert.match(shelf, /const width = this\.numericAreaLength\(newValue\.width\);/,
-  'bookshelf must use the live viewport width');
-assert.match(shelf, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
-  'bookshelf must accept the vp string form returned by physical-device Area');
-assert.match(shelf,
-  /private phoneContentFrame\(\): SurfaceHorizontalFrame \{[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
-  'bookshelf content must resolve the 352vp cap and 19vp design gaps through shared geometry');
-assert.match(shelf, /private bookshelfList\(isTablet: boolean\)[\s\S]*List\(\{ space: TOK_SPACE_CONTROL_INLINE, scroller: this\.shelfScroller \}\)[\s\S]*\.height\('100%'\)/,
-  'the lazy shelf list must occupy the viewport and stay top-aligned');
-assert.equal((shelf.match(/LazyForEach\(this\.rowDataSource/g) ?? []).length, 1,
-  'both projections must share one lazily materialized stable row tree');
-assert.match(shelf,
-  /private phoneContent\(\)[\s\S]*\.padding\(\{ left: this\.phoneContentFrame\(\)\.left, right: this\.phoneContentFrame\(\)\.right \}\)/,
-  'phone books must preserve the Figma gaps while honoring asymmetric safe edges');
-assert.match(shelf, /private continueReadingCard\(book: ShelfBook, isTablet: boolean\)[\s\S]*\.width\(this\.shelfContentWidth\(isTablet\)\)/,
-  'the continue-reading card must consume the reactive shelf width instead of a frozen Builder argument');
-assert.match(shelf,
-  /private projectionBookTranslateX[\s\S]*this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\)/,
-  'the persistent three-column projection must consume the reactive measured content width');
-assert.match(shelf,
-  /private projectionBookCard[\s\S]*\.width\(this\.projectionBookWidth\(isTablet, index\)\)/,
-  'persistent book actors must not retain the 352vp first-layout fallback after a physical Area update');
-assert.match(shelf, /return Math\.min\(30,[\s\S]*Math\.max\(TOK_SPACE_XS,/,
-  'the adaptive shelf grid must retain the Figma 30vp gap as its maximum');
-
-assert.match(detail, /@State private viewportWidth: number = 0;/,
-  'book detail must observe its physical viewport');
-assert.match(detail,
-  /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, 19, 19, 'center'\)/,
-  'book detail must share one continuous Figma cap and per-edge safe-frame rule');
-assert.match(detail,
-  /private actionButtonWidth\(\): number \{[\s\S]*Math\.min\(355, Math\.max\(0, \(this\.contentWidth\(\) - TOK_SPACE_CONTROL_INLINE\) \/ 2\)\)/,
-  'detail action buttons must shrink on narrow screens without exceeding the Figma maximum');
-assert.match(detail, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
-  'book detail must accept the vp string form returned by physical-device Area');
-
-console.log('physical phone Figma layout regressions: PASS');
+}

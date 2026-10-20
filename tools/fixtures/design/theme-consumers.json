@@ -1,0 +1,534 @@
+[
+  {
+    "role": "app.ReaderSegmentedControl.SEG_TEXT_ACTIVE",
+    "file": "features/common/ReaderSegmentedControl.ets",
+    "day": "#FF21382E",
+    "night": "#FFEADFCE",
+    "originalConstant": "SEG_TEXT_ACTIVE"
+  },
+  {
+    "role": "app.ReaderSegmentedControl.SEG_TEXT_INACTIVE",
+    "file": "features/common/ReaderSegmentedControl.ets",
+    "day": "#FF6E665C",
+    "night": "#FFBAAD9C",
+    "originalConstant": "SEG_TEXT_INACTIVE"
+  },
+  {
+    "role": "app.ReaderSegmentedControl.SEG_SELECTED_BG",
+    "file": "features/common/ReaderSegmentedControl.ets",
+    "day": "#FFFBFAF6",
+    "night": "#FF2C2824",
+    "originalConstant": "SEG_SELECTED_BG"
+  },
+  {
+    "role": "app.ReaderSegmentedControl.SEG_SELECTED_BORDER",
+    "file": "features/common/ReaderSegmentedControl.ets",
+    "day": "#FF2D4A3E",
+    "night": "#FFD2BD96",
+    "originalConstant": "SEG_SELECTED_BORDER"
+  },
+  {
+    "role": "app.ReaderSegmentedControl.SEG_BG",
+    "file": "features/common/ReaderSegmentedControl.ets",
+    "day": "#FFF2EDE5",
+    "night": "#FF24211E",
+    "originalConstant": "SEG_BG"
+  },
+  {
+    "role": "app.ReaderSegmentedControl.SEG_BORDER",
+    "file": "features/common/ReaderSegmentedControl.ets",
+    "day": "#FFD1C9BD",
+    "night": "#FFE2D1B9",
+    "originalConstant": "SEG_BORDER"
+  },
+  {
+    "role": "app.SyncPage.ROW_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#B3FFFCF8",
+    "night": "#B32A2622",
+    "originalConstant": "ROW_BG"
+  },
+  {
+    "role": "app.SyncPage.ROW_BORDER",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "ROW_BORDER"
+  },
+  {
+    "role": "app.SyncPage.GHOST_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#14236179",
+    "night": "#14D2BD96",
+    "originalConstant": "GHOST_BG"
+  },
+  {
+    "role": "app.SyncPage.GHOST_BORDER",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#38236179",
+    "night": "#38D2BD96",
+    "originalConstant": "GHOST_BORDER"
+  },
+  {
+    "role": "app.SyncPage.SOLID_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FF243D30",
+    "night": "#FF7A684F",
+    "originalConstant": "SOLID_BG"
+  },
+  {
+    "role": "app.SyncPage.SOLID_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FF243D30",
+    "night": "#FF7A684F",
+    "originalConstant": "SOLID_BG"
+  },
+  {
+    "role": "app.SyncPage.CARD_BORDER_SOFT",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFD8D0C3",
+    "night": "#FFE2D1B9",
+    "originalConstant": "CARD_BORDER_SOFT"
+  },
+  {
+    "role": "app.SyncPage.SOLID_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FF243D30",
+    "night": "#FF7A684F",
+    "originalConstant": "SOLID_BG"
+  },
+  {
+    "role": "app.SyncPage.GHOST_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#14236179",
+    "night": "#14D2BD96",
+    "originalConstant": "GHOST_BG"
+  },
+  {
+    "role": "app.SyncPage.SOLID_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FF243D30",
+    "night": "#FF7A684F",
+    "originalConstant": "SOLID_BG"
+  },
+  {
+    "role": "app.SyncPage.GHOST_BORDER",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#38236179",
+    "night": "#38D2BD96",
+    "originalConstant": "GHOST_BORDER"
+  },
+  {
+    "role": "app.SyncPage.CARD_BORDER_SOFT",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFD8D0C3",
+    "night": "#FFE2D1B9",
+    "originalConstant": "CARD_BORDER_SOFT"
+  },
+  {
+    "role": "app.SyncPage.CARD_BORDER_SOFT",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFD8D0C3",
+    "night": "#FFE2D1B9",
+    "originalConstant": "CARD_BORDER_SOFT"
+  },
+  {
+    "role": "app.SyncPage.CARD_BORDER_SOFT",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFD8D0C3",
+    "night": "#FFE2D1B9",
+    "originalConstant": "CARD_BORDER_SOFT"
+  },
+  {
+    "role": "app.SyncPage.CARD_BORDER_SOFT",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFD8D0C3",
+    "night": "#FFE2D1B9",
+    "originalConstant": "CARD_BORDER_SOFT"
+  },
+  {
+    "role": "app.SyncPage.CARD_BORDER_SOFT",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFD8D0C3",
+    "night": "#FFE2D1B9",
+    "originalConstant": "CARD_BORDER_SOFT"
+  },
+  {
+    "role": "app.SyncPage.BADGE_BG",
+    "file": "features/sync/SyncPage.ets",
+    "day": "#FFEEE7DB",
+    "night": "#FF2C2824",
+    "originalConstant": "BADGE_BG"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_ERROR_DOT",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#FFA8584D",
+    "night": "#FFA8584D",
+    "originalConstant": "STATUS_ERROR_DOT"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_ERROR_BG",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#21A8584D",
+    "night": "#21A8584D",
+    "originalConstant": "STATUS_ERROR_BG"
+  },
+  {
+    "role": "app.SourceManagementPage.CHIP_BORDER",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#85B4A697",
+    "night": "#85E2D1B9",
+    "originalConstant": "CHIP_BORDER"
+  },
+  {
+    "role": "app.SourceManagementPage.CHIP_BORDER",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#85B4A697",
+    "night": "#85E2D1B9",
+    "originalConstant": "CHIP_BORDER"
+  },
+  {
+    "role": "app.SourceManagementPage.CHIP_BORDER",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#85B4A697",
+    "night": "#85E2D1B9",
+    "originalConstant": "CHIP_BORDER"
+  },
+  {
+    "role": "app.SourceManagementPage.SEARCH_FIELD_BORDER",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#75B4A697",
+    "night": "#75E2D1B9",
+    "originalConstant": "SEARCH_FIELD_BORDER"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_GOOD_BG",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#212B895C",
+    "night": "#212B895C",
+    "originalConstant": "STATUS_GOOD_BG"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_ERROR_BG",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#21A8584D",
+    "night": "#21A8584D",
+    "originalConstant": "STATUS_ERROR_BG"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_MUTED_BG",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#1F8C8276",
+    "night": "#1F8C8276",
+    "originalConstant": "STATUS_MUTED_BG"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_GOOD_DOT",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#FF28704E",
+    "night": "#FF54B080",
+    "originalConstant": "STATUS_GOOD_DOT"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_ERROR_DOT",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#FFA8584D",
+    "night": "#FFA8584D",
+    "originalConstant": "STATUS_ERROR_DOT"
+  },
+  {
+    "role": "app.SourceManagementPage.STATUS_MUTED_DOT",
+    "file": "features/source/SourceManagementPage.ets",
+    "day": "#FF8C8276",
+    "night": "#FFBEB2A5",
+    "originalConstant": "STATUS_MUTED_DOT"
+  },
+  {
+    "role": "app.DiscoverPage.ICON_BOX_BG",
+    "file": "features/discover/DiscoverPage.ets",
+    "day": "#1A2D4A3E",
+    "night": "#1AD2BD96",
+    "originalConstant": "ICON_BOX_BG"
+  },
+  {
+    "role": "app.DiscoverPage.CURRENT_SOURCE_BORDER",
+    "file": "features/discover/DiscoverPage.ets",
+    "day": "#5CB4A697",
+    "night": "#5CE2D1B9",
+    "originalConstant": "CURRENT_SOURCE_BORDER"
+  },
+  {
+    "role": "app.DiscoverPage.CHIP_BG",
+    "file": "features/discover/DiscoverPage.ets",
+    "day": "#D1EEE8DF",
+    "night": "#D12C2824",
+    "originalConstant": "CHIP_BG"
+  },
+  {
+    "role": "app.DiscoverPage.FILTER_BORDER",
+    "file": "features/discover/DiscoverPage.ets",
+    "day": "#7AB4A697",
+    "night": "#7AE2D1B9",
+    "originalConstant": "FILTER_BORDER"
+  },
+  {
+    "role": "app.DiscoverPage.APPLY_BORDER",
+    "file": "features/discover/DiscoverPage.ets",
+    "day": "#C72D5D76",
+    "night": "#C7D2BD96",
+    "originalConstant": "APPLY_BORDER"
+  },
+  {
+    "role": "app.DiscoverPage.CHIP_BG",
+    "file": "features/discover/DiscoverPage.ets",
+    "day": "#D1EEE8DF",
+    "night": "#D12C2824",
+    "originalConstant": "CHIP_BG"
+  },
+  {
+    "role": "app.RssEntryDetailPage.CARD_BORDER",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssEntryDetailPage.CARD_BORDER",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssEntryDetailPage.ACTION_BG",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#D6EEE8DF",
+    "night": "#D62C2824",
+    "originalConstant": "ACTION_BG"
+  },
+  {
+    "role": "app.RssEntryDetailPage.CARD_BORDER",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssEntryDetailPage.ACTION_BG",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#D6EEE8DF",
+    "night": "#D62C2824",
+    "originalConstant": "ACTION_BG"
+  },
+  {
+    "role": "app.RssEntryDetailPage.CARD_BORDER",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssEntryDetailPage.CARD_BORDER",
+    "file": "features/rss/RssEntryDetailPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssSourceFeedPage.CARD_BORDER",
+    "file": "features/rss/RssSourceFeedPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssSourceFeedPage.ACTION_BG",
+    "file": "features/rss/RssSourceFeedPage.ets",
+    "day": "#D6EEE8DF",
+    "night": "#D62C2824",
+    "originalConstant": "ACTION_BG"
+  },
+  {
+    "role": "app.RssSourceFeedPage.CARD_BORDER",
+    "file": "features/rss/RssSourceFeedPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssPage.PILL_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#DBFFFCF8",
+    "night": "#DB2A2622",
+    "originalConstant": "PILL_BG"
+  },
+  {
+    "role": "app.RssPage.PILL_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#6BB4A697",
+    "night": "#6BE2D1B9",
+    "originalConstant": "PILL_BORDER"
+  },
+  {
+    "role": "app.RssPage.PILL_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#DBFFFCF8",
+    "night": "#DB2A2622",
+    "originalConstant": "PILL_BG"
+  },
+  {
+    "role": "app.RssPage.PILL_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#6BB4A697",
+    "night": "#6BE2D1B9",
+    "originalConstant": "PILL_BORDER"
+  },
+  {
+    "role": "app.RssPage.SOFT_PILL_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#D6EEE8DF",
+    "night": "#D62C2824",
+    "originalConstant": "SOFT_PILL_BG"
+  },
+  {
+    "role": "app.RssPage.CARD_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssPage.FILTER_TEXT",
+    "file": "features/rss/RssPage.ets",
+    "day": "#FF3F372F",
+    "night": "#FFEADFCE",
+    "originalConstant": "FILTER_TEXT"
+  },
+  {
+    "role": "app.RssPage.FILTER_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#7AB4A697",
+    "night": "#7AE2D1B9",
+    "originalConstant": "FILTER_BORDER"
+  },
+  {
+    "role": "app.RssPage.CARD_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssPage.CARD_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssPage.SOFT_PILL_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#D6EEE8DF",
+    "night": "#D62C2824",
+    "originalConstant": "SOFT_PILL_BG"
+  },
+  {
+    "role": "app.RssPage.CARD_BORDER",
+    "file": "features/rss/RssPage.ets",
+    "day": "#4DB4A697",
+    "night": "#4DE2D1B9",
+    "originalConstant": "CARD_BORDER"
+  },
+  {
+    "role": "app.RssPage.VIEW_ALL_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#172D4A3E",
+    "night": "#17D2BD96",
+    "originalConstant": "VIEW_ALL_BG"
+  },
+  {
+    "role": "app.RssPage.MUTED_DEEP",
+    "file": "features/rss/RssPage.ets",
+    "day": "#FF6F655D",
+    "night": "#FFBAAD9C",
+    "originalConstant": "MUTED_DEEP"
+  },
+  {
+    "role": "app.RssPage.ERROR_CARD_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#14D62222",
+    "night": "#14D62222",
+    "originalConstant": "ERROR_CARD_BG"
+  },
+  {
+    "role": "app.RssPage.STATUS_DISABLED_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#1F7F766C",
+    "night": "#1F7F766C",
+    "originalConstant": "STATUS_DISABLED_BG"
+  },
+  {
+    "role": "app.RssPage.STATUS_ENABLED_BG",
+    "file": "features/rss/RssPage.ets",
+    "day": "#1F36795B",
+    "night": "#1F36795B",
+    "originalConstant": "STATUS_ENABLED_BG"
+  },
+  {
+    "role": "app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR",
+    "file": "features/reading/ReaderDirectoryModulePanel.ets",
+    "day": "#D9FFFCF8",
+    "night": "#D92A2622",
+    "originalConstant": "DIRECTORY_EDGE_FADE_COLOR"
+  },
+  {
+    "role": "app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR",
+    "file": "features/reading/ReaderDirectoryModulePanel.ets",
+    "day": "#00FFFCF8",
+    "night": "#002A2622",
+    "originalConstant": "DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR"
+  },
+  {
+    "role": "app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR",
+    "file": "features/reading/ReaderDirectoryModulePanel.ets",
+    "day": "#D9FFFCF8",
+    "night": "#D92A2622",
+    "originalConstant": "DIRECTORY_EDGE_FADE_COLOR"
+  },
+  {
+    "role": "app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR",
+    "file": "features/reading/ReaderDirectoryModulePanel.ets",
+    "day": "#00FFFCF8",
+    "night": "#002A2622",
+    "originalConstant": "DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR"
+  },
+  {
+    "role": "app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT",
+    "file": "features/reading/ReaderBookmarkRow.ets",
+    "day": "#8C9B8466",
+    "night": "#8CE2D1B9",
+    "originalConstant": "BOOKMARK_EXCERPT_ACCENT"
+  },
+  {
+    "role": "app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT",
+    "file": "features/reading/ReaderBookmarkRow.ets",
+    "day": "#8C9B8466",
+    "night": "#8CE2D1B9",
+    "originalConstant": "BOOKMARK_EXCERPT_ACCENT"
+  },
+  {
+    "role": "app.ReaderBookmarkEmptyState.EMPTY_STATE_BUTTON_COLOR",
+    "file": "features/reading/ReaderBookmarkEmptyState.ets",
+    "day": "#FFFFFFFF",
+    "night": "#FF1C1A18",
+    "originalConstant": "EMPTY_STATE_BUTTON_COLOR"
+  },
+  {
+    "role": "app.BookshelfSettingsPage.modeOption.onSelected",
+    "file": "features/bookshelf/BookshelfSettingsPage.ets",
+    "day": "#FFFFFFFF",
+    "night": "#FFFFFAF4",
+    "originalConstant": "Color.White"
+  }
+]

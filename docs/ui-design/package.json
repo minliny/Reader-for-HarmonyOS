@@ -1,0 +1,7 @@
+{
+  "name": "reader-ui-reference-tools",
+  "private": true,
+  "version": "1.0.0",
+  "engines": { "node": ">=20" },
+  "devDependencies": { "esbuild": "0.28.2" }
+}

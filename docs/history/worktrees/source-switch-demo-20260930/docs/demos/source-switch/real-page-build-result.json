@@ -1,0 +1,68 @@
+{
+  "runId": "20260930T151426Z-7b921b74-1c1ed497",
+  "manifest": ".reader-artifacts/hap/20260930T151426Z-7b921b74-1c1ed497/manifest.json",
+  "buildClass": "iteration",
+  "harmony": {
+    "repo": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+    "commit": "7b921b7403193156344b532ada5035e9cd1096e3",
+    "dirty": false,
+    "status": []
+  },
+  "core": {
+    "commit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+    "dirty": true
+  },
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "dcb2e63af3cb7dfc8b8e42bc58cee48dae6879394c1607667ff0ec57dd6458fa",
+      "fileCount": 465,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "ea84ff230ea893da0293578f23147358de44b34129ae79b832a59b5602bacbdb",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "signedArtifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 178196048,
+    "sha256": "426fc4e029bb071cb400d406f7f3494c76c3ba5b54009d6cb7faf2f100bc9b50",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+      "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+      "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16863576,
+      "sha256": "fb42e385afbf5ed61c7245a0026f738911314c4522ba4de177a99a7c3db0fa81"
+    }
+  },
+  "contractTests": {
+    "passed": 385,
+    "failed": 0,
+    "elapsedSeconds": 93.49
+  },
+  "compileSignElapsedSeconds": 32.879
+}

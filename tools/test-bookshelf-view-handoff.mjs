@@ -1,9 +1,11 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
 import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 
 // Execute the real SDK-emitted Builder callbacks and production sample methods.
 // This checks composition inputs and retained node identity, not native pixels.
@@ -13,11 +15,11 @@ const noCoverSource = read('bookshelf/NoCoverCover.ets');
 const motionSource = read('common/MotionSpec.ets');
 const tokensSource = read('common/ReaderTokens.ets');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const parse = text => ts.createSourceFile('/tmp/BookshelfHandoffProbe.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const parse = text => ts.createSourceFile(virtualFilePath('BookshelfHandoffProbe.ets'), text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 function constants(text, names, dependencies = {}) {
   const tree = parse(text);
   const declarations = tree.statements.filter(ts.isVariableStatement).flatMap(statement =>
@@ -46,12 +48,13 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
   'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
   'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
-  'projectionCoverLayerOpacity', 'gridBookCardHeight', 'listCoverWidth', 'listCoverHeight',
+  'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight',
   'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover',
-  'projectionBookCover', 'projectionBookCoverLayer', 'projectionListDetails'];
+  'projectionBookCover', 'projectionBookCoverLayer', 'projectionGridDetails', 'projectionListDetails',
+  'bookActionPresentationHandler', 'isShelfPresentationCurrent'];
 function fixture(text = source) {
   const { owner } = createReaderBuilderProbe(text, methods, { ...tokens, ...geometry,
-    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child,
+    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child, ShelfBookPresentation,
     ImageFit: { Cover: 'cover' } });
   Object.assign(owner, { viewMotion: motion, viewContentCurve: curves.cubicBezierCurve(.4, 0, .2, 1),
     viewFadeCurve: curves.cubicBezierCurve(0, 0, .58, 1), viewMoveCurve: curves.cubicBezierCurve(.2, 0, 0, 1),
@@ -81,6 +84,15 @@ function verifyGroupedCoverActors(owner) {
     assert.ok(writes.length > 0 && writes.every(call => call.args[0] === true),
       'both cover groups remain enabled throughout the animation and reset');
   }
+}
+function verifyDetailsInput(owner) {
+  const list = [...owner.nodes.values()].find(node => node.type === 'Row' && node.width === owner.projectionListDetailsWidth(false));
+  const grid = [...owner.nodes.values()].find(node => node.type === 'Column' && node.translate?.y !== undefined);
+  assert.ok(list && grid, 'actual retained grid/list detail parents are mounted');
+  assert.equal(list.enabled, owner.viewMode === 'list', 'hidden list disables every descendant, including More');
+  assert.equal(grid.enabled, owner.viewMode === 'cover', 'hidden grid disables its retained descendants');
+  assert.equal(list.hitTestBehavior, owner.viewMode === 'list' ? 'HitTestMode.Default' : 'HitTestMode.None');
+  assert.equal(grid.hitTestBehavior, owner.viewMode === 'cover' ? 'HitTestMode.Default' : 'HitTestMode.None');
 }
 function verifyHandoff(owner, from, to, start, end) {
   let previous = 1;
@@ -132,8 +144,10 @@ for (const hasImage of [false, true]) {
     owner.ifElseBranchUpdateFunction = (branch, builder) => { branches.push(branch); updateBranch(branch, builder); };
     sample(owner, from, to, 0);
     owner.projectionBookCover(rowBook, false, 5);
+    owner.projectionGridDetails(rowBook, false);
     owner.projectionListDetails(rowBook, false);
     verifyGroupedCoverActors(owner);
+    verifyDetailsInput(owner);
     const initialBranches = branches.slice();
     const nodeIds = [...owner.nodes.keys()], childIds = [...owner.children.keys()];
     const childProps = [...owner.children.values()].map(child => structuredClone(child.params));
@@ -148,6 +162,7 @@ for (const hasImage of [false, true]) {
       branches = [];
       owner.replay();
       verifyGroupedCoverActors(owner);
+      verifyDetailsInput(owner);
       assert.deepEqual(branches, initialBranches, 'opacity updates do not replace a conditional cover subtree');
       assert.deepEqual([...owner.nodes.keys()], nodeIds);
       assert.deepEqual([...owner.children.keys()], childIds);
@@ -159,6 +174,23 @@ for (const hasImage of [false, true]) {
       assert.ok(groups.length === 0 || groups.every(value => value === groups[0]), 'renderGroup never changes at animation completion');
     }
   }
+}
+
+// None excludes the container itself, while its descendants remain eligible
+// for native hit testing. Restore the former missing subtree gates in the
+// real SDK input and require the emitted-parent contract to reject them.
+const ungatedDetailsSource = source
+  .replace("    .enabled(this.viewMode === 'cover')\n", '')
+  .replace("    .enabled(this.viewMode === 'list')\n", '');
+assert.notEqual(ungatedDetailsSource, source);
+for (const mode of ['cover', 'list']) {
+  const ungated = fixture(ungatedDetailsSource);
+  Object.assign(ungated, { viewMode: mode, viewSwitchGridContentOpacity: mode === 'cover' ? 1 : 0,
+    viewSwitchListContentOpacity: mode === 'list' ? 1 : 0 });
+  ungated.projectionGridDetails(book, false);
+  ungated.projectionListDetails(book, false);
+  assert.throws(() => verifyDetailsInput(ungated), /hidden list disables|hidden grid disables/,
+    'legacy None-only retained details remain input-eligible despite zero opacity');
 }
 
 // Render the real default-cover text body, not a test replica of its labels.
@@ -206,4 +238,4 @@ for (const hasImage of [false, true]) {
     'the default and image cover both require complete-layer grouping');
 }
 
-console.log('PASS bookshelf cover handoff: bidirectional opacity, whole-cover composition, final-frame continuity, retained default/image actors, historical negative controls; native pixels remain separate');
+console.log('PASS bookshelf cover handoff: bidirectional opacity, whole-cover composition, final-frame continuity, retained default/image actors, mode-gated descendant input and historical negative controls; native pixels/hit scheduling remain separate');

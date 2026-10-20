@@ -1,4 +1,6 @@
+import { TYPE_APP_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import {
   TOK_BORDER_W,
   TOK_INK,
@@ -19,13 +21,13 @@ export struct CategoryRow {
 
   @Prop icon: Resource = (this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'));
   @Prop label: string = '';
-  onRowClick: () => void = (): void => {};
+  onRowClick: (() => void) | undefined = undefined;
   @BuilderParam content: () => void;
 
   build() {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image(this.icon).width(15).height(15);
+        Image(this.icon).width(15).height(15).objectFit(ImageFit.Contain).accessibilityLevel('no');
       }
       .width(28)
       .height(28)
@@ -34,10 +36,10 @@ export struct CategoryRow {
 
       Text(this.label)
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(13)
-        .lineHeight(15.34)
+        .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -49,6 +51,8 @@ export struct CategoryRow {
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => this.onRowClick());
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 14,
+      this.onRowClick !== undefined))
+    .onClick((): void => this.onRowClick?.());
   }
 }

@@ -1,19 +1,51 @@
-import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
-registerHooks({ resolve(specifier, context, nextResolve) {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'crud':{description:'Actual existing CLI partial fields/validation/current admission and CRUD',resources:[]},
+ 'receipts':{description:'Actual lost/malformed/exact original receipts and final nondispatch',resources:[]},
+ 'replace-bundle':{description:'Actual replace-only bundle families/import duplicates and no replaceExisting',resources:[]},
+ 'preview-request':{description:'Actual Gateway preview input/typed decode against fake runtime; no Core result claim',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { registerHooks }=await import('node:module');
+const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
       return nextResolve(`${specifier}.ts`, context);
     throw error;
   }
 } });
-const { ReaderControlReplaceGateway, ReaderControlReplaceGatewayError, readerControlReplaceDraftParams } =
-  await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
+let cleanupDurableFixtures;
+try {
+if(selectedCase==='preview-request'){
+ const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {readFileSync}=await import('node:fs');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderReplaceQuickGateway.ts',import.meta.url),'utf8');const {ts}=installedEtsCompiler();
+ const emitted=ts.transpileModule(source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);
+ const exports={};new Function('exports','errorMessageOf',emitted.outputText)(exports,error=>error.message);
+ const calls=[],runtime={request:async(method,params)=>{calls.push({method,params});return{data:{...params,chapterTitle:'chapter',before:'old',after:'new',changed:true,truncated:false,storedRuleCount:3,enabledRuleCount:3}};}};
+ const gateway=new exports.ReaderReplaceQuickGateway(runtime),preview=await gateway.preview('source','book',4,80);
+ assert.equal(preview.before,'old');assert.equal(preview.after,'new');assert.deepEqual(calls,[{method:'replace.preview',params:{sourceId:'source',bookId:'book',chapterIndex:4,maxScalars:80}}]);
+ await assert.rejects(gateway.preview('source','book',4,2049),/bounds/);assert.equal(calls.length,1);return;
+}
+const durable=await import('./lib/rules-mutation-durable-probe.mjs');cleanupDurableFixtures=durable.cleanupDurableFixtures;
+console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durable.durableFixtureToolEvidence()}));
+const { readerReplaceSdkFixture, readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
+const actualSdk = await readerReplaceSdkFixture();
+const ReaderControlReplaceGateway = actualSdk.Full, ReaderControlReplaceGatewayError = actualSdk.FullError;
 const { createReaderControlReplaceDraft } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const { BookRequestNotDispatchedError } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const rule = (id) => ({ id, order: id, name: `规则${id}`, pattern: 'old', replacement: 'new', group: 'g',
   scope: 'book', excludeScope: 'skip', scopeTitle: true, scopeSource: true, scopeContent: true,
   isEnabled: true, isRegex: false, timeoutMillisecond: 9000 });
-let rows = [5, 2, 1, 4, 3].map(rule);
+// Actual SDK-emitted full Owner/Gateway, AtomicFile seam and cold SQLite Core.
+// Only controlled protocol observations/lost replies are injected; no rule
+// persistence, identity, receipt or mutation algorithm is copied into the test.
+for (let id = 1; id <= (selectedCase==='crud'?5:selectedCase==='receipts'?3:1); id++) {
+  const seed = { ...rule(id) }; delete seed.id;
+  await actualSdk.command('replace.persist', { operation: 'create', params: seed });
+}
+if(selectedCase==='replace-bundle')await actualSdk.command('dict-rule.put', { name: 'unrelated', urlRule: 'https://dict.invalid/{{key}}', showRule: '$.definition', enabled: true, sortNumber: 0 });
 const calls = [];
 let current = true;
 let validationValid = true;
@@ -21,57 +53,53 @@ let duringValidation;
 let duringPersist;
 let persistError = false;
 let badReceipt = false;
-const runtime = { async request(method, params = {}, options = {}) {
-  calls.push({ method, params: structuredClone(params), options });
+let duringStartup;
+const runtime = actualSdk.runtime;
+const actualRequest = runtime.request.bind(runtime);
+runtime.request = async (method, params = {}, options = {}) => {
+  const mutation = method === 'rules.mutation.apply' ? params.mutation : undefined;
+  calls.push({ method: mutation?.method ?? method, params: structuredClone(mutation?.params ?? params), options });
+  if (mutation !== undefined) {
+    duringStartup?.();
+    assert.equal(options.shouldCancel, undefined, 'a dispatched write cannot be canceled by panel lifetime');
+  }
+  const result = method === 'replace.preview' ? { data: { ...params, chapterTitle: 'chapter', before: 'old', after: 'new', changed: true, truncated: false, storedRuleCount: 3, enabledRuleCount: 3 } } : await actualRequest(method, params, options);
   if (method === 'replace-rule.list') {
     assert.equal(typeof options.shouldCancel, 'function');
-    return { data: { rules: structuredClone(rows) } };
+    return { ...result, data: { ...result.data, rules: result.data.rules.slice().reverse() } };
   }
   if (method === 'replace.validate') {
     duringValidation?.();
-    return { data: { valid: validationValid } };
+    return validationValid ? result : { ...result, data: { ...result.data, valid: false } };
   }
-  if (method === 'replace.persist') {
-    assert.equal(options.shouldCancel, undefined, 'a dispatched write cannot be canceled by panel lifetime');
+  if (method === 'replace.preview') return { ...result, data: { ...result.data, before: 'old', after: 'new' } };
+  if (mutation !== undefined) {
     duringPersist?.();
-    if (persistError) throw new Error('write may have committed, receipt lost');
-    if (params.operation === 'delete') {
-      rows = rows.filter(r => r.id !== params.params.id);
-      return { data: { operation: 'delete', data: { id: params.params.id, deleted: !badReceipt } } };
+    if (persistError) throw new Error('actual SQLite write committed, reply lost');
+    if (badReceipt) {
+      const data = structuredClone(result.data);
+      if (mutation.params.operation === 'delete') data.receipt.data.data.deleted = false;
+      else data.receipt.data.data.rule = { ...data.receipt.data.data.rule, id: -99, name: 'wrong' };
+      return { ...result, data };
     }
-    const stored = params.operation === 'create' ? { id: 100, ...params.params } :
-      { ...rows.find(r => r.id === params.params.id), ...params.params };
-    rows = rows.filter(r => r.id !== stored.id).concat(stored);
-    return { data: { operation: params.operation, data: { rule: badReceipt ? { ...stored, id: -99, name: 'wrong' } : stored } } };
   }
-  if (method === 'replace.preview') return { data: { ...params, chapterTitle: 'chapter', before: 'old', after: 'new',
-    changed: true, truncated: false, storedRuleCount: rows.length, enabledRuleCount: rows.length } };
-  if (method === 'rule-bundle.export') return { data: { schemaVersion: 1, json: JSON.stringify({
-    schemaVersion: 1, replaceRules: rows, dictRules: [{ secret: 'must not export this family' }],
-    txtTocRules: [], ruleSubscriptions: [] }) } };
-  if (method === 'rule-bundle.import') {
-    assert.equal(options.shouldCancel, undefined);
-    const bundle = JSON.parse(params.json);
-    return { data: { schemaVersion: 1, replaceExisting: params.replaceExisting,
-      counts: { replaceRules: bundle.replaceRules.length, dictRules: bundle.dictRules.length,
-        txtTocRules: bundle.txtTocRules.length, ruleSubscriptions: bundle.ruleSubscriptions.length } } };
-  }
-  throw new Error(`unexpected Core method ${method}`);
-} };
-const gateway = new ReaderControlReplaceGateway(runtime);
+  return result;
+};
+let gateway = new ReaderControlReplaceGateway(runtime);
 const all = await gateway.loadRules(() => current);
-assert.deepEqual(all.map(r => r.id), [1, 2, 3, 4, 5]);
+if(selectedCase==='crud')assert.deepEqual(all.map(r => r.id), [1,2,3,4,5]);
 assert.equal(all[0].scopeSource, true);
-assert.deepEqual((await gateway.load()).rules.map(r => r.id), [1, 2, 3], 'legacy Quick facade stays bounded');
+if(selectedCase==='crud')assert.deepEqual((await gateway.load()).rules.map(r=>r.id),[1,2,3],'legacy Quick facade stays bounded');
 const original = all[0];
 let draft = createReaderControlReplaceDraft(original);
-assert.deepEqual(readerControlReplaceDraftParams(draft), { id: 1 });
-let count = calls.length;
+let count=calls.length;
+if(selectedCase==='crud'){
+assert.deepEqual(readerControlReplaceDraftParams(draft),{id:1});
 assert.equal((await gateway.save(draft)).changed, false);
 assert.equal(calls.length, count, 'Core rejects no-op updates, so do not send them');
 draft.name = 'renamed';
 assert.deepEqual(readerControlReplaceDraftParams(draft), { id: 1, name: 'renamed' });
-rows.find(r => r.id === 1).group = 'concurrent Core group';
+await actualSdk.command('replace.persist', { operation: 'update', params: { id: 1, group: 'concurrent Core group' } });
 const saved = await gateway.save(draft);
 assert.equal(saved.rule.group, 'concurrent Core group', 'unchanged fields must not overwrite latest Core values');
 assert.equal(saved.rule.scopeSource, true);
@@ -91,27 +119,52 @@ assert.equal(calls.filter(c => c.method === 'replace.persist').length, count);
 duringValidation = undefined;
 current = true;
 duringPersist = () => { current = false; };
-assert.equal((await gateway.save(draft, () => current)).rule.name, 'renamed',
+draft.name = 'renamed-after-close';
+assert.equal((await gateway.save(draft, () => current)).rule.name, 'renamed-after-close',
   'confirmed real write still resolves after UI closure; Host separately protects presentation');
 duringPersist = undefined;
 current = true;
+}
+if(selectedCase==='receipts'){
 persistError = true;
+draft.name = 'lost-original-reply';
 await assert.rejects(gateway.save(draft), e => e instanceof ReaderControlReplaceGatewayError && e.writeUncertain);
 persistError = false;
+const writesBeforeReplacement = actualSdk.writes().length;
+await assert.rejects(new ReaderControlReplaceGateway(runtime).save(draft), e => e.writeUncertain);
+assert.equal(actualSdk.writes().length, writesBeforeReplacement, 'warm Gateway replacement cannot bypass original unknown');
+await gateway.recoverMutation(() => true);
+assert.equal(actualSdk.owner.snapshot().confirmation, 'confirmed');
+gateway = new ReaderControlReplaceGateway(runtime);
 badReceipt = true;
+draft.name = 'malformed-original-reply';
 await assert.rejects(gateway.save(draft), e => e.writeUncertain === true);
+badReceipt = false;
+await gateway.recoverMutation(() => true);
+badReceipt = true;
+gateway = new ReaderControlReplaceGateway(runtime);
 await assert.rejects(gateway.deleteRule(3), e => e.writeUncertain === true);
 badReceipt = false;
+await gateway.recoverMutation(() => true);
+gateway = new ReaderControlReplaceGateway(runtime);
+// Actual startup/final-admission rejection: reaching the RPC wrapper is not
+// execution. The cold SQLite lineage and rule remain unchanged and intent is
+// cleared only by the existing branded nondispatch evidence.
+const headBeforeRetirement = (await actualSdk.command('rules.mutation.query')).data.head;
+draft.name = 'retired-before-native-send';
+duringStartup = () => { current = false; };
+await assert.rejects(gateway.save(draft, () => current), e => e.writeUncertain === false);
+assert.deepEqual((await actualSdk.command('rules.mutation.query')).data.head, headBeforeRetirement);
+assert.equal(actualSdk.owner.snapshot().confirmation, 'undispatched');
+assert.equal(actualSdk.disk(), '');
+duringStartup = undefined; current = true;
 draft.order = 2147483648;
 await assert.rejects(gateway.save(draft), /数值/);
 
-const preview = await gateway.preview('source', 'book', 4, 80);
-assert.equal(preview.before, 'old');
-assert.equal(preview.after, 'new');
-assert.equal(calls.some(c => c.method === 'replace.apply'), false, 'preview never re-processes already rendered UI text');
-await assert.rejects(gateway.preview('source', 'book', 4, 2049), /bounds/);
+}
+if(selectedCase==='replace-bundle'){
 const exported = JSON.parse(await gateway.exportJson());
-assert.equal(exported.replaceRules.length, rows.length);
+assert.equal(exported.replaceRules.length, (await actualSdk.command('replace-rule.list')).data.rules.length);
 assert.deepEqual(exported.dictRules, [], 'in-reader export must not disclose unrelated rule families');
 assert.equal(exported.replaceRules[0].scopeSource, true);
 await assert.rejects(gateway.importJson(JSON.stringify({ ...exported, dictRules: [{ name: 'other' }] })), /其他规则/);
@@ -127,4 +180,10 @@ assert.equal(await gateway.importJson(JSON.stringify({ ...incoming, replaceRules
 current = false;
 await assert.rejects(gateway.loadRules(() => current), /过期/);
 await assert.rejects(gateway.importJson(JSON.stringify(incoming), () => current), /过期/);
-console.log('PASS reader-control-replace-gateway: real production requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle');
+assert.ok(actualSdk.writes().every(call => call.method === 'rules.mutation.apply'), 'all actual writes retain the complete typed exact-receipt envelope');
+}
+console.log(`PASS replace gateway ${selectedCase}: existing CLI/actual SDK boundary`);
+}finally{if(cleanupDurableFixtures)await cleanupDurableFixtures();resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

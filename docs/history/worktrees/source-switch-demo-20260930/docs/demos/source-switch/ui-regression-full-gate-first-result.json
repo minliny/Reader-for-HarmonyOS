@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "cf5d9c026ebce06d436cd819b3b9cb2d0b7d545c",
+  "tests": 394,
+  "pass": 391,
+  "fail": 3,
+  "cancelled": 0,
+  "skipped": 0,
+  "duration_ms": 117714.520459,
+  "artifactProduced": false,
+  "failures": [
+    {
+      "file": "test-bookshelf-reading-entry.mjs",
+      "stage": "new Function source extraction",
+      "reason": "new bookshelfContent @Builder survives old whole-file transform"
+    },
+    {
+      "file": "test-legado-product-logic.mjs",
+      "stage": "SHF03 assertion",
+      "reason": "assertion still locates CheckUpdates intent in old BookshelfPage owner"
+    },
+    {
+      "file": "test-reader-window-chrome-p0.mjs",
+      "stage": "root palette count",
+      "reason": "startup failure moved to shared shell; Index private palette count now1"
+    }
+  ],
+  "resolution": "pending targeted production-aware regression adaptation; no product change requested for these failures"
+}

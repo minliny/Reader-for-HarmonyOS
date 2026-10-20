@@ -1,0 +1,364 @@
+{
+  "state": "FINAL 27-file UI candidate: ready for review; NOT applied",
+  "main": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+  "lane": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+  "baseline": "63a5ab653fb573c5369ea67a4edc12b4a9dffcae",
+  "sourceCommit": "bdf8bcde87f1c547a2cae97ba65351be47825e3d",
+  "previousCandidatePatchSha256": "e153bec2bd416af3a6a132fa33c506174b8ac234164c766859d46d461defa89b",
+  "candidateTree": "f840dd515c867b9f6b5331dead40511c55c33105",
+  "index": "/private/tmp/reader-main-ui-sync-ac2a-20261001-gcdamvxv/index",
+  "objects": "/private/tmp/reader-main-ui-sync-ac2a-20261001-gcdamvxv/objects",
+  "alternateObjects": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.git/objects",
+  "files": [
+    "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+    "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+    "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+    "entry/src/main/ets/features/bookshelf/BookshelfShell.ets",
+    "entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets",
+    "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+    "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+    "entry/src/main/ets/features/reading/ReadingSurface.ets",
+    "entry/src/main/ets/pages/Index.ets",
+    "tools/contract-test-tiers.json",
+    "tools/test-bookshelf-continue-reading-publication.mjs",
+    "tools/test-bookshelf-detail-scroll-layout.mjs",
+    "tools/test-bookshelf-filter-responsibilities.mjs",
+    "tools/test-bookshelf-management.mjs",
+    "tools/test-bookshelf-more-layout.mjs",
+    "tools/test-bookshelf-physical-feedback.mjs",
+    "tools/test-bookshelf-reading-entry.mjs",
+    "tools/test-bookshelf-settings-layout.mjs",
+    "tools/test-bookshelf-shell-states.mjs",
+    "tools/test-legado-product-logic.mjs",
+    "tools/test-phone-layout-figma-regressions.mjs",
+    "tools/test-reader-chapter-first-title-publication.mjs",
+    "tools/test-reader-fragment-authority.mjs",
+    "tools/test-reader-paragraph-indent.mjs",
+    "tools/test-reader-title-recipe-lifetime.mjs",
+    "tools/test-reader-window-chrome-p0.mjs",
+    "tools/test-reading-document-window.mjs"
+  ],
+  "patchSha256": "9eb8a196d33ebc624a4e656c2722806f402f98a98477b7641f1ff43d72f7303e",
+  "mainStatusAtPreparation": "",
+  "candidateFileSha256": {
+    "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets": "62e6c9bef9a5a9e821baaaa6d8c155a105530f9494019afb86812098e5ff4eb5",
+    "entry/src/main/ets/features/bookshelf/BookshelfPage.ets": "41b33827d67537c8213c1252501469dacf5085ae0b54d72996525138d9e32f0e",
+    "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets": "feb06b4527b4ca8d5e2cef373060f018fcb7f7a2f3a53aba95e04411843be596",
+    "entry/src/main/ets/features/bookshelf/BookshelfShell.ets": "33278cccaeb127f1aeecb864b3963ca219824eb48cc245b7a80cce51428d2749",
+    "entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets": "36325ac60702b77e09c138ad88f73886ab7b0d41cef1403bb09308b082e97aa6",
+    "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets": "750c8add692141c0b0ead6df8513449c7f82db5f719af935af2fbb25e6b66a12",
+    "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets": "63480ad8a0ae350db31a9ce1b0bd893907720588f8a92867593d51ac7de58adf",
+    "entry/src/main/ets/features/reading/ReadingSurface.ets": "935d7bddf1d5778ee7a6132a85a9332481dae90b86deabadf22428dd501f680c",
+    "entry/src/main/ets/pages/Index.ets": "74e2c48c270b07d01a662bc9862291a5a9f30f072972160d72787ada76028c32",
+    "tools/contract-test-tiers.json": "85e1722c5d858eeb3bb4ee98c8c40247f80b43dbbdf6b0f12e86b36b9469d4fa",
+    "tools/test-bookshelf-continue-reading-publication.mjs": "f61d14278f6450e2f28137fed99d1b031f1da278e507300aca5772f73b097670",
+    "tools/test-bookshelf-detail-scroll-layout.mjs": "e6481d17e6b9d9f56d5be5695a37853eb33c1dd2bbe2ceeb1e3a23f3a911cf8a",
+    "tools/test-bookshelf-filter-responsibilities.mjs": "0f5bdd098c6eaba11adc893b5655ba140f00aa6b05117cf5871b10f5258775af",
+    "tools/test-bookshelf-management.mjs": "d48f4677b18d5a6591c45a9629e4de363adc3ffe567ace7b15bbed1fd1139faf",
+    "tools/test-bookshelf-more-layout.mjs": "27ed25739867f037eb423a71092dfb5461a988654fea548d065f641a66e7e6a7",
+    "tools/test-bookshelf-physical-feedback.mjs": "eb683c395961318259018627fca2825178705a4c5b78183779b5aeb5e87050e3",
+    "tools/test-bookshelf-reading-entry.mjs": "007f5cdeb9865a98f0070bec78ce2bba26d62227f74861eb5a8dc498f5ce3ce4",
+    "tools/test-bookshelf-settings-layout.mjs": "f9ebece8b06c3ebe645d9cefbaabc3a33bdfd05deb271c7fc344bee4e4449d90",
+    "tools/test-bookshelf-shell-states.mjs": "a90336794cad968d5808d3e83fccb7933cfc114b221b6bdbc51338032c279966",
+    "tools/test-legado-product-logic.mjs": "9f1ca4af9d3abb3782142ea1dc519499ae914c49b2305cf618512e53fed2ea94",
+    "tools/test-reader-chapter-first-title-publication.mjs": "4e6fb6677a7a96579f211900ac49be8ceb013996739c2b26293a9d84db9d6f2e",
+    "tools/test-reader-fragment-authority.mjs": "e5f38d7d14d89628657a0e49f1eef549a3dac0420f3fd9048b69dc228d1566c3",
+    "tools/test-reader-paragraph-indent.mjs": "b55d5bda61c4b6b36810eaa44071f940ccb31b30ac793aa7f80c612f699cdd49",
+    "tools/test-reader-title-recipe-lifetime.mjs": "9d66eea324d2ba739a350347bc81bf51e9a701e97f3b7bcd372f12f2b2103c81",
+    "tools/test-reader-window-chrome-p0.mjs": "756140d408591ecf46cf103982e3caf4c9a03b0dd30f67510fae2b41e049c0cf",
+    "tools/test-reading-document-window.mjs": "c85970fe555b4a976fdd54ab9dd2b6457d432509cf90a496098d823e1be1405b",
+    "tools/test-phone-layout-figma-regressions.mjs": "8ed24eb4a1e831af80cedef7d9e73ca4126119ed609d69ae473f180e206f9060"
+  },
+  "retainedTierMode": "100755",
+  "uiIntegrationRegistrations": [
+    "test-bookshelf-continue-reading-publication.mjs",
+    "test-bookshelf-detail-scroll-layout.mjs",
+    "test-bookshelf-settings-layout.mjs",
+    "test-bookshelf-shell-states.mjs",
+    "test-reader-title-recipe-lifetime.mjs"
+  ],
+  "mainApplied": false,
+  "preparedAtUtc": "2026-09-30T19:14:27.038005+00:00",
+  "checkedAtUtc": "2026-09-30T19:22:29.418337+00:00",
+  "mainHeadAtFinalCheck": "63a5ab653fb573c5369ea67a4edc12b4a9dffcae",
+  "mainStatusAtFinalCheck": "",
+  "testTierClassification": {
+    "source": 173,
+    "integration": 235,
+    "discovered": 408,
+    "completeAndUnique": true
+  },
+  "focusedValidation": {
+    "nodeVersion": "v26.0.0",
+    "passed": 18,
+    "failed": 0,
+    "seconds": 3.473,
+    "summaryPath": "/private/tmp/reader-main-ui-sync-ac2a-20261001-gcdamvxv/focused-tests/summary.json",
+    "results": [
+      {
+        "test": "test-bookshelf-continue-reading-publication.mjs",
+        "exit": 0,
+        "seconds": 0.593,
+        "logSha256": "129898046abff6331d9c51784fd38481a038d9f66d7404ba779fdb0c0e4edf4a"
+      },
+      {
+        "test": "test-reader-title-recipe-lifetime.mjs",
+        "exit": 0,
+        "seconds": 0.645,
+        "logSha256": "df5150309468aedbe475cfdf5bb0119824023b552bc82efd9c9664723934dddc"
+      },
+      {
+        "test": "test-reader-chapter-first-title-publication.mjs",
+        "exit": 0,
+        "seconds": 0.537,
+        "logSha256": "bfe4b007d7c29847ecc4aa3fa9b7e90eef0483b5f22bff2f381a9016cd91644e"
+      },
+      {
+        "test": "test-reader-fragment-authority.mjs",
+        "exit": 0,
+        "seconds": 0.406,
+        "logSha256": "2a6913b8f21aac483185ef9874cd316cf5996926e8a5a0ff9bcdabac08e6606b"
+      },
+      {
+        "test": "test-reader-offscreen-fragment-publication.mjs",
+        "exit": 0,
+        "seconds": 0.752,
+        "logSha256": "3fb719d70b497e4c1a0467aeb3bf0be4afe2bd2386f2b883edc3ee67e4b9559d"
+      },
+      {
+        "test": "test-reader-prepared-title-boundary.mjs",
+        "exit": 0,
+        "seconds": 0.392,
+        "logSha256": "58212d40a70fa561d1e1068ad66b442d021ce679deda8d62a22ce9ef4f1bc529"
+      },
+      {
+        "test": "test-reader-native-paragraph-view.mjs",
+        "exit": 0,
+        "seconds": 0.87,
+        "logSha256": "448dca95cf5c84592f1f6e29bf528f0428b1a7e1b3fdd9a75991dedbfe1c8fc0"
+      },
+      {
+        "test": "test-reader-native-paragraph-owner.mjs",
+        "exit": 0,
+        "seconds": 0.84,
+        "logSha256": "0c483c25fd21a9c4f7b2d492675497966d1ab22359305e824080d8a1cb419052"
+      },
+      {
+        "test": "test-reader-appearance-page-publication.mjs",
+        "exit": 0,
+        "seconds": 0.994,
+        "logSha256": "f8ac186538573ac96bb7b77e48345f980face75ce1d9ca4ef9de3435f120ac1a"
+      },
+      {
+        "test": "test-bookshelf-startup-readiness.mjs",
+        "exit": 0,
+        "seconds": 0.353,
+        "logSha256": "51af0bb151897f8b74f5614a93121d3ac7d18ab693da58fc4084b6906cecd04d"
+      },
+      {
+        "test": "test-bookshelf-shell-states.mjs",
+        "exit": 0,
+        "seconds": 0.712,
+        "logSha256": "dcdabc9f257444b052b7d86a69d7a740fd8f2a58836c0e3b35beb1ef66797dd1"
+      },
+      {
+        "test": "test-bookshelf-view-and-menu.mjs",
+        "exit": 0,
+        "seconds": 0.408,
+        "logSha256": "40245c5d8727f4c19ffc5a7f4df391ef485dbc2d65651089d8e056723b2d8a72"
+      },
+      {
+        "test": "test-bookshelf-detail-control-stability.mjs",
+        "exit": 0,
+        "seconds": 0.4,
+        "logSha256": "7bbccb6e748e3329f048cea44135e5d24e931c3eba3d25b7fad1052a0e82c8e0"
+      },
+      {
+        "test": "test-bookshelf-physical-feedback.mjs",
+        "exit": 0,
+        "seconds": 0.442,
+        "logSha256": "89aae7389c6d43e09ed7f4119ae411975f7fd7dc4fdc0300776dce1fc2b0e3c4"
+      },
+      {
+        "test": "test-bookshelf-more-layout.mjs",
+        "exit": 0,
+        "seconds": 0.709,
+        "logSha256": "155f8b47cd67ada4f27ed71a22092d769e4b2b6bb871e95953fd1a44f4abc587"
+      },
+      {
+        "test": "test-bookshelf-filter-responsibilities.mjs",
+        "exit": 0,
+        "seconds": 0.392,
+        "logSha256": "3e90b8ce230df50d855c675c7a101cb421751ccc6eaca75cc82e043ba09e3153"
+      },
+      {
+        "test": "test-bookshelf-settings-layout.mjs",
+        "exit": 0,
+        "seconds": 0.362,
+        "logSha256": "93830c35f1169854f505cc694dacd4b968be8b3a23d5a6f28b3013d3f4495c5f"
+      },
+      {
+        "test": "test-bookshelf-detail-scroll-layout.mjs",
+        "exit": 0,
+        "seconds": 0.339,
+        "logSha256": "ea29e7b62546702d8b803b076eb96aad36bd2da6b1b1f2d51243e86d3ad3f2c9"
+      }
+    ]
+  },
+  "retainedMainFixes": [
+    "ReadingSurface renderFragments uses main fragments local and preserves the explicit pageFragments read",
+    "main offscreen publication test is byte-identical",
+    "reading-entry harness keeps updateRemoteReadableChapterOrder",
+    "product-logic retains directory-business-boundaries import",
+    "main63a appearance publication model test is byte-identical",
+    "Index prefix except 2 bookshelf imports, settings/multiselect/management routes and entire search-to-end suffix are byte-identical",
+    "registry original mode100755 retained"
+  ],
+  "excludedScopes": [
+    "source-switch production changes",
+    "Core",
+    "Native",
+    "pipeline/signing",
+    "old demo routes",
+    "external main commits reverted"
+  ],
+  "mainIndexModified": false,
+  "fullGateRun": false,
+  "hapBuildRun": false,
+  "vmUsed": false,
+  "previousCandidate": {
+    "sourceCommit": "ac2a5c19f96aad25e4f91c15a0a062d614cf24a7",
+    "candidateTree": "287d0156d62c308bdb684f5864b6a69402be86bb",
+    "patchSha256": "be0c3b9a1fd3cd536ee362f6a779dc806d1f04321ab4c32962a1f79fe830a6de",
+    "focusedValidation": {
+      "nodeVersion": "v26.0.0",
+      "passed": 18,
+      "failed": 0,
+      "seconds": 3.473,
+      "summaryPath": "/private/tmp/reader-main-ui-sync-ac2a-20261001-gcdamvxv/focused-tests/summary.json",
+      "results": [
+        {
+          "test": "test-bookshelf-continue-reading-publication.mjs",
+          "exit": 0,
+          "seconds": 0.593,
+          "logSha256": "129898046abff6331d9c51784fd38481a038d9f66d7404ba779fdb0c0e4edf4a"
+        },
+        {
+          "test": "test-reader-title-recipe-lifetime.mjs",
+          "exit": 0,
+          "seconds": 0.645,
+          "logSha256": "df5150309468aedbe475cfdf5bb0119824023b552bc82efd9c9664723934dddc"
+        },
+        {
+          "test": "test-reader-chapter-first-title-publication.mjs",
+          "exit": 0,
+          "seconds": 0.537,
+          "logSha256": "bfe4b007d7c29847ecc4aa3fa9b7e90eef0483b5f22bff2f381a9016cd91644e"
+        },
+        {
+          "test": "test-reader-fragment-authority.mjs",
+          "exit": 0,
+          "seconds": 0.406,
+          "logSha256": "2a6913b8f21aac483185ef9874cd316cf5996926e8a5a0ff9bcdabac08e6606b"
+        },
+        {
+          "test": "test-reader-offscreen-fragment-publication.mjs",
+          "exit": 0,
+          "seconds": 0.752,
+          "logSha256": "3fb719d70b497e4c1a0467aeb3bf0be4afe2bd2386f2b883edc3ee67e4b9559d"
+        },
+        {
+          "test": "test-reader-prepared-title-boundary.mjs",
+          "exit": 0,
+          "seconds": 0.392,
+          "logSha256": "58212d40a70fa561d1e1068ad66b442d021ce679deda8d62a22ce9ef4f1bc529"
+        },
+        {
+          "test": "test-reader-native-paragraph-view.mjs",
+          "exit": 0,
+          "seconds": 0.87,
+          "logSha256": "448dca95cf5c84592f1f6e29bf528f0428b1a7e1b3fdd9a75991dedbfe1c8fc0"
+        },
+        {
+          "test": "test-reader-native-paragraph-owner.mjs",
+          "exit": 0,
+          "seconds": 0.84,
+          "logSha256": "0c483c25fd21a9c4f7b2d492675497966d1ab22359305e824080d8a1cb419052"
+        },
+        {
+          "test": "test-reader-appearance-page-publication.mjs",
+          "exit": 0,
+          "seconds": 0.994,
+          "logSha256": "f8ac186538573ac96bb7b77e48345f980face75ce1d9ca4ef9de3435f120ac1a"
+        },
+        {
+          "test": "test-bookshelf-startup-readiness.mjs",
+          "exit": 0,
+          "seconds": 0.353,
+          "logSha256": "51af0bb151897f8b74f5614a93121d3ac7d18ab693da58fc4084b6906cecd04d"
+        },
+        {
+          "test": "test-bookshelf-shell-states.mjs",
+          "exit": 0,
+          "seconds": 0.712,
+          "logSha256": "dcdabc9f257444b052b7d86a69d7a740fd8f2a58836c0e3b35beb1ef66797dd1"
+        },
+        {
+          "test": "test-bookshelf-view-and-menu.mjs",
+          "exit": 0,
+          "seconds": 0.408,
+          "logSha256": "40245c5d8727f4c19ffc5a7f4df391ef485dbc2d65651089d8e056723b2d8a72"
+        },
+        {
+          "test": "test-bookshelf-detail-control-stability.mjs",
+          "exit": 0,
+          "seconds": 0.4,
+          "logSha256": "7bbccb6e748e3329f048cea44135e5d24e931c3eba3d25b7fad1052a0e82c8e0"
+        },
+        {
+          "test": "test-bookshelf-physical-feedback.mjs",
+          "exit": 0,
+          "seconds": 0.442,
+          "logSha256": "89aae7389c6d43e09ed7f4119ae411975f7fd7dc4fdc0300776dce1fc2b0e3c4"
+        },
+        {
+          "test": "test-bookshelf-more-layout.mjs",
+          "exit": 0,
+          "seconds": 0.709,
+          "logSha256": "155f8b47cd67ada4f27ed71a22092d769e4b2b6bb871e95953fd1a44f4abc587"
+        },
+        {
+          "test": "test-bookshelf-filter-responsibilities.mjs",
+          "exit": 0,
+          "seconds": 0.392,
+          "logSha256": "3e90b8ce230df50d855c675c7a101cb421751ccc6eaca75cc82e043ba09e3153"
+        },
+        {
+          "test": "test-bookshelf-settings-layout.mjs",
+          "exit": 0,
+          "seconds": 0.362,
+          "logSha256": "93830c35f1169854f505cc694dacd4b968be8b3a23d5a6f28b3013d3f4495c5f"
+        },
+        {
+          "test": "test-bookshelf-detail-scroll-layout.mjs",
+          "exit": 0,
+          "seconds": 0.339,
+          "logSha256": "ea29e7b62546702d8b803b076eb96aad36bd2da6b1b1f2d51243e86d3ad3f2c9"
+        }
+      ]
+    }
+  },
+  "phoneSupplement": {
+    "test": "tools/test-phone-layout-figma-regressions.mjs",
+    "exit": 0,
+    "seconds": 0.112,
+    "logPath": "/private/tmp/reader-main-ui-sync-ac2a-20261001-gcdamvxv/phone-layout-supplement.log",
+    "logSha256": "34f8f398f77d53fda71e11aab7109b0554a42742946238003572dc4b854e4cbf",
+    "deltaFromPreviouslyTestedCandidate": [
+      "tools/test-phone-layout-figma-regressions.mjs"
+    ],
+    "productionIdenticalToPreviousCandidate": true
+  },
+  "validationReuseBoundary": "Previous 18 focused checks are bound to previousCandidate.candidateTree. Current candidate differs only in test-phone-layout-figma-regressions.mjs; production and all previous test inputs are unchanged. Only the added Phone test was rerun and passed.",
+  "excludedUntrackedLaneTest": "tools/test-reader-paragraph-indent 2.mjs is not a requested main-sync input and is absent from the candidate; not removed or changed in lane"
+}

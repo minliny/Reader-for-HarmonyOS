@@ -1,142 +1,117 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 
-const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const localReading = readFileSync(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
-
-const failures = [];
-
-function contract(name, check) {
-  try {
-    check();
-  } catch (error) {
-    failures.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+function timers() {
+  let serial = 0; const pending = new Map(), issued = [];
+  return { pending, issued,
+    setTimeout(fn, delay) { const id = ++serial; const task = { id, fn, delay }; pending.set(id, task); issued.push(task); return id; },
+    clearTimeout(id) { pending.delete(id); },
+    fire() { const task = pending.values().next().value; assert.ok(task, 'one scheduled callback'); pending.delete(task.id); task.fn(); return task; },
+  };
+}
+async function actual(names, dependencies = {}) {
+  const { selectedProductionMethods, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+  const constants = selectedProductionValues(file, ['FIRST_PAGE_COMPLETION_DEADLINE_MS', 'FIRST_PAGE_COMPLETION_MAX_RETRIES',
+    'PAGE_TURN_PREPARATION_RETRY_BASE_MS', 'PAGE_TURN_PREPARATION_RETRY_MAX_MS', 'PAGE_TURN_PREPARATION_RETRY_LIMIT']);
+  for (const [name, value] of Object.entries(constants)) assert.ok(Number.isSafeInteger(value) && value > 0, `valid actual policy ${name}`);
+  return { Type: selectedProductionMethods(file, 'ReadingExperience', names, { ...constants, ...dependencies }), constants };
+}
+async function preparationContextCase() {
+  class Preparation { constructor(...args) { this.args = args; } }
+  class Context { constructor(...args) { this.args = args; } }
+  const { Type } = await actual(['beginPageTurnPreparation'], { ReaderPageTurnPreparation: Preparation,
+    ReaderMaterializedChapterContext: Context, readingChapterLayoutMap: chapter => chapter.fixtureLayout });
+  function fixture() {
+    const map = { scalarCount: () => 10 }, chapter = { chapterIndex: 1, content: 'abcdefghij', contentVersion: 'v1' };
+    const origin = { layoutMap: map, paragraphRanges: ['retained'], paginationDraft: {} }, page = { startScalar: 2 };
+    const measurements = [], versions = [], requests = [];
+    const owner = Object.assign(new Type(), { visiblePage: page, chapter, phase: 'ready', pageTurnGeneration: 3, lifecycleToken: 4,
+      canTurnPage: () => true, chapterWindow: { get: () => undefined }, captureMaterializedChapterContext: () => origin,
+      lastVisibleScalar: () => 9, admitChapterContentVersion: (...args) => versions.push(args),
+      requestPageTurnChapter: (...args) => requests.push(args), beginMeasurement: token => measurements.push(token) });
+    return { owner, chapter, origin, page, measurements, versions, requests };
+  }
+  const rejected = fixture();
+  assert.equal(rejected.owner.beginPageTurnPreparation('next', { chapterIndex: 1, chapterOffset: 99 }), 'retry');
+  assert.equal(rejected.owner.adjacentMeasurementContext, undefined); assert.equal(rejected.owner.pageTurnPreparation, undefined);
+  assert.strictEqual(rejected.owner.chapter, rejected.chapter); assert.strictEqual(rejected.owner.visiblePage, rejected.page);
+  assert.deepEqual(rejected.measurements, [4], 'tail rejection discards only speculative measurement context');
+  const admitted = fixture();
+  admitted.owner.beginMeasurement = token => { admitted.measurements.push(token); admitted.owner.phase = 'measuring'; };
+  assert.equal(admitted.owner.beginPageTurnPreparation('next', { chapterIndex: 1, chapterOffset: 99 }), 'begun');
+  assert.ok(admitted.owner.pageTurnPreparation instanceof Preparation);
+  assert.strictEqual(admitted.owner.pageTurnPreparation.args[1], admitted.origin);
+  assert.equal(admitted.owner.adjacentMeasurementContext.args[5], 9); assert.equal(admitted.owner.adjacentMeasurementContext.args[6], .9);
+  const absent = fixture(); assert.equal(absent.owner.beginPageTurnPreparation('next', { chapterIndex: 2, chapterOffset: 0 }), 'abandon');
+  assert.deepEqual(absent.requests, [['next', 2]]); assert.deepEqual(absent.measurements, []);
+  for (const mutate of [f => { f.owner.visiblePage = undefined; }, f => { f.owner.chapter = undefined; }, f => { f.owner.canTurnPage = () => false; }]) {
+    const f = fixture(); mutate(f); assert.equal(f.owner.beginPageTurnPreparation('next', { chapterIndex: 1, chapterOffset: 0 }), 'retry');
+    assert.deepEqual(f.measurements, []); assert.equal(f.owner.pageTurnPreparation, undefined);
   }
 }
-
-function methodSection(source, name) {
-  const plainAnchor = `  private ${name}(`;
-  const asyncAnchor = `  private async ${name}(`;
-  let start = source.indexOf(plainAnchor);
-  if (start < 0) {
-    start = source.indexOf(asyncAnchor);
+async function retryQueueCase() {
+  const { readerPageTransitionUsesPreparedPages } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+  async function fixture(outcome = 'retry') {
+    const clock = timers(), attempts = [], refreshes = [];
+    const { Type, constants } = await actual(['drainPageTurnPreparationQueue', 'cancelPageTurnPreparationRetry'],
+      { readerPageTransitionUsesPreparedPages, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout });
+    const owner = Object.assign(new Type(), { sessionLaunchRenderWorkBlocked: () => false,
+      pageTurnPreparationQueue: ['next'], pageTurnGestureState: { phase: 'idle' }, readerSettingsSnapshot: { navigationMode: 'paged' },
+      canTurnPage: () => true, preparedPageTurn: () => undefined, adjacentPageTurnTarget: () => ({ chapterIndex: 1, chapterOffset: 5 }),
+      beginPageTurnPreparation: direction => { attempts.push(direction); return outcome; }, scheduleBookTurnTextureRefresh: () => refreshes.push(true),
+      pageTurnPreparationRetryTimer: -1, pageTurnPreparationRetryCount: 0, pageTurnGeneration: 3, chapterSelectionToken: 4 });
+    return { owner, clock, attempts, refreshes, constants };
   }
-  if (start < 0) {
-    start = source.indexOf(`  ${name}(`);
+  const f = await fixture(); f.owner.drainPageTurnPreparationQueue();
+  assert.deepEqual(f.owner.pageTurnPreparationQueue, ['next']); assert.equal(f.attempts.length, 1); assert.equal(f.clock.pending.size, 1);
+  for (let step = 0; f.clock.pending.size && step <= f.constants.PAGE_TURN_PREPARATION_RETRY_LIMIT; step++) f.clock.fire();
+  assert.equal(f.clock.pending.size, 0); assert.deepEqual(f.owner.pageTurnPreparationQueue, []); assert.equal(f.owner.pageTurnPreparationRetryCount, 0);
+  assert.equal(f.attempts.length, f.constants.PAGE_TURN_PREPARATION_RETRY_LIMIT + 1, 'retry policy terminates without an immediate spin loop');
+  assert.ok(f.clock.issued.every(task => task.delay > 0 && task.delay <= f.constants.PAGE_TURN_PREPARATION_RETRY_MAX_MS));
+  for (const key of ['pageTurnGeneration', 'chapterSelectionToken']) {
+    const stale = await fixture(); stale.owner.drainPageTurnPreparationQueue(); stale.owner[key]++;
+    stale.clock.fire(); assert.equal(stale.attempts.length, 1); assert.deepEqual(stale.owner.pageTurnPreparationQueue, []); assert.equal(stale.clock.pending.size, 0);
   }
-  assert.notEqual(start, -1, `missing ${name} method`);
-  const nextPrivate = source.indexOf('\n  private ', start + 4);
-  return nextPrivate < 0 ? source.slice(start) : source.slice(start, nextPrivate);
+  const cancelled = await fixture(); cancelled.owner.drainPageTurnPreparationQueue(); cancelled.owner.cancelPageTurnPreparationRetry();
+  assert.equal(cancelled.clock.pending.size, 0); assert.equal(cancelled.owner.pageTurnPreparationRetryCount, 0);
+  for (const outcome of ['begun', 'abandon']) {
+    const ready = await fixture(outcome); ready.owner.drainPageTurnPreparationQueue();
+    assert.equal(ready.clock.pending.size, 0); assert.deepEqual(ready.owner.pageTurnPreparationQueue, []);
+  }
 }
-
-contract('a rejected preparation attempt never swaps the context away from the visible page', () => {
-  const begin = methodSection(localReading, 'beginPageTurnPreparation');
-  assert.match(begin, /: ReaderPageTurnPreparationOutcome \{/,
-    'the outcome must distinguish begun / retry / abandon instead of a boolean');
-  assert.match(begin, /visiblePage === undefined \|\| originChapter === undefined \|\| !this\.canTurnPage\(\)/,
-    'the lane-busy case must be retry, not a silent drop');
-  assert.match(begin, /this\.adjacentMeasurementContext = targetContext;\s*this\.beginMeasurement/);
-  const tailRestore = begin.indexOf(
-    'this.adjacentMeasurementContext = undefined;',
-    begin.indexOf('this.adjacentMeasurementContext = targetContext;'),
-  );
-  assert.notEqual(tailRestore, -1,
-    'a tail rejection after the target context was installed must discard only the speculative context');
-  assert.match(begin, /this\.pageTurnPreparation = undefined;\s*return 'retry';/,
-    'a tail rejection must also release the preparation slot it armed');
-  assert.match(begin, /return 'abandon';/, 'a missing target must be abandon, not retry');
-});
-
-contract('a transiently rejected drain entry is re-queued with bounded backoff, never dropped', () => {
-  const drain = methodSection(localReading, 'drainPageTurnPreparationQueue');
-  assert.match(drain, /outcome === 'begun'/);
-  assert.match(drain, /outcome === 'abandon'/);
-  assert.match(drain, /this\.pageTurnPreparationQueue\.unshift\(direction\)/,
-    'the rejected direction must return to the head of the queue');
-  assert.match(drain, /PAGE_TURN_PREPARATION_RETRY_LIMIT/,
-    'backoff retries must be capped');
-  assert.match(drain, /this\.pageTurnGeneration !== generation \|\| this\.chapterSelectionToken !== token/,
-    'stale backoff fires must not drain against a newer selection');
-  assert.match(drain, /const delay = Math\.min\(/,
-    'retry delay must be a bounded backoff, not an immediate busy loop');
-  assert.match(localReading, /private cancelPageTurnPreparationRetry\(\): void/);
-});
-
-contract('the dynamic rapid target is re-drained at every completion hook', () => {
-  const request = methodSection(localReading, 'requestPageTurn');
-  assert.match(request,
-    /enqueueReaderRapidPageTurn\(this\.rapidPageTurnState, direction\)[\s\S]*this\.drainRapidPageTurn\(\)/,
-    'busy/preparing work must remain represented by the dynamic target');
-
-  const preparedComplete = methodSection(localReading, 'completePreparedPageTurn');
-  assert.match(preparedComplete,
-    /this\.drainRapidPageTurn\(\);[\s\S]*this\.resumePagePreparationAfterTextureFrame\(\);/,
-    'a finished preparation drains user intent now and resumes other preparation after textures');
-
-  assert.match(methodSection(localReading, 'resumePagePreparationAfterTextureFrame'), /refreshBookTurnTextures[\s\S]*finally[\s\S]*drainPageTurnPreparationQueue/);
-  const complete = methodSection(localReading, 'completeFirstPage');
-  assert.match(complete,
-    /this\.schedulePageTurnPreparation\(\);[\s\S]*this\.completeRapidPageTurnTransaction\(\);[\s\S]*this\.drainRapidPageTurn\(\);/,
-    'first-page completion must consume one admitted turn and continue toward the target');
-});
-
-contract('the first-page completion lane has a watchdog with bounded re-measurement', () => {
-  const commit = methodSection(localReading, 'beginFirstPageCommit');
-  assert.match(commit,
-    /this\.armFirstPageCompletionDeadline\(\);\s*void this\.completeFirstPage\(/,
-    'arming must cover exactly the completeFirstPage branch whose deadline was cancelled');
-  const preparedBranch = commit.indexOf('this.completePreparedPageTurn(page, generation, selectionToken, lifecycleToken);');
-  const armBranch = commit.indexOf('this.armFirstPageCompletionDeadline();');
-  assert.ok(preparedBranch >= 0 && preparedBranch < armBranch,
-    'the prepared and previous-chapter branches must return before the watchdog lane arms');
-
-  const watchdog = methodSection(localReading, 'armFirstPageCompletionDeadline');
-  assert.match(watchdog, /FIRST_PAGE_COMPLETION_DEADLINE_MS/);
-  assert.match(watchdog, /this\.phase !== 'measuring' \|\| !this\.measurementCompleting/,
-    'the watchdog must only fire while a completion is genuinely stuck');
-  assert.match(watchdog, /this\.firstPageCompletionRetryCount >= FIRST_PAGE_COMPLETION_MAX_RETRIES/,
-    're-measurement must be capped before giving up');
-  assert.match(watchdog, /this\.paginationIndex\.invalidateMeasurement\(\);[\s\S]*this\.measurementCompleting = false;[\s\S]*this\.beginMeasurement\(this\.lifecycleToken\)/,
-    'a retry must break the suspended chain and re-measure');
-  assert.match(watchdog, /READING_FIRST_PAGE_COMPLETION_TIMEOUT/,
-    'exhausted retries must fail closed instead of staying wedged');
-
-  assert.match(methodSection(localReading, 'resumePagePreparationAfterTextureFrame'), /refreshBookTurnTextures[\s\S]*finally[\s\S]*drainPageTurnPreparationQueue/);
-  const complete = methodSection(localReading, 'completeFirstPage');
-  assert.match(complete, /this\.cancelFirstPageCompletionDeadline\(\);/,
-    'normal completion must disarm the watchdog');
-
-  const cancel = methodSection(localReading, 'cancelFirstPageCompletionDeadline');
-  assert.match(cancel, /this\.firstPageCompletionGeneration \+= 1;/,
-    'a cancelled timer must not act on a later selection');
-});
-
-contract('lifecycle teardown and failure disarm both new watchdogs', () => {
-  const fail = methodSection(localReading, 'fail');
-  assert.match(fail, /cancelFirstPageCompletionDeadline\(\)/);
-  assert.match(fail, /cancelPageTurnPreparationRetry\(\)/);
-  // Inspect the full lifecycle method, not a character budget that changes
-  // meaning when another legitimate cleanup is added before these timers.
-  const teardown = methodSection(localReading, 'aboutToDisappear');
-  assert.match(teardown, /cancelFirstPageCompletionDeadline\(\);[\s\S]*?cancelPageTurnPreparationRetry\(\);/,
-    'aboutToDisappear must disarm the completion watchdog and the preparation retry timer');
-  assert.match(localReading, /this\.phase = 'loading';\s*this\.cancelMeasurementDeadline\(\);\s*this\.cancelFirstPageReadyDeadline\(\);\s*this\.cancelFirstPageCompletionDeadline\(\);/,
-    'the selection reset path must disarm the completion watchdog');
-});
-
-contract('watchdog constants keep generous normal-path margins', () => {
-  assert.match(localReading, /const FIRST_PAGE_COMPLETION_DEADLINE_MS = 10000;/,
-    'normal completion is well under 1s; 10s must not false-fire');
-  assert.match(localReading, /const FIRST_PAGE_COMPLETION_MAX_RETRIES = 3;/);
-  assert.match(localReading, /const PAGE_TURN_PREPARATION_RETRY_MAX_MS = 2000;/);
-  assert.match(localReading, /const PAGE_TURN_PREPARATION_RETRY_BASE_MS = 250;/);
-});
-
-if (failures.length > 0) {
-  console.error(`reader cold-entry recovery contract: ${failures.length} FAILURE(S)`);
-  for (const line of failures) {
-    console.error(`  - ${line}`);
+async function completionWatchdogCase() {
+  function fixtureFactory(Type, clock) {
+    const failures = [], measurements = []; let invalidations = 0;
+    const owner = Object.assign(new Type(), { mounted: true, exitRequested: false, phase: 'measuring', measurementCompleting: true,
+      batchProcessing: true, firstPageCompletionGeneration: 0, firstPageCompletionDeadlineTimer: -1, firstPageCompletionRetryCount: 0,
+      lifecycleToken: 8, physicalPagination: { index: { invalidateMeasurement: () => invalidations++ } },
+      beginMeasurement: token => { measurements.push(token); owner.measurementCompleting = true; }, fail: (...args) => failures.push(args) });
+    return { owner, failures, measurements, invalidations: () => invalidations };
   }
-  process.exit(1);
+  const clock = timers();
+  const { Type, constants } = await actual(['armFirstPageCompletionDeadline', 'cancelFirstPageCompletionDeadline'],
+    { setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout });
+  const f = fixtureFactory(Type, clock); f.owner.armFirstPageCompletionDeadline();
+  assert.equal(clock.pending.size, 1); assert.equal(f.measurements.length, 0);
+  for (let attempt = 0; attempt <= constants.FIRST_PAGE_COMPLETION_MAX_RETRIES; attempt++) clock.fire();
+  assert.equal(f.measurements.length, constants.FIRST_PAGE_COMPLETION_MAX_RETRIES); assert.equal(f.invalidations(), f.measurements.length);
+  assert.equal(f.failures.length, 1); assert.match(f.failures[0][0].message, /READING_FIRST_PAGE_COMPLETION_TIMEOUT/); assert.equal(f.failures[0][1], 8);
+  assert.equal(clock.pending.size, 0); assert.equal(f.owner.firstPageCompletionRetryCount, 0);
+  const staleClock = timers(); const staleType = (await actual(['armFirstPageCompletionDeadline', 'cancelFirstPageCompletionDeadline'],
+    { setTimeout: staleClock.setTimeout, clearTimeout: staleClock.clearTimeout })).Type;
+  const stale = fixtureFactory(staleType, staleClock); stale.owner.armFirstPageCompletionDeadline(); const retired = staleClock.issued[0].fn;
+  stale.owner.cancelFirstPageCompletionDeadline(); retired(); assert.equal(stale.measurements.length, 0); assert.equal(stale.failures.length, 0);
+  for (const mutate of [owner => { owner.mounted = false; }, owner => { owner.exitRequested = true; }, owner => { owner.phase = 'ready'; }, owner => { owner.measurementCompleting = false; }]) {
+    const localClock = timers(); const Local = (await actual(['armFirstPageCompletionDeadline', 'cancelFirstPageCompletionDeadline'],
+      { setTimeout: localClock.setTimeout, clearTimeout: localClock.clearTimeout })).Type;
+    const current = fixtureFactory(Local, localClock); current.owner.armFirstPageCompletionDeadline(); mutate(current.owner); localClock.fire();
+    assert.equal(current.measurements.length, 0); assert.equal(current.failures.length, 0); assert.equal(localClock.pending.size, 0);
+  }
 }
-console.log('reader cold-entry recovery contract: PASS');
+const cases = { 'preparation-context': preparationContextCase, 'retry-queue': retryQueueCase, 'completion-watchdog': completionWatchdogCase };
+for (const id of selectContractCases({
+  'preparation-context': { description: 'Actual preparation admission preserves visible context on rejected/begun/missing target paths', resources: [] },
+  'retry-queue': { description: 'Actual bounded retry queue with controlled timer, generation/token cancellation and no spin', resources: [] },
+  'completion-watchdog': { description: 'Actual completion watchdog retries/invalidation/failure and stale/cancel/lifecycle predicates', resources: [] },
+})) { await cases[id](); recordContractCasePass(id); }

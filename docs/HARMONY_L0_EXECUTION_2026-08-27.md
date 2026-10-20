@@ -9,8 +9,8 @@ artifact-bearing Harmony commit=ae708c8362165bc7429c189e3caca14c1609050f
 Core commit=c17dea52317efb790ded4438be23c6eda4012b88
 Core dirty=false
 Core buildId=1dabffda3d650ddb22f1d69f8fa95c2b073f28d509f823cb7bec7879306e5da7
-NAPI input sha256=d343ad2f0d26a9a5c787c38851ac4bee26a9c057e928b27f3491abeb52659611
-HAP embedded NAPI sha256=7006b43e8c5c139d146f0823d42dc719ef2304e0f1e24d75e400932a50450c99
+Native input SHA-256: d343ad2f0d26a9a5c787c38851ac4bee26a9c057e928b27f3491abeb52659611
+HAP embedded Native SHA-256: 7006b43e8c5c139d146f0823d42dc719ef2304e0f1e24d75e400932a50450c99
 ```
 
 本摘要之后产生的文档提交不改变上述产物归因。

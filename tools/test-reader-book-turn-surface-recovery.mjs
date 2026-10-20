@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {createBookTurnTextureOwner} from './lib/reader-book-turn-owner-fixture.mjs';
 import {cancelReaderPagePan,completeReaderPageGestureSettlement} from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
 const source=readFileSync(file,'utf8');
@@ -14,6 +15,7 @@ const noop=()=>{};
 function owner(){
  const stats={committed:0,rollback:0,refresh:0,native:0};
  const value=Object.assign(new Owner(),{mounted:true,lifecycleToken:1,bookTurnSurfaceRecoveryPending:false,
+  bookTurnTextureCaptureGeneration:0,bookTurnSurfaceCaptureEpoch:0,
   bookTurnRuntimeFailed:false,pageTurnSettlementGeneration:7,bookTurnSurfaceGeneration:7,
   pageTurnRenderRevision:9,bookTurnArkUIReadyRevision:9,pageTurnSettlementActive:true,pageTurnPresentationPhase:'settling',bookTurnMotion:{generation:7},
   pageTurnGestureState:{phase:'settling',owner:'horizontalPage',direction:'next'},pageTurnInputOwned:true,
@@ -83,3 +85,75 @@ assert.deepEqual(failures,[]);
  assert.equal(stats.rollback,0,'late rollback of A cannot reset a new tracking surface B');
 }
 console.log('Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)');
+
+const ReadyOwner=productionMotionMethods(file,['onBookTurnNativeEvent','recoverBookTurnSurfaceIfIdle',
+ 'performBookTurnTextureRefresh','captureBookTurnTexture','takeBookTurnPendingSnapshot','canStartReaderPageTurn'],{
+ ...events,BOOK_TURN_TEXTURE_CURRENT:1,BOOK_TURN_TEXTURE_NEXT:2,BOOK_TURN_TEXTURE_PREVIOUS:0,
+ READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID:'native-current',readerPageTransitionUsesPreparedPages:()=>true,
+ BookTurnTextureBuildInput:class {},ComponentContent:class {update() {}},wrapBuilder:value=>value,BookTurnTextureBuilder(){},
+});
+async function idleReplacementOwner(){
+ const stats={uploads:0,snapshotReleases:0,mask:0,refresh:0};
+ const bitmap=()=>({release(){stats.snapshotReleases++;}});
+ const pages=[{textureIdentity:'previous-page',renderRevision:8,fragments:[]},
+  {textureIdentity:'chapter-last-page',renderRevision:8,fragments:[]},
+  {textureIdentity:'next-chapter-first-page',renderRevision:8,fragments:[]}];
+ const session=createBookTurnTextureOwner(async slot=>{stats.uploads++;stats.mask|=1<<slot;return true;});
+ const value=Object.assign(new ReadyOwner(),{
+  mounted:true,exitRequested:false,pageTurnSettlementActive:false,bookTurnMotion:undefined,
+  bookTurnSurfaceRecoveryPending:false,bookTurnRuntimeFailed:false,bookTurnAwaitingSlotCommit:false,
+  bookTurnSurfaceOpacity:0,pageTurnPresentationPhase:'idle',bookTurnTextureCaptureGeneration:3,
+  bookTurnSurfaceCaptureEpoch:0,bookTurnArkUIContentRevision:8,pageTurnPreparation:undefined,
+  phase:'ready',pageTurnGeneration:1,preferredPageTextureDirection:'next',
+  bookTurnSession:Object.assign(session,{configure:()=>true,isReady:()=>true,
+   canStart:direction=>(stats.mask&(direction==='next'?6:3))===(direction==='next'?6:3)}),
+  usesBookTurnSimulation:()=>true,shouldMountBookTurnSurface:()=>true,sessionLaunchRenderWorkBlocked:()=>false,
+  controlVisible:()=>false,pageTurnInputPhase:()=>'idle',currentPageTurnRenderPage:()=>pages[1],
+  preparedPageTurnRenderPage:direction=>pages[direction==='next'?2:0],bookTurnCapturedIdentity:slot=>session.capturedIdentity(slot),
+  scheduleBookTurnTextureRefresh(){stats.refresh++;},canTurnPage:()=>true,usesNoAnimationPageTurnRuntime:()=>false,
+  readerSettingsSnapshot:{},preparedPageTurn:()=>({direction:'next'}),yieldPageTextureFrame:async()=>{},
+  bookTurnTextureSnapshotScale:()=>1,readingLayout:()=>({}),
+  getUIContext:()=>({getComponentSnapshot:()=>({get:async()=>bitmap()})}),
+  captureDecodedBookTurnPage:async()=>bitmap(),
+  failBookTurnTextureCapture(_slot,_generation,message){throw new Error(message);},
+ });
+ session.eventListener=event=>value.onBookTurnNativeEvent(event);
+ for(let slot=0;slot<pages.length;slot++) await session.uploadTexture(slot,{},pages[slot].textureIdentity,()=>true);
+ stats.uploads=0;
+ const replace=()=>{stats.mask=0;session.onNativeEvent(events.BOOK_TURN_EVENT_SURFACE_READY,0,0);};
+ return {value,session,stats,pages,bitmap,replace};
+}
+{
+ const {value,session,stats,pages,replace}=await idleReplacementOwner();
+ replace();
+ assert.equal(value.bookTurnTextureCaptureGeneration,4,'READY invalidates in-flight capture publication');
+ assert.equal(value.bookTurnSurfaceCaptureEpoch,1,'READY invalidates retention of old-surface snapshots');
+ assert.equal(stats.refresh,1,'an idle READY schedules capture without needing a LOST callback');
+ assert.deepEqual([0,1,2].map(slot=>session.capturedIdentity(slot)),['','','']);
+ assert.equal(value.canStartReaderPageTurn('next'),false,'an empty replacement ring cannot admit NEXT');
+ await value.performBookTurnTextureRefresh(value.bookTurnTextureCaptureGeneration);
+ assert.equal(stats.uploads,3,'unchanged logical pages are uploaded again for the replacement surface');
+ assert.equal(stats.mask,7);
+ assert.deepEqual([0,1,2].map(slot=>session.capturedIdentity(slot)),pages.map(page=>page.textureIdentity));
+ assert.equal(value.canStartReaderPageTurn('next'),true,'the next chapter first page is admissible after recapture');
+ assert.equal(value.canStartReaderPageTurn('previous'),true);
+ assert.equal(value.bookTurnRuntimeFailed,false);
+}
+for(const slot of [1,2]){
+ const {value,session,stats,pages,bitmap,replace}=await idleReplacementOwner();
+ pages[slot]={...pages[slot],textureIdentity:`pending-surface-${slot}`};
+ let finishSnapshot;
+ const snapshot=new Promise(resolve=>{finishSnapshot=resolve;});
+ if(slot===1)value.getUIContext=()=>({getComponentSnapshot:()=>({get:()=>snapshot})});
+ else value.captureDecodedBookTurnPage=()=>snapshot;
+ const pending=value.captureBookTurnTexture(slot,pages[slot],value.bookTurnTextureCaptureGeneration);
+ replace();
+ finishSnapshot(bitmap());
+ assert.equal(await pending,false,'a pre-READY snapshot cannot upload under a new surface epoch');
+ assert.equal(stats.uploads,0);
+ assert.equal(stats.snapshotReleases,1,'a late old-surface bitmap is released instead of retained');
+ assert.equal(session.takePendingSnapshot(pages[slot].textureIdentity,value.pageTurnGeneration),undefined,
+  'an unchanged page generation cannot reintroduce the old-surface bitmap');
+ assert.equal(session.capturedIdentity(slot),'');
+}
+console.log('Production READY-only idle recovery: ring recapture, next-chapter admission and late current/adjacent snapshots PASS');

@@ -1,0 +1,421 @@
+import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { MangaReadingSurface } from '../manga/MangaReadingSurface';
+import type { JsonObject } from '@reader/core-harmony';
+import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import type { ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
+import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest, ReaderRetainedPresentation } from '../reading/LocalReadingExperience';
+import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
+import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
+import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
+import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
+import type {
+  ReaderDirectoryChapterStartBookmarkRequest,
+  ReaderPageBookmarkToggleRequest,
+} from '../reading/ReaderDirectoryMarkerState';
+import type { ReaderBookIdentity } from '../reading/ReaderBookmarkProjection';
+import type { RemoteReadingBookSeed, RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
+import type { RemoteReadingFailureKind } from '../reading/RemoteContentAdmission';
+import { ReaderStatusBarPaper } from '../reading/ReaderStatusBarPaper';
+import { readerWidthClass } from '../reading/ReaderLayoutGeometry';
+
+
+// ReaderShell —— 阅读会话的 UI 组合层 (Batch 2, FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §六)。
+// 把阅读区 (ReadingExperience: ReadingSurface + ReaderControlPanel)、目录 overlay
+// (ReaderFullDirectory)、换源 overlay (SourceSwitchPanel) 收进同一个 Shell, 让 Index 对
+// 阅读路由只暴露一个组件。阅读会话的业务状态 (detailBook/detailToc/route/generation/
+// source-switch gateway) 与持久化仍由 Index 持有, 经 props + 回调透传 —— Shell 只负责
+// UI 骨架与 overlay 宿主, 不复制业务数据。
+//
+// 挂载契约 (与改造前 Index 内联阅读段一致):
+//   - 仅当 readingSessionActive 且 book 已就绪时挂载; ReadingExperience 保持挂载,
+//     opacity 随 route 在 reading/directory 间切换, 避免阅读会话被 remount。
+//   - Shell owns the edge-to-edge reader background/overlay host. Window facts
+//     and content/control safe rects come from the single window coordinator;
+//     the whole reader subtree is never shifted by a second status-bar padding.
+type PreparedReaderRoute = 'reading' | 'directory';
+
+@Component
+export struct ReaderShell {
+  private readonly mangaSettingsGateway: ReaderSettingsGateway = new ReaderSettingsGateway(ReaderRuntimeOwner.current());
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
+    readerAppColor('app.window.background', 'day');
+  @StorageLink('readerWindowChromeThemeId') private chromePaperThemeId: string = '';
+  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+
+  // 阅读内容。
+  @Prop bookId: string = '';
+  @Prop readingReadyGeneration: number = 0;
+  @Prop bookTitle: string = '';
+  @Prop sourceId: string = '';
+  @Prop sourceName: string = '';
+  @Prop bookKind: string | undefined = undefined;
+  // Explicit Core content fact; never infer this from the free-form genre.
+  @Prop contentKind: 'text' | 'manga' = 'text';
+  @Prop inBookshelf: boolean = true;
+  @Prop bookAuthor: string = '';
+  @Prop bookCoverUrl: string = '';
+  onToggleShelf: () => void = (): void => {};
+  onStopSourceSwitch: () => void = (): void => {};
+  @Prop remoteSession: RemoteReadingSession | undefined = undefined;
+  @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
+  entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
+  @Prop sourceSwitchFailureMessage: string = '';
+  @Prop sourceSwitchTransactionId: string | undefined = undefined;
+  @Prop totalChapters: number = 0;
+  @Prop requestedChapterIndex: number | undefined = undefined;
+  @Prop mangaChapterRequestGeneration: number = 0;
+  @Prop requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
+  @Prop isTablet: boolean = false;
+  @Prop reduceMotion: boolean = false;
+  // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
+  @Prop visible: boolean = false;
+  @Prop route: PreparedReaderRoute = 'reading';
+  // 目录 overlay。
+  @Prop tocEntries: LocalReadingTocEntry[] = [];
+  @Prop catalogMessage: string = '';
+  @Prop bookmarkLoadMessage: string = '';
+  @Prop directoryCurrentChapterIndex: number = -1;
+  @Prop directoryChapterTitle: string = '';
+  @Prop directoryOpenedFromControl: boolean = false;
+  @Prop offlineBookOperationActive: boolean = false;
+  @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  // 书签 tab 精确锚点接线: requestedBookmarkAnchor 经 @Prop @Watch 触发阅读会话
+  // 的精确 (章节, Unicode 标量偏移) 跳转; bookmarkIdentity 是会话期静态书籍身份,
+  // 用于稳定书签 id。两者 undefined 时书签 tab 保留面板自身的章首降级。
+  @Prop requestedBookmarkAnchor: ReaderBookmarkAnchorRequest | undefined = undefined;
+  @Prop bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
+  // 换源 overlay。
+  @Prop sourceSwitchVisible: boolean = false;
+  @Prop sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
+
+  // 回调 (全部由 Index 提供, 透传到对应子组件)。
+  onExitRequestHandler: (requestExit: (intent?: 'navigation') => void) => void = (): void => {};
+  onExit: () => void = (): void => {};
+  onExitCancelled: () => void = (): void => {};
+  onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number) => void =
+    (_chapterIndex: number, _sourceId: string, _bookId: string, _generation: number): void => {};
+  onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
+  onRetryFailedSourceSwitch: () => void = (): void => {};
+  onDismissSourceSwitchFailure: () => void = (): void => {};
+  resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
+    (_sourceId: string, _bookId: string): Promise<string | undefined> => Promise.resolve(undefined);
+  onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
+  onReadingFailure: (sourceId: string, bookId: string, message: string,
+    failureKind?: RemoteReadingFailureKind) => void =
+    (_sourceId: string, _bookId: string, _message: string,
+      _failureKind?: RemoteReadingFailureKind): void => {};
+  onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
+    (_chapterIndex: number, _chapterTitle: string): void => {};
+  onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
+  // undefined = 未接线, 面板走自身的章首降级链 (selectBookmark 降级)。
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
+    undefined;
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDownloadBook: () => void = (): void => {};
+  onClearBookOffline: () => void = (): void => {};
+  onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
+  onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]) => void =
+    (_entries: LocalReadingTocEntry[]): void => {};
+  onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean) => Promise<void> =
+    (_sourceId: string, _bookId: string, _isCurrent: () => boolean): Promise<void> =>
+      Promise.reject(new Error('Bookmark projection loader unavailable'));
+  onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
+    (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
+  onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest) => void =
+    (_request: ReaderPageBookmarkToggleRequest): void => {};
+  onCloseDirectory: () => void = (): void => {};
+  onOpenDirectory: () => void = (): void => {};
+  onOpenBookInfo: () => void = (): void => {};
+  onSwitchSource: () => void = (): void => {};
+  onMangaLogin: () => Promise<void> = (): Promise<void> => Promise.reject(new Error('MANGA_SOURCE_LOGIN_UNAVAILABLE'));
+  onOpenRulesManagement: () => void = (): void => {};
+  onCloseSourceSwitch: () => void = (): void => {};
+  onRetrySourceSwitch: () => void = (): void => {};
+  onRefreshSourceSwitch: () => void = (): void => {};
+  onPickSource: (candidate: SourceSwitchCandidate) => void = (_candidate: SourceSwitchCandidate): void => {};
+  onRollbackSourceSwitch: () => void = (): void => {};
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      // This stable nested layer prevents the reader component from being
+      // remounted when sibling overlays appear.  Opacity 0 still receives the
+      // true viewport/layout pass; `Visibility` would make the TextController
+      // metrics unavailable.
+      Stack({ alignContent: Alignment.TopStart }) {
+        // A new source/book needs fresh gateways and lifecycle tokens. Theme,
+        // font, chapter and overlay changes retain this same reading owner.
+        if (this.contentKind === 'manga') {
+          this.mangaSurface()
+        } else {
+        ForEach([this.readingIdentityKey()], (_identity: string) => {
+        ReadingExperience({
+          sourceId: this.sourceId,
+          bookId: this.bookId,
+          isReaderIdentityCurrent: (): boolean => _identity === this.readingIdentityKey(),
+          bookKind: this.bookKind,
+          remoteSession: this.remoteSession,
+          remoteBookSeed: this.remoteBookSeed,
+          entryPresentationProvider: (): ReaderRetainedPresentation | undefined =>
+            _identity === this.readingIdentityKey() ? this.entryPresentationProvider() : undefined,
+          sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
+          onRetryFailedSourceSwitch: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onRetryFailedSourceSwitch();
+          },
+          onDismissSourceSwitchFailure: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onDismissSourceSwitchFailure();
+          },
+          resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
+            _identity === this.readingIdentityKey() ?
+              this.resolveSourceSwitchTransactionId(sourceId, bookId) : Promise.resolve(undefined),
+          onRemoteSessionReady: (session: RemoteReadingSession): void => {
+            if (_identity === this.readingIdentityKey()) this.onRemoteSessionReady(session);
+          },
+          sourceSwitchTransactionId: this.sourceSwitchTransactionId,
+          requestedChapterIndex: this.requestedChapterIndex,
+          requestedBookmarkAnchor: this.requestedBookmarkAnchor,
+          bookmarkIdentity: this.bookmarkIdentity,
+          isTablet: this.isTablet,
+          windowChromeActive: this.visible,
+          windowChromeOverlayActive: this.visible &&
+            (this.route === 'directory' || this.sourceSwitchVisible),
+          bookTitle: this.bookTitle,
+          sourceName: this.sourceName,
+          totalChapters: this.totalChapters,
+          directoryEntries: this.tocEntries,
+          bookmarkLoadMessage: this.bookmarkLoadMessage,
+          controlObscured: this.route === 'directory',
+          interactionBlocked: !this.visible || this.route !== 'reading' || this.sourceSwitchVisible,
+          reduceMotion: this.reduceMotion,
+          onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => {
+            if (_identity === this.readingIdentityKey()) this.onExitRequestHandler(requestExit);
+          },
+          onExit: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onExit();
+          },
+          onExitCancelled: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onExitCancelled();
+          },
+          onReadingReady: (chapterIndex: number): void => {
+            if (_identity === this.readingIdentityKey())
+              this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
+          },
+          onReadingCommitted: (commit: ReadingCommit): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingCommitted(commit);
+          },
+          onReadingFailure: (sourceId: string, bookId: string, message: string,
+            failureKind?: RemoteReadingFailureKind): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingFailure(sourceId, bookId, message, failureKind);
+          },
+          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
+            if (_identity === this.readingIdentityKey()) this.onChapterCommitted(chapterIndex, chapterTitle);
+          },
+          onOpenDirectory: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onOpenDirectory();
+          },
+          onOpenBookInfo: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onOpenBookInfo();
+          },
+          onSwitchSource: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onSwitchSource();
+          },
+          onOpenRulesManagement: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onOpenRulesManagement();
+          },
+          onDownloadChapter: (chapterIndex: number): void => {
+            if (_identity === this.readingIdentityKey()) this.onDownloadChapter(chapterIndex);
+          },
+          offlineBookOperationActive: this.offlineBookOperationActive,
+          onDownloadBook: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onDownloadBook();
+          },
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => {
+            if (_identity === this.readingIdentityKey()) this.onDeleteBookmarks(bookmarkTimes);
+          },
+          onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void => {
+            if (_identity === this.readingIdentityKey()) this.onDirectoryProjectionChanged(entries);
+          },
+          onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean): Promise<void> =>
+            _identity === this.readingIdentityKey() ? this.onLoadControlBookmarks(sourceId, bookId,
+              (): boolean => _identity === this.readingIdentityKey() && isCurrent()) : Promise.resolve(),
+          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
+            if (_identity === this.readingIdentityKey()) this.onCreateChapterStartBookmark(request);
+          },
+          onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest): void => {
+            if (_identity === this.readingIdentityKey()) this.onTogglePageBookmark(request);
+          },
+        })
+          .width('100%')
+          .height('100%')
+          .opacity(this.route === 'reading' || this.route === 'directory' ? 1 : 0);
+        }, (identity: string): string => identity);
+        }
+      }
+      .width('100%')
+      .height('100%')
+      // A transparent lifecycle container must never become an invisible
+      // input shield over Local Book Detail.
+      .hitTestBehavior(HitTestMode.Transparent);
+
+      if (this.route === 'directory') {
+        ReaderFullDirectory({
+          bookTitle: this.bookTitle,
+          chapterTitle: this.directoryChapterTitle,
+          entries: this.tocEntries,
+          catalogMessage: this.catalogMessage,
+          currentChapterIndex: this.directoryCurrentChapterIndex,
+          sourceId: this.sourceId,
+          animateFromControl: this.directoryOpenedFromControl,
+          reduceMotion: this.reduceMotion,
+          offlineBookOperationActive: this.offlineBookOperationActive,
+          onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+          onSelectBookmark: this.onSelectBookmark,
+          bookmarkIdentity: this.bookmarkIdentity,
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+          onDownloadBook: (): void => this.onDownloadBook(),
+          onClearBookOffline: (): void => this.onClearBookOffline(),
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.onCreateChapterStartBookmark(request),
+          onSwitchSource: (): void => this.onSwitchSource(),
+          onExit: (): void => this.onCloseDirectory(),
+        });
+      }
+
+      if (this.sourceSwitchVisible) {
+        Stack({ alignContent: Alignment.Center }) {
+          Stack()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(readerAppColor('app.ReaderShell.build.backgroundColor.40FFFFFF', this.appThemeScheme))
+            .onClick((): void => this.onCloseSourceSwitch());
+          SourceSwitchPanel({
+            state: this.sourceSwitchState,
+            currentSourceId: this.sourceId,
+            bookTitle: this.bookTitle, author: this.bookAuthor, coverUrl: this.bookCoverUrl, currentSourceName: this.sourceName,
+            currentChapterTitle: this.directoryChapterTitle, reduceMotion: this.reduceMotion,
+            contentKind: this.contentKind,
+            onStop: (): void => this.onStopSourceSwitch(),
+            onClose: (): void => this.onCloseSourceSwitch(),
+            onRetry: (): void => this.onRetrySourceSwitch(),
+            onRefresh: (): void => this.onRefreshSourceSwitch(),
+            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
+            onRollback: (): void => this.onRollbackSourceSwitch(),
+          });
+        }
+        .width('100%')
+        .height('100%');
+      }
+      this.overlayStatusBarUnderlay();
+    }
+    .width('100%')
+    .height('100%')
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    // Keep the route opaque while the reading owner measures and admits its
+    // first physical page. Without a shell-owned underlay, the route switch
+    // can expose the Index/window background for a few frames before
+    // ReadingSurface mounts its paper composition.
+    .backgroundColor(this.chromeUnderlayColor)
+    .opacity(this.visible ? 1 : 0)
+    .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
+  }
+
+  @Builder
+  private mangaSurface() {
+    ForEach([this.mangaIdentityKey()], (_identity: string) => {
+      MangaReadingSurface({
+        reduceMotion: this.reduceMotion,
+        offline: ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(this.sourceId, this.bookId) === true || this.remoteSession?.acquisitionMode === 'offline',
+        settingsGateway: this.mangaSettingsGateway,
+        bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
+        onDetail: (): void => this.onOpenBookInfo(),
+        onToggleShelf: (): void => this.onToggleShelf(),
+        onDownloadChapter: (): void => {
+          const index = this.directoryCurrentChapterIndex;
+          if (index >= 0) this.onDownloadChapter(index);
+        },
+        onSelectDirectoryTarget: (chapterIndex: number, directoryTargetProof?: JsonObject): void => {
+          if (directoryTargetProof === undefined) this.onSelectChapter(chapterIndex);
+          else this.onSelectNavigationTarget(chapterIndex, 0, undefined, directoryTargetProof);
+        },
+        mangaBackgroundColor: readerAppColor('app.window.background', this.appThemeScheme),
+        mangaForegroundColor: readerAppColor('app.window.foreground', this.appThemeScheme),
+        errorColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
+        onDirectory: (): void => this.onOpenDirectory(),
+        onSwitchSource: (): void => this.onSwitchSource(),
+        onLoginSource: (): Promise<void> => this.onMangaLogin(),
+        onSaveFailure: (message: string): void => this.onReadingFailure(this.sourceId, this.bookId, message),
+        runtime: ReaderRuntimeOwner.current(), sourceId: this.sourceId, bookId: this.bookId,
+        chapterIndex: this.requestedChapterIndex,
+        directoryTargetProof: this.requestedMangaDirectoryTargetProof,
+        remoteSession: this.remoteSession, remoteBookSeed: this.remoteBookSeed,
+        onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
+        onChapterCommitted: (index: number, title: string): void => this.onMangaChapterReady(_identity, index, title),
+        onBack: (): void => this.onExit(),
+        onExitRequestHandler: (exit: () => void): void => this.onExitRequestHandler(exit),
+        onChapter: (direction: number): void => {
+          if (this.contentKind === 'manga' && _identity === this.mangaIdentityKey()) this.selectAdjacentMangaChapter(direction);
+        },
+      })
+    }, (identity: string): string => identity)
+  }
+
+  private mangaIdentityKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration,
+      this.requestedChapterIndex ?? null, this.mangaChapterRequestGeneration]);
+  }
+
+  private onMangaChapterReady(identity: string, chapterIndex: number, chapterTitle: string): void {
+    if (this.contentKind !== 'manga' || identity !== this.mangaIdentityKey() ||
+      !Number.isSafeInteger(chapterIndex) || chapterIndex < 0 ||
+      (this.requestedChapterIndex !== undefined && this.requestedChapterIndex !== chapterIndex)) return;
+    this.onChapterCommitted(chapterIndex, chapterTitle);
+    this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
+  }
+
+  private selectAdjacentMangaChapter(direction: number): void {
+    if (direction !== -1 && direction !== 1) return;
+    const current = this.tocEntries.findIndex(entry => entry.index === (this.requestedChapterIndex ?? this.directoryCurrentChapterIndex));
+    if (current < 0) return;
+    // A historical cached group can be resumed without becoming selectable.
+    for (let next = current + direction; next >= 0 && next < this.tocEntries.length; next += direction) {
+      if (this.tocEntries[next].navigable !== false) { this.onSelectChapter(this.tocEntries[next].index); return; }
+    }
+  }
+
+  private readingIdentityKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration]);
+  }
+
+  private chromeMetrics(_revision: number): ReaderWindowMetricsSnapshot {
+    return ReaderWindowCoordinator.metrics();
+  }
+
+  @Builder
+  private overlayStatusBarUnderlay() {
+    // Sibling directory and source-switch surfaces can paint over the band's
+    // child in ReadingExperience. Repaint above those surfaces with the same
+    // owner-requested color; do not derive an independent application tone.
+    if (this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
+      ReaderStatusBarPaper({
+        theme: this.chromePaperThemeId,
+        fallbackColor: this.chromeUnderlayColor,
+        viewportWidth: this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+        viewportHeight: this.chromeMetrics(this.windowMetricsRevision).windowRect.height,
+        statusRect: this.chromeMetrics(this.windowMetricsRevision).statusBarRect,
+        expanded: readerWidthClass(this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+          this.isTablet) === 'expanded',
+      }).zIndex(10).hitTestBehavior(HitTestMode.None)
+        .id('reader-overlay-status-bar-underlay');
+    }
+  }
+}

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { readFileSync }=await import('node:fs');
+const { registerHooks }=await import('node:module');
 
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
@@ -9,9 +12,10 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingEntryPreparation:ProductionPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+const ownedPreparations=[];const createPreparation=(...args)=>{const v=new ProductionPreparation(...args);ownedPreparations.push(v);return v;};
+const tick = () => new Promise(setImmediate);
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 async function until(predicate) {
   for (let n = 0; n < 100; n += 1) { if (predicate()) return; await tick(); }
@@ -80,7 +84,7 @@ function fixture() {
     },
   };
   const runtime = { request, bookAcquisitions: () => coordinator };
-  const preparations = new ReadingEntryPreparation(runtime);
+  const preparations = createPreparation(runtime);
   const ready = async (sourceId, bookId) => {
     let snapshot;
     await until(() => { snapshot = preparations.take(sourceId, bookId); return snapshot !== undefined; });
@@ -93,6 +97,9 @@ function fixture() {
 
 // A read-only wrapper keeps capability/catalog proofs without exposing
 // acquisition or mutation authority. No full-book cache status is needed.
+
+try{
+if(id==='legacy-cache-only'){
 {
   const f=fixture();
   f.runtime.supportsCoreCapability=name=>name==='chapter.content.cacheOnly.v1';
@@ -104,8 +111,8 @@ function fixture() {
   assert.equal(f.calls.find(c=>c.method==='chapter.content').params.cacheOnly,true);
   f.preparations.close();
 }
-
-// A never-read local book is prepared without any progress write. A miss is synchronous.
+}
+if(id==='hot-local'){
 {
   const f = fixture();
   assert.equal(f.preparations.take('local', 'new'), undefined);
@@ -123,8 +130,8 @@ function fixture() {
   f.preparations.close();
   assert.equal(snapshot.isCurrent(), false);
 }
-
-// Exact restored chapter/offset/version context survives background materialization.
+}
+if(id==='restored-position'){
 {
   const f = fixture();
   f.progress.set(identity('s1', '/same'), { sourceId: 's1', bookId: '/same', chapterIndex: 2,
@@ -145,8 +152,8 @@ function fixture() {
   assert.ok(!f.calls.some(call => call.method === 'reading.progress.update' || call.method === 'source.switch.recover'));
   f.preparations.close();
 }
-
-// Completed and already consumed snapshots are fenced at mutation start AND completion.
+}
+if(id==='mutation-fences'){
 {
   const f = fixture();
   f.preparations.setVisibleBooks([seed('book')]);
@@ -173,8 +180,8 @@ function fixture() {
   assert.equal(f.preparations.beginRequest('source.switch.pending.list'), false);
   f.preparations.close();
 }
-
-// Window removal and foreground pause cancel in-flight reads without publishing stale results.
+}
+if(id==='inflight-retirement'){
 for (const change of ['window', 'pause', 'mutation']) {
   const f = fixture();
   const gate = deferred();
@@ -201,8 +208,8 @@ for (const change of ['window', 'pause', 'mutation']) {
   await f.ready('local', 'next');
   f.preparations.close();
 }
-
-// Own detail/catalog installation is admitted; later catalog changes invalidate taken and in-flight data.
+}
+if(id==='catalog-epoch'){
 {
   const f = fixture();
   f.setAcquireHook(async (remoteSeed, options) => {
@@ -239,8 +246,8 @@ for (const change of ['window', 'pause', 'mutation']) {
     'a cache miss after own catalog installation must remain a miss, without an automatic retry loop');
   f.preparations.close();
 }
-
-// Bounded visible window, failed work and remote cache misses leave the normal path available.
+}
+if(id==='bounded-misses'){
 {
   const f = fixture();
   f.preparations.setVisibleBooks(Array.from({ length: 9 }, (_, n) => seed(`book-${n}`)));
@@ -263,8 +270,8 @@ for (const change of ['window', 'pause', 'mutation']) {
     'speculation must not refill a missing remote body and migrate positions');
   f.preparations.close();
 }
-
-// Pending source-switch recovery belongs exclusively to normal entry.
+}
+if(id==='pending-switch'){
 {
   const f = fixture(); f.setPending([{ transactionId: 'pending' }]);
   f.preparations.setVisibleBooks([seed('switching', 's1')]);
@@ -273,8 +280,8 @@ for (const change of ['window', 'pause', 'mutation']) {
   assert.deepEqual(f.calls.map(call => call.method), ['source.switch.pending.list']);
   f.preparations.close();
 }
-
-// A body removed after cache.status is still a pure miss, never a network refill.
+}
+if(id==='vanished-cache'){
 {
   const f = fixture(); const gate = deferred();
   f.gates.set(`chapter.content:${identity('s1', 'vanished')}`, gate);
@@ -288,9 +295,8 @@ for (const change of ['window', 'pause', 'mutation']) {
   assert.ok(!f.calls.some(call => call.method === 'reading.progress.update'));
   f.preparations.close();
 }
-
-// Public validity fences also protect display owners after the optional pool
-// hands data off; viewport/pause changes never become content mutations.
+}
+if(id==='public-validity'){
 {
   const f = fixture();
   const current = f.preparations.captureValidity('s1', 'same');
@@ -319,9 +325,8 @@ for (const change of ['window', 'pause', 'mutation']) {
   assert.equal(sibling(), false);
   assert.equal(otherSource(), false);
 }
-
-// RPC envelopes define book/source/global mutation scopes. Unknown/opaque
-// impact remains conservative; exact scopes preserve unrelated identities.
+}
+if(id==='mutation-scopes'){
 for (const [method, params, affected] of [
   ['reading.progress.update', { sourceId: 's1', bookId: 'a' }, ['s1/a']],
   ['bookshelf.add', { sourceId: 's1', bookId: 'a' }, ['s1/a']],
@@ -334,6 +339,7 @@ for (const [method, params, affected] of [
   ['cache.clear', { scope: 'book', sourceId: 's1', bookId: 'a' }, ['s1/a']],
   ['chapter.content', { sourceId: 's1', bookId: 'a', forceRefresh: true }, ['s1/a']],
   ['source.switch.commit', { from: { sourceId: 's1', bookId: 'a' }, target: { sourceId: 's2', bookId: 'a' } }, ['s1/a', 's2/a']],
+  ['manga.sourceSwitch.commit', { fromSourceId: 's1', fromBookId: 'a', firstImage: { chapter: { sourceId: 's2', bookId: 'a' } } }, ['s1/a', 's2/a']],
   ['source.switch.rollback', { transactionId: 'opaque' }, ['s1/a', 's1/b', 's2/a', 'local/a']],
   ['source.import', { sourceId: 's1', json: 'opaque imports may replace more than one identity' }, ['s1/a', 's1/b', 's2/a', 'local/a']],
   ['replace.persist', { operation: 'update', params: { id: 1, scopeContent: true } }, ['s1/a', 's1/b', 's2/a', 'local/a']],
@@ -353,8 +359,8 @@ for (const [method, params, affected] of [
   }
   f.preparations.close();
 }
-
-// One book's mutation cancels its active RPC while another book is admitted.
+}
+if(id==='scoped-inflight'){
 {
   const f = fixture(), gate = deferred();
   f.gates.set(`local_book.chapter.content:${identity('local', 'a')}`, gate);
@@ -375,9 +381,8 @@ for (const [method, params, affected] of [
   assert.equal(b.isCurrent(), true);
   f.preparations.close();
 }
-
-// A hung first book cannot starve the second lane, and a third cannot bypass
-// the fixed concurrency ceiling while both real requests remain active.
+}
+if(id==='two-lanes'){
 {
   const f = fixture(), a = deferred(), b = deferred();
   f.gates.set(`local_book.chapter.content:${identity('local', 'a')}`, a);
@@ -394,9 +399,8 @@ for (const [method, params, affected] of [
   assert.equal(f.calls.find(call => call.params.bookId === 'a').options.shouldCancel(), true);
   a.resolve(); await f.settled();
 }
-
-// Limits apply to retained UTF-16 payloads, not only a count of six books.
-// Oversized preparation remains an optional miss; foreground content is intact.
+}
+if(id==='item-budget'){
 {
   const f = fixture();
   f.bodies.set(identity('local', 'big'), '长段正文'.repeat(150000));
@@ -410,6 +414,8 @@ for (const [method, params, affected] of [
   assert.equal((await gateway.loadChapter('big', 0)).content, f.bodies.get(identity('local', 'big')));
   f.preparations.close();
 }
+}
+if(id==='aggregate-budget'){
 {
   const f = fixture();
   const seeds = Array.from({ length: 6 }, (_, i) => seed(`payload-${i}`));
@@ -424,6 +430,8 @@ for (const [method, params, affected] of [
   assert.equal(f.preparations.retainedBytes(), 0);
   f.preparations.close();
 }
+}
+if(id==='catalog-budget'){
 {
   const f = fixture();
   f.tocs.set(identity('local', 'large-catalog'), [{ index: 0, title: '目录'.repeat(300000), url: '/0' }]);
@@ -434,11 +442,10 @@ for (const [method, params, affected] of [
     'an already oversized catalog must not initiate another optional body read');
   f.preparations.close();
 }
-
-// Check the actual Core contract, not a parallel guessed spelling list. Reads
-// and previews remain non-mutating; every rule write fences both owners.
-const contract = readFileSync(new URL('../../Reader-Core-Native/crates/reader-contract/src/lib.rs', import.meta.url), 'utf8') +
-  readFileSync(new URL('../../Reader-Core-Native/crates/reader-contract/src/reader_ui.rs', import.meta.url), 'utf8');
+}
+if(id==='rule-writes'){
+const contract = readFileSync(new URL('../../Reader-Core/crates/reader-contract/src/lib.rs', import.meta.url), 'utf8') +
+  readFileSync(new URL('../../Reader-Core/crates/reader-contract/src/reader_ui.rs', import.meta.url), 'utf8');
 const ruleMutations = ['REPLACE_RULE_CREATE', 'REPLACE_RULE_UPDATE', 'REPLACE_RULE_DELETE',
   'REPLACE_PERSIST', 'REPLACE_UNDO', 'DICT_RULE_PUT', 'DICT_RULE_DELETE', 'RULE_BUNDLE_IMPORT'];
 for (const name of ruleMutations) {
@@ -454,10 +461,14 @@ for (const name of ruleMutations) {
   assert.equal(f.preparations.captureContentValidity('local', 'a')(), true);
   f.preparations.close();
 }
+}
+if(id==='pure-reads'){
 for (const method of ['replace-rule.list', 'replace.validate', 'replace.preview', 'dict-rule.list', 'dict-rule.query', 'rule-bundle.export']) {
   const f = fixture(), valid = f.preparations.captureContentValidity('local', 'a');
   assert.equal(f.preparations.beginRequest(method, {}), false, method); assert.equal(valid(), true); f.preparations.close();
 }
+}
+if(id==='content-vs-position'){
 {
   const f = fixture(), content = f.preparations.captureContentValidity('local', 'a'), snapshot = f.preparations.captureValidity('local', 'a');
   const own = { sourceId: 'local', bookId: 'a' };
@@ -472,7 +483,8 @@ for (const method of ['replace-rule.list', 'replace.validate', 'replace.preview'
   assert.equal(content(), false, 'transactional source finalization does change content ownership');
   f.preparations.close();
 }
-
+}
+if(id==='memory-release'){
 {
   const f = fixture();
   f.preparations.setVisibleBooks([seed('kept')]);
@@ -491,15 +503,14 @@ for (const method of ['replace-rule.list', 'replace.validate', 'replace.preview'
   assert.ok(await f.ready('local','ready'),'normal optional preparation can resume on a later viewport event');
   f.preparations.close();
 }
-console.log('reading entry preparation: PASS (scoped fences, Core rule command matrix, independent validity, two lanes, cancellation, payload budgets, memory pressure and normal miss recovery)');
-
-// Whole-shelf persistent preparation is metadata-only and independent of the hot-six window.
+}
+if(id==='persisted-shelf'){
 {
  const calls=[];const runtime={supportsCoreCapability:c=>c==='reading.entry.prepare.v1',
   bookAcquisitions:()=>({request:async(method,params,options,priority)=>{
    assert.equal(options.shouldCancel(),false);assert.equal(options.canDispatch(),true);
    calls.push({method,params,priority});return preparedResult(params);}})};
- const prep=new ReadingEntryPreparation(runtime);const seeds=Array.from({length:9},(_,i)=>seed(String(i)));
+ const prep=createPreparation(runtime);const seeds=Array.from({length:9},(_,i)=>seed(String(i)));
  const load=async()=>seeds;
  await prep.preparePersistedShelf('r1',load,()=>true);
  assert.equal(calls.length,63);assert.ok(calls.every(c=>c.method==='reading.entry.prepare'&&c.priority==='background'));
@@ -511,9 +522,8 @@ console.log('reading entry preparation: PASS (scoped fences, Core rule command m
  prep.setPaused(false);await prep.preparePersistedShelf('r2',load,()=>true);assert.equal(calls.length,126);
  prep.close();await prep.preparePersistedShelf('r3',load,()=>true);assert.equal(calls.length,126);
 }
-console.log('PASS persistent whole-shelf preparation: all identities, current targets first, metadata only, background priority, pause/resume and close');
-
-// Resume and newer revision admissions must survive an old cancelled sweep.
+}
+if(id==='persisted-latest'){
 {
  const calls=[];let release;let entered;
  const started=new Promise(resolve=>{entered=resolve;});
@@ -523,7 +533,7 @@ console.log('PASS persistent whole-shelf preparation: all identities, current ta
   if(options.shouldCancel())throw new Error('cancelled-old-admission');
   return preparedResult(params);
  }})};
- const prep=new ReadingEntryPreparation(runtime);
+ const prep=createPreparation(runtime);
  const old=prep.preparePersistedShelf('old',async()=>[seed('old')],()=>true).catch(e=>e.message);
  await started;prep.setPaused(true);prep.setPaused(false);
  const obsolete=prep.preparePersistedShelf('obsolete',async()=>[seed('obsolete')],()=>true).catch(e=>e.message);
@@ -533,25 +543,23 @@ console.log('PASS persistent whole-shelf preparation: all identities, current ta
  await prep.preparePersistedShelf('latest',async()=>{throw Error('already completed');},()=>true);
  prep.close();
 }
-console.log('PASS persistent preparation rapid pause/resume and latest pending admission');
-// A corrupt/unavailable book does not prevent other current targets or neighbours.
+}
+if(id==='persisted-failures'){
 {
  const calls=[];let fail=true;
  const runtime={supportsCoreCapability:()=>true,bookAcquisitions:()=>({request:async(_m,p)=>{
   calls.push(p.bookId);if(fail&&p.bookId==='bad')throw Error('invalid-derived-book');
   return preparedResult(p);
  }})};
- const prep=new ReadingEntryPreparation(runtime);const load=async()=>[seed('bad'),seed('good')];
+ const prep=createPreparation(runtime);const load=async()=>[seed('bad'),seed('good')];
  await assert.rejects(prep.preparePersistedShelf('failure',load,()=>true),/invalid-derived-book/);
  assert.equal(calls.filter(x=>x==='good').length,7);
  fail=false;await prep.preparePersistedShelf('failure',load,()=>true);
  assert.equal(calls.filter(x=>x==='good').length,7,'retry does not redo another book');
  assert.equal(calls.filter(x=>x==='bad').length,14,'only the seven failed targets are retried');prep.close();
 }
-console.log('PASS persistent preparation isolates per-book failures and retains retryable revision');
-
-// Successful RPCs may still leave documents unprepared. Each reason must keep
-// the same revision retryable without blocking other books or fetching bodies.
+}
+if(id==='persisted-outcomes'){
 for (const [kind, reason, offset] of [
   ['missing', 'catalogMissing', 0], ['missing', 'contentMissing', 0],
   ['missing', 'contentMissing', 1], ['deferred', 'sourceSwitchPending', 0],
@@ -571,7 +579,7 @@ for (const [kind, reason, offset] of [
     },
   }) };
   let loads = 0;
-  const prep = new ReadingEntryPreparation(runtime), load = async () => {
+  const prep = createPreparation(runtime), load = async () => {
     loads += 1; return [seed('waiting'), seed('available')];
   };
   await prep.preparePersistedShelf('same', load, () => true);
@@ -586,10 +594,8 @@ for (const [kind, reason, offset] of [
   assert.equal(loads, 1, `${reason}: retry reuses the same shelf membership`);
   prep.close();
 }
-console.log('PASS persistent preparation outcomes: legacy and current retryable cases, isolated target retry, no self-retry');
-
-// Only an absent neighbour is a satisfied no-work outcome. An existing current
-// chapter is mandatory even in a one-chapter book.
+}
+if(id==='absent-neighbor'){
 {
   const calls = [], runtime = { supportsCoreCapability: () => true, bookAcquisitions: () => ({
     request: async (_method, p) => {
@@ -597,15 +603,14 @@ console.log('PASS persistent preparation outcomes: legacy and current retryable 
       return p.neighborOffset === 0 ? preparedResult(p) : preparedResult(p, 'missing', 'neighborAbsent');
     },
   }) };
-  const prep = new ReadingEntryPreparation(runtime), load = async () => [seed('one-chapter')];
+  const prep = createPreparation(runtime), load = async () => [seed('one-chapter')];
   await prep.preparePersistedShelf('single', load, () => true);
   await prep.preparePersistedShelf('single', load, () => true);
   assert.equal(calls.length, 7, 'six absent neighbours do not cause redundant passes');
   prep.close();
 }
-
-// Corrupt/unrecognized responses cannot mark a revision complete, and remain
-// isolated to the affected book just like transport failures.
+}
+if(id==='malformed-result'){
 for (const corrupt of [
   data => ({ ...data, kind: 'future-kind' }),
   data => ({ ...data, reason: 'future-reason' }),
@@ -618,24 +623,21 @@ for (const corrupt of [
     calls.push(p); const result = preparedResult(p);
     return invalid && p.bookId === 'bad' && p.neighborOffset === 0 ? { data: corrupt(result.data) } : result;
   } }) };
-  const prep = new ReadingEntryPreparation(runtime), load = async () => [seed('bad'), seed('good')];
+  const prep = createPreparation(runtime), load = async () => [seed('bad'), seed('good')];
   await assert.rejects(prep.preparePersistedShelf('corrupt', load, () => true), /READING_ENTRY_PREPARATION_/);
   assert.equal(calls.length, 14); assert.equal(calls.filter(p => p.bookId === 'good').length, 7);
   invalid = false; await prep.preparePersistedShelf('corrupt', load, () => true);
   assert.equal(calls.length, 15, 'malformed target retries without redoing another book'); prep.close();
 }
-console.log('PASS persistent result validation: missing neighbours finish; five malformed-result cases stay isolated and retryable');
-
-// Durable target completion follows the exact source/book mutation scope.
-// A progress save changes only that book's target; a source edit invalidates
-// its books, while a global rule edit invalidates every saved projection.
+}
+if(id==='persisted-scopes'){
 {
   const calls = []; let loads = 0;
   const runtime = { supportsCoreCapability: () => true, bookAcquisitions: () => ({ request: async (_method, params) => {
     calls.push([params.sourceId, params.bookId, params.neighborOffset]);
     return preparedResult(params);
   } }) };
-  const prep = new ReadingEntryPreparation(runtime);
+  const prep = createPreparation(runtime);
   const books = [seed('a', 's1'), seed('b', 's1'), seed('c', 's2')];
   const load = async () => { loads += 1; return books; };
   await prep.preparePersistedShelf('stable', load, () => true);
@@ -663,17 +665,15 @@ console.log('PASS persistent result validation: missing neighbours finish; five 
   assert.equal(loads, 4);
   prep.close();
 }
-console.log('PASS persistent target reuse: progress book scope, source scope, global rule scope and revision reset');
-
-// A late result may ignore cancellation. It still cannot complete the paused
-// revision; resuming uses the existing later-admission path exactly once.
+}
+if(id==='persisted-cancel'){
 {
   const started = deferred(), held = deferred(), calls = [];
   const runtime = { supportsCoreCapability: () => true, bookAcquisitions: () => ({ request: async (_method, p) => {
     calls.push(p); if (calls.length === 1) { started.resolve(); await held.promise; }
     return preparedResult(p);
   } }) };
-  const prep = new ReadingEntryPreparation(runtime), load = async () => [seed('paused')];
+  const prep = createPreparation(runtime), load = async () => [seed('paused')];
   const first = prep.preparePersistedShelf('pause', load, () => true);
   await started.promise; prep.setPaused(true); held.resolve(); await first;
   assert.equal(calls.length, 1, 'late ready result does not dispatch more work while paused');
@@ -682,9 +682,8 @@ console.log('PASS persistent target reuse: progress book scope, source scope, gl
   await prep.preparePersistedShelf('pause', load, () => true); assert.equal(calls.length, 8);
   prep.close();
 }
-console.log('PASS persistent late cancellation: one pending call, seven calls on explicit resume, then no duplicates');
-
-// Modern visible entries use the same atomic offline read as foreground entry.
+}
+if(id==='atomic-snapshot'){
 for (const sourceId of ['local', 's1']) {
   const calls = [];
   const runtime = { supportsCoreCapability: c => c === 'reading.entry.snapshot.v1',
@@ -700,7 +699,7 @@ for (const sourceId of ['local', 's1']) {
         navigation:{revision:'r',chapterCount:10000,readableChapterCount:10000,
           current:{index:40,position:40,readablePosition:40,title:'正文',navigable:true},before:[],after:[]}}};
     }, acquireBook: () => {throw Error('must not acquire full session');} }) };
-  const preparations = new ReadingEntryPreparation(runtime);
+  const preparations = createPreparation(runtime);
   preparations.setVisibleBooks([seed('narrow',sourceId)]);
   let snapshot;
   await until(() => {snapshot=preparations.take(sourceId,'narrow');return snapshot!==undefined;});
@@ -719,10 +718,8 @@ for (const sourceId of ['local', 's1']) {
   assert.equal(snapshot.isCurrent(),false,'new progress invalidates retained resume');
   preparations.close();
 }
-console.log('PASS modern visible preparation: atomic body/progress/navigation only, background lane and handoff mutation fencing');
-
-// The real shared gateway must neither repair nor retain known damaged text
-// from the shelf's read-only background lane.
+}
+if(id==='damaged-text'){
 {
   const calls = [];
   const runtime = { supportsCoreCapability: c => c === 'reading.entry.snapshot.v1',
@@ -735,16 +732,15 @@ console.log('PASS modern visible preparation: atomic body/progress/navigation on
         progress:null,baseUrl:'https://example.org/40',contentRefreshRequired:false,
         sourceCorrectionRequired:true,navigation:null } };
     } }) };
-  const prep = new ReadingEntryPreparation(runtime);
+  const prep = createPreparation(runtime);
   prep.setVisibleBooks([seed('damaged', 's1')]);
   await until(() => prep.active === 0);
   assert.deepEqual(calls, ['reading.entry.snapshot']);
   assert.equal(prep.take('s1', 'damaged'), undefined, 'damaged text cannot reach the retained first-page path');
   prep.close();
 }
-
-// Shelf preparation uses the production bounded gateway, including semantic
-// paragraph qualification, absolute anchors and pause-independent handoff.
+}
+if(id==='bounded-window'){
 for (const [sourceId, bookKind, text, expected] of [
   ['local','TXT','tail\n目标😀段\n第二段\nhead','目标😀段\n第二段'],
   ['local','EPUB','tail\n\n目标\nBR\n\n第二段\n\nhead','目标\nBR\n\n第二段'],
@@ -762,7 +758,7 @@ for (const [sourceId, bookKind, text, expected] of [
         positionScope:{sourceId,bookId:'window',chapterIndex:4,bodyVersion:'b',processingVersion:'p'},
         progress:null,baseUrl:'',contentRefreshRequired:false,navigation:null}};
     }}),request:async()=>{throw Error('foreground lane forbidden');}};
-  const preparations=new ReadingEntryPreparation(runtime);
+  const preparations=createPreparation(runtime);
   preparations.setVisibleBooks([{...seed('window',sourceId),bookKind}]);
   let snapshot;
   await until(()=>{snapshot=preparations.take(sourceId,'window');return snapshot!==undefined;});
@@ -774,13 +770,10 @@ for (const [sourceId, bookKind, text, expected] of [
   assert.equal(snapshot.isCurrent(),true);
   preparations.close();
 }
-console.log('PASS bounded shelf preparation: TXT, EPUB explicit breaks, remote, absolute restore and handoff');
-
-// Foreground chapter reads must wait for a content mutation to settle and
-// reject a result captured before a cache or rule replacement. Ordinary
-// progress saves do not change the body's epoch.
+}
+if(id==='content-idle'){
 {
-  const prep = new ReadingEntryPreparation({ request: async () => { throw Error('unexpected request'); } });
+  const prep = createPreparation({ request: async () => { throw Error('unexpected request'); } });
   const before = prep.captureContentValidity('s1', 'book');
   assert.equal(before(), true);
   const progress = { sourceId: 's1', bookId: 'book' };
@@ -804,4 +797,36 @@ console.log('PASS bounded shelf preparation: TXT, EPUB explicit breaks, remote, 
   assert.equal(prep.captureContentValidity('s1', 'book')(), true);
   prep.close();
 }
-console.log('PASS content mutation epoch: stale chapter fenced, progress save retained, retry waits for idle');
+}
+if(id==='manga-epoch'){
+{
+ const f=fixture(), prep=f.preparations;
+ const image=prep.captureMangaImageContentValidity('s1','book');
+ for(const method of ['book.detail','book.toc','bookshelf.add']) {
+   const params={sourceId:'s1',bookId:'book'};
+   prep.beginRequest(method,params);assert.equal(image(),true,method+' does not replace active image content');
+   prep.finishRequest(method,params);assert.equal(image(),true);
+ }
+ const params={sourceId:'s1',bookId:'book',scope:'chapter',chapterIndex:3};
+ prep.beginRequest('cache.clear',params);assert.equal(image(),false,'destructive cache mutation fences retained pixels');
+ prep.finishRequest('cache.clear',params);assert.equal(image(),false);
+ prep.close();
+}
+}
+if(id==='exact-cleanup'){
+{
+ const f=fixture();f.preparations.setVisibleBooks([seed('/retained','s1')]);
+ await until(()=>f.preparations.visible.get(identity('s1','/retained'))?.snapshot!==undefined);
+ const image=f.preparations.captureMangaImageContentValidity('s1','/retained');
+ f.preparations.invalidateCachedChapters([{sourceId:'s1',bookId:'/retained',chapterIndex:2}]);
+ assert.ok(f.preparations.visible.get(identity('s1','/retained')).snapshot,'cleanup of another chapter keeps the prepared current chapter');
+ f.preparations.invalidateCachedChapters([{sourceId:'s1',bookId:'/retained',chapterIndex:0}]);
+ assert.equal(f.preparations.visible.get(identity('s1','/retained')).snapshot,undefined);
+ assert.equal(image(),true,'actual cleaned chapter receipt does not revoke protected active image leases');
+ f.preparations.close();
+}
+}
+}finally{for(const prep of ownedPreparations)prep.close();}
+}
+const definitions={"legacy-cache-only": "legacy-cache-only production preparation scope; controlled Core DTO, no network or native build", "hot-local": "hot-local production preparation scope; controlled Core DTO, no network or native build", "restored-position": "restored-position production preparation scope; controlled Core DTO, no network or native build", "mutation-fences": "mutation-fences production preparation scope; controlled Core DTO, no network or native build", "inflight-retirement": "inflight-retirement production preparation scope; controlled Core DTO, no network or native build", "catalog-epoch": "catalog-epoch production preparation scope; controlled Core DTO, no network or native build", "bounded-misses": "bounded-misses production preparation scope; controlled Core DTO, no network or native build", "pending-switch": "pending-switch production preparation scope; controlled Core DTO, no network or native build", "vanished-cache": "vanished-cache production preparation scope; controlled Core DTO, no network or native build", "public-validity": "public-validity production preparation scope; controlled Core DTO, no network or native build", "mutation-scopes": "mutation-scopes production preparation scope; controlled Core DTO, no network or native build", "scoped-inflight": "scoped-inflight production preparation scope; controlled Core DTO, no network or native build", "two-lanes": "two-lanes production preparation scope; controlled Core DTO, no network or native build", "item-budget": "item-budget production preparation scope; controlled Core DTO, no network or native build", "aggregate-budget": "aggregate-budget production preparation scope; controlled Core DTO, no network or native build", "catalog-budget": "catalog-budget production preparation scope; controlled Core DTO, no network or native build", "rule-writes": "rule-writes production preparation scope; controlled Core DTO, no network or native build", "pure-reads": "pure-reads production preparation scope; controlled Core DTO, no network or native build", "content-vs-position": "content-vs-position production preparation scope; controlled Core DTO, no network or native build", "memory-release": "memory-release production preparation scope; controlled Core DTO, no network or native build", "persisted-shelf": "persisted-shelf production preparation scope; controlled Core DTO, no network or native build", "persisted-latest": "persisted-latest production preparation scope; controlled Core DTO, no network or native build", "persisted-failures": "persisted-failures production preparation scope; controlled Core DTO, no network or native build", "persisted-outcomes": "persisted-outcomes production preparation scope; controlled Core DTO, no network or native build", "absent-neighbor": "absent-neighbor production preparation scope; controlled Core DTO, no network or native build", "malformed-result": "malformed-result production preparation scope; controlled Core DTO, no network or native build", "persisted-scopes": "persisted-scopes production preparation scope; controlled Core DTO, no network or native build", "persisted-cancel": "persisted-cancel production preparation scope; controlled Core DTO, no network or native build", "atomic-snapshot": "atomic-snapshot production preparation scope; controlled Core DTO, no network or native build", "damaged-text": "damaged-text production preparation scope; controlled Core DTO, no network or native build", "bounded-window": "bounded-window production preparation scope; controlled Core DTO, no network or native build", "content-idle": "content-idle production preparation scope; controlled Core DTO, no network or native build", "manga-epoch": "manga-epoch production preparation scope; controlled Core DTO, no network or native build", "exact-cleanup": "exact-cleanup production preparation scope; controlled Core DTO, no network or native build"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

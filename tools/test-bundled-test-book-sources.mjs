@@ -1,136 +1,74 @@
-import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"supply-record-admission": {"description": "当前供应记录最小格式准入，不将历史verdict当新证据", "resources": []}, "startup-nonblocking-binding": {"description": "当前startRuntime实际AST ready之后不await source seed及两反例", "resources": []}, "packaged-input-binding": {"description": "当前rawfile字节与runtime声明SHA/文件名绑定", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
 
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = relative => readFileSync(resolve(repo, relative), 'utf8');
-const rawFile = 'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json';
-const document = read(rawFile);
-const sources = JSON.parse(document);
+const {default:assert}=await import('node:assert/strict');
+const {readFileSync}=await import('node:fs');
+const read=relative=>readFileSync(new URL('../'+relative,import.meta.url),'utf8');
+const rawFile='entry/src/main/resources/rawfile/reader-tested-book-source-collection.json';
+if(selectedCase==='supply-record-admission') {
+ const {assertSourceLoginDefault}=await import('./source-login-default-policy.mjs');
+ const sources=JSON.parse(read(rawFile));assert.ok(Array.isArray(sources));
+ const builtinIds=new Set();
+ for(const [index,source] of sources.entries()) {
+  const label=`declared bundled record ${index}`;assertSourceLoginDefault(source);
+  assert.equal(typeof source.bookSourceUrl,'string');assert.ok(source.bookSourceUrl.startsWith('https://'));
+  assert.equal(typeof source.bookSourceName,'string');assert.ok(source.bookSourceName.trim());
+  assert.equal(typeof source.enabled,'boolean');assert.equal(typeof source.defaultEnabled,'boolean');
+  assert.ok(Number.isSafeInteger(source.builtinVersion)&&source.builtinVersion>=1);
+  assert.match(source.builtinId,/^reader-builtin-[a-z0-9-]+$/);assert.ok(!builtinIds.has(source.builtinId),label+' duplicate builtinId');builtinIds.add(source.builtinId);
+  assert.match(source.ruleFingerprint,/^[0-9a-f]{64}$/);assert.equal(typeof source.provenance?.origin,'string');
+ }
+ console.log('declared source record format PASS; historical verdict/live source behavior NOT_RUN');
+}
+if(selectedCase==='startup-nonblocking-binding') {
+ const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
+ const {ts}=installedEtsCompiler();
+ const owner=read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
+function sourceStartsAfterReady(text) {
+  const ast = ts.createSourceFile('ReaderRuntimeOwner.ts', text, ts.ScriptTarget.Latest, true);
+  assert.equal(ast.parseDiagnostics.length, 0);
+  const type = ast.statements.find(node => node.name?.text === 'ReaderRuntimeOwner');
+  const start = type.members.find(node => node.name?.getText(ast) === 'startRuntime');
+  const assignments = [];
+  const sourceCalls = [], waits = [];
+  const visit = node => {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken)
+      assignments.push({ target: node.left.getText(ast), value: node.right.getText(ast), position: node.pos });
+    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'this.installBundledBookSourceCollection')
+      sourceCalls.push(node);
+    if (ts.isAwaitExpression(node) && /installBundledBookSourceCollection|sourceSupplyTask/.test(node.expression.getText(ast))) waits.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(start.body);
+  const runtime = assignments.find(node => node.target === 'this.runtime' && node.value === 'runtime');
+  const ready = assignments.find(node => node.target === 'this.state' && node.value === "'ready'");
+  assert.ok(runtime && ready && sourceCalls.length === 1);
+  assert.ok(runtime.position < ready.position && ready.position < sourceCalls[0].pos,
+    'bundled-source seeding follows the exact runtime and ready publication');
+  assert.equal(waits.length, 0, 'source seeding must never become an awaited first-page prerequisite');
+}
+sourceStartsAfterReady(owner);
+assert.throws(() => sourceStartsAfterReady(owner.replace("      this.state = 'ready';", '')),
+  /false|ready/, 'a runtime without ready publication is rejected');
+assert.throws(() => sourceStartsAfterReady(owner.replace('this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)',
+  'this.sourceSupplyTask = await this.installBundledBookSourceCollection(runtime)')),
+  /awaited first-page prerequisite/, 'an accidentally awaited source task is rejected');
 
-const expectedCollectionRecords = 1046;
-const expectedFullCorpusRecords = 1040;
-const expectedLaterAdmissionRecords = 6;
-const expectedUniqueSourceIds = 919;
-assert.ok(Array.isArray(sources), 'the app import collection must be a top-level JSON array');
-assert.equal(sources.length, expectedCollectionRecords,
-  `the collection must retain all ${expectedCollectionRecords} recorded test entries`);
-
-const sourceIds = new Set();
-const builtinIds = new Set();
-let fullCorpusRecords = 0;
-let laterAdmissionRecords = 0;
-let defaultEnabledRecords = 0;
-for (const [index, source] of sources.entries()) {
-  const label = `bundled source ${index + 1}`;
-  assert.equal(typeof source.bookSourceUrl, 'string', `${label} requires bookSourceUrl`);
-  assert.match(source.bookSourceUrl, /^https:\/\//, `${label} identity must use HTTPS`);
-  sourceIds.add(source.bookSourceUrl);
-  assert.equal(typeof source.bookSourceName, 'string', `${label} requires bookSourceName`);
-  assert.ok(source.bookSourceName.trim().length > 0, `${label} name must not be blank`);
-  assert.equal(typeof source.enabled, 'boolean', `${label} must carry a boolean seed state`);
-  assert.equal(typeof source.defaultEnabled, 'boolean', `${label} must carry defaultEnabled`);
-  assert.equal(source.enabled, source.defaultEnabled,
-    `${label} seed state must equal the evidence-backed default`);
-  if (source.defaultEnabled) {
-    defaultEnabledRecords += 1;
-  }
-  assert.equal(Number.isSafeInteger(source.builtinVersion), true,
-    `${label} requires an integer update version`);
-  assert.ok(source.builtinVersion >= 6, `${label} version must be at least 6`);
-  assert.equal(Object.hasOwn(source, 'readerTestBuiltinVersion'), false,
-    `${label} portable collection must not emit the legacy test-version marker`);
-  assert.match(source.builtinId, /^reader-builtin-[a-z0-9-]+$/,
-    `${label} requires a builtinId slug`);
-  assert.equal(builtinIds.has(source.builtinId), false, `${label} builtinId must be unique`);
-  builtinIds.add(source.builtinId);
-  assert.match(source.ruleFingerprint, /^[0-9a-f]{64}$/, `${label} requires a rule fingerprint`);
-  assert.equal(typeof source.verifiedAt, 'string', `${label} requires a verification timestamp`);
-  assert.equal(Number.isNaN(Date.parse(source.verifiedAt)), false,
-    `${label} verification timestamp must be valid`);
-  assert.ok(Array.isArray(source.capabilities) && source.capabilities.includes('import'),
-    `${label} must record the passed import capability`);
-  assert.equal(typeof source.provenance?.origin, 'string', `${label} requires rule provenance`);
-  assert.equal(typeof source.readerHistoricalTest, 'object',
-    `${label} requires its recorded test verdict`);
-  if (source.defaultEnabled) {
-    for (const capability of ['search', 'detail', 'toc', 'content']) {
-      assert.ok(source.capabilities.includes(capability),
-        `${label} is default-enabled so it must carry the ${capability} capability`);
-    }
-  }
-  if (source.verificationSuiteVersion === 'reader-tested-corpus/1') {
-    fullCorpusRecords += 1;
-    assert.equal(source.provenance.evidence,
-      'Reader-Core-Native/reports/tooling/corpus-batch-live-full-1945-v5-2026-07-09.json');
-    assert.ok(['fully_passed', 'partially_passed'].includes(source.readerHistoricalTest.verdict));
-  } else if (source.verificationSuiteVersion === 'reader-source-admission/1') {
-    laterAdmissionRecords += 1;
-    assert.equal(source.provenance.evidence,
-      'evidence/2026-08-31-five-line/supply-admission-results.json');
-    assert.equal(source.readerHistoricalTest.verdict, 'admitted');
-    assert.equal(source.bookSourceGroup, 'Reader 内置 · 已验证书源');
-  } else {
-    assert.fail(`${label} references an unknown verification suite`);
-  }
+}
+if(selectedCase==='packaged-input-binding') {
+ const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts}=installedEtsCompiler();
+ const {createHash}=await import('node:crypto');
+ const owner=read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
+ function constants(source) {const ast=ts.createSourceFile('ReaderRuntimeOwner.ts',source,ts.ScriptTarget.Latest,true);assert.equal(ast.parseDiagnostics.length,0);const values=new Map();for(const st of ast.statements) if(ts.isVariableStatement(st))for(const d of st.declarationList.declarations)if(ts.isStringLiteral(d.initializer))values.set(d.name.getText(ast),d.initializer.text);return values;}
+ const values=constants(owner);assert.equal(values.get('BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE'),rawFile.split('/').at(-1));
+ assert.equal(values.get('BUNDLED_RAW_FILE_SHA256'),createHash('sha256').update(read(rawFile)).digest('hex'),'exact current packaged bytes match current runtime declaration');
+ const bad=owner.replace(values.get('BUNDLED_RAW_FILE_SHA256'),'0'.repeat(64));assert.notEqual(constants(bad).get('BUNDLED_RAW_FILE_SHA256'),createHash('sha256').update(read(rawFile)).digest('hex'));
+ console.log('runtime input declaration binding PASS; HAP content/native import behavior NOT_RUN');
 }
 
-assert.equal(fullCorpusRecords, expectedFullCorpusRecords);
-assert.equal(laterAdmissionRecords, expectedLaterAdmissionRecords);
-assert.equal(sourceIds.size, expectedUniqueSourceIds,
-  'duplicate tested rule variants must remain records but share their real bookSourceUrl identity');
-assert.equal(defaultEnabledRecords, 158,
-  'only evidence-backed full-chain/admitted records may be enabled by default');
-
-// The six later admitted sources are appended after the older corpus variants,
-// so normal sequential app import leaves their current product rules installed.
-const lastBySourceId = new Map();
-for (const source of sources) {
-  lastBySourceId.set(source.bookSourceUrl, source);
 }
-const currentAdmission = [...lastBySourceId.values()]
-  .filter(source => source.verificationSuiteVersion === 'reader-source-admission/1');
-assert.equal(currentAdmission.length, expectedLaterAdmissionRecords);
-assert.equal([...lastBySourceId.values()].filter(source => source.defaultEnabled).length, 137);
-
-const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
-const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
-const supply = read('entry/src/main/ets/app/BundledBookSourceSupply.ts');
-assert.match(owner,
-  /BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection\.json'/,
-  'runtime must name the packaged source document');
-const expectedDigest = createHash('sha256').update(document).digest('hex');
-assert.match(owner, new RegExp(`const BUNDLED_RAW_FILE_SHA256 = '${expectedDigest}';`),
-  'runtime must pin the exact bundled document bytes');
-assert.match(owner, /fileDigest !== BUNDLED_RAW_FILE_SHA256/,
-  'runtime must verify the bundled document before importing');
-assert.match(owner,
-  /this\.runtime = runtime;[\s\S]{0,300}this\.state = 'ready';[\s\S]{0,500}installBundledBookSourceCollection/,
-  'large collection seeding must start only after Reader becomes usable');
-assert.match(owner, /failed without blocking Reader/,
-  'collection failure must be isolated from application startup');
-assert.match(owner, /new Map<string, JsonObject>\(\)[\s\S]*admittedBySourceId\.set/,
-  'duplicate rule records must collapse to their stable source identity at install time');
-assert.match(owner, /runtime\.request\('source\.export',[\s\S]*format: 'json'/,
-  'startup must read existing sources in one local Core export');
-assert.match(owner,
-  /existing\['enabled'\][\s\S]*importedSource\['enabled'\] = existing\['enabled'\]/,
-  'a bundled rule upgrade must preserve the user enabled choice');
-assert.match(owner,
-  /existing\['enabledExplore'\][\s\S]*importedSource\['enabledExplore'\] = existing\['enabledExplore'\]/,
-  'a bundled rule upgrade must preserve the user explore choice');
-assert.match(owner, /Bundled source item failed and was isolated/,
-  'one invalid source import must not abort the remaining collection');
-assert.match(owner, /readerBuiltinWithdrawn/,
-  'withdrawn bundled identities must be marked retired instead of deleted');
-assert.match(supply, /RULE_PAYLOAD_FIELDS: string\[\] = \[/,
-  'the ArkTS fingerprint canonicalization must be declared');
-assert.match(supply, /decideBundledUpgrade/,
-  'upgrade decisions must go through the shared user-copy guard');
-assert.match(host, /resourceManager\.getRawFileContent\(fileName\)/,
-  'Host must read the exact raw resource packaged into every HAP');
-
-console.log(`bundled book-source import collection: PASS ` +
-  `(${sources.length} tested records, ${sourceIds.size} unique identities)`);

@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import {readFileSync} from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const {readFileSync}=await import('node:fs');
+const { fileURLToPath }=await import('node:url');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { compileHost, ReaderDirectoryHost }=await import('./lib/reading-entry-owner-probe.mjs');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
@@ -16,7 +20,7 @@ const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; ret
 let captureContentEpoch=()=>()=>true;
 let waitContentIdle=async()=>{};
 const Reader=productionMotionMethods(file,['openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
-  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
+  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','progressProducerIntent','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh','reconcileReaderRecovery'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
   ReaderRuntimeOwner:{current:()=>({captureReadingContentValidity:(...args)=>captureContentEpoch(...args),
     waitForReadingContentIdle:(...args)=>waitContentIdle(...args)})}});
 const old={sourceId:'s',bookId:'b',chapterIndex:0,chapterTitle:'章',chapterUrl:'/0',bodyVersion:'old',processingVersion:'old-p',
@@ -27,7 +31,7 @@ const receipt=(id)=>({status:'committed',previousBodyVersion:'old',bodyVersion:'
 function page(load){
   const calls=[];
   const gateway={loadChapter:async(...args)=>{calls.push(args);return load(...args);}};
-  const p=Object.assign(new Reader(),{sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
+  const p=Object.assign(new Reader(),{mounted:true,lifecycleToken:1,chapterSelectionToken:1,sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
     controlBookmarkLoadGeneration:0,onLoadControlBookmarks:async()=>{},isSelectionActive:()=>true,activeGateway:()=>gateway,ensureCurrentContentMetrics:async()=>true,
     admitChapterContentVersion(){},retainCurrentChapterWindow(){},rebuildChapterImageIndexes(){},hasMeasuredViewport:()=>false,
     fail(error){this.failure=error;}});
@@ -35,6 +39,12 @@ function page(load){
 }
 // A cache/rule mutation during an ordinary body read must retire the first
 // result and wait for the replacement before publishing the chapter.
+const preservedChapter=()=>({...old,positionMigration:{...receipt('requested'),status:'preserved',reason:'text_anchor_missing_or_ambiguous',
+ bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',previousOffset:6,offset:6}]}});
+
+
+try{
+if(id==='content-epoch'){
 {
  let revision=0, release, reads=0, idleCalls=0;
  const gate=new Promise(resolve=>release=resolve);
@@ -53,6 +63,8 @@ function page(load){
  captureContentEpoch=()=>()=>true;
  waitContentIdle=async()=>{};
 }
+}
+if(id==='restored-anchor'){
 {
  const {p,calls}=page(async()=>({...upgraded,positionMigration:receipt('restored')}));
  p.restoredProgress={kind:'restored',progress:{bookId:'b',chapterIndex:0,chapterOffset:6,chapterProgress:.3,updatedAt:1,bodyVersion:'old',processingVersion:'old-p'}};
@@ -60,22 +72,30 @@ function page(load){
  assert.equal(p.failure,undefined);assert.equal(p.desiredChapterOffset,3);assert.equal(p.restoredProgress.progress.updatedAt,1);
  assert.deepEqual(calls[0][4],{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'restored',offset:6}]});
 }
+}
+if(id==='explicit-anchor'){
 {
  const {p}=page(async()=>({...upgraded,positionMigration:receipt('requested')}));
  await p.openChapter(0,false,1,1,6,undefined,true,{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]});
  assert.equal(p.failure,undefined);assert.equal(p.desiredChapterOffset,3,'explicit bookmark must land on the same text after migration');
 }
+}
+if(id==='preserved-anchor'){
 {
  const {p}=page(async()=>({...old,positionMigration:{...receipt('requested'),status:'preserved',bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',previousOffset:6,offset:6}]}}));
  await p.openChapter(0,false,1,1,6,undefined,true,{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]});
  assert.equal(p.desiredChapterOffset,6);assert.equal(p.chapter.bodyVersion,'old','preserved transaction keeps old body and anchor');
 }
+}
+if(id==='reject-migration'){
 for(const bad of ['body','anchor']){
  const migration=receipt('requested');if(bad==='body')migration.previousBodyVersion='foreign';else migration.anchors=[];
  const {p}=page(async()=>({...upgraded,positionMigration:migration}));
  await p.openChapter(0,false,1,1,6,undefined,true,{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]});
  assert.match(p.failure.message,/MIGRATION/);assert.equal(p.chapter,undefined);
 }
+}
+if(id==='late-selection'){
 {
  let release;const gate=new Promise(resolve=>release=resolve);let active=true;
  const {p}=page(async()=>gate);p.isSelectionActive=()=>active;
@@ -83,22 +103,26 @@ for(const bad of ['body','anchor']){
  active=false;release({...upgraded,positionMigration:receipt('requested')});await pending;
  assert.equal(p.chapter,undefined);assert.equal(p.restoredProgress,undefined);assert.equal(p.failure,undefined);
 }
+}
+if(id==='window-proof'){
 {
  const {p,calls}=page(async()=>upgraded);p.chapterWindow.get=()=>old;
  await p.loadSessionChapter(0,()=>true,false,{bodyVersion:'new',processingVersion:'new-p',anchors:[]});assert.equal(calls.length,1);
  assert.equal(await p.loadSessionChapter(0,()=>true,false,{bodyVersion:'old',processingVersion:'old-p',anchors:[]}),old);
  assert.equal(calls.length,1,'exact retained window evidence may be reused');
 }
+}
+if(id==='tts-position'){
 {
  const {p,gateway}=page(async()=>old);p.chapter=upgraded;p.isSessionActive=()=>true;p.requireChapterLayoutMap=()=>new ReadingSurfaceLayoutMap(upgraded.content);
- p.coreLayout=()=>({});p.admitCommittedProgress=()=>{};p.logTtsFailure=()=>{};
- let saved;gateway.runProgressCommitSerial=async work=>work();gateway.resolveAndUpdateProgress=async(_book,_title,anchor)=>{saved=anchor;return anchor;};
+ p.coreLayout=()=>({});p.admitCommittedProgress=()=>{};p.logTtsFailure=(_label,error)=>{throw error;};
+ let saved;gateway.runProgressCommitSerial=async work=>work();gateway.persistPresentedProgress=async(bookId,_title,anchor,_layout,admitted)=>{assert.equal(admitted(),true);saved=anchor;return {bookId,...anchor,updatedAt:1};};
  await p.commitTtsProgress({chapter:p.ttsChapterRef(old),charEnd:6},1);assert.equal(saved,undefined,'old TTS callback cannot bind offsets to a new chapter body');
  await p.commitTtsProgress({chapter:p.ttsChapterRef(upgraded),charEnd:3},1);
  assert.equal(saved.bodyVersion,'new');assert.equal(saved.processingVersion,'new-p');assert.equal(saved.chapterOffset,3);
 }
-console.log('PH75 actual reader restore, explicit anchor, preservation, late selection, window proof and TTS write ownership PASS');
-
+}
+if(id==='bookmark-proof'){
 {
  const {p}=page(async()=>old); const selections=[]; const notices=[];
  p.selectChapterAnchor=(...args)=>selections.push(args);p.clearTtsChapterEndTimer=()=>{};
@@ -110,14 +134,8 @@ console.log('PH75 actual reader restore, explicit anchor, preservation, late sel
  assert.deepEqual(selections[0][8],{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]});
  p.sourceId='local';p.selectBookmarkAnchor(0,6);assert.equal(selections.length,2);
 }
-console.log('PH75 unproven persistent offset never borrows current body proof PASS');
-
-const preservedChapter=()=>({...old,positionMigration:{...receipt('requested'),status:'preserved',reason:'text_anchor_missing_or_ambiguous',
- bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',previousOffset:6,offset:6}]}});
-let feedbackScenarios=0;
-// Execute the actual LRE open/load/admit path. No notice is emitted until the
-// returned chapter has been admitted, and only an explicit preserved refresh
-// is a failed replacement (a cache version hint alone is not a refresh).
+}
+if(id==='refresh-feedback'){
 for(const status of [undefined,'committed','unchanged','preserved'])for(const force of [false,true]){
  const chapter=status==='committed'?{...upgraded,positionMigration:receipt('requested')}:
    status===undefined?{...old,cacheRefreshRequired:true}:{...preservedChapter(),positionMigration:{...preservedChapter().positionMigration,status}};
@@ -130,10 +148,10 @@ for(const status of [undefined,'committed','unchanged','preserved'])for(const fo
  assert.equal(notices.length,(force&&status!==undefined)||status===undefined?1:0,`${status}, force=${force}`);
  if(status===undefined)assert.match(notices[0],/旧版缓存.*待验证/);
  if(notices.length&&status==='preserved'){assert.match(notices[0],/本次未更新正文/);assert.match(notices[0],/原正文和阅读位置已保留/);assert.equal(p.desiredChapterOffset,6);}
- feedbackScenarios++;
+ 
 }
-// All synchronous PromptAction failure sites are non-fatal. The platform's
-// showToast API returns void, so no promise, timer or retry loop is introduced.
+}
+if(id==='feedback-unavailable'){
 for(const failure of ['context','prompt','toast']){
  const chapter=preservedChapter();const {p}=page(async()=>chapter);
  p.getUIContext=()=>{
@@ -143,10 +161,10 @@ for(const failure of ['context','prompt','toast']){
  };
  await p.openChapter(0,false,1,1,6,undefined,true);
  assert.equal(p.failure,undefined,failure);assert.equal(p.chapter,chapter);assert.equal(p.desiredChapterOffset,6);
- feedbackScenarios++;
+ 
 }
-// A late fetch or a selection invalidated by metrics work cannot notify the
-// next reading generation. Test both asynchronous boundaries in openChapter.
+}
+if(id==='late-feedback'){
 for(const stage of ['load','metrics']){
  let release;const gate=new Promise(resolve=>release=resolve);let active=true;const notices=[];
  const {p}=page(async()=>stage==='load'?gate:preservedChapter());p.isSelectionActive=()=>active;
@@ -156,20 +174,20 @@ for(const stage of ['load','metrics']){
  await Promise.resolve();await Promise.resolve();active=false;
  release(stage==='load'?preservedChapter():true);await pending;
  assert.equal(notices.length,0,stage);assert.equal(p.failure,undefined);
- feedbackScenarios++;
+ 
 }
+}
+if(id==='metrics-unavailable'){
 {
  const {p}=page(async()=>preservedChapter());const notices=[];
  p.ensureCurrentContentMetrics=async()=>false;
  p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row)})});
  await p.openChapter(0,false,1,1,6,undefined,true);
  assert.equal(notices.length,0);assert.equal(p.chapter,undefined);assert.equal(p.failure,undefined);
- feedbackScenarios++;
+ 
 }
-assert.equal(feedbackScenarios,14);
-console.log(`PH85 actual LRE preserved-refresh notice: ${feedbackScenarios} admission, intent, status, generation and presentation-failure scenarios PASS`);
-
-// A normal old cache remains readable offline and is announced once per reader session.
+}
+if(id==='old-cache-once'){
 {
  const cached={...old,cacheRefreshRequired:true}; const {p,calls}=page(async()=>cached);const notices=[];
  p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row.message)})});
@@ -177,25 +195,53 @@ console.log(`PH85 actual LRE preserved-refresh notice: ${feedbackScenarios} admi
  assert.equal(p.failure,undefined);assert.equal(p.chapter,cached);assert.equal(notices.length,1);
  assert.ok(calls.every(call=>call[3]===false));assert.match(notices[0],/旧版缓存.*待验证/);
 }
-// Only a rejected cache asks for explicit, per-chapter protected refresh.
-for(const accept of [false,true]){
- const context={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
- const session={identity:{sourceId:'s',bookId:'b'}};let dialogs=0;
- const {p,calls}=page(async(...args)=>{
-   if(!args[3])throw new RemoteChapterCacheRefreshError(session,0,context,false);
-   assert.deepEqual(args[4],context);return {...upgraded,positionMigration:receipt('requested')};
- });
- p.beginExit=()=>{p.exited=true;};p.getUIContext=()=>({showAlertDialog(row){dialogs++;row[accept?'primaryButton':'secondaryButton'].action();},
-   getPromptAction:()=>({showToast(){}})});
- await p.openChapter(0,false,1,1,6);
- assert.equal(dialogs,1);assert.equal(p.failure,undefined);assert.equal(calls.length,accept?2:1);
- if(accept){assert.equal(p.desiredChapterOffset,3);assert.equal(p.chapter.bodyVersion,'new');}
- else{assert.equal(p.exited,true);assert.equal(p.chapter,undefined);}
 }
-console.log('ML cache: offline readable old body, one-session notice, explicit protected refresh and decline without write PASS');
-
-// Execute the actual Index confirmation/recovery method; the RPC boundary is
-// controlled, and neither declining nor leaving the book dispatches a refresh.
+if(id==='inline-cache-recovery'){
+for(const scenario of ['refresh','decline','stale','late','preserved','already-refresh','failure']){
+ const context={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
+ const session={identity:{sourceId:'s',bookId:'b'}};let dialogs=0,active=true,release;
+ const gate=new Promise(resolve=>release=resolve);
+ const rejected=new RemoteChapterCacheRefreshError(session,0,context,scenario==='preserved');
+ const {p,calls}=page(async(...args)=>{
+   if(!args[3]||scenario==='already-refresh')throw rejected;
+   assert.deepEqual(args[4],context,'explicit refresh carries only the original protected position context');
+   if(scenario==='failure')throw Error('synthetic refresh failed');
+   if(scenario==='late')return gate;
+   return {...upgraded,positionMigration:receipt('requested')};
+ });
+ p.isSelectionActive=(lifecycle,selection)=>active&&lifecycle===p.lifecycleToken&&selection===p.chapterSelectionToken;
+ p.beginExit=()=>assert.fail('cache recovery must not force reader exit');
+ // Pagination/timeout scheduling is the existing fixture seam. The production
+ // openChapter/recovery admission and native action callbacks remain real.
+ p.resetForChapterSelection=()=>{p.failure=undefined;};p.armFirstPageReadyDeadline=()=>{};
+ p.getUIContext=()=>({showAlertDialog(){dialogs++;assert.fail('automatic cache failure must not open a modal');},
+   getPromptAction:()=>({showToast(){}})});
+ await p.openChapter(0,false,1,1,6,undefined,scenario==='already-refresh');
+ assert.equal(dialogs,0);assert.equal(calls.length,1,'initial failure completes without waiting for UI');
+ assert.equal(p.failure,rejected);assert.equal(p.chapter,undefined);
+ if(scenario==='preserved'||scenario==='already-refresh'){
+   assert.equal(p.readerRecoveryView?.canRetry===true,false,'a preserved/already-refresh failure cannot recursively propose another replacement');
+   continue;
+ }
+ assert.equal(p.readerRecoveryView.visible,true);assert.equal(p.readerRecoveryView.canRetry,true);assert.equal(p.readerRecoveryActionLabel,'刷新本章');
+ const presentation=p.readerRecoveryView.generation;
+ if(scenario==='stale')active=false;
+ if(scenario!=='decline'){p.reconcileReaderRecovery(presentation);p.reconcileReaderRecovery(presentation);}
+ if(scenario==='late'){
+   for(let n=0;n<20&&calls.length<2;n++)await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(calls.length,2,'late cancellation happens after the actual refresh dispatch');
+   active=false;p.chapterSelectionToken++;release({...upgraded,positionMigration:receipt('requested')});
+ }
+ for(let n=0;n<4;n++)await new Promise(resolve=>setImmediate(resolve));
+ const refreshed=['refresh','late','failure'].includes(scenario);
+ assert.equal(calls.length,refreshed?2:1,'only one current explicit inline action may refresh');assert.equal(dialogs,0);
+ if(refreshed){assert.equal(calls[1][3],true);assert.deepEqual(calls[1][4],context);}
+ if(scenario==='refresh'){assert.equal(p.failure,undefined);assert.equal(p.desiredChapterOffset,3);assert.equal(p.chapter.bodyVersion,'new');}
+ else if(scenario==='failure'){assert.match(p.failure.message,/synthetic refresh failed/);assert.equal(p.chapter,undefined);}
+ else assert.equal(p.chapter,undefined,'declined/stale/late recovery cannot publish replacement body');
+}
+}
+if(id==='index-cache-recovery'){
 {
  const admission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
  const {withPreparedRemoteChapter}=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
@@ -203,34 +249,49 @@ console.log('ML cache: offline readable old body, one-session notice, explicit p
    detailUrl:'/b',tocUrl:'/toc',book:{title:'书',author:'作者'},entries:[{index:0,title:'章',url:'/0',variables:[]}],
    continuationVariables:[],hostRequirements:[]};
  const position={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
- for(const scenario of ['refresh','decline','stale','preserved','failure']){
-   let active=true,revision=0;const calls=[],dialogs=[],failures=[];
-   const ErrorKind=RemoteChapterCacheRefreshError;
-   const error=new ErrorKind(session,0,position,scenario==='preserved');
+ for(const scenario of ['refresh','decline','stale','late','preserved','failure']){
+   let active=true,revision=0,release;const calls=[],dialogs=[],failures=[];
+   const gate=new Promise(resolve=>release=resolve);
+   const error=new RemoteChapterCacheRefreshError(session,0,position,scenario==='preserved');
+   const runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>revision,setPreparationVisible(){}})};
+   const NativeGateway=class{async loadChapter(...args){calls.push(args);revision+=2;
+     if(scenario==='failure')throw Error('synthetic refresh failed');if(scenario==='late')return gate;return upgraded;}};
+   const Entry=compileHost(undefined,{ReaderRuntimeOwner:{current:()=>runtime,isCurrent:owner=>owner===runtime},RemoteReadingFlowGateway:NativeGateway});
+   const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
    const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-     ['refreshCachedChapterFromPrompt'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
-       ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>({readingProjectionRevision:()=>revision})})},
-       RemoteReadingFlowGateway:class{async loadChapter(...args){calls.push(args);revision+=2;
-         if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}}});
-   const page=Object.assign(new Index(),{navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
-     installRemoteReadingSession(value){this.remoteReadingSession=value;},getUIContext:()=>({showAlertDialog(row){
-       dialogs.push(row);if(scenario==='stale')active=false;
-       row[scenario==='decline'?'secondaryButton':'primaryButton'].action();}})});
-   const result=await page.refreshCachedChapterFromPrompt(error,()=>active);
-   assert.equal(calls.length,scenario==='refresh'||scenario==='failure'?1:0,scenario);
+     ['refreshCachedChapterFromPrompt','bindReadingEntryReader','runIndexRecoveryAction'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+       ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',
+       ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
+       RemoteReadingFlowGateway:NativeGateway});
+   const page=Object.assign(new Index(),{route:'reading',shelfReceiptRetired:false,remoteSessionGeneration:1,remoteReadingSession:session,navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
+     mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},detailToc:session.entries,
+     shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>emptyAdmission,
+     getUIContext:()=>({showAlertDialog(row){dialogs.push(row);assert.fail('entry recovery must not create a native dialog');}})});
+   page.bindReadingEntryReader();
+   assert.equal(await page.refreshCachedChapterFromPrompt(error,()=>active),undefined,'background probe completes without waiting for a notice decision');
+   assert.equal(calls.length,0,'background failure never silently fetches another body');assert.equal(dialogs.length,0);
+   if(scenario!=='preserved'){
+     assert.equal(page.indexRecoveryNotice.canRetry,true);assert.equal(page.indexRecoveryActionLabel,'刷新本章');
+     const presentation=page.indexRecoveryNotice.generation;
+     if(scenario==='stale')active=false;
+     if(scenario!=='decline'){page.runIndexRecoveryAction(presentation);page.runIndexRecoveryAction(presentation);}
+     if(scenario==='late'){
+       for(let n=0;n<20&&calls.length<1;n++)await new Promise(resolve=>setImmediate(resolve));
+       assert.equal(calls.length,1,'late entry cancellation follows actual dispatch');active=false;release(upgraded);
+     }
+   }
+   for(let n=0;n<4;n++)await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(calls.length,['refresh','failure','late'].includes(scenario)?1:0,scenario);
    if(calls.length){assert.equal(calls[0][0],session);assert.equal(calls[0][1],0);
      assert.equal(calls[0][3],true);assert.deepEqual(calls[0][4],position);}
-   if(scenario==='refresh'){assert.equal(result,0);assert.equal(page.remoteContentVerdict,'readable');
-     assert.equal(page.remoteReadingSession.identity,session.identity);}
-   else assert.equal(result,undefined);
+   if(scenario==='refresh'){assert.equal(page.remoteContentVerdict,'readable');assert.equal(page.remoteReadingSession.identity,session.identity);}
+   else assert.equal(page.remoteReadingSession.preparedChapter,undefined);
    assert.equal(failures.length,scenario==='preserved'||scenario==='failure'?1:0,scenario);
-   assert.equal(dialogs.length,scenario==='preserved'?0:1);
+   assert.equal(dialogs.length,0);assert.equal(page.route,'reading','feedback never changes the active route');
  }
 }
-console.log('ML actual Index cache recovery: explicit refresh, decline, stale route, preserved positions and failure feedback PASS');
-
-// PH93: the real reader admits the committed fresh body and the Core's explicit
-// fallback anchor, retires older bookmark reads and gives accurate feedback.
+}
+if(id==='fallback-anchor'){
 {
  const current={...upgraded,content:'全新的本章正文，旧版文字已被替换。',positionMigration:{...receipt('requested'),
    reason:'positions_partially_restored',anchors:[{id:'requested',previousOffset:6,offset:0}]}};
@@ -244,6 +305,8 @@ console.log('ML actual Index cache recovery: explicit refresh, decline, stale ro
  assert.match(notices[0],/正文已更新.*章首.*书签和划线记录仍保留/);
  p.chapter={...current,bodyVersion:'newer'};assert.equal(reads[0][2](),false,'older list cannot commit after a newer body');
 }
+}
+if(id==='refresh-results'){
 for(const status of ['committed','unchanged']){
  const chapter=status==='committed'?{...upgraded,positionMigration:receipt('requested')}:
    {...old,positionMigration:{...preservedChapter().positionMigration,status:'unchanged'}};
@@ -253,6 +316,8 @@ for(const status of ['committed','unchanged']){
  assert.equal(notices.length,2,'each explicit refresh has its own result');
  assert.match(notices[0],status==='unchanged'?/正文没有变化/:/正文已更新/);
 }
+}
+if(id==='bookmark-reload'){
 {
  const {p}=page(async()=>upgraded);let release;const gate=new Promise(resolve=>release=resolve),reads=[];
  p.chapter=upgraded;p.onLoadControlBookmarks=async(...args)=>{reads.push(args);return gate;};
@@ -265,9 +330,10 @@ for(const status of ['committed','unchanged']){
  p.reloadBookmarksAfterContentRefresh(newer,1,2);await new Promise(resolve=>setImmediate(resolve));
  assert.equal(p.controlBookmarkLoadFailed,true);assert.equal(p.chapter,newer,'failed mark read never rolls body back');
 }
-
+}
+if(id==='page-mark-scope'){
 const Marks=productionMotionMethods(file,['bookmarkMatchesCurrentChapter','controlDirectoryEntries','currentPageBookmarkStatus',
- 'toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback'],
+ 'toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','bookmarkFeedbackOwnerKey'],
  {LOCAL_READING_SOURCE_ID:'local'});
 {
  const scope={sourceId:'s',bookId:'b',chapterIndex:0,bodyVersion:'old',processingVersion:'old-p'};
@@ -302,6 +368,8 @@ const Marks=productionMotionMethods(file,['bookmarkMatchesCurrentChapter','contr
  assert.equal(p.currentPageBookmarkStatus(),'bookmarked');
  p.toggleCurrentPageBookmark();assert.deepEqual(requests.at(-1).bookmarkTimes,[1]);
 }
+}
+if(id==='cold-bookmark'){
 {
  const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
    ['onReaderBookmarkSelected'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:class{constructor(...args){this.args=args;}}});
@@ -313,21 +381,27 @@ const Marks=productionMotionMethods(file,['bookmarkMatchesCurrentChapter','contr
   assert.equal(p.requestedBookmarkAnchor,undefined);assert.equal(p.readingSessionActive,active);
  }
 }
-console.log('PH93 actual reader fresh-body/fallback admission, refresh results, mark reload races, quote/proof retention, page-mark deletion and cold-open safety PASS');
+}
+if(id==='index-bookmark-failure'){
 {
  const {loadReaderControlBookmarkProjection}=await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
  for(const scenario of ['read-failed','new-mutation','new-navigation']){
   let reject;const gate=new Promise((_resolve,no)=>reject=no);
   const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['loadControlBookmarks'],{loadReaderControlBookmarkProjection,ReaderRuntimeOwner:{current:()=>({})},
-    LocalReadingFlowGateway:class{async loadBookmarkProjection(){return gate;}}});
+   ['loadControlBookmarks','directoryBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries'],
+   {ReaderRuntimeOwner:{current:()=>runtime}});
+  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+  const runtime={request:()=>gate};
+  const host=new ReaderDirectoryHost({gateway:new LocalReadingFlowGateway(runtime),ownsRuntime:()=>true});
   const fresh=[{index:0,title:'章',bookmarks:[{time:2,chapterOffset:0}]}];
-  const p=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
+  const p=Object.assign(new Index(),{mounted:true,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,route:'directory',
+   detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
    navigationGeneration:1,directoryBookmarkMutationGeneration:1,directoryBookmarkMutationActiveKey:'',
    detailToc:[{index:0,title:'章',bookmarks:[]}],directoryBookmarkMutationKey:()=> 'book-key',
-   clearDirectoryBookmarkProjectionFailure(){}});
+   getReaderDirectoryHost:()=>host,getReadingEntryHost:()=>undefined,clearDirectoryBookmarkProjectionFailure(){}});
   const promise=p.loadControlBookmarks('s','b',()=>true);
-  if(scenario==='new-mutation'){p.directoryBookmarkMutationGeneration++;p.detailToc=fresh;}
+  await new Promise(resolve=>setImmediate(resolve));
+  if(scenario==='new-mutation'){host.generation++;p.detailToc=fresh;}
   if(scenario==='new-navigation')p.navigationGeneration++;
   reject(Error('bookmark read failed'));
   if(scenario==='read-failed')await assert.rejects(promise,/bookmark read failed/);
@@ -335,4 +409,23 @@ console.log('PH93 actual reader fresh-body/fallback admission, refresh results, 
   if(scenario==='new-mutation')assert.equal(p.detailToc,fresh,'obsolete read cannot overwrite or fail a new CRUD projection');
  }
 }
-console.log('PH93 actual Index: superseded mark read is retired; current IO failure remains retryable and visible PASS');
+}
+if(id==='directory-proof'){
+{
+ const {p}=page(async()=>old);const selections=[];
+ p.selectChapterAnchor=(...args)=>selections.push(args);p.clearTtsChapterEndTimer=()=>{};
+ p.getUIContext=()=>({getPromptAction:()=>({showToast(){}})});
+ const proof={sourceId:'s',bookId:'b',catalogRevision:'c',structureRevision:'n',nodeId:'leaf',url:'/0'};
+ p.selectBookmarkAnchor(0,0,undefined,proof);
+ assert.deepEqual(selections.at(-1)[8],{anchors:[],directoryTargetProof:proof},'chapterStart has independent directory authority and no fabricated body version');
+ const scope={sourceId:'s',bookId:'b',chapterIndex:0,bodyVersion:'old',processingVersion:'old-p'};
+ p.selectBookmarkAnchor(0,0,scope,proof);
+ assert.deepEqual(selections.at(-1)[8],{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:0}],directoryTargetProof:proof},'exact zero preserves both original body proof and directory authority');
+ const before=selections.length;p.selectBookmarkAnchor(0,0,undefined,{...proof,sourceId:'other'});
+ assert.equal(selections.length,before,'foreign source proof cannot start a selection');
+}
+}
+}finally{}
+}
+const definitions={"content-epoch": "content-epoch actual scoped owner/gateway/storage path; controlled Core/OS ports", "restored-anchor": "restored-anchor actual scoped owner/gateway/storage path; controlled Core/OS ports", "explicit-anchor": "explicit-anchor actual scoped owner/gateway/storage path; controlled Core/OS ports", "preserved-anchor": "preserved-anchor actual scoped owner/gateway/storage path; controlled Core/OS ports", "reject-migration": "reject-migration actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-selection": "late-selection actual scoped owner/gateway/storage path; controlled Core/OS ports", "window-proof": "window-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "tts-position": "tts-position actual scoped owner/gateway/storage path; controlled Core/OS ports", "bookmark-proof": "bookmark-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "refresh-feedback": "refresh-feedback actual scoped owner/gateway/storage path; controlled Core/OS ports", "feedback-unavailable": "feedback-unavailable actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-feedback": "late-feedback actual scoped owner/gateway/storage path; controlled Core/OS ports", "metrics-unavailable": "metrics-unavailable actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-cache-once": "old-cache-once actual scoped owner/gateway/storage path; controlled Core/OS ports", "inline-cache-recovery": "inline-cache-recovery actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-cache-recovery": "index-cache-recovery actual scoped owner/gateway/storage path; controlled Core/OS ports", "fallback-anchor": "fallback-anchor actual scoped owner/gateway/storage path; controlled Core/OS ports", "refresh-results": "refresh-results actual scoped owner/gateway/storage path; controlled Core/OS ports", "bookmark-reload": "bookmark-reload actual scoped owner/gateway/storage path; controlled Core/OS ports", "page-mark-scope": "page-mark-scope actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-bookmark": "cold-bookmark actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-bookmark-failure": "index-bookmark-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "directory-proof": "directory-proof actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

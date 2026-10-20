@@ -1,14 +1,24 @@
-import assert from 'node:assert/strict';
-import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['input-progress','Shared pointer admission, trailing save/exit and programmatic edge ownership'],['image-anchor','Image reflow/row identity, native line and scalar anchor preservation'],['canonical-mode','Saved mode transition, obsolete stop and canonical containing-page measurement'],['data-source','Actual insertion notifications and intermediate full source identity']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { createReaderPageGestureState }=await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+const { withReaderProgressProducerFixture }=await import('./lib/reader-progress-producer-fixture.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { observeReaderProgressOperation, reconcileReaderControlSelectionProgress }=await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
+if(selectedCase==='input-progress'||selectedCase==='image-anchor'){
 const InputClock = productionMotionMethods(new URL('ReaderPageInputClock.ts', reading), ['sample']);
 class Clock extends InputClock { constructor() { super(); Object.assign(this, { initialized:false,lastNativeMs:-1,lastReceivedMs:0,timeMs:0,nativeOffsetMs:0,rebase:false,resetVelocity:false }); } }
 let receivedMs = 1000;
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };
 const Stage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  ['handleTouch', 'resetTouch', 'reportManualInteraction', 'reportVisibleRange', 'reportCurrentVisibleRange', 'handleStationaryTap', 'cancelInitialScrollForInput'],
+  selectedCase==='image-anchor'?['reportVisibleRange']:['handleTouch', 'resetTouch', 'reportManualInteraction', 'reportVisibleRange', 'reportCurrentVisibleRange', 'handleStationaryTap', 'cancelInitialScrollForInput'],
   { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
+const touch=(type,id,x,y)=>({type,changedTouches:[{id,x,y}],touches:[{id,x,y}]});
+if(selectedCase==='input-progress'){
 let interaction = 0, boundary = 0, rectY = -20;
 const reports = [];
 const stage = Object.assign(new Stage(), {
@@ -22,7 +32,7 @@ const stage = Object.assign(new Stage(), {
   onManualInteraction: () => interaction++, onBoundaryDrag: () => boundary++,
   isScrollerAtEnd: () => true, isScrollerAtStart: () => true,
 });
-const touch = (type, id, x, y) => ({ type, changedTouches: [{ id, x, y }], touches: [{ id, x, y }] });
+
 stage.handleTouch(touch(TouchType.Down, 1, 100, 200));
 stage.handleTouch(touch(TouchType.Down, 2, 300, 700));
 stage.handleTouch(touch(TouchType.Move, 2, 100, 0));
@@ -35,11 +45,13 @@ stage.reportCurrentVisibleRange(); rectY = -120; stage.reportCurrentVisibleRange
 assert.deepEqual(reports, [[0, 0, .1], [0, 0, .6]], 'same-row scrolling refreshes the intra-fragment anchor');
 
 class CoreReadingAnchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
-const Owner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['commitContinuousProgress', 'drainContinuousProgress', 'persistContinuousProgress', 'reconcileContinuousUnknownProgress'],
-  { CoreReadingAnchor, observeReaderProgressOperation, reconcileReaderControlSelectionProgress, hilog: { error() {} } });
+const Owner = withReaderProgressProducerFixture(productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
+  ['commitContinuousProgress'],
+  { CoreReadingAnchor, observeReaderProgressOperation, reconcileReaderControlSelectionProgress, hilog: { error() {} } }));
 let completeFirst;
 const firstWrite = new Promise(resolve => { completeFirst = resolve; });
+let reportFirstDispatch;
+const firstDispatched = new Promise(resolve => { reportFirstDispatch = resolve; });
 const writes = [];
 const chapter = { chapterIndex: 2, chapterTitle: 'Chapter' };
 const owner = Object.assign(new Owner(), {
@@ -52,11 +64,12 @@ const owner = Object.assign(new Owner(), {
   admitCommittedProgress(value) { this.lastCommittedProgress = value; }, drainRapidPageTurn() {},
   activeGateway: () => ({ runProgressCommitSerial: fn => fn(),
     resolveAndUpdateProgress: async (_book, _title, anchor) => {
-      writes.push(anchor.chapterOffset); if (writes.length === 1) await firstWrite;
+      writes.push(anchor.chapterOffset); if (writes.length === 1) { reportFirstDispatch(); await firstWrite; }
       return { sourceId: 's', bookId: 'b', ...anchor };
     } }),
 });
 const inFlight = owner.commitContinuousProgress(1);
+await firstDispatched;
 owner.continuousVisibleScalar = 65; owner.continuousProgressRevision++;
 let exitDone = false;
 const exitFlush = owner.commitContinuousProgress(1).then(() => { exitDone = true; });
@@ -65,6 +78,102 @@ completeFirst(); await Promise.all([inFlight, exitFlush]);
 assert.deepEqual(writes, [10, 65]); assert.equal(owner.lastCommittedProgress.chapterOffset, 65);
 assert.equal(owner.continuousCommitInFlight, false);
 console.log('continuous production pointer, same-row anchor and trailing exit commit: PASS');
+const LeaseOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
+  ['acquirePagePointer', 'releasePagePointer', 'drainRapidPageTurn', 'performPageTurn'],
+  { setTimeout: action => deferred.push(action) });
+const LeaseStage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
+  ['handleTouch', 'resetTouch', 'onInteractionEnabledChanged', 'reportManualInteraction', 'cancelInitialScrollForInput'],
+  { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
+let deferred = [];
+for (const ending of ['up', 'cancel', 'disabled', 'unmount']) {
+  const events = []; deferred = [];
+  const owner = Object.assign(new LeaseOwner(), { mounted: true, lifecycleToken: 1,
+    pageTurnGestureState:createReaderPageGestureState(),activePagePointerId: -1, pagePointerEpoch: 0, isReaderPageInteractionEnabled: () => true,
+    controlVisible: () => false, exitRequested: false, interactionBlocked: false, controlObscured: false,
+    drainRapidPageTurn: () => events.push('rapid'), resumePendingAutoPageTurn: () => events.push('auto'),
+    drainPageTurnPreparationQueue: () => events.push('prepare'),
+  });
+  const list = Object.assign(new LeaseStage(), { interactionEnabled: true, touchActive: false,
+    touchPointerId: -1, onPointerStart: id => owner.acquirePagePointer(id),
+    onPointerEnd: id => owner.releasePagePointer(id), onManualInteraction() {}, onBoundaryDrag() {},
+    isScrollerAtStart: () => false, isScrollerAtEnd: () => false });
+  list.handleTouch(touch(TouchType.Down, 8, 200, 200));
+  assert.equal(owner.activePagePointerId, 8, 'native List DOWN registers the shared owner before any MOVE');
+  for (const direction of ['next', 'previous']) {
+    assert.equal(LeaseOwner.prototype.drainRapidPageTurn.call(owner).kind, 'busy');
+    assert.equal(LeaseOwner.prototype.performPageTurn.call(owner, direction).kind, 'busy');
+  }
+  list.handleTouch(touch(TouchType.Down, 9, 220, 220));
+  list.handleTouch(touch(TouchType.Up, 9, 220, 220));
+  assert.equal(owner.activePagePointerId, 8, 'extra finger cannot release continuous ownership');
+  if (ending === 'disabled') { list.interactionEnabled = false; list.onInteractionEnabledChanged(); }
+  else if (ending === 'unmount') list.resetTouch();
+  else list.handleTouch(touch(ending === 'up' ? TouchType.Up : TouchType.Cancel, 8, 200, 200));
+  assert.equal(owner.activePagePointerId, -1);
+  list.resetTouch(); assert.equal(deferred.length, 1, 'terminal cleanup releases exactly once');
+  assert.deepEqual(events, [], 'older queued work cannot run inside UP/CANCEL');
+  if (ending === 'up') {
+    list.handleTouch(touch(TouchType.Down, 10, 200, 200));
+    deferred.shift()(); assert.deepEqual(events, [], 'a newer native List DOWN wins an old release task');
+    list.resetTouch();
+  }
+  deferred.shift()(); assert.deepEqual(events, ['rapid', 'auto', 'prepare']);
+}
+console.log('native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS');
+
+for (const nativeTime of [true, false]) {
+  for (const duration of [100, 499, 500, 6000]) {
+    let taps = 0, releases = 0;
+    stage.layout.viewportWidth = 360; stage.onTurn = () => taps++;
+    stage.onPointerEnd = () => releases++;
+    receivedMs = 1000;
+    const down = touch(TouchType.Down, 1, 340, 200); down.timestamp = nativeTime ? 1000000000 : NaN;
+    stage.handleTouch(down); receivedMs += duration;
+    const up = touch(TouchType.Up, 1, 340, 200); up.timestamp = nativeTime ? receivedMs * 1000000 : NaN;
+    stage.handleTouch(up);
+    stage.handleStationaryTap({ fingerList: [{ localX: 340 }] });
+    stage.handleStationaryTap({ fingerList: [{ localX: 340 }] });
+    assert.equal(taps, duration < 500 ? 1 : 0, 'short tap once; stationary long hold never synthesizes an extra turn');
+    assert.equal(releases, 1, 'long-press suppression still releases the shared pointer');
+  }
+}
+console.log('continuous short tap and stationary long UP share paged 500ms clock boundary: PASS');
+
+const ProgrammaticScrollOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
+  ['performPageTurn', 'performContinuousPageTurn', 'onContinuousReachStart', 'onContinuousReachEnd', 'onContinuousManualInteraction']);
+for (const direction of ['next', 'previous']) {
+  let atEdge = false, scrolls = 0, chapters = 0;
+  const o = Object.assign(new ProgrammaticScrollOwner(), {
+    mounted: true, exitRequested: false, phase: 'ready', activePagePointerId: 9,
+    readerSettingsSnapshot: { navigationMode: 'continuous' }, controlVisible: () => false,
+    chapter: { chapterIndex: 3 }, continuousFragments: [{}], continuousCommitInFlight: false,
+    continuousUserInteractionActive: true, continuousVisibleFragmentIndex: 0, continuousVisibleScalar: 100,
+    isContinuousScrollerAtStart: () => direction === 'previous' && atEdge,
+    isContinuousScrollerAtEnd: () => direction === 'next' && atEdge,
+    adjacentChapterIndex: (_chapter, delta) => 3 + delta,
+    openPageTurnChapter: () => { chapters++; return true; },
+    turnToPreviousChapter: () => { chapters++; return true; }, onReaderManualInteraction() {},
+    continuousScroller: { scrollPage() {
+      scrolls++; atEdge = true;
+      if (direction === 'next') o.onContinuousReachEnd(); else o.onContinuousReachStart();
+    } },
+  });
+  assert.equal(o.performPageTurn(direction).kind, 'busy');
+  assert.equal(scrolls, 0); assert.equal(o.continuousUserInteractionActive, true, 'held producer is not admitted');
+  o.activePagePointerId = -1;
+  assert.equal(o.performPageTurn(direction).kind, 'started');
+  assert.equal(scrolls, 1); assert.equal(chapters, 0, 'queued one-viewport turn cannot become an extra manual chapter turn');
+  assert.equal(o.continuousUserInteractionActive, false);
+  assert.equal(o.performPageTurn(direction).kind, 'started');
+  assert.equal(chapters, 1, 'a separate later turn at the edge can cross exactly one chapter');
+  o.onContinuousManualInteraction();
+  if (direction === 'next') o.onContinuousReachEnd(); else o.onContinuousReachStart();
+  assert.equal(chapters, 2, 'a genuinely new manual scroll retains chapter-edge behavior');
+}
+console.log('native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS');
+
+
+}else{
 const ImageStage=productionMotionMethods(new URL('ReaderContinuousReadingStage.ets',reading),['onContentRevisionChanged','restoreImageAnchor','onContentScrolled'],{ContinuousLayoutFrame:class{constructor(action){this.action=action;}},ScrollState:{Idle:0,Scroll:1,Fling:2}});
 for(const currentImage of [false,true]){
  const frames=[],deltas=[];let y=-50,height=100;
@@ -75,26 +184,6 @@ for(const currentImage of [false,true]){
  frames[0].action();assert.deepEqual(deltas,[currentImage?50:100]);assert.equal(y,currentImage?-120:-70,'image correction preserves simultaneous manual displacement');
 }
 console.log('production batched image reflow preserves leading fragment fraction and concurrent scroll: PASS');
-
-const StyleOwner=productionMotionMethods(new URL('LocalReadingExperience.ets',reading),['changeReaderPageTurnStyle']);
-for(const invalidation of ['none','new-style','exit','failure']) {
- let release,reject;const pending=new Promise((resolve,fail)=>{release=resolve;reject=fail;});const applied=[],toasts=[];let sampled=0;
- const o=Object.assign(new StyleOwner(),{pageStyleChangeGeneration:0,lifecycleToken:1,readerSettingsSnapshot:{navigationMode:'continuous'},continuousAnchorSampler:()=>sampled++,commitContinuousProgress:()=>pending,isSessionActive:()=>invalidation!=='exit',getUIContext:()=>({getPromptAction:()=>({showToast:t=>toasts.push(t)})})});
- o.changeReaderPageTurnStyle=(style,saved)=>applied.push([style,saved]);
- StyleOwner.prototype.changeReaderPageTurnStyle.call(o,'slide');assert.equal(sampled,1);assert.equal(applied.length,0);
- if(invalidation==='new-style')o.pageStyleChangeGeneration++;
- if(invalidation==='failure')reject(Error('disk full'));else release();
- await new Promise(r=>setImmediate(r));
- assert.equal(applied.length,invalidation==='none'?1:0,'switch waits for saved latest anchor and matching mode/lifecycle');assert.equal(toasts.length,invalidation==='failure'?1:0);
-}
-const StopOwner=productionMotionMethods(new URL('LocalReadingExperience.ets',reading),['onContinuousScrollStopped']);
-let finishStop;let consumed=0;const stop=Object.assign(new StopOwner(),{rapidPageTurnState:{inFlightDirection:'next'},lifecycleToken:1,chapterSelectionToken:2,pageTurnTransactionSerial:3,commitContinuousProgress:()=>new Promise(r=>finishStop=r),isMountedToken:()=>true,completeRapidPageTurnTransaction:()=>consumed++,drainRapidPageTurn(){}});
-stop.onContinuousScrollStopped();stop.pageTurnTransactionSerial++;finishStop();await new Promise(r=>setImmediate(r));assert.equal(consumed,0,'late saved stop cannot consume a newer rapid transaction');
-console.log('continuous mode change save/error/obsolete ownership and late stop receipt: PASS');
-
-// Initial geometry/attach ordering and stale receipts are covered by the
-// production-method suite test-reader-continuous-initial-offset.mjs. Keep
-// this suite focused on real input and progress serialization.
 
 const ProjectionOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
   ['hasContinuousRenderContent']);
@@ -111,11 +200,17 @@ console.log('production continuous cold-entry projection branch observes its rea
 // The independent geometry oracle is a 4059px row with 400 scalar cells.
 // Saving/reopening a stable physical viewport must not ratchet backwards.
 const QuantizedOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['onContinuousVisibleRangeChanged', 'setContinuousInitialAnchor']);
+  ['onContinuousVisibleRangeChanged', 'setContinuousInitialAnchor', 'continuousPageChromeSnapshot',
+    'pageChromeSnapshot', 'pageChromeChapterTitle', 'pageChromeProgress', 'pageChromeOrdinal', 'normalizedProgress', 'currentChapterIndex'],
+  { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress });
 const quantized = Object.assign(new QuantizedOwner(), {
   readerSettingsSnapshot: { navigationMode: 'continuous' },
   continuousFragments: [{ startScalar: 100, endScalar: 500 }],
   continuousProgressRevision: 0, chapterLayoutMap: { scalarCount: () => 1000 },
+  // This input-only fixture owns no current chapter or session capsule.
+  // Execute the actual chrome formatting dependency without native session UI.
+  readingTocEntries: () => [],
+  shouldShowSessionCapsule: () => false,
   resolveVisibleContinuousImages() {}, continuousFragmentIndexForScalar: () => 0,
 });
 for (const initialPixels of [308, 416, 1119, 1998, 3062]) {
@@ -197,49 +292,6 @@ console.log('continuous padded viewport: native line offsets at START, positive 
   assert.equal(saved.length,1,'unmounted text geometry cannot replace the saved position');
 }
 
-const LeaseOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['acquirePagePointer', 'releasePagePointer', 'drainRapidPageTurn', 'performPageTurn'],
-  { setTimeout: action => deferred.push(action) });
-const LeaseStage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  ['handleTouch', 'resetTouch', 'onInteractionEnabledChanged', 'reportManualInteraction', 'cancelInitialScrollForInput'],
-  { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
-let deferred = [];
-for (const ending of ['up', 'cancel', 'disabled', 'unmount']) {
-  const events = []; deferred = [];
-  const owner = Object.assign(new LeaseOwner(), { mounted: true, lifecycleToken: 1,
-    activePagePointerId: -1, pagePointerEpoch: 0, isReaderPageInteractionEnabled: () => true,
-    controlVisible: () => false, exitRequested: false, interactionBlocked: false, controlObscured: false,
-    drainRapidPageTurn: () => events.push('rapid'), resumePendingAutoPageTurn: () => events.push('auto'),
-    drainPageTurnPreparationQueue: () => events.push('prepare'),
-  });
-  const list = Object.assign(new LeaseStage(), { interactionEnabled: true, touchActive: false,
-    touchPointerId: -1, onPointerStart: id => owner.acquirePagePointer(id),
-    onPointerEnd: id => owner.releasePagePointer(id), onManualInteraction() {}, onBoundaryDrag() {},
-    isScrollerAtStart: () => false, isScrollerAtEnd: () => false });
-  list.handleTouch(touch(TouchType.Down, 8, 200, 200));
-  assert.equal(owner.activePagePointerId, 8, 'native List DOWN registers the shared owner before any MOVE');
-  for (const direction of ['next', 'previous']) {
-    assert.equal(LeaseOwner.prototype.drainRapidPageTurn.call(owner).kind, 'busy');
-    assert.equal(LeaseOwner.prototype.performPageTurn.call(owner, direction).kind, 'busy');
-  }
-  list.handleTouch(touch(TouchType.Down, 9, 220, 220));
-  list.handleTouch(touch(TouchType.Up, 9, 220, 220));
-  assert.equal(owner.activePagePointerId, 8, 'extra finger cannot release continuous ownership');
-  if (ending === 'disabled') { list.interactionEnabled = false; list.onInteractionEnabledChanged(); }
-  else if (ending === 'unmount') list.resetTouch();
-  else list.handleTouch(touch(ending === 'up' ? TouchType.Up : TouchType.Cancel, 8, 200, 200));
-  assert.equal(owner.activePagePointerId, -1);
-  list.resetTouch(); assert.equal(deferred.length, 1, 'terminal cleanup releases exactly once');
-  assert.deepEqual(events, [], 'older queued work cannot run inside UP/CANCEL');
-  if (ending === 'up') {
-    list.handleTouch(touch(TouchType.Down, 10, 200, 200));
-    deferred.shift()(); assert.deepEqual(events, [], 'a newer native List DOWN wins an old release task');
-    list.resetTouch();
-  }
-  deferred.shift()(); assert.deepEqual(events, ['rapid', 'auto', 'prepare']);
-}
-console.log('native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS');
-
 const ImageRowKey=productionMotionMethods(new URL('ReaderContinuousReadingStage.ets',reading),['fragmentRenderKey']);
 const rowOwner=Object.assign(new ImageRowKey(),{chapterIdentity:'chapter-1-v1'});
 const textRow={id:'text-1',text:'body',imageHeight:0};
@@ -253,23 +305,29 @@ assert.equal(rowOwner.fragmentRenderKey({...textRow}),rowOwner.fragmentRenderKey
 assert.notEqual(rowOwner.fragmentRenderKey({...decodedRow,fileUri:'file:///cache/new-hash.png'}),rowOwner.fragmentRenderKey(decodedRow));
 console.log('production continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS');
 
-for (const nativeTime of [true, false]) {
-  for (const duration of [100, 499, 500, 6000]) {
-    let taps = 0, releases = 0;
-    stage.layout.viewportWidth = 360; stage.onTurn = () => taps++;
-    stage.onPointerEnd = () => releases++;
-    receivedMs = 1000;
-    const down = touch(TouchType.Down, 1, 340, 200); down.timestamp = nativeTime ? 1000000000 : NaN;
-    stage.handleTouch(down); receivedMs += duration;
-    const up = touch(TouchType.Up, 1, 340, 200); up.timestamp = nativeTime ? receivedMs * 1000000 : NaN;
-    stage.handleTouch(up);
-    stage.handleStationaryTap({ fingerList: [{ localX: 340 }] });
-    stage.handleStationaryTap({ fingerList: [{ localX: 340 }] });
-    assert.equal(taps, duration < 500 ? 1 : 0, 'short tap once; stationary long hold never synthesizes an extra turn');
-    assert.equal(releases, 1, 'long-press suppression still releases the shared pointer');
-  }
+
 }
-console.log('continuous short tap and stationary long UP share paged 500ms clock boundary: PASS');
+}
+if(selectedCase==='canonical-mode'){
+const StyleOwner=productionMotionMethods(new URL('LocalReadingExperience.ets',reading),['changeReaderPageTurnStyle']);
+for(const invalidation of ['none','new-style','exit','failure']) {
+ let release,reject;const pending=new Promise((resolve,fail)=>{release=resolve;reject=fail;});const applied=[],toasts=[];let sampled=0;
+ const o=Object.assign(new StyleOwner(),{pageStyleChangeGeneration:0,lifecycleToken:1,readerSettingsSnapshot:{navigationMode:'continuous'},continuousAnchorSampler:()=>sampled++,commitContinuousProgress:()=>pending,isSessionActive:()=>invalidation!=='exit',getUIContext:()=>({getPromptAction:()=>({showToast:t=>toasts.push(t)})})});
+ o.changeReaderPageTurnStyle=(style,saved)=>applied.push([style,saved]);
+ StyleOwner.prototype.changeReaderPageTurnStyle.call(o,'slide');assert.equal(sampled,1);assert.equal(applied.length,0);
+ if(invalidation==='new-style')o.pageStyleChangeGeneration++;
+ if(invalidation==='failure')reject(Error('disk full'));else release();
+ await new Promise(r=>setImmediate(r));
+ assert.equal(applied.length,invalidation==='none'?1:0,'switch waits for saved latest anchor and matching mode/lifecycle');assert.equal(toasts.length,invalidation==='failure'?1:0);
+}
+const StopOwner=productionMotionMethods(new URL('LocalReadingExperience.ets',reading),['onContinuousScrollStopped']);
+let finishStop;let consumed=0;const stop=Object.assign(new StopOwner(),{rapidPageTurnState:{inFlightDirection:'next'},lifecycleToken:1,chapterSelectionToken:2,pageTurnTransactionSerial:3,commitContinuousProgress:()=>new Promise(r=>finishStop=r),isMountedToken:()=>true,completeRapidPageTurnTransaction:()=>consumed++,drainRapidPageTurn(){}});
+stop.onContinuousScrollStopped();stop.pageTurnTransactionSerial++;finishStop();await new Promise(r=>setImmediate(r));assert.equal(consumed,0,'late saved stop cannot consume a newer rapid transaction');
+console.log('continuous mode change save/error/obsolete ownership and late stop receipt: PASS');
+
+// Initial geometry/attach ordering and stale receipts are covered by the
+// production-method suite test-reader-continuous-initial-offset.mjs. Keep
+// this suite focused on real input and progress serialization.
 
 const CanonicalModeOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
   ['beginCanonicalModeMeasurement', 'continueCanonicalModeMeasurement']);
@@ -324,39 +382,9 @@ for (const target of [0, 3, 5, 99, 100, 102, 104, 105, 199]) {
 }
 console.log('measured prefix whitespace gaps match complete canonical page identity: PASS');
 
-const ProgrammaticScrollOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['performPageTurn', 'performContinuousPageTurn', 'onContinuousReachStart', 'onContinuousReachEnd', 'onContinuousManualInteraction']);
-for (const direction of ['next', 'previous']) {
-  let atEdge = false, scrolls = 0, chapters = 0;
-  const o = Object.assign(new ProgrammaticScrollOwner(), {
-    mounted: true, exitRequested: false, phase: 'ready', activePagePointerId: 9,
-    readerSettingsSnapshot: { navigationMode: 'continuous' }, controlVisible: () => false,
-    chapter: { chapterIndex: 3 }, continuousFragments: [{}], continuousCommitInFlight: false,
-    continuousUserInteractionActive: true, continuousVisibleFragmentIndex: 0, continuousVisibleScalar: 100,
-    isContinuousScrollerAtStart: () => direction === 'previous' && atEdge,
-    isContinuousScrollerAtEnd: () => direction === 'next' && atEdge,
-    adjacentChapterIndex: (_chapter, delta) => 3 + delta,
-    openPageTurnChapter: () => { chapters++; return true; },
-    turnToPreviousChapter: () => { chapters++; return true; }, onReaderManualInteraction() {},
-    continuousScroller: { scrollPage() {
-      scrolls++; atEdge = true;
-      if (direction === 'next') o.onContinuousReachEnd(); else o.onContinuousReachStart();
-    } },
-  });
-  assert.equal(o.performPageTurn(direction).kind, 'busy');
-  assert.equal(scrolls, 0); assert.equal(o.continuousUserInteractionActive, true, 'held producer is not admitted');
-  o.activePagePointerId = -1;
-  assert.equal(o.performPageTurn(direction).kind, 'started');
-  assert.equal(scrolls, 1); assert.equal(chapters, 0, 'queued one-viewport turn cannot become an extra manual chapter turn');
-  assert.equal(o.continuousUserInteractionActive, false);
-  assert.equal(o.performPageTurn(direction).kind, 'started');
-  assert.equal(chapters, 1, 'a separate later turn at the edge can cross exactly one chapter');
-  o.onContinuousManualInteraction();
-  if (direction === 'next') o.onContinuousReachEnd(); else o.onContinuousReachStart();
-  assert.equal(chapters, 2, 'a genuinely new manual scroll retains chapter-edge behavior');
-}
-console.log('native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS');
 
+}
+if(selectedCase==='data-source'){
 const Source=productionMotionMethods(new URL('ReaderContinuousReadingStage.ets',reading),
  ['totalCount','getData','registerDataChangeListener','unregisterDataChangeListener','replace','extend','update'],
  {DataOperationType:{ADD:'add'}});
@@ -372,3 +400,7 @@ const Source=productionMotionMethods(new URL('ReaderContinuousReadingStage.ets',
  assert.equal(source.getData(2),body[0]);
 }
 console.log('PASS native continuous insertion notifications preserve original rows and exact intermediate source state');
+
+}
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

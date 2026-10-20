@@ -55,10 +55,11 @@ export class ReaderHttpTtsGateway {
     this.runtime = runtime;
   }
 
-  async put(config: ReaderHttpTtsConfig): Promise<ReaderHttpTtsConfig> {
+  async put(config: ReaderHttpTtsConfig, onDispatch?: () => void): Promise<ReaderHttpTtsConfig> {
     // Decode the outbound object too: ephemeral form secrets must never enter Core.
     const payload = this.decodeConfig(config, 'http-tts.put');
     this.assertConfig(payload, 'http-tts.put');
+    onDispatch?.();
     const result = await this.runtime.request('http-tts.put', { ...payload });
     return this.decodeConfig(result.data['tts'], 'http-tts.put');
   }
@@ -77,8 +78,9 @@ export class ReaderHttpTtsGateway {
     return raw.map((item: unknown): ReaderHttpTtsConfig => this.decodeConfig(item, 'http-tts.list'));
   }
 
-  async delete(id: number): Promise<ReaderHttpTtsDeleteResult> {
+  async delete(id: number, onDispatch?: () => void): Promise<ReaderHttpTtsDeleteResult> {
     this.assertId(id, 'http-tts.delete');
+    onDispatch?.();
     const result = await this.runtime.request('http-tts.delete', { id });
     const resultId = result.data['id'];
     const deleted = result.data['deleted'];

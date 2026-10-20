@@ -1,0 +1,2696 @@
+{
+  "schemaVersion": 1,
+  "boundary": "Immutable physical tuples remain in conventional-typography-baseline.json. These are audited actual carrier successors only; no budget or visual value is raised. Current CI verifies native five-attribute/AUTO tuples and actual AST consumer edges. Historical byte proof remains opt-in at original source.",
+  "entries": [
+    {
+      "id": "settings-reset-feedback-builder",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+        "method": "buildGeneral",
+        "kind": "Text",
+        "text": "this.resetMessage"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+        "method": "operationFeedback",
+        "kind": "Text",
+        "text": "this.feedbackMessage()"
+      },
+      "edge": "this.operationFeedback()",
+      "proof": "test-settings-recovery-consumers.mjs + test-typography-carrier-successors.mjs; actual buildGeneral → operationFeedback keeps TYPE_APP_INHERITED_BODY and AUTO omissions"
+    },
+    {
+      "id": "bookshelf-mode-shared-notice",
+      "kind": "shared",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+        "method": "bookshelfList",
+        "kind": "Text",
+        "text": "this.viewModeError"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.view.message"
+      },
+      "component": "ReaderRecoveryNotice",
+      "module": "../common/ReaderRecoveryNotice",
+      "view": "this.viewModeRecovery()",
+      "proof": "test-bookshelf-view-mode-receipts.mjs + test-typography-carrier-successors.mjs"
+    },
+    {
+      "id": "bookshelf-settings-mode-shared-notice",
+      "kind": "shared",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.error"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.view.message"
+      },
+      "component": "ReaderRecoveryNotice",
+      "module": "../common/ReaderRecoveryNotice",
+      "view": "this.viewModeRecovery()",
+      "proof": "test-bookshelf-view-mode-receipts.mjs + test-typography-carrier-successors.mjs"
+    },
+    {
+      "id": "source-switch-shared-heading",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+        "method": "header",
+        "kind": "Text",
+        "text": "'换源'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "source-switch-window",
+      "nativeText": "换源",
+      "bindingMethod": "header",
+      "methodEdges": [],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "titleText",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-selection-heading",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'导入本地书籍'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "local-import-selection",
+      "nativeText": "导入本地书籍",
+      "bindingMethod": "fileSelectionHeader",
+      "methodEdges": [
+        [
+          "fileSelectionPanel",
+          "fileSelectionHeader"
+        ]
+      ],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "importTitle",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-result-heading",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "resultHeader",
+        "kind": "Text",
+        "text": "'导入结果'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "local-import-result-content",
+      "nativeText": "导入结果",
+      "bindingMethod": "resultHeader",
+      "methodEdges": [],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "localImportHeader",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-selection-primary",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "this.state === 'pickerOpening' ? '正在选择…' : '选择文件'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "local-file-selection",
+      "nativeText": "选择文件",
+      "bindingMethod": "fileSelectionActions",
+      "methodEdges": [
+        [
+          "fileSelectionPanel",
+          "fileSelectionActions"
+        ]
+      ],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "fileAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-selection-cancel",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "local-file-selection",
+      "nativeText": "取消",
+      "bindingMethod": "fileSelectionActions",
+      "methodEdges": [
+        [
+          "fileSelectionPanel",
+          "fileSelectionActions"
+        ]
+      ],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "fileAction",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-result-primary",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "resultFooter",
+        "kind": "Text",
+        "text": "'完成'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "local-import-result",
+      "nativeText": "完成",
+      "bindingMethod": "resultFooter",
+      "methodEdges": [],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "fileAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-body-1",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'从系统文件中选择'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionBody",
+        "kind": "Text",
+        "text": "'从系统文件中选择'"
+      },
+      "edge": "this.fileSelectionBody()",
+      "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
+    },
+    {
+      "id": "local-import-body-2",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'支持多选 TXT、EPUB、MOBI、AZW3'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionBody",
+        "kind": "Text",
+        "text": "'支持多选 TXT、EPUB、MOBI、AZW3'"
+      },
+      "edge": "this.fileSelectionBody()",
+      "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
+    },
+    {
+      "id": "local-import-body-3",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionBody",
+        "kind": "Text",
+        "text": "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'"
+      },
+      "edge": "this.fileSelectionBody()",
+      "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
+    },
+    {
+      "id": "replace-leading-6",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "'返回'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryLeading",
+        "kind": "Text",
+        "text": "'返回'"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryHeader"
+        ],
+        [
+          "temporaryHeader",
+          "temporaryLeading"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-shared-title",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :\n          this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "reader-replace-editor",
+      "nativeText": "新增替换规则",
+      "bindingMethod": "temporaryHeader",
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryHeader"
+        ]
+      ],
+      "params": {},
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "titleText",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "replace-body-8",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-body-9",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "'导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "'导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。'"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-body-10",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "this.localError || this.state.errorMessage"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "this.localError || this.state.errorMessage"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-body-11",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "'正在等待确认…'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "'正在等待确认…'"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-footer-12",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "editorActions",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "replace-editor",
+      "nativeText": "取消",
+      "bindingMethod": "editorActions",
+      "methodEdges": [],
+      "params": {},
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "replace-footer-13",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "editorActions",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "replace-editor",
+      "nativeText": "保存",
+      "bindingMethod": "editorActions",
+      "methodEdges": [],
+      "params": {},
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "tts-content-0",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.message"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "boundedContent",
+        "kind": "Text",
+        "text": "this.message"
+      },
+      "methodEdges": [
+        [
+          "build",
+          "boundedContent"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "tts-content-1",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "'管理在线 TTS'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "boundedContent",
+        "kind": "Text",
+        "text": "'管理在线 TTS'"
+      },
+      "methodEdges": [
+        [
+          "build",
+          "boundedContent"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "tts-content-2",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.errorText"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "boundedContent",
+        "kind": "Text",
+        "text": "this.errorText"
+      },
+      "methodEdges": [
+        [
+          "build",
+          "boundedContent"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "tts-footer-17",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerFooter",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "tts-manager",
+      "nativeText": "取消",
+      "bindingMethod": "managerFooter",
+      "methodEdges": [],
+      "params": {
+        "manager": true
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "tts-footer-18",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerFooter",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "tts-manager",
+      "nativeText": "保存",
+      "bindingMethod": "managerFooter",
+      "methodEdges": [],
+      "params": {
+        "manager": true
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "tts-shared-dynamic-title",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "configurationHeader",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": null,
+      "nativeText": "TTS 标题",
+      "bindingMethod": "configurationHeader",
+      "methodEdges": [],
+      "params": {
+        "title": "TTS 标题"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "titleText",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation",
+      "specExpression": "this.boundedSpecId()",
+      "cases": [
+        {
+          "specId": "tts-config-manager",
+          "role": "TYPE_READER_TTS_MANAGER_TITLE",
+          "params": {
+            "manager": true
+          }
+        },
+        {
+          "specId": "tts-config-picker",
+          "role": "TYPE_READER_TTS_CONFIGURATION_TITLE",
+          "params": {
+            "manager": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "foundation-smallButton",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+        "method": "smallButton",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "smallButton",
+      "specId": "rules-compact",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs; actual owner/SDK/AttributeModifier/tuple and role propagation"
+    },
+    {
+      "id": "foundation-webdavInputRow",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "webdavInputRow",
+        "kind": "TextInput",
+        "text": "{ text: value, placeholder: placeholder }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "webdavInputRow",
+      "specId": "sync-credential",
+      "arguments": [
+        "icon",
+        "字段",
+        "草稿",
+        "占位",
+        true,
+        "@callback"
+      ],
+      "requiredMethods": [
+        "canEdit",
+        "canMutate"
+      ],
+      "proof": "test-foundation-controls-shared.mjs; actual owner/SDK/AttributeModifier/tuple and role propagation",
+      "cases": [
+        {
+          "arguments": [
+            "icon",
+            "字段",
+            "草稿",
+            "占位",
+            true,
+            "@callback"
+          ]
+        },
+        {
+          "arguments": [
+            "icon",
+            "字段",
+            "草稿",
+            "占位",
+            false,
+            "@callback"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "foundation-manualActionButton",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "manualActionButton",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "manualActionButton",
+      "specId": "sync-action",
+      "arguments": [
+        "证明",
+        true,
+        "@callback"
+      ],
+      "requiredMethods": [
+        "canEdit",
+        "canMutate"
+      ],
+      "proof": "test-foundation-controls-shared.mjs; actual owner/SDK/AttributeModifier/tuple and role propagation"
+    },
+    {
+      "id": "foundation-JsonImportDialog-localButton-Text",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/common/JsonImportDialog.ets",
+        "method": "localButton",
+        "kind": "Text",
+        "text": "'选择本地 JSON 文件'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "./ReaderButton",
+      "bindingMethod": "localButton",
+      "specId": "form-action",
+      "arguments": [],
+      "params": {},
+      "methodEdges": [],
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs + actual JSON/RSS owner/SDK/AttributeModifier, immutable five tuple and AUTO/role propagation"
+    },
+    {
+      "id": "foundation-JsonImportDialog-formBody-TextInput",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/common/JsonImportDialog.ets",
+        "method": "formBody",
+        "kind": "TextInput",
+        "text": "{\n          text: this.urlDraft,\n          placeholder: 'https://example.com/data.json',\n        }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "./ReaderFormField",
+      "bindingMethod": "formBody",
+      "specId": "form-url",
+      "arguments": [],
+      "params": {
+        "urlDraft": "https://example.com/data.json",
+        "validationMessage": "",
+        "description": "描述"
+      },
+      "methodEdges": [],
+      "requiredMethods": [
+        "localButton",
+        "submitOnlineImport"
+      ],
+      "proof": "test-foundation-controls-shared.mjs + actual JSON/RSS owner/SDK/AttributeModifier, immutable five tuple and AUTO/role propagation"
+    },
+    {
+      "id": "foundation-RssSubscriptionEditorPage-build-Text",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "saveAction",
+      "specId": "form-busy-action",
+      "arguments": [],
+      "params": {
+        "snapshot": {
+          "busy": false,
+          "canSave": true
+        }
+      },
+      "methodEdges": [
+        [
+          "build",
+          "saveAction"
+        ]
+      ],
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs + actual JSON/RSS owner/SDK/AttributeModifier, immutable five tuple and AUTO/role propagation"
+    },
+    {
+      "id": "foundation-RssSubscriptionEditorPage-editorField-TextInput",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+        "method": "editorField",
+        "kind": "TextInput",
+        "text": "{ text: value, placeholder }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "editorField",
+      "specId": "form-body",
+      "arguments": [
+        "字段",
+        "草稿",
+        "占位",
+        "@callback"
+      ],
+      "params": {},
+      "methodEdges": [],
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs + actual JSON/RSS owner/SDK/AttributeModifier, immutable five tuple and AUTO/role propagation"
+    },
+    {
+      "id": "foundation-RssSubscriptionManagementPage-sourceDocumentAction-Text",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+        "method": "sourceDocumentAction",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "sourceDocumentAction",
+      "specId": "form-document-action",
+      "arguments": [
+        "导入",
+        "@callback"
+      ],
+      "params": {},
+      "methodEdges": [],
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs + actual JSON/RSS owner/SDK/AttributeModifier, immutable five tuple and AUTO/role propagation"
+    },
+    {
+      "id": "foundation-SearchPage-primaryPill-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "primaryPill",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "primaryPill",
+      "specId": "search-primary",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-SearchPage-secondaryPill-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "secondaryPill",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "secondaryPill",
+      "specId": "search-secondary",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-DiscoverPage-pageAction-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "method": "pageAction",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "pageAction",
+      "specId": "discover-page",
+      "arguments": [
+        "证明",
+        true,
+        "@callback"
+      ],
+      "params": {
+        "presentation": {
+          "loading": false
+        }
+      },
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-RssPage-statusTab-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "statusTab",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "statusTab",
+      "specId": "rss-mode-tab",
+      "arguments": [
+        "全部",
+        "all"
+      ],
+      "params": {
+        "activeMode": "all"
+      },
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-RssPage-stateButtons-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "stateButtons",
+        "kind": "Text",
+        "text": "primaryLabel"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "stateButtons",
+      "specId": "rss-state",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation",
+      "nativeText": "证明"
+    },
+    {
+      "id": "foundation-RssPage-stateButtons-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "stateButtons",
+        "kind": "Text",
+        "text": "'订阅管理'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "stateButtons",
+      "specId": "rss-state",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation",
+      "nativeText": "订阅管理"
+    },
+    {
+      "id": "foundation-RssEntryDetailPage-sourceCard-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "sourceCard",
+        "kind": "Text",
+        "text": "'查看源'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "sourceCard",
+      "specId": "rss-source-link",
+      "arguments": [],
+      "params": {
+        "subscription": {
+          "title": "订阅"
+        },
+        "item": {
+          "publishTime": "",
+          "read": false,
+          "favorite": false
+        }
+      },
+      "requiredMethods": [
+        "itemMeta"
+      ],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-RssEntryDetailPage-bottomActions-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "bottomActions",
+        "kind": "Text",
+        "text": "'返回列表'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "bottomActions",
+      "specId": "rss-detail-bottom",
+      "arguments": [],
+      "params": {
+        "item": {
+          "link": "https://original.test"
+        },
+        "readerWindowMetricsRevision": -1,
+        "contentFrameOverride": {
+          "width": 300,
+          "left": 18,
+          "right": 18
+        }
+      },
+      "requiredMethods": [
+        "contentFrame",
+        "hasOriginalLink"
+      ],
+      "proof": "test-foundation-shelf-field-consumers.mjs + original immutable font tuple SDK/role propagation",
+      "nativeText": "返回列表",
+      "sourceConstants": {
+        "RSS_DETAIL_ACTION_AREA_HEIGHT": "62"
+      }
+    },
+    {
+      "id": "foundation-RssEntryDetailPage-bottomActions-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "bottomActions",
+        "kind": "Text",
+        "text": "'打开原文'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "bottomActions",
+      "specId": "rss-detail-bottom",
+      "arguments": [],
+      "params": {
+        "item": {
+          "link": "https://original.test"
+        },
+        "readerWindowMetricsRevision": -1,
+        "contentFrameOverride": {
+          "width": 300,
+          "left": 18,
+          "right": 18
+        }
+      },
+      "requiredMethods": [
+        "contentFrame",
+        "hasOriginalLink"
+      ],
+      "proof": "test-foundation-shelf-field-consumers.mjs + original immutable font tuple SDK/role propagation",
+      "nativeText": "打开原文",
+      "sourceConstants": {
+        "RSS_DETAIL_ACTION_AREA_HEIGHT": "62"
+      }
+    },
+    {
+      "id": "foundation-icon-rss-feed",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+        "method": "actionTarget",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-feed",
+      "bindingMethod": "actionTarget",
+      "arguments": [
+        "原操作",
+        "icon",
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-entry",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "actionTarget",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-entry",
+      "bindingMethod": "actionTarget",
+      "arguments": [
+        "原操作",
+        "icon",
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-management",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+        "method": "actionTarget",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-management",
+      "bindingMethod": "actionTarget",
+      "arguments": [
+        "原操作",
+        "icon",
+        false,
+        false,
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-manage",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "managePill",
+        "kind": "Text",
+        "text": "'管理'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-manage",
+      "bindingMethod": "managePill",
+      "arguments": [],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-source-operations",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+        "method": "entrySectionHeader",
+        "kind": "Text",
+        "text": "'源操作'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-source-operations",
+      "bindingMethod": "entrySectionHeader",
+      "arguments": [],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-view-all",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "recentUnreadHeader",
+        "kind": "Text",
+        "text": "'查看全部'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-view-all",
+      "bindingMethod": "recentUnreadHeader",
+      "arguments": [],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-filter",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "filterPill",
+        "kind": "Text",
+        "text": "opt"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderButton",
+      "component": "ReaderButton",
+      "specId": "rss-filter",
+      "bindingMethod": "filterPill",
+      "arguments": [
+        "当前"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-sync-config-test",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "configActions",
+        "kind": "Text",
+        "text": "'测试网络连通性'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderButton",
+      "component": "ReaderButton",
+      "specId": "sync-config-test",
+      "bindingMethod": "configActions",
+      "arguments": [],
+      "requiredMethods": [
+        "canMutate",
+        "effectiveWebdavUrl",
+        "effectiveWebdavUser",
+        "effectiveWebdavPath"
+      ],
+      "proof": "tools/test-foundation-icon-consumers.mjs",
+      "nativeText": "测试网络连通性",
+      "params": {
+        "snapshot": {
+          "facts": {
+            "canMutate": true
+          },
+          "webdavUrl": "https://dav.test",
+          "webdavUser": "user",
+          "webdavPath": "/Reader"
+        },
+        "webdavPass": "fixture-password",
+        "backupPass": "fixture-backup-password"
+      }
+    },
+    {
+      "id": "foundation-icon-sync-config-save",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "configActions",
+        "kind": "Text",
+        "text": "'保存配置'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderButton",
+      "component": "ReaderButton",
+      "specId": "sync-config-save",
+      "bindingMethod": "configActions",
+      "arguments": [],
+      "requiredMethods": [
+        "canMutate",
+        "effectiveWebdavUrl",
+        "effectiveWebdavUser",
+        "effectiveWebdavPath"
+      ],
+      "proof": "tools/test-foundation-icon-consumers.mjs",
+      "nativeText": "保存配置",
+      "params": {
+        "snapshot": {
+          "facts": {
+            "canMutate": true
+          },
+          "webdavUrl": "https://dav.test",
+          "webdavUser": "user",
+          "webdavPath": "/Reader"
+        },
+        "webdavPass": "fixture-password",
+        "backupPass": "fixture-backup-password"
+      }
+    },
+    {
+      "id": "foundation-ReaderControlReplaceContent-editorText-reader-replace-text-52",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "editorText",
+        "kind": "TextInput",
+        "text": "{ text: value(), placeholder: '' }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "editorText",
+      "specId": "reader-replace-text",
+      "arguments": [
+        "替换内容",
+        "@value",
+        "@callback"
+      ],
+      "params": {
+        "motionProgress": 1,
+        "interactionEnabled": true,
+        "localPending": false,
+        "state": {
+          "mutationPending": false,
+          "writeBlocked": false,
+          "writeUncertain": false
+        }
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原草稿",
+      "requiredMethods": [
+        "fullInput"
+      ]
+    },
+    {
+      "id": "foundation-ReaderControlSearchContent-searchField-reader-content-search-53",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlSearchContent.ets",
+        "method": "searchField",
+        "kind": "TextInput",
+        "text": "{ placeholder: '搜索正文内容', text: this.query, controller: this.inputController }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "searchField",
+      "specId": "reader-content-search",
+      "arguments": [],
+      "params": {
+        "query": "原正文关键词",
+        "queryInputId": "persistent-reading-input",
+        "frameOverride": {
+          "field": {
+            "width": 260,
+            "height": 32,
+            "x": 18,
+            "y": 10
+          }
+        },
+        "presentationOverride": {
+          "contentOpacity": 1,
+          "contentBlur": 0
+        }
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原正文关键词"
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-name-54",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: '例如 Azure 语音', text: this.draftName }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-name",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原服务",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-value-55",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: 'https://api.example.com/tts', text: this.draftUrl }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-value",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "https://original.invalid/tts",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-value-56",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: '填入访问密钥', text: this.draftApiKey }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-value",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "private-fixture-only",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-value-57",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: '例如 xiaoxiao', text: this.draftVoice }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-value",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原音色",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderDirectoryRules-build-directory-rule-pattern-58",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderDirectoryRules.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: rule.pattern, placeholder: '匹配完整标题或独立正文行的正则表达式' }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "build",
+      "specId": "directory-rule-pattern",
+      "arguments": [],
+      "params": {
+        "scheme": "day",
+        "bookId": "book",
+        "rules": [
+          {
+            "id": 7,
+            "pattern": "^卷",
+            "level": "2",
+            "boundary": "title"
+          }
+        ],
+        "loaded": true,
+        "busy": false,
+        "previewReady": false,
+        "preview": [],
+        "message": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "^卷"
+    },
+    {
+      "id": "foundation-SourceManagementPage-statusBanner-source-management-retry-59",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "statusBanner",
+        "kind": "Text",
+        "text": "'重试'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "statusBanner",
+      "specId": "source-management-retry",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "requiredMethods": [
+        "recovery"
+      ],
+      "nativeText": "重试"
+    },
+    {
+      "id": "foundation-SourceManagementPage-categoryFilter-source-management-category-60",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "categoryFilter",
+        "kind": "Text",
+        "text": "category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory)"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "categoryFilter",
+      "specId": "source-management-category",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "全部类型"
+    },
+    {
+      "id": "foundation-SourceManagementPage-chip-source-management-status-compact-61",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "chip",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "chip",
+      "specId": "source-management-status-compact",
+      "arguments": [
+        "有限状态",
+        58,
+        false,
+        true
+      ],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "specExpression": "width === 58 ? 'source-management-status-compact' : 'source-management-status-wide'",
+      "nativeText": "有限状态",
+      "cases": [
+        {},
+        {
+          "arguments": [
+            "有限状态",
+            72,
+            true,
+            false
+          ],
+          "specId": "source-management-status-wide"
+        }
+      ]
+    },
+    {
+      "id": "foundation-SourceManagementPage-detectButton-source-management-detect-62",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "detectButton",
+        "kind": "Text",
+        "text": "source.checkState === 'checking' ? '检测中' : '检测'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "detectButton",
+      "specId": "source-management-detect",
+      "arguments": [
+        {
+          "sourceId": "exact-source",
+          "checkState": "idle"
+        }
+      ],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "检测"
+    },
+    {
+      "id": "foundation-SourceManagementPage-loginButton-source-management-login-63",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "loginButton",
+        "kind": "Text",
+        "text": "'登录'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "loginButton",
+      "specId": "source-management-login",
+      "arguments": [
+        {
+          "sourceId": "exact-source",
+          "checkState": "idle"
+        }
+      ],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "登录"
+    },
+    {
+      "id": "foundation-SourceManagementPage-bottomActionBar-source-management-manage-64",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "bottomActionBar",
+        "kind": "Text",
+        "text": "'批量管理'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "bottomActionBar",
+      "specId": "source-management-manage",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "批量管理"
+    },
+    {
+      "id": "foundation-SourceManagementPage-bottomActionBar-source-management-add-65",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "bottomActionBar",
+        "kind": "Text",
+        "text": "'新增书源'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderLabeledIconAction",
+      "module": "../common/ReaderLabeledIconAction",
+      "bindingMethod": "bottomActionBar",
+      "specId": "source-management-add",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "新增书源"
+    },
+    {
+      "id": "foundation-tail-SearchPage-searchBar-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "searchBar",
+        "kind": "Text",
+        "text": "'停止'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "searchBar",
+      "specId": "search-field-phone",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "loading",
+          "history": [],
+          "operation": {
+            "canCancel": true
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "停止",
+      "specExpression": "this.isTablet ? 'search-field-wide' : 'search-field-phone'",
+      "cases": [
+        {
+          "params": {
+            "isTablet": false
+          },
+          "specId": "search-field-phone",
+          "role": "TYPE_SEARCH_FIELD_ACTION"
+        },
+        {
+          "params": {
+            "isTablet": true
+          },
+          "specId": "search-field-wide",
+          "role": "TYPE_SEARCH_FIELD_ACTION_WIDE"
+        }
+      ]
+    },
+    {
+      "id": "foundation-tail-SearchPage-searchBar-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "searchBar",
+        "kind": "Text",
+        "text": "'搜索'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "searchBar",
+      "specId": "search-field-phone",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "initial",
+          "history": [],
+          "operation": {
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "搜索",
+      "specExpression": "this.isTablet ? 'search-field-wide' : 'search-field-phone'",
+      "cases": [
+        {
+          "params": {
+            "isTablet": false
+          },
+          "specId": "search-field-phone",
+          "role": "TYPE_SEARCH_FIELD_ACTION"
+        },
+        {
+          "params": {
+            "isTablet": true
+          },
+          "specId": "search-field-wide",
+          "role": "TYPE_SEARCH_FIELD_ACTION_WIDE"
+        }
+      ]
+    },
+    {
+      "id": "foundation-tail-SearchPage-initialContent-3",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "initialContent",
+        "kind": "Text",
+        "text": "'清空记录'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "initialContent",
+      "specId": "search-history-clear",
+      "arguments": [],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "清空记录"
+    },
+    {
+      "id": "foundation-tail-SearchPage-initialContent-4",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "initialContent",
+        "kind": "Text",
+        "text": "keyword"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "initialContent",
+      "specId": "search-history-keyword",
+      "arguments": [],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "原历史"
+    },
+    {
+      "id": "foundation-tail-SearchPage-groupScopeChip-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "groupScopeChip",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "groupScopeChip",
+      "specId": "search-scope",
+      "arguments": [
+        "当前"
+      ],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "当前",
+      "cases": [
+        {
+          "params": {
+            "selectedGroupName": "其他"
+          }
+        },
+        {
+          "params": {
+            "selectedGroupName": "当前"
+          }
+        }
+      ],
+      "expressionBindings": {
+        "label": "当前"
+      }
+    },
+    {
+      "id": "foundation-tail-SearchPage-resultsContent-3",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "resultsContent",
+        "kind": "Text",
+        "text": "this.partialSearchFailure()"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "resultsContent",
+      "specId": "search-retry-status",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "results",
+          "history": [],
+          "localSearchFailed": true,
+          "localSearchError": "原本地失败",
+          "failedSourceCount": 2,
+          "searching": false,
+          "completedSourceCount": 3,
+          "totalSourceCount": 7,
+          "results": [],
+          "operation": {
+            "canRetry": true,
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-tail-SearchPage-resultsContent-6",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "resultsContent",
+        "kind": "Text",
+        "text": "` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "resultsContent",
+      "specId": "search-retry-progress",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "results",
+          "results": [],
+          "failedSourceCount": 2,
+          "searching": false,
+          "operation": {
+            "canRetry": true,
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-tail-SearchPage-emptyContent-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "emptyContent",
+        "kind": "Text",
+        "text": "this.partialSearchFailure()"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "emptyContent",
+      "specId": "search-retry-status-spaced",
+      "arguments": [
+        "原关键词",
+        7
+      ],
+      "params": {
+        "presentation": {
+          "kind": "empty",
+          "history": [],
+          "localSearchFailed": true,
+          "localSearchError": "原本地失败",
+          "failedSourceCount": 2,
+          "searching": false,
+          "completedSourceCount": 3,
+          "totalSourceCount": 7,
+          "results": [],
+          "operation": {
+            "canRetry": true,
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-tail-SearchPage-errorContent-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "errorContent",
+        "kind": "Text",
+        "text": "'重新搜索'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "errorContent",
+      "specId": "search-error-retry",
+      "arguments": [
+        7
+      ],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "重新搜索"
+    },
+    {
+      "id": "foundation-tail-SearchPage-errorContent-3",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "errorContent",
+        "kind": "Text",
+        "text": "'检查书源'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "errorContent",
+      "specId": "search-error-source",
+      "arguments": [
+        7
+      ],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "检查书源"
+    },
+    {
+      "id": "foundation-tail-DiscoverPage-categoryChips-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "method": "categoryChips",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "categoryChips",
+      "specId": "discover-category",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kinds": [
+            {
+              "title": "分类一"
+            }
+          ],
+          "activeKindIndex": 0
+        }
+      },
+      "requiredMethods": [
+        "currentFilterText",
+        "kindTitles"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "分类一"
+    },
+    {
+      "id": "foundation-tail-DiscoverPage-filterRow-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "method": "filterRow",
+        "kind": "Text",
+        "text": "'应用'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderLabeledIconAction",
+      "module": "../common/ReaderLabeledIconAction",
+      "bindingMethod": "filterRow",
+      "specId": "discover-apply",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kinds": [],
+          "filter": "最新"
+        }
+      },
+      "requiredMethods": [
+        "currentFilterText",
+        "kindTitles"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "应用"
+    },
+    {
+      "id": "foundation-tail-SyncPage-emptyState-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "emptyState",
+        "kind": "Text",
+        "text": "'立即备份'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "emptyState",
+      "specId": "sync-empty-backup",
+      "arguments": [],
+      "params": {},
+      "requiredMethods": [
+        "canMutate"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "立即备份"
+    }
+  ]
+}

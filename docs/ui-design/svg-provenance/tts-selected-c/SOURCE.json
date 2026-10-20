@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "selectionId": "TTS-TRANSPORT-C",
+  "selectedVariant": "C",
+  "authorization": "User explicitly selected candidate C in this conversation",
+  "description": "Chevron plus one vertical bar with increased spacing; keep existing colors and control sizes",
+  "license": "Reader project design",
+  "demoFile": "docs/audits/icons-20261020/tts-options/index.html",
+  "variantsFile": "docs/audits/icons-20261020/tts-options/variants.json",
+  "demoCandidateSvgSha256": "d40cff8282a1781126d7eb91801f801ee701b66014bcd20fb5b0e4bf1ac0d2de",
+  "sourceFile": "transport-previous.svg",
+  "sourceSha256": "301b61aeb0b2bd833b761388d9bef401ede3e79af08269fa1af0d443c043be01",
+  "viewBox": "0 0 26 26",
+  "strokeWidth": 1.9,
+  "previousPaths": [
+    "M19 7 12 13l7 6",
+    "M6 7v12"
+  ],
+  "nextTransform": "translate(26 0) scale(-1 1)",
+  "originalAssets": [
+    {
+      "file": "reader_tts_make_previous.svg",
+      "originType": "figma-make-dom-export",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_previous.svg",
+      "sourceSha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603",
+      "generatedSha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603",
+      "license": "Reader project design"
+    },
+    {
+      "file": "reader_tts_make_next.svg",
+      "originType": "figma-make-dom-export",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_next.svg",
+      "sourceSha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80",
+      "generatedSha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80",
+      "license": "Reader project design"
+    },
+    {
+      "file": "reader_tts_make_previous_quick.svg",
+      "originType": "figma-make-source-export",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_previous_quick.svg",
+      "sourceSha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae",
+      "generatedSha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae",
+      "license": "Reader project design"
+    },
+    {
+      "file": "reader_tts_make_next_quick.svg",
+      "originType": "figma-make-source-export",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_next_quick.svg",
+      "sourceSha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064",
+      "generatedSha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064",
+      "license": "Reader project design"
+    },
+    {
+      "file": "reader_tts_previous.svg",
+      "originType": "figma-component-derived",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronLeft.svg",
+      "sourceSha256": "9f24d27fd1df5559af07875598096b0656b0dbed42db8b3eda72577fca26150a",
+      "generatedSha256": "c778e9abd7bf407919fc9d5f6f134ce0c00a759ffd6267bef43a2e888d08488c",
+      "license": "MIT"
+    },
+    {
+      "file": "reader_tts_next.svg",
+      "originType": "figma-component-derived",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronRight.svg",
+      "sourceSha256": "651bef1c49216b39349268c9b3b9a24c150d188327576b8f7872eb15ee807f5c",
+      "generatedSha256": "9710aa7fb4cc109a3abeffe2a49961dfa78ecd36f71628481ac46571189580b1",
+      "license": "MIT"
+    }
+  ],
+  "platformPaintAdaptation": "Explicit fill=\"none\" on both open paths; same C geometry, stroke and palette; avoids relying on root fill inheritance"
+}

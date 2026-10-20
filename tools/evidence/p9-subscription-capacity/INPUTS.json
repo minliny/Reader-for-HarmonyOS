@@ -1,0 +1,21 @@
+{
+  "hostBase": "3df16be152bcb7701a08670a218cb90b964d6cca",
+  "baseStoreSource": "file:///Users/minliny/Documents/Reader/.reader-isolated/p4-subscription-capacity-20261003/Reader-for-HarmonyOS/tools/evidence/p9-subscription-capacity/base-store.txt",
+  "baseStoreSha256": "e5e67705aabad289599603dd55765e4c1669e36989ced272ca0244c7af04d2c9",
+  "candidateStoreSource": "file:///Users/minliny/Documents/Reader/.reader-isolated/p4-subscription-capacity-20261003/Reader-for-HarmonyOS/tools/evidence/p9-subscription-capacity/whole-sha-store.txt",
+  "candidateStoreSha256": "365125d388bb180fafc7fe56bda07e7c6175d9251cb91b2bb22a832f786e180d",
+  "dependencyHashes": {
+    "app/ReaderAtomicSnapshotFile.ts": "1de439f8eac4a38af0526645aa959e1ca850190e99c5074ed8877d8d3ab29d68",
+    "app/BundledBookSourceSupply.ts": "a230651e50cd9984112b5ae29d908c97cf8938d750016444cdacbc3edef0ac90",
+    "features/settings/RulesMutationOwner.ts": "aecbb9f88d87c271234c56f409f3ce3386f523aef97699cc155885ff8a951e37",
+    "features/settings/RulesManagementGateway.ts": "f5d30f221b7d4d3c0db031356c6bb02027b1afceae559de9320d72bcf547fcce",
+    "features/settings/RulesMutationContract.ts": "fab135f714d0f1acb36e7dbf0a8093f8b4893d2a07f7bc3476dcad50eab0fbfc",
+    "features/source/SourceGateway.ts": "0f5db7873da3bcab73efdf3d0ac447292ffac0af465eaba92b9ea48cf8af3dbd"
+  },
+  "boundaries": [
+    "No Core database writes or native target used",
+    "Installed SDK full production Store/Owner/SourceGateway/Gateway and Atomic thin IO",
+    "Memory-backed API bytes and Mac CPU/RSS observations are not OS durability or HarmonyOS budgets",
+    "Complete 50/500 paths validate exact normal-journey byte/hash formula; 5000 cumulative numbers are derived, with real API cold checkpoint verification"
+  ]
+}

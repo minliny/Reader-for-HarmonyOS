@@ -1,4 +1,5 @@
 import { bookTitleAuthorKey, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
+import { readBookSearchTiming } from '../common/BookSearchTiming';
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
@@ -7,7 +8,8 @@ import { SearchBookProjection, type SearchBookPatch } from './SearchBookProjecti
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
   classifyReaderSource,
-  readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
+  readerMediaIdentity,
   type ReaderSourceCategory,
 } from '../source/ReaderSourceCategory';
 
@@ -82,7 +84,31 @@ export type SearchSource = {
   /** Legado `bookSourceGroup`, trimmed; undefined when the source declares none. */
   group?: string;
   category: ReaderSourceCategory;
+  /** Last Core source.check evidence, when the paired Core exposes reports. */
+  health?: SearchSourceHealth;
 };
+
+export type SearchSourceHealth = {
+  state: 'unknown' | 'passed' | 'failed' | 'stale';
+  checkedAtMs?: number;
+  mode?: 'search' | 'explore' | 'legacy';
+  failedLevels?: string[];
+};
+
+/** Search-source health is evidence, never a default. Unknown sources remain eligible. */
+export const SEARCH_SOURCE_HEALTH_TTL_MS = 24 * 60 * 60 * 1000;
+/** Bound one broken source's foreground search without changing local search. */
+export const SEARCH_SOURCE_REQUEST_TIMEOUT_MS = 15 * 1000;
+
+export function searchSourceHealthState(source: SearchSource, now: number = Date.now()): SearchSourceHealth['state'] {
+  const health = source.health;
+  if (health === undefined || health.state === 'unknown') return 'unknown';
+  if (health.checkedAtMs === undefined || !Number.isSafeInteger(health.checkedAtMs) ||
+    health.checkedAtMs <= 0 || now < health.checkedAtMs || now - health.checkedAtMs >= SEARCH_SOURCE_HEALTH_TTL_MS) {
+    return 'stale';
+  }
+  return health.state;
+}
 
 export type SearchOutcome =
   | { ok: true; results: SearchBook[]; discardedCount?: number; discardedReasons?: string[] }
@@ -113,6 +139,7 @@ export class SearchGateway {
   private loadingSourceRevision: number | undefined = undefined;
   private bookProjectionEpoch: number = 0;
   private bookProjection: SearchBookProjection = new SearchBookProjection();
+  private searchTimingPersistence: Promise<void> = Promise.resolve();
 
   private sourceRevision(): number | undefined {
     return this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision?.();
@@ -188,7 +215,7 @@ export class SearchGateway {
     // callers represent the legacy text-source contract; the source-list
     // decoder always supplies an explicit category for real app traffic.
     const sourceCategory = source.category ?? 'novel';
-    if (!readerSourceCategoryIsText(sourceCategory)) {
+    if (!readerSourceCategoryIsReadable(sourceCategory)) {
       return { ok: false, error: `source category ${sourceCategory} is not supported by the novel reader` };
     }
     const requestId = searchRequestId !== undefined && searchRequestId.length > 0 ?
@@ -199,10 +226,17 @@ export class SearchGateway {
       sourceRuleVersion: source.sourceVersion ?? '',
     };
     try {
+      let dispatchedAt: number | undefined = undefined;
+      const options = this.requestOptions(isCurrent, canDispatch, SEARCH_SOURCE_REQUEST_TIMEOUT_MS);
+      // Measure this Core search only after the shared scheduler dispatches it.
+      // Waiting for page visibility or a request lane is not source latency.
+      options.onDispatch = (): void => { dispatchedAt = Date.now(); };
       const result = await this.runtimeOwner.request('book.search', {
         sourceId: source.sourceId,
         keyword: keyword,
-      }, this.requestOptions(isCurrent, canDispatch));
+      }, options);
+      const measuredAt = Date.now();
+      if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
       const data = result.data;
       const returnedSourceId = requiredString(data, 'sourceId');
       if (returnedSourceId !== source.sourceId) {
@@ -216,6 +250,10 @@ export class SearchGateway {
         identity.sourceRuleVersion = data['sourceVersion'] as string;
       }
       const rawBooks = data['books'];
+      if ((sourceCategory === 'comic' && data['contentKind'] !== 'manga') ||
+        (sourceCategory === 'novel' && data['contentKind'] !== undefined && data['contentKind'] !== 'text')) {
+        return { ok: false, error: 'book.search returned a mismatched contentKind' };
+      }
       if (!Array.isArray(rawBooks)) {
         return { ok: false, error: 'book.search returned invalid books' };
       }
@@ -236,6 +274,19 @@ export class SearchGateway {
         }
       }
       if (books.length === 0 && discardedCount > 0) return { ok: false, error: discardedReasons[0] };
+      const durationMs = dispatchedAt === undefined ? undefined : measuredAt - dispatchedAt;
+      if (identity.sourceRuleVersion.length > 0 && durationMs !== undefined && Number.isSafeInteger(durationMs) &&
+        durationMs >= 0 && durationMs <= 0xffffffff && Number.isSafeInteger(measuredAt) && measuredAt > 0) {
+        const timedBooks: SearchBook[] = [];
+        for (const book of books) {
+          const previous = readBookSearchTiming(book.acquisition, identity.sourceRuleVersion);
+          if (previous !== undefined && previous.latencyMeasuredAt > measuredAt) continue;
+          book.acquisition = { ...book.acquisition, schemaVersion: 2, sourceVersion: identity.sourceRuleVersion,
+            searchTiming: { kind: 'search', sourceVersion: identity.sourceRuleVersion, durationMs, measuredAt } };
+          timedBooks.push(book);
+        }
+        if (timedBooks.length > 0) this.enqueueSearchTimings(timedBooks, isCurrent);
+      }
       if (discardedCount > 0) return { ok: true, results: books, discardedCount, discardedReasons };
       return { ok: true, results: books };
     } catch (error) {
@@ -243,6 +294,29 @@ export class SearchGateway {
       const diagnostic = httpTransportFailureSummary(error);
       return diagnostic === undefined ? { ok: false, error: message } : { ok: false, error: message, diagnostic };
     }
+  }
+
+  /** Timing enrichments use the existing Core merge contract and never delay
+   * first results. One gateway owns at most four writes across every source. */
+  private enqueueSearchTimings(books: SearchBook[], isCurrent: SearchRequestGuard | undefined): void {
+    this.searchTimingPersistence = this.searchTimingPersistence.then(async (): Promise<void> => {
+      for (let offset = 0; offset < books.length; offset += 4) {
+        if (isCurrent?.() === false) return;
+        await Promise.all(books.slice(offset, offset + 4).map(async (book: SearchBook): Promise<void> => {
+          const timing = readBookSearchTiming(book.acquisition, book.sourceRuleVersion);
+          if (timing === undefined || isCurrent?.() === false) return;
+          try {
+            await this.runtimeOwner.request('search-book.put', { origin: book.sourceId, bookUrl: book.bookId,
+              acquisition: { schemaVersion: 2, sourceVersion: book.sourceRuleVersion, stage: 'search',
+                checkedAt: timing.latencyMeasuredAt, searchTiming: { kind: 'search', sourceVersion: book.sourceRuleVersion,
+                  durationMs: timing.latencyMs, measuredAt: timing.latencyMeasuredAt } } }, this.requestOptions(isCurrent));
+          } catch (_error) {
+            // Legacy/read-only Core and a failed enrichment leave valid live
+            // results and their in-memory sample available for first open.
+          }
+        }));
+      }
+    });
   }
 
   async searchLocalBooks(keyword: string, searchRequestId: string,
@@ -464,7 +538,18 @@ export class SearchGateway {
   }
 
   private async readSources(revision: number | undefined): Promise<SearchSource[]> {
-    const result = await this.runtimeOwner.request('source.list', {});
+    // Source health is an optional, versioned Core fact. Do not require it
+    // from injected/legacy owners: absent evidence must remain searchable.
+    const reportVersion = typeof this.runtimeOwner.supportsCoreCapability === 'function' &&
+      this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
+      typeof this.runtimeOwner.supportsCoreCapability === 'function' &&
+        this.runtimeOwner.supportsCoreCapability('source.check.report.v1') ? 1 : undefined;
+    const sourceListParams: JsonObject = {};
+    if (reportVersion !== undefined) {
+      sourceListParams['includeCheckReports'] = true;
+      if (reportVersion === 2) sourceListParams['checkReportVersion'] = 2;
+    }
+    const result = await this.runtimeOwner.request('source.list', sourceListParams);
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');
@@ -481,9 +566,10 @@ export class SearchGateway {
       const name = requiredString(source, 'name');
       const enabled = requiredBoolean(source, 'enabled');
       const baseUrl = optionalString(source, 'baseUrl');
+      const sourceVersion = optionalString(source, 'sourceVersion');
       let bookSourceType: unknown = undefined;
       const decoded: SearchSource = {
-        sourceId, name, enabled, sourceVersion: optionalString(source, 'sourceVersion'),
+        sourceId, name, enabled, sourceVersion,
         category: 'novel',
       };
       if (baseUrl !== undefined) {
@@ -500,6 +586,8 @@ export class SearchGateway {
       }
       decoded.category = classifyReaderSource({ bookSourceType, name, group: decoded.group,
         sourceId, baseUrl });
+      const health = decodeSearchSourceHealth(source['checkReports'], sourceVersion, reportVersion);
+      if (health !== undefined) decoded.health = health;
       sources.push(decoded);
     }
     if (revision !== this.sourceRevision()) throw new Error('source registry changed while loading');
@@ -515,11 +603,27 @@ export class SearchGateway {
     const sources = await this.loadSources();
     if (epoch !== this.bookProjectionEpoch) throw new Error('search projection superseded');
     const revision = this.sourceRevision();
-    return this.bookProjection.refresh(books, change, sources,
+    const patch = await this.bookProjection.refresh(books, change, sources,
       async (method: string, params: JsonObject): Promise<JsonObject> => {
         const result = await this.runtimeOwner.request(method, params);
         return result.data;
       }, (): boolean => revision === this.sourceRevision());
+    // A metadata read can finish before its background timing write. Retain
+    // only a newer sample of this exact identity and current source version;
+    // cached catalog/readability facts remain authoritative for other fields.
+    for (const book of patch.upserted) {
+      const sourceVersion = sources.find((source: SearchSource): boolean => source.sourceId === book.sourceId)?.sourceVersion;
+      if (sourceVersion === undefined || book.sourceRuleVersion !== sourceVersion) continue;
+      const previous = patch.captured.get(`${book.sourceId}\u0000${book.bookId}`);
+      const live = readBookSearchTiming(previous?.acquisition, book.sourceRuleVersion);
+      const stored = readBookSearchTiming(book.acquisition, book.sourceRuleVersion);
+      if (live !== undefined && (stored === undefined || live.latencyMeasuredAt > stored.latencyMeasuredAt)) {
+        book.acquisition = { ...book.acquisition, schemaVersion: 2, sourceVersion: book.sourceRuleVersion,
+          searchTiming: { kind: 'search', sourceVersion: book.sourceRuleVersion,
+            durationMs: live.latencyMs, measuredAt: live.latencyMeasuredAt } };
+      }
+    }
+    return patch;
   }
 
   /** Compatibility entry for callers without a query-owned identity index. */
@@ -533,8 +637,13 @@ export class SearchGateway {
     return Array.from(indexed.values());
   }
 
-  private requestOptions(isCurrent: SearchRequestGuard | undefined, canDispatch?: SearchRequestGuard): BookRequestOptions {
-    return { shouldCancel: isCurrent === undefined ? undefined : (): boolean => !isCurrent(), canDispatch };
+  private requestOptions(isCurrent: SearchRequestGuard | undefined, canDispatch?: SearchRequestGuard,
+    timeoutMs?: number): BookRequestOptions {
+    const options: BookRequestOptions = {
+      shouldCancel: isCurrent === undefined ? undefined : (): boolean => !isCurrent(), canDispatch,
+    };
+    if (timeoutMs !== undefined) options.timeoutMs = timeoutMs;
+    return options;
   }
 }
 
@@ -545,7 +654,7 @@ export class SearchGateway {
  * Every result carries the full immutable source identity of the request that
  * produced it: any dedupe or aggregation downstream must keep per-source rows.
  */
-function decodeBookSearchResult(
+export function decodeBookSearchResult(
   value: unknown,
   source: SearchSource,
   identity: { searchRequestId: string; bookSourceUrl: string; sourceRuleVersion: string },
@@ -567,8 +676,8 @@ function decodeBookSearchResult(
     searchRequestId: identity.searchRequestId,
     sourceRuleVersion: identity.sourceRuleVersion,
     category: source.category ?? 'novel',
-    groupKey: bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? '',
-      authorIdentity, identity.sourceRuleVersion),
+    groupKey: readerMediaIdentity(source.category === 'comic', bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? '',
+      authorIdentity, identity.sourceRuleVersion)),
     title: requiredNonBlankString(book, 'title'),
     author: optionalString(book, 'author') ?? '',
     variables: decodeBookSearchVariables(book['variables']),
@@ -578,6 +687,11 @@ function decodeBookSearchResult(
   const intro = optionalString(book, 'intro');
   const kind = optionalString(book, 'kind');
   const latestChapterTitle = optionalString(book, 'lastChapter');
+  const acquisition = book['acquisition'];
+  if (acquisition !== null && typeof acquisition === 'object' && !Array.isArray(acquisition) &&
+    (acquisition as JsonObject)['sourceVersion'] === identity.sourceRuleVersion) {
+    decoded.acquisition = { ...(acquisition as JsonObject) };
+  }
   if (coverUrl !== undefined) {
     decoded.coverUrl = coverUrl;
   }
@@ -646,4 +760,52 @@ function optionalString(value: JsonObject, key: string): string | undefined {
     throw new Error(`search protocol returned invalid ${key}`);
   }
   return candidate;
+}
+
+/**
+ * Decode only the bounded source.check history needed by search admission.
+ * Malformed/legacy evidence is deliberately downgraded to unknown so a bad
+ * report cannot silently disable a source. Core's `stale` bit and the current
+ * rule digest both bind the verdict to the source definition that was checked.
+ */
+function decodeSearchSourceHealth(value: unknown, sourceVersion: string | undefined,
+  reportVersion: number | undefined): SearchSourceHealth | undefined {
+  if (reportVersion === undefined || sourceVersion === undefined || sourceVersion.length === 0 || !Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+  const first = value[0];
+  if (typeof first !== 'object' || first === null || Array.isArray(first)) return { state: 'unknown' };
+  const row = first as JsonObject;
+  const checkedAtMs = row['checkedAtMs'];
+  const stale = row['stale'];
+  const report = row['report'];
+  if (typeof checkedAtMs !== 'number' || !Number.isSafeInteger(checkedAtMs) || checkedAtMs <= 0 ||
+    typeof stale !== 'boolean' || typeof report !== 'object' || report === null || Array.isArray(report)) {
+    return { state: 'unknown' };
+  }
+  const checkedReport = report as JsonObject;
+  const mode = checkedReport['mode'];
+  const ruleDigest = checkedReport['ruleDigest'];
+  const steps = checkedReport['steps'];
+  const parsedMode: SearchSourceHealth['mode'] = mode === 'search' || mode === 'explore' || mode === 'legacy' ? mode : undefined;
+  if (stale || ruleDigest !== sourceVersion || parsedMode === undefined || !Array.isArray(steps)) {
+    return { state: 'stale', checkedAtMs, mode: parsedMode };
+  }
+  const selected = new Map<string, string>();
+  for (const rawStep of steps) {
+    if (typeof rawStep !== 'object' || rawStep === null || Array.isArray(rawStep)) continue;
+    const step = rawStep as JsonObject;
+    if (step['requested'] !== true || typeof step['level'] !== 'string' || typeof step['status'] !== 'string') continue;
+    selected.set(step['level'] as string, step['status'] as string);
+  }
+  // Only a complete search check is authoritative. Unknown/blocked evidence
+  // remains dispatchable; an explicit L1/L2 failure is the safe skip signal.
+  const required = ['L1', 'L2'];
+  if (parsedMode !== 'search' || !required.every((level: string): boolean => selected.has(level))) {
+    return { state: 'unknown', checkedAtMs, mode: parsedMode };
+  }
+  const failedLevels = required.filter((level: string): boolean => selected.get(level) === 'fail');
+  const passed = required.every((level: string): boolean => selected.get(level) === 'pass');
+  return { state: failedLevels.length > 0 ? 'failed' : passed ? 'passed' : 'unknown', checkedAtMs,
+    mode: parsedMode, failedLevels };
 }

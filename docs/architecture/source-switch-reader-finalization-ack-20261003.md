@@ -1,0 +1,15 @@
+# Source-switch canonical reader receipt and failure action identity
+
+Independent clean baseline `9358a026`; only ReadingSessionFlowGateway, LocalReadingExperience and their dedicated test/document are changed. Index/ReaderShell and target execution belong to P5/Root.
+
+The actual Remote gateway already checks stored progress identity/location and requires both the exact submitted transactionId and sourceSwitchFinalized=true. The Flow gateway captured that transaction before dispatch but previously erased it after the ACK, so the emitted ReadingCommit could not distinguish an ordinary progress save from the original canonical switch finalization. A later UI callback must not borrow the current Host transaction or live LRE prop as proof.
+
+ReadingSessionCommittedProgress adds optional sourceSwitchTransactionId only after the real Remote update method has returned its qualified canonical ACK. Both direct update and atomic resolve+update carry the captured ID with that particular returned progress. The old ACK clears the internal pending field only while it still equals its captured ID. Lost/mismatched/unfinalized replies throw and retain pending truth. Ordinary later saves and local saves emit no marker. LRE copies this receipt into the optional eighth ReadingCommit constructor argument; it never reads its live sourceSwitchTransactionId prop to invent it. The marker is a transient ACK projection, not persisted reading-position metadata or a replacement journal/query.
+
+P5 consumes commit.sourceSwitchTransactionId directly when invoking SourceSwitchHost.targetCommitted for the captured reader tuple. It must never use Host.currentTransactionId after receiving an unmarked ordinary callback. Pure exact query remains responsible for clearing the retained full intent only after the Core terminal phase.
+
+The actual failure surface now receives sourceSwitchScopeId. Its existing retry/continue-source buttons are keyed tiny ForEach actors whose closures carry the original scope. The callbacks accept optional scope for compatibility. The text, button order, Column spacing, padding, geometry and retained reading tree are preserved; ordinary body retry remains its original callback. P5 passes the scope and rejects obsolete owner/reader/route before invoking Host recovery.
+
+`node tools/test-source-switch-reader-ack.mjs` executes actual Flow/Remote Gateway → production LRE admitCommittedProgress → installed-SDK-emitted ReadingCommit, proving direct/atomic/original/wrong/unfinalized/lost/late/local cases. It also emits the actual failure Builder through the installed SDK, replays old physical callbacks after scope update/reopen, and removes the lexical capture in a negative control to reproduce fresh-scope borrowing. Existing targeted progress/source tests are separate regression gates. These are source and SDK closure proofs, not full ArkTS/HAP/native scheduling/target/visual acceptance.
+
+Rollback: revert this leaf commit and P5's matching consumer together; never clear source-switch intents/journals or compensate a canonical progress write while reverting presentation contracts.

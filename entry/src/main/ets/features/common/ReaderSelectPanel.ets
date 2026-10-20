@@ -1,4 +1,5 @@
 import { readerAppColor } from './ReaderThemeRegistry';
+import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from './ReaderFonts';
 import {
   TOK_BORDER,
@@ -53,7 +54,7 @@ export struct ReaderSelectPanel {
   @Prop x: number = 0;
   @Prop y: number = 0;
   @Prop variant: ReaderSelectVariant = 'default';
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop @Watch('onClosingChanged') closing: boolean = false;
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
   // 与 ReaderSelect.controlWidth 成对使用；0 保持按内容测量。
@@ -72,6 +73,7 @@ export struct ReaderSelectPanel {
   private generation: number = 0;
   private closingValue: string = '';
   private closingOptions: string[] = [];
+  private closeFinish: (() => void) | undefined = undefined;
 
   private renderedValue(): string { return this.closeInFlight ? this.closingValue : this.value; }
   private renderedOptions(): string[] { return this.closeInFlight ? this.closingOptions : this.options; }
@@ -79,15 +81,34 @@ export struct ReaderSelectPanel {
   aboutToAppear(): void {
     this.mounted = true;
     this.generation += 1;
+    this.closeFinish = undefined;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.generation += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.closeFinish = undefined; }
 
   private onIdentityChanged(): void {
     this.generation += 1;
     this.closeInFlight = false;
+    this.closeFinish = undefined;
     if (this.mounted) this.expandPanel();
+  }
+
+  private onReduceMotionChanged(): void {
+    if (!this.mounted || !this.reduceMotion) return;
+    const generation = ++this.generation;
+    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+      this.expandedHeight = this.closeInFlight ? OPTION_H : this.fullPanelHeight();
+      this.chevronAngle = this.closeInFlight ? 0 : -180;
+    });
+    if (this.closeInFlight) this.finishCollapse(generation);
+  }
+
+  private finishCollapse(generation: number): void {
+    if (!this.mounted || generation !== this.generation || !this.closeInFlight) return;
+    const finish = this.closeFinish;
+    this.closeFinish = undefined;
+    finish?.();
   }
 
   build() {
@@ -122,129 +143,33 @@ export struct ReaderSelectPanel {
 
   @Builder
   private appearanceLibraryOption(opt: string) {
-    Row({ space: 10 }) {
-      Text(opt).layoutWeight(1).fontFamily(opt === this.renderedValue() ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIRegular').fontSize(11).lineHeight(13)
-        .fontWeight(opt === this.renderedValue() ? FontWeight.Bold : FontWeight.Regular, { enableVariableFontWeight: true })
-        .fontColor(opt === this.renderedValue() ? readerAppColor('app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF2F6373', this.appThemeScheme) : readerAppColor('app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF41484C', this.appThemeScheme)).maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-      if (opt === this.renderedValue()) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check'))).width(11).height(9);
-      }
-    }.width('100%').height(APPEARANCE_SELECT_OPTION_HEIGHT).padding({ left: 9, right: 9 })
-      .borderRadius(6).backgroundColor(opt === this.renderedValue() ? readerAppColor('app.appearance.selectSelected', this.appThemeScheme) : Color.Transparent)
-      .accessibilityText(`${opt}${opt === this.renderedValue() ? '，已选择' : ''}`)
-      .onClick((): void => this.selectAndCollapse(opt));
+    ReaderChoiceRow({
+      specId: 'appearance-library', label: opt,
+      selected: opt === this.renderedValue(), scheme: this.appThemeScheme,
+      actionEnabled: !this.closeInFlight,
+      onChoose: (option: string): void => this.selectAndCollapse(option),
+    });
   }
 
-  // 已选行 = 触发条展开态 (panel-soft 高亮 + 上旋 chevron)。点它 = 选中当前值并收起。
   @Builder
   private selectedRow() {
-    if (this.variant === 'appearanceCompact') {
-      this.appearanceSelectedRow();
-    } else if (this.variant === 'sourceGroup') {
-      this.sourceGroupSelectedRow();
-    } else {
-      this.defaultSelectedRow();
-    }
-  }
-
-  @Builder
-  private sourceGroupSelectedRow() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.renderedValue())
-        .width(Math.max(0, this.resolvedWidth() - 42))
-        .height(15)
-        .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
-        .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
-        .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
-        .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 14, y: 10 });
-      Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron')))
-        .width(12)
-        .height(12)
-        .rotate({ angle: this.chevronAngle })
-        .position({ x: this.resolvedWidth() - 21, y: 12 });
-    }
-    .width('100%')
-    .height(OPTION_H)
-    .backgroundColor(readerAppColor('app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8', this.appThemeScheme))
-    .onClick((): void => this.selectAndCollapse(this.renderedValue()));
-  }
-
-  @Builder
-  private appearanceSelectedRow() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.renderedValue())
-        .width(Math.max(0, this.resolvedWidth() - 28))
-        .height(14)
-        .fontFamily(TYPE_SELECT_APPEARANCE_VALUE.fontFamily)
-        .fontWeight(TYPE_SELECT_APPEARANCE_VALUE.fontWeight)
-        .fontSize(TYPE_SELECT_APPEARANCE_VALUE.fontSizeFp)
-        .lineHeight(TYPE_SELECT_APPEARANCE_VALUE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 10, y: 11 });
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
-        .width(8)
-        .height(4)
-        .rotate({ angle: this.chevronAngle })
-        .position({ x: this.resolvedWidth() - 14, y: 16 });
-    }
-    .width('100%')
-    .height(OPTION_H)
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-    .onClick((): void => this.selectAndCollapse(this.renderedValue()));
-  }
-
-  @Builder
-  private defaultSelectedRow() {
-    Row({ space: CHEVRON_GAP }) {
-      Text(this.renderedValue())
-        .layoutWeight(1)
-        .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
-        .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
-        .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
-        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-        .textAlign(TextAlign.Start)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))).width(CHEVRON_W).height(CHEVRON_H)
-        .rotate({ angle: this.chevronAngle });
-    }
-    .width('100%')
-    .height(OPTION_H)
-    .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-    .alignItems(VerticalAlign.Center)
-    .onClick((): void => this.selectAndCollapse(this.renderedValue()));
+    ReaderChoiceRow({
+      specId: this.variant === 'appearanceCompact' ? 'appearance-compact-selected' :
+        (this.variant === 'sourceGroup' ? 'source-group-selected' : 'default-selected'),
+      label: this.renderedValue(), selected: true, scheme: this.appThemeScheme,
+      availableWidth: this.resolvedWidth(), chevronAngle: this.chevronAngle,
+      actionEnabled: !this.closeInFlight,
+      onChoose: (option: string): void => this.selectAndCollapse(option),
+    });
   }
 
   @Builder
   private optionRow(opt: string) {
-    Row() {
-      Text(opt)
-        .layoutWeight(1)
-        .fontFamily(this.optionTextStyle().fontFamily)
-        .fontWeight(this.optionTextStyle().fontWeight)
-        .fontSize(this.optionTextStyle().fontSizeFp)
-        .lineHeight(this.optionTextStyle().lineHeightFp as number)
-        .fontColor(this.variant === 'sourceGroup' ? readerAppColor('TOK_INK', this.appThemeScheme) : readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Start)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-    }
-    .width('100%')
-    .height(OPTION_H)
-    .padding({
-      left: this.variant === 'sourceGroup' ? 14 : SELECT_PAD,
-      right: this.variant === 'sourceGroup' ? 14 : SELECT_PAD,
-    })
-    .alignItems(VerticalAlign.Center)
-    .onClick((): void => this.selectAndCollapse(opt));
+    ReaderChoiceRow({
+      specId: this.variant === 'sourceGroup' ? 'source-group-option' : 'default-option',
+      label: opt, scheme: this.appThemeScheme, actionEnabled: !this.closeInFlight,
+      onChoose: (option: string): void => this.selectAndCollapse(option),
+    });
   }
 
   // 最长文本(值 ∪ 选项)实测宽 + chrome, px→vp。
@@ -296,10 +221,6 @@ export struct ReaderSelectPanel {
       return readerAppColor('app.ReaderSelectPanel.panelBorderColor.paint.85B4A697', this.appThemeScheme);
     }
     return readerAppColor('TOK_BORDER', this.appThemeScheme);
-  }
-
-  private optionTextStyle() {
-    return this.variant === 'sourceGroup' ? TYPE_SELECT_SOURCE_GROUP_VALUE : TYPE_SELECT_OPTION;
   }
 
   private measureTextStyle() {
@@ -359,19 +280,19 @@ export struct ReaderSelectPanel {
     this.closingValue = this.value;
     this.closingOptions = this.options.slice();
     this.closeInFlight = true;
+    this.closeFinish = onFinish;
     const generation = ++this.generation;
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
       this.expandedHeight = OPTION_H;
       this.chevronAngle = 0;
-      onFinish();
+      this.finishCollapse(generation);
       return;
     }
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
-        if (!this.mounted || generation !== this.generation) return;
-        onFinish();
+        this.finishCollapse(generation);
       }),
       (): void => {
         this.expandedHeight = OPTION_H;

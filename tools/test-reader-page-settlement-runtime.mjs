@@ -3,6 +3,7 @@ import { ReaderPageSettlementTimeline } from '../entry/src/main/ets/features/rea
 import { resumeReaderPagePan, updateReaderPagePanInPlace, finishReaderPagePan } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderRapidPageTurnState, enqueueReaderRapidPageTurn, beginReaderRapidPageTurn, completeReaderRapidPageTurn } from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
+import { readerBookTurnRuntimeSpec } from '../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts';
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Host = productionMotionMethods(file, ['regrabPageTurn', 'completeRapidPageTurnTransaction'], { resumeReaderPagePan, completeReaderRapidPageTurn });
 for (const direction of ['next', 'previous']) {
@@ -40,7 +41,7 @@ const nativeEvents = Object.fromEntries([
   'SURFACE_LOST', 'RENDER_FAILURE', 'SLOTS_COMMITTED', 'TERMINAL_RELEASED', 'FRAME_PRESENTED',
 ].map((name, i) => [`BOOK_TURN_EVENT_${name}`, i + 1]));
 const NativeLifecycle = productionMotionMethods(file,
-  ['shouldMountBookTurnSurface', 'onBookTurnNativeEvent', 'recoverBookTurnSurfaceIfIdle'], nativeEvents);
+  ['shouldMountBookTurnSurface', 'onBookTurnNativeEvent', 'recoverBookTurnSurfaceIfIdle'], { ...nativeEvents, readerBookTurnRuntimeSpec });
 const lifecycle = Object.assign(new NativeLifecycle(), {
   mounted: true, reduceMotion: false, bookTurnRuntimeFailed: false,
   readerSettingsSnapshot: { navigationMode: 'paged', pageTransition: 'simulation' },

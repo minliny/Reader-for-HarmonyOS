@@ -137,6 +137,10 @@ for (const invalidation of ['selection', 'content']) {
   const f = fixture(), gate = deferred(); f.gates.set('reading.entry.snapshot', gate);
   const gateway = await ReadingSessionFlowGateway.open(f.intent, f.runtime);
   const task = gateway.loadEntrySnapshot(undefined, f.intent.isCurrent); const failed = assert.rejects(task, /cancelled/);
+  // Cross the real async restoration/serial boundary before invalidating:
+  // this scenario verifies a late reply, rather than an undispatched request.
+  await new Promise(setImmediate);
+  assert.deepEqual(f.methods(), ['reading.entry.snapshot']);
   if (invalidation === 'selection') f.stop(); else f.invalidate();
   gate.resolve(); await failed;
   assert.deepEqual(f.methods(), ['reading.entry.snapshot']);

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
 
 // ArkTS uses extensionless relative imports. Let this Node-only test resolve
 // those imports to their real TypeScript files without changing production
@@ -35,6 +38,252 @@ const {
 
 const longRealBody = '山间的风掠过竹林，带来一阵沙沙的响声。'.repeat(30);
 
+const SEED = {
+  sourceId: 'source-1',
+  bookId: '/book/42',
+  detailUrl: '/book/42',
+  title: 'Remote Book',
+  author: 'Author',
+};
+
+function makeRuntime({ bodies, openSessionError, toc }) {
+  return {
+    requests: [],
+    async request(method, params = {}, options = {}) {
+      assert.equal(options.shouldCancel?.(), false);
+      if (method === 'book.detail') {
+        if (openSessionError !== undefined) {
+          throw openSessionError;
+        }
+        return { data: {
+          sourceId: params.sourceId,
+          book: { bookId: params.bookUrl, title: 'Remote Book', author: 'Author' },
+          tocUrl: '/book/42/toc',
+        } };
+      }
+      if (method === 'book.toc') {
+        return { data: {
+          sourceId: params.sourceId,
+          bookId: params.bookId,
+          toc: toc ?? [
+            { index: 0, title: 'Chapter 1', url: '/chapter/1' },
+            { index: 1, title: 'Chapter 2', url: '/chapter/2' },
+            { index: 2, title: 'Chapter 3', url: '/chapter/3' },
+          ],
+        } };
+      }
+      if (method === 'chapter.content') {
+        const body = bodies[params.chapterIndex];
+        if (typeof body === 'string') {
+          return { data: {
+            sourceId: params.sourceId,
+            bookId: params.bookId,
+            chapterTitle: `Chapter ${params.chapterIndex}`,
+            content: body,
+            via: 'rule',
+          } };
+        }
+        throw body;
+      }
+      throw new Error(`unexpected command: ${method}`);
+    },
+    async loadReadingImage() {
+      throw new Error('no image expected in this fixture');
+    },
+  };
+}
+
+async function verifyWith(runtime, seed = SEED) {
+  const admission = new RemoteContentAdmission(new RemoteReadingFlowGateway(runtime));
+  return admission.verify(seed, { isCurrent: () => true });
+}
+
+// 6. verify(): a readable leading chapter admits the session.
+
+try{
+if(id==='readable'){
+{
+  const runtime = makeRuntime({ bodies: [longRealBody, longRealBody, longRealBody] });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'readable', 'a readable first chapter admits the book');
+  assert.equal(outcome.readableChapterIndex, 0);
+  assert.ok(outcome.session !== undefined, 'the admitted session is returned');
+  assert.equal(outcome.session.identity.bookId, '/book/42');
+}
+}
+if(id==='leading-empty'){
+{
+  const runtime = makeRuntime({ bodies: ['正在加载中', '  ', longRealBody] });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'readable', 'a blank chapter 0 does not block admission');
+  assert.equal(outcome.readableChapterIndex, 2,
+    'the admitted readable chapter index is reported');
+}
+}
+if(id==='paywall'){
+{
+  const runtime = makeRuntime({ bodies: [new RemoteReadingSourceError('SOURCE_PAYWALL', 'buy')] });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'paywalled', 'a paywall chapter yields the paywalled verdict');
+  assert.equal(outcome.readableChapterIndex, undefined);
+  assert.ok(outcome.session !== undefined, 'the session still admits for detail display');
+}
+}
+if(id==='auth'){
+{
+  const runtime = makeRuntime({ bodies: [new RemoteReadingSourceError('SOURCE_AUTH_REQUIRED', 'login')] });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'authRequired', 'a login wall yields the authRequired verdict');
+}
+}
+if(id==='all-empty'){
+{
+  const runtime = makeRuntime({ bodies: ['正在加载中', '暂无内容', '内容不存在'] });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'contentUnavailable',
+    'all-blank leading chapters yield contentUnavailable');
+}
+}
+if(id==='network-failure'){
+{
+  const runtime = makeRuntime({ bodies: [], openSessionError: new Error('network unreachable') });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'networkFailed', 'an HTTP failure yields networkFailed');
+  assert.equal(outcome.session, undefined);
+}
+}
+if(id==='toc-empty'){
+{
+  const runtime = makeRuntime({
+    bodies: [],
+    openSessionError: new RemoteReadingGatewayError('emptyToc', 'book.toc returned no readable chapters', 'book.toc'),
+  });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'contentUnavailable', 'an empty TOC yields contentUnavailable');
+}
+}
+if(id==='malformed'){
+{
+  const runtime = makeRuntime({
+    bodies: [],
+    openSessionError: new RemoteReadingGatewayError('invalidResponse', 'book.toc returned invalid toc', 'book.toc'),
+  });
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'parseFailed', 'a malformed envelope yields parseFailed');
+}
+}
+if(id==='typed-body-error'){
+{
+  const runtime = makeRuntime({ bodies: ['请登录后继续阅读本章内容'] });
+  const gateway = new RemoteReadingFlowGateway(runtime);
+  const admission = new RemoteContentAdmission(gateway);
+  const outcome = await admission.verify(SEED, { isCurrent: () => true });
+  assert.equal(outcome.verdict, 'authRequired', 'the gateway-level rejection classifies as authRequired');
+  let thrown = undefined;
+  try {
+    const session = await gateway.openSession(SEED, { isCurrent: () => true });
+    await gateway.loadChapter(session, 0, () => true);
+  } catch (error) {
+    thrown = error;
+  }
+  assert.ok(thrown instanceof RemoteReadingSourceError,
+    'loadChapter throws the typed source error for a rejected body');
+  assert.equal(thrown.kind, 'SOURCE_AUTH_REQUIRED');
+  assert.equal(thrown.command, 'chapter.content');
+}
+}
+if(id==='image-admission'){
+{
+  const runtime = {
+    async request(method, params = {}, options = {}) {
+      assert.equal(options.shouldCancel?.(), false);
+      if (method === 'book.detail') {
+        return { data: {
+          sourceId: params.sourceId,
+          book: { bookId: params.bookUrl, title: 'Remote Book', author: 'Author' },
+          tocUrl: '/book/42/toc',
+        } };
+      }
+      if (method === 'book.toc') {
+        return { data: {
+          sourceId: params.sourceId,
+          bookId: params.bookId,
+          toc: [{ index: 0, title: 'Picture Chapter', url: '/chapter/pic' }],
+        } };
+      }
+      assert.equal(method, 'chapter.content');
+      return { data: {
+        sourceId: params.sourceId,
+        bookId: params.bookId,
+        chapterTitle: 'Picture Chapter',
+        content: '￼',
+        blocks: [{ kind: 'image', source: 'images/a.webp', startScalar: 0, endScalar: 1 }],
+        via: 'rule',
+        http: { finalUrl: 'https://fixture.invalid/chapter/pic' },
+      } };
+    },
+    async loadReadingImage() {
+      return {
+        pixelMap: 'pixel-map',
+        fileUri: 'file:///fixture/body.png',
+        width: 320,
+        height: 180,
+        revision: 'image-r1',
+      };
+    },
+  };
+  const outcome = await verifyWith(runtime);
+  assert.equal(outcome.verdict, 'readable',
+    'an image chapter with a minimal text body is admitted');
+}
+}
+if(id==='cache-provenance'){
+{
+  const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+  const session = { identity: { sourceId: 'cache-source', bookId: 'cache-book' }, sourceVersion: 'v1',
+    acquisitionMode: 'offline', detailUrl: '/book', tocUrl: '/toc', book: { title: '缓存书', author: '作者' },
+    continuationVariables: [], hostRequirements: [], entries: [{ index: 0, title: '第一章', url: '/chapter', variables: [] }] };
+  const calls = [], verdicts = [];
+  const old = { ...session.identity, chapterTitle: '第一章', via: 'cache', content: longRealBody,
+    bodyVersion: 'old-body', processingVersion: 'old-processing', contentFormatVersion: 2, contentRefreshRequired: true };
+  let data = structuredClone(old);
+  const coordinator = { beginAttempt: () => 1, currentSourceVersion: async () => 'v1',
+    reportVerdict: async (...args) => verdicts.push(args) };
+  const runtime = { bookAcquisitions: () => coordinator, request: async (method, params) => {
+    calls.push({ method, params });
+    if (method === 'cache.book.status') return { data: { ...session.identity, chapters: [{ chapterIndex: 0, state: 'cached' }] } };
+    assert.equal(method, 'chapter.content');
+    return { data: structuredClone(data) };
+  } };
+  const gateway = new RemoteReadingFlowGateway(runtime);
+  const chapter = await gateway.loadChapter(session, 0);
+  assert.equal(chapter.content, old.content);assert.equal(chapter.cacheRefreshRequired, true);
+  assert.equal(verdicts.length, 0, 'old provenance cannot manufacture a new readable proof');
+  assert.ok(calls.every(call => call.params.forceRefresh !== true), 'normal offline read never refreshes');
+  const window = new ReadingChapterWindow();window.configure('cache-source', 'cache-book', [0]);window.setCurrent(chapter);
+  assert.equal(window.get(0).cacheRefreshRequired, true, 'retained chapter window keeps the pending-validation hint');
+  data.content = '请求参数错误，请稍后重试';
+  let rejected;
+  try { await gateway.loadChapter(session, 0); } catch (error) { rejected = error; }
+  assert.ok(rejected instanceof RemoteChapterCacheRefreshError);
+  assert.equal(remoteReadingFailureKindOf(rejected), 'STORAGE_FAILED');
+  assert.equal(verdicts.length, 0, 'bad cache is not fresh evidence against the source');
+  assert.deepEqual(rejected.positionContext, { bodyVersion: 'old-body', processingVersion: 'old-processing', anchors: [] });
+  const rejectedSnapshot = structuredClone(data);
+  const before = calls.length;
+  data = { ...old, via: 'rule', bodyVersion: 'new-body', processingVersion: 'new-processing',
+    contentFormatVersion: 3, contentRefreshRequired: false, positionMigration: { status: 'committed',
+      previousBodyVersion: 'old-body', previousProcessingVersion: 'old-processing', bodyVersion: 'new-body',
+      processingVersion: 'new-processing', anchors: [] } };
+  const fresh = await gateway.loadChapter(session, 0, () => true, true, rejected.positionContext);
+  assert.equal(calls.length, before + 1);assert.equal(calls.at(-1).params.forceRefresh, true);
+  assert.deepEqual(calls.at(-1).params.positionContext, rejected.positionContext);
+  assert.equal(fresh.cacheRefreshRequired, false);assert.equal(verdicts.length, 1);
+  assert.equal(rejectedSnapshot.content, '请求参数错误，请稍后重试');
+}
+}
+if(id==='body-classifier'){
 // 1. classifyChapterBody: readable vs placeholder families.
 assert.deepEqual(classifyChapterBody(longRealBody), { kind: 'readable' },
   'a real chapter body is readable');
@@ -85,6 +334,13 @@ assert.equal(classifyChapterBody(
   '<!DOCTYPE html><html><head><title>Error</title></head><body><p>500</p></body></html>').kind,
   'SOURCE_PARSE_FAILED', 'a non-login HTML page is a parse failure');
 
+assert.deepEqual(classifyChapterBody('\ufffc', true), {kind:'readable'}, 'image-only chapter remains readable');
+assert.deepEqual(classifyChapterBody('插图\ufffc', true), {kind:'readable'}, 'short normal image caption remains readable');
+assert.equal(classifyChapterBody('请先登录后阅读\ufffc', true).kind, 'SOURCE_AUTH_REQUIRED', 'image cannot bypass login notice');
+assert.equal(classifyChapterBody('验证码\ufffc', true).kind, 'SOURCE_AUTH_REQUIRED', 'captcha image remains an access page');
+
+}
+if(id==='failure-taxonomy'){
 // 3. remoteReadingFailureKindOf: taxonomy mapping.
 assert.equal(remoteReadingFailureKindOf(new RemoteReadingSourceError('SOURCE_PAYWALL', 'x')),
   'SOURCE_PAYWALL', 'a typed source error keeps its kind');
@@ -154,247 +410,9 @@ assert.equal(verdictForFailureKind('SOURCE_PAYWALL'), 'paywalled');
 assert.equal(verdictForFailureKind('SOURCE_AUTH_REQUIRED'), 'authRequired');
 assert.equal(verdictForFailureKind('PAGINATION_FAILED'), 'contentUnavailable');
 
-const SEED = {
-  sourceId: 'source-1',
-  bookId: '/book/42',
-  detailUrl: '/book/42',
-  title: 'Remote Book',
-  author: 'Author',
-};
 
-function makeRuntime({ bodies, openSessionError, toc }) {
-  return {
-    requests: [],
-    async request(method, params = {}, options = {}) {
-      assert.equal(options.shouldCancel?.(), false);
-      if (method === 'book.detail') {
-        if (openSessionError !== undefined) {
-          throw openSessionError;
-        }
-        return { data: {
-          sourceId: params.sourceId,
-          book: { bookId: params.bookUrl, title: 'Remote Book', author: 'Author' },
-          tocUrl: '/book/42/toc',
-        } };
-      }
-      if (method === 'book.toc') {
-        return { data: {
-          sourceId: params.sourceId,
-          bookId: params.bookId,
-          toc: toc ?? [
-            { index: 0, title: 'Chapter 1', url: '/chapter/1' },
-            { index: 1, title: 'Chapter 2', url: '/chapter/2' },
-            { index: 2, title: 'Chapter 3', url: '/chapter/3' },
-          ],
-        } };
-      }
-      if (method === 'chapter.content') {
-        const body = bodies[params.chapterIndex];
-        if (typeof body === 'string') {
-          return { data: {
-            sourceId: params.sourceId,
-            bookId: params.bookId,
-            chapterTitle: `Chapter ${params.chapterIndex}`,
-            content: body,
-            via: 'rule',
-          } };
-        }
-        throw body;
-      }
-      throw new Error(`unexpected command: ${method}`);
-    },
-    async loadReadingImage() {
-      throw new Error('no image expected in this fixture');
-    },
-  };
 }
-
-async function verifyWith(runtime, seed = SEED) {
-  const admission = new RemoteContentAdmission(new RemoteReadingFlowGateway(runtime));
-  return admission.verify(seed, { isCurrent: () => true });
+}finally{}
 }
-
-// 6. verify(): a readable leading chapter admits the session.
-{
-  const runtime = makeRuntime({ bodies: [longRealBody, longRealBody, longRealBody] });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'readable', 'a readable first chapter admits the book');
-  assert.equal(outcome.readableChapterIndex, 0);
-  assert.ok(outcome.session !== undefined, 'the admitted session is returned');
-  assert.equal(outcome.session.identity.bookId, '/book/42');
-}
-
-// 7. verify(): a blank leading chapter is skipped; the next readable chapter wins.
-{
-  const runtime = makeRuntime({ bodies: ['正在加载中', '  ', longRealBody] });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'readable', 'a blank chapter 0 does not block admission');
-  assert.equal(outcome.readableChapterIndex, 2,
-    'the admitted readable chapter index is reported');
-}
-
-// 8. verify(): paywall/auth/captcha verdicts stop the probe immediately.
-{
-  const runtime = makeRuntime({ bodies: [new RemoteReadingSourceError('SOURCE_PAYWALL', 'buy')] });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'paywalled', 'a paywall chapter yields the paywalled verdict');
-  assert.equal(outcome.readableChapterIndex, undefined);
-  assert.ok(outcome.session !== undefined, 'the session still admits for detail display');
-}
-{
-  const runtime = makeRuntime({ bodies: [new RemoteReadingSourceError('SOURCE_AUTH_REQUIRED', 'login')] });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'authRequired', 'a login wall yields the authRequired verdict');
-}
-
-// 9. verify(): every leading chapter blank => contentUnavailable.
-{
-  const runtime = makeRuntime({ bodies: ['正在加载中', '暂无内容', '内容不存在'] });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'contentUnavailable',
-    'all-blank leading chapters yield contentUnavailable');
-}
-
-// 10. verify(): openSession failures map onto detail verdicts.
-{
-  const runtime = makeRuntime({ bodies: [], openSessionError: new Error('network unreachable') });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'networkFailed', 'an HTTP failure yields networkFailed');
-  assert.equal(outcome.session, undefined);
-}
-{
-  const runtime = makeRuntime({
-    bodies: [],
-    openSessionError: new RemoteReadingGatewayError('emptyToc', 'book.toc returned no readable chapters', 'book.toc'),
-  });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'contentUnavailable', 'an empty TOC yields contentUnavailable');
-}
-{
-  const runtime = makeRuntime({
-    bodies: [],
-    openSessionError: new RemoteReadingGatewayError('invalidResponse', 'book.toc returned invalid toc', 'book.toc'),
-  });
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'parseFailed', 'a malformed envelope yields parseFailed');
-}
-
-// 11. loadChapter itself rejects a placeholder body with the typed source error.
-{
-  const runtime = makeRuntime({ bodies: ['请登录后继续阅读本章内容'] });
-  const gateway = new RemoteReadingFlowGateway(runtime);
-  const admission = new RemoteContentAdmission(gateway);
-  const outcome = await admission.verify(SEED, { isCurrent: () => true });
-  assert.equal(outcome.verdict, 'authRequired', 'the gateway-level rejection classifies as authRequired');
-  let thrown = undefined;
-  try {
-    const session = await gateway.openSession(SEED, { isCurrent: () => true });
-    await gateway.loadChapter(session, 0, () => true);
-  } catch (error) {
-    thrown = error;
-  }
-  assert.ok(thrown instanceof RemoteReadingSourceError,
-    'loadChapter throws the typed source error for a rejected body');
-  assert.equal(thrown.kind, 'SOURCE_AUTH_REQUIRED');
-  assert.equal(thrown.command, 'chapter.content');
-}
-
-// 12. loadChapter admits an image chapter with a short text body.
-{
-  const runtime = {
-    async request(method, params = {}, options = {}) {
-      assert.equal(options.shouldCancel?.(), false);
-      if (method === 'book.detail') {
-        return { data: {
-          sourceId: params.sourceId,
-          book: { bookId: params.bookUrl, title: 'Remote Book', author: 'Author' },
-          tocUrl: '/book/42/toc',
-        } };
-      }
-      if (method === 'book.toc') {
-        return { data: {
-          sourceId: params.sourceId,
-          bookId: params.bookId,
-          toc: [{ index: 0, title: 'Picture Chapter', url: '/chapter/pic' }],
-        } };
-      }
-      assert.equal(method, 'chapter.content');
-      return { data: {
-        sourceId: params.sourceId,
-        bookId: params.bookId,
-        chapterTitle: 'Picture Chapter',
-        content: '￼',
-        blocks: [{ kind: 'image', source: 'images/a.webp', startScalar: 0, endScalar: 1 }],
-        via: 'rule',
-        http: { finalUrl: 'https://fixture.invalid/chapter/pic' },
-      } };
-    },
-    async loadReadingImage() {
-      return {
-        pixelMap: 'pixel-map',
-        fileUri: 'file:///fixture/body.png',
-        width: 320,
-        height: 180,
-        revision: 'image-r1',
-      };
-    },
-  };
-  const outcome = await verifyWith(runtime);
-  assert.equal(outcome.verdict, 'readable',
-    'an image chapter with a minimal text body is admitted');
-}
-
-console.log('remote content admission contract: PASS');
-
-// Actual Gateway cache admission: age alone preserves offline reading, rejected
-// bytes do not publish source blame, and only explicit refresh bypasses cache.
-{
-  const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-  const session = { identity: { sourceId: 'cache-source', bookId: 'cache-book' }, sourceVersion: 'v1',
-    acquisitionMode: 'offline', detailUrl: '/book', tocUrl: '/toc', book: { title: '缓存书', author: '作者' },
-    continuationVariables: [], hostRequirements: [], entries: [{ index: 0, title: '第一章', url: '/chapter', variables: [] }] };
-  const calls = [], verdicts = [];
-  const old = { ...session.identity, chapterTitle: '第一章', via: 'cache', content: longRealBody,
-    bodyVersion: 'old-body', processingVersion: 'old-processing', contentFormatVersion: 2, contentRefreshRequired: true };
-  let data = structuredClone(old);
-  const coordinator = { beginAttempt: () => 1, currentSourceVersion: async () => 'v1',
-    reportVerdict: async (...args) => verdicts.push(args) };
-  const runtime = { bookAcquisitions: () => coordinator, request: async (method, params) => {
-    calls.push({ method, params });
-    if (method === 'cache.book.status') return { data: { ...session.identity, chapters: [{ chapterIndex: 0, state: 'cached' }] } };
-    assert.equal(method, 'chapter.content');
-    return { data: structuredClone(data) };
-  } };
-  const gateway = new RemoteReadingFlowGateway(runtime);
-  const chapter = await gateway.loadChapter(session, 0);
-  assert.equal(chapter.content, old.content);assert.equal(chapter.cacheRefreshRequired, true);
-  assert.equal(verdicts.length, 0, 'old provenance cannot manufacture a new readable proof');
-  assert.ok(calls.every(call => call.params.forceRefresh !== true), 'normal offline read never refreshes');
-  const window = new ReadingChapterWindow();window.configure('cache-source', 'cache-book', [0]);window.setCurrent(chapter);
-  assert.equal(window.get(0).cacheRefreshRequired, true, 'retained chapter window keeps the pending-validation hint');
-  data.content = '请求参数错误，请稍后重试';
-  let rejected;
-  try { await gateway.loadChapter(session, 0); } catch (error) { rejected = error; }
-  assert.ok(rejected instanceof RemoteChapterCacheRefreshError);
-  assert.equal(remoteReadingFailureKindOf(rejected), 'STORAGE_FAILED');
-  assert.equal(verdicts.length, 0, 'bad cache is not fresh evidence against the source');
-  assert.deepEqual(rejected.positionContext, { bodyVersion: 'old-body', processingVersion: 'old-processing', anchors: [] });
-  const rejectedSnapshot = structuredClone(data);
-  const before = calls.length;
-  data = { ...old, via: 'rule', bodyVersion: 'new-body', processingVersion: 'new-processing',
-    contentFormatVersion: 3, contentRefreshRequired: false, positionMigration: { status: 'committed',
-      previousBodyVersion: 'old-body', previousProcessingVersion: 'old-processing', bodyVersion: 'new-body',
-      processingVersion: 'new-processing', anchors: [] } };
-  const fresh = await gateway.loadChapter(session, 0, () => true, true, rejected.positionContext);
-  assert.equal(calls.length, before + 1);assert.equal(calls.at(-1).params.forceRefresh, true);
-  assert.deepEqual(calls.at(-1).params.positionContext, rejected.positionContext);
-  assert.equal(fresh.cacheRefreshRequired, false);assert.equal(verdicts.length, 1);
-  assert.equal(rejectedSnapshot.content, '请求参数错误，请稍后重试');
-}
-console.log('ML cache provenance, offline reading, non-source rejection and explicit protected refresh PASS');
-assert.deepEqual(classifyChapterBody('\ufffc', true), {kind:'readable'}, 'image-only chapter remains readable');
-assert.deepEqual(classifyChapterBody('插图\ufffc', true), {kind:'readable'}, 'short normal image caption remains readable');
-assert.equal(classifyChapterBody('请先登录后阅读\ufffc', true).kind, 'SOURCE_AUTH_REQUIRED', 'image cannot bypass login notice');
-assert.equal(classifyChapterBody('验证码\ufffc', true).kind, 'SOURCE_AUTH_REQUIRED', 'captcha image remains an access page');
-console.log('ML image-only chapter and short captions preserve access-notice admission PASS');
+const definitions={"readable": "readable actual scoped owner/gateway/storage path; controlled Core/OS ports", "leading-empty": "leading-empty actual scoped owner/gateway/storage path; controlled Core/OS ports", "paywall": "paywall actual scoped owner/gateway/storage path; controlled Core/OS ports", "auth": "auth actual scoped owner/gateway/storage path; controlled Core/OS ports", "all-empty": "all-empty actual scoped owner/gateway/storage path; controlled Core/OS ports", "network-failure": "network-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "toc-empty": "toc-empty actual scoped owner/gateway/storage path; controlled Core/OS ports", "malformed": "malformed actual scoped owner/gateway/storage path; controlled Core/OS ports", "typed-body-error": "typed-body-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "image-admission": "image-admission actual scoped owner/gateway/storage path; controlled Core/OS ports", "cache-provenance": "cache-provenance actual scoped owner/gateway/storage path; controlled Core/OS ports", "body-classifier": "body-classifier actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-taxonomy": "failure-taxonomy actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

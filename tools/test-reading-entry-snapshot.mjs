@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const { readFileSync }=await import('node:fs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const {readReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
 function fixture(){
  const calls=[];let current=true,contentCurrent=true,answer;
  const body={kind:'ready',sourceId:'s',bookId:'b',chapterIndex:40,chapterTitle:'第四章',content:'正文甲乙丙',blocks:[{kind:'text',startScalar:0,endScalar:5,text:'正文甲乙丙'}],
@@ -18,6 +22,9 @@ function fixture(){
   resolveSourceSwitchTransactionId:async()=>undefined,onRemoteSessionReady:()=>{throw Error('must not fabricate a full session');}};
  return {calls,body,runtime,intent,set:value=>{answer=value;},invalidate:()=>{contentCurrent=false;},stop:()=>{current=false;}};
 }
+
+try{
+if(id==='atomic-body'){
 {
  const f=fixture();const gateway=await ReadingSessionFlowGateway.open(f.intent,f.runtime);
  assert.equal(f.calls.length,0);assert.equal(gateway.remoteSession(),undefined);
@@ -27,23 +34,94 @@ function fixture(){
  assert.equal(chapter,snapshot.chapter);assert.equal(f.calls.length,1,'entry progress/body processing has one Core request');
  f.invalidate();assert.equal(snapshot.isCurrent(),false);
 }
+}
+if(id==='schema'){
 {
  const f=fixture();f.set({...f.body,bookId:'other'});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/identity/);
  f.set({...f.body,progress:{...f.body.progress,bodyVersion:'stale'}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/scope/);
  f.set({...f.body,navigation:{...f.body.navigation,after:[{index:40,position:5,title:'duplicate',navigable:true}]}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/order/);
+ // Legacy snapshot level is positive, with no existing upper bound; Core
+ // omits unrepresentable fact depths rather than changing this Host contract.
+ for (const level of [1,32,33,undefined]) {
+  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level}}});
+  assert.equal((await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true)).navigation.current.level,level);
+ }
  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level:0}}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/level/);
 }
+}
+if(id==='resume-chapter'){
+{
+ const f=fixture();
+ const mismatch={...f.body,chapterIndex:3,progressRevision:'durable-325',
+  positionScope:{...f.body.positionScope,chapterIndex:3},
+  progress:{...f.body.progress,chapterIndex:325,bodyVersion:'body-325',processingVersion:'process-325'},
+  navigation:{...f.body.navigation,current:{...f.body.navigation.current,index:3}}};
+ f.set(mismatch);
+ await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/resume chapter mismatch/,
+  'implicit resume rejects a ready chapter 3 paired with restored chapter 325');
+ f.runtime.supportsCoreCapability=()=>true;
+ f.runtime.readPreparedEntry=()=>structuredClone(mismatch);
+ assert.throws(()=>readPreparedReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true,'lineSeparated'),/resume chapter mismatch/,
+  'synchronous prepared first frame uses the same durable resume guard');
+ const selected=await readReadingEntrySnapshot(f.runtime,'s','b',3,()=>true);
+ assert.equal(selected.chapter.chapterIndex,3);assert.equal(selected.progress.progress.chapterIndex,325,
+  'explicit chapter selection keeps prior durable progress as a separate observation');
+ const preparedSelected=readPreparedReadingEntrySnapshot(f.runtime,'s','b',3,()=>true,'lineSeparated');
+ assert.equal(preparedSelected.chapter.chapterIndex,3);assert.equal(preparedSelected.progress.progress.chapterIndex,325);
+ const path=new URL('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts',import.meta.url);
+ const guarded=readFileSync(path,'utf8');
+ const guard="    if (chapterIndex === undefined && progressIndex !== index) throw new Error('reading entry resume chapter mismatch');";
+ assert.equal(guarded.split(guard).length,2,'negative control removes only the actual resume guard');
+ const mutatedUrl=path.href+'?resume-guard-removed';
+ const hook=registerHooks({load(url,context,next){
+  if(url===mutatedUrl)return{format:'module',source:stripTypeScriptTypes(guarded.replace(guard,'')),shortCircuit:true};
+  return next(url,context);
+ }});
+ try{
+  const legacy=await import(mutatedUrl);
+  const accepted=await legacy.readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
+  assert.equal(accepted.chapter.chapterIndex,3);assert.equal(accepted.progress.progress.chapterIndex,325,
+   'removing only the production guard recreates acceptance of the inconsistent Core DTO');
+  const acceptedFirstFrame=legacy.readPreparedReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true,'lineSeparated');
+  assert.equal(acceptedFirstFrame.chapter.chapterIndex,3);assert.equal(acceptedFirstFrame.progress.progress.chapterIndex,325);
+ }finally{hook.deregister();}
+ console.log('PASS defensive implicit resume chapter/progress guard: async and prepared reject 3/325; explicit chapter 3 remains legal; guard-removal counterexample accepts the same DTO');
+}
+}
+if(id==='offline-body'){
 {
  const f=fixture();f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'contentMissing'});
  assert.equal(await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),undefined);
  f.set({...f.body,contentRefreshRequired:true});const snapshot=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
  assert.equal(snapshot.chapter.cacheRefreshRequired,true,'valid old offline bytes remain readable without forced network');
 }
+}
+if(id==='cancellation'){
 {
  const f=fixture();let release;f.runtime.request=async()=>{await new Promise(r=>release=r);return{data:f.body};};
  const read=readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);f.invalidate();release();await assert.rejects(read,/cancelled/);
 }
-console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisite, one request + retained body, strict identity/scope/navigation, old offline body and cancellation PASS');
+}
+if(id==='historical-resume'){
+{
+ const f=fixture();
+ const resumed={...f.body,resumeOnly:true,navigation:{...f.body.navigation,
+  current:{...f.body.navigation.current,navigable:false,readablePosition:null}}};
+ f.set(resumed);
+ const snapshot=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
+ assert.equal(snapshot.resumeOnly,true,'Core-proved historical current chapter keeps its limited restore permission');
+ assert.equal(snapshot.navigation.current.navigable,false,'resume permission never makes a group selectable');
+ for(const changed of [{progress:null},{progress:{...f.body.progress,chapterIndex:50}},
+  {navigation:f.body.navigation},{resumeOnly:'true'}]){
+  f.set({...resumed,...changed});
+  await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/resume/);
+ }
+ f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'directoryNodeNotReadable'});
+ assert.equal(await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),undefined);
+ console.log('PASS explicit historical-only entry proof, durable matching progress, group isolation and non-readable miss');
+}
+}
+if(id==='image-identity'){
 {
  const f=fixture();
  const old=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
@@ -65,6 +143,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  }
  console.log('PASS separate chapter image layout identity: stable across windows, unchanged position scope, malformed metadata rejected');
 }
+}
+if(id==='catalog-paging'){
 {
  const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
  const calls=[];let changed=false,cancel=false;
@@ -81,6 +161,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  cancel=true;await assert.rejects(readReadingCatalog(runtime,'s','b',()=>!cancel),/cancelled/);
  console.log('bounded catalog: 256-row pages, pinned revision, reject changed and cancelled projections PASS');
 }
+}
+if(id==='lazy-observer'){
 {
  const f=fixture(), admissions=[];
  f.runtime.bookAcquisitions=()=>({acquireBookWithBackgroundRefresh:(_seed,options,priority)=>new Promise(resolve=>admissions.push({resolve,options,priority}))});
@@ -100,3 +182,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  assert.equal(old,0);assert.equal(current,1,'old mount disposer cannot remove the replacement observer');
  console.log('lazy session: independent foreground/background consumers, priority and rebound observer ownership PASS');
 }
+}
+}finally{}
+}
+const definitions={"atomic-body": "atomic-body actual production scoped behavior, controlled IO; no native device claim", "schema": "schema actual production scoped behavior, controlled IO; no native device claim", "resume-chapter": "resume-chapter actual production scoped behavior, controlled IO; no native device claim", "offline-body": "offline-body actual production scoped behavior, controlled IO; no native device claim", "cancellation": "cancellation actual production scoped behavior, controlled IO; no native device claim", "historical-resume": "historical-resume actual production scoped behavior, controlled IO; no native device claim", "image-identity": "image-identity actual production scoped behavior, controlled IO; no native device claim", "catalog-paging": "catalog-paging actual production scoped behavior, controlled IO; no native device claim", "lazy-observer": "lazy-observer actual production scoped behavior, controlled IO; no native device claim"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -1,0 +1,1802 @@
+{
+  "schemaVersion": 1,
+  "observedClientDate": "2026-10-07",
+  "purpose": "Fixed native shared download typography identity and remote-font comparison boundary",
+  "metadataTool": "fonttools 4.60.2 (existing reader-sheet-fonttools-4602 environment; no dependency installation)",
+  "demoReference": "docs/ui-design/shared-download/demo.html",
+  "demoFontCss": "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@700&display=swap",
+  "licenseSha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+  "nativeSourceOwnership": {
+    "sansSource": "entry/src/main/resources/rawfile/NotoSansSC-VF.otf",
+    "sansSourceSha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+    "600Generator": "tools/generate-manga-sheet-fonts.py",
+    "600Provenance": "docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json",
+    "400500700ProvenanceBoundary": "Existing static files reused unchanged; no generation of new files in this task."
+  },
+  "faces": [
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+      "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e",
+      "bytes": 7715508,
+      "arkuiFamily": "ReaderNotoSansSCUIRegular",
+      "physicalFamily": "Noto Sans SC",
+      "subfamily": "Regular",
+      "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603",
+      "unitsPerEm": 1000,
+      "weightClass": 400,
+      "intendedWeight": 400,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "licensePath": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "sampleGlyphs": {
+        "下": {
+          "unicode": "U+4E0B",
+          "glyphName": "uni4E0B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 59,
+          "boundsFontUnits": [
+            55,
+            -79,
+            945,
+            766
+          ],
+          "recordingPenSha256": "c478b7ed0708229c07aba455b30da2aad21d160dd02332abd92ccfcbb6f7ffbc"
+        },
+        "载": {
+          "unicode": "U+8F7D",
+          "glyphName": "uni8F7D",
+          "advanceWidth": 1000,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            54,
+            -81,
+            963,
+            840
+          ],
+          "recordingPenSha256": "f321f7eb5dbdbc11403dccbc13960241b486967d9991d767d2f5416d2f6cce03"
+        },
+        "漫": {
+          "unicode": "U+6F2B",
+          "glyphName": "uni6F2B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 57,
+          "boundsFontUnits": [
+            40,
+            -81,
+            959,
+            820
+          ],
+          "recordingPenSha256": "7f797374eb9a8167800096d94a290009295d8391963baf996cd5b9668da26a28"
+        },
+        "画": {
+          "unicode": "U+753B",
+          "glyphName": "uni753B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 105,
+          "boundsFontUnits": [
+            90,
+            -76,
+            911,
+            775
+          ],
+          "recordingPenSha256": "eb346c3c746158c07387a271f6f4771612abeba3d16e7e511b77690aa484562c"
+        },
+        "小": {
+          "unicode": "U+5C0F",
+          "glyphName": "uni2F29",
+          "advanceWidth": 1000,
+          "leftSideBearing": 42,
+          "boundsFontUnits": [
+            33,
+            -80,
+            977,
+            826
+          ],
+          "recordingPenSha256": "3eafa12e38d465aa6e019fc566c180ce025b0efe0f35b18c75990bf629faaedb"
+        },
+        "说": {
+          "unicode": "U+8BF4",
+          "glyphName": "uni8BF4",
+          "advanceWidth": 1000,
+          "leftSideBearing": 52,
+          "boundsFontUnits": [
+            44,
+            -80,
+            960,
+            840
+          ],
+          "recordingPenSha256": "dc142312f2a129a1ce57913f1fcfd3d441fcfb8fcc3e86f0fa1d13e8cf197a9b"
+        },
+        "A": {
+          "unicode": "U+0041",
+          "glyphName": "A",
+          "advanceWidth": 608,
+          "leftSideBearing": 11,
+          "boundsFontUnits": [
+            4,
+            0,
+            605,
+            733
+          ],
+          "recordingPenSha256": "b645aa9ce4a6da16eaab9b1ee225eb27b5feb9c1d77ec49f83ce4daccad150b5"
+        },
+        "B": {
+          "unicode": "U+0042",
+          "glyphName": "B",
+          "advanceWidth": 657,
+          "leftSideBearing": 110,
+          "boundsFontUnits": [
+            101,
+            0,
+            612,
+            733
+          ],
+          "recordingPenSha256": "6a111194f43c0e0fdc34a00f0bc72957dd1c059b3608cadffbec170d8be268e0"
+        },
+        "C": {
+          "unicode": "U+0043",
+          "glyphName": "C",
+          "advanceWidth": 638,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            58,
+            -14,
+            601,
+            746
+          ],
+          "recordingPenSha256": "a3c3f2049a55898a2a8c862bfcf4856badc4135a68e31eb9c0dabf0764b4dc81"
+        },
+        "1": {
+          "unicode": "U+0031",
+          "glyphName": "one",
+          "advanceWidth": 555,
+          "leftSideBearing": 95,
+          "boundsFontUnits": [
+            88,
+            0,
+            490,
+            733
+          ],
+          "recordingPenSha256": "1de2933c6cafbf5094a01a653831fa53ac92510ed1bb05a909f56135dff159d7"
+        },
+        "2": {
+          "unicode": "U+0032",
+          "glyphName": "two",
+          "advanceWidth": 555,
+          "leftSideBearing": 44,
+          "boundsFontUnits": [
+            39,
+            0,
+            504,
+            746
+          ],
+          "recordingPenSha256": "a9b826dd0cfa78e3f6caa23f88dedfddb6be378c55e8234ab90b281ee9507453"
+        },
+        "3": {
+          "unicode": "U+0033",
+          "glyphName": "three",
+          "advanceWidth": 555,
+          "leftSideBearing": 33,
+          "boundsFontUnits": [
+            27,
+            -13,
+            499,
+            747
+          ],
+          "recordingPenSha256": "cf29d7e6695e66b7e4b87cb572f13367aaebf340bf445a0d7ee2af206be38207"
+        }
+      }
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+      "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d",
+      "bytes": 7709456,
+      "arkuiFamily": "ReaderNotoSansSCUIMedium",
+      "physicalFamily": "Noto Sans SC",
+      "subfamily": "Regular",
+      "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603",
+      "unitsPerEm": 1000,
+      "weightClass": 500,
+      "intendedWeight": 500,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "licensePath": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "sampleGlyphs": {
+        "下": {
+          "unicode": "U+4E0B",
+          "glyphName": "uni4E0B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 59,
+          "boundsFontUnits": [
+            54,
+            -82,
+            947,
+            771
+          ],
+          "recordingPenSha256": "f414fc8724469f5a73b842cf61aaa4a70515349f3ca9d20a53c1c10f5d87f6f3"
+        },
+        "载": {
+          "unicode": "U+8F7D",
+          "glyphName": "uni8F7D",
+          "advanceWidth": 1000,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            51,
+            -87,
+            968,
+            845
+          ],
+          "recordingPenSha256": "da88044f566df13b5662ad87db1df18250d54e306fcc5c0dbe82b39205a3e648"
+        },
+        "漫": {
+          "unicode": "U+6F2B",
+          "glyphName": "uni6F2B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 57,
+          "boundsFontUnits": [
+            37,
+            -86,
+            968,
+            820
+          ],
+          "recordingPenSha256": "ff15f94f4da454ff36e150331dcd974a97c3c9c1714b1d15176ff89d894dcce8"
+        },
+        "画": {
+          "unicode": "U+753B",
+          "glyphName": "uni753B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 105,
+          "boundsFontUnits": [
+            79,
+            -80,
+            923,
+            781
+          ],
+          "recordingPenSha256": "947d430074eae7cca642cec20fd65513c0cdb81b0b7ec194dea7603d2eace723"
+        },
+        "小": {
+          "unicode": "U+5C0F",
+          "glyphName": "uni2F29",
+          "advanceWidth": 1000,
+          "leftSideBearing": 42,
+          "boundsFontUnits": [
+            28,
+            -84.17283950617283,
+            980,
+            830
+          ],
+          "recordingPenSha256": "26b124b71ae93abf0f9b23df85bec3e6537d405b84658ef54a6901f200d10f84"
+        },
+        "说": {
+          "unicode": "U+8BF4",
+          "glyphName": "uni8BF4",
+          "advanceWidth": 1000,
+          "leftSideBearing": 52,
+          "boundsFontUnits": [
+            41,
+            -86,
+            960,
+            842
+          ],
+          "recordingPenSha256": "f733db9598588ed444f85ec5216a5445e461c02f05efc2c1a546b7533f3f84d2"
+        },
+        "A": {
+          "unicode": "U+0041",
+          "glyphName": "A",
+          "advanceWidth": 622,
+          "leftSideBearing": 11,
+          "boundsFontUnits": [
+            0,
+            0,
+            622,
+            737
+          ],
+          "recordingPenSha256": "092c93a83fb85ad1b5183f8575cedcc9fc476bcb8beb1ffbbf3e9ffe7740dd09"
+        },
+        "B": {
+          "unicode": "U+0042",
+          "glyphName": "B",
+          "advanceWidth": 667,
+          "leftSideBearing": 110,
+          "boundsFontUnits": [
+            97,
+            0,
+            625,
+            737
+          ],
+          "recordingPenSha256": "f0adedefd26e515149647b6c026ba79ee18a265da929de4a81824a02a5ead0b0"
+        },
+        "C": {
+          "unicode": "U+0043",
+          "glyphName": "C",
+          "advanceWidth": 646,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            56,
+            -14,
+            614,
+            750
+          ],
+          "recordingPenSha256": "cba57497d8ad52d69e88d4301ab0c733fc23e44dbf38bb64faaab370db7a9518"
+        },
+        "1": {
+          "unicode": "U+0031",
+          "glyphName": "one",
+          "advanceWidth": 570,
+          "leftSideBearing": 95,
+          "boundsFontUnits": [
+            85,
+            0,
+            506,
+            736
+          ],
+          "recordingPenSha256": "1dc61fa86cfec52091db7ab3dca520151129a2c81d6eb47c119c0a0ec39d3ebf"
+        },
+        "2": {
+          "unicode": "U+0032",
+          "glyphName": "two",
+          "advanceWidth": 570,
+          "leftSideBearing": 44,
+          "boundsFontUnits": [
+            39,
+            0,
+            520,
+            751
+          ],
+          "recordingPenSha256": "736bea0d5ec78e7cf18346d071e2c189e907593c5000bdf64b3cdb7a8e15eae2"
+        },
+        "3": {
+          "unicode": "U+0033",
+          "glyphName": "three",
+          "advanceWidth": 570,
+          "leftSideBearing": 33,
+          "boundsFontUnits": [
+            30,
+            -14,
+            515,
+            750
+          ],
+          "recordingPenSha256": "750577cf5161b053f61061fa047ece922ba97f9a8d47a0d815dfdef373e98237"
+        }
+      }
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+      "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54",
+      "bytes": 7713748,
+      "arkuiFamily": "ReaderMangaSans600",
+      "physicalFamily": "ReaderMangaSans600",
+      "subfamily": "Regular",
+      "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603",
+      "unitsPerEm": 1000,
+      "weightClass": 600,
+      "intendedWeight": 600,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "licensePath": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "sampleGlyphs": {
+        "下": {
+          "unicode": "U+4E0B",
+          "glyphName": "uni4E0B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 59,
+          "boundsFontUnits": [
+            53,
+            -85,
+            948,
+            773
+          ],
+          "recordingPenSha256": "3749445d26f6adbe8ece18be7bc74a11658e90b21b45f7b2e341e118051be18f"
+        },
+        "载": {
+          "unicode": "U+8F7D",
+          "glyphName": "uni8F7D",
+          "advanceWidth": 1000,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            48,
+            -94,
+            969,
+            846
+          ],
+          "recordingPenSha256": "155e389efe1f69760e73af81b9dc1cee204cc2f1f79b35b9781b6bbd286d80ec"
+        },
+        "漫": {
+          "unicode": "U+6F2B",
+          "glyphName": "uni6F2B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 57,
+          "boundsFontUnits": [
+            28,
+            -86,
+            969,
+            829
+          ],
+          "recordingPenSha256": "b7a147479f69b1aff2e67a9e1c07ede62cc0c01ccced0e0983621fa5eba6fee1"
+        },
+        "画": {
+          "unicode": "U+753B",
+          "glyphName": "uni753B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 105,
+          "boundsFontUnits": [
+            71,
+            -84,
+            931,
+            785
+          ],
+          "recordingPenSha256": "07037d44c62e57be115f1c882071a2e10b0dc4449c734365d65392b5ca5fc10d"
+        },
+        "小": {
+          "unicode": "U+5C0F",
+          "glyphName": "uni2F29",
+          "advanceWidth": 1000,
+          "leftSideBearing": 42,
+          "boundsFontUnits": [
+            23,
+            -86.17149014706825,
+            981,
+            833
+          ],
+          "recordingPenSha256": "f1ca0e55d7e42ca65ff93201aa041f37d594018b93c379603e7d72cc33bd05a3"
+        },
+        "说": {
+          "unicode": "U+8BF4",
+          "glyphName": "uni8BF4",
+          "advanceWidth": 1000,
+          "leftSideBearing": 52,
+          "boundsFontUnits": [
+            41,
+            -89,
+            966,
+            842
+          ],
+          "recordingPenSha256": "683a7c89f11c4fe7c76f154354107f6a775d7411931082b6b690c396a43a7018"
+        },
+        "A": {
+          "unicode": "U+0041",
+          "glyphName": "A",
+          "advanceWidth": 632,
+          "leftSideBearing": 11,
+          "boundsFontUnits": [
+            -2,
+            0,
+            633,
+            739
+          ],
+          "recordingPenSha256": "787c2980dd6b67e39dc2ca76de346e38a2c1a9010025c8752863a86c0c3568f2"
+        },
+        "B": {
+          "unicode": "U+0042",
+          "glyphName": "B",
+          "advanceWidth": 674,
+          "leftSideBearing": 110,
+          "boundsFontUnits": [
+            94,
+            0,
+            633,
+            739
+          ],
+          "recordingPenSha256": "0c98f59783d8ca4a7a76862e1601f9bd0e8fff9ea52e4ac4c164b574b76872ad"
+        },
+        "C": {
+          "unicode": "U+0043",
+          "glyphName": "C",
+          "advanceWidth": 651,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            55,
+            -14,
+            621,
+            752
+          ],
+          "recordingPenSha256": "bb213bdee7fae82272a223048cde3038d80fc7f4a8d07ee55f371c5aff226f76"
+        },
+        "1": {
+          "unicode": "U+0031",
+          "glyphName": "one",
+          "advanceWidth": 580,
+          "leftSideBearing": 95,
+          "boundsFontUnits": [
+            84,
+            0,
+            517,
+            738
+          ],
+          "recordingPenSha256": "9d78398bd6352ed73e8dadb95cac25cf8061b6cdb71944b3532a979f1116217d"
+        },
+        "2": {
+          "unicode": "U+0032",
+          "glyphName": "two",
+          "advanceWidth": 580,
+          "leftSideBearing": 44,
+          "boundsFontUnits": [
+            37,
+            0,
+            529,
+            751
+          ],
+          "recordingPenSha256": "555693bf3e91627d5cb791306bf39a22489a50994245d6ed292ba00b415aaa63"
+        },
+        "3": {
+          "unicode": "U+0033",
+          "glyphName": "three",
+          "advanceWidth": 580,
+          "leftSideBearing": 33,
+          "boundsFontUnits": [
+            25,
+            -15,
+            524,
+            752
+          ],
+          "recordingPenSha256": "4cfbc35ea604db774491c8351ef768f0c0dee0ff14ab21a1a541c787f62a4d5f"
+        }
+      }
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIBold.otf",
+      "sha256": "995b908ebac24174fae7965b03324f21371dfe57bbfbe2794116d71ddde262cd",
+      "bytes": 7791444,
+      "arkuiFamily": "ReaderNotoSansSCUIBold",
+      "physicalFamily": "Noto Sans SC",
+      "subfamily": "Regular",
+      "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603",
+      "unitsPerEm": 1000,
+      "weightClass": 700,
+      "intendedWeight": 700,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "licensePath": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "sampleGlyphs": {
+        "下": {
+          "unicode": "U+4E0B",
+          "glyphName": "uni4E0B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 59,
+          "boundsFontUnits": [
+            52,
+            -87,
+            949,
+            776
+          ],
+          "recordingPenSha256": "6db1efece57d54940023d4fd14875062c8db4e188bc2793c0e0fa27410074e59"
+        },
+        "载": {
+          "unicode": "U+8F7D",
+          "glyphName": "uni8F7D",
+          "advanceWidth": 1000,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            47,
+            -96,
+            973,
+            849
+          ],
+          "recordingPenSha256": "4056f590f16880c379a25290add3b21929270d08b6d6ba96b7a2ff372c7e682f"
+        },
+        "漫": {
+          "unicode": "U+6F2B",
+          "glyphName": "uni6F2B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 57,
+          "boundsFontUnits": [
+            26,
+            -90,
+            973,
+            829
+          ],
+          "recordingPenSha256": "84a30545de7e6eece3cf20fdfc0721cb645a67c9a5d85f2ff0b2cc5ef7e84e2f"
+        },
+        "画": {
+          "unicode": "U+753B",
+          "glyphName": "uni753B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 105,
+          "boundsFontUnits": [
+            63,
+            -86,
+            940,
+            790
+          ],
+          "recordingPenSha256": "66eb75bc18be5060fa1e489baeedfc7c31d8d66568da44b864315f1086d875fb"
+        },
+        "小": {
+          "unicode": "U+5C0F",
+          "glyphName": "uni2F29",
+          "advanceWidth": 1000,
+          "leftSideBearing": 42,
+          "boundsFontUnits": [
+            25,
+            -87.14125584816973,
+            987,
+            837
+          ],
+          "recordingPenSha256": "f96578f03436238200697e7bc4e7c315608fcb70fed3defccf67e976abf21ca0"
+        },
+        "说": {
+          "unicode": "U+8BF4",
+          "glyphName": "uni8BF4",
+          "advanceWidth": 1000,
+          "leftSideBearing": 52,
+          "boundsFontUnits": [
+            38,
+            -89,
+            971,
+            847
+          ],
+          "recordingPenSha256": "2cc41afe25ad3975c5aca52b71a9c32cffa145d60f2cd3a0c9a543390f8594fb"
+        },
+        "A": {
+          "unicode": "U+0041",
+          "glyphName": "A",
+          "advanceWidth": 641,
+          "leftSideBearing": 11,
+          "boundsFontUnits": [
+            -4,
+            0,
+            644,
+            741
+          ],
+          "recordingPenSha256": "d6ab204db270a2892ac6b032067411519e94e88e28e9fa9beea49ee5b24a6ed9"
+        },
+        "B": {
+          "unicode": "U+0042",
+          "glyphName": "B",
+          "advanceWidth": 681,
+          "leftSideBearing": 110,
+          "boundsFontUnits": [
+            90,
+            0,
+            642,
+            740
+          ],
+          "recordingPenSha256": "983adfe1f7c294d6d5884dd5d4c4bb82fd71b462e76296462b13946d03ef15bd"
+        },
+        "C": {
+          "unicode": "U+0043",
+          "glyphName": "C",
+          "advanceWidth": 656,
+          "leftSideBearing": 62,
+          "boundsFontUnits": [
+            54,
+            -15,
+            628,
+            753
+          ],
+          "recordingPenSha256": "a4a1cf3c5490ef080a50193be90a7ce62df3bf77919467f57660cd2ef7efadc9"
+        },
+        "1": {
+          "unicode": "U+0031",
+          "glyphName": "one",
+          "advanceWidth": 590,
+          "leftSideBearing": 95,
+          "boundsFontUnits": [
+            82,
+            0,
+            527,
+            741
+          ],
+          "recordingPenSha256": "adc1b0dfae87b0f4ceba0aaf517ed290644263088b7cc283c90a521d858a3400"
+        },
+        "2": {
+          "unicode": "U+0032",
+          "glyphName": "two",
+          "advanceWidth": 590,
+          "leftSideBearing": 44,
+          "boundsFontUnits": [
+            36,
+            0,
+            539,
+            754
+          ],
+          "recordingPenSha256": "808268670fa894f27179912523d25c100c0660763bd347b0be0f013997ebcfff"
+        },
+        "3": {
+          "unicode": "U+0033",
+          "glyphName": "three",
+          "advanceWidth": 590,
+          "leftSideBearing": 33,
+          "boundsFontUnits": [
+            26,
+            -14,
+            534,
+            752
+          ],
+          "recordingPenSha256": "949d9271cb08bc504154bf4f3622e165bc9481483aa36bfa1843542242734e71"
+        }
+      }
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSerifSC-Bold.ttf",
+      "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894",
+      "bytes": 14853692,
+      "arkuiFamily": "ReaderNotoSerifSCBold",
+      "physicalFamily": "Noto Serif SC",
+      "subfamily": "Bold",
+      "version": "Version 2.003-H1;hotconv 1.1.1;makeotfexe 2.6.0",
+      "unitsPerEm": 1000,
+      "weightClass": 700,
+      "intendedWeight": 700,
+      "variable": false,
+      "outlineTable": "glyf",
+      "licensePath": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "sampleGlyphs": {
+        "下": {
+          "unicode": "U+4E0B",
+          "glyphName": "uni4E0B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 30,
+          "boundsFontUnits": [
+            30,
+            -89,
+            976,
+            845
+          ],
+          "recordingPenSha256": "e72df47ba771db77e92ba4ef012d21e679067bfbe5807e81bb2bf59e5ea6d414"
+        },
+        "载": {
+          "unicode": "U+8F7D",
+          "glyphName": "uni8F7D",
+          "advanceWidth": 1000,
+          "leftSideBearing": 35,
+          "boundsFontUnits": [
+            35,
+            -88.5111111111111,
+            976.5625,
+            841
+          ],
+          "recordingPenSha256": "47443652bb3f0fb51fd8ea6aae9eeeccee690da7e212a98b7e07694c6bd28c03"
+        },
+        "漫": {
+          "unicode": "U+6F2B",
+          "glyphName": "uni6F2B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 25,
+          "boundsFontUnits": [
+            25,
+            -91,
+            985,
+            850
+          ],
+          "recordingPenSha256": "b2a51d25b332e3fa64e3b5cf340bd642733a94d0cbf061b6ef54f96f96feafe8"
+        },
+        "画": {
+          "unicode": "U+753B",
+          "glyphName": "uni753B",
+          "advanceWidth": 1000,
+          "leftSideBearing": 29,
+          "boundsFontUnits": [
+            29,
+            -87,
+            978,
+            845
+          ],
+          "recordingPenSha256": "3e64132ef7e673da7dcd19755aa9c0f9384ff272d3336432b8d0f858f6eea797"
+        },
+        "小": {
+          "unicode": "U+5C0F",
+          "glyphName": "uni2F29",
+          "advanceWidth": 1000,
+          "leftSideBearing": 24,
+          "boundsFontUnits": [
+            24,
+            -88,
+            957.8421052631579,
+            835
+          ],
+          "recordingPenSha256": "a5671a214445d5fd3d8ac3be8bed3f887f75b02257c75c84f5afdeb0b77da3ce"
+        },
+        "说": {
+          "unicode": "U+8BF4",
+          "glyphName": "uni8BF4",
+          "advanceWidth": 1000,
+          "leftSideBearing": 37,
+          "boundsFontUnits": [
+            37,
+            -90,
+            971,
+            850
+          ],
+          "recordingPenSha256": "abf0bdb11d2fe711fd5325c75f8f3ddd17f690a6455c5450395440cc107fae4a"
+        },
+        "A": {
+          "unicode": "U+0041",
+          "glyphName": "A",
+          "advanceWidth": 746,
+          "leftSideBearing": 13,
+          "boundsFontUnits": [
+            13,
+            0,
+            736,
+            745
+          ],
+          "recordingPenSha256": "cf895d6d8932a00b880ef5b6419c274d6c0af4c4e433d7feb7d9a3849c5a5b41"
+        },
+        "B": {
+          "unicode": "U+0042",
+          "glyphName": "B",
+          "advanceWidth": 708,
+          "leftSideBearing": 45,
+          "boundsFontUnits": [
+            45,
+            0,
+            674,
+            741
+          ],
+          "recordingPenSha256": "42c1c726b8f1b26660f61373d0bbd79145d46e3dc2d2b04705d713a0f547318f"
+        },
+        "C": {
+          "unicode": "U+0043",
+          "glyphName": "C",
+          "advanceWidth": 702,
+          "leftSideBearing": 48,
+          "boundsFontUnits": [
+            48,
+            -19,
+            658,
+            759
+          ],
+          "recordingPenSha256": "3e0506f783b99ff050673a4c487019c9670e2507b8e5091a2081271b1901e01d"
+        },
+        "1": {
+          "unicode": "U+0031",
+          "glyphName": "one",
+          "advanceWidth": 466,
+          "leftSideBearing": 54,
+          "boundsFontUnits": [
+            54,
+            -2,
+            432,
+            752
+          ],
+          "recordingPenSha256": "e19e136a93679055d85a0e25cb49d2b5bd1c559a95148a85d1b959a3685e13ba"
+        },
+        "2": {
+          "unicode": "U+0032",
+          "glyphName": "two",
+          "advanceWidth": 594,
+          "leftSideBearing": 59,
+          "boundsFontUnits": [
+            59,
+            0,
+            544,
+            757
+          ],
+          "recordingPenSha256": "ada25fb81573d980cebdd24440feda138c8088ad54c439a403cc1dfe09925437"
+        },
+        "3": {
+          "unicode": "U+0033",
+          "glyphName": "three",
+          "advanceWidth": 593,
+          "leftSideBearing": 43,
+          "boundsFontUnits": [
+            43,
+            -16,
+            537,
+            757
+          ],
+          "recordingPenSha256": "060d1b7279f2a5180b9e6944b2d9f23c2e78d5a145ea827b30d1fde7e7c4c3ab"
+        }
+      }
+    }
+  ],
+  "sampleBoundary": "Twelve representative codepoints only; hashes identify local drawn outline commands, not cross-engine raster pixels or equivalence with another outline format.",
+  "remoteProbe": {
+    "textSubset": "下载漫画小说ABC123",
+    "fullFontsDownloaded": false,
+    "observedCssFamilyVersions": {
+      "Noto Sans SC": "v41",
+      "Noto Serif SC": "v36"
+    },
+    "modernCssFormat": "woff2",
+    "modernSansWeightsShareOneResource": true,
+    "decoded": true,
+    "limitation": "Twelve codepoints only. Current Sans2.004-H2 glyf differs from local2.004 CFF2; matched advances do not establish identical contours. Serif2.003-H1 sampled advances/bounds and glyf representation match, but full contour/raster identity remains unproven.",
+    "sameVersionConfirmed": false,
+    "sameGlyphMetricsConfirmed": false,
+    "metadataTool": "fonttools 4.60.2 + existing /opt/homebrew/bin/brotli CLI thin decompression adapter; no new decoder/dependency",
+    "subsetCssSha256": "5626d504d40dc6c471b4c8f56d32ebd142fbdfadd6216a45d97589b6cab74016",
+    "uniqueSubsetFiles": 2,
+    "totalSubsetBytes": 7500,
+    "results": [
+      {
+        "family": "Noto Sans SC",
+        "weight": 400,
+        "url": "https://fonts.gstatic.com/l/font?kit=k3kXo84MPvpLmixcA63oeALhLIiP-Q_M6p2oKFbE_mjf4xFjc5b1W9D4lKJF4CzsnQ&skey=cf0bb10b5602fdc3&v=v41",
+        "subsetSha256": "dd6157723d1a8341fa2dacff2eda0bd6d34ef2b4e193aac9f729646e88cbc332",
+        "bytes": 4376,
+        "version": "Version 2.004-H2;hotconv 1.0.118;makeotfexe 2.5.65603",
+        "unitsPerEm": 1000,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 100.0,
+            "default": 100.0,
+            "max": 900.0
+          }
+        ],
+        "outlineTable": "glyf",
+        "comparedLocal": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+        "advanceDifferences": [],
+        "boundsDifferences": [
+          "下",
+          "载",
+          "漫",
+          "画",
+          "小",
+          "说",
+          "A",
+          "B",
+          "C",
+          "1",
+          "2",
+          "3"
+        ],
+        "sampleGlyphs": {
+          "下": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              55.489868,
+              -78.580322,
+              945.510132,
+              766.140381
+            ],
+            "localBounds": [
+              55,
+              -79,
+              945,
+              766
+            ]
+          },
+          "载": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              53.809692,
+              -81.820557,
+              962.750366,
+              840.580322
+            ],
+            "localBounds": [
+              54,
+              -81,
+              963,
+              840
+            ]
+          },
+          "漫": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              41.789429,
+              -80.750366,
+              961.260498,
+              819.750366
+            ],
+            "localBounds": [
+              40,
+              -81,
+              959,
+              820
+            ]
+          },
+          "画": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              89.789429,
+              -75.92041,
+              911.210571,
+              774.820557
+            ],
+            "localBounds": [
+              90,
+              -76,
+              911,
+              775
+            ]
+          },
+          "小": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              32.249634,
+              -80.238672,
+              975.750366,
+              825.750366
+            ],
+            "localBounds": [
+              33,
+              -80,
+              977,
+              826
+            ]
+          },
+          "说": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              44.589722,
+              -80.580322,
+              958.700439,
+              839.190308
+            ],
+            "localBounds": [
+              44,
+              -80,
+              960,
+              840
+            ]
+          },
+          "A": {
+            "remoteAdvanceNativeUnits": 608.0,
+            "localAdvance": 608,
+            "remoteBoundsNativeUnits": [
+              3.589722,
+              0.0,
+              603.951538,
+              733.410278
+            ],
+            "localBounds": [
+              4,
+              0,
+              605,
+              733
+            ]
+          },
+          "B": {
+            "remoteAdvanceNativeUnits": 657.0,
+            "localAdvance": 657,
+            "remoteBoundsNativeUnits": [
+              100.639648,
+              0.0,
+              611.641113,
+              733.410278
+            ],
+            "localBounds": [
+              101,
+              0,
+              612,
+              733
+            ]
+          },
+          "C": {
+            "remoteAdvanceNativeUnits": 638.0,
+            "localAdvance": 638,
+            "remoteBoundsNativeUnits": [
+              58.099854,
+              -13.390015,
+              601.911011,
+              746.410278
+            ],
+            "localBounds": [
+              58,
+              -14,
+              601,
+              746
+            ]
+          },
+          "1": {
+            "remoteAdvanceNativeUnits": 555.0,
+            "localAdvance": 555,
+            "remoteBoundsNativeUnits": [
+              88.369751,
+              0.0,
+              490.051392,
+              733.410278
+            ],
+            "localBounds": [
+              88,
+              0,
+              490,
+              733
+            ]
+          },
+          "2": {
+            "remoteAdvanceNativeUnits": 555.0,
+            "localAdvance": 555,
+            "remoteBoundsNativeUnits": [
+              39.709839,
+              0.0,
+              504.931274,
+              746.410278
+            ],
+            "localBounds": [
+              39,
+              0,
+              504,
+              746
+            ]
+          },
+          "3": {
+            "remoteAdvanceNativeUnits": 555.0,
+            "localAdvance": 555,
+            "remoteBoundsNativeUnits": [
+              29.489868,
+              -13.390015,
+              499.101318,
+              746.410278
+            ],
+            "localBounds": [
+              27,
+              -13,
+              499,
+              747
+            ]
+          }
+        }
+      },
+      {
+        "family": "Noto Sans SC",
+        "weight": 500,
+        "url": "https://fonts.gstatic.com/l/font?kit=k3kXo84MPvpLmixcA63oeALhLIiP-Q_M6p2oKFbE_mjf4xFjc5b1W9D4lKJF4CzsnQ&skey=cf0bb10b5602fdc3&v=v41",
+        "subsetSha256": "dd6157723d1a8341fa2dacff2eda0bd6d34ef2b4e193aac9f729646e88cbc332",
+        "bytes": 4376,
+        "version": "Version 2.004-H2;hotconv 1.0.118;makeotfexe 2.5.65603",
+        "unitsPerEm": 1000,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 100.0,
+            "default": 100.0,
+            "max": 900.0
+          }
+        ],
+        "outlineTable": "glyf",
+        "comparedLocal": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+        "advanceDifferences": [],
+        "boundsDifferences": [
+          "下",
+          "载",
+          "漫",
+          "画",
+          "小",
+          "说",
+          "A",
+          "B",
+          "C",
+          "1",
+          "2",
+          "3"
+        ],
+        "sampleGlyphs": {
+          "下": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              53.960022,
+              -82.319946,
+              947.039978,
+              770.559937
+            ],
+            "localBounds": [
+              54,
+              -82,
+              947,
+              771
+            ]
+          },
+          "载": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              50.240051,
+              -88.279907,
+              966.999939,
+              844.319946
+            ],
+            "localBounds": [
+              51,
+              -87,
+              968,
+              845
+            ]
+          },
+          "漫": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              35.160095,
+              -84.999939,
+              967.039917,
+              823.999939
+            ],
+            "localBounds": [
+              37,
+              -86,
+              968,
+              820
+            ]
+          },
+          "画": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              79.440186,
+              -80.679932,
+              922.999817,
+              781.279907
+            ],
+            "localBounds": [
+              79,
+              -80,
+              923,
+              781
+            ]
+          },
+          "小": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              28.000061,
+              -83.836811,
+              979.999939,
+              829.999939
+            ],
+            "localBounds": [
+              28,
+              -84.17284,
+              980,
+              830
+            ]
+          },
+          "说": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              41.360046,
+              -84.319946,
+              963.799927,
+              842.759949
+            ],
+            "localBounds": [
+              41,
+              -86,
+              960,
+              842
+            ]
+          },
+          "A": {
+            "remoteAdvanceNativeUnits": 622.0,
+            "localAdvance": 622,
+            "remoteBoundsNativeUnits": [
+              0.360046,
+              0.0,
+              621.799744,
+              736.639954
+            ],
+            "localBounds": [
+              0,
+              0,
+              622,
+              737
+            ]
+          },
+          "B": {
+            "remoteAdvanceNativeUnits": 667.0,
+            "localAdvance": 667,
+            "remoteBoundsNativeUnits": [
+              96.560059,
+              0.0,
+              624.559814,
+              736.639954
+            ],
+            "localBounds": [
+              97,
+              0,
+              625,
+              737
+            ]
+          },
+          "C": {
+            "remoteAdvanceNativeUnits": 646.0,
+            "localAdvance": 646,
+            "remoteBoundsNativeUnits": [
+              56.400024,
+              -13.559998,
+              613.639832,
+              749.639954
+            ],
+            "localBounds": [
+              56,
+              -14,
+              614,
+              750
+            ]
+          },
+          "1": {
+            "remoteAdvanceNativeUnits": 570.0,
+            "localAdvance": 570,
+            "remoteBoundsNativeUnits": [
+              85.480042,
+              0.0,
+              506.199768,
+              736.639954
+            ],
+            "localBounds": [
+              85,
+              0,
+              506,
+              736
+            ]
+          },
+          "2": {
+            "remoteAdvanceNativeUnits": 570.0,
+            "localAdvance": 570,
+            "remoteBoundsNativeUnits": [
+              37.840027,
+              0.0,
+              519.719788,
+              749.639954
+            ],
+            "localBounds": [
+              39,
+              0,
+              520,
+              751
+            ]
+          },
+          "3": {
+            "remoteAdvanceNativeUnits": 570.0,
+            "localAdvance": 570,
+            "remoteBoundsNativeUnits": [
+              27.960022,
+              -13.559998,
+              514.39978,
+              749.639954
+            ],
+            "localBounds": [
+              30,
+              -14,
+              515,
+              750
+            ]
+          }
+        }
+      },
+      {
+        "family": "Noto Sans SC",
+        "weight": 600,
+        "url": "https://fonts.gstatic.com/l/font?kit=k3kXo84MPvpLmixcA63oeALhLIiP-Q_M6p2oKFbE_mjf4xFjc5b1W9D4lKJF4CzsnQ&skey=cf0bb10b5602fdc3&v=v41",
+        "subsetSha256": "dd6157723d1a8341fa2dacff2eda0bd6d34ef2b4e193aac9f729646e88cbc332",
+        "bytes": 4376,
+        "version": "Version 2.004-H2;hotconv 1.0.118;makeotfexe 2.5.65603",
+        "unitsPerEm": 1000,
+        "axes": [
+          {
+            "tag": "wght",
+            "min": 100.0,
+            "default": 100.0,
+            "max": 900.0
+          }
+        ],
+        "outlineTable": "glyf",
+        "comparedLocal": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+        "advanceDifferences": [],
+        "boundsDifferences": [
+          "下",
+          "载",
+          "漫",
+          "画",
+          "小",
+          "说",
+          "A",
+          "B",
+          "C",
+          "1",
+          "2",
+          "3"
+        ],
+        "sampleGlyphs": {
+          "下": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              52.969604,
+              -84.740967,
+              948.030396,
+              773.421143
+            ],
+            "localBounds": [
+              53,
+              -85,
+              948,
+              773
+            ]
+          },
+          "载": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              47.929077,
+              -92.46167,
+              969.751099,
+              846.740967
+            ],
+            "localBounds": [
+              48,
+              -94,
+              969,
+              846
+            ]
+          },
+          "漫": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              30.868286,
+              -87.751099,
+              970.781494,
+              826.751099
+            ],
+            "localBounds": [
+              28,
+              -86,
+              969,
+              829
+            ]
+          },
+          "画": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              71.07666,
+              -83.76123,
+              931.253296,
+              785.46167
+            ],
+            "localBounds": [
+              71,
+              -84,
+              931,
+              785
+            ]
+          },
+          "小": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              25.248901,
+              -86.166747,
+              982.751099,
+              832.751099
+            ],
+            "localBounds": [
+              23,
+              -86.17149,
+              981,
+              833
+            ]
+          },
+          "说": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              39.269165,
+              -86.740967,
+              967.101318,
+              845.070923
+            ],
+            "localBounds": [
+              41,
+              -89,
+              966,
+              842
+            ]
+          },
+          "A": {
+            "remoteAdvanceNativeUnits": 632.0,
+            "localAdvance": 632,
+            "remoteBoundsNativeUnits": [
+              -1.730835,
+              0.0,
+              633.354614,
+              738.730835
+            ],
+            "localBounds": [
+              -2,
+              0,
+              633,
+              739
+            ]
+          },
+          "B": {
+            "remoteAdvanceNativeUnits": 674.0,
+            "localAdvance": 674,
+            "remoteBoundsNativeUnits": [
+              93.918945,
+              0.0,
+              632.92334,
+              738.730835
+            ],
+            "localBounds": [
+              94,
+              0,
+              633,
+              739
+            ]
+          },
+          "C": {
+            "remoteAdvanceNativeUnits": 651.0,
+            "localAdvance": 651,
+            "remoteBoundsNativeUnits": [
+              55.299561,
+              -13.670044,
+              621.233032,
+              751.730835
+            ],
+            "localBounds": [
+              55,
+              -14,
+              621,
+              752
+            ]
+          },
+          "1": {
+            "remoteAdvanceNativeUnits": 580.0,
+            "localAdvance": 580,
+            "remoteBoundsNativeUnits": [
+              83.609253,
+              0.0,
+              516.654175,
+              738.730835
+            ],
+            "localBounds": [
+              84,
+              0,
+              517,
+              738
+            ]
+          },
+          "2": {
+            "remoteAdvanceNativeUnits": 580.0,
+            "localAdvance": 580,
+            "remoteBoundsNativeUnits": [
+              36.629517,
+              0.0,
+              529.293823,
+              751.730835
+            ],
+            "localBounds": [
+              37,
+              0,
+              529,
+              751
+            ]
+          },
+          "3": {
+            "remoteAdvanceNativeUnits": 580.0,
+            "localAdvance": 580,
+            "remoteBoundsNativeUnits": [
+              26.969604,
+              -13.670044,
+              524.303955,
+              751.730835
+            ],
+            "localBounds": [
+              25,
+              -15,
+              524,
+              752
+            ]
+          }
+        }
+      },
+      {
+        "family": "Noto Serif SC",
+        "weight": 700,
+        "url": "https://fonts.gstatic.com/l/font?kit=H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7RlrCWq847hdT2Cc177smiKl6Rg2z6MEt2v8cX1fWTi1LWbw3w&skey=37fe335b8fd815cc&v=v36",
+        "subsetSha256": "453f0731bdcbe628b73a9f81943601d083a01b1cca9cba79727da0079e5c36c9",
+        "bytes": 3124,
+        "version": "Version 2.003-H1;hotconv 1.1.1;makeotfexe 2.6.0",
+        "unitsPerEm": 1000,
+        "axes": [],
+        "outlineTable": "glyf",
+        "comparedLocal": "entry/src/main/resources/rawfile/NotoSerifSC-Bold.ttf",
+        "advanceDifferences": [],
+        "boundsDifferences": [],
+        "sampleGlyphs": {
+          "下": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              30.0,
+              -89.0,
+              976.0,
+              845.0
+            ],
+            "localBounds": [
+              30,
+              -89,
+              976,
+              845
+            ]
+          },
+          "载": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              35.0,
+              -88.511111,
+              976.5625,
+              841.0
+            ],
+            "localBounds": [
+              35,
+              -88.511111,
+              976.5625,
+              841
+            ]
+          },
+          "漫": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              25.0,
+              -91.0,
+              985.0,
+              850.0
+            ],
+            "localBounds": [
+              25,
+              -91,
+              985,
+              850
+            ]
+          },
+          "画": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              29.0,
+              -87.0,
+              978.0,
+              845.0
+            ],
+            "localBounds": [
+              29,
+              -87,
+              978,
+              845
+            ]
+          },
+          "小": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              24.0,
+              -88.0,
+              957.842105,
+              835.0
+            ],
+            "localBounds": [
+              24,
+              -88,
+              957.842105,
+              835
+            ]
+          },
+          "说": {
+            "remoteAdvanceNativeUnits": 1000.0,
+            "localAdvance": 1000,
+            "remoteBoundsNativeUnits": [
+              37.0,
+              -90.0,
+              971.0,
+              850.0
+            ],
+            "localBounds": [
+              37,
+              -90,
+              971,
+              850
+            ]
+          },
+          "A": {
+            "remoteAdvanceNativeUnits": 746.0,
+            "localAdvance": 746,
+            "remoteBoundsNativeUnits": [
+              13.0,
+              0.0,
+              736.0,
+              745.0
+            ],
+            "localBounds": [
+              13,
+              0,
+              736,
+              745
+            ]
+          },
+          "B": {
+            "remoteAdvanceNativeUnits": 708.0,
+            "localAdvance": 708,
+            "remoteBoundsNativeUnits": [
+              45.0,
+              0.0,
+              674.0,
+              741.0
+            ],
+            "localBounds": [
+              45,
+              0,
+              674,
+              741
+            ]
+          },
+          "C": {
+            "remoteAdvanceNativeUnits": 702.0,
+            "localAdvance": 702,
+            "remoteBoundsNativeUnits": [
+              48.0,
+              -19.0,
+              658.0,
+              759.0
+            ],
+            "localBounds": [
+              48,
+              -19,
+              658,
+              759
+            ]
+          },
+          "1": {
+            "remoteAdvanceNativeUnits": 466.0,
+            "localAdvance": 466,
+            "remoteBoundsNativeUnits": [
+              54.0,
+              -2.0,
+              432.0,
+              752.0
+            ],
+            "localBounds": [
+              54,
+              -2,
+              432,
+              752
+            ]
+          },
+          "2": {
+            "remoteAdvanceNativeUnits": 594.0,
+            "localAdvance": 594,
+            "remoteBoundsNativeUnits": [
+              59.0,
+              0.0,
+              544.0,
+              757.0
+            ],
+            "localBounds": [
+              59,
+              0,
+              544,
+              757
+            ]
+          },
+          "3": {
+            "remoteAdvanceNativeUnits": 593.0,
+            "localAdvance": 593,
+            "remoteBoundsNativeUnits": [
+              43.0,
+              -16.0,
+              537.0,
+              757.0
+            ],
+            "localBounds": [
+              43,
+              -16,
+              537,
+              757
+            ]
+          }
+        }
+      }
+    ],
+    "matchingSampleAdvances": true
+  },
+  "browserReferenceDecision": {
+    "canSilentlyReplaceConfirmedDemoRemoteFonts": false,
+    "reason": "The decoded current text subsets can establish sampled advances/bounds only; observed metric differences and incomplete contour/raster identity prevent silent replacement of the confirmed remote-font demo.",
+    "recommendedReference": "Keep the original demo unchanged. A separate explicitly named native-comparison reference may pin these exact local files; it is a controlled reference, not proof that the previously rendered demo used the same glyphs."
+  }
+}

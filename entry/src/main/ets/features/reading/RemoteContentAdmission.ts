@@ -7,6 +7,7 @@ import type {
   RemoteReadingCommand,
 } from './RemoteReadingContract';
 import { RemoteReadingGatewayError } from './RemoteReadingContract';
+import { errorMessageOf } from '../../app/ErrorMessage';
 
 /**
  * Stable failure taxonomy for the whole remote reading chain. Only the six
@@ -315,10 +316,6 @@ export class RemoteContentAdmission {
     }
     return { verdict: lastVerdict, message: lastMessage, session };
   }
-}
-
-function errorMessageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /** Structural type so this module never value-imports the gateway. */

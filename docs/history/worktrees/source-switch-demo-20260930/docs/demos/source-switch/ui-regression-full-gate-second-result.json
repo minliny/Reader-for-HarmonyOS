@@ -1,0 +1,17 @@
+{
+  "sourceCommit": "1b03aae550f0e5f85945a8d3a46ad0fcea143c7d",
+  "status": "FAILED_TIMEOUT",
+  "concurrency": 6,
+  "limitMs": 120000,
+  "metrics": {
+    "tests": "394",
+    "pass": "283",
+    "fail": "0",
+    "cancelled": "111",
+    "skipped": "0",
+    "duration_ms": "120019.569959"
+  },
+  "artifactProduced": false,
+  "behaviorAssertionFailures": 0,
+  "next": "Calibrate allowed concurrency against host resource pressure; do not skip tests or extend deadline."
+}

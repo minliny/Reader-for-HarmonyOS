@@ -1,3 +1,4 @@
+import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
@@ -53,6 +54,36 @@ for (const hasRealProgress of [false, true]) {
   assert.equal(published, undefined);
   assert.equal(f.continueCalls(), 1, 'catalog-only or malformed optional position cannot prove the first global progress record');
   f.continued.resolve(actual); await load; assert.equal(published.continueReading, actual);
+}
+for (const hasOlderNovel of [false,true]) {
+  const f=flow();let published;
+  const manga={...book('same-book-id'),sourceId:'manga-source',contentKind:'manga',lastReadAt:30};
+  const novel={...book('same-book-id',5),sourceId:'novel-source',lastReadAt:20};
+  const load=f.owner.load().then(value=>{published=value;});
+  const original=page(hasOlderNovel?[manga,novel]:[manga]);f.first.resolve(original);await settle();
+  assert.equal(f.continueCalls(),1,'latest manga with an unknown catalog mapping retains the global progress-record query');
+  assert.equal(published,undefined,'the older novel cannot steal the card while manga progress is being resolved');
+  f.continued.resolve(manga);await load;
+  assert.equal(published.continueReading,manga);assert.equal(published.shelf,original);
+  assert.equal(manga.currentChapterIndex,undefined,'selecting the manga card does not invent a catalog mapping');
+  assert.equal(manga.readingPosition,undefined,'manga never gains a fabricated novel coordinate');
+  assert.equal(published.continueReading.sourceId,'manga-source','same bookId on a novel source does not alias');
+}
+{
+  const f=flow(),ambiguous={...book(1),contentKind:'manga',lastReadAt:30},novel=book(2,5);
+  const load=f.owner.load();f.first.resolve(page([ambiguous,novel]));await settle();
+  assert.equal(f.continueCalls(),1);f.continued.resolve(novel);
+  assert.equal((await load).continueReading,novel,'a manga read time alone never proves a progress record; Core still owns selection');
+}
+{
+  const f=flow(),novel=book(1,0),older={...book(2),contentKind:'manga',lastReadAt:10};
+  const load=f.owner.load();f.first.resolve(page([novel,older]));
+  assert.equal((await load).continueReading,novel);assert.equal(f.continueCalls(),0,'an older unmapped manga does not delay a proven latest novel');
+}
+{
+  const f=flow(),unread={...book(1),contentKind:'manga'},novel=book(2,0);
+  const load=f.owner.load();f.first.resolve(page([unread,novel]));
+  assert.equal((await load).continueReading,novel);assert.equal(f.continueCalls(),0,'a manga with no read time retains the known-unread fast path');
 }
 {
   const f = flow(); let published;
@@ -144,7 +175,7 @@ function storeFixture() {
   assert.equal(f.store.currentBookshelfViewMode(), 'list', 'serialized writes publish the last acknowledgement');
 }
 
-const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode'], { registerReaderShelfFonts() {} });
+const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode', 'viewModeRecovery', 'viewModePending', 'modeFeedback', 'applyViewModeSnapshot'], { readerRecoveryView, registerReaderShelfFonts() {} });
 function pageFixture(confirmed, pending) {
   let reads = 0, builds = 0;
   const owner = Object.assign(new Page(), { mounted: false, viewModeRevision: 0, storedViewMode: 'cover', viewSwitchRunning: false,
@@ -152,6 +183,7 @@ function pageFixture(confirmed, pending) {
     viewState: { filterExpanded: false }, getUIContext: () => ({ getFont() {} }),
     setRestingProjectionOpacity() {}, resetViewSwitchMotion() {}, rebuildShelfProjection() { builds += 1; },
   });
+  owner.viewModeHost=actualModeHost(owner.webDavCredentials);owner.viewModeSnapshot={canonical:undefined};
   return { owner, reads: () => reads, builds: () => builds };
 }
 {

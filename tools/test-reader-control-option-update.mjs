@@ -1,17 +1,24 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { gunzipSync } from 'node:zlib';
-import { createHash } from 'node:crypto';
-import { runInNewContext } from 'node:vm';
-import { productionSettingsOptionModifier } from './lib/reader-control-option-modifier-probe.mjs';
-import { sampleReaderControlSettings } from '../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts';
-import { sampleReaderControlMotionPresentation } from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={'modifier-budget':{description:'Pinned Apache-2.0 upstream modifier correctness and native setter call budget',resources:[]}};
+const selected=selectContractCases(definitions);
+async function runCase(){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { gunzipSync }=await import('node:zlib');
+const { createHash }=await import('node:crypto');
+const { runInNewContext }=await import('node:vm');
+const { productionSettingsOptionModifier }=await import('./lib/reader-control-option-modifier-probe.mjs');
+const { sampleReaderControlSettings }=await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
+const { sampleReaderControlMotionPresentation }=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
 
+const upstreamEvidence=[];
 const fixture = name => {
   const url = new URL(`./fixtures/openharmony/${name}`, import.meta.url);
   const bytes = gunzipSync(readFileSync(new URL(`${url}.js.gz`)));
   const meta = JSON.parse(readFileSync(new URL(`${url}.json`)));
   assert.equal(createHash('sha256').update(bytes).digest('hex'), meta.sha256, 'exact unmodified upstream bytes');
+  assert.equal(meta.license,'Apache-2.0');assert.match(meta.gitBlob,/^[a-f0-9]{40}$/);
+  upstreamEvidence.push({repository:meta.repository,ref:meta.ref,gitBlob:meta.gitBlob,sha256:meta.sha256,license:meta.license,scope:meta.scope});
   return bytes.toString();
 };
 const calls = [], values = new Map();
@@ -45,9 +52,9 @@ const mountedCalls = calls.length;
 calls.length = 0;
 for (let i = 1; i <= 120; i++) pose(i / 120);
 const movingCalls = calls.length;
-// SDK-emitted legacy Text observers forwarded all 16 properties on every pose.
-const legacyCalls = 13 * 16 * 120;
-assert.ok(movingCalls < legacyCalls / 2, 'upstream diff removes the majority of redundant native attribute calls');
+// Budget covers five changing setters for each of 13 native nodes over 120 poses; no wall-clock inference.
+const nativeSetterCallBudget=13*5*120;
+assert.ok(movingCalls<=nativeSetterCallBudget,'bounded dynamic native setter calls');
 for (const name of ['setFontFamily', 'setFontSize', 'setTextAlign', 'setMaxLines', 'setBorderRadius',
   'setFontColor', 'setBackgroundColor', 'setEnabled', 'setAccessibilityText', 'setOnClick',
   'setFontFamily', 'setFontSize', 'setFontWeight', 'setTextAlign', 'setMaxLines', 'setBorderRadius']) {
@@ -64,5 +71,8 @@ const retained = new Modifier(() => { received = current; }), retainedNode = new
 retained.update({ x: 0, y: 0, width: 20, height: 20, opacity: 1 }, sampleReaderControlMotionPresentation(.5), false, true, 'live').applyNormalAttribute(retainedNode);
 retainedNode.applyModifierPatch(); current = 2; values.get(99).get('setOnClick')[0](); assert.equal(received, 2);
 console.log(JSON.stringify({ result: 'PASS', layer: 'real upstream 5.0 attribute diff + production modifier; not native layout or VM performance',
-  mountedNodes: 13, mountedCalls, poses: 120, legacyAttributeCalls: legacyCalls, patchedAttributeCalls: movingCalls,
-  reductionPercent: +(100 * (1 - movingCalls / legacyCalls)).toFixed(2), reverseResizeBusinessAndCallback: 'PASS' }));
+  mountedNodes: 13, mountedCalls, poses:120,upstreamEvidence,nativeSetterCallBudget,patchedAttributeCalls:movingCalls,
+  sdkRelationship:'Pinned OpenHarmony 5.0 upstream attribute diff fixture; production installed API23 SDK may differ; no VM performance claim', reverseResizeBusinessAndCallback: 'PASS' }));
+
+}
+for(const id of selected){await runCase();recordContractCasePass(id);}

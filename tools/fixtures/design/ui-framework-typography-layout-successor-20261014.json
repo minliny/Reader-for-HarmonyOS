@@ -1,0 +1,366 @@
+{
+  "schema": 1,
+  "purpose": "Exact UI framework builder relocations; historical physical font witnesses remain byte immutable. No style/count/role changes are admitted.",
+  "previousFixtures": [
+    {
+      "path": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+      "sha256": "87f72cffa795b3565acd03e67cc8a9ae89517dc8975a1a2270f100ab9cf9ca82"
+    },
+    {
+      "path": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+      "sha256": "30e243b894f58f3d0be5d26d6a9be687ed7be1e3d041249b9cfd202acc6b58e9"
+    },
+    {
+      "path": "tools/fixtures/design/conventional-typography-baseline.json",
+      "sha256": "e7e44878f83d99580c96d14f2e3d70214f8220a205321746168cf5504275e5f9"
+    },
+    {
+      "path": "tools/fixtures/design/typography-carrier-successors.json",
+      "sha256": "7d92992d9a1b32b7e86b96bfa3d36c8988b96df11efd8bb129e017778535674f"
+    }
+  ],
+  "approvedRelocations": [
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+      "previousFixture": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+      "previousEntrySha256": "7bd908c1e903ecc94f45b85ec425072845fbab43ec2a53e4464d1bde56d8b630",
+      "carrierCount": 7,
+      "nativeCount": 3,
+      "relocations": [
+        {
+          "field": "carriers",
+          "index": 0,
+          "previousMethod": "build",
+          "currentMethod": "fontPreparationContent",
+          "previousCarrierSha256": "0462b5a28542df0dc7473e685db8458d2ccc111d887f5725bd62782829e22e0b",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "mangaDirectory",
+            "slot": "content",
+            "builder": "fontPreparationContent",
+            "edges": []
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 1,
+          "previousMethod": "standardPage",
+          "currentMethod": "standardContent",
+          "previousCarrierSha256": "9007d6cd045cb13cde88fc951fdc61c8376d36ddffb612c910757ed521db4d62",
+          "binding": {
+            "method": "standardPage",
+            "component": "ReaderPageScaffold",
+            "variant": "directory",
+            "slot": "content",
+            "builder": "standardContent",
+            "edges": []
+          }
+        },
+        {
+          "field": "nativeDefaults",
+          "index": 0,
+          "previousMethod": "build",
+          "currentMethod": "fontPreparationContent",
+          "previousCarrierSha256": "969d5b9a80673229930f19dd5d5fd9e13b95ce3faf545b49e7f315de10ed1e63",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "mangaDirectory",
+            "slot": "content",
+            "builder": "fontPreparationContent",
+            "edges": []
+          }
+        },
+        {
+          "field": "nativeDefaults",
+          "index": 1,
+          "previousMethod": "standardPage",
+          "currentMethod": "standardToolbar",
+          "previousCarrierSha256": "6e9f35e72395fefa3e82dd1ece8b50ad5da16a197da6a1e5f8483e8b9ff14485",
+          "binding": {
+            "method": "standardPage",
+            "component": "ReaderPageScaffold",
+            "variant": "directory",
+            "slot": "header",
+            "builder": "standardHeader",
+            "edges": [
+              [
+                "standardHeader",
+                "standardToolbar"
+              ]
+            ]
+          }
+        },
+        {
+          "field": "nativeDefaults",
+          "index": 2,
+          "previousMethod": "standardPage",
+          "currentMethod": "standardToolbar",
+          "previousCarrierSha256": "d8966a09313630be643e926a6314523f2e1ca525df80ecf9f07591b4d9c5633e",
+          "binding": {
+            "method": "standardPage",
+            "component": "ReaderPageScaffold",
+            "variant": "directory",
+            "slot": "header",
+            "builder": "standardHeader",
+            "edges": [
+              [
+                "standardHeader",
+                "standardToolbar"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "previousFixture": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+      "previousEntrySha256": "cfed9cd86bd81e1bfc3bcba337bf63293d0a18fcf55199875528f4be997bccb0",
+      "carrierCount": 40,
+      "nativeCount": 1,
+      "relocations": [
+        {
+          "field": "carriers",
+          "index": 0,
+          "previousMethod": "build",
+          "currentMethod": "fontPreparationContent",
+          "previousCarrierSha256": "d75d91ee5d21364c13b8fb8bcb56ac92abd675181a8dea77ef576c8518f54c15",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "mangaDetail",
+            "slot": "content",
+            "builder": "fontPreparationContent",
+            "edges": []
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 1,
+          "previousMethod": "detailPage",
+          "currentMethod": "detailScroll",
+          "previousCarrierSha256": "e76e4e9baf43b5def81efb2356f9a167ba93d02c13763fd338ec94e80ca0e75c",
+          "binding": {
+            "method": "detailPage",
+            "component": "ReaderPageScaffold",
+            "variant": "this.book.contentKind === 'manga' ? 'mangaDetail' : 'detail'",
+            "slot": "content",
+            "builder": "detailScroll",
+            "edges": []
+          }
+        },
+        {
+          "field": "nativeDefaults",
+          "index": 0,
+          "previousMethod": "build",
+          "currentMethod": "fontPreparationContent",
+          "previousCarrierSha256": "26f93aa6e7c8ea17d3c5a61b2811799061fe3e3a6bfdf2dff08aa54c6aed1f92",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "mangaDetail",
+            "slot": "content",
+            "builder": "fontPreparationContent",
+            "edges": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "previousFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+      "previousEntrySha256": "c95c9885d0c520d1e997ba99c172b9cfa4cc016b48107d23d5e85a83201d750d",
+      "carrierCount": 38,
+      "nativeCount": 0,
+      "relocations": [
+        {
+          "field": "carriers",
+          "index": 0,
+          "previousMethod": "build",
+          "currentMethod": "searchActivity",
+          "previousCarrierSha256": "86a6948613352c66e9690eb481aab311cc7c293d940234183ccde601c7785beb",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "overlayContent",
+            "builder": "searchActivity",
+            "edges": []
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 7,
+          "previousMethod": "resultsContent",
+          "currentMethod": "resultStats",
+          "previousCarrierSha256": "02e523196bfe4213f7c18379523e55f2d9e4438361a56cf9a6dc5d82e5874c85",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "header",
+            "builder": "searchHeader",
+            "edges": [
+              [
+                "searchHeader",
+                "resultStats"
+              ]
+            ]
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 8,
+          "previousMethod": "resultsContent",
+          "currentMethod": "resultStats",
+          "previousCarrierSha256": "f41184edfcdec3acd086b8d985642dfc557e302940cc834d9c0a341d09dc3919",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "header",
+            "builder": "searchHeader",
+            "edges": [
+              [
+                "searchHeader",
+                "resultStats"
+              ]
+            ]
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 9,
+          "previousMethod": "resultsContent",
+          "currentMethod": "resultStats",
+          "previousCarrierSha256": "5298a068e974808ca048d5a06e4e50a0a8af35689eaa72659436c6cc84d602f2",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "header",
+            "builder": "searchHeader",
+            "edges": [
+              [
+                "searchHeader",
+                "resultStats"
+              ]
+            ]
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 10,
+          "previousMethod": "resultsContent",
+          "currentMethod": "resultStats",
+          "previousCarrierSha256": "9b41eac8b841a087dc225cc3b792da8edaee23eaf51dbde0038f4cdde2783491",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "header",
+            "builder": "searchHeader",
+            "edges": [
+              [
+                "searchHeader",
+                "resultStats"
+              ]
+            ]
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 11,
+          "previousMethod": "resultsContent",
+          "currentMethod": "resultStats",
+          "previousCarrierSha256": "d3ab56b919d10fdceb544711ac66d359f93eea7baa7be955529a30b23fe29d36",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "header",
+            "builder": "searchHeader",
+            "edges": [
+              [
+                "searchHeader",
+                "resultStats"
+              ]
+            ]
+          }
+        },
+        {
+          "field": "carriers",
+          "index": 12,
+          "previousMethod": "resultsContent",
+          "currentMethod": "resultStats",
+          "previousCarrierSha256": "bf41a9c8fbea9b0472f1d6ddc81c4fe261848d038d097afac8de1978899fdcfe",
+          "binding": {
+            "method": "build",
+            "component": "ReaderPageScaffold",
+            "variant": "search",
+            "slot": "header",
+            "builder": "searchHeader",
+            "edges": [
+              [
+                "searchHeader",
+                "resultStats"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "baselineOwners": [
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+      "previousMethod": "build",
+      "currentMethod": "pageContent",
+      "binding": {
+        "method": "build",
+        "component": "ReaderStandardPage",
+        "variant": "settings",
+        "slot": "content",
+        "builder": "pageContent",
+        "edges": []
+      }
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+      "previousMethod": "build",
+      "currentMethod": "pageContent",
+      "binding": {
+        "method": "build",
+        "component": "ReaderStandardPage",
+        "variant": "rssEditor",
+        "slot": "content",
+        "builder": "pageContent",
+        "edges": []
+      }
+    }
+  ],
+  "sharedRail": {
+    "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+    "previousFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+    "previousEntrySha256": "692caccbf843aebcd143a34108085788917f16fc8c147e744c7bec2ec600478f",
+    "carrierIndex": 17,
+    "previousCarrierSha256": "f66c313ece3933c15f6d1d94f31f08ac6c9f7232d4c6a7a0552f2c11f917e799",
+    "carrierCount": 18,
+    "nativeCount": 0,
+    "ownerPath": "entry/src/main/ets/features/bookshelf/BookshelfShell.ets",
+    "shellPath": "entry/src/main/ets/features/shell/MainTabShell.ets",
+    "producerPath": "entry/src/main/ets/features/shell/MainTabBar.ets",
+    "producerOwner": "MainTabBar",
+    "producerMethod": "railTabItem",
+    "producerText": "tab.label",
+    "variant": "bookshelf",
+    "fontTuple": {
+      "fontFamily": "ReaderNotoSansSCUIBold",
+      "fontWeight": 700,
+      "fontSize": 11,
+      "lineHeight": 18
+    }
+  }
+}

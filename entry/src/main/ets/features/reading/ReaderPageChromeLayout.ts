@@ -16,6 +16,10 @@ export const READER_PAGE_CHROME_BOOKMARK_SIZE = 24;
 // applications_systemui d0f84037f1975dd9bf13ccbd279bd2d9b56e8a01,
 // features/statusbarcomponent/src/main/resources/phone/element/float.json.
 export const READER_SYSTEM_STATUS_CONTENT_INSET = 24;
+// Same-page VYG-AL30 captures show a ~12px optical difference for a 57px
+// measured AUTO line. Use a proportional correction, not a device pixel
+// offset; the complete line remains constrained to the measured status lane.
+export const READER_SYSTEM_STATUS_TEXT_SHIFT_RATIO = 0.2;
 
 export class ReaderPageChromeMeasurements {
   topStartWidth: number;
@@ -124,11 +128,23 @@ export function resolveReaderPageChromeLayout(
   const interactiveRightInset = measurements.sessionVisible ?
     Math.max(visualRightInset, layout.pageChromeInteractiveSafeRight) : visualRightInset;
   const visualRight = Math.max(visualLeft, layout.viewportWidth - visualRightInset);
-  // Reuse the measured system-bar-height lane. In extended reading it
-  // starts at zero; otherwise the same-height information lane follows it.
-  const top = layout.pageChromeTopRegionHeight > 0 ? layout.pageChromeVisualSafeTop +
+  const metrics = layout.pageChromeStatusMetrics;
+  // The authored information row occupies the system status-bar origin. A
+  // visible status bar increases the visual safe inset for body content, but
+  // must not push the row down a second time; the native bar covers this same
+  // lane while controls are presented.
+  const informationOrigin = metrics !== undefined && metrics.ready ?
+    Math.max(0, metrics.statusBarRect.top) : layout.pageChromeVisualSafeTop;
+  const statusHeight = metrics !== undefined && metrics.ready &&
+    Number.isFinite(metrics.statusBarRect.height) && metrics.statusBarRect.height > 0 ?
+    metrics.statusBarRect.height : 0;
+  // The larger information lane reserves body/cutout clearance. Position
+  // each label by its measured height relative to the actual status region;
+  // neither extra clearance nor a bookmark may shift its vertical centre.
+  const top = statusHeight > 0 ? statusContentTop(informationOrigin, statusHeight, measurements.topStartHeight) :
+    layout.pageChromeTopRegionHeight > 0 ? informationOrigin +
     Math.max(0, (layout.pageChromeTopRegionHeight - measurements.topStartHeight) / 2) :
-    Math.max(READER_PAGE_CHROME_TOP_INSET, layout.pageChromeVisualSafeTop + READER_PAGE_CHROME_SAFE_TOP_GAP);
+    Math.max(READER_PAGE_CHROME_TOP_INSET, informationOrigin + READER_PAGE_CHROME_SAFE_TOP_GAP);
   const bottomInset = measurements.sessionVisible ?
     Math.max(READER_PAGE_CHROME_BOTTOM_INSET, layout.pageChromeInteractiveSafeBottom) :
     Math.max(READER_PAGE_CHROME_BOTTOM_INSET, layout.pageChromeVisualSafeBottom);
@@ -137,27 +153,38 @@ export function resolveReaderPageChromeLayout(
   result.topStartX = visualLeft;
   result.topStartY = top;
   result.topEndX = Math.max(visualLeft, visualRight - measurements.topEndWidth);
-  result.topEndY = top + Math.max(0, (measurements.topStartHeight - measurements.topEndHeight) / 2);
+  result.topEndY = statusHeight > 0 ? statusContentTop(informationOrigin, statusHeight, measurements.topEndHeight) :
+    top + Math.max(0, (measurements.topStartHeight - measurements.topEndHeight) / 2);
   result.topStartMaxWidth = Math.max(0,
     result.topEndX - READER_PAGE_CHROME_FOOTER_GAP - visualLeft);
   result.topEndMaxWidth = Math.max(0, visualRight - visualLeft);
-  const accessoryHeight = layout.pageChromeTopRegionHeight > 0 ?
-    Math.min(measurements.topAccessoryHeight, layout.pageChromeTopRegionHeight) : measurements.topAccessoryHeight;
+  const topTrackHeight = statusHeight > 0 ? statusHeight : layout.pageChromeTopRegionHeight;
+  const accessoryHeight = topTrackHeight > 0 ?
+    Math.min(measurements.topAccessoryHeight, topTrackHeight) : measurements.topAccessoryHeight;
   const accessoryWidth = Math.min(measurements.topAccessoryWidth, accessoryHeight);
-  const rowHeight = Math.max(measurements.topStartHeight, measurements.topEndHeight, accessoryHeight);
+  const measuredRowHeight = Math.max(measurements.topStartHeight, measurements.topEndHeight, accessoryHeight);
   let topLeft = visualLeft;
   let topRight = visualRight;
   let topLeftLimit = visualRight;
   let topRightFloor = visualLeft;
-  let rowTop = layout.pageChromeTopRegionHeight > 0 ? layout.pageChromeVisualSafeTop +
-    Math.max(0, (layout.pageChromeTopRegionHeight - rowHeight) / 2) : top;
-  const metrics = layout.pageChromeStatusMetrics;
-  if (metrics !== undefined && metrics.ready && metrics.statusBarRect.height > 0) {
+  const fallbackRowTop = layout.pageChromeTopRegionHeight > 0 ? informationOrigin +
+    Math.max(0, (layout.pageChromeTopRegionHeight - measuredRowHeight) / 2) : top;
+  const accessoryTop = statusHeight > 0 ? informationOrigin + Math.max(0, (statusHeight - accessoryHeight) / 2) :
+    fallbackRowTop + Math.max(0, (measuredRowHeight - accessoryHeight) / 2);
+  const rowTop = statusHeight > 0 ? Math.min(result.topStartY, result.topEndY,
+    accessoryWidth > 0 ? accessoryTop : Number.MAX_SAFE_INTEGER) : fallbackRowTop;
+  const rowBottom = statusHeight > 0 ? Math.max(result.topStartY + measurements.topStartHeight,
+    result.topEndY + measurements.topEndHeight, accessoryWidth > 0 ? accessoryTop + accessoryHeight : 0) :
+    fallbackRowTop + measuredRowHeight;
+  const rowHeight = Math.max(0, rowBottom - rowTop);
+  if (metrics !== undefined && statusHeight > 0) {
     // Public Window gives a region, not OEM status-glyph baselines. Use the
     // upstream SystemUI content padding independently of the measured height,
     // then clamp it against this window's physical cutout and rounded corners.
     const rect = metrics.statusBarRect;
-    rowTop = layout.pageChromeVisualSafeTop + Math.max(0, (rect.height - rowHeight) / 2);
+    // rowTop/rowHeight bound the newly positioned labels and accessory. Use
+    // that same interval for physical cutout and corner clearance, including
+    // an oversized accessibility line that extends below the status region.
     const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + READER_SYSTEM_STATUS_CONTENT_INSET,
       cornerEdge(metrics.topLeftCorner, rowTop, true));
     const right = Math.min(layout.viewportWidth - layout.pageChromeVisualSafeRight,
@@ -173,8 +200,6 @@ export function resolveReaderPageChromeLayout(
     topLeftLimit = leftLimit;
     topRightFloor = rightFloor;
     result.topStartX = left;
-    result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
-    result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
     result.topEndMaxWidth = Math.max(0, right - rightFloor);
     result.topEndX = Math.max(rightFloor, right - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
     result.topStartMaxWidth = Math.max(0, Math.min(leftLimit,
@@ -193,10 +218,14 @@ export function resolveReaderPageChromeLayout(
     result.topEndX = Math.max(topRightFloor, topRight - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
     result.topAccessoryX = fitsWithClock ? result.topEndX - gap - result.topAccessoryWidth :
       Math.max(topLeft, Math.min(topLeftLimit, result.topEndX - gap) - result.topAccessoryWidth);
-    result.topAccessoryY = rowTop + Math.max(0, (rowHeight - result.topAccessoryHeight) / 2);
-    result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
+    result.topAccessoryY = statusHeight > 0 ?
+      informationOrigin + Math.max(0, (statusHeight - result.topAccessoryHeight) / 2) :
+      rowTop + Math.max(0, (rowHeight - result.topAccessoryHeight) / 2);
+    if (statusHeight === 0) {
+      result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
+      result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
+    }
     result.topStartX = topLeft;
-    result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
     result.topStartMaxWidth = Math.max(0,
       Math.min(topLeftLimit, result.topAccessoryX - gap) - result.topStartX);
   }
@@ -209,8 +238,11 @@ export function resolveReaderPageChromeLayout(
 
   const reservedSession = measurements.sessionVisible ?
     measurements.sessionWidth + READER_PAGE_CHROME_FOOTER_GAP : 0;
-  const footerLeftFloor = visualLeft + measurements.bottomStartWidth + READER_PAGE_CHROME_FOOTER_GAP;
-  result.bottomEndMaxWidth = Math.max(0, result.footerRight - reservedSession - footerLeftFloor);
+  // The right-hand percentage is a required status slot. Reserve it from the
+  // right edge first, then let a long chapter title consume only the remaining
+  // left width and ellipsize there; a long title must never hide progress.
+  const footerEndRight = Math.max(visualLeft, result.footerRight - reservedSession);
+  result.bottomEndMaxWidth = Math.max(0, footerEndRight - visualLeft);
   const resolvedBottomEndWidth = Math.min(measurements.bottomEndWidth, result.bottomEndMaxWidth);
   result.sessionX = measurements.sessionVisible ?
     Math.max(visualLeft, result.footerRight - measurements.sessionWidth) : result.footerRight;
@@ -218,12 +250,20 @@ export function resolveReaderPageChromeLayout(
     (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.sessionHeight) / 2);
   const bottomEndRight = measurements.sessionVisible ?
     result.sessionX - READER_PAGE_CHROME_FOOTER_GAP : result.footerRight;
-  result.bottomEndX = Math.max(footerLeftFloor, bottomEndRight - resolvedBottomEndWidth);
+  result.bottomEndX = Math.max(visualLeft, bottomEndRight - resolvedBottomEndWidth);
   result.bottomEndY = footerTop + Math.max(0,
     (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.bottomEndHeight) / 2);
   result.bottomStartMaxWidth = Math.max(0,
     result.bottomEndX - READER_PAGE_CHROME_FOOTER_GAP - result.bottomStartX);
   return result;
+}
+
+function statusContentTop(origin: number, statusHeight: number, contentHeight: number): number {
+  // H * (0.5 - 0.3 * h/H): centre the measured line, then account for the
+  // observed system-clock optical track by 20% of that line's height. Clamp
+  // short status regions / large text so the correction cannot overflow.
+  const available = Math.max(0, statusHeight - contentHeight);
+  return origin + Math.min(available, available / 2 + contentHeight * READER_SYSTEM_STATUS_TEXT_SHIFT_RATIO);
 }
 
 function cornerEdge(corner: ReaderDisplayCornerVp, rowTop: number, left: boolean): number {

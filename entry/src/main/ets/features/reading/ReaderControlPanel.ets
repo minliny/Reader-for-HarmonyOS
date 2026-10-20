@@ -1,3 +1,7 @@
+import { TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI } from '../common/ReaderTypography';
+import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../common/ReaderTypography';
+import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
@@ -5,6 +9,7 @@ import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
 import { FrameCallback } from '@kit.ArkUI';
 import { sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
@@ -113,6 +118,7 @@ import {
 } from './ReaderLayoutGeometry';
 import {
   TYPE_READER_CONTROL_BOOK_TITLE,
+  TYPE_READER_CONTROL_CHAPTER_TITLE,
   TYPE_READER_CONTROL_CHAPTER_SOURCE,
   TYPE_READER_CONTROL_SOURCE_ACTION,
 } from '../common/ReaderTypography';
@@ -240,15 +246,19 @@ export struct ReaderControlPanel {
   @Prop sourceName: string = '';
   @Prop progressPercent: number = 0;
   @Prop totalChapters: number = 0;
+  @Prop readableChapterPosition: number = -1;
   @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop catalogComplete: boolean = true;
+  @Prop catalogLoading: boolean = false;
+  @Prop catalogLoadFailed: boolean = false;
   @Prop catalogChapterCount: number = 0;
   @Prop catalogCurrentPosition: number = -1;
   onRequireCompleteCatalog: () => void = (): void => {};
   @Prop currentChapterIndex: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   @Prop chapterDownloadEnabled: boolean = false;
+  @Prop mangaSearch: boolean = false;
   @Prop bookmarkLoadFailed: boolean = false;
   @Prop bookmarkLoadMessage: string = '';
   onRetryBookmarkLoad: () => void = (): void => {};
@@ -267,6 +277,7 @@ export struct ReaderControlPanel {
   @Prop replaceState: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
   @Prop controlReplaceState: ReaderControlReplaceState = createReaderControlReplaceState();
   @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionIdentity: string = '';
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop settingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   /** Native simulation capability for this mounted reading session. */
@@ -301,6 +312,8 @@ export struct ReaderControlPanel {
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
   // chapter-start fallback, so this stays a zero-regression opt-in.
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
@@ -337,7 +350,7 @@ export struct ReaderControlPanel {
   onOpenRulesManagement: () => void = (): void => {};
   onToggleReplaceRule: (ruleId: number, isEnabled: boolean) => void =
     (_ruleId: number, _isEnabled: boolean): void => {};
-  onReloadControlReplace: () => Promise<void> = async (): Promise<void> => {};
+  onReloadControlReplace: (operationId?: string) => Promise<void> = async (): Promise<void> => {};
   onSaveControlReplace: (draft: ReaderControlReplaceDraft) => Promise<void> =
     async (_draft: ReaderControlReplaceDraft): Promise<void> => {};
   onToggleControlReplace: (rule: ReaderReplaceRule, value: boolean) => Promise<void> =
@@ -368,7 +381,7 @@ export struct ReaderControlPanel {
     (_current: ReaderAppearanceAlignment): void => {};
   onAppearanceMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
-  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
+  onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void =
     (_mode: ReaderChineseConversionMode): void => {};
   onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
     (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
@@ -463,7 +476,7 @@ export struct ReaderControlPanel {
   private brightnessDragging: boolean = false;
   private brightnessLastEmittedPercent: number = -1;
   private geo: ReaderControlGeometry = new ReaderControlGeometry(false);
-  private dockRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0 };
+  private dockRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0, borderRadius: 24 };
   private dockMeasured: boolean = false;
   private topBarRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0 };
   // The host stores these as a non-reactive input snapshot. Keep the array and
@@ -471,7 +484,7 @@ export struct ReaderControlPanel {
   // VSync needlessly allocates and makes the host reassign the same geometry.
   private readonly backdropRegions: ReaderControlBackdropRect[] = [
     this.dockRect,
-    { x: 0, y: 0, width: 0, height: 0 },
+    { x: 0, y: 0, width: 0, height: 0, borderRadius: 24 },
   ];
   private readonly expandCurve = curves.cubicBezierCurve(0, 0, 0.58, 1);
   private readonly collapseCurve = curves.cubicBezierCurve(0.42, 0, 1, 1);
@@ -772,6 +785,7 @@ export struct ReaderControlPanel {
     topBar.y = this.topBarRect.y + frame.topBar.translateY;
     topBar.width = this.topBarRect.width;
     topBar.height = this.topBarRect.height;
+    topBar.borderRadius = 24;
     this.onBackdropRegionsChange(this.backdropRegions, ready);
   }
 
@@ -929,6 +943,20 @@ export struct ReaderControlPanel {
           .opacity(this.frame().navigation.opacity)
           .enabled(this.contentInputEnabled() && this.frame().navigation.opacity > 0)
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
+        // The empty cap above the header is also a grab region. Requiring an
+        // exact hit on the old 72vp-wide handle made Full -> Quick difficult
+        // to begin. Stop at the header's top so its title/actions keep input.
+        Stack()
+          .id('reader-control-motion-grab-cap')
+          .width(this.layout.fullPanelWidth)
+          .height(Math.max(0, Math.min(19, this.frame().shell.height,
+            this.frame().header.y - this.frame().shell.y,
+            this.frame().content.y - this.frame().shell.y)))
+          .position({ x: 0, y: this.frame().shell.y })
+          .zIndex(3)
+          .hitTestBehavior(HitTestMode.Block)
+          .accessibilityLevel('no')
+          .onTouch((event: TouchEvent): void => this.handleControlTouch(event));
         Stack({ alignContent: Alignment.TopStart }) {
           // Paint from the same actor used by the spatial axis. Stack margin
           // alignment must not become a second source of vertical placement.
@@ -944,7 +972,8 @@ export struct ReaderControlPanel {
         .position({ x: (this.layout.fullPanelWidth - 72) / 2, y: this.frame().shell.y })
         .hitTestBehavior(HitTestMode.Block)
         .accessibilityText(this.contentLocation().level === 'home' ?
-          '控制栏拖动区域，向下关闭' : '控制栏展开或收起，向下关闭')
+          '控制栏拖动区域，向下关闭' : this.contentLocation().form === 'full' ?
+            '完整控制栏，向下收回快捷控制栏' : '快捷控制栏，向上展开，向下关闭')
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityLevel('no')
         .accessibilityVirtualNode(this.accessibleControlActions)
@@ -1024,6 +1053,7 @@ export struct ReaderControlPanel {
   }
 
   private readerMoreMenuWidth(): number {
+    const surface = this.readerMoreSurfaceSpec();
     // Measure only on opening; progress/motion publications reuse this width.
     // Native popup placement owns target tracking and window-edge avoidance.
     if (this.moreMenuVisible && this.moreMenuMeasuredWidth <= 0) {
@@ -1032,14 +1062,19 @@ export struct ReaderControlPanel {
       let width: number = 0;
       labels.forEach((label: string): void => {
         const measured = context.getMeasureUtils().measureTextSize({
-          textContent: label, fontFamily: 'ReaderNotoSansSC', fontSize: '15fp', fontWeight: '500',
+          textContent: label, fontFamily: surface.actionFontFamily,
+          fontSize: `${surface.actionFontSize}fp`, fontWeight: '500',
         });
         width = Math.max(width, context.px2vp(Number(measured.width)));
       });
       this.moreMenuMeasuredWidth = Math.ceil(width) + 36;
     }
-    return Math.min(this.moreMenuMeasuredWidth > 0 ? this.moreMenuMeasuredWidth : 176,
+    return Math.min(this.moreMenuMeasuredWidth > 0 ? this.moreMenuMeasuredWidth : surface.width,
       Math.max(0, this.layout.viewportWidth - 24));
+  }
+
+  private readerMoreSurfaceSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('reader-more-menu');
   }
 
   private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download'): boolean {
@@ -1048,35 +1083,24 @@ export struct ReaderControlPanel {
       (action !== 'download' || this.bookDownloadEnabled);
   }
 
-  @Builder
-  private readerMoreAction(label: string, action: 'info' | 'refresh' | 'download') {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row() {
-        Text(label).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(15).lineHeight(22)
-          .fontColor(readerAppColor('TOK_INK', this.appScheme)).maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.width('100%').height(50).padding({ left: 18, right: 18 });
-      if (action !== 'download') {
-        Row().width('calc(100% - 32vp)').height(1)
-          .backgroundColor(readerAppColor('app.BookshelfMoreMenu.action.color.FFE8E2DA', this.appScheme))
-          .position({ x: 16, y: 49 });
-      }
-    }.width('100%').height(50)
-      .opacity(this.readerMoreActionEnabled(action) ? 1 : 0.45).enabled(this.readerMoreActionEnabled(action))
-      .accessibilityText(label).onClick((): void => this.performMoreAction(action));
+  private readerMoreActions(): ReaderMenuActionView[] {
+    return [
+      new ReaderMenuActionView('info', '书籍信息', this.readerMoreActionEnabled('info')),
+      new ReaderMenuActionView('refresh', '刷新本章', this.readerMoreActionEnabled('refresh')),
+      new ReaderMenuActionView('download', this.bookDownloadActive ? '正在下载章节…' : '下载全部章节',
+        this.readerMoreActionEnabled('download')),
+    ];
   }
 
   @Builder
   private readerMoreMenu() {
-    Scroll() {
-      Column() {
-        this.readerMoreAction('书籍信息', 'info');
-        this.readerMoreAction('刷新本章', 'refresh');
-        this.readerMoreAction(this.bookDownloadActive ? '正在下载章节…' : '下载全部章节', 'download');
-      }.width('100%');
-    }.width('100%')
-      .height(Math.min(150, Math.max(0, this.layout.viewportHeight - 36)))
-      .scrollBar(BarState.Auto).align(Alignment.TopStart);
+    ReaderActionMenuSurface({
+      specId: 'reader-more-menu', scheme: this.appScheme, actions: this.readerMoreActions(),
+      viewportHeight: Math.max(0, this.layout.viewportHeight - 36),
+      onAction: (id: string): void => {
+        if (id === 'info' || id === 'refresh' || id === 'download') this.performMoreAction(id);
+      },
+    });
   }
 
   @Builder
@@ -1090,8 +1114,8 @@ export struct ReaderControlPanel {
         interactionEnabled: false, status: this.launchSourceAutoStatus,
         speedSeconds: this.autoPageSpeedSeconds, timerSummaryText: this.autoPageTimerSummaryText,
         timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
-        followHighlight: this.autoPageFollowHighlight, canPreviousChapter: this.currentChapterIndex > 0,
-        canNextChapter: this.currentChapterIndex >= 0 && this.currentChapterIndex < this.totalChapters - 1,
+        followHighlight: this.autoPageFollowHighlight, canPreviousChapter: this.canStepChapter(-1),
+        canNextChapter: this.canStepChapter(1),
       });
     } else {
       ReaderControlTtsContent({
@@ -1130,7 +1154,7 @@ export struct ReaderControlPanel {
     if (location.module === 'tts') return $r(this.appScheme === 'night' ? 'app.media.reader_tts_header_theme_night' : 'app.media.reader_tts_header');
     if (location.module === 'appearance') return $r(this.appScheme === 'night' ? 'app.media.reader_appearance_header_theme_night' : 'app.media.reader_appearance_header');
     if (location.module === 'settings') return $r(this.appScheme === 'night' ? 'app.media.reader_settings_header_theme_night' : 'app.media.reader_settings_header');
-    if (location.module === 'autoPage') return $r(this.appScheme === 'night' ? 'app.media.reader_auto_full_header_theme_night' : 'app.media.reader_auto_full_header');
+    if (location.module === 'autoPage') return $r(this.appScheme === 'night' ? 'app.media.rc_autopage_theme_night' : 'app.media.rc_autopage');
     return $r(this.appScheme === 'night' ? 'app.media.rc_search_theme_night' : 'app.media.rc_search');
   }
 
@@ -1142,15 +1166,15 @@ export struct ReaderControlPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Image(this.headerIcon()).width(16).height(16).position({ x: 0, y: 7 })
         .hitTestBehavior(HitTestMode.None);
-      Text(this.contentTitle()).fontFamily(this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold')
-        .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(14).lineHeight(this.headerInter() ? 16.8 : 20)
+      Text(this.contentTitle()).fontFamily(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontFamily : TYPE_READER_CONTROL_HEADER_UI.fontFamily)
+        .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontWeight : TYPE_READER_CONTROL_HEADER_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontSizeFp : TYPE_READER_CONTROL_HEADER_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.lineHeightFp : TYPE_READER_CONTROL_HEADER_UI.lineHeightFp) as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(Math.max(0, this.headerFrame().width - 74)).height(this.headerInter() ? 17 : 20)
         .position({ x: 24, y: this.headerInter() ? 6.5 : 5 });
       Stack({ alignContent: Alignment.TopStart }) {
         Text('收起').width(20).height(this.headerInter() ? 12 : 14)
-          .fontFamily(this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold')
-          .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(10).lineHeight(this.headerInter() ? 12 : 14)
+          .fontFamily(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontFamily : TYPE_READER_CONTROL_COLLAPSE_UI.fontFamily)
+          .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontWeight : TYPE_READER_CONTROL_COLLAPSE_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontSizeFp : TYPE_READER_CONTROL_COLLAPSE_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.lineHeightFp : TYPE_READER_CONTROL_COLLAPSE_UI.lineHeightFp) as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
           .position({ x: 10, y: this.headerInter() ? 7 : 6 });
       }.width(40).height(26).position({ x: Math.max(0, this.headerFrame().width - 40), y: 2 })
@@ -1171,8 +1195,8 @@ export struct ReaderControlPanel {
   @Builder
   private replaceHeader() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('替换规则管理').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(14).lineHeight(16.8).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
+      Text('替换规则管理').fontFamily(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontFamily).fontWeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontSizeFp).lineHeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
         .width(this.replaceHeaderFrame().title.width).height(this.replaceHeaderFrame().title.height)
         .position({ x: this.replaceHeaderFrame().title.x, y: this.replaceHeaderFrame().title.y })
         .opacity(this.replaceHeaderFrame().title.opacity).hitTestBehavior(HitTestMode.None);
@@ -1180,8 +1204,8 @@ export struct ReaderControlPanel {
         .width(this.replaceHeaderFrame().icon.width).height(this.replaceHeaderFrame().icon.height)
         .position({ x: this.replaceHeaderFrame().icon.x, y: this.replaceHeaderFrame().icon.y })
         .opacity(this.replaceHeaderFrame().icon.opacity).hitTestBehavior(HitTestMode.None);
-      Text('完成').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(10).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
+      Text('完成').fontFamily(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
         .width(this.replaceHeaderFrame().action.width).height(this.replaceHeaderFrame().action.height)
         .position({ x: this.replaceHeaderFrame().action.x, y: this.replaceHeaderFrame().action.y })
         .opacity(this.replaceHeaderFrame().action.opacity).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
@@ -1202,12 +1226,15 @@ export struct ReaderControlPanel {
         ReaderControlDirectoryContent({
           entries: this.tocEntries, currentChapterIndex: this.currentChapterIndex,
           catalogComplete: this.catalogComplete, catalogChapterCount: this.catalogChapterCount,
+          catalogLoading: this.catalogLoading, catalogLoadFailed: this.catalogLoadFailed,
           catalogCurrentPosition: this.catalogCurrentPosition,
+          catalogReadableChapterCount: this.totalChapters, catalogReadablePosition: this.readableChapterPosition,
           onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),
           bookmarkLoadFailed: this.bookmarkLoadFailed,
           bookmarkLoadMessage: this.bookmarkLoadMessage,
           onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),
           chapterDownloadEnabled: this.chapterDownloadEnabled,
+          mangaSearch: this.mangaSearch,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           progress: this.contentMotionProgress,
           interactionEnabled: this.secondaryModuleInputEnabled('directory'),
@@ -1220,6 +1247,8 @@ export struct ReaderControlPanel {
               tab === 'bookmarks' ? 'bookmarks' : 'directory'));
           },
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: this.onSelectBookmark,
           onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
@@ -1275,8 +1304,9 @@ export struct ReaderControlPanel {
         this.onAppearanceAlignmentRequest(current),
       onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
         this.onAppearanceMetricStep(metric, direction),
-      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
-        this.onChineseConversionChange(mode),
+      chineseConversionIdentity: this.chineseConversionIdentity,
+      onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string): void =>
+        this.onChineseConversionChange(mode, identity),
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
         this.onPageTurnStyleChange(style),
     });
@@ -1401,8 +1431,8 @@ export struct ReaderControlPanel {
           availableWidth: this.contentMotionWidth,
           availableHeight: this.contentMotionHeight,
           interactionEnabled: this.secondaryModuleInputEnabled('autoPage'),
-          canPreviousChapter: this.currentChapterIndex > 0,
-          canNextChapter: this.currentChapterIndex >= 0 && this.currentChapterIndex < this.totalChapters - 1,
+          canPreviousChapter: this.canStepChapter(-1),
+          canNextChapter: this.canStepChapter(1),
           status: this.autoPageStatus, speedSeconds: this.autoPageSpeedSeconds,
           timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
           timerSummaryText: this.autoPageTimerSummaryText, followHighlight: this.autoPageFollowHighlight,
@@ -1434,7 +1464,7 @@ export struct ReaderControlPanel {
             this.applySemanticSession(expandReaderControlSession(this.controlSession,
               this.reduceMotion ? 0 : READER_CONTROL_EXPAND_MS));
           },
-          onReload: (): Promise<void> => this.onReloadControlReplace(),
+          onReload: (operationId?: string): Promise<void> => this.onReloadControlReplace(operationId),
           onSave: (draft: ReaderControlReplaceDraft): Promise<void> => this.onSaveControlReplace(draft),
           onToggle: (rule: ReaderReplaceRule, value: boolean): Promise<void> => this.onToggleControlReplace(rule, value),
           onDelete: (rule: ReaderReplaceRule): Promise<void> => this.onDeleteControlReplace(rule),
@@ -1454,7 +1484,7 @@ export struct ReaderControlPanel {
     Row({ space: 8 }) {
       // BackHitArea 44×42 (icon 24 居中)。
       Stack({ alignContent: Alignment.Center }) {
-        Image($r(this.appScheme === 'night' ? 'app.media.rc_arrow_left_theme_night' : 'app.media.rc_arrow_left'))
+        Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back'))
           .width(24)
           .height(24);
       }
@@ -1469,6 +1499,8 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_BOOK_TITLE.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_BOOK_TITLE.fontWeight)
           .fontSize(TYPE_READER_CONTROL_BOOK_TITLE.fontSizeFp)
+          .lineHeight(TYPE_READER_CONTROL_BOOK_TITLE.lineHeightFp)
+          .letterSpacing(TYPE_READER_CONTROL_BOOK_TITLE.letterSpacingFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1476,6 +1508,8 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontWeight)
           .fontSize(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontSizeFp)
+          .lineHeight(TYPE_READER_CONTROL_CHAPTER_SOURCE.lineHeightFp)
+          .letterSpacing(TYPE_READER_CONTROL_CHAPTER_SOURCE.letterSpacingFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1494,6 +1528,8 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_SOURCE_ACTION.fontWeight, { enableVariableFontWeight: true })
           .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
+          .lineHeight(TYPE_READER_CONTROL_SOURCE_ACTION.lineHeightFp)
+          .letterSpacing(TYPE_READER_CONTROL_SOURCE_ACTION.letterSpacingFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1);
       }
@@ -1524,17 +1560,21 @@ export struct ReaderControlPanel {
         builder: this.readerMoreMenu,
         placement: Placement.BottomRight,
         width: this.readerMoreMenuWidth(),
-        enableArrow: true, arrowWidth: 24, arrowHeight: 12, radius: 16,
+        enableArrow: true, arrowWidth: this.readerMoreSurfaceSpec().pointerWidth,
+        arrowHeight: this.readerMoreSurfaceSpec().pointerHeight,
+        radius: this.readerMoreSurfaceSpec().borderRadius,
         arrowPointPosition: ArrowPointPosition.CENTER,
         targetSpace: 8,
-        popupColor: readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appScheme),
+        popupColor: readerAppColor(this.readerMoreSurfaceSpec().surfaceBackgroundRole, this.appScheme),
         backgroundBlurStyle: BlurStyle.NONE,
-        borderWidth: 1,
+        borderWidth: this.readerMoreSurfaceSpec().borderWidth,
         borderLinearGradient: { colors: [
-          [readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme), 0],
-          [readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme), 1],
+          [readerAppColor(this.readerMoreSurfaceSpec().surfaceBorderRole, this.appScheme), 0],
+          [readerAppColor(this.readerMoreSurfaceSpec().surfaceBorderRole, this.appScheme), 1],
         ] },
-        shadow: { radius: 28, color: readerAppColor('app.BookshelfMoreMenu.build.color.292E261F', this.appScheme), offsetY: 10 },
+        shadow: { radius: this.readerMoreSurfaceSpec().shadowRadius,
+          color: readerAppColor(this.readerMoreSurfaceSpec().surfaceShadowRole, this.appScheme),
+          offsetY: this.readerMoreSurfaceSpec().shadowOffsetY },
         autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
         onStateChange: (event: PopupStateChangeParam): void => {
           if (!event.isVisible) this.dismissMoreMenu();
@@ -1581,10 +1621,10 @@ export struct ReaderControlPanel {
       Text(label)
         .width('100%')
         .height(13)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(11)
-        .lineHeight(13)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
@@ -1648,10 +1688,11 @@ export struct ReaderControlPanel {
       Text(this.chapterTitle)
         .layoutWeight(1)
         .height(34)
-        .fontFamily('ReaderInter')
-        .fontWeight(700)
-        .fontSize(13)
-        .lineHeight(16.25)
+        .fontFamily(TYPE_READER_CONTROL_CHAPTER_TITLE.fontFamily)
+        .fontWeight(TYPE_READER_CONTROL_CHAPTER_TITLE.fontWeight)
+        .fontSize(TYPE_READER_CONTROL_CHAPTER_TITLE.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROL_CHAPTER_TITLE.lineHeightFp)
+        .letterSpacing(TYPE_READER_CONTROL_CHAPTER_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
@@ -1688,10 +1729,10 @@ export struct ReaderControlPanel {
       // 进度百分比 Inter Regular 9 (固定 26.23 宽容器, 使 slider 起点对齐 Figma)。
       Text(`${Math.round(this.effectiveProgressPercent())}%`)
         .width(26.23)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
         .maxLines(1);
 
@@ -1732,10 +1773,10 @@ export struct ReaderControlPanel {
       Text(`共 ${this.totalChapters} 章`)
         .width(39)
         .height(30)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
         .textAlign(TextAlign.RIGHT)
         .maxLines(1)
@@ -1805,10 +1846,10 @@ export struct ReaderControlPanel {
           Text('A')
             .width(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
             .height(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(13)
-            .lineHeight(13)
+            .fontFamily(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontFamily)
+            .fontWeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontWeight)
+            .fontSize(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontSizeFp)
+            .lineHeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.lineHeightFp as number)
             .fontColor(this.brightnessAutomatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_INK', this.appScheme))
             .textAlign(TextAlign.Center);
         }
@@ -1951,10 +1992,10 @@ export struct ReaderControlPanel {
       Text(label)
         .width('100%')
         .height(15)
-        .fontFamily('ReaderNotoSansSCUIBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(10)
-        .lineHeight(15)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.lineHeightFp as number)
         .fontColor(this.isActiveModule(module) ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_ICON', this.appScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
@@ -1976,11 +2017,16 @@ export struct ReaderControlPanel {
   }
 
   private canStepChapter(delta: number): boolean {
+    if (this.readableChapterPosition >= 0) {
+      const target = this.readableChapterPosition + delta;
+      return target >= 0 && target < this.totalChapters;
+    }
     for (let position = 0; position < this.tocEntries.length; position += 1) {
-      if (this.tocEntries[position].index === this.currentChapterIndex) {
-        const target = position + delta;
-        return target >= 0 && target < this.tocEntries.length;
+      if (this.tocEntries[position].index !== this.currentChapterIndex) continue;
+      for (let target = position + delta; target >= 0 && target < this.tocEntries.length; target += delta) {
+        if (this.tocEntries[target].navigable !== false) return true;
       }
+      return false;
     }
     return false;
   }

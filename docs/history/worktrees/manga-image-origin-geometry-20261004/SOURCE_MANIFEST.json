@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "status": "INACTIVE_HISTORICAL_SOURCE_NOT_PRODUCTION_GATE",
+  "reason": "Native Image.onComplete destination geometry was replaced for first frame and progress ownership by current prepare/present barrier and exact Host lease ownership. This legacy observer cannot prove submitted frames, GPU paint, screen origin or progress persistence. Archived source/tests are historical references only; no active imports, gate or reader callbacks are restored.",
+  "files": [
+    {
+      "sourceCommit": "8d00af5b7bb66c9249d1b7aec3523240e5d4d91f",
+      "sourcePath": "entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "archivePath": "docs/history/worktrees/manga-image-origin-geometry-20261004/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "bytes": 2048,
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b"
+    },
+    {
+      "sourceCommit": "8d00af5b7bb66c9249d1b7aec3523240e5d4d91f",
+      "sourcePath": "tools/lib/manga-surface-sdk-probe.mjs",
+      "archivePath": "docs/history/worktrees/manga-image-origin-geometry-20261004/tools/lib/manga-surface-sdk-probe.mjs",
+      "bytes": 3832,
+      "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332"
+    },
+    {
+      "sourceCommit": "8d00af5b7bb66c9249d1b7aec3523240e5d4d91f",
+      "sourcePath": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "archivePath": "docs/history/worktrees/manga-image-origin-geometry-20261004/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "bytes": 121581,
+      "sha256": "06c1267d4b8865efe8b5154568c568903039c9f43e9295b032cff58c5d6421cb"
+    },
+    {
+      "sourceCommit": "8d00af5b7bb66c9249d1b7aec3523240e5d4d91f",
+      "sourcePath": "tools/test-manga-directory-font-readiness-sdk.mjs",
+      "archivePath": "docs/history/worktrees/manga-image-origin-geometry-20261004/tools/test-manga-directory-font-readiness-sdk.mjs",
+      "bytes": 24950,
+      "sha256": "de9480458c2269aed1d9f56c6612ea1de714d797c9f1ba24f9beda9849dbd806"
+    },
+    {
+      "sourceCommit": "8d00af5b7bb66c9249d1b7aec3523240e5d4d91f",
+      "sourcePath": "tools/lib/manga-native-default-control-probe.mjs",
+      "archivePath": "docs/history/worktrees/manga-image-origin-geometry-20261004/tools/lib/manga-native-default-control-probe.mjs",
+      "bytes": 21213,
+      "sha256": "2b5e993818fa11319d467b6b02ddae2402095665ecbdad3904dc112bff71f5cd"
+    }
+  ]
+}

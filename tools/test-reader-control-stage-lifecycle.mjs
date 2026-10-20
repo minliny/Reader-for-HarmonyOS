@@ -1,10 +1,16 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import * as gesturePolicy from '../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts';
-import * as geometryPolicy from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
-import * as layoutPolicy from '../entry/src/main/ets/features/reading/ReaderControlLayoutRebase.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+// Diagnostic-page Stage only. Shipping ReaderControlPanel uses Runtime;
+// these cases are never product release prerequisites.
+const definitions=Object.fromEntries([['diagnostic-frames','Diagnostic Stage frame/lifecycle/geometry ownership and negative controls'],['diagnostic-touch','Diagnostic Stage touch/propagation/regrab and negative controls'],['diagnostic-trace','Diagnostic Stage passive throttled trace and content privacy']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const sessionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const gesturePolicy=await import('../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts');
+const geometryPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+const layoutPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlLayoutRebase.ts');
 
 // Execute the actual ArkTS adapter methods, not a mirrored state machine. Only
 // ArkUI syntax, decorators, and render DSL are removed. The fake UI context
@@ -360,37 +366,6 @@ function checkStableTouchHoldAndHome(Stage) {
   }
 }
 
-function checkHiddenHoldResizeReverse(Stage) {
-  const h = touchHarness(Stage, sessionPolicy.expandReaderControlSession(bookmarks(), 0));
-  const y = grabberY(h);
-  touch(h, 0, 1000, [point(1, y)]);
-  touch(h, 2, 1100, [point(1, y + 18)]);
-  near(visual(h).visibilityProgress, 0, 'finger can reach the fully hidden geometry');
-  near(visual(h).expansionProgress, 1, 'Full direct close freezes Full composition');
-  assert.equal(h.stage.session.closeRevision, 0, 'held hidden endpoint must not commit close');
-  assert.equal(sessionPolicy.readerControlContentLocation(h.stage.session).directoryTab, 'bookmarks');
-
-  const oldY = grabberY(h);
-  h.stage.availableWidth = 420;
-  h.stage.fullHeight = 900;
-  h.stage.admitLayout(400);
-  near(grabberY(h), oldY, 'resize preserves held hidden screen anchor through shared compensation');
-  assert.equal(h.stage.session.heldPointerId, 1);
-  assert.equal(h.stage.session.closeRevision, 0);
-  const unchanged = structuredClone({ session: h.stage.session, compensation: h.stage.layoutCompensation });
-  h.stage.admitLayout(400);
-  assert.deepEqual({ session: h.stage.session, compensation: h.stage.layoutCompensation }, unchanged,
-    'duplicate layout cannot manufacture progress or restart compensation');
-  touch(h, 2, 1200, [point(1, y + 12)]);
-  near(grabberY(h), oldY - 6, 'same held touch reverses back from hidden after resize');
-  assert.ok(visual(h).visibilityProgress > 0);
-  near(visual(h).expansionProgress, 1, 'reverse does not flash a Quick composition');
-  touch(h, 1, 1300, [point(1, y + 12)], []);
-  assert.equal(sessionPolicy.readerControlTargetLocation(h.stage.session).form, 'full');
-  assert.equal(sessionPolicy.readerControlTargetLocation(h.stage.session).directoryTab, 'bookmarks');
-  assert.equal(h.stage.session.closeRevision, 0);
-}
-
 function checkTouchBackAndDismissTakeover(Stage) {
   const h = touchHarness(Stage, bookmarks());
   const y = grabberY(h);
@@ -422,45 +397,6 @@ function checkTouchBackAndDismissTakeover(Stage) {
   assert.equal(sessionPolicy.readerControlTargetLocation(h.stage.session).level, 'hidden');
 }
 
-const Stage = loadStage();
-assert.match(stageSource, /@Prop @Watch\('onSemanticSessionChanged'\) semanticSession:/);
-assert.match(stageSource, /@State private visualSession:/);
-assert.doesNotMatch(stageSource, /@Link[^\n]*session/,
-  'the Stage must not own a writable session link to the Panel/Host');
-assert.match(stageSource, /lastSemanticSession/,
-  'semantic prop delivery is deduplicated while the local visual clock runs');
-checkPauseAndResume(Stage);
-checkStaleCallbackOwnership(Stage);
-checkInitialDisableAndCommands(Stage);
-checkRepeatedSemanticDoesNotResetVisual(Stage);
-checkHeldPointerRevocation(Stage);
-checkCompensationPause(Stage);
-checkDockGeometry(Stage);
-checkGeometryLifecycle(Stage);
-checkTouchOwnerAndFinalUp(Stage);
-checkTouchHoldResumeAndRegrab(Stage);
-checkStableTouchHoldAndHome(Stage);
-checkHiddenHoldResizeReverse(Stage);
-checkTouchBackAndDismissTakeover(Stage);
-checkOwnerPropagationBoundary(Stage);
-
-// Teardown can race ArkUI Watch/Area/touch delivery.  Every mutating adapter
-// entry must reject that stale lifecycle before it reaches @Link/@State or
-// the semantic endpoint callback.
-for (const method of ['onSemanticSessionChanged', 'admitLayout', 'acceptTouch', 'cancelTouch', 'touch']) {
-  const start = stageSource.indexOf(`  private ${method}`);
-  const next = stageSource.indexOf('\n  private ', start + 1);
-  const end = next >= 0 ? next : stageSource.indexOf('\n  @Builder', start);
-  assert.ok(start >= 0 && end > start, `${method} source boundary exists`);
-  assert.match(stageSource.slice(start, end), /if \(!this\.mounted\) return;/,
-    `${method} ignores callbacks after stage teardown`);
-}
-
-// Geometry-only compensation frames no longer assign the host session directly:
-// the production Stage funnels the local write through setVisualSession, while
-// the explicit geometry callback still runs after that write.  Keep this as a
-// source-level contract because the fake @Link setter below would otherwise
-// invoke onSemanticSessionChanged and mask a missing explicit notification.
 function checkExplicitGeometryNotification(source) {
   const start = source.indexOf('  private scheduleFrame(): void {');
   const end = source.indexOf('\n  private eventTime(', start);
@@ -470,36 +406,11 @@ function checkExplicitGeometryNotification(source) {
     /this\.setVisualSession\(next,[\s\S]*?\);[\s\S]*?this\.reportDockGeometry\(\);/,
     'each local frame explicitly reports geometry after visual-session publication');
 }
-checkExplicitGeometryNotification(stageSource);
-
-// Debug observations execute the production sampler but must never advance or
-// replace the session/gesture/compensation or expose reading/search content.
-{
-  const logs = [];
-  let now = 1000;
-  const TracedStage = loadStage(stageSource, { console: { info: value => logs.push(value) }, Date: { now: () => now } });
-  const h = touchHarness(TracedStage, bookmarks());
-  h.stage.traceFrame('disabled');
-  assert.equal(logs.length, 0);
-  h.stage.traceMotion = true;
-  const before = { session: h.stage.session, pointer: h.stage.pointerState, layout: h.stage.layoutCompensation };
-  const event = { type: 0, timestamp: 123000000, changedTouches: [point(7, 415)] };
-  h.stage.traceFrame('touch', event);
-  const observed = JSON.parse(logs[0].replace('ReaderControlMotionProbe ', ''));
-  assert.equal(observed.eventType, 0); assert.equal(observed.eventTime, 123000000);
-  assert.deepEqual(observed.changedIds, [7]); assert.deepEqual(observed.changedY, [415]);
-  assert.equal(observed.p, 0); assert.equal(observed.v, 1); assert.equal(observed.tab, 'bookmarks');
-  for (const [key, value] of Object.entries(before)) {
-    assert.strictEqual(key === 'session' ? h.stage.session : key === 'pointer' ? h.stage.pointerState : h.stage.layoutCompensation, value);
-  }
-  assert.doesNotMatch(logs[0], /chapterTitle|query|excerpt|bookTitle|textContent/);
-  h.stage.traceFrame('frame'); assert.equal(logs.length, 1, 'routine observations throttled');
-  h.stage.traceFrame('touch', { ...event, type: 3, changedTouches: [] });
-  assert.equal(logs.length, 2, 'same-time CANCEL observation never dropped');
-  now += 40; h.stage.traceFrame('frame'); assert.equal(logs.length, 3);
-  h.stage.mounted = false; h.stage.traceFrame('touch', event); assert.equal(logs.length, 3);
-}
-
+const Stage=loadStage();
+if(selectedCase==='diagnostic-frames'){
+checkPauseAndResume(Stage);checkStaleCallbackOwnership(Stage);checkInitialDisableAndCommands(Stage);
+checkRepeatedSemanticDoesNotResetVisual(Stage);checkHeldPointerRevocation(Stage);checkCompensationPause(Stage);
+checkDockGeometry(Stage);checkGeometryLifecycle(Stage);checkExplicitGeometryNotification(stageSource);
 // Prove these behavior assertions reject representative production regressions.
 assert.throws(() => checkInitialDisableAndCommands(loadStage(stageSource.replace(
   '!this.mounted || !this.inputEnabled || this.pendingFrame', '!this.mounted || this.pendingFrame'))),
@@ -525,6 +436,10 @@ assert.throws(() => checkGeometryLifecycle(loadStage(stageSource.replace(
   'this.pointerState = createReaderControlGestureState(this.gestureConfig());\n    this.reportDockGeometry();',
   'this.pointerState = createReaderControlGestureState(this.gestureConfig());'))),
   'missing unmount geometry invalidation is detected');
+
+}else if(selectedCase==='diagnostic-touch'){
+checkTouchOwnerAndFinalUp(Stage);checkTouchHoldResumeAndRegrab(Stage);
+checkStableTouchHoldAndHome(Stage);checkTouchBackAndDismissTakeover(Stage);checkOwnerPropagationBoundary(Stage);
 assert.throws(() => checkTouchOwnerAndFinalUp(loadStage(stageSource.replace(
   'if (pointer.id !== this.pointerState.pointerId) continue;',
   'if (false) continue;'))), 'wrong changedTouches pointer ownership is detected');
@@ -566,4 +481,37 @@ assert.throws(() => checkTouchHoldResumeAndRegrab(loadStage(stageSource.replace(
     }`))),
   'empty native CANCEL must not strand the pointer owner');
 
-console.log('reader control Stage lifecycle: production adapter methods passed (mock frame queue; not native/touch/visual acceptance)');
+
+}else{
+// Debug observations execute the production sampler but must never advance or
+// replace the session/gesture/compensation or expose reading/search content.
+{
+  const logs = [];
+  let now = 1000;
+  const TracedStage = loadStage(stageSource, { console: { info: value => logs.push(value) }, Date: { now: () => now } });
+  const h = touchHarness(TracedStage, bookmarks());
+  h.stage.traceFrame('disabled');
+  assert.equal(logs.length, 0);
+  h.stage.traceMotion = true;
+  const before = { session: h.stage.session, pointer: h.stage.pointerState, layout: h.stage.layoutCompensation };
+  const event = { type: 0, timestamp: 123000000, changedTouches: [point(7, 415)] };
+  h.stage.traceFrame('touch', event);
+  const observed = JSON.parse(logs[0].replace('ReaderControlMotionProbe ', ''));
+  assert.equal(observed.eventType, 0); assert.equal(observed.eventTime, 123000000);
+  assert.deepEqual(observed.changedIds, [7]); assert.deepEqual(observed.changedY, [415]);
+  assert.equal(observed.p, 0); assert.equal(observed.v, 1); assert.equal(observed.tab, 'bookmarks');
+  for (const [key, value] of Object.entries(before)) {
+    assert.strictEqual(key === 'session' ? h.stage.session : key === 'pointer' ? h.stage.pointerState : h.stage.layoutCompensation, value);
+  }
+  assert.doesNotMatch(logs[0], /chapterTitle|query|excerpt|bookTitle|textContent/);
+  h.stage.traceFrame('frame'); assert.equal(logs.length, 1, 'routine observations throttled');
+  h.stage.traceFrame('touch', { ...event, type: 3, changedTouches: [] });
+  assert.equal(logs.length, 2, 'same-time CANCEL observation never dropped');
+  now += 40; h.stage.traceFrame('frame'); assert.equal(logs.length, 3);
+  h.stage.mounted = false; h.stage.traceFrame('touch', event); assert.equal(logs.length, 3);
+}
+
+
+}
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

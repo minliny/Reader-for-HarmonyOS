@@ -1,0 +1,1706 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-05T14:22:19.967Z",
+  "status": "DRAFT_REPAIRS_VERIFIED_PRIOR_SOURCE_DEMO_GAP_OPEN",
+  "hostHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+  "coreHead": "2166576ff5f2091b1d921c9a018cd7c7b536fdd4",
+  "sourceTreeSha256": "7ba0dbddfab49fe87a7b36d4993b301dc0e38e1ef5cd05dbd0d6f60075201c2b",
+  "designSourceSha256": "cfcf577a266c6da4343c82586482b5aac6363555ad234f51167a1a5568418e7e",
+  "logicSha256": "8871335274baa1717fd259df755df4015e3965963f77f4820e53c6f71869c393",
+  "bundleSha256": "e48fa5f8a629582f51a0e0fd6b9f522dd1ca99b129f385c2047b4ab3b130ff38",
+  "counts": {
+    "modules": 41,
+    "registeredStateSamples": 441,
+    "findings": 69,
+    "draftRepairs": 66,
+    "sourceSupersededAndRebuilt": 1,
+    "auditRetracted": 1,
+    "unresolvedKnownDraftFindings": 1,
+    "nativeSourceConcerns": 1,
+    "followUpReturnRepairs": 16,
+    "followUpReplacementRepairs": 5
+  },
+  "findings": [
+    {
+      "id": "COM-01",
+      "severity": "P1",
+      "title": "阅读子控制栏的选中图标被同色背景吞掉",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-controls",
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings"
+      ],
+      "resolution": "子导航使用对应active SVG及夜间资源，恢复原标签字号、字族、间距及选中色。",
+      "repairInputs": {
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90",
+        "shared.mjs": "3b4bdb6c709b4cf4462ecb1bd18b129f1788132530da406d3cfd557111d929b9",
+        "demo-state.mjs": "83481ef90c8ac064ab0342613151a381ed1f8fc92f8449f9e54a41d424c6231d",
+        "control-gesture.mjs": "a6ed0dfda4ff6476e5301007b9b1ce11790e1cb6996ec076e91606c595857c56"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "moduleNav 只切 active class，始终使用 rc_list/rc_headphones/rc_palette/rc_settings 普通资源。浅色普通目录图标 stroke #2F6373 与 active 背景 TOK_READ_PRIMARY #2F6373 完全相同；既有目录 Quick 稿的选中圆圈呈空白。夜间也没有采用原生的四种 active_theme_night 资源。文字仍用11px/800、gap3、统一ink，与原生10px/UIBold、top gap5及选中色不同。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "COM-02",
+      "severity": "P1",
+      "title": "控制栏抓手没有展开、收起和下拉关闭交互",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-controls",
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "resolution": "小说抓手复用应用会话/手势/采样模块；连续拖动、展开、收起、下拉关闭与cancel回原形态已接线。漫画抓手采用自身阈值，宽面板不变形。",
+      "repairInputs": {
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90",
+        "shared.mjs": "3b4bdb6c709b4cf4462ecb1bd18b129f1788132530da406d3cfd557111d929b9",
+        "demo-state.mjs": "83481ef90c8ac064ab0342613151a381ed1f8fc92f8449f9e54a41d424c6231d",
+        "control-gesture.mjs": "a6ed0dfda4ff6476e5301007b9b1ce11790e1cb6996ec076e91606c595857c56"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "画布抓手仅执行 hint；app 的 pointer handlers 只处理书籍长按，没有控制栏拖动、空间进度或中断处理。多数模块只能从画布外状态按钮看到 Full。已有外部 motion-preview 自述为空间采样仪、不模拟触摸仲裁，不能代替画布的真实路线演示。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "COM-03",
+      "severity": "P2",
+      "title": "阅读开关缺少关联的可访问名称",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-settings",
+        "reader-tts",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "resolution": "所有开关具关联名称与布尔aria-checked，本地choice保留true/false类型。",
+      "repairInputs": {
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90",
+        "shared.mjs": "3b4bdb6c709b4cf4462ecb1bd18b129f1788132530da406d3cfd557111d929b9",
+        "demo-state.mjs": "83481ef90c8ac064ab0342613151a381ed1f8fc92f8449f9e54a41d424c6231d",
+        "control-gesture.mjs": "a6ed0dfda4ff6476e5301007b9b1ce11790e1cb6996ec076e91606c595857c56"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "共享 toggle 只暴露 role=switch 和 aria-checked；toggleRow 的标签是同级普通 span，没有 aria-label、aria-labelledby 或 label 关联。屏幕阅读器不能从这个 switch 节点确定是哪一项偏好。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "COM-04",
+      "severity": "P2",
+      "title": "弹层焦点进入、关闭恢复及背景隔离未落实",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "book-actions",
+        "book-removal",
+        "group-select",
+        "local-import",
+        "json-import",
+        "reader-tts-config",
+        "reader-tts-manager",
+        "source-switch",
+        "restore-defaults",
+        "source-result",
+        "source-export",
+        "source-delete",
+        "reader-exit-failure",
+        "reader-refresh-failure"
+      ],
+      "resolution": "弹层进入对话框内焦点、隔离背景、限制Tab、关闭恢复触发项；禁关闭状态沿实际门禁。",
+      "repairInputs": {
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90",
+        "shared.mjs": "3b4bdb6c709b4cf4462ecb1bd18b129f1788132530da406d3cfd557111d929b9",
+        "demo-state.mjs": "83481ef90c8ac064ab0342613151a381ed1f8fc92f8449f9e54a41d424c6231d",
+        "control-gesture.mjs": "a6ed0dfda4ff6476e5301007b9b1ce11790e1cb6996ec076e91606c595857c56"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "渲染覆盖层时仍保留底页可聚焦控件，没有 inert 或等效隔离，没有对新弹层设置初始焦点或关闭后恢复触发点。唯一显式 focus 只用于层级规则输入重绘。部分弹层还缺 dialog/alertdialog 语义。book-actions 虽有 aria-modal，也没有对应的焦点与背景处理。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-01",
+      "severity": "P1",
+      "title": "自动翻页播放/暂停失去背景，停止错用白色资源",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-autopage"
+      ],
+      "resolution": "自动翻页恢复原生播放、停止资源和首行结构。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "资源存在但#FFFAF4图案被放在透明按钮上，day下几乎空白；stop用reader_tts_stop白线，而native用reader_auto_full_stop teal线。已有Full day PNG也显示这个问题，属已有设计参考非本轮抓图。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-02",
+      "severity": "P1",
+      "title": "自动翻页Quick头部/状态/返回图标和Full定时单位缺失",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-autopage"
+      ],
+      "resolution": "恢复Quick标题/状态和Full定时分秒；撤回未调用quickBack helper应渲染的子结论，移除误增的Quick返回按钮。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "Quick未渲染自身quickHeader/status；返回只文字；Full两列滚轮丢分/秒单位。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-03",
+      "severity": "P1",
+      "title": "正文搜索用通用流布局替代真实Query/Results结构",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-search"
+      ],
+      "resolution": "内容搜索恢复查询栏、原生结果行、摘录、高亮和分页状态。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "Quick field铺满置顶/返回到底部且无图；结果没有原摘录左线、9字号、红色高亮和独立分页位置。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-04",
+      "severity": "P1",
+      "title": "搜索和自动翻页缺Full状态组合，展开丢原状态",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-search",
+        "reader-autopage"
+      ],
+      "resolution": "搜索/自动翻页Quick/Full形态映射保留查询、运行及结果状态。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "search结果/加载/空/失败及auto running/paused只能Quick。展开强换full丢原状态。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-05",
+      "severity": "P1",
+      "title": "目录章节/书签tab图标与选中下划线未渲染",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-directory"
+      ],
+      "resolution": "目录及书签恢复原生tabs、工具、元数据、查询、折叠和页脚。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "两个tab只剩文字，和真实模块不符。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-06",
+      "severity": "P1",
+      "title": "所有分组折叠共用第一部状态",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "directory",
+        "reader-directory"
+      ],
+      "resolution": "小说快捷/完整/详情独立目录与漫画独立宿主分开，Core节点语义一致。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "点第二部也折第一部；第二部章节永远显示，两个箭头同时变化。小说/漫画及三宿主都有。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-07",
+      "severity": "P2",
+      "title": "TTS定时/配置下拉图标和音色徽章载体丢失",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-tts"
+      ],
+      "resolution": "TTS恢复语音badge、配置切换和系统/在线服务本地tabs。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "Quick timer和Full配置都纯文字；voice缺24徽章/30高pill。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-08",
+      "severity": "P1",
+      "title": "点击未配置在线TTS卡片直接跳manager",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-tts"
+      ],
+      "resolution": "TTS准备/恢复/停止状态使用真实控制图标与状态门控。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "改变真实入口：应用先切serviceTab展示online未配置态，再点服务信息配置。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-09",
+      "severity": "P1",
+      "title": "TTS 准备状态的播放图标、按钮禁用逻辑错误，且缺少关键状态",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-tts"
+      ],
+      "resolution": "TTS完整seek仅activeQueue且totalSlices>1，Quick/Full保持朗读阶段。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "draft preparing画play并禁previous/stop/next；native preparing属于activelySpeaking/activeQueue，画pause。stopping/unavailable/interrupted无法评审。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-10",
+      "severity": "P1",
+      "title": "TTS选择临时层固定top，未按实际滚动锚点定位",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-tts-config"
+      ],
+      "resolution": "TTS选择层恢复原生锚点、宽度与待选值，交由根层实测定位。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "普通top280/voice272固定，Full底部配置行打开会脱离触发控件；与spec anchor要求矛盾。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-11",
+      "severity": "P1",
+      "title": "TTS新增草稿填完仍不能保存，格式/清密钥不回读",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-tts-manager"
+      ],
+      "resolution": "在线服务管理恢复真实字段、草稿有效性、格式、清空密钥及busy门控。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "disabled=busy||!edit，new永远disabled；inputs无data-choice，格式和清密钥只hint。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-12",
+      "severity": "P2",
+      "title": "外观主题/字体选中态与Full库容器未还原",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-appearance"
+      ],
+      "resolution": "外观恢复真实主题/字体/偏好控件、字体预览及排序状态。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "主题没active2边/Full选中shell；字体全同底/同family、import无虚线；排版库缺共享254高surface。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-13",
+      "severity": "P2",
+      "title": "阅读设置几何及平台不可用状态缺口",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-settings"
+      ],
+      "resolution": "设置恢复真实分组、分段控件及仿真不可用门控。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "通用流式label/segments/toggle取代source端点；不可用选项仍全可点。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-14",
+      "severity": "P1",
+      "title": "替换Quick标题/返回布局错误且多画隐藏header icon",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-replace"
+      ],
+      "resolution": "原修复不完整；本轮重新核对native geometry/控件/状态/临时层并修复，详见REPLACE-01–05。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "draft Quick在dock y19画全header和icon；native persistent title header-local66.55/29.55，icon opacity0；返回缺11图。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      },
+      "priorRepairResolution": "替换恢复Quick标题、返回、空状态及Full滚动列表内预览。",
+      "followUp": "REPLACE-01–REPLACE-05"
+    },
+    {
+      "id": "READING-15",
+      "severity": "P2",
+      "title": "替换规则没有实际空集合状态",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-replace"
+      ],
+      "resolution": "原修复不完整；本轮重新核对native geometry/控件/状态/临时层并修复，详见REPLACE-01–05。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "ready永远硬编码3条，无法审查无规则入口。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      },
+      "priorRepairResolution": "未知写入Quick/Full保持核对结果并禁写入，新增quick-write-uncertain。",
+      "followUp": "REPLACE-01–REPLACE-05"
+    },
+    {
+      "id": "READING-16",
+      "severity": "P2",
+      "title": "换源候选缺状态点/延迟条/离线超时投影",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "source-switch"
+      ],
+      "resolution": "当前SourceSwitchWindow全视口承载，52返回栏/书籍上下文/状态/自然来源行/原位恢复；删除前次误用300×385表格窗、状态点与延迟bar。当前候选不可选，离线/超时候选仍可新尝试。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "只有三列文字；5点/36条没画，offline/timeout无样例。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      },
+      "priorRepairResolution": "换源候选恢复原生状态点/延迟、当前不可选及失败候选仍可选。",
+      "followUp": "BACK-16"
+    },
+    {
+      "id": "READING-17",
+      "severity": "P2",
+      "title": "更多popup缺箭头，固定坐标脱离目标",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-more"
+      ],
+      "resolution": "用户指定样式调整：小说更多共用漫画phone底部／wide右侧sheet，保留三项小说业务、local/busy门禁及先关闭菜单；原生仍bindPopup，稿件不再采用旧popup锚点。",
+      "repairInputs": {
+        "ui-reading.mjs": "898d150ba0d3102e442dd144349be535234b5f34fae1586e42f3b70bc9e4b9b0",
+        "reading.css": "36509d1202e11d2bba321bfc7b1c1bd435461faa072e9f4c7462c249a44d821e",
+        "spec-reading.mjs": "6cd81c5305825fc768b3aa83ee484f3e91b46a39948ed42fbb69dd00ea664caf",
+        "routes-reading.json": "276829c0780a20a6eb42e873b9a511a9035d7a39a1d3b47112ca42e8d0e236b8",
+        "app.mjs": "7b110888abc4dc03167d183454358d83521712e401103de05013d0d810a709c9"
+      },
+      "evidence": "coverage-evidence/novel-more-redraw.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "无24×12箭头，top82/right20及宽176固定，safeTop/宽窗不跟more目标。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      },
+      "priorRepairResolution": "阅读更多恢复真实popup、锚点及动作先关闭菜单的承载关系。",
+      "latestDisposition": "USER_REQUESTED_STYLE_ADJUSTMENT"
+    },
+    {
+      "id": "READING-18",
+      "severity": "P1",
+      "title": "更多刷新/下载点击没有先关闭popup",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-more"
+      ],
+      "resolution": "更多菜单动作先消费浮层，保留原阅读/控制上下文；业务动作说明留在画布外。",
+      "repairInputs": {
+        "ui-reading.mjs": "898d150ba0d3102e442dd144349be535234b5f34fae1586e42f3b70bc9e4b9b0",
+        "reading.css": "36509d1202e11d2bba321bfc7b1c1bd435461faa072e9f4c7462c249a44d821e",
+        "spec-reading.mjs": "6cd81c5305825fc768b3aa83ee484f3e91b46a39948ed42fbb69dd00ea664caf",
+        "routes-reading.json": "276829c0780a20a6eb42e873b9a511a9035d7a39a1d3b47112ca42e8d0e236b8",
+        "app.mjs": "7b110888abc4dc03167d183454358d83521712e401103de05013d0d810a709c9"
+      },
+      "evidence": "coverage-evidence/novel-more-redraw.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "两操作hint且无dismissOverlay；菜单停留，与自身note/route及native先dismiss矛盾。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-19",
+      "severity": "P1",
+      "title": "路线图错误把auto停止、刷新/下载回读画成回正文",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader-autopage",
+        "reader-more"
+      ],
+      "resolution": "同步所有模块路线，停止自动翻页留原模块，刷新/下载原位反馈，临时选择关闭恢复对应模块。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "stop不hideControl；refresh selectChapterAnchor第7参closeControlOnCommit=false；download只请求队列。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-21",
+      "severity": "P2",
+      "title": "通用正文图像渲染缺正向设计样例",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader"
+      ],
+      "resolution": "区分小说正文内image-loaded正向片段与真实MangaReadingSurface漫画正文；不再把专用漫画入口说成休眠组件。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "image-unavailable/manga-fragments均同一空div，只覆盖Blank；已实现fileUri/imageSource没有正常显示稿。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "READING-22",
+      "severity": "P2",
+      "title": "默认正文两端对齐遗漏",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "reader"
+      ],
+      "resolution": "小说正文恢复原生justify排版。",
+      "repairInputs": {
+        "ui-reading.mjs": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d",
+        "reading.css": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4",
+        "spec-reading.mjs": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b",
+        "routes-reading.json": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "spec写justify，prose无text-align而默认left。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-01",
+      "severity": "P1",
+      "title": "书籍身份与场景上下文没有随入口传递，阅读/目录类型及多选预选相互污染",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "bookshelf",
+        "detail",
+        "directory",
+        "multiselect",
+        "book-actions",
+        "reader-controls",
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace",
+        "reader-more",
+        "reader"
+      ],
+      "resolution": "入口携带稳定book身份/内容类型/来源/原index，详情/目录/阅读沿用上下文；多选预选原书，未读漫画不误恢复既有位置。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "reset→书架第二本本地书点书，go:reader没有local target，reader默认normal在线样本。；reset→长按第二本本地书→多选，selected variant固定seed=1，选中第一本在线样本；native要求触发书身份。；外部目录导航选择manga变体→回书架→小说/本地详情→完整目录，app仅外部目录导航更新directory-fixture；点击详情入口既不清manga fixture也不传当前书kind，因此可继承前一本目录样本。；列表书架→书籍操作→多选固定selected/grid，源组件按同一readerBookshelfViewMode与阅读/来源筛选投影。；local首页进入子模块后换源恢复enabled；更多没local下载限制；正文失败总画切源。可与根context finding归并。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-02",
+      "severity": "P2",
+      "title": "可在前端完成的选中/清空/开关交互只改备注，状态和画布不变",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "shelf-filter",
+        "search",
+        "bookshelf-settings"
+      ],
+      "resolution": "显示方式、当前内容/来源两组筛选、搜索两组类别/草稿/清空及自动检查开关使用独立本地choice；render不重置选择。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "打开shelf-filter，点未读/本地；chip默认hint动作，仍保留旧选中与旧列表。；search results→点本地/在线；searchCategories始终i===0选全部，不能查看对应过滤投影。；search results→点清空；没有data-choice/本地草稿状态更新，输入原值未被清空。；bookshelf-settings→点自动检查更新；toggle(true,hint)始终on，无关闭后的本地样本。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-03",
+      "severity": "P2",
+      "title": "返回/关闭重新创建原页面，滚动位置和未保存输入丢失",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "bookshelf",
+        "search",
+        "detail",
+        "directory"
+      ],
+      "resolution": "按surface保存滚动与字段草稿，返回/关闭恢复；书籍变化才清对应页状态。章节选择更新真实样例章节。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "详情滚动到下方→完整目录→返回：app render直接重写app-screen.innerHTML，snapshot没有scroll位置，详情滚动回顶。；搜索页编辑草稿→点结果详情→返回：新input由f.query重建，修改草稿不在choices，原草稿丢失。；书架有滚动时打开/关闭浮层也render并重建底页，无法保留native稳定列表位置。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-04",
+      "severity": "P2",
+      "title": "详情无目录/目录加载的282高章节卡被收缩，空目录与不可导航条目分支未表达",
+      "status": "SOURCE_DRIFT_SUPERSEDED_REBUILT",
+      "modules": [
+        "detail"
+      ],
+      "resolution": "旧282卡适用于旧审计源码，当前源已改自然章节树。按当前详情重新绘制小说/漫画、卷组及不可导航分支，旧要求标为源码变更后替代。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "外部选择detail/catalog-loading；章节区只有header+p自然高度，已有参考图卡高约108，源码无toc固定282。；detail variants只有catalog-loading，缺toc为空的暂无章节/实际loadingMessage或readingBlockedReason；章节样本永远f.chapters且只在removing禁用，不能表达entry.navigable=false。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-05",
+      "severity": "P2",
+      "title": "全部样本只画缺封面，真实封面分支及其裁切/阴影没有可用视觉稿",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "bookshelf",
+        "search",
+        "detail",
+        "multiselect"
+      ],
+      "resolution": "实际img封面与无封面双分支覆盖书架、搜索、详情、多选；封面fit/radius/shadow按源。原始SVG为预览fixture，不声明Core支持格式。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "审查所有81个库区variant渲染函数：bookGrid/bookList/continue/detail均直接noCover；resultCard固定渐变。没有真实封面节点或相应样本。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-06",
+      "severity": "P2",
+      "title": "搜索结果的非空简介结构完全不渲染",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "search"
+      ],
+      "resolution": "搜索结果真实渲染非空简介，最多2行；空简介不占行。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "所有搜索结果variant调用同一resultCard；有标题/作者/最新/标签，模板中没有lib-result-intro节点。CSS有简介样式，实际没有任何渲染路径。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-07",
+      "severity": "P1",
+      "title": "窄窗书架封面不按源公式缩小，第三列被窗口裁掉",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "bookshelf"
+      ],
+      "resolution": "phone3列卡宽与gap按源公式计算，320/352/390不裁第三列；wide保持当前卡上限与断点。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "W320，内容C282；稿固定30 gap使网格列约74，内层NoCover仍96.656，overflow超出列。已有bookshelf/cover/small图第三本封面被画布右沿裁切。；源码同C下封面min(96.656,(282−16)/3)=88.6667，gap8，保留3列且在右19间距内。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-08",
+      "severity": "P2",
+      "title": "更多菜单仍用固定坐标和菱形箭头，未实现已写入规格的锚点与短窗夹取",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "shelf-more"
+      ],
+      "resolution": "提供真实更多触发器测量锚点、24x12三角和独立可滚动body；root按源公式夹取x/y/visibleH/pointerX。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "CSS .lib-shelf-more top64/right20,width176；:before14×14 rotate45。没有读取实际更多目标位置或overlayW/H的代码。；safe右边距变化、短窗时不能按源码clamp移动/限制body滚动；稿中整行bottom-border也不同于源左右16缩进分隔线。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-09",
+      "severity": "P2",
+      "title": "共用返回栏的44目标仍按全局36目标绘制，规格与画布不一致",
+      "status": "AUDIT_RETRACTED",
+      "modules": [
+        "detail",
+        "bookshelf-settings",
+        "directory"
+      ],
+      "resolution": "撤回审计误判：审计时app.css已有最终44目标/r22/24图标覆盖，无需重复修改。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "详情与书架设置的返回按钮继承.icon-btn36×36/r10，library.css只调整定位。源PageBackBar为44×44/r22、Rowgap10，title被推进不同x位置。；详情自定义back icon24但书架设置shared.topbar默认icon22也与PageBackBar图标24不一致。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-10",
+      "severity": "P2",
+      "title": "布局/筛选头部缺少选中状态层，筛选展开时图标也没有激活",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "bookshelf",
+        "shelf-filter"
+      ],
+      "resolution": "显示方式与筛选展开/条件存在分别产生选中背景/边框/active图标，34视觉+44响应；当前筛选胶囊暗绿态。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "shelf-filter/default展开但activeFilter=false，shelfHeader选择bookshelf_filter而非active；native isSectionActionActive在filterRowVisible为true就激活。；全部布局按钮只有icon-btn，没有selected类/round17背景层/border，active asset不能替代源周围状态层。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-11",
+      "severity": "P2",
+      "title": "空书架次按钮与固定定位未还原",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "bookshelf"
+      ],
+      "resolution": "空书架在350卡内显式y137/y173/y219/y281，次按钮使用真实soft/green/primary-text。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "已有empty/day/phone图次按钮为白底灰边黑字；源使用TOK_PRIMARY_SOFT底、TOK_GREEN边、TOK_PRIMARY_TEXT字。；稿用padding137后流式标题/说明/按钮margin，已有图主按钮相对卡y约229，而源显式y219；次按钮约291与源281同样偏10。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-12",
+      "severity": "P2",
+      "title": "导入结果的列表预算与compact固定footer结构没有进入画布",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "local-import"
+      ],
+      "resolution": "导入结果header/summary/items/list/footer实测slot和常规/compact结构，20行长批次样本；自然items+2边线，原footer承接receipt核对。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "result所有变体固定2行，lib-import-results无列表overflow/预算；整体app-dialog overflow:auto让标题/summary/footer一并滚动。；源常规只列表滚动，compact时header+summary+items共同滚而footer独立固定。稿没有compact分支或实测布局数据，因此大量文件/短窗无法复刻这两种结构。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "LIB-13",
+      "severity": "P2",
+      "title": "搜索空态/无源/历史失败的主次胶囊被通用矩形或裸文字替代",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "search"
+      ],
+      "resolution": "空态/无源/历史失败复用36高/r999主次胶囊；secondary按当前card/muted/border。",
+      "repairInputs": {
+        "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+        "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+        "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+        "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "search empty/no-source/all-disabled主次操作调用普通button；没有36高/r999对应选择器，继承app-btn min38/r10。；历史读取/清空失败用noteAction kind=text，变成无边框裸文字，而源同secondaryPill；spec写36视觉/44响应的胶囊未落实。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-01",
+      "severity": "P1",
+      "title": "书源搜索、状态、类别、分组筛选被替换成说明动作",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "sources"
+      ],
+      "resolution": "书源查询、状态、类型与分组采用独立choice与交集投影；数量和空态同步。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "搜索 input 无状态键和输入回调；状态/类别按钮只更新画布外 hint，选中项恒为首项；分组选项也只 hint，不改变列表、数量、已选值或关闭面板。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-02",
+      "severity": "P1",
+      "title": "单源操作丢失源身份，点击第二行检测会改变第一行",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "sources"
+      ],
+      "resolution": "检测、启停、登录与结果沿实际sourceId作用于所选行，第二源不污染第一源。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "sourceRow 的检测状态只为 index===0 分配；所有行检测均 data-action=variant:checking；第二源启停仅 hint。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-03",
+      "severity": "P2",
+      "title": "分组弹层写死坐标且缺透明关闭层",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "sources"
+      ],
+      "resolution": "分组按真实trigger.left/top/width定位，透明关闭层、选择及系统Back消费；离页退役，隐藏分组不拦其他页返回。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "CSS固定 top189/left93/right19，宽窗固定top148/left calc；HTML 没有分组专用 backdrop dismiss，点击空白不能收起。状态banner、滚动和字号变化不会重新取锚点。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-04",
+      "severity": "P1",
+      "title": "通用偏好和任务状态共用一个variant，互相抹掉",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "general"
+      ],
+      "resolution": "主题、自动更新、减少动态效果及任务结果独立；已接受选择与未知保存反馈保留。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "主题 mode只由v决定，autoCheck(v!=auto-check-off)，reduceMotion(v==reduce-motion)。打开减少动态效果会重开自动检查；清理缓存会恢复默认主题和两个开关。主题点击也只variant跳转，不改变当前App主题色。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-05",
+      "severity": "P2",
+      "title": "恢复中系统返回首页后，设置壳的禁用状态丢失",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "general",
+        "settings",
+        "restore-defaults"
+      ],
+      "resolution": "重置忙态跨通用设置/首页持久，首页壳禁用门禁不因返回消失。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "reset-busy仅在renderGeneral用disabled fieldset；Escape转settings后renderSettings不读取恢复状态，所有入口和底栏变为可点击。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-06",
+      "severity": "P1",
+      "title": "工具页编辑卡、批检结果、调试日志与源值不能共存",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "source-tools"
+      ],
+      "resolution": "编辑卡、批检、调试日志、选择与结果快照独立；工具重入保留pending/unknown/confirmedRefreshFailed会话，共享原操作忙态独立禁用恢复按钮。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "渲染仅check-*显示进度，editor-*显示编辑卡，debug-*或当前check结果显示日志；进入export/debug等variant会隐藏已有编辑卡/进度/旧日志，并sourceRowsFor回到fixture原启停值。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-07",
+      "severity": "P2",
+      "title": "在线导入字段校验、键盘提交、草稿生命周期缺失",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "json-import"
+      ],
+      "resolution": "JSON按钮/Enter共用源码trim空白门禁，非空交Host；输入即时清除旧校验文案，重新打开使用新草稿，关闭返回原来源。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "empty-url错误由variant固定；输入data-choice更新草稿但不清错误；Enter没有submit handler；关闭/重开未清全局source-import-url及empty-url variant，因此旧草稿/旧校验残留。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-08",
+      "severity": "P2",
+      "title": "导入弹层颜色与已写规格不一致",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "json-import"
+      ],
+      "resolution": "导入使用源码scrim和文字颜色，恢复当前结构；系统弹窗尺寸仍是明确移植近似。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "通用overlay用ink的25%遮罩，而源码/本模块spec为#66000000黑色40%；正文description未设置TOK_MUTED，继承app-dialog的ink，源码description为muted。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "SET-09",
+      "severity": "P2",
+      "title": "书源过滤栏把宽窗口直接等同tablet，与源码/规格不符",
+      "status": "FIXED_DRAFT",
+      "modules": [
+        "sources"
+      ],
+      "resolution": "宽窗口与设备类型分开，新增明确tablet profile；两组设备判定按实际flag，不以宽度替代平板。",
+      "repairInputs": {
+        "ui-settings.mjs": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+        "settings.css": "c19b4fce709d5597276f75bb0e5b8213e3b95ede9c3fd44e9ed980aefdceee5b",
+        "spec-settings.mjs": "980a244c8e64c09f2cd8794e3c1a296d477dc17cf46fd79c774c0b996cbcc8b0",
+        "routes-settings.json": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+        "app.mjs": "65a89d0990ec58831211a7f548441f1903a9fa72fff2d1c90d9a60a929bb1c90"
+      },
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "current source/code review + offline template/state/grammar regression; visual pending",
+      "productionBugClaim": false,
+      "originalObservation": {
+        "hostHead": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+        "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+        "observed": "applyProfile只有width>=600→wide；settings.css按data-size=wide将filters横排，未区分真实deviceInfo tablet。宽手机窗口也会走tablet布局。",
+        "record": "coverage-evidence/pre-repair-audit.json"
+      }
+    },
+    {
+      "id": "BACK-01",
+      "title": "内容搜索Quick返回内边距导致图文挤压换行，字族和底色不匹配",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-search"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-02",
+      "title": "替换Quick返回误用搜索的内边距，未按原生居中gap5",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-03",
+      "title": "替换编辑返回缺独立38×28文字槽和primary色",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-04",
+      "title": "全局viewport按钮颜色规则压过语义返回样式",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "shared-buttons"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-05",
+      "title": "阅读Full子模块标题与收起按钮依靠flex而非真实header几何",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-06",
+      "title": "小说阅读顶部标题/章节/换源行高及边线不匹配",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-controls",
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-07",
+      "title": "兼容完整目录更多宽度被reading-action覆盖，标题/收起样式不匹配",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-directory"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-08",
+      "title": "TTS配置返回/关闭将28响应区域误作为正常流尺寸",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-tts-config",
+        "reader-tts-manager"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-09",
+      "title": "普通返回顶栏无trailing仍渲染空操作槽",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "general",
+        "sources",
+        "source-tools",
+        "bookshelf-settings"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-10",
+      "title": "200%顶栏返回按钮顶对齐而非居中",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "shared-topbar"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-11",
+      "title": "详情浮动返回栏和内容重复计算顶部安全区",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "detail"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-12",
+      "title": "书籍搜索返回圆角未按专用navigation-back规格",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "search"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-13",
+      "title": "多选标题与取消/全选在文字压力下互相挤压，列表未避让实际头高",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "multiselect"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-14",
+      "title": "登录顶部取消/完成及标题URL在文字压力下溢出固定栏",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "source-login"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-15",
+      "title": "JSON关闭文字在200%压力下超过固定目标高度",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "json-import"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-16",
+      "title": "换源仍画旧小弹窗，顶部返回和列表承载与当前应用整页结构不符",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "source-switch"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "REPLACE-01",
+      "observed": "Full规则行用flex居中，名称/元信息/开关/编辑删除未沿native明确坐标，Quick名称间距8而native10。",
+      "status": "FIXED_DRAFT",
+      "resolution": "规则名称/元信息/开关/编辑删除按native actor坐标排布；Quick冻结完整规则集合的窗口，Full独立滚动。",
+      "productionBugClaim": false,
+      "severity": "P2",
+      "title": "Full规则行用flex居中，名称/元信息/开关/编辑删除未沿native明确坐标，Quick名称间距8而native10。",
+      "modules": [
+        "reader-replace"
+      ],
+      "repairInputs": {
+        "ui-reading.mjs": "89120d870c86fd47a875b36cde75118cb90524407f30ca530dec3eaf142c9cad",
+        "reading.css": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+        "spec-reading.mjs": "935e42a1c83215e92aed0c6ecc2f7a45f7e2883a6a285235d63118c40f298184",
+        "routes-reading.json": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+        "app.mjs": "fdab8083f71d06152f9fb246c2b06f5711c1fe5689f0cfe48add96de8c85fe49"
+      },
+      "evidence": "coverage-evidence/replace-ui-repair.json",
+      "evidenceTier": "current native source/geometry + offline template/state + historical native screenshot; current visual pending"
+    },
+    {
+      "id": "REPLACE-02",
+      "observed": "规则Full开关仍34×20/thumb14，Quick flex末端与translateX叠加；editor旗标开关也非44×24/thumb20。",
+      "status": "FIXED_DRAFT",
+      "resolution": "独立规则/编辑旗标开关，Quick27×16/thumb12与Full44×24/thumb20；off/on用单次绝对定位，沿阅读语义与原生palette。",
+      "productionBugClaim": false,
+      "severity": "P2",
+      "title": "规则Full开关仍34×20/thumb14，Quick flex末端与translateX叠加；editor旗标开关也非44×24/thumb20。",
+      "modules": [
+        "reader-replace"
+      ],
+      "repairInputs": {
+        "ui-reading.mjs": "89120d870c86fd47a875b36cde75118cb90524407f30ca530dec3eaf142c9cad",
+        "reading.css": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+        "spec-reading.mjs": "935e42a1c83215e92aed0c6ecc2f7a45f7e2883a6a285235d63118c40f298184",
+        "routes-reading.json": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+        "app.mjs": "fdab8083f71d06152f9fb246c2b06f5711c1fe5689f0cfe48add96de8c85fe49"
+      },
+      "evidence": "coverage-evidence/replace-ui-repair.json",
+      "evidenceTier": "current native source/geometry + offline template/state + historical native screenshot; current visual pending"
+    },
+    {
+      "id": "REPLACE-03",
+      "observed": "toolbar gap6等宽，原生gap8/100.66:96.67:96.67；颜色和边框使用通用应用变量而非阅读语义。",
+      "status": "FIXED_DRAFT",
+      "resolution": "工具栏gap8与100.66/96.67/96.67权重；20icon/11Bold，新增/次项及内容底面使用真实阅读主题。",
+      "productionBugClaim": false,
+      "severity": "P2",
+      "title": "toolbar gap6等宽，原生gap8/100.66:96.67:96.67；颜色和边框使用通用应用变量而非阅读语义。",
+      "modules": [
+        "reader-replace"
+      ],
+      "repairInputs": {
+        "ui-reading.mjs": "89120d870c86fd47a875b36cde75118cb90524407f30ca530dec3eaf142c9cad",
+        "reading.css": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+        "spec-reading.mjs": "935e42a1c83215e92aed0c6ecc2f7a45f7e2883a6a285235d63118c40f298184",
+        "routes-reading.json": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+        "app.mjs": "fdab8083f71d06152f9fb246c2b06f5711c1fe5689f0cfe48add96de8c85fe49"
+      },
+      "evidence": "coverage-evidence/replace-ui-repair.json",
+      "evidenceTier": "current native source/geometry + offline template/state + historical native screenshot; current visual pending"
+    },
+    {
+      "id": "REPLACE-04",
+      "observed": "状态提示未按原生列表内min76及已有规则时84上覆notice承载；预览直接32按钮而非32row/28button；Quick可滚动而原生冻结3行投影。",
+      "status": "FIXED_DRAFT",
+      "resolution": "状态min76、已有规则错误覆盖min(84,ListH)，Full32row/28preview；pending不新增列表外状态条，预览恢复原形态/规则数量。",
+      "productionBugClaim": false,
+      "severity": "P2",
+      "title": "状态提示未按原生列表内min76及已有规则时84上覆notice承载；预览直接32按钮而非32row/28button；Quick可滚动而原生冻结3行投影。",
+      "modules": [
+        "reader-replace"
+      ],
+      "repairInputs": {
+        "ui-reading.mjs": "89120d870c86fd47a875b36cde75118cb90524407f30ca530dec3eaf142c9cad",
+        "reading.css": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+        "spec-reading.mjs": "935e42a1c83215e92aed0c6ecc2f7a45f7e2883a6a285235d63118c40f298184",
+        "routes-reading.json": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+        "app.mjs": "fdab8083f71d06152f9fb246c2b06f5711c1fe5689f0cfe48add96de8c85fe49"
+      },
+      "evidence": "coverage-evidence/replace-ui-repair.json",
+      "evidenceTier": "current native source/geometry + offline template/state + historical native screenshot; current visual pending"
+    },
+    {
+      "id": "REPLACE-05",
+      "observed": "编辑层、预览层混用通用字号/色/开关；字段草稿无具体可访问label与本地choice。",
+      "status": "FIXED_DRAFT",
+      "resolution": "临时层28头/12padding/8gap/36footer，8字段/5flag绑定本地草稿；真实新增正则/3000ms/scope/order默认，被选编辑/删除对象，预览当前章节及计数。",
+      "productionBugClaim": false,
+      "severity": "P2",
+      "title": "编辑层、预览层混用通用字号/色/开关；字段草稿无具体可访问label与本地choice。",
+      "modules": [
+        "reader-replace"
+      ],
+      "repairInputs": {
+        "ui-reading.mjs": "89120d870c86fd47a875b36cde75118cb90524407f30ca530dec3eaf142c9cad",
+        "reading.css": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+        "spec-reading.mjs": "935e42a1c83215e92aed0c6ecc2f7a45f7e2883a6a285235d63118c40f298184",
+        "routes-reading.json": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+        "app.mjs": "fdab8083f71d06152f9fb246c2b06f5711c1fe5689f0cfe48add96de8c85fe49"
+      },
+      "evidence": "coverage-evidence/replace-ui-repair.json",
+      "evidenceTier": "current native source/geometry + offline template/state + historical native screenshot; current visual pending"
+    },
+    {
+      "id": "SOURCE-DEMO-01",
+      "severity": "P2",
+      "title": "上轮漫画换源demo引用与静态交互偏差",
+      "status": "OPEN_DRAFT",
+      "modules": [
+        "source-switch"
+      ],
+      "resolution": "上轮只读核对已发现：原4197为带阴影/返回箭头的全屏增量列表，当前稿混入原生样式、重复当前源候选且选择/重查只演示静态状态；本轮替换规则修复未处理该项。",
+      "evidence": "Reader-UI@eeb2af00b141b4b737187f3ceaa1a925a4ec3830:design/manga-ui-20261002/prototype/src/{Prototype.tsx,prototype.css}",
+      "evidenceTier": "historical exact demo source + current draft source review; not visual acceptance",
+      "productionBugClaim": false
+    }
+  ],
+  "additionalCurrentSourceRepairs": [
+    "独立MangaReadingSurface正文/4面板/窄宽目录/Guarded FullDirectory兼容入口/目标章换源分支。",
+    "当前详情自然章节树、双行搜索筛选、固定统计与独立搜索actor。",
+    "公共恢复反馈归原书架/设置/书源/目录；删除休眠library-error注册。",
+    "478字体roles通过已有esbuild编译提取，保留别名、继承、inline与负字距。",
+    "返回/源分组退役/即时JSON校验清除/未知工具会话重入保护及共享忙态。"
+  ],
+  "sourceRebase": "source-rebase.json",
+  "verification": "repair-verification.json",
+  "nativeSourceConcerns": [
+    {
+      "id": "SRC-01",
+      "status": "OPEN_SOURCE_CODE_CONCERN",
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "lines": [
+        422,
+        446
+      ],
+      "observed": "build渲染来源与内容两行筛选共83，但searchHeaderHeight只加41.5。结果偏移可能与第二行重叠。",
+      "trigger": "显示当前双行筛选的搜索页",
+      "sourceHead": "9b70ff4e219f522efa36f994b12944d61fe93436",
+      "sourceFileSha256": "6df3b9aafbb24318edf0f00a763f02db4cbd96ec0cd8a9c47d63dc68b29dcc5b",
+      "evidenceTier": "current source code only; no runtime reproduction",
+      "draftTreatment": "稿件按双行83安排统计与结果区；spec-library明确这是迁移修正。",
+      "productionChanged": false,
+      "unresolved": "原生函数是否在运行中产生重叠未验证；本次只修稿件及演示。"
+    }
+  ],
+  "bounds": {
+    "browser": "not rerun: earlier file-URL automation rejected by browser safety; no HTTP/CDP/indirect workaround",
+    "referenceImages": "HISTORICAL_STALE; original PNGs retained as historical evidence",
+    "nativeVisual": false,
+    "device": false,
+    "backendOperations": false,
+    "accessibilityRuntime": false,
+    "mangaPanelSpring": "source thresholds/cancel adapted; web release uses stable endpoint, native spring timing not visually verified"
+  },
+  "productionSourceChangedByThisRepair": false,
+  "intermediateFailuresResolved": [
+    "LocalReadingExperience旧行引用越界，按当前methods重锚。",
+    "旧typography正则遗漏aliases/inherited/inline/负字距，改复用现有编译器。",
+    "write-uncertain收起映射会丢结果，增加对应Quick状态并核验保留。"
+  ],
+  "followUpReturnAudit": "coverage-evidence/back-button-audit.json",
+  "latestVerificationSummary": {
+    "integratedChecks": 20,
+    "failures": 0,
+    "states": 441,
+    "staticRenders": 882,
+    "returnInventoryRenders": 3969,
+    "returnOrCloseControls": 5940,
+    "returnLayoutModels": 27,
+    "readingChecks": 26,
+    "browser": false,
+    "nativeVisual": false
+  },
+  "returnRepairSourceRefresh": {
+    "from": "9b70ff4e219f522efa36f994b12944d61fe93436",
+    "to": "bb68a364248022e8ecaa3c16ecce03851f845be2",
+    "changedNativeInputs": 2,
+    "changedPaths": [
+      "entry/src/main/ets/app/ErrorMessage.ts",
+      "entry/src/main/ets/features/source/SourceSwitchHost.ts"
+    ],
+    "sourceSwitchWindowChanged": false,
+    "changedByThisRepair": false
+  },
+  "latestUserStyleAdjustment": {
+    "module": "reader-more",
+    "record": "novel-more-redraw.json",
+    "resolution": "用户指定样式调整：小说更多共用漫画phone底部／wide右侧sheet，保留三项小说业务、local/busy门禁及先关闭菜单；原生仍bindPopup，稿件不再采用旧popup锚点。",
+    "sourceRefresh": {
+      "from": "bb68a364248022e8ecaa3c16ecce03851f845be2",
+      "to": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+      "sourceChanges": [
+        "entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts:216 保留contentKind"
+      ],
+      "menuSourceChanged": false
+    },
+    "nativeChanged": false
+  },
+  "latestReplacementRepair": {
+    "record": "replace-ui-repair.json",
+    "groups": 5,
+    "scope": "Only replacement module UI/spec/logic/demo and generated deliverables",
+    "nativeChanged": false
+  }
+}

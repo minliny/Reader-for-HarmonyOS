@@ -1,13 +1,17 @@
-import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
-import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
-import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({'sdk-lowering':{description:'Actual component member lowering and viewport/chapter/stale/adjacent first-page admission',resources:[]},'accessor-diagnostic':{description:'Diagnostic source-only ordinary-member policy; does not prove SDK lowering',resources:[]}});
+async function run(id){
+if(id==='accessor-diagnostic'){const {default:assert}=await import('node:assert/strict');const{readFileSync}=await import('node:fs');assert.doesNotMatch(readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8'),/private (?:get|set) measuring\w+\(/);return;}
+const { resolveEtsLoaderRoot, virtualFilePath }=await import('./lib/tool-environment.mjs');
+const { installReaderMeasurementOwner }=await import('./lib/reader-measurement-owner-fixture.mjs');
+const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync, existsSync }=await import('node:fs');
+const { createRequire, stripTypeScriptTypes }=await import('node:module');
 
 // Exercise the SDK's actual @Component member lowering. A normal TypeScript
 // class keeps accessors which ArkUI V1 silently drops, hiding this cold-entry bug.
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const names = ['automaticReadingState', 'automaticReadingConfiguration', 'currentMeasurementGeneration', 'currentMeasurementSelection',
   'beginMeasurement', 'admitReaderViewportSize', 'hasMeasuredViewport',
@@ -16,24 +20,20 @@ const names = ['automaticReadingState', 'automaticReadingConfiguration', 'curren
   'measuringOffset', 'measuringProgress', 'measuringRequestedAnchor',
   'setMeasuringDraft', 'setMeasuringOffset', 'setMeasuringProgress', 'setMeasuringRequestedAnchor',
   'measurementIncludesChapterTitle', 'isMeasurementChapterFirstPageStart'];
-if (!existsSync(`${sdk}/lib/process_component_class.js`)) {
-  assert.doesNotMatch(source, /private (?:get|set) measuring\w+\(/,
-    'ArkUI V1 requires ordinary methods for the measurement context');
-  console.log('first-page member contract PASS; actual SDK lowering NOT RUN (SDK unavailable)');
-} else {
+assert.ok(existsSync(`${sdk}/lib/process_component_class.js`),'selected SDK lowering requires installed component compiler');
   const require = createRequire(import.meta.url);
   const ts = require(`${sdk}/node_modules/typescript`);
   const compiler = require(`${sdk}/lib/process_component_class.js`);
   const utils = require(`${sdk}/lib/utils.js`);
   const main = require(`${sdk}/main.js`);
   const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-  const parse = text => ts.createSourceFile('/tmp/ReaderFirstPageSdkProbe.ets', text,
+  const parse = text => ts.createSourceFile(virtualFilePath('ReaderFirstPageSdkProbe.ets'), text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const tree = parse(source);
   assert.equal(tree.parseDiagnostics.length, 0);
   const struct = tree.statements.find(n => n.name?.getText(tree) === 'ReadingExperience');
-  const members = struct.members.filter(m => names.includes(m.name?.getText(tree)))
-    .map(m => m.getText(tree)).join('\n');
+  const selectedMembers=names.map(name=>{const matches=struct.members.filter(m=>m.name?.getText(tree)===name);assert.equal(matches.length,1,`one actual member ${name}`);return matches[0];});
+  const members=selectedMembers.map(m=>m.getText(tree)).join('\n');
   main.partialUpdateConfig.partialUpdateMode = true;
   utils.storedFileInfo.setCurrentArkTsFile();
   const file = parse(`@Component struct ReaderFirstPageSdkProbe { ${members} }`);
@@ -145,3 +145,4 @@ if (!existsSync(`${sdk}/lib/process_component_class.js`)) {
   assert.equal(isolated.desiredChapterOffset, 2);
   console.log('actual SDK first-page admission: viewport/chapter order, stale selection and adjacent context PASS');
 }
+for(const id of selected){await run(id);recordContractCasePass(id);}

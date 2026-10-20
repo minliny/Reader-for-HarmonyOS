@@ -1,7 +1,11 @@
 import type { JsonObject } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import { RulesMutationOwner, RulesMutationError } from '../settings/RulesMutationOwner';
+import type { RulesMutationSnapshot } from '../settings/RulesMutationOwner';
+import { RulesManagementGateway } from '../settings/RulesManagementGateway';
+import type { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { errorMessageOf } from '../../app/ErrorMessage';
-import { ReaderReplaceQuickGateway } from './ReaderReplaceQuickGateway';
+import { ReaderReplaceQuickGateway, ReaderReplaceQuickGatewayError } from './ReaderReplaceQuickGateway';
 import { copyReaderReplaceRule, type ReaderReplaceRule } from './ReaderReplaceQuickState';
 import { orderedReaderControlReplaceRules, type ReaderControlReplaceDraft } from './ReaderControlReplaceState';
 
@@ -56,6 +60,12 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
 
   constructor(runtime: ReadingGatewayRuntime) { super(runtime); this.fullRuntime = runtime; }
 
+  /** The original rule domain gateway qualifies all nine receipt families;
+   * Full/Quick never maintain a second journal or infer ACK from current rows. */
+  async recoverMutation(isCurrent: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot> {
+    return new RulesManagementGateway(this.fullRuntime as ReaderRuntimeOwner).recoverMutation(isCurrent, retryOriginal);
+  }
+
   async loadRules(isCurrent: () => boolean = (): boolean => true): Promise<ReaderReplaceRule[]> {
     this.assertCurrent(isCurrent);
     const rules = await this.loadAll(isCurrent);
@@ -90,7 +100,8 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       // After dispatch, UI closure must not cancel a real write or discard its
       // result. The Host separately guards presentation and invalidates the
       // original book's processed content after every confirmed mutation.
-      const result = await this.fullRuntime.request('replace.persist', { operation, params });
+      return await RulesMutationOwner.forRuntime(this.fullRuntime).run('保存替换规则', isCurrent, async (request, confirmed) => {
+      const result = await request('replace.persist', { operation, params });
       if (result.data['operation'] !== operation) throw new Error('保存操作回执不匹配');
       const data = this.checkedObject(result.data['data']);
       const rawRule = this.checkedObject(data['rule']);
@@ -98,7 +109,8 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       for (const key of Object.keys(params)) {
         if (rawRule[key] !== params[key]) throw new Error(`保存字段回执不匹配：${key}`);
       }
-      return { rule, changed: true };
+      confirmed(); return { rule, changed: true };
+      });
     } catch (error) {
       throw this.uncertain(error);
     }
@@ -109,7 +121,7 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
     this.assertCurrent(isCurrent);
     if (rule.isEnabled === enabled) return { rule: copyReaderReplaceRule(rule), changed: false };
     try {
-      return { rule: await this.setRuleEnabled(rule.id, enabled), changed: true };
+      return { rule: await this.setRuleEnabled(rule.id, enabled, isCurrent), changed: true };
     } catch (error) { throw this.uncertain(error); }
   }
 
@@ -117,12 +129,14 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
     this.assertCurrent(isCurrent);
     if (!Number.isSafeInteger(id)) throw new ReaderControlReplaceGatewayError('规则身份无效');
     try {
-      const result = await this.fullRuntime.request('replace.persist', { operation: 'delete', params: { id } });
+      return await RulesMutationOwner.forRuntime(this.fullRuntime).run('删除替换规则', isCurrent, async (request, confirmed) => {
+      const result = await request('replace.persist', { operation: 'delete', params: { id } });
       const data = this.checkedObject(result.data['data']);
       if (result.data['operation'] !== 'delete' || data['id'] !== id || data['deleted'] !== true) {
         throw new Error('删除回执未确认指定规则');
       }
-      return id;
+      confirmed(); return id;
+      });
     } catch (error) { throw this.uncertain(error); }
   }
 
@@ -169,13 +183,15 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       if (validation.data['valid'] !== true) throw new ReaderControlReplaceGatewayError(`规则校验失败：${rule.name}`);
     }
     try {
-      const result = await this.fullRuntime.request('rule-bundle.import',
+      return await RulesMutationOwner.forRuntime(this.fullRuntime).run('导入替换规则', isCurrent, async (request, confirmed) => {
+      const result = await request('rule-bundle.import',
         { json: this.replaceOnlyJson(rules), replaceExisting: false });
       const counts = this.checkedObject(result.data['counts']);
       if (result.data['schemaVersion'] !== 1 || result.data['replaceExisting'] !== false ||
         counts['replaceRules'] !== rules.length || counts['dictRules'] !== 0 ||
         counts['txtTocRules'] !== 0 || counts['ruleSubscriptions'] !== 0) throw new Error('导入回执不匹配');
-      return rules.length;
+      confirmed(); return rules.length;
+      });
     } catch (error) { throw this.uncertain(error); }
   }
 
@@ -206,6 +222,6 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
 
   private uncertain(error: unknown): ReaderControlReplaceGatewayError {
     return new ReaderControlReplaceGatewayError(
-      `写入结果未确认，请重新加载核对后再操作：${errorMessageOf(error)}`, true);
+      errorMessageOf(error), (error instanceof RulesMutationError || error instanceof ReaderReplaceQuickGatewayError) && error.writeUncertain);
   }
 }

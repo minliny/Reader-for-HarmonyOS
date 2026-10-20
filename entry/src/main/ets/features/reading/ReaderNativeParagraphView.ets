@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderNativeParagraphController, ReaderNativeParagraphRecipe, ReaderNativeParagraphResource, ReaderNativeParagraphPosition, readerNativeParagraphResource } from './ReaderNativeParagraph';
 import { ReaderDynamicHighlightRect, readerHighlightCanvasColor } from './ReaderDynamicHighlight';
 import { ReadingSurfaceLayoutMap } from './ReadingSurfaceLayoutMap';
@@ -8,6 +9,7 @@ import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 /** A shaped paragraph stays intact through pagination, selection and TTS. */
 @Component
 export struct ReaderNativeParagraphView {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @Prop @Watch('prepare') recipe: ReaderNativeParagraphRecipe;
   resourceProvider: (() => ReaderNativeParagraphResource | undefined) | undefined = undefined;
   @Prop @Watch('prepare') gapVp: number = 0;
@@ -18,6 +20,12 @@ export struct ReaderNativeParagraphView {
   @Prop @Watch('updateHighlight') highlightEnd: number | undefined = undefined;
   @Prop @Watch('updateHighlight') highlightColor: string = '#222222';
   @Prop @Watch('updateHighlight') underline: boolean = false;
+  /**
+   * The TTS underline is painted by a separate Canvas, so its geometry must
+   * observe the same shaping identity as the native Text.  A scalar range can
+   * stay unchanged while a font/size/spacing reflow moves its glyphs.
+   */
+  @Prop @Watch('updateHighlight') highlightLayoutKey: string = '';
   queueHighlightMeasurement: ((action: () => void) => void) | undefined = undefined;
   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]) => void = (_rects): void => {};
   @Prop localHighlights: boolean = false;
@@ -33,11 +41,13 @@ export struct ReaderNativeParagraphView {
   private y: number = 0;
   private localCanvas: CanvasRenderingContext2D | undefined;
   private localRects: ReaderDynamicHighlightRect[] = [];
+  private paintedHighlightLayoutKey: string = '';
   @State private localHighlightTop: number = 0;
   @State private localHighlightHeight: number = 0;
 
   aboutToAppear(): void { this.mounted = true; this.prepare(); }
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.mounted = false; this.epoch += 1; this.preparedKey = '';
     this.controller.close(); this.map = undefined; this.onHighlightGeometry([]);
     this.onPositionResolver(undefined); this.localRects = []; this.localCanvas = undefined;
@@ -83,12 +93,24 @@ export struct ReaderNativeParagraphView {
         this.controller.visibleStartUtf16(), this.controller.visibleEndUtf16());
       if (original === undefined || original.length === 0) return;
       try { copyReaderSelection(original); }
-      catch (_) { this.getUIContext().getPromptAction().showToast({ message: '复制失败，请重试' }); }
+      catch (_) { this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, (): boolean => this.mounted && this.selectionEnabled && epoch === this.epoch); }
     });
   }
 
   private updateHighlight(): void {
     if (!this.mounted) return;
+    // Font changes can retain the same fragment and scalar range.  Invalidate
+    // the old Canvas rects immediately, then measure against the new native
+    // Text layout in the owner's frame.  Otherwise the old underline remains
+    // at its pre-reflow coordinates until another TTS range/area event.
+    if (this.paintedHighlightLayoutKey !== this.highlightLayoutKey) {
+      this.paintedHighlightLayoutKey = this.highlightLayoutKey;
+      this.onHighlightGeometry([]);
+      this.localRects = [];
+      this.localHighlightTop = 0;
+      this.localHighlightHeight = 0;
+      this.localCanvas?.clearRect(0, 0, this.recipe.style.widthVp, this.localHighlightViewportHeight);
+    }
     const epoch = this.epoch;
     const action = (): void => {
       if (!this.mounted || epoch !== this.epoch || this.map === undefined) return;

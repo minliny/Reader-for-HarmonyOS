@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -34,7 +35,7 @@ assert.match(bookshelfPage,
 
 console.log('dynamic ArkUI list refresh contracts: PASS');
 
-const Page = productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url).pathname, ['bookRowRenderKey']);
+const Page = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url)), ['bookRowRenderKey']);
 const page = new Page();
 const classSource=bookshelfPage.slice(bookshelfPage.indexOf('class BookshelfRowDataSource'),bookshelfPage.indexOf('/**',bookshelfPage.indexOf('class BookshelfRowDataSource')));
 const DS=new Function('DataOperationType',stripTypeScriptTypes(classSource)+';return BookshelfRowDataSource;')({ADD:'add',DELETE:'delete'});

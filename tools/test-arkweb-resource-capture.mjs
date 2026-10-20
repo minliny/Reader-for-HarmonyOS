@@ -1,3 +1,4 @@
+import { resolveOpenHarmonySdkRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
@@ -7,7 +8,7 @@ const read=name=>readFileSync(new URL(name,app),'utf8');
 const policy=stripTypeScriptTypes(read('HttpTransportPolicy.ts')).replace(/^export /gm,'');
 const routeProduction=stripTypeScriptTypes(read('NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const NetworkEnvironmentError=new Function('connection',policy+routeProduction+';return NetworkEnvironmentError;')({});
-const WebNetErrorList=Object.fromEntries([...readFileSync('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.web.netErrorList.d.ts','utf8').matchAll(/^\s+(ERR_\w+) = (-?\d+),/gm)].map(match=>[match[1],Number(match[2])]));
+const WebNetErrorList=Object.fromEntries([...readFileSync((resolveOpenHarmonySdkRoot() + '/ets/api/@ohos.web.netErrorList.d.ts'),'utf8').matchAll(/^\s+(ERR_\w+) = (-?\d+),/gm)].map(match=>[match[1],Number(match[2])]));
 assert.equal(WebNetErrorList.ERR_PROXY_CONNECTION_FAILED,-130);
 const production=stripTypeScriptTypes(read('ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
 const ticks=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
@@ -22,7 +23,7 @@ const matcher='(url) => { const match = new RegExp(".*\\\\.m3u8(?:\\\\?.*)?").ex
 function setup({autoAttach=true,autoDetach=true,constructorError=false,target={host:'93.184.216.34',addresses:['93.184.216.34'],route:'direct'},proxyAck=true}={}){
  const clock=new Clock();let generation=0;let cookies=[];const reconciled=[],clears=[],seeds=[],scripts=[],surfaces=[],proxyOperations=[],loads=[],admissions=[],pins=[];
  let onLoad=()=>{},evaluate,configureController=()=>{};
- const store={instance:{sessionGeneration:()=>generation,arkWebSeeds:async profile=>[{url:base,header:'sid='+profile}],reconcileArkWebCookies:async(...args)=>{reconciled.push(args);}}};
+ const store={instance:{sessionGeneration:()=>generation,arkWebSeeds:async profile=>[{name:'sid',domain:'93.184.216.34',path:'/',url:base,header:'sid='+profile}],reconcileArkWebCookies:async(...args)=>{reconciled.push(args);}}};
  class Controller {
   static setHostIP(...args){pins.push(args);} static clearHostIP(){}
   url='about:blank';stopCount=0;

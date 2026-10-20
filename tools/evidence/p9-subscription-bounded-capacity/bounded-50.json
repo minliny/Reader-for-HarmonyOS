@@ -1,0 +1,44 @@
+{
+  "n": 50,
+  "mode": "complete actual SDK Owner/Store/Gateway; controlled memory platform and typed RPC observations, zero Core mutations",
+  "documentBytes": 32801,
+  "elapsedMs": 10.191917,
+  "beforeRssBytes": 188153856,
+  "readCalls": 53,
+  "readBytes": 92600,
+  "writeCalls": 54,
+  "writeBytes": 172517,
+  "hashCalls": 204,
+  "hashBytes": 269156,
+  "recordHashCalls": 104,
+  "recordHashBytes": 256156,
+  "receiptHashCalls": 100,
+  "receiptHashBytes": 13000,
+  "finishes": 54,
+  "fsyncs": 108,
+  "maxSnapshotBytes": 40433,
+  "maxRssBytes": 188891136,
+  "rpcCalls": 153,
+  "rpcWrites": 51,
+  "payloadPreserved": true,
+  "fileStats": {
+    "/controlled-capacity/reader-rules-mutation-intent-v1.json": {
+      "reads": 53,
+      "readBytes": 92600,
+      "writes": 53,
+      "writeBytes": 133033,
+      "maxBytes": 40433
+    },
+    "/controlled-capacity/reader-rule-subscription-plan-v1.json": {
+      "reads": 0,
+      "readBytes": 0,
+      "writes": 1,
+      "writeBytes": 39484,
+      "maxBytes": 39484
+    }
+  },
+  "largestBoundedCurrentBytes": 1841,
+  "description": "订阅更新已确认；50 个导入步骤已确认；订阅更新时间已保存",
+  "immutablePlanWrittenOnce": true,
+  "everyDispatchedOriginalDtoPreserved": true
+}

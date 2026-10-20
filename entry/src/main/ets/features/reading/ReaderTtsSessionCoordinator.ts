@@ -1,4 +1,5 @@
 import { diagnosticCodeOf } from '../../app/LogPrivacy.ts';
+import { ReaderStartupTrace } from '../../app/ReaderStartupTrace.ts';
 import { errorMessageOf } from '../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
@@ -38,6 +39,8 @@ type StartWaiter = { generation: number; resolve: (started: boolean) => void };
 
 export type ReaderTtsHostSpeakRequest = {
   requestId: string;
+  /** Process-local diagnostics identity, never speech/book/provider data. */
+  traceOperationId?: number;
   text: string;
   rate: number;
   pitch: number;
@@ -53,7 +56,8 @@ export type ReaderTtsHostEvent =
   | { type: 'error'; requestId: string; message: string }
   | { type: 'interruption'; action: 'pause' | 'resume' | 'stop' | 'duck' | 'unduck' }
   | { type: 'deviceChange'; action: 'continue' | 'stop' }
-  | { type: 'mediaControl'; action: 'play' | 'pause' | 'stop' | 'next' | 'previous' };
+  | { type: 'mediaControl'; action: 'play' | 'pause' | 'stop' | 'next' | 'previous' }
+  | { type: 'backgroundLeaseRevoked' };
 
 export type ReaderTtsHostProbe = {
   available: boolean;
@@ -160,6 +164,7 @@ interface ReaderTtsAuditionSession {
 
 type ActiveSession = {
   identity: ReaderTtsSessionIdentity;
+  traceOperationId?: number;
   input: ReaderTtsStartInput;
   plan?: ReaderTtsSlicePlan;
   config?: ReaderTtsConfig;
@@ -208,6 +213,7 @@ export class ReaderTtsSessionCoordinator {
   private operationTail: Promise<void> = Promise.resolve();
   /** Persist completed slices in order without putting storage on the next-speech path. */
   private progressCommitTail: Promise<void> = Promise.resolve();
+  private latestCompletedProgress: ReaderTtsProgressCommit | undefined = undefined;
   private state: ReaderTtsState = createReaderTtsState(false);
   private transport: HostTtsTransportState = createHostTtsTransportState();
   private coreSnapshot: ReaderTtsQueueSnapshot | undefined = undefined;
@@ -228,6 +234,7 @@ export class ReaderTtsSessionCoordinator {
   private startConfirmedRequestId: string | undefined = undefined;
   private startWatchdogHandle: number = -1;
   private awaitingStartToken: ReaderTtsUtteranceToken | undefined = undefined;
+  private lastTraceOperationId: number | undefined = undefined;
 
   constructor(
     gateway: ReaderTtsCoordinatorGateway | ReaderTtsGateway,
@@ -250,6 +257,14 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private routeHostEvent(event: ReaderTtsHostEvent): void {
+    if (event.type === 'backgroundLeaseRevoked') {
+      // Platform background eligibility is mandatory, independent from the
+      // user's optional interruption preference. Router admits this event
+      // only while the app is actually in background.
+      this.voidLogged(this.stopAudition(), 'audition.background-lease-revoked');
+      this.voidLogged(this.pauseForBackground(), 'background-lease-revoked');
+      return;
+    }
     const audition = this.audition;
     if (audition !== undefined) {
       if ('requestId' in event && event.requestId === audition.requestId) {
@@ -373,6 +388,13 @@ export class ReaderTtsSessionCoordinator {
     return { ...this.state };
   }
 
+  /** Only completed audio is eligible for exit progress, never a queued slice. */
+  captureCompletedProgress(): ReaderTtsProgressCommit | undefined {
+    const progress = this.latestCompletedProgress;
+    if (progress === undefined) return undefined;
+    return { chapter: { ...progress.chapter }, charEnd: progress.charEnd };
+  }
+
   getTransportState(): HostTtsTransportState {
     return { ...this.transport };
   }
@@ -395,16 +417,27 @@ export class ReaderTtsSessionCoordinator {
     return available;
   }
 
-  private async probeAvailabilityInternal(): Promise<boolean> {
+  /** Configuration inspection shares transport ownership, but its failures
+   * belong to configuration facts, never to the formal book playback state. */
+  async probeConfigurationAvailability(isAdmitted: () => boolean): Promise<boolean> {
+    let available = false;
+    await this.enqueue(async (): Promise<void> => {
+      if (isAdmitted()) available = await this.probeAvailabilityInternal(false, isAdmitted);
+    });
+    return available;
+  }
+
+  private async probeAvailabilityInternal(publishPlaybackState: boolean = true,
+    isAdmitted: () => boolean = (): boolean => true): Promise<boolean> {
     // Public stop/start intents update transport state synchronously before
     // entering the operation tail.  Capture the generation here so a probe
     // that is already awaiting a platform call cannot publish idle/unavailable
     // state over that newer intent when its callback resumes.
     const probeGeneration = this.transport.sessionGeneration;
-    const isProbeCurrent = (): boolean => !this.disposed &&
+    const isProbeCurrent = (): boolean => !this.disposed && isAdmitted() &&
       this.transport.sessionGeneration === probeGeneration;
     const hadActiveSession = this.active !== undefined;
-    if (!hadActiveSession && isProbeCurrent()) {
+    if (publishPlaybackState && !hadActiveSession && isProbeCurrent()) {
       this.setState({ ...this.state, status: 'probing' });
     }
     try {
@@ -436,7 +469,7 @@ export class ReaderTtsSessionCoordinator {
       const probe = await this.host.probe();
       if (!isProbeCurrent()) return false;
       if (!probe.available) {
-        if (this.active === undefined && isProbeCurrent()) {
+        if (publishPlaybackState && this.active === undefined && isProbeCurrent()) {
           this.setState({
             ...this.state,
             status: 'unavailable',
@@ -446,7 +479,7 @@ export class ReaderTtsSessionCoordinator {
         }
         return false;
       }
-      if (this.active === undefined && isProbeCurrent()) {
+      if (publishPlaybackState && this.active === undefined && isProbeCurrent()) {
         const wasEngineUnavailable = this.state.stopReason === 'engineUnavailable';
         this.setState({
           ...this.state,
@@ -459,6 +492,7 @@ export class ReaderTtsSessionCoordinator {
     } catch (error) {
       const detail = errorMessageOf(error);
       this.logTtsEvent('probe', detail);
+      if (!publishPlaybackState) throw error;
       if (this.active === undefined && isProbeCurrent()) {
         this.setState({
           ...this.state,
@@ -473,6 +507,8 @@ export class ReaderTtsSessionCoordinator {
 
   start(input: ReaderTtsStartInput, desiredPlaying: boolean = true): Promise<void> {
     this.assertStartInput(input);
+    const traceOperationId = ReaderStartupTrace.currentTts()?.beginTtsOperation();
+    this.lastTraceOperationId = traceOperationId;
     this.voidLogged(this.stopAudition(), 'audition.formal-start');
     this.desiredPlaying = desiredPlaying;
     const chapterKey = this.chapterKey(input.chapter);
@@ -506,7 +542,8 @@ export class ReaderTtsSessionCoordinator {
     const identity = this.sessionIdentity(input.contentVersion, chapterKey);
     const prior = this.active;
     const hostStopTask = prior === undefined ? undefined : this.stopHostTransportImmediately();
-    this.active = { identity, input: { ...input, rate } };
+    this.latestCompletedProgress = undefined;
+    this.active = { identity, traceOperationId, input: { ...input, rate } };
     return this.enqueue(async (): Promise<void> => this.prepareNewSession(identity, prior, hostStopTask));
   }
 
@@ -758,7 +795,11 @@ export class ReaderTtsSessionCoordinator {
 
   stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' | 'screenOff' |
     'systemInterruption' = 'user'): Promise<void> {
+    if (this.lastTraceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts('tts.stop-intent', this.lastTraceOperationId);
+    }
     this.voidLogged(this.stopAudition(), 'audition.stop');
+    if (reason !== 'lifecycle') this.latestCompletedProgress = undefined;
     const active = this.active;
     this.clearTimer();
     this.clearStartWatchdog();
@@ -823,6 +864,9 @@ export class ReaderTtsSessionCoordinator {
     this.resolveStartWaiters(false);
     await this.stop('lifecycle');
     this.host.clearEventListener(this.ownerToken);
+    if (this.lastTraceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts('tts.owner-release', this.lastTraceOperationId, 'ready');
+    }
   }
 
   async whenSettled(): Promise<void> {
@@ -906,6 +950,9 @@ export class ReaderTtsSessionCoordinator {
     this.clearStartWatchdog();
     this.awaitingStartToken = undefined;
     const active = this.active;
+    if (active?.traceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts('tts.session-failure', active.traceOperationId, 'failed');
+    }
     this.active = undefined;
     this.clearUtteranceCorrelations();
     this.startConfirmedRequestId = undefined;
@@ -1016,7 +1063,7 @@ export class ReaderTtsSessionCoordinator {
     if (slice === undefined) throw new Error('Reader TTS Core cursor is outside the slice plan');
     if (!this.isSessionCurrent(active.identity)) return;
     const utteranceGeneration = this.nextGeneration(this.transport.utteranceGeneration);
-    const requestId = `tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
+    const requestId = `${this.ownerToken}-tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
       `-c${active.input.chapter.chapterIndex}-i${slice.index}`;
     this.transport = {
       ...this.transport,
@@ -1065,6 +1112,7 @@ export class ReaderTtsSessionCoordinator {
     try {
       await this.host.speak({
         requestId: token.requestId,
+        traceOperationId: active.traceOperationId,
         text: slice.text,
         rate: active.input.rate ?? 1,
         pitch: active.input.pitch ?? 1,
@@ -1135,7 +1183,8 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private async handleHostEvent(event: ReaderTtsHostEvent): Promise<void> {
-    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange') {
+    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange' ||
+      event.type === 'backgroundLeaseRevoked') {
       return;
     }
     const active = this.active;
@@ -1534,6 +1583,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private queueProgressCommit(progress: ReaderTtsProgressCommit): void {
+    this.latestCompletedProgress = { chapter: { ...progress.chapter }, charEnd: progress.charEnd };
     const commit = this.progressCommitTail.then((): Promise<void> => this.progressCommit(progress));
     // LRE logs its storage failure and leaves the prior durable position in
     // place. Keep the queue usable for later slices even if another caller's

@@ -1,18 +1,22 @@
-import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingSurfaceLayoutMap, readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
-import { ReadingPaginationIndex, ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
-import { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({'reverse-assembly':{description:'Actual bounded reverse page metrics, Unicode, exact adjacency, partial edges and stale measurement',resources:[]},'native-title-ownership':{description:'Actual measurement clear/take ownership for title/body plus old-call disposal negative',resources:[]},'retained-lifecycle':{description:'Actual retain/restore and both queued neighbours preserve original request and committed progress',resources:[]}});
+async function run(id){
+const {default:assert}=await import('node:assert/strict');
+const { mkdtempSync, readFileSync, rmSync, writeFileSync }=await import('node:fs');
+const { tmpdir }=await import('node:os');
+const { join }=await import('node:path');
+const { stripTypeScriptTypes }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap }=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes }=await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
 
 // Execute production page assembly against explicit native metric receipts.
 // These fixtures prove admission/ownership, not platform shaping or pixels.
 const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const text = readFileSync(source, 'utf8');
+const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
+  readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
   return new Function('ReadingSurfaceLayoutMap', stripTypeScriptTypes(text.slice(text.indexOf(`class ${name} {`), text.indexOf(next, text.indexOf(`class ${name} {`)))) + `; return ${name};`)(ReadingSurfaceLayoutMap);
 }
@@ -119,6 +123,7 @@ function create(paragraphs, endScalar, { capacity = 25, gap = 3, titleHeight = 0
   });
   return o;
 }
+if(id==='reverse-assembly'){
 
 {
   const o = create([{ text: '远前文', lines: [[3, 90]] }, { text: '甲乙丙丁', lines: [[1, 9], [1, 9], [1, 9], [1, 9]] },
@@ -255,6 +260,8 @@ function create(paragraphs, endScalar, { capacity = 25, gap = 3, titleHeight = 0
   assert.equal(o.previousChapter, 9, 'actual chapter head crosses to previous EOF even without canonical page facts');
 }
 
+
+}else if(id==='native-title-ownership'){
 // Native node allocation is the platform boundary; measure/clear/take below
 // execute the complete production owner with its actual node/controller lists.
 const ownershipSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
@@ -356,6 +363,8 @@ for (const firstLineFits of [true, false]) {
 console.log('PASS reverse title ownership: real native measurement clear/take, head fit/reject, retained title and old-call negative control');
 console.log('PASS production reverse page: deep/tail bounded native metrics, Unicode, title/gaps, exact adjacency, partial edges and cancellation');
 
+
+}else{
 // The regression requires the combined lifecycle: a measured current page is
 // retained, restored into a new reader, then both neighbours are prepared.
 // Use the real retain/restore/queue and page assembly methods; only native line
@@ -367,7 +376,8 @@ let activeHandoff;
 const runtime = { optionalReadingEntryMemoryEnabled: () => true,
   readingEntryPreparations: () => ({ captureValidity: () => () => true, setPaused() {} }) };
 const HandoffOwner = productionMotionMethods(source, [...methods, 'retainConfirmedEntryPresentation',
-  'restoreRetainedReadingPresentation', 'captureMaterializedChapterContext', 'restoreMaterializedChapterContext',
+  'restoreRetainedReadingPresentation', 'admitRetainedReadingRecency', 'isVisiblePageCurrent', 'isSelectionCurrent', 'isMountedToken',
+  'captureMaterializedChapterContext', 'restoreMaterializedChapterContext',
   'copyParagraphRanges', 'currentPaginationKey', 'samePaginationKey', 'schedulePageTurnPreparation'], {
   ...ownerDependencies, ReaderMaterializedChapterContext, ReaderRetainedPresentation, estimateRetainedRemoteSessionBytes,
   ReaderRuntimeOwner: { current: () => runtime }, ReaderWindowCoordinator: { metrics: () => ({ densityPixels: 3 }) },
@@ -379,6 +389,8 @@ function handoffReader(paragraphs, residentStart, total, direction) {
   o.previousChapterMeasurement = undefined;
   Object.assign(o, {
     sourceId: 's', bookId: 'b', materializedContentVersion: 'body', chapterSelectionToken: 4,
+    mounted: true, appForeground: true, windowChromeActive: true,
+    retainedReadingRecencyReceipt: undefined, retainedReadingRecencyVisible: false,
     hasMeasuredViewport: () => true, readerSettingsLoaded: true,
     paginationLayoutSignature: () => 'layout', requireChapter() { return this.chapter; },
     requireChapterLayoutMap() { return this.chapterLayoutMap; }, retainCurrentChapterWindow() {},
@@ -388,7 +400,9 @@ function handoffReader(paragraphs, residentStart, total, direction) {
     isSelectionActive(life, selection) { return life === 1 && selection === this.chapterSelectionToken; },
     admitTocEntries(entries) { this.tocEntries = entries; }, readingTocEntries() { return this.tocEntries; },
     chapterWindow: { configure() {}, setCurrent() {} },
-    publishMeasuredFirstPage(page) { this.visiblePage = page; this.visibleFragments = page.fragments; },
+    publishMeasuredFirstPage(page, _chapter, selection) {
+      this.visiblePage = page; this.visibleFragments = page.fragments; this.visiblePageSelectionToken = selection;
+    },
     admitCommittedProgress(progress) { this.lastCommittedProgress = progress; this.progressAdmissions = (this.progressAdmissions ?? 0) + 1; },
     configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {}, beginReadingRecordClock() {},
     onDirectoryProjectionChanged() {}, notifyControlSelectionReadingReady() {},
@@ -452,6 +466,8 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   };
   assert.equal(consumer.restoreRetainedReadingPresentation(1), true);
   assert.equal(consumer.visiblePage, page, 'body is already submitted before background preparation runs');
+  assert.equal(consumer.retainedReadingRecencyVisible, true, 'the restored foreground body admits the exact visible reading receipt');
+  assert.equal(consumer.retainedReadingRecencyReceipt, producer.lastCommittedProgress);
   assert.equal(prepared, 0);
   scheduled.shift()();
   assert.equal(prepared, 2);
@@ -464,6 +480,7 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   assert.equal(consumer.lastCommittedProgress, producer.lastCommittedProgress);
   assert.equal(consumer.progressAdmissions, 1, 'speculative neighbours do not change committed progress');
   assert.equal(consumer.visiblePage, page, 'speculative neighbours cannot replace the visible page');
+  assert.equal(consumer.retainedReadingRecencyReceipt, producer.lastCommittedProgress, 'speculative neighbours cannot replace the retained reading receipt');
 }
 // Completing the canonical chapter drops the run. Its last real page must
 // still retain an exact request receipt rather than falling back to guessing.
@@ -472,7 +489,7 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   const page = forwardPage(o, 0);
   assert.equal(o.paginationDraft, undefined);
   assert.deepEqual(page.paginationObservation, { requestScalar: 0, startScalar: 0, endScalarExclusive: 2 });
-  o.visiblePage = page; o.lastCommittedProgress = { chapterIndex: 2, chapterOffset: 0, chapterProgress: 0 };
+  o.visiblePage = page; o.lastCommittedProgress = { sourceId: 's', bookId: 'b', chapterIndex: 2, chapterOffset: 0, chapterProgress: 0 };
   activeHandoff = new ReadingEntryHandoff(); o.retainConfirmedEntryPresentation();
   const snapshot = activeHandoff.current('s', 'b');
   assert.deepEqual(snapshot.context.paginationDraft.pageStartScalars(), [0]);
@@ -485,3 +502,7 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   assert.equal(consumer.visiblePage, page);
 }
 console.log('PASS retained page integration: real measurement/retain/restore/queued neighbours, both orders, partial windows, CRLF/Emoji and mid-line request, canonical completion, cancellation, constant-size ownership and unchanged progress');
+
+}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

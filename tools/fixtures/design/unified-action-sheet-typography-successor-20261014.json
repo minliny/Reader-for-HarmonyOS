@@ -1,0 +1,768 @@
+{
+  "schema": 1,
+  "boundary": "Two exact manga action-content successors. Only the formerly local More option/refresh and download item Button carriers retire into ReaderActionSheetContent. All unrelated text, AUTO defaults, font families and public roles retain their immutable previous witnesses. One finite producer contract proves actual shared rendering. No wildcard or budget inflation; static and SDK results are not native visual or user acceptance.",
+  "userAuthorization": "你在独立 worktree 实现",
+  "previousDirectoryFixture": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+  "previousDirectoryFixtureSha256": "30e243b894f58f3d0be5d26d6a9be687ed7be1e3d041249b9cfd202acc6b58e9",
+  "historicalFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+  "historicalFixtureSha256": "87f72cffa795b3565acd03e67cc8a9ae89517dc8975a1a2270f100ab9cf9ca82",
+  "implementationEvidence": "docs/architecture/unified-action-sheet-registration-20261014.md",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "previousFixture": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+      "previousEntrySha256": "615d4f13f85186fd6eb67778a02780096b2fde780c04c97c934c68605a991a06",
+      "retiredCarrierIndices": [
+        23,
+        28
+      ],
+      "carriers": [
+        {
+          "owner": "MangaReadingSurface",
+          "method": "build",
+          "kind": "Text",
+          "text": "`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`",
+          "modifiers": {
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "tabletDirectory",
+          "kind": "Text",
+          "text": "this.bookTitle",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.sidebarTitleLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "this.stageWidth <= 700 ? visual.sidebarNarrowTitleFontSize : visual.sidebarTitleFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "700",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SERIF_SC_BOLD",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "tabletDirectory",
+          "kind": "Text",
+          "text": "'章节目录'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "visual.sidebarCaptionLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.sidebarCaptionFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Text",
+          "text": "this.bookTitle || this.remoteSession?.book.title || this.remoteBookSeed?.title || '漫画阅读'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "17",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "FontWeight.Bold",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "'ReaderNotoSerifSCBold'",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Text",
+          "text": "this.title",
+          "modifiers": {
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Text",
+          "text": "'换源'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "10",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Button",
+          "text": "this.controller?.replacementRecoveryRequired === true ? '内容已更新，从新版首图开始' : '内容已更新，确认从当前页继续'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Text",
+          "text": "this.displayError(this.error)",
+          "modifiers": {
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Text",
+          "text": "this.offlineProbeStatus",
+          "modifiers": {
+            "fontSize": {
+              "expression": "10",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "bottomControls",
+          "kind": "Button",
+          "text": "'‹'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "20",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "bottomControls",
+          "kind": "Text",
+          "text": "this.opened ? `${this.pageOrdinal() + 1} / ${this.horizontalPageCount}` : '—'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "10",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "bottomControls",
+          "kind": "Text",
+          "text": "' 页'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "10",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "bottomControls",
+          "kind": "Button",
+          "text": "'›'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "20",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "footerAction",
+          "kind": "Text",
+          "text": "label",
+          "modifiers": {
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "panelOverlay",
+          "kind": "Text",
+          "text": "this.panelTitle()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "this.panel === 'directory' ? visual.wideHeaderLineHeight : 24",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "this.panel === 'directory' ? visual.wideHeaderFontWeight : 600",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_600",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "this.panel === 'directory' ? visual.wideHeaderFontSize : 15",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "panelOverlay",
+          "kind": "Text",
+          "text": "this.panelTitle()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "this.panel === 'directory' ? visual.quickHeaderLineHeight : 26",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "900",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_900",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "this.panel === 'directory' ? visual.quickHeaderFontSize : 18",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "directoryTools",
+          "kind": "Text",
+          "text": "'上一章节'",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.toolLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.toolFontSize",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "directoryTools",
+          "kind": "Text",
+          "text": "'完整目录'",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.toolLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.toolFontSize",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "directoryTools",
+          "kind": "Text",
+          "text": "'下一章节'",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "lineHeight": {
+              "expression": "visual.toolLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "visual.toolFontSize",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "modePanel",
+          "kind": "Text",
+          "text": "'图片适配'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "21",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "600",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_600",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "sectionTitle",
+          "kind": "Text",
+          "text": "label",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "21",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "600",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_600",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "sheetChoice",
+          "kind": "Text",
+          "text": "label",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "18",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "fitLine",
+          "kind": "Text",
+          "text": "label",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "18",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "settingsPanel",
+          "kind": "Text",
+          "text": "'亮度'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "21",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "600",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_600",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "settingsPanel",
+          "kind": "Text",
+          "text": "`${Math.round(this.brightnessPercent)}%`",
+          "modifiers": {
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "settingsPanel",
+          "kind": "Text",
+          "text": "'常驻页码'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "18",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "settingsPanel",
+          "kind": "Text",
+          "text": "'恢复默认'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "18",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "400",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Text",
+          "text": "this.chapterEndTypeLabel()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "19",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Text",
+          "text": "`${this.chapterEndLabel()} 完`",
+          "modifiers": {
+            "fontSize": {
+              "expression": "23",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "FontWeight.Bold",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "'ReaderNotoSerifSCBold'",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Text",
+          "text": "this.adjacentLabel()",
+          "modifiers": {
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Button",
+          "text": "this.adjacentActionLabel()",
+          "modifiers": {
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Button",
+          "text": "'返回目录'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Text",
+          "text": "'已读到本书末尾'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Button",
+          "text": "'返回目录'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "chapterEndContent",
+          "kind": "Text",
+          "text": "`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`",
+          "modifiers": {
+            "fontSize": {
+              "expression": "11",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [
+        {
+          "owner": "MangaReadingSurface",
+          "method": "imageViewport",
+          "kind": "Text",
+          "text": "this.displayError(this.imageError(row))",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "maxLines": "4",
+            "fontColor": "this.errorColor"
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "imageViewport",
+          "kind": "Button",
+          "text": "this.retryLabel(row)",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => this.retry(row)"
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Button",
+          "text": "this.openingRetry ? '重试中' : '重试'",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => { void this.retryOpen(); }",
+            "enabled": "!this.openingRetry",
+            "height": "44"
+          }
+        },
+        {
+          "owner": "MangaReadingSurface",
+          "method": "topControls",
+          "kind": "Button",
+          "text": "this.loggingIn ? '登录处理中' : '登录书源后重试'",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => { void this.loginAndRetry(); }",
+            "enabled": "!this.loggingIn",
+            "height": "44"
+          }
+        }
+      ],
+      "roles": {},
+      "fontFamilies": {
+        "READER_FONT_NOTO_SERIF_SC_BOLD": "ReaderNotoSerifSCBold",
+        "READER_FONT_NOTO_SANS_SC_UI_REGULAR": "ReaderNotoSansSCUIRegular",
+        "READER_FONT_NOTO_SANS_SC_UI_600": "ReaderMangaSans600",
+        "READER_FONT_NOTO_SANS_SC_UI_900": "ReaderMangaSans900"
+      },
+      "delegate": {
+        "component": "ReaderActionSheetContent",
+        "file": "entry/src/main/ets/features/common/ReaderActionSheetContent.ets",
+        "method": "morePanel",
+        "variant": "this.moreMenuVariant"
+      }
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets",
+      "previousFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+      "previousEntrySha256": "2cbd39400e2f6bf4db29066b2c1aaeefd61988b774cb36ba2a471cefb2156645",
+      "retiredCarrierIndices": [
+        3
+      ],
+      "carriers": [
+        {
+          "owner": "MangaDownloadOperationsPanel",
+          "method": "build",
+          "kind": "Text",
+          "text": "'正在读取下载状态…'",
+          "modifiers": {
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaDownloadOperationsPanel",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.failureMessage",
+          "modifiers": {
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "MangaDownloadOperationsPanel",
+          "method": "build",
+          "kind": "Button",
+          "text": "'重试'",
+          "modifiers": {
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [],
+      "roles": {},
+      "fontFamilies": {
+        "READER_FONT_NOTO_SANS_SC_UI_REGULAR": "ReaderNotoSansSCUIRegular"
+      },
+      "delegate": {
+        "component": "ReaderActionSheetContent",
+        "file": "entry/src/main/ets/features/common/ReaderActionSheetContent.ets",
+        "method": "build",
+        "variant": "'grouped'"
+      }
+    }
+  ]
+}

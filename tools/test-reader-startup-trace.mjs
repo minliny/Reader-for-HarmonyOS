@@ -1,3 +1,4 @@
+import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
 import assert from 'node:assert/strict';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -87,3 +88,15 @@ for (const code of [0, 17]) {
 }
 assert.equal(errors.length, 1);
 console.log('startup trace: release zero-sample/zero-log direct promises, immutable launch decision; debug monotonic process correlation, measured segments, original result/failure preservation, entry ownership and explicit code-only evidence PASS');
+
+const directoryBefore=rows.length;
+const directory=new ReaderDirectoryTrace('search');
+now+=150;directory.step('response');now+=8;directory.step('published');now+=16;directory.step('frame-callback');
+const directoryRows=rows.slice(directoryBefore);
+assert.equal(directoryRows.length,4);
+assert.ok(directoryRows.every(row=>row.entryId===directoryRows[0].entryId));
+assert.deepEqual(directoryRows.slice(1).map(row=>row.durationMs),[150,158,174]);
+assert.ok(directoryRows.every(row=>row.evidence==='application-code'));
+assert.ok(directoryRows.every(row=>!('bookId' in row)&&!('query' in row)));
+assert.equal(directoryRows.at(-1).stage,'directory.search.frame-callback');
+console.log('directory trace: correlated monotonic code milestones, debounce inclusion and no content retention PASS; not FPS');

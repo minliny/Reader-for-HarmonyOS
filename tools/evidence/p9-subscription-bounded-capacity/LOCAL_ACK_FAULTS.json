@@ -1,0 +1,122 @@
+[
+  {
+    "mode": "finish",
+    "phase": 1,
+    "recovery": "warm",
+    "initialError": "actual atomic finish accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "finish",
+    "phase": 1,
+    "recovery": "cold",
+    "initialError": "actual atomic finish accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "finish",
+    "phase": 2,
+    "recovery": "warm",
+    "initialError": "actual atomic finish accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "finish",
+    "phase": 2,
+    "recovery": "cold",
+    "initialError": "actual atomic finish accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "finish",
+    "phase": 3,
+    "recovery": "warm",
+    "initialError": "actual atomic finish accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "finish",
+    "phase": 3,
+    "recovery": "cold",
+    "initialError": "actual atomic finish accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "fsync",
+    "phase": 1,
+    "recovery": "warm",
+    "initialError": "actual fsync accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "fsync",
+    "phase": 1,
+    "recovery": "cold",
+    "initialError": "actual fsync accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "fsync",
+    "phase": 2,
+    "recovery": "warm",
+    "initialError": "actual fsync accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "fsync",
+    "phase": 2,
+    "recovery": "cold",
+    "initialError": "actual fsync accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "fsync",
+    "phase": 3,
+    "recovery": "warm",
+    "initialError": "actual fsync accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  },
+  {
+    "mode": "fsync",
+    "phase": 3,
+    "recovery": "cold",
+    "initialError": "actual fsync accepted; ACK lost",
+    "pureQueryPreservesSameId": true,
+    "pureQueryRpcWrites": 0,
+    "explicitOriginalSteps": 4,
+    "metadataConfirmed": true
+  }
+]

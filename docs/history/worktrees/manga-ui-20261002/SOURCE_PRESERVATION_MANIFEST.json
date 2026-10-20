@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "scope": "Exact private recovery copies; obsolete snapshot cannot be a current SDK/HAP input",
+  "files": [
+    {
+      "originHead": "c263f0432a9e16e87502ad2d2aea4ee43d7ed01c",
+      "originPath": "evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/native-sdk.tar.gz",
+      "archive": "/Users/minliny/Documents/Reader/.reader-artifacts/evidence/all-worktree-integration-20261015/source-preservation/manga-ui-20261002/native-sdk.tar.gz",
+      "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d",
+      "bytes": 9662167,
+      "activeBuildInput": false
+    },
+    {
+      "originHead": "c263f0432a9e16e87502ad2d2aea4ee43d7ed01c",
+      "originPath": "evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/reader-source.tar.gz",
+      "archive": "/Users/minliny/Documents/Reader/.reader-artifacts/evidence/all-worktree-integration-20261015/source-preservation/manga-ui-20261002/reader-source.tar.gz",
+      "sha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132",
+      "bytes": 209937914,
+      "activeBuildInput": false
+    }
+  ]
+}

@@ -1,18 +1,32 @@
-import * as ttsConfig from '../entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts';
-import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import * as ttsState from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
-import * as sourceIdentity from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
-import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reader-control-builder-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const descriptions={
+ 'auto-headers':'Actual SDK retained AutoPage headers geometry/meta plus frozen-value negative',
+ 'tts-fields':'Actual SDK retained TTS headers/status/voice/configuration booleans and native callbacks',
+ 'tts-source':'Actual TTS measurement source identity/form/input preview admission',
+ 'auto-source':'Actual AutoPage measurement source identity/form/input preview admission',
+ 'timer-wheel':'Actual timer wheel bounds/input and source neighbour roles',
+ 'media-inventory':'Explicit current playback literal media reference inventory; no packaging claim',
+ 'historical-geometry':'Explicit archived live/Make geometry and source mutations; excluded from current release'
+};
+const selected=selectContractCases(Object.fromEntries(Object.entries(descriptions).map(([id,description])=>[id,{description,resources:[]}])));
+async function runCase(selectedCase){
+const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const ttsConfig=await import('../entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts');
+const morphScroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
+const presentation=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const {default:assert}=await import('node:assert/strict');
+const { existsSync, readFileSync }=await import('node:fs');
+const { createRequire, stripTypeScriptTypes }=await import('node:module');
+const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
+const actors=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const ttsState=await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
+const sourceIdentity=await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
 
-const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
+const root=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
+const near=(a,b,label)=>assert.ok(Math.abs(a-b)<0.0011,`${label}: ${a} != ${b}`);
+if(selectedCase==='historical-geometry'){
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/reader-control-playback-live-20260905.json', import.meta.url), 'utf8'));
-const near = (a, b, label) => assert.ok(Math.abs(a - b) < 0.0011, `${label}: ${a} != ${b}`);
+
 
 // Expected samples are derived from the live motion CSS and static node-local
 // bounds, not a second copy of production interpolation functions.
@@ -117,34 +131,6 @@ for (const p of [0, 0.25, 0.5, 0.75, 1]) {
   near(seek.speed.y - noSeek.speed.y, 32 * p, 'sentence-seek row expands Speed position simultaneously');
 }
 
-const deps = { ...presentation, ...ttsConfig, ...morphScroll, ...geometry, ...actors, ...ttsState, ...sourceIdentity, Scroller: class { currentOffset() { return { yOffset: 0 }; } },
-  ScrollSource: { SCROLLER: 6, FLING: 1, DRAG: 0 } };
-function loadInputAdapter(name, source) {
-  const boundary = source.indexOf('\n  build() {');
-  assert.ok(boundary > 0, `${name} actual adapter boundary exists`);
-  const rateMethod = name === 'ReaderControlTtsContent' ?
-    ['effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'].map(method =>
-      source.match(new RegExp('  private ' + method + '\\(\\): [^{]+\\{[\\s\\S]*?\\n  \\}'))?.[0] ?? '').join('\n') : '';
-  if (name === 'ReaderControlTtsContent') assert.ok(rateMethod, 'actual rate method used by frame must exist');
-  const adapter = (source.slice(0, boundary) + '\n' + rateMethod + '\n}')
-    .replace(/^import[\s\S]*?;\s*/gm, '')
-    .replace(/@(?:Component|Prop|State)\b\s*/g, '')
-    .replace(/@(?:Watch|StorageLink)\('[^']+'\)\s*/g, '')
-    .replace(`export struct ${name}`, `class ${name}`);
-  return new Function(...Object.keys(deps), `${stripTypeScriptTypes(adapter)}\nreturn ${name};`)(...Object.values(deps));
-}
-function actualCallArgument(source, startMarker) {
-  const start = source.indexOf(startMarker);
-  assert.ok(start >= 0, `real render attribute exists: ${startMarker}`);
-  const open = source.indexOf('(', start);
-  let depth = 1;
-  for (let end = open + 1; end < source.length; end += 1) {
-    if (source[end] === '(') depth += 1;
-    if (source[end] === ')' && --depth === 0) return source.slice(open + 1, end);
-  }
-  assert.fail(`unterminated actual render attribute: ${startMarker}`);
-}
-
 function checkAutoPageSpeedContent(source) {
   const start = source.indexOf('  private speedRow() {');
   const end = source.indexOf('  private followHighlightRow() {', start);
@@ -167,7 +153,35 @@ function checkAutoPageSpeedContent(source) {
 }
 const autoContentSource = readFileSync(new URL('ReaderControlAutoPageContent.ets', root), 'utf8');
 checkAutoPageSpeedContent(autoContentSource);
-if (readerBuilderSdkAvailable) {
+for (const [from, to] of [
+  ['.position({ x: this.frame().speed.x, y: this.frame().speed.y })',
+    '.position({ x: this.frame().speed.x, y: this.frame().speed.y }).clip(true)'],
+  ["this.speedActor('slider').width", '109'],
+]) {
+  assert.ok(autoContentSource.includes(from), 'actual speed layout mutation target exists');
+  assert.throws(() => checkAutoPageSpeedContent(autoContentSource.replace(from, to)),
+    'speed child regression rejects added clipping or lost source minimum');
+}
+const geometrySource = readFileSync(new URL('ReaderControlPlaybackGeometry.ts', root), 'utf8');
+function mutant(replace, replacement) {
+  assert.ok(geometrySource.includes(replace), 'mutation target exists');
+  const executable = stripTypeScriptTypes(geometrySource.replace(replace, replacement)
+    .replace(/^import[\s\S]*?;\s*/gm, '')).replace(/^export /gm, '');
+  return new Function(...Object.keys(actors), `${executable}; return { sampleReaderControlTts, sampleReaderControlAutoPage };`)(...Object.values(actors));
+}
+for (const [from, to] of [
+  ['readerControlActor(125, 19, 28, 28)', 'readerControlActor(58, 60, 44, 44)'],
+  ['readerControlLerp(87, 401.5, p)', 'readerControlLerp(87, 401.5, p > 0.5 ? 1 : 0)'],
+  ['readerControlActor(31.4921875, 2.5, 32, 32)', 'readerControlActor(0, 0, 32, 32)'],
+]) assert.throws(() => checkGeometry(mutant(from, to)), 'live track regression kills a wrong actor/threshold mutation');
+
+return;
+}
+if(selectedCase==='auto-headers'||selectedCase==='tts-fields'){
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+if(selectedCase==='auto-headers'){
+ const autoContentSource=readFileSync(new URL('ReaderControlAutoPageContent.ets',root),'utf8');
+
   const autoMembers = ['p', 'frame', 'headerActor', 'headerMeta', 'moduleHeader', 'fullOnlyScrollTranslation', 'presentation'];
   function checkMountedAutoHeaders(source, frozenArguments = false) {
     const { owner } = createReaderBuilderProbe(source, autoMembers, { ...geometry, ...actors, ...morphScroll, ...presentation });
@@ -200,6 +214,8 @@ if (readerBuilderSdkAvailable) {
   assert.throws(() => checkMountedAutoHeaders(frozenAuto), /mounted header|deep-equal/,
     'actual SDK closures reproduce the old by-value actor/meta freeze after a single Quick mount');
 
+
+}else{
   const ttsSource = readFileSync(new URL('ReaderControlTtsContent.ets', root), 'utf8');
   const members = ['p', 'frame', 'effectiveRate', 'headerActor', 'headerMeta', 'quickLabelActor', 'moduleHeader', 'quickLabel',
     'playbackLabel', 'statusText', 'isActivelySpeaking', 'timerSummary', 'twoDigits', 'voiceSelectorRow', 'ttsSelectValueField',
@@ -255,17 +271,27 @@ if (readerBuilderSdkAvailable) {
   assert.ok([...owner.nodes.entries()].some(([key, node]) => key >= fieldIds[0].id && key < fieldIds[0].end &&
     node.type === 'Text' && node.create === '新引擎'));
   console.log('Actual SDK Auto/TTS mounted Builder observers: reversible actor geometry + live strings/numbers/booleans/child Prop payloads PASS');
-} else console.log('Mounted Builder SDK regression SKIP: ETS loader unavailable');
-for (const [from, to] of [
-  ['.position({ x: this.frame().speed.x, y: this.frame().speed.y })',
-    '.position({ x: this.frame().speed.x, y: this.frame().speed.y }).clip(true)'],
-  ["this.speedActor('slider').width", '109'],
-]) {
-  assert.ok(autoContentSource.includes(from), 'actual speed layout mutation target exists');
-  assert.throws(() => checkAutoPageSpeedContent(autoContentSource.replace(from, to)),
-    'speed child regression rejects added clipping or lost source minimum');
+
 }
-for (const [name, module] of [['ReaderControlTtsContent', 'tts'], ['ReaderControlAutoPageContent', 'autoPage']]) {
+}
+if(selectedCase==='tts-source'||selectedCase==='auto-source'){
+const deps = { ...presentation, ...ttsConfig, ...morphScroll, ...geometry, ...actors, ...ttsState, ...sourceIdentity, Scroller: class { currentOffset() { return { yOffset: 0 }; } },
+  ScrollSource: { SCROLLER: 6, FLING: 1, DRAG: 0 } };
+function loadInputAdapter(name, source) {
+  const boundary = source.indexOf('\n  build() {');
+  assert.ok(boundary > 0, `${name} actual adapter boundary exists`);
+  const rateMethod = name === 'ReaderControlTtsContent' ?
+    ['effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'].map(method =>
+      source.match(new RegExp('  private ' + method + '\\(\\): [^{]+\\{[\\s\\S]*?\\n  \\}'))?.[0] ?? '').join('\n') : '';
+  if (name === 'ReaderControlTtsContent') assert.ok(rateMethod, 'actual rate method used by frame must exist');
+  const adapter = (source.slice(0, boundary) + '\n' + rateMethod + '\n}')
+    .replace(/^import[\s\S]*?;\s*/gm, '')
+    .replace(/@(?:Component|Prop|State)\b\s*/g, '')
+    .replace(/@(?:Watch|StorageLink)\('[^']+'\)\s*/g, '')
+    .replace(`export struct ${name}`, `class ${name}`);
+  return new Function(...Object.keys(deps), `${stripTypeScriptTypes(adapter)}\nreturn ${name};`)(...Object.values(deps));
+}
+for (const [name, module] of selectedCase==='tts-source'?[['ReaderControlTtsContent','tts']]:[['ReaderControlAutoPageContent','autoPage']]) {
   const source = readFileSync(new URL(`${name}.ets`, root), 'utf8');
   const Component = loadInputAdapter(name, source), component = new Component(), reports = [];
   component.onMorphActorMeasured = (...args) => reports.push(args);
@@ -306,130 +332,14 @@ for (const [name, module] of [['ReaderControlTtsContent', 'tts'], ['ReaderContro
       assert.equal(component.playbackLabel(), label, `actual persistent Quick TTS status ${status}`);
     }
   }
-  // Evaluate the production render-attribute expressions, not a rewritten
-  // compensation model. This proves valid scroll extents and continuous poses
-  // for a retained native offset; it does not simulate ArkUI callback delivery.
-  const retained = new Component(), originalScroller = retained.scroller;
-  if (module === 'tts') retained.state = { status: 'idle', rate: 1, totalSlices: 0 };
-  const fullViewportHeight = module === 'tts' ? 666 : 250;
-  const nativeOffset = module === 'tts' ? 500 : 150;
-  retained.scrollMotion.fullScrollOffset = nativeOffset;
-  retained.scrollMotion.nativeScrollOffset = nativeOffset;
-  const heightExpression = actualCallArgument(source, '.height(Math.max(this.frame().contentHeight');
-  const translationExpression = 'this.sharedScrollTranslation()';
-  assert.ok(translationExpression, 'actual render scroll-compensation expression exists');
-  const heightFor = new Function(...Object.keys(morphScroll), `return function() { return (${heightExpression}); };`)(...Object.values(morphScroll));
-  const translationFor = new Function(`return (${translationExpression});`);
-  for (const p of [1, .7, .2, 0, .15, .6, 1]) {
-    retained.motionProgress = p; retained.availableWidth = 286 + 52 * p;
-    retained.availableHeight = 190 + (fullViewportHeight - 190) * p;
-    const height = heightFor.call(retained), translation = translationFor.call(retained);
-    assert.ok(height - retained.availableHeight >= nativeOffset - 1e-8,
-      `${module} native scroll offset remains valid during shrink/reverse`);
-    near(translation - nativeOffset, -nativeOffset * p,
-      `${module} retained Full scroll contributes only the shared continuous p`);
-    assert.equal(retained.scroller, originalScroller, 'Full -> Quick -> Full never creates a second Scroller');
-    assert.equal(retained.scrollMotion.fullScrollOffset, nativeOffset, 'sampling does not restart, reset or time the saved offset');
-  }
-  if (module === 'tts') {
-    // Only the three shared module roots receive scroll-to-Quick compensation.
-    // Detail/Config are Full-only: their source 26/34vp exit is NOT S+26/S+34.
-    assert.equal([...source.matchAll(/\.translate\(\{ y: this\.sharedScrollTranslation\(\) \}\)/g)].length, 3);
-    for (const actor of ['playback', 'timer', 'speed']) {
-      const body = source.split(`  private ${actor}() {`)[1].split('  @Builder')[0];
-      assert.match(body, /\.translate\(\{ y: this\.sharedScrollTranslation\(\) \}\)/);
-    }
-    const scrollBody = source.slice(source.indexOf('\n  private normalContent() {'), source.indexOf('\n  private headerActor'));
-    assert.equal([...scrollBody.matchAll(/\.translate\(/g)].length, 2, 'only two Full-only coordinate compensations, never whole-Scroll rewind');
-    assert.equal([...scrollBody.matchAll(/\.translate\(\{ y: this\.fullOnlyScrollTranslation\(\) \}\)/g)].length, 2);
-    for (const s of [0, 180, 523, 780]) {
-      retained.scrollMotion.fullScrollOffset = s;
-      retained.scrollMotion.nativeScrollOffset = s;
-      for (const p of [1, .95, .6, .2, 0, .2, .6, .95, 1]) {
-        retained.motionProgress = p; retained.availableWidth = 286 + 52 * p;
-        const frame = retained.frame(), shift = retained.sharedScrollTranslation();
-        for (const actor of ['playback', 'timer', 'speed']) {
-          near(frame[actor].y + shift - s, frame[actor].y - s * p, `${actor}: actual shared screen-local pose`);
-        }
-        for (const [actor, fullY, exit] of [['detail', makeFixture.adaptedFull.detail[1], 26], ['config', makeFixture.adaptedFull.config[1], 34]]) {
-          const position = actualCallArgument(scrollBody.slice(scrollBody.indexOf(`.position({ x: this.frame().${actor}.x`)), '.position(');
-          const actualY = new Function(`return (${position}).y;`).call(retained) + retained.fullOnlyScrollTranslation() - s;
-          near(actualY, fullY - s + exit * (1 - p), `${actor}: original local exit at scroll ${s}, p${p}`);
-          near(frame[actor].opacity, p, `${actor}: same p, no delayed second phase`);
-        }
-      }
-    }
-    // Real component handoff: freeze once at the newest native position, even
-    // if onDidScroll has not arrived. Reversals must not recapture or scroll.
-    const handoff = new Component(), calls = [];
-    let offset = 500;
-    handoff.scroller = { currentOffset: () => ({ xOffset: 0, yOffset: offset }),
-      scrollTo: value => calls.push(value) };
-    handoff.motionProgress = 1; handoff.onMotionChanged(); handoff.onFullDidScroll();
-    assert.equal(handoff.scrollMotion.fullScrollOffset, 500);
-    offset = 523; handoff.interactionEnabled = false; handoff.onMotionChanged();
-    assert.equal(handoff.scrollMotion.fullScrollOffset, 523, 'handoff captures native position, not stale callback');
-    assert.deepEqual(calls, [{ xOffset: 0, yOffset: 523, animation: false }]);
-    for (const p of [.98, .4, .7, .2, 0, .3, 1]) {
-      handoff.motionProgress = p; handoff.onMotionChanged(); handoff.onFullDidScroll();
-      assert.equal(handoff.scrollMotion.fullScrollOffset, 523, 'one scroll anchor survives an uncommitted held reversal');
-    }
-    assert.equal(calls.length, 1, 'no per-frame native scroll commands');
-    handoff.interactionEnabled = true; handoff.onMotionChanged();
-    offset = 410; handoff.onFullDidScroll();
-    assert.equal(handoff.scrollMotion.fullScrollOffset, 410, 'Full endpoint resumes normal scrolling');
-    assert.match(source, /\.onDidScroll\(/);
-    const willScroll = actualCallArgument(source, '.onWillScroll(');
-    const allowScroll = new Function(`return (${stripTypeScriptTypes(`const callback = ${willScroll};`).replace(/^const callback = /, '').replace(/;\s*$/, '')});`).call(handoff);
-    assert.deepEqual(allowScroll(0, 7), { xOffset: 0, yOffset: 7 });
-    handoff.interactionEnabled = false;
-    assert.deepEqual(allowScroll(0, 7), { xOffset: 0, yOffset: 0 }, 'no residual native delta during morph');
-    handoff.onMotionChanged(); // Freeze a fresh collapse at S=410.
-    handoff.motionProgress = 0; handoff.onMotionChanged();
-    assert.equal(handoff.scrollMotion.fullScrollOffset, 410, 'held Quick endpoint is still reversible');
-    const callCountBeforeCommit = calls.length;
-    handoff.interactionEnabled = true; handoff.onMotionChanged();
-    assert.equal(handoff.scrollMotion.fullScrollOffset, 0, 'committed Quick discards the old Full scroll anchor');
-    assert.equal(handoff.scrollMotion.nativeScrollOffset, 410, 'test models a deferred native scrollTo callback');
-    assert.deepEqual(calls.at(-1), { xOffset: 0, yOffset: 0, animation: false });
-    assert.equal(calls.length, callCountBeforeCommit + 1);
-    near(handoff.sharedScrollTranslation() - offset, 0, 'Quick actors do not jump before native reset completes');
-    assert.deepEqual(allowScroll(0, -410, 0, deps.ScrollSource.SCROLLER), { xOffset: 0, yOffset: -410 }, 'own reset is not blocked');
-    assert.deepEqual(allowScroll(0, 7, 0, deps.ScrollSource.FLING), { xOffset: 0, yOffset: 0 }, 'old inertia stays blocked');
-    handoff.interactionEnabled = false; handoff.motionProgress = .15; handoff.onMotionChanged();
-    near(handoff.sharedScrollTranslation() - offset, 0, 'immediate new expansion starts at top even before reset callback');
-    near(handoff.fullOnlyScrollTranslation() - offset, 0, 'Full-only content also starts at top on the new expansion');
-    offset = 0; handoff.onFullDidScroll();
-    assert.equal(handoff.scrollMotion.resettingFullScroll, false);
-    for (const p of [.2, .7, 1]) {
-      handoff.motionProgress = p; handoff.onMotionChanged();
-      near(handoff.sharedScrollTranslation(), 0, 'new expansion uses the unscrolled Figma track');
-      near(handoff.fullOnlyScrollTranslation(), 0);
-    }
-    handoff.interactionEnabled = true; handoff.onMotionChanged();
-    offset = 260; handoff.onFullDidScroll();
-    assert.equal(handoff.scrollMotion.fullScrollOffset, 260, 'new Full session scrolls normally after resetting');
-    assert.equal([...source.matchAll(/\.scrollTo\(/g)].length, 1, 'one shared command adapter handles handoff and committed reset');
-  } else {
-    assert.match(source, /advanceReaderControlMorphScroll/);
-    for (const actor of ['timer', 'follow']) assert.match(source, new RegExp('frame\\(\\)\\.' + actor + '\\.y \\}\\)\\s*\\.translate\\(\\{ y: this\\.fullOnlyScrollTranslation'));
-    assert.match(source, /\.translate\(\{ y: this\.sharedScrollTranslation\(\) \}\)/);
-  }
-  if (module === 'autoPage') assert.match(source, /ReaderControlTimerWheel\(\{/);
-  else assert.match(source, /this\.timerStepButton\(minutes, -5\)/);
-  assert.match(source, /ReaderControlSwitchTrack\(\{/);
-  assert.doesNotMatch(source, /(?:ReaderTtsFullPanel|ReaderAutoPageFullPanel)\(\{/);
-  assert.doesNotMatch(source, /\b(?:setTimeout|setInterval|animateTo|postFrameCallback)\s*\(/);
-  assert.doesNotMatch(source, /\.position\(\{ x: -14, y: -58 \}\)/);
-  assert.match(source, /measureActor\(false, area\)/); assert.match(source, /measureActor\(true, area\)/);
-  const media = [...source.matchAll(/app\.media\.([a-zA-Z0-9_]+)/g)].map(m => m[1]);
-  for (const id of new Set(media)) {
-    assert.ok(['svg', 'png', 'jpg', 'webp'].some(ext => existsSync(new URL(`../entry/src/main/resources/base/media/${id}.${ext}`, import.meta.url))), `real packaged media ${id}`);
-  }
+
 }
 
-const wheelSource = readFileSync(new URL('ReaderControlTimerWheel.ets', root), 'utf8');
-const Wheel = loadInputAdapter('ReaderControlTimerWheel', wheelSource), wheel = new Wheel(), steps = [];
+}
+if(selectedCase==='timer-wheel'){
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const Wheel=selectedProductionMethods(new URL('ReaderControlTimerWheel.ets',root),'ReaderControlTimerWheel',['step','valid','offsets']);
+const wheel=Object.assign(new Wheel(),{minimum:0,maximum:59,interactionEnabled:true}),steps=[];
 wheel.onStep = delta => steps.push(delta);
 wheel.value = 0; wheel.maximum = 59;
 wheel.step(-1); wheel.step(0); assert.deepEqual(steps, [], 'minimum and selected timer values are not commands');
@@ -439,28 +349,15 @@ wheel.interactionEnabled = false; wheel.step(-1); assert.deepEqual(steps, [1], '
 wheel.neighbours = 2; assert.deepEqual(wheel.offsets(), [-2, -1, 0, 1, 2], 'TTS has five source rows');
 wheel.neighbours = 1; assert.deepEqual(wheel.offsets(), [-1, 0, 1], 'AutoPage has three source rows');
 
-// The SDK parse check is read-only and does not build/sign a HAP. It catches
-// ArkUI DSL syntax that standard TypeScript-only method tests cannot parse.
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-if (existsSync(`${sdkRoot}/node_modules/typescript`)) {
-  const require = createRequire(import.meta.url), ts = require(`${sdkRoot}/node_modules/typescript`);
-  const options = require(`${sdkRoot}/lib/ets_checker`).compilerOptions;
-  for (const name of ['ReaderControlTtsContent', 'ReaderControlAutoPageContent', 'ReaderControlTimerWheel']) {
-    const file = ts.createSourceFile(`${name}.ets`, readFileSync(new URL(`${name}.ets`, root), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-    assert.deepEqual(file.parseDiagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, '\n')), [], `ArkTS parser accepts ${name}`);
-  }
-} else console.log('SDK syntax check SKIP: ets-loader not installed; pure geometry/identity checks still run.');
 
-const geometrySource = readFileSync(new URL('ReaderControlPlaybackGeometry.ts', root), 'utf8');
-function mutant(replace, replacement) {
-  assert.ok(geometrySource.includes(replace), 'mutation target exists');
-  const executable = stripTypeScriptTypes(geometrySource.replace(replace, replacement)
-    .replace(/^import[\s\S]*?;\s*/gm, '')).replace(/^export /gm, '');
-  return new Function(...Object.keys(actors), `${executable}; return { sampleReaderControlTts, sampleReaderControlAutoPage };`)(...Object.values(actors));
 }
-for (const [from, to] of [
-  ['readerControlActor(125, 19, 28, 28)', 'readerControlActor(58, 60, 44, 44)'],
-  ['readerControlLerp(87, 401.5, p)', 'readerControlLerp(87, 401.5, p > 0.5 ? 1 : 0)'],
-  ['readerControlActor(31.4921875, 2.5, 32, 32)', 'readerControlActor(0, 0, 32, 32)'],
-]) assert.throws(() => checkGeometry(mutant(from, to)), 'live track regression kills a wrong actor/threshold mutation');
-console.log('Reader control playback: live-track geometry, child clipping/min-height, persistent content, actual measurement identity, SDK syntax and 5 mutations PASS');
+if(selectedCase==='media-inventory'){
+ for(const name of ['ReaderControlTtsContent','ReaderControlAutoPageContent']){
+  const source=readFileSync(new URL(name+'.ets',root),'utf8');
+  for(const id of new Set([...source.matchAll(/app\.media\.([a-zA-Z0-9_]+)/g)].map(m=>m[1])))
+   assert.ok(['svg','png','jpg','webp'].some(ext=>existsSync(new URL(`../entry/src/main/resources/base/media/${id}.${ext}`,import.meta.url))),'literal playback media exists: '+id);
+ }
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

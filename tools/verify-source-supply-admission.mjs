@@ -1,3 +1,4 @@
+import { coreCliPath } from './lib/tool-environment.mjs';
 // Live admission suite for the bundled book-source supply chain.
 // Per source: HTTPS-only + secret + paywall static gates, then a reader-cli
 // live chain across >=3 keywords (cold process each), a warm repeat of the
@@ -10,6 +11,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
 import {
   REQUIRED_CAPABILITIES,
   SUITE_VERSION,
@@ -22,13 +24,13 @@ import {
 } from './source-supply-lib.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const coreRepo = resolve(repo, '../Reader-Core-Native');
-const cliPath = process.env.READER_CORE_CLI ?? resolve(coreRepo, 'target/debug/reader-cli');
+const coreRepo = resolve(repo, '../Reader-Core');
+const cliPath = coreCliPath(coreRepo);
 const sourcePath = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
 const evidenceIndex = process.argv.indexOf('--evidence-dir');
 const evidenceDir = evidenceIndex >= 0 ? resolve(repo, process.argv[evidenceIndex + 1]) :
-  resolve(repo, '../evidence/2026-08-31-five-line');
+  resolve(repo, '.reader-local/source-admission');
 
 // Ordered per-source keyword pools. The first three that produce a live pass
 // become the verified keyword set; misses fall through to later candidates.
@@ -101,6 +103,8 @@ for (const source of sources) {
   result.static.secrets = collectSecretFindings(source);
   result.static.paywall = collectPaywallFindings(source);
   result.static.metadataErrors = validateBundledMetadata(source);
+  try { assertSourceLoginDefault(source); }
+  catch (error) { result.static.metadataErrors.push(error.message); }
   if (result.static.insecureUrls.length > 0) {
     result.reasons.push('insecure http:// URLs in rules');
   }

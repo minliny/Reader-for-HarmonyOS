@@ -1,3 +1,4 @@
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import assert from 'node:assert/strict';
 import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
 
@@ -28,6 +29,8 @@ function fixture() {
   return { owner, view, timers, cancelled, advance, start, jump: ms => { now += ms; } };
 }
 
+
+async function runCase() {
 {
   const f = fixture(); f.owner.setSessionTimer(1, 0); f.start();
   f.advance(3000); assert.equal(f.owner.snapshot().remainingSeconds, 5);
@@ -43,10 +46,12 @@ function fixture() {
   assert.equal(f.view.turns, 1); assert.equal(f.timers.size, 0);
 }
 
-for (const mode of ['simulation', 'cover', 'slide', 'none', 'continuous']) {
+// The coordinator receives outcomes and commit acknowledgements, not a native
+// animation mode. Run this owner protocol once; it does not cover five renderers.
+{
   const f = fixture(); f.owner.setSpeed(2); f.owner.setSessionTimer(0, 0);
   f.view.outcome = { kind: 'preparing' }; f.start(); f.advance(2000);
-  assert.equal(f.view.turns, 1, mode);
+  assert.equal(f.view.turns, 1);
   f.view.canResume = false; f.owner.resumePendingTurn(); assert.equal(f.view.turns, 1);
   f.view.canResume = true; f.view.outcome = { kind: 'started' }; f.owner.resumePendingTurn();
   assert.equal(f.view.turns, 2); f.owner.resumePendingTurn(); assert.equal(f.view.turns, 2);
@@ -54,7 +59,7 @@ for (const mode of ['simulation', 'cover', 'slide', 'none', 'continuous']) {
   f.owner.retryTurn(previous); assert.equal(f.owner.snapshot().awaitingPageCommit, false);
   f.owner.armPageTimer(true); f.advance(2000); assert.equal(f.view.turns, 3);
   f.owner.pause('touch'); f.owner.pageCommitted();
-  assert.equal(f.owner.snapshot().status, 'paused', `${mode}: manual interaction owns pause during commit`);
+  assert.equal(f.owner.snapshot().status, 'paused', 'manual interaction owns pause during commit');
   f.owner.resume(); f.owner.armPageTimer(true); f.view.outcome = { kind: 'boundary', edge: 'end' };
   f.advance(2000); assert.equal(f.owner.snapshot().stopReason, 'bookEnd'); assert.equal(f.timers.size, 0);
 }
@@ -143,3 +148,9 @@ for (const interruption of ['pause', 'stop']) {
 }
 
 console.log('automatic reading coordinator: deadlines, 500 ms presentation isolation, full reading interval, interruption and commit barrier PASS');
+
+}
+for (const id of selectContractCases({ 'clock-commit': { description: 'Production coordinator deadlines, pause/retry and commit barrier using controlled clock', resources: [] } })) {
+  await runCase();
+  recordContractCasePass(id);
+}

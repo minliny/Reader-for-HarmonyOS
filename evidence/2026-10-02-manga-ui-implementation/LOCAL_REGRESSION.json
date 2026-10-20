@@ -1,0 +1,251 @@
+{
+  "tier": "local production-method / SDK probe tests; not full semantic build or native pixels",
+  "results": [
+    {
+      "name": "test-hap-pipeline-contract",
+      "exitCode": 0,
+      "seconds": 0.283,
+      "output": "HarmonyOS HAP pipeline contract: PASS\n"
+    },
+    {
+      "name": "test-bookshelf-view-handoff",
+      "exitCode": 0,
+      "seconds": 0.527,
+      "output": "PASS bookshelf cover handoff: bidirectional opacity, whole-cover composition, final-frame continuity, retained default/image actors, historical negative controls; native pixels remain separate\n(node:57506) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-paged-projection",
+      "exitCode": 0,
+      "seconds": 0.388,
+      "output": "PASS shelf pages: bounded first read, independent continue summary, filtered-empty distinction, complete membership, stale revision restart, cancellation and anchor extension\nPASS shelf page UI ownership: single request, append, stale generation/runtime rejection, changed revision refresh and duplicate-page rejection\nPASS 1001-book forward/backward bounded windows, partial-tail alignment and one-query deep anchor\nPASS synchronous native reload cannot overwrite the old visible-book anchor\n(node:57519) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-reading-entry",
+      "exitCode": 0,
+      "seconds": 0.501,
+      "output": "bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)\nReader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS\n(node:57528) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-detail-removal",
+      "exitCode": 0,
+      "seconds": 0.06,
+      "output": "bookshelf detail removal: PASS\n"
+    },
+    {
+      "name": "test-bookshelf-source-name-durability",
+      "exitCode": 0,
+      "seconds": 0.372,
+      "output": "PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection\nshelf source fallback: exact unique identities only, cancellation and foreign-result rejection PASS\n(node:57541) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-shelf-source-name-resolution",
+      "exitCode": 0,
+      "seconds": 0.462,
+      "output": "{\"name\":\"missing/invalid name is unknown, not evidence of source removal\",\"status\":\"PASS\"}\n{\"name\":\"unready in-memory registries preserve caller supplied persisted identity label\",\"status\":\"PASS\"}\n{\"name\":\"temporary unknown Core name cannot erase cached exact-source name or progress\",\"status\":\"PASS\"}\n{\"name\":\"successful but unmatched/filtered source list does not prove deletion\",\"status\":\"PASS\"}\n{\"name\":\"late old hydration cannot overwrite newer successful name\",\"status\":\"PASS\"}\n{\"name\":\"Core deletion admitted while name lookup is pending is never resurrected\",\"status\":\"PASS\"}\n{\"name\":\"runtime/route-generation changes reject old results without borrowing another identity\",\"status\":\"PASS\"}\n{\"name\":\"source-name-only change invalidates the actual mounted row key while identity stays exact\",\"status\":\"PASS\"}\nPH45 source name projection and actual Host hydration regressions PASS (8 groups); no device identity is inferred.\n(node:57551) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-startup-readiness",
+      "exitCode": 0,
+      "seconds": 0.331,
+      "output": "PASS bookshelf startup readiness: authoritative first-page card, global filtered/truncated fallback, delayed/failing reads, acknowledged mode reuse, write/restore context fencing and no duplicate projection\n(node:57563) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-reading-feedback",
+      "exitCode": 0,
+      "seconds": 0.373,
+      "output": "PASS original shelf dispatch: unread/read, local/remote; no snapshot prerequisite or loading overlay; source-switch Back protection. Device first-frame timing is not measured by this test.\n(node:57571) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-viewport-return",
+      "exitCode": 0,
+      "seconds": 0.322,
+      "output": "PASS bookshelf route return: identity+item offset, list/state/type filters, removed group-filter migration, reordered books, late callback isolation\n(node:57575) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-detail-control-stability",
+      "exitCode": 1,
+      "seconds": 0.355,
+      "output": "<anonymous_script>:28\n            List.contentEndOffset(this.isWideViewport() ? 24 : readerFloatingTabContentInset(ReaderWindowCoordinator.metrics()));\n                                       ^\n\nTypeError: this.isWideViewport is not a function\n    at Array.eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:153:21), <anonymous>:28:40)\n    at ReaderBuilderProbe.runObserver (file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:105:31)\n    at ReaderBuilderProbe.observeComponentCreation2 (file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:100:12)\n    at ReaderBuilderProbe.bookshelfList (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:153:21), <anonymous>:23:14)\n    at file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-bookshelf-detail-control-stability.mjs:45:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v26.0.0\n"
+    },
+    {
+      "name": "test-bookshelf-shared-scan",
+      "exitCode": 0,
+      "seconds": 0.496,
+      "output": "bookshelf shared scan: PASS (single scan, fallback, revision fencing, bounded retry)\n(node:57596) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-more-layout",
+      "exitCode": 0,
+      "seconds": 0.339,
+      "output": "PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update\n(node:57602) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-bookshelf-management",
+      "exitCode": 0,
+      "seconds": 0.06,
+      "output": "bookshelf management Core ownership contract: PASS\n"
+    },
+    {
+      "name": "test-bookshelf-manual-update",
+      "exitCode": 0,
+      "seconds": 0.631,
+      "output": "{\"name\":\"manual update bypasses prepared sessions and executes real Gateway detail/TOC\",\"status\":\"PASS\"}\n{\"name\":\"manual update also bypasses durable catalog cache after prepared eviction\",\"status\":\"PASS\"}\n{\"name\":\"manual request waits for a cache-only in-flight acquisition then refreshes\",\"status\":\"PASS\"}\n{\"name\":\"per-book failure/empty results preserve old records, settle flags and continue bounded batch\",\"status\":\"PASS\"}\n{\"name\":\"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions\",\"status\":\"PASS\"}\n{\"name\":\"cold scoped manga skips only automatic catalog refresh while other and manual checks continue\",\"status\":\"PASS\"}\n{\"name\":\"automatic work waits for settings and yields to reading; manual work stays explicit\",\"status\":\"PASS\"}\n{\"name\":\"paged filtered shelf automatic sweep covers offscreen targets and cancels before network\",\"status\":\"PASS\"}\n{\"name\":\"automatic catalog projection does not rescan its own new revision\",\"status\":\"PASS\"}\n{\"name\":\"multiple force waiters share one refresh after the nonforce admission settles\",\"status\":\"PASS\"}\n{\"name\":\"force waiting revalidates cancel before new network work\",\"status\":\"PASS\"}\n{\"name\":\"force waiting revalidates close before new network work\",\"status\":\"PASS\"}\n{\"name\":\"force waiting revalidates source-delete before new network work\",\"status\":\"PASS\"}\nPH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS\n(node:57618) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-shelf-resume-handoff",
+      "exitCode": 0,
+      "seconds": 0.844,
+      "output": "PASS actual Index→LRE→Core progress/body: one authoritative progress read and body request, current offset wins over stale shelf projection\nPASS committed-first-page optional projection, late bookmark preservation, cancellation and refresh revision ownership; no native timing claims\n(node:57628) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-hierarchy",
+      "exitCode": 0,
+      "seconds": 0.111,
+      "output": "PASS local EPUB directory hierarchy projection, bounded indentation and accessible depth\n"
+    },
+    {
+      "name": "test-reader-directory-navigation",
+      "exitCode": 0,
+      "seconds": 0.104,
+      "output": "PH42 directory navigation protocol, revision fencing and retained-source backfill: PASS\nreader directory v2 scope and target contracts passed\ndirectory selection uses independent immutable authority through deferred context\nPASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path\n"
+    },
+    {
+      "name": "test-reader-directory-extent",
+      "exitCode": 0,
+      "seconds": 0.087,
+      "output": "reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)\n(node:57652) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-navigation-ui",
+      "exitCode": 0,
+      "seconds": 0.628,
+      "output": "PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS\nPASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row\nPASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child\nPASS actual SDK directory empty-result presentation without replacing list lifecycle\nPASS directory diagnostics separate disposed query cancellation from active failure\nPASS tree download actual SDK Builder and Core target fencing: day/night states, group exclusion, queued/stale/source guards and download-state refresh\nPASS actual SDK Quick/Full/Surface download prop and callback propagation\n(node:57655) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-projection",
+      "exitCode": 0,
+      "seconds": 0.079,
+      "output": "reader directory projection behavior: PASS\n"
+    },
+    {
+      "name": "test-reader-directory-viewport",
+      "exitCode": 0,
+      "seconds": 0.338,
+      "output": "PH42 tree viewport continuity, ancestor accessibility and bounded page cache: PASS\n(node:57676) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-window-publication",
+      "exitCode": 0,
+      "seconds": 0.326,
+      "output": "PASS production directory: immediate 7-row window, true 1368 total/global position; full search/sort/edges deferred; old lifecycle rejected\n(node:57679) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-shared-content",
+      "exitCode": 0,
+      "seconds": 0.383,
+      "output": "PASS shared directory toolbar/chapter row: actual SDK Builders, retained props, actions, marker gates and control wrappers\n(node:57694) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-markers",
+      "exitCode": 0,
+      "seconds": 0.091,
+      "output": "reader-directory-markers static contract: PASS\n"
+    },
+    {
+      "name": "test-reader-directory-data-snapshot",
+      "exitCode": 0,
+      "seconds": 0.321,
+      "output": "reader directory business-value snapshot and no-op prop refresh: PASS (native scroll still separate)\nPASS complete bookmark excerpt/proof snapshots, every scope field, removal, excerpt-only and in-place updates\nPASS real FullDirectoryPanel deferred scope/quote-only update retains viewport, keeps morph tree stable, and updates exact click proof at the endpoint\n(node:57702) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-depth-contract",
+      "exitCode": 0,
+      "seconds": 0.391,
+      "output": "PASS actual SDK tree rows: v2 zero-based depth, v1 compatibility, bounded indent and full accessibility actions\n(node:57705) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-business-boundaries",
+      "exitCode": 0,
+      "seconds": 0.375,
+      "output": "PASS production near-end and prefetch canonical readable boundaries\nPASS accepted-session index rebuilt once, constant-time commits, unknown/group boundaries and stale prefetch ownership\nPASS actual manual shelf refresh -> acquisition -> independent readable prefetch; visible session and directory are preserved\n(node:57721) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-directory-backfill-after-frame",
+      "exitCode": 0,
+      "seconds": 0.38,
+      "output": "PH42 retained EPUB backfill only after directory miss and readable frame: PASS\nPASS production TXT local/TXT tags, case/whitespace normalization, visible-frame admission and stale-session rejection\nPASS same-book manual chapter generation rearms navigation backfill\n(node:57729) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-manga-admission",
+      "exitCode": 0,
+      "seconds": 0.447,
+      "output": "PASS manga admission: exact intent/manifest/page/source scope, decode-before-add, no admission on failure, lease release and cancellation\nPASS manga preview and one bounded cached-resource renewal\nPASS actual Index manga detail gate follows image success/failure without novel body or shelf writes\nPASS manga detail rejects legacy text download actions before queue mutation\nPASS manga admission skips non-readable groups even with URLs and refuses group-only catalogs before side effects\nPASS actual BookAcquisitionCoordinator manga admission wrapper preserves both manifest decode revisions to owner argument 13 and admission receipt\n(node:57758) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-manga-session",
+      "exitCode": 1,
+      "seconds": 0.329,
+      "output": "PASS manga session: bounded window, stable resources, serialized CAS, invalid anchor, teardown, late release, explicit recovery, offline manifest, duplicate IDs\nPASS replaced tile windows discard old queued work; only decoded visible regions can save progress\nPASS first frame admits before neighbor and reuses first-region lease; failed explicit refresh retains old view\nPASS pending neighbor selection joins decode and admits a visible tile without a second scroll\nPASS narrow cold entry: 3 of 10000 real page facts, no full manifest/catalog/progress RPC, bounded end window, invalid ordinal and disposed request rejected\nPASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable\n(node:57764) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- true\n\n    at file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-manga-session.mjs:170:40 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: undefined,\n  expected: true,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+    },
+    {
+      "name": "test-manga-navigation",
+      "exitCode": 1,
+      "seconds": 0.351,
+      "output": "PASS production long-image horizontal projection, bounded upstream zoom, delayed gesture layout anchor, both-axis save, page boundaries and independent reading preferences\n<anonymous_script>:157\n    if (this.panel.length > 0) { this.panel = ''; return; }\n                   ^\n\nTypeError: Cannot read properties of undefined (reading 'length')\n    at Probe.handleBack (eval at productionMotionMethods (file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:32:10), <anonymous>:157:20)\n    at file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-manga-navigation.mjs:77:26\n\nNode.js v26.0.0\n"
+    },
+    {
+      "name": "test-manga-directory-route",
+      "exitCode": 0,
+      "seconds": 0.378,
+      "output": "PASS actual SDK manga directory child: cold resume→chapter 0, current image readiness routing, failure/stale fences, late catalog and cached sparse chapter navigation (native scheduling/paint not tested)\nPASS integrated v2 manga proof routing, four-argument readiness/session fencing, no text anchor, same-chapter revalidation and resume-only group exit\n(node:57783) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-manga-display-policy",
+      "exitCode": 0,
+      "seconds": 0.332,
+      "output": "PASS production imageStyle width/contain, explicit preference priority, whole-image crop geometry, both-axis anchor, height reflow, login one-retry/no-refresh/fences, exact refresh restores global ordinal and ambiguous recovery remains explicit\n(node:57795) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-manga-orientation",
+      "exitCode": 0,
+      "seconds": 0.14,
+      "output": "PASS 32 real PNG/JPEG/WebP fixture hashes and Pillow eight-direction pixel goldens; long image 2048/2048/15 crops join exactly; bounded region requests; normalized display coordinates; cancellation releases native objects. Codec and PixelMap are mocked; target pixels remain OPEN.\n(node:57797) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-manga-strip",
+      "exitCode": 0,
+      "seconds": 0.388,
+      "output": "PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion\nPASS actual manga surface preserves observed original-image anchor across width changes and missing geometry; obsolete resize discarded\n(node:57807) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-manga-cancelled-banner",
+      "exitCode": 0,
+      "seconds": 0.337,
+      "output": "PASS actual manga surface methods: stale save/viewport cancellation does not obscure a visible image; current failures remain visible\n(node:57816) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-reader-settings",
+      "exitCode": 0,
+      "seconds": 0.095,
+      "output": "reader settings pure/static contract: PASS\n"
+    },
+    {
+      "name": "test-reader-settings-rounded-clip",
+      "exitCode": 0,
+      "seconds": 0.372,
+      "output": "Settings real SDK Builder hierarchy: separate rounded paint and cached dynamic mask; 42 reversible width/theme poses + partial scroll + mutation PASS\n(node:57822) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-theme-page-back-bar",
+      "exitCode": 0,
+      "seconds": 0.321,
+      "output": "PASS retained shared PageBackBar Day/Night/Day and reactive Sync override; no palette changes or pixel claim\n(node:57839) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "name": "test-detail-acquisition-return-stability",
+      "exitCode": 0,
+      "seconds": 0.574,
+      "output": "PASS production Index + actual Coordinator/Gateway: stable return/new catalog, exact evidence negatives, source/processing races, delayed offline readmission. No device pixel claim.\n(node:57844) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  ]
+}

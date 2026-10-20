@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,10 +8,13 @@ import { fileURLToPath } from 'node:url';
 // The host build excludes every OH_Input call at compile time. It executes the
 // production parser, not a JS copy and not native input or authorization tests.
 const source = fileURLToPath(new URL('native/reader-control-touch-sequence.c', import.meta.url));
-const output = join(mkdtempSync(join(tmpdir(), 'reader-control-touch-parser-')), 'plan-check');
-const compile = spawnSync('/usr/bin/clang', ['-std=c11', '-Wall', '-Wextra', '-Werror',
+const scratch = mkdtempSync(join(tmpdir(), 'reader-control-touch-parser-'));
+try {
+const output = join(scratch, 'plan-check');
+const compiler = process.env.CC ?? 'cc';
+const compile = spawnSync(compiler, ['-std=c11', '-Wall', '-Wextra', '-Werror',
   '-DREADER_CONTROL_DRY_ONLY', source, '-o', output], { encoding: 'utf8' });
-assert.equal(compile.status, 0, `${compile.stdout}\n${compile.stderr}`);
+assert.equal(compile.status, 0, `${compiler}: ${compile.error ?? ''}\n${compile.stdout}\n${compile.stderr}`);
 const dryArgs = ['--dry-run', '1320', '2856', '--display', '0'];
 // The parser itself is synchronous and normally completes in milliseconds, but
 // this suite runs alongside the full contract matrix on constrained CI hosts.
@@ -64,3 +67,6 @@ assert.match(c, /current != AUTHORIZED/);
 assert.match(c, /STEP_CANCEL, finger, fingers\[finger\]\.x/);
 assert.match(c, /OH_Input_CancelInjection\(\);\n    int final_code = query_authorization/);
 console.log(`Native diagnostic production parser: 4 valid + ${malformed.length} malformed plans, CLI and non-injecting host gates PASS; authorization/runtime cleanup not executed.`);
+} finally {
+  rmSync(scratch, { recursive: true, force: true });
+}

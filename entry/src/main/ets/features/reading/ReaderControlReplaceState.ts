@@ -10,6 +10,9 @@ export interface ReaderControlReplaceState {
   errorMessage: string;
   writeUncertain: boolean;
   canonicalReloadRequired: boolean;
+  writeOperationId?: string;
+  writeBlocked?: boolean;
+  recoveryLabel?: string;
 }
 
 export interface ReaderControlReplaceTicket { sessionKey: string; revision: number; }
@@ -53,11 +56,12 @@ export function orderedReaderControlReplaceRules(rules: ReaderReplaceRule[]): Re
   return ordered.sort((a: ReaderReplaceRule, b: ReaderReplaceRule): number => a.order - b.order || a.id - b.id);
 }
 
-function copyState(state: ReaderControlReplaceState): ReaderControlReplaceState {
+export function copyReaderControlReplaceState(state: ReaderControlReplaceState): ReaderControlReplaceState {
   return { sessionKey: state.sessionKey, defaultScope: state.defaultScope, revision: state.revision, status: state.status,
     rules: state.rules, mutationPending: state.mutationPending,
     errorMessage: state.errorMessage, writeUncertain: state.writeUncertain,
-    canonicalReloadRequired: state.canonicalReloadRequired };
+    canonicalReloadRequired: state.canonicalReloadRequired, writeOperationId: state.writeOperationId,
+    writeBlocked: state.writeBlocked, recoveryLabel: state.recoveryLabel };
 }
 
 export function readerControlReplaceTicket(state: ReaderControlReplaceState): ReaderControlReplaceTicket {
@@ -71,32 +75,32 @@ export function readerControlReplaceTicketCurrent(state: ReaderControlReplaceSta
 
 export function beginReaderControlReplaceLoad(state: ReaderControlReplaceState): ReaderControlReplaceState {
   if (state.mutationPending) throw new Error('替换规则正在保存，请等待完成');
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.revision += 1;
   next.status = 'loading';
-  next.errorMessage = '';
+  next.errorMessage = state.writeUncertain ? state.errorMessage : '';
   return next;
 }
 
 export function admitReaderControlReplaceLoad(state: ReaderControlReplaceState,
   ticket: ReaderControlReplaceTicket, rules: ReaderReplaceRule[]): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket) || state.mutationPending) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.rules = orderedReaderControlReplaceRules(rules);
   next.status = 'ready';
-  next.errorMessage = '';
+  next.errorMessage = state.writeUncertain ? state.errorMessage : '';
   // A fresh read supplies current facts, not proof that an uncertain write failed.
-  // The UI leaves its old editor on reload and requires a new explicit action.
-  next.writeUncertain = false;
-  next.canonicalReloadRequired = false;
+  // Preserve the original unknown across every successful pure list read.
+  next.writeUncertain = state.writeUncertain;
+  next.canonicalReloadRequired = state.writeUncertain;
   return next;
 }
 
 export function beginReaderControlReplaceMutation(state: ReaderControlReplaceState): ReaderControlReplaceState {
-  if (state.mutationPending || state.writeUncertain || state.canonicalReloadRequired || state.status !== 'ready') {
+  if (state.mutationPending || state.writeBlocked || state.writeUncertain || state.canonicalReloadRequired || state.status !== 'ready') {
     throw new Error('请先完成或重新核对当前替换规则操作');
   }
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.revision += 1; // Invalidates every older list read too.
   next.mutationPending = true;
   next.errorMessage = '';
@@ -121,7 +125,7 @@ export function admitReaderControlReplaceDeletion(state: ReaderControlReplaceSta
 export function admitReaderControlReplaceImport(state: ReaderControlReplaceState,
   ticket: ReaderControlReplaceTicket): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket)) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.mutationPending = false;
   next.status = 'idle';
   next.errorMessage = '';
@@ -131,7 +135,7 @@ export function admitReaderControlReplaceImport(state: ReaderControlReplaceState
 }
 
 function admitMutation(state: ReaderControlReplaceState, rules: ReaderReplaceRule[]): ReaderControlReplaceState {
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.rules = orderedReaderControlReplaceRules(rules);
   next.mutationPending = false;
   next.status = 'ready';
@@ -141,15 +145,27 @@ function admitMutation(state: ReaderControlReplaceState, rules: ReaderReplaceRul
 }
 
 export function failReaderControlReplaceRequest(state: ReaderControlReplaceState,
-  ticket: ReaderControlReplaceTicket, message: string, writeUncertain: boolean = false): ReaderControlReplaceState {
+  ticket: ReaderControlReplaceTicket, message: string, writeUncertain: boolean = false,
+  operationId?: string): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket)) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.mutationPending = false;
   next.status = state.rules.length > 0 && !writeUncertain && !state.writeUncertain &&
     !state.canonicalReloadRequired ? 'ready' : 'error';
   next.errorMessage = message;
   next.writeUncertain = writeUncertain || state.writeUncertain;
+  if (writeUncertain && next.writeOperationId === undefined) next.writeOperationId = operationId;
   return next;
+}
+
+/** Only this original qualified terminal receipt releases uncertainty. A list
+ * read, another operation's ACK or retirement cannot establish that proof. */
+export function settleReaderControlReplaceOriginal(state: ReaderControlReplaceState,
+  operationId: string | undefined): ReaderControlReplaceState {
+  if (!state.writeUncertain || operationId === undefined || state.writeOperationId !== operationId) return state;
+  const next = copyReaderControlReplaceState(state);
+  next.writeUncertain = false; next.writeOperationId = undefined;
+  next.canonicalReloadRequired = true; next.errorMessage = ''; return next;
 }
 
 export function createReaderControlReplaceDraft(rule?: ReaderReplaceRule, order: number = 0,

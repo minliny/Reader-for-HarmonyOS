@@ -7,6 +7,13 @@ import {
   READER_FONT_LXGW_WENKAI_LITE,
   READER_FONT_LXGW_WENKAI_GB_LITE,
   READER_FONT_NOTO_SANS_SC,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_550,
+  READER_FONT_NOTO_SANS_SC_UI_600,
+  READER_FONT_NOTO_SANS_SC_UI_650,
+  READER_FONT_NOTO_SANS_SC_UI_900,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
   READER_FONT_SARASA_MONO_SC,
@@ -17,9 +24,13 @@ function bundledFontSource(family: string): Resource | undefined {
   if (family === READER_FONT_INTER) return $rawfile('InterVariable.ttf');
   if (family === READER_FONT_NOTO_SERIF_SC_BOLD) return $rawfile('NotoSerifSC-Bold.ttf');
   if (family === READER_FONT_NOTO_SERIF_SC_REGULAR) return $rawfile('NotoSerifSC-Regular.ttf');
-  if (family === 'ReaderNotoSansSCUIRegular') return $rawfile('NotoSansSC-UIRegular.otf');
-  if (family === 'ReaderNotoSansSCUIMedium') return $rawfile('NotoSansSC-UIMedium.otf');
-  if (family === 'ReaderNotoSansSCUIBold') return $rawfile('NotoSansSC-UIBold.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_REGULAR) return $rawfile('NotoSansSC-UIRegular.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_550) return $rawfile('ReaderMangaSans550.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_600) return $rawfile('ReaderMangaSans600.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_650) return $rawfile('ReaderMangaSans650.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_900) return $rawfile('ReaderMangaSans900.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_MEDIUM) return $rawfile('NotoSansSC-UIMedium.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_BOLD) return $rawfile('NotoSansSC-UIBold.otf');
   if (family === READER_FONT_NOTO_SANS_SC) return $rawfile('NotoSansSC-VF.otf');
   if (family === READER_FONT_LXGW_WENKAI_LITE) return $rawfile('LXGWWenKaiLite-Regular.ttf');
   if (family === READER_FONT_LXGW_WENKAI_GB_LITE) return $rawfile('LXGWWenKaiGBLite-Regular.ttf');
@@ -41,21 +52,66 @@ export function readerFontFamilyReady(family: string): boolean {
   return family === READER_FONT_HARMONYOS_SANS || readerFontLoadReady(family);
 }
 
-/** Only faces used by the initial bookshelf shell need a checked receipt
- * before its first build. Reader body and control faces retain their own
- * on-demand admission after the shelf has been mounted. */
+/** Manga panels own these extra faces. No shelf startup load; admission waits
+ * for every checked receipt, including dynamic current/group text roles. */
+export function prepareMangaSheetFonts(): Promise<boolean> {
+  const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+    READER_FONT_NOTO_SANS_SC_UI_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+    READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600,
+    READER_FONT_NOTO_SANS_SC_UI_650,
+    READER_FONT_NOTO_SANS_SC_UI_900];
+  return Promise.all(families.map((family: string): Promise<void> =>
+    prepareReaderFontFamily(family))).then((): boolean =>
+    families.every((family: string): boolean => readerFontFamilyReady(family)));
+}
+
+/** The shared download demo uses checked static Sans 400/500/600/700 and Serif
+ * 700 faces. Its first text build must wait for every receipt; registering a
+ * family in the background does not authorize rendering with a fallback face.
+ * The existing 600 face is shared with manga sheets, without copying its file. */
+export function prepareSharedDownloadFonts(): Promise<boolean> {
+  const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_600,
+    READER_FONT_NOTO_SANS_SC_UI_BOLD,
+    READER_FONT_NOTO_SERIF_SC_BOLD];
+  return Promise.all(families.map((family: string): Promise<void> =>
+    prepareReaderFontFamily(family))).then((): boolean =>
+    families.every((family: string): boolean => readerFontFamilyReady(family)));
+}
+
+/** Initial shelf and its shared message surfaces need checked receipts before
+ * first build, including the message action 500 and title 600 static faces.
+ * Reader body and other control faces retain their on-demand admission. */
 export function prepareReaderShelfFonts(): Promise<void> {
   return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC]
+    READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_600]
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
+}
+
+/** The selected novel drawer admits only its four checked physical faces.
+ * Keep its extra Medium face on demand instead of extending shelf startup. */
+export function sourceSwitchNovelFontsReady(): boolean {
+  return [READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
+    .every((family: string): boolean => readerFontFamilyReady(family));
+}
+
+export function prepareSourceSwitchNovelFonts(): Promise<boolean> {
+  return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
+    .map((family: string): Promise<void> => prepareReaderFontFamily(family)))
+    .then((): boolean => sourceSwitchNovelFontsReady())
+    .catch((error: Error): boolean => { reportFontFailure(error); return false; });
 }
 
 export function prepareReaderFonts(): Promise<void> {
   return Promise.all([
     prepareReaderShelfFonts(),
     prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_REGULAR),
-    prepareReaderFontFamily('ReaderNotoSansSCUIRegular'),
-    prepareReaderFontFamily('ReaderNotoSansSCUIMedium'),
+    prepareReaderFontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR),
+    prepareReaderFontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM),
     prepareReaderFontFamily('ReaderNotoSansSCUIBold'),
   ]).then((): void => {});
 }

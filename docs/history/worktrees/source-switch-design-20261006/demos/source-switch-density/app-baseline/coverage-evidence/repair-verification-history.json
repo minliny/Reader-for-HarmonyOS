@@ -1,0 +1,200 @@
+{
+  "scope": "Local design repair checks only",
+  "events": [
+    {
+      "phase": "pure-render-all-variants",
+      "result": "failed",
+      "error": "SourceTools renderTools uses scope[current-1].name when no corresponding scope item exists",
+      "location": "ui-settings.mjs:212",
+      "input": "Each registered variant, day, phone, empty local choices",
+      "productionApplicationFailure": false,
+      "status": "repair requested"
+    },
+    {
+      "phase": "pure-render-all-variants",
+      "result": "passed",
+      "checkedAt": "2026-10-05T05:57:59.509Z",
+      "variants": 322,
+      "input": "Each registered variant, day, phone, empty local choices",
+      "productionApplicationFailure": false,
+      "resolves": "SourceTools empty initial/stopped progress scope guard"
+    },
+    {
+      "phase": "contract-read-only-audit",
+      "result": "failed",
+      "checkedAt": "2026-10-05T06:09:16.408217+00:00",
+      "findingId": "source-editor-read-preservation",
+      "finding": "The local preview cleared the current source/draft and hid the existing editor as soon as another source was requested. Production openEditor only updates busy/status before awaiting loadEditableSource; read failure preserves the prior editor.",
+      "productionApplicationFailure": false,
+      "status": "repaired",
+      "sourceEvidence": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 430
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 433
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 437
+        }
+      ],
+      "repair": "Add editor-switch-loading/error/success samples. Store pending request separately; preserve prior source/draft/readback until successful sample commits the new raw JSON. UI, specification, and route agree."
+    },
+    {
+      "phase": "contract-read-only-audit",
+      "result": "failed",
+      "checkedAt": "2026-10-05T06:09:16.408217+00:00",
+      "findingId": "source-outcome-configuration-freeze",
+      "finding": "Changing live mode/depth after a completed sample recomputed the previous debug/batch result copy. Production updates only the next check configuration; historical status/logs/results are derived from that check outcome.",
+      "productionApplicationFailure": false,
+      "status": "repaired",
+      "sourceEvidence": [
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 568
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 601
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 619
+        },
+        {
+          "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+          "line": 633
+        }
+      ],
+      "repair": "Freeze source-result-mode/depth at check/debug start. The result sample reads frozen values while Select reads live next-run configuration."
+    },
+    {
+      "phase": "pure-render-and-source-contract-settings",
+      "result": "passed",
+      "checkedAt": "2026-10-05T06:09:16.408217+00:00",
+      "variants": 94,
+      "renderCases": 752,
+      "productionApplicationFailure": false,
+      "input": "All settings variants with eight local-choice contexts; current editor draft, pending other source, frozen Search/L2 plus live Explore/L5 included.",
+      "assertions": [
+        "Pending and failed source reads preserve current source/draft/readback explanation",
+        "Successful source read shows fresh target JSON",
+        "Live Select changes do not rewrite frozen prior result level copy",
+        "Default tool selection is zero; explicit selected sample is both fixture sources",
+        "Both settings modules pass node --check and routes-settings JSON parses"
+      ],
+      "resolves": [
+        "source-editor-read-preservation",
+        "source-outcome-configuration-freeze"
+      ]
+    },
+    {
+      "phase": "pure-render-all-variants-final",
+      "result": "passed",
+      "checkedAt": "2026-10-05T06:09:29.274Z",
+      "modules": 38,
+      "variants": 335,
+      "input": "Each registered variant, day, phone, empty local choices",
+      "native": false,
+      "backend": false
+    },
+    {
+      "phase": "browser-interaction-round-1",
+      "result": "failed",
+      "checkedAt": "2026-10-05T06:09:21.701Z",
+      "designSourceSha256": "2dd1e85c29e9c1ae10684d46a5b54b25180f4d06bf55646ffed44cf27a55dedb",
+      "checksPassed": 21,
+      "failures": [
+        {
+          "name": "all-registered-actions-have-valid-targets",
+          "error": "Error: shelf-more/default: missing variant:cover"
+        },
+        {
+          "name": "replace-quick-preview-returns-to-same-form",
+          "error": "Error: preview back lost Quick"
+        },
+        {
+          "name": "runner",
+          "error": "Error: Page errors: Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?; Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?; Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?"
+        }
+      ],
+      "pageErrors": [
+        "Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?",
+        "Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?",
+        "Failed to set the 'innerHTML' property on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?"
+      ],
+      "native": false,
+      "backend": false
+    },
+    {
+      "phase": "browser-interaction-round-2",
+      "result": "passed",
+      "checkedAt": "2026-10-05T06:18:29.356Z",
+      "designSourceSha256": "6a00e7d8db049d1f7b1399c312ab5996dfb6bd8bc29936755f4231b7f7d89091",
+      "checksPassed": 28,
+      "failures": [],
+      "pageErrors": [],
+      "resolves": [
+        "render reentry on blur/change guarded",
+        "background actions validated by owning screen",
+        "preview pending systemBack matches source",
+        "source/TTS/editor return chains preserve context"
+      ],
+      "native": false,
+      "backend": false
+    },
+    {
+      "phase": "visual-reference-inspection",
+      "result": "repair-required",
+      "checkedAt": "2026-10-05T06:22:27.091Z",
+      "issues": [
+        "image-book chapter metadata differs between directory and reader topbar",
+        "foreground text-selection hit layer paints above underlying TTS module when configuration opens"
+      ],
+      "native": false,
+      "backend": false
+    },
+    {
+      "phase": "final-browser-and-integrity",
+      "result": "passed",
+      "checkedAt": "2026-10-05T06:27:29.474Z",
+      "designSourceSha256": "6450923adf20d05407aa31ee0afb919afc1777635bf71340d43a1ccb438b9652",
+      "browserInteractionChecks": 28,
+      "referenceImages": 962,
+      "referenceFilesSha256Verified": 962,
+      "routeDiagrams": 45,
+      "visualInspection": [
+        "independent-directory",
+        "novel/image Quick and Full directory",
+        "anchored appearance choice",
+        "TTS Full and voice audition",
+        "local rule preview",
+        "bookmark pull offset",
+        "scrolled source logs and editor readback",
+        "shelf local removal and cancel"
+      ],
+      "native": false,
+      "backend": false
+    },
+    {
+      "phase": "scroll-endpoint-source-check",
+      "result": "source-matched",
+      "checkedAt": "2026-10-05T06:30:03.537Z",
+      "observation": "SourceToolsPage.ets:230-245 places PageBackBar above full-height padded Scroll; PageBackBar.ets:20-60 has transparent hit surface and no opaque background. Browser fixture preserves this source layout. Native appearance remains unverified.",
+      "designMismatch": false,
+      "native": false
+    },
+    {
+      "phase": "book-actions-manga-style-local-browser-check",
+      "result": "failed",
+      "checkedAt": "2026-10-05",
+      "error": "Chromium sandbox launch blocked by macOS MachPortRendezvousServer Permission denied before any page loaded",
+      "productionApplicationFailure": false,
+      "status": "retry with existing local verification process outside the filesystem sandbox",
+      "scope": "Design preview verification only; no user browser control, VM or HAP"
+    }
+  ]
+}

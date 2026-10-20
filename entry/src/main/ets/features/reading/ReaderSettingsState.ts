@@ -18,6 +18,7 @@ export type ReaderPageTurnStyle = 'simulation' | 'cover' | 'slide' | 'scroll' | 
 export type ReaderScreenTimeout = 'system' | 'oneMinute' | 'fiveMinutes' | 'tenMinutes' | 'alwaysOn';
 
 export type ReaderSettingsToggleKey =
+  | 'hideStatusBar'
   | 'hideNavigationBar'
   | 'extendIntoCutout'
   | 'justifyText'
@@ -28,10 +29,17 @@ export type ReaderSettingsToggleKey =
 
 export type ReaderSettingsSnapshot = {
   version: 5;
+  /** Existing v5 manga choices are retained without materializing new defaults. */
+  mangaDirection?: 'vertical' | 'horizontal';
+  mangaFit?: 'source' | 'width' | 'contain';
+  mangaBackground?: 'paper' | 'white' | 'ink';
+  mangaPageNumbers?: boolean;
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
   pageTransition: ReaderPageTransition;
   screenTimeout: ReaderScreenTimeout;
+  /** Independent opt-in; V5 files written without it normalize to false. */
+  hideStatusBar: boolean;
   hideNavigationBar: boolean;
   extendIntoCutout: boolean;
   /** Compatibility field only; ReaderAppearance remains the single owner. */
@@ -127,6 +135,7 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
     navigationMode: 'paged',
     pageTransition: 'slide',
     screenTimeout: 'system',
+    hideStatusBar: false,
     hideNavigationBar: false,
     extendIntoCutout: false,
     justifyText: false,
@@ -141,8 +150,8 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
  * Decoded preferences are not trusted. V1/V2/V3 are migrated at this boundary;
  * every field then validates independently and malformed values fail back to
  * the safe default without erasing valid siblings. V3 is the first version in
- * which `hideStatusBar` represents an explicit user choice: older snapshots
- * are moved to the new immersive default once by ReaderSettingsGateway. V4
+ * which `hideStatusBar` represents an explicit user choice. Keep that choice
+ * in V3/V4 and extended V5; absent V5 values use the visible-bar default. V4
  * enables the now-functional native text-selection path once for existing
  * installs; subsequent explicit V4 choices remain stable.
  */
@@ -160,13 +169,14 @@ export function normalizeReaderSettingsSnapshot(
       candidate.navigationMode === 'continuous' ? 'continuous' : 'paged',
       isReaderPageTransition(candidate.pageTransition) ? candidate.pageTransition : fallback.pageTransition,
     );
-  return {
+  const normalized: ReaderSettingsSnapshot = {
     version: 5,
     screenDirection: candidate.screenDirection === 'portrait' || candidate.screenDirection === 'landscape' ?
       candidate.screenDirection : 'system',
     navigationMode: pageTurn.navigationMode,
     pageTransition: pageTurn.pageTransition,
     screenTimeout: isReaderScreenTimeout(candidate.screenTimeout) ? candidate.screenTimeout : fallback.screenTimeout,
+    hideStatusBar: (candidate.version === 3 || candidate.version === 4 || candidate.version === 5) && candidate.hideStatusBar === true,
     hideNavigationBar: candidate.hideNavigationBar === true,
     // Read raw fields before adding defaults: an explicitly stored extend
     // value wins. Only V3/V4 missing that field migrate their old hide value.
@@ -180,6 +190,13 @@ export function normalizeReaderSettingsSnapshot(
     stopTtsOnScreenOff: candidate.stopTtsOnScreenOff === true,
     longPressSelectText: candidate.version === 4 || candidate.version === 5 ? candidate.longPressSelectText === true : true,
   };
+  // The shared v5 preferences file is also consumed by the manga candidate.
+  // Preserve only its established finite fields; absent fields stay absent.
+  if (candidate.version === 5 && candidate.mangaDirection !== undefined) normalized.mangaDirection = candidate.mangaDirection === 'horizontal' ? 'horizontal' : 'vertical';
+  if (candidate.version === 5 && (candidate.mangaFit === 'width' || candidate.mangaFit === 'contain' || candidate.mangaFit === 'source')) normalized.mangaFit = candidate.mangaFit;
+  if (candidate.version === 5 && (candidate.mangaBackground === 'paper' || candidate.mangaBackground === 'white' || candidate.mangaBackground === 'ink')) normalized.mangaBackground = candidate.mangaBackground;
+  if (candidate.version === 5 && typeof candidate.mangaPageNumbers === 'boolean') normalized.mangaPageNumbers = candidate.mangaPageNumbers;
+  return normalized;
 }
 
 export function copyReaderSettingsSnapshot(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
@@ -250,6 +267,7 @@ export function setReaderSettingsToggle(
   const current = copyReaderSettingsSnapshot(snapshot);
   return normalizeReaderSettingsSnapshot({
     ...current,
+    hideStatusBar: key === 'hideStatusBar' ? value : current.hideStatusBar,
     hideNavigationBar: key === 'hideNavigationBar' ? value : current.hideNavigationBar,
     extendIntoCutout: key === 'extendIntoCutout' ? value : current.extendIntoCutout,
     alignPageBottom: key === 'alignPageBottom' ? value : current.alignPageBottom,
@@ -274,7 +292,7 @@ export function isReaderScreenTimeoutAvailable(timeout: ReaderScreenTimeout): bo
 export function isReaderSettingsToggleAvailable(key: ReaderSettingsToggleKey): boolean {
   // Justification is exposed through ReaderAppearance and deliberately remains
   // unavailable here so settings cannot become a second owner.
-  return key === 'hideNavigationBar' || key === 'extendIntoCutout' || key === 'alignPageBottom' ||
+  return key === 'hideStatusBar' || key === 'hideNavigationBar' || key === 'extendIntoCutout' || key === 'alignPageBottom' ||
     key === 'volumeKeysTurnPage' || key === 'stopTtsOnScreenOff' || key === 'longPressSelectText';
 }
 

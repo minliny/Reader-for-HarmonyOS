@@ -1,9 +1,15 @@
+import { ReaderIconButton } from '../common/ReaderIconButton';
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import type { SearchOperationFacts } from './SearchPresentation';
+import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { SearchSpinner } from './SearchSpinner';
-import { SearchViewState } from './SearchViewState';
+import { SearchViewState, type SearchContentType } from './SearchViewState';
 import { SearchPublication } from './SearchPublication';
 import type { SearchPresentation } from './SearchPresentation';
 import { bookIntroText } from '../common/BookIntroText';
@@ -12,9 +18,18 @@ import {
   type SearchSource,
 } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
-import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
+import { readerSourceCategoryIsText, readerMediaIdentity } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  TYPE_SEARCH_RESULT_AUTHOR,
+  TYPE_SEARCH_RESULT_CHAPTER,
+  TYPE_SEARCH_RESULT_COVER_TITLE,
+  TYPE_SEARCH_RESULT_INTRO,
+  TYPE_SEARCH_RESULT_TAG,
+  TYPE_SEARCH_RESULT_TITLE,
+} from '../common/ReaderTypography';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import {
   SurfaceHorizontalFrame,
@@ -40,12 +55,13 @@ import {
   TOK_PRIMARY_SOFT,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_LG,
   TOK_SPACE_MD,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
+import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 
 export type {
   SearchInitialPresentation,
@@ -55,8 +71,18 @@ export type {
   SearchErrorPresentation,
   SearchSourceRequiredPresentation,
   SearchSourceLoadErrorPresentation,
+  SearchOperationFacts,
+  SearchOperationValue,
   SearchPresentation,
 } from './SearchPresentation';
+
+const SEARCH_LOCAL_SCOPE = '本地';
+const SEARCH_ONLINE_SCOPE = '在线';
+
+interface SearchScopeEntry {
+  name: string;
+  sourceIds: string[];
+}
 
 class SearchLayoutFrame extends FrameCallback {
   private action: () => void;
@@ -145,7 +171,7 @@ class SearchResultDataSource implements IDataSource {
     if (book.sourceId === 'local') return `local:${book.bookId}`;
     if (book.groupKey !== undefined) return `online:${book.groupKey}`;
     const alias = bookTitleAuthorKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
-    return `online:${alias}`;
+    return `online:${readerMediaIdentity(book.category === 'comic', alias)}`;
   }
 
   private sameBook(left: SearchBook, right: SearchBook): boolean {
@@ -294,6 +320,8 @@ export struct SearchPage {
   // retain their identities for the incremental projection.
   @State private presentation: SearchPresentation = { kind: 'initial', history: [] };
   private shelfBooks: ShelfBook[] = [];
+  /** The latest source.list snapshot; used by both scope dispatch and result projection. */
+  private searchSources: SearchSource[] = [];
   viewState: SearchViewState = new SearchViewState();
   private resultScroller: Scroller = new Scroller();
   private restoreKey: string = '';
@@ -304,6 +332,9 @@ export struct SearchPage {
   @Prop isTablet: boolean;
   @Prop reduceMotion: boolean = false;
   @State private historyWidth: number = 0;
+  @State private resultStatsHeight: number = 28.5;
+  @State private fixedHeaderHeight: number = 0;
+  @State private fixedHeaderLayoutKey: string = '';
   @State private spinnerRunKey: number = 0;
   onBack: () => void = (): void => {};
   /**
@@ -316,7 +347,8 @@ export struct SearchPage {
   /** Stop the live sweep, keeping whatever partial results already landed. */
   onStop: () => void = (): void => {};
   onClearHistory: () => void = (): void => {};
-  onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
+  onRetryHistory: () => void = (): void => {};
+  onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
   onVisibleGroups: (groups: SearchBook[][]) => void = (_groups: SearchBook[][]): void => {};
   private visibleStart: number = 0;
@@ -329,10 +361,12 @@ export struct SearchPage {
   // Product result categories filter one session; changing a chip never
   // starts another network sweep.
   @State selectedGroupName: string = '全部';
+  @State private selectedContentType: SearchContentType = '全部类型';
   @State private visibleGroups: SearchBookGroup[] = [];
   private acceptedVisibleGroups: SearchBookGroup[] | undefined = undefined;
   private resultDataSource: SearchResultDataSource = new SearchResultDataSource();
   private groupedCategory: string = '';
+  private groupedContentType: string = '';
   private groupedResultsCache: SearchBookGroup[] = [];
   private resultProjection: SearchResultProjection | undefined = undefined;
   private projectedGroups: Map<string, SearchBookGroup> = new Map();
@@ -352,6 +386,7 @@ export struct SearchPage {
   private acceptPublication(): void {
     this.presentation = this.publication.presentationAt(this.publicationRevision);
     this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
+    this.searchSources = this.publication.sourcesAt(this.publicationRevision);
     this.refreshVisibleResults();
   }
 
@@ -365,6 +400,7 @@ export struct SearchPage {
     this.restoreItemY = this.viewState.anchorItemY;
     this.scrollRestored = false;
     this.selectedGroupName = this.viewState.category;
+    this.selectedContentType = this.viewState.contentType;
     this.focusInputOnAppear = this.viewState.consumeInputFocusRequest();
     this.keyword = this.viewState.keywordDraft;
     this.acceptPublication();
@@ -394,33 +430,114 @@ export struct SearchPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    ReaderPageScaffold({
+      variant: 'search', headerKind: 'search',
+      frameInsetLeft: this.contentFrame().left, frameInsetRight: this.contentFrame().right,
+      content: (): void => { this.stateContent(); },
+      header: (): void => { this.searchHeader(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0) {
+          this.fixedHeaderLayoutKey = this.searchHeaderLayoutKey();
+          if (Math.abs(height - this.fixedHeaderHeight) > .1) this.fixedHeaderHeight = height;
+        }
+      },
+      overlayContent: (): void => { this.searchActivity(); },
+    });
+  }
+
+  @Builder
+  private searchHeader() {
+    Column() {
       Column() {
         this.searchBar();
         if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
           this.groupScopeRow();
+          this.contentTypeRow();
         }
-        Column() { this.stateContent(); }.layoutWeight(1).width('100%');
-      }.width('100%').height('100%');
-      // Stable actor anchored to the whole safe viewport, outside changing
-      // source/category/result rows. Caption keeps its lane during streaming.
+      }.width('100%').constraintSize({ minHeight: this.searchHeaderHeight() });
+      if (this.presentation.kind === 'results') { this.resultStats(); }
+    }.width('100%');
+  }
+
+  @Builder
+  private searchActivity() {
+    // The activity actor stays anchored to the safe viewport independently
+    // from streaming result/filter rows.
+    Stack({ alignContent: Alignment.Bottom }) {
       Column({ space: 18 }) {
         SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
           reduceMotion: this.reduceMotion, diameter: 36 });
-        Text('正在搜索本地与在线书籍…').fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular).fontSize(13).lineHeight(19.5).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        Text('正在搜索本地与在线书籍…').fontFamily(MESSAGE_BODY.fontFamily)
+          .fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .opacity(this.presentation.kind === 'loading' ? 1 : 0);
       }.width('100%').margin({ bottom: 48 })
         .visibility(this.isSweeping() ? Visibility.Visible : Visibility.Hidden)
         .hitTestBehavior(HitTestMode.None);
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.None);
+  }
+
+  private searchHeaderHeight(): number {
+    const groups = this.presentation.kind === 'results' || this.presentation.kind === 'empty';
+    // Results/Empty renders two independent filter rows when search scopes
+    // are available: the source row followed by the content-type row. The
+    // stats bar and result list both use this value as their absolute start;
+    // omitting the second row lets them cover the content-type chips.
+    const filterRows = groups ? (this.groupNames().length > 0 ? 2 : 1) : 0;
+    return this.searchBarHeight() + filterRows * this.searchFilterHeight();
+  }
+
+  private searchHeaderLayoutKey(): string {
+    return `${this.readerWindowMetricsRevision}:${this.isTablet}:${this.searchFontScale()}:${this.searchHeaderHeight()}:${this.presentation.kind === 'results' ? 'stats' : 'plain'}`;
+  }
+
+  private searchContentStartInset(): number {
+    if (this.fixedHeaderHeight > 0 && this.fixedHeaderLayoutKey === this.searchHeaderLayoutKey())
+      return this.fixedHeaderHeight;
+    return readerPageContentStartInset(this.searchHeaderHeight(), this.presentation.kind === 'results' ?
+      Math.max(this.resultStatsHeight, 12 + (TYPE_SEARCH_PROGRESS_META.lineHeightFp as number) * this.searchFontScale()) : 0);
+  }
+
+  private searchFontScale(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  private searchFilterHeight(): number {
+    return Math.max(41.5, 23 * Math.max(1, this.searchFontScale()) + 18);
+  }
+
+  private searchFilterLabelWidth(): number {
+    return 51 * Math.max(1, this.searchFontScale());
+  }
+
+  private searchBarHeight(): number {
+    return (this.isTablet ? 56 : 52) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) *
+      Math.max(0, this.searchFontScale() - 1);
+  }
+
+  private searchBottomInset(minimum: number = 20): number {
+    if (this.readerWindowMetricsRevision < 0) { return minimum; }
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), minimum);
+  }
+
+  private operation(): SearchOperationFacts | undefined {
+    const presentation = this.presentation;
+    if (presentation.kind === 'loading' || presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') {
+      return presentation.operation;
     }
-    .width('100%').height('100%')
-    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    return undefined;
+  }
+
+  private retryOperation(): void {
+    const operation = this.operation();
+    if (operation !== undefined && !operation.canRetry) return;
+    this.onRetry();
   }
 
   private isSweeping(): boolean {
+    const operation = this.operation();
+    if (operation !== undefined) return operation.canCancel;
     return this.presentation.kind === 'loading' ||
       (this.presentation.kind === 'results' && this.presentation.searching);
   }
@@ -436,7 +553,7 @@ export struct SearchPage {
 
   /** Reads the presentation directly so minimal-update re-render tracks it. */
   private isStoppedEmpty(): boolean {
-    return this.presentation.kind === 'empty' && this.presentation.stopped === true;
+    return this.presentation.kind === 'empty' && (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true);
   }
 
   private submitSearch(): void {
@@ -455,16 +572,66 @@ export struct SearchPage {
     }
     this.viewState.reset(keyword);
     this.selectedGroupName = '全部';
+    this.selectedContentType = '全部类型';
     this.onSearch(keyword, scope);
   }
 
   /** undefined = all enabled sources; otherwise the selected group's usable subset. */
   private scopeSourceIds(): string[] | undefined {
-    return undefined;
+    if (this.selectedGroupName === '全部') return undefined;
+    const scope = this.scopeEntries().find((entry: SearchScopeEntry): boolean => entry.name === this.selectedGroupName);
+    return scope === undefined ? [] : scope.sourceIds.slice();
   }
 
   private groupNames(): string[] {
-    return ['本地', '在线'];
+    return this.scopeEntries().map((entry: SearchScopeEntry): string => entry.name);
+  }
+
+    /**
+     * Keep the first-release search scope intentionally small.  Core source
+     * groups are still carried by SearchSource for source-switch and future
+     * grouped search, but they are not a user-facing search scope yet.  A
+     * source group here used to turn every provider label (for example 七猫)
+     * into a filter chip, which changed the approved local/online contract and
+     * made the header grow as sources arrived.
+     */
+  private scopeEntries(): SearchScopeEntry[] {
+    const entries: SearchScopeEntry[] = [];
+    const byName: Map<string, SearchScopeEntry> = new Map();
+    const add = (name: string, sourceId: string): void => {
+      const trimmed = name.trim();
+      if (trimmed.length === 0 || sourceId.trim().length === 0) return;
+      let entry = byName.get(trimmed);
+      if (entry === undefined) {
+        entry = { name: trimmed, sourceIds: [] };
+        byName.set(trimmed, entry);
+        entries.push(entry);
+      }
+      if (entry.sourceIds.indexOf(sourceId) < 0) entry.sourceIds.push(sourceId);
+    };
+    const presentedResults = this.presentation.kind === 'results' && Array.isArray(this.presentation.results) ?
+      this.presentation.results : [];
+    // The first-release contract always exposes exactly the local and online
+    // scopes.  An empty local scope is still useful feedback (it produces the
+    // local empty state) and must not make the filter row change shape as
+    // streaming results arrive.
+    add(SEARCH_LOCAL_SCOPE, 'local');
+    const knownRemoteIds = new Set<string>();
+    const sources = Array.isArray(this.searchSources) ? this.searchSources : [];
+    for (const source of sources) {
+      if (!source.enabled) continue;
+      add(SEARCH_ONLINE_SCOPE, source.sourceId);
+      knownRemoteIds.add(source.sourceId);
+    }
+    // During a streaming sweep a result can arrive before the corresponding
+    // source snapshot is published. Keep the row filter and the next submit
+    // coherent by admitting that source to the fallback online scope.
+    if (this.presentation.kind === 'results') {
+      for (const book of presentedResults) {
+        if (book.sourceId !== 'local' && !knownRemoteIds.has(book.sourceId)) add(SEARCH_ONLINE_SCOPE, book.sourceId);
+      }
+    }
+    return entries;
   }
 
   private selectGroup(name: string): void {
@@ -478,20 +645,34 @@ export struct SearchPage {
     this.viewState.anchorItemY = 0;
     this.restoreKey = ''; this.restoreOffset = 0; this.restoreItemY = 0;
     this.viewState.anchorNeighbors = []; this.scrollRestored = false;
-    this.resultScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    this.resultScroller.scrollEdge(Edge.Top);
     this.refreshVisibleResults();
+  }
+
+  private selectContentType(contentType: SearchContentType): void {
+    if (this.selectedContentType === contentType) return;
+    this.selectedContentType = contentType;
+    this.viewState.contentType = contentType;
+    // Reuse scope navigation/anchor handling without changing the query run.
+    this.selectGroup(this.selectedGroupName);
+  }
+
+  private filteredEmptyMessage(): string {
+    const selection = `${this.selectedGroupName} · ${this.selectedContentType}`;
+    if (this.presentation.kind === 'results' && this.presentation.searching) {
+      return `当前筛选（${selection}）下暂无结果，搜索仍在继续。`;
+    }
+    if (this.presentation.kind === 'results' && this.presentation.stopped === true) {
+      return `搜索已停止，已返回的结果中没有符合当前筛选（${selection}）的书籍。可切换范围或内容类型。`;
+    }
+    return `已返回的结果中没有符合当前筛选（${selection}）的书籍，可切换范围或内容类型。`;
   }
 
   @Builder
   private searchBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back'))).width(20).height(20);
-      }
-      .width(32)
-      .height(32)
-      .borderRadius(16)
-      .onClick((): void => this.onBack());
+      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')),
+        specId: 'navigation-back', accessibilityLabel: '返回', onTap: (): void => this.onBack() });
 
       Row() {
         ReaderSearchField({
@@ -512,59 +693,36 @@ export struct SearchPage {
         });
       }
       .layoutWeight(1)
-      .height(this.isTablet ? 40 : 36)
       .alignItems(VerticalAlign.Center);
 
       // The search action doubles as the ACQ-02 stop control: while a sweep
       // is live the pill reads 停止 and stops the sweep; otherwise it submits.
-      // Loading additionally inlines a 13px spinner and submitSearch prevents
-      // re-entry.
-      Stack({ alignContent: Alignment.Center }) {
-        if (this.isSweeping()) {
-          Row({ space: 6 }) {
-            SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
-              reduceMotion: this.reduceMotion, diameter: 13, light: true });
-            Text('停止')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(this.isTablet ? 14 : 13)
-              .lineHeight(this.isTablet ? 14 : 13)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-          }
-          .alignItems(VerticalAlign.Center);
-        } else {
-          Text('搜索')
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(this.isTablet ? 14 : 13)
-            .lineHeight(this.isTablet ? 14 : 13)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-        }
-      }
-      .height(this.isTablet ? 40 : 36)
-      .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .opacity(this.canSubmit() ? 1 : 0.4)
-      .borderRadius(999)
-      .onClick((): void => {
-        if (this.isSweeping()) {
-          this.onStop();
-          return;
-        }
-        this.submitSearch();
-      });
+      // LoadingProgress paints a ring inside its layout box. Keep enough
+      // native drawing space for a visible ~16vp indicator in the 36vp pill.
+      ReaderButton({ scheme: this.appThemeScheme, specId: this.isTablet ? 'search-field-wide' : 'search-field-phone',
+        label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),
+        leading: (): void => this.searchActionLeading(),
+        onAction: (): void => { if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });
     }
     .width(this.contentFrame().width)
-    .height(this.isTablet ? 56 : 52)
+    .constraintSize({ minHeight: this.searchBarHeight() })
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } });
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private searchActionLeading() {
+    SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
+      reduceMotion: this.reduceMotion, diameter: 28, light: true });
   }
 
   @Builder
   private stateContent() {
     if (this.presentation.kind === 'initial') {
-      Scroll() { this.initialContent(); }.width('100%').height('100%')
+      Scroll() {
+        Column() { this.initialContent(); }.width('100%').padding({ top: this.searchContentStartInset() });
+      }.width('100%').height('100%')
         .align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
@@ -575,14 +733,14 @@ export struct SearchPage {
         Column() {
           this.sourceRequiredContent(this.sourceRequiredReason());
           this.initialContent();
-        }.width('100%');
+        }.width('100%').padding({ top: this.searchContentStartInset() });
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'sourceLoadError') {
       Scroll() {
         Column() {
           this.sourceLoadErrorContent();
           this.initialContent();
-        }.width('100%');
+        }.width('100%').padding({ top: this.searchContentStartInset() });
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'empty') {
       this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount);
@@ -601,48 +759,40 @@ export struct SearchPage {
   @Builder
   private initialContent() {
     Column({ space: 0 }) {
+      if (this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
+        this.presentation.kind === 'sourceLoadError') {
+        if (this.presentation.historyStatus === 'loading') {
+          ReaderPageState({ message: '正在读取搜索历史', loading: true, padded: false });
+        } else if (this.presentation.historyStatus === 'loadFailed' || this.presentation.historyStatus === 'clearFailed') {
+          ReaderPageState({ message: this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败',
+            padded: false, customActions: true, actionContent: (): void => {
+              this.secondaryPill(this.presentation.historyStatus === 'clearFailed' ? '重试清空' : '重试读取',
+                (): void => this.onRetryHistory());
+            } }).padding({ bottom: TOK_SPACE_XS });
+        }
+      }
       if ((this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
         this.presentation.kind === 'sourceLoadError') && this.presentation.history.length > 0) {
         Row() {
           Text('最近搜索')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(19.5)
+            .fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
+            .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
+            .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .layoutWeight(1);
-          Text('清空记录')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Medium)
-            .fontSize(12)
-            .lineHeight(18)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .onClick((): void => this.onClearHistory());
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-clear', label: '清空记录',
+            actionEnabled: this.presentation.historyStatus !== 'loading', onAction: (): void => this.onClearHistory() });
         }
         .width('100%')
-        .height(26)
+        .constraintSize({ minHeight: 26 })
         .alignItems(VerticalAlign.Center);
 
         // All retained history is visible inside the existing page Scroll.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
           ForEach(this.presentation.history, (keyword: string) => {
-            Text(keyword)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Medium)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-              .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
-              .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-              .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-              .borderRadius(999)
-              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .constraintSize({ maxWidth: this.historyWidth > 0 ? Math.max(0, this.historyWidth - TOK_SPACE_XS) : '100%' })
-              .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-              .onClick((): void => {
-                this.keyword = keyword;
-                this.submitSearch();
-              });
+            ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: keyword, availableWidth: this.historyWidth,
+              onAction: (): void => { this.keyword = keyword; this.submitSearch(); } });
           }, (keyword: string): string => `search-history-${keyword}`);
         }
         .width('100%')
@@ -655,11 +805,11 @@ export struct SearchPage {
       left: this.isTablet ? 20 : 18,
       right: this.isTablet ? 20 : 18,
       top: TOK_SPACE_XS,
-      bottom: 20,
+      bottom: this.searchBottomInset(),
     })
     // Only constrain long chip width; history admission never depends on measurement.
     .onAreaChange((_old: Area, next: Area): void => {
-      const outerWidth = Number(next.width);
+      const outerWidth = readerPageAreaLength(next.width);
       if (!Number.isFinite(outerWidth)) return;
       const width = Math.max(0, outerWidth - (this.isTablet ? 40 : 36));
       if (Math.abs(width - this.historyWidth) > .1) {
@@ -669,46 +819,93 @@ export struct SearchPage {
   }
 
   // Figma 2635:58985 / 2635:59076: the chip wall sits directly under the
-  // search bar in Results/Empty — row 41.5 tall, chips 23 tall, 8px gaps,
-  // horizontally scrollable when the group names overflow.
+  // search bar in Results/Empty — row 41.5 tall, chips 23 tall, 8px gaps.
+  // The first-release source scopes are fixed to local/online; future source
+  // groups must not change this row's shape.
   @Builder
   private groupScopeRow() {
     if (this.groupNames().length > 0) {
-      Scroll() {
-        Row({ space: TOK_SPACE_XS }) {
-          this.groupScopeChip('全部');
-          ForEach(this.groupNames(), (name: string) => {
-            this.groupScopeChip(name);
-          }, (name: string): string => `search-group-${name}`);
+      Row({ space: TOK_SPACE_XS }) {
+        Text('来源')
+          .width(this.searchFilterLabelWidth())
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(11)
+          .lineHeight(17)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Scroll() {
+          Row({ space: TOK_SPACE_XS }) {
+            this.groupScopeChip('全部');
+            ForEach(this.groupNames(), (name: string) => {
+              this.groupScopeChip(name);
+            }, (name: string): string => `search-group-${name}`);
+          }
+          .alignItems(VerticalAlign.Center)
+          .padding({ right: this.isTablet ? 20 : 16 });
         }
-        .alignItems(VerticalAlign.Center)
-        .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 });
+        .layoutWeight(1)
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .height(this.searchFilterHeight())
+        .align(Alignment.Start);
       }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
       .width('100%')
-      .height(41.5)
-      .align(Alignment.Start);
+      .height(this.searchFilterHeight())
+      .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
+      .alignItems(VerticalAlign.Center);
     }
   }
 
   @Builder
   private groupScopeChip(label: string) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-scope', label, primary: this.selectedGroupName === label,
+      actionAccessibilityLabel: this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`,
+      onAction: (): void => this.selectGroup(label) });
+  }
+
+  @Builder
+  private contentTypeRow() {
+    Row({ space: TOK_SPACE_XS }) {
+      Text('内容类型')
+        .width(this.searchFilterLabelWidth())
+        .fontFamily('ReaderNotoSansSC')
+        .fontSize(11)
+        .lineHeight(17)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Scroll() {
+        Row({ space: TOK_SPACE_XS }) {
+          this.contentTypeChip('全部类型');
+          this.contentTypeChip('小说');
+          this.contentTypeChip('漫画');
+        }
+        .alignItems(VerticalAlign.Center)
+        .padding({ right: this.isTablet ? 20 : 16 });
+      }
+      .layoutWeight(1)
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .height(this.searchFilterHeight())
+      .align(Alignment.Start);
+    }
+    .width('100%')
+    .height(this.searchFilterHeight())
+    .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
+    .alignItems(VerticalAlign.Center);
+  }
+
+  @Builder
+  private contentTypeChip(label: SearchContentType) {
     Text(label)
       .fontFamily('ReaderInter')
-      .fontWeight(this.selectedGroupName === label ? FontWeight.Bold : FontWeight.Medium)
-      .fontSize(12)
-      .lineHeight(12)
-      .fontColor(this.selectedGroupName === label ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+      .fontWeight(this.selectedContentType === label ? FontWeight.Bold : FontWeight.Medium)
+      .fontSize(12).lineHeight(12)
+      .fontColor(this.selectedContentType === label ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
-      .backgroundColor(this.selectedGroupName === label ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: this.selectedGroupName === label ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .constraintSize({ maxWidth: 160 })
-      .onClick((): void => this.selectGroup(label))
-      .accessibilityText(this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`);
+      .backgroundColor(this.selectedContentType === label ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: this.selectedContentType === label ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(999).maxLines(1)
+      .id(`search-content-type-${label}`)
+      .onClick((): void => this.selectContentType(label))
+      .accessibilityText(this.selectedContentType === label ? `当前内容类型:${label}` : `筛选内容类型:${label}`);
   }
 
   @Builder
@@ -721,6 +918,7 @@ export struct SearchPage {
     if (this.viewStateRevision !== this.viewState.revision) {
       this.viewStateRevision = this.viewState.revision;
       this.selectedGroupName = this.viewState.category;
+      this.selectedContentType = this.viewState.contentType;
       this.keyword = this.viewState.keywordDraft;
       this.restoreKey = this.viewState.anchorKey;
       this.restoreOffset = this.viewState.anchorOffset;
@@ -761,90 +959,110 @@ export struct SearchPage {
     this.publishVisibleGroups();
   }
 
+  @Builder
+  private resultStats() {
+    Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
+      Text('找到 ')
+        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text(`${this.visibleGroups.length}`)
+        .fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily)
+        .fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
+        .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+      Text(' 本相关书籍')
+        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      // Reads the presentation directly (not a builder param) so the
+      // minimal-update re-render tracks it exactly like the search/stop
+      // pill does: the sweep counter must update live per source landing.
+      if (this.presentation.kind === 'results') {
+        if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status', label: this.partialSearchFailure(),
+            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+        }
+        if (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true) {
+          // ACQ-02: a stopped sweep keeps its partial results; the header
+          // states how far the interrupted sweep got so partials never read
+          // as a complete verdict.
+          Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
+            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        } else if (this.isSweeping()) {
+          Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
+            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+        if (this.presentation.failedSourceCount > 0) {
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-progress',
+            label: ` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`,
+            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+        }
+        if ((this.presentation.skippedSourceCount ?? 0) > 0) {
+          Text(` · 跳过 ${this.presentation.skippedSourceCount} 个近期不可用书源，重试`)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .onClick((): void => this.onRetry());
+        }
+      }
+    }
+    .width(this.contentFrame().width)
+    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
+    .hitTestBehavior(HitTestMode.Transparent)
+    .onAreaChange((_old: Area, next: Area): void => {
+      const height = readerPageAreaLength(next.height);
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.resultStatsHeight) > .1) {
+        this.resultStatsHeight = height;
+      }
+    });
+  }
+
   // ArkUI does not track mutable @Builder value parameters. Read state at
   // the consuming nodes so category changes and stop both update in place.
   @Builder
   private resultsContent() {
     Stack({ alignContent: Alignment.Bottom }) {
-      Column() {
-        Row() {
-          Text('找到 ')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          Text(`${this.visibleGroups.length}`)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-          Text(' 本相关书籍')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          // Reads the presentation directly (not a builder param) so the
-          // minimal-update re-render tracks it exactly like the search/stop
-          // pill does: the sweep counter must update live per source landing.
-          if (this.presentation.kind === 'results') {
-            if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
-              Text(this.partialSearchFailure()).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .onClick((): void => this.onRetry());
-            }
-            if (this.presentation.stopped === true) {
-              // ACQ-02: a stopped sweep keeps its partial results; the header
-              // states how far the interrupted sweep got so partials never read
-              // as a complete verdict.
-              Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis });
-            } else if (this.presentation.searching) {
-              Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis });
-            }
-            if (this.presentation.failedSourceCount > 0) {
-              Text(` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .onClick((): void => this.onRetry());
-            }
-          }
-        }
-        .width(this.contentFrame().width)
-        .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
-        .alignItems(VerticalAlign.Center)
-        .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } });
+      Stack({ alignContent: Alignment.TopStart }) {
 
+
+        if (this.visibleGroups.length === 0) {
+          ReaderPageState({ message: this.filteredEmptyMessage() });
+        }
         List({ scroller: this.resultScroller }) {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
               SearchResultCard({ group, isTablet: this.isTablet, cardWidth: this.contentFrame().width,
-                onSelectResult: (book: SearchBook, variants: SearchBook[]): void => this.onSelectResult(book, variants) });
+                onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => this.onSelectResult(book, variants, displayCoverUrl) });
             }
           }, (group: SearchBookGroup): string =>
             this.resultGroupKey(group.book));
         }
         .width('100%')
-        .layoutWeight(1)
+        .height('100%')
+        .contentStartOffset(this.searchContentStartInset())
+        .contentEndOffset(this.searchBottomInset())
         .scrollBar(BarState.Off)
         .maintainVisibleContentPosition(true)
         .onTouch((event: TouchEvent): void => {
@@ -864,7 +1082,7 @@ export struct SearchPage {
 
     }
     .width('100%')
-    .layoutWeight(1);
+    .height('100%');
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
@@ -882,10 +1100,27 @@ export struct SearchPage {
       group.book = row.book;
       this.projectedGroups.set(key, group);
     }
+    const contentType = this.selectedContentType ?? '全部类型';
     const categoryChanged = this.groupedCategory !== this.selectedGroupName;
-    if (update.orderChanged || categoryChanged || this.projectedGroupKeys === undefined) {
-      this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean =>
-        this.selectedGroupName === '全部' || (this.selectedGroupName === '本地' ? key.startsWith('local:') : !key.startsWith('local:')));
+    const typeChanged = this.groupedContentType !== contentType;
+    if (update.orderChanged || categoryChanged || typeChanged ||
+      (contentType !== '全部类型' && update.changedKeys.size > 0) || this.projectedGroupKeys === undefined) {
+      this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean => {
+        const book = (this.projectedGroups.get(key) as SearchBookGroup).book;
+        const scopeIds = this.selectedGroupName === '全部' ? undefined :
+          this.scopeEntries().find((entry: SearchScopeEntry): boolean => entry.name === this.selectedGroupName)?.sourceIds;
+        // Legacy snapshots may not carry source.list yet; retain the previous
+        // identity fallback for the local/online labels until the first source
+        // publication arrives.
+        const scopeMatches = scopeIds !== undefined ? scopeIds.indexOf(book.sourceId) >= 0 :
+          (this.selectedGroupName === '全部' ||
+            (this.selectedGroupName === SEARCH_LOCAL_SCOPE ? book.sourceId === 'local' : book.sourceId !== 'local'));
+        // Facts admitted by the gateway determine type. Unknown declarations
+        // remain visible under All; titles/genres never grant type admission.
+        const typeMatches = contentType === '全部类型' || (contentType === '漫画' ? book.category === 'comic' :
+          book.category === 'novel' || (book.sourceId === 'local' && book.category === undefined));
+        return scopeMatches && typeMatches;
+      });
       this.groupedResultsCache = this.projectedGroupKeys.map((key: string): SearchBookGroup => this.projectedGroups.get(key) as SearchBookGroup);
       this.projectedGroupIndexes = new Map();
       for (let index = 0; index < this.projectedGroupKeys.length; index++) this.projectedGroupIndexes.set(this.projectedGroupKeys[index], index);
@@ -896,6 +1131,7 @@ export struct SearchPage {
       }
     }
     this.groupedCategory = this.selectedGroupName;
+    this.groupedContentType = contentType;
     return this.groupedResultsCache;
   }
 
@@ -956,7 +1192,9 @@ export struct SearchPage {
         if (index >= 0) break;
       }
       if (index < 0) {
-        this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.restoreKey.length === 0 ? this.restoreOffset : 0 });
+        const offset = this.restoreKey.length === 0 ? this.restoreOffset : 0;
+        if (offset !== 0) this.resultScroller.scrollTo({ xOffset: 0, yOffset: offset });
+        else this.resultScroller.scrollEdge(Edge.Top);
         this.restoreScheduled = false;
         this.scrollRestored = true;
         return;
@@ -971,7 +1209,8 @@ export struct SearchPage {
           if (actual < 0) throw new Error('anchor removed');
           const rect = this.resultScroller.getItemRect(actual);
           if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) throw new Error('anchor not laid out');
-          const offset = Math.max(1 - rect.height, Math.min(0, this.restoreItemY));
+          const offset = Math.max(1 - rect.height,
+            Math.min(this.searchContentStartInset(), this.restoreItemY));
           this.resultScroller.scrollBy(0, rect.y - offset);
           this.viewState.anchorKey = anchorKey;
           this.viewState.anchorIndex = actual;
@@ -991,7 +1230,7 @@ export struct SearchPage {
 
   private resultGroupKey(book: SearchBook): string {
     return book.sourceId === 'local' ? `local:${book.bookId}` :
-      `online:${book.groupKey ?? this.normalizedBookKey(book.title, book.author)}`;
+      `online:${book.groupKey ?? readerMediaIdentity(book.category === 'comic', this.normalizedBookKey(book.title, book.author))}`;
   }
 
   private normalizedBookKey(title: string, author: string): string {
@@ -1004,7 +1243,11 @@ export struct SearchPage {
     if (this.presentation.localSearchFailed) messages.push(`本地检索：${this.presentation.localFailureMessage ?? '读取未完成，请重试'}`);
     if (this.presentation.sourceListFailed) messages.push(`书源列表：${this.presentation.sourceListFailureMessage ?? '读取未完成，请重试'}`);
     if (messages.length > 0) return messages.join('；');
-    return (this.presentation.failedSourceCount ?? 0) > 0 ? `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
+    const failed = (this.presentation.failedSourceCount ?? 0) > 0 ?
+      `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
+    const skipped = (this.presentation.skippedSourceCount ?? 0) > 0 ?
+      `${this.presentation.skippedSourceCount} 个近期不可用书源已跳过，可点击重试` : '';
+    return [failed, skipped].filter((message: string): boolean => message.length > 0).join('；');
   }
 
   private searchFailureTitle(): string {
@@ -1022,80 +1265,61 @@ export struct SearchPage {
   private emptyContent(keyword: string, searchedSourceCount: number) {
     Scroll() {
       Column({ space: 0 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
-          .width(128)
-          .height(120)
-          .alignSelf(ItemAlign.Center);
-
-        Text('没有找到相关书籍')
-          .margin({ top: 28 })
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(17)
-          .lineHeight(25.5)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .textAlign(TextAlign.Center);
-
-        Text(this.isStoppedEmpty()
+        ReaderPageState({ title: '没有找到相关书籍', padded: false,
+          message: this.isStoppedEmpty()
           ? (searchedSourceCount > 0
             ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`
             : `已停止搜索,未找到「${keyword}」的相关结果`)
-          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`)
-          .margin({ top: TOK_SPACE_CONTROL_INLINE })
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(13)
-          .lineHeight(21.125)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .textAlign(TextAlign.Center)
-          .maxLines(3);
-
-        if (this.partialSearchFailure().length > 0) {
-          Text(this.partialSearchFailure())
-            .fontSize(12)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .margin({ top: TOK_SPACE_CONTROL_INLINE })
-            .onClick((): void => this.onRetry());
-        }
-
-        Column({ space: 0 }) {
-          Text('搜索建议')
-            .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(12)
-            .lineHeight(18)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1);
-          this.suggestion('检查书名拼写是否正确');
-          this.suggestion('尝试更短的关键词或作者名');
-          this.suggestion('前往书源管理添加或启用更多书源');
-        }
-        .width(this.isTablet ? 300 : 190)
-        .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
-        .margin({ top: 22 })
-        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(12)
-        .alignItems(HorizontalAlign.Start)
-        .alignSelf(ItemAlign.Center);
-
-        Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-          this.primaryPill('添加更多书源', (): void => this.onManageSources());
-          this.secondaryPill('重新搜索', (): void => this.onRetry());
-        }
-        .margin({ top: 20 })
-        .alignSelf(ItemAlign.Center);
+          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`,
+          leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
+          actionContent: (): void => { this.emptyStateActions(); } });
       }
       .width('100%')
-      .padding({ top: 50, bottom: 40 });
+      .padding({ top: this.searchContentStartInset() + 50, bottom: this.searchBottomInset(40) });
     }
     .width('100%')
-    .layoutWeight(1)
+    .height('100%')
     .scrollBar(BarState.Off);
   }
 
+  @Builder
+  private emptyStateActions() {
+    Column({ space: 0 }) {
+      if (this.partialSearchFailure().length > 0) {
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status-spaced', label: this.partialSearchFailure(),
+          actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      }
+
+      Column({ space: 0 }) {
+        Text('搜索建议')
+          .width('100%')
+          .fontFamily(TYPE_SEARCH_SUGGESTION_HEADING.fontFamily)
+          .fontWeight(TYPE_SEARCH_SUGGESTION_HEADING.fontWeight)
+          .fontSize(TYPE_SEARCH_SUGGESTION_HEADING.fontSizeFp)
+          .lineHeight(TYPE_SEARCH_SUGGESTION_HEADING.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .maxLines(1);
+        this.suggestion('检查书名拼写是否正确');
+        this.suggestion('尝试更短的关键词或作者名');
+        this.suggestion('前往书源管理添加或启用更多书源');
+      }
+      .width(this.isTablet ? 300 : 190)
+      .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
+      .margin({ top: 10 })
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(12)
+      .alignItems(HorizontalAlign.Start)
+      .alignSelf(ItemAlign.Center);
+
+      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+        this.primaryPill('添加更多书源', (): void => this.onManageSources());
+        this.secondaryPill('重新搜索', (): void => this.retryOperation());
+      }
+      .margin({ top: 20 })
+      .alignSelf(ItemAlign.Center);
+    }.width('100%');
+  }
   /**
    * P0 add-source flow extension state: no source can search online books.
    * The search bar still accepts local-book queries. Layout reuses the Empty
@@ -1104,73 +1328,31 @@ export struct SearchPage {
   @Builder
   private sourceRequiredContent(reason: string) {
     Column({ space: 0 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
-        .width(128)
-        .height(120)
-        .alignSelf(ItemAlign.Center);
-
-      Text(reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源')
-        .margin({ top: 28 })
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(17)
-        .lineHeight(25.5)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Text(reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
-        '启用可搜索书籍的书源；本地导入的书仍可在上方搜索')
-        .margin({ top: TOK_SPACE_CONTROL_INLINE })
-        .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(21.125)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(3);
-
-      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
-          (): void => this.onManageSources());
-        this.secondaryPill('返回书架', (): void => this.onBack());
-      }
-      .margin({ top: 20 })
-      .alignSelf(ItemAlign.Center);
+      ReaderPageState({ title: reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源',
+        message: reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
+          '启用可搜索书籍的书源；本地导入的书仍可在上方搜索', padded: false,
+        leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
+        actionContent: (): void => { this.sourceRequiredActions(reason); } });
     }
     .width('100%')
     .padding({ top: 50, bottom: 40 });
   }
 
   @Builder
+  private sourceRequiredActions(reason: string) {
+    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+      this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
+        (): void => this.onManageSources());
+      this.secondaryPill('返回书架', (): void => this.onBack());
+    }.margin({ top: 8 }).alignSelf(ItemAlign.Center);
+  }
+
+  @Builder
   private sourceLoadErrorContent() {
     Column({ space: 0 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
-
-      Text('书源列表加载失败')
-        .margin({ top: 20 })
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(17)
-        .lineHeight(25.5)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Text('在线书源暂不可用；本地导入的书仍可在上方搜索')
-        .margin({ top: TOK_SPACE_XS })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(19.5)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        this.primaryPill('重试加载', (): void => this.onRetry());
-        this.secondaryPill('返回书架', (): void => this.onBack());
-      }
-      .margin({ top: TOK_SPACE_LG })
-      .alignSelf(ItemAlign.Center);
+      ReaderPageState({ title: '书源列表加载失败', message: '在线书源暂不可用；本地导入的书仍可在上方搜索',
+        padded: false, leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
+        actionContent: (): void => { this.sourceLoadErrorActions(); } });
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
@@ -1178,52 +1360,37 @@ export struct SearchPage {
   }
 
   @Builder
+  private sourceLoadErrorActions() {
+    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+      this.primaryPill('重试加载', (): void => this.retryOperation());
+      this.secondaryPill('返回书架', (): void => this.onBack());
+    }.margin({ top: 8 }).alignSelf(ItemAlign.Center);
+  }
+
+  @Builder
   private primaryPill(label: string, onTap: () => void) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(800)
-      .fontSize(13)
-      .lineHeight(13)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(999)
-      .onClick((): void => onTap())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(label);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-primary', label, primary: true, onAction: onTap });
   }
 
   @Builder
   private secondaryPill(label: string, onTap: () => void) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(13)
-      .lineHeight(13)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .onClick((): void => onTap())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(label);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-secondary', label, onAction: onTap });
   }
 
   @Builder
   private suggestion(text: string) {
     Row({ space: 6 }) {
       Text('·')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16.5)
+        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       Text(text)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .lineHeight(19.5)
+        .fontFamily(TYPE_SEARCH_SUGGESTION_BODY.fontFamily)
+        .fontWeight(TYPE_SEARCH_SUGGESTION_BODY.fontWeight)
+        .fontSize(TYPE_SEARCH_SUGGESTION_BODY.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_SUGGESTION_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1238,64 +1405,36 @@ export struct SearchPage {
     // Figma Error (2635:59125): content is top-anchored at 96, retry is a solid
     // primary pill (not the outline used before the rebuild). The "检查书源"
     // secondary action is a P0 add-source flow addition.
+    Scroll() {
     Column({ space: 0 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
-
-      Text(this.searchFailureTitle())
-        .margin({ top: 20 })
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(17)
-        .lineHeight(25.5)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Text(this.searchFailureMessage())
-        .margin({ top: TOK_SPACE_XS })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(19.5)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(2);
-
-      Stack({ alignContent: Alignment.Center }) {
-        Text('重新搜索')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(14)
-          .lineHeight(14)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }
-      .height(40)
-      .margin({ top: TOK_SPACE_LG })
-      .padding({ left: 28, right: 28 })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(999)
-      .onClick((): void => this.onRetry())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 48 })
-      .accessibilityText('重新搜索');
-
-      Text('检查书源')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(13)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(999)
-        .margin({ top: TOK_SPACE_CONTROL_INLINE })
-        .onClick((): void => this.onManageSources())
-        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-        .accessibilityText('检查书源');
+      ReaderPageState({ title: this.searchFailureTitle(), message: this.searchFailureMessage(), padded: false,
+        leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
+        actionContent: (): void => { this.searchErrorActions(); } });
     }
     .width('100%')
-    .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: 96, bottom: 40 });
+    .padding({ top: this.searchContentStartInset() + 96, bottom: this.searchBottomInset(40) });
+    }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+  }
+
+  @Builder
+  private searchErrorActions() {
+    Column() {
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
+        actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-source', label: '检查书源', onAction: (): void => this.onManageSources() });
+    }.width('100%');
+  }
+
+  @Builder
+  private searchStateIllustration(failed: boolean) {
+    if (failed) {
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error')))
+        .width(80).height(80).margin({ bottom: 8 });
+    } else {
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
+        .width(128).height(120).margin({ bottom: 16 });
+    }
   }
 
   private contentFrame(): SurfaceHorizontalFrame {
@@ -1318,17 +1457,26 @@ export struct SearchPage {
 @Component
 struct SearchResultCard {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   // The data source keeps the same @Observed instance for the same book key.
   // ObjectLink delivers metadata changes without replacing the lazy child.
   @ObjectLink group: SearchBookGroup;
   @Prop isTablet: boolean = false;
   @Prop cardWidth: number = 0;
-  onSelectResult: (book: SearchBook, variants: SearchBook[]) => void = (): void => {};
+  onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string) => void = (): void => {};
 
   private displayIntro(): string {
     return bookIntroText(this.group.book.intro);
   }
+
+  private searchFontScale(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? Math.max(1, scale) : 1;
+  }
+
+  private resultTagWidth(): number { return 30 * this.searchFontScale(); }
+  private resultTagHeight(): number { return 16 + 14 * (this.searchFontScale() - 1); }
 
   private coverWidth(): number {
     return this.isTablet ? 96 : 88;
@@ -1364,10 +1512,10 @@ struct SearchResultCard {
           Stack({ alignContent: Alignment.Bottom }) {
             Text(this.group.book.title)
               .width('100%')
-              .fontFamily('ReaderNotoSerifSCBold')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(9)
-              .lineHeight(11.7)
+              .fontFamily(TYPE_SEARCH_RESULT_COVER_TITLE.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_COVER_TITLE.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_COVER_TITLE.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_COVER_TITLE.lineHeightFp as number)
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.99FFFAF4', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1)
@@ -1388,50 +1536,70 @@ struct SearchResultCard {
       .borderRadius(6);
 
       Column() {
-        Column({ space: 5 }) {
+        if (this.group.book.category === 'comic') {
+          Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+            space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
+            Text('漫画').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
+              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
+            if (this.group.book.sourceId === 'local') {
+              Text('本地').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
+                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
+            } else {
+              Text('在线').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
+                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
+            }
+          }.width('100%');
+        }
+
+        Column({ space: 4 }) {
           Text(this.group.book.title)
             .width('100%')
-            .fontFamily('ReaderNotoSerifSCBold')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(15)
-            .lineHeight(19.5)
+            .fontFamily(TYPE_SEARCH_RESULT_TITLE.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TITLE.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TITLE.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(12)
+            .fontFamily(TYPE_SEARCH_RESULT_AUTHOR.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_AUTHOR.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_AUTHOR.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_AUTHOR.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           if ((this.group.book.latestChapterTitle?.trim().length ?? 0) > 0) {
-            Text(this.group.book.latestChapterTitle)
+            Text(this.group.book.category === 'comic' ? `最新 · ${this.group.book.latestChapterTitle}` : this.group.book.latestChapterTitle)
               .width('100%')
               .opacity(0.8)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(11)
+              .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_CHAPTER.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_CHAPTER.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_CHAPTER.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
 
           if (this.displayIntro().length > 0) {
+            if (this.group.book.category !== 'comic') {
             Text(this.displayIntro())
               .width('100%')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(18)
+              .fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
           }
         }
         .width('100%')
@@ -1439,26 +1607,49 @@ struct SearchResultCard {
 
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
+          if (this.group.book.category !== 'comic') {
+            Text('小说')
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
+          }
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).maxLines(1);
+            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.group.inBookshelf) {
             Text('已在书架')
-              .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).maxLines(1);
+              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
         }
         .width('100%')
@@ -1468,13 +1659,28 @@ struct SearchResultCard {
       // Only the gap above the tags grows for short metadata. Long metadata
       // grows the row naturally, while the original cover ratio stays intact.
       .constraintSize({ minHeight: this.coverHeight() })
-      .justifyContent(FlexAlign.SpaceBetween)
+      .justifyContent(FlexAlign.Start)
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.cardWidth)
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
-    .alignItems(VerticalAlign.Bottom)
+    .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
-    .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
+      .onClick((): void => this.onSelectResult(this.group.book, this.group.variants, this.group.coverUrl));
+  }
+
+  @Builder
+  private resultTag(label: string, primary: boolean) {
+    Text(label)
+      .fontFamily('ReaderNotoSansSC')
+      .fontWeight(FontWeight.Medium)
+      .fontSize(9)
+      .lineHeight(14)
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .width(this.resultTagWidth())
+      .height(this.resultTagHeight())
+      .textAlign(TextAlign.Center)
+      .backgroundColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+      .borderRadius(4);
   }
 }

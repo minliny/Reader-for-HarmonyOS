@@ -1,7 +1,6 @@
 import { PathShape } from '@ohos.arkui.shape';
 import { ReaderControlMotionPathCache, readerControlMotionClipPath } from './ReaderControlMotionPresentation';
-import { TOK_LINE, TOK_LINE_STRONG, TOK_ON_PRIMARY, TOK_READ_INK, TOK_SURFACE_PANEL,
-  TOK_READ_PRIMARY, TOK_READ_SURFACE } from '../common/ReaderTokens';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderSessionCapsuleLeading, ReaderSessionCapsulePause,
   readerSessionCapsuleAccessibility } from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
@@ -21,21 +20,21 @@ export struct ReaderSessionLaunchStage {
   @Prop desiredPlaying: boolean = true;
   @Prop countdown: number = 8;
   @Prop interactionEnabled: boolean = true;
-  @Prop surfaceColor: string = TOK_READ_SURFACE;
-  @Prop surfaceBorderColor: string = TOK_LINE;
-  @Prop sourceSurfaceColor: string = TOK_SURFACE_PANEL;
+  @Prop surfaceColor: string = '';
+  @Prop surfaceBorderColor: string = '';
+  @Prop sourceSurfaceColor: string = '';
   @Prop sourceSurfaceTopInset: number = 0;
   @Prop sourceHighlightColor: string = '#00000000';
   @Prop sourceGradientStart: string = '';
   @Prop sourceGradientEnd: string = '';
-  @Prop sourceBorderColor: string = TOK_LINE_STRONG;
+  @Prop sourceBorderColor: string = '';
   @Prop sourceBorderWidth: number = 1;
   @Prop sourceShadowColor: string = '#0D5C4732';
   @Prop sourceShadowRadius: number = 0;
   @Prop sourceShadowOffsetY: number = 5;
-  @Prop textColor: string = TOK_READ_INK;
-  @Prop primaryColor: string = TOK_READ_PRIMARY;
-  @Prop onPrimaryColor: string = TOK_ON_PRIMARY;
+  @Prop textColor: string = '';
+  @Prop primaryColor: string = '';
+  @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
   @Prop shadowColor: string = '#12463423';
   @BuilderParam sourceSharpContent: () => void;
@@ -60,8 +59,8 @@ export struct ReaderSessionLaunchStage {
     Stack({ alignContent: Alignment.TopStart }) {
       // MorphSurface · canonical capsule shell.
       Row() {}
-        .width('100%').height('100%').backgroundColor(this.surfaceColor)
-        .border({ width: 1, color: this.surfaceBorderColor }).borderRadius(12)
+        .width('100%').height('100%').backgroundColor(this.effectiveSurfaceColor())
+        .border({ width: 1, color: this.effectiveSurfaceBorderColor() }).borderRadius(12)
         .shadow({ radius: 8, color: this.shadowColor, offsetX: 0, offsetY: 3 })
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
@@ -69,9 +68,9 @@ export struct ReaderSessionLaunchStage {
       Stack({ alignContent: Alignment.TopStart }) {
         Row().width('100%').height(Math.max(0, this.sample.proxyHeight - this.sourceSurfaceTopInset * (1 - this.sample.flight)))
           .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) })
-          .linearGradient({ angle: 155, colors: [[this.sourceGradientStart.length > 0 ? this.sourceGradientStart : this.sourceSurfaceColor, 0],
-            [this.sourceGradientEnd.length > 0 ? this.sourceGradientEnd : this.sourceSurfaceColor, 1]] })
-          .border({ width: this.sourceBorderWidth, color: this.sourceBorderColor }).borderRadius(this.sample.sourceRadius)
+          .linearGradient({ angle: 155, colors: [[this.sourceGradientStart.length > 0 ? this.sourceGradientStart : this.effectiveSourceSurfaceColor(), 0],
+            [this.sourceGradientEnd.length > 0 ? this.sourceGradientEnd : this.effectiveSourceSurfaceColor(), 1]] })
+          .border({ width: this.sourceBorderWidth, color: this.effectiveSourceBorderColor() }).borderRadius(this.sample.sourceRadius)
           .shadow({ radius: this.sourceShadowRadius, color: this.sourceShadowColor, offsetX: 0, offsetY: this.sourceShadowOffsetY })
           .hitTestBehavior(HitTestMode.None);
         Row().width('100%').height(1).backgroundColor(this.sourceHighlightColor)
@@ -95,14 +94,14 @@ export struct ReaderSessionLaunchStage {
       // CapsuleContent reveal clip and CapsuleTransitionContent leading row.
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderSessionCapsuleLeading({ type: this.sample.type, countdown: this.countdown,
-          textColor: this.textColor, primaryColor: this.primaryColor,
-          onPrimaryColor: this.onPrimaryColor, themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth })
+          textColor: this.effectiveTextColor(), primaryColor: this.effectivePrimaryColor(),
+          onPrimaryColor: this.effectiveOnPrimaryColor(), themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth })
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
       }.width('100%').height('100%').borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
 
       // CircleState is NOT a descendant of the reveal row: already visible at dot.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
-        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor })
+        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
         .position({ x: this.sample.pauseX, y: 4 }).opacity(this.sample.pauseOpacity);
     }
     .width(this.sample.proxyWidth).height(this.sample.proxyHeight)
@@ -110,8 +109,39 @@ export struct ReaderSessionLaunchStage {
     .responseRegion({ x: 0, y: -10, width: '100%', height: this.sample.proxyHeight + 20 })
     .hitTestBehavior(this.interactionEnabled && this.sample.pauseOpacity > 0 ? HitTestMode.Block : HitTestMode.None)
     .accessibilityText(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying))
+    // Transparent overlay ancestors also admit the page's raw touch owner.
+    // Consume the whole pointer stream here; the click recognizer still runs.
+    .onTouch((event: TouchEvent): void => event.stopPropagation())
     .onClick((): void => {
       if (this.interactionEnabled && this.sample.pauseOpacity > 0) this.onToggle();
     });
+  }
+
+  private effectiveSurfaceColor(): string {
+    return this.surfaceColor.length > 0 ? this.surfaceColor : readerAppColor('TOK_READ_SURFACE', this.themeScheme);
+  }
+
+  private effectiveSurfaceBorderColor(): string {
+    return this.surfaceBorderColor.length > 0 ? this.surfaceBorderColor : readerAppColor('TOK_LINE', this.themeScheme);
+  }
+
+  private effectiveSourceSurfaceColor(): string {
+    return this.sourceSurfaceColor.length > 0 ? this.sourceSurfaceColor : readerAppColor('TOK_SURFACE_PANEL', this.themeScheme);
+  }
+
+  private effectiveSourceBorderColor(): string {
+    return this.sourceBorderColor.length > 0 ? this.sourceBorderColor : readerAppColor('TOK_LINE_STRONG', this.themeScheme);
+  }
+
+  private effectiveTextColor(): string {
+    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
+  }
+
+  private effectivePrimaryColor(): string {
+    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
+  }
+
+  private effectiveOnPrimaryColor(): string {
+    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
   }
 }

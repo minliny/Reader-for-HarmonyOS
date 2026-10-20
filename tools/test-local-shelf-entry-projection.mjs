@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+import {ProductionHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
@@ -25,7 +26,7 @@ const settle = async () => { for (let i = 0; i < 4; i++) await new Promise(resol
 // Execute actual Index entry/publication methods and the actual local gateway.
 // Only Core RPC replies and unrelated native UI boundaries are controlled.
 function fixture() {
-  const calls = [], failures = [], tocReads = [], statusReads = [];
+  const calls = [], failures = [], tocReads = [], statusReads = []; let bookmarks=[];
   const book = { sourceId: 'local', bookId: 'local-book', title: '本地书', author: '作者' };
   const toc = [{ index: 0, title: '第一章', url: 'local://chapter/0' }];
   const owner = { bookAcquisitions: () => ({ setPreparationVisible() {} }), request: async (method, params, options) => {
@@ -39,25 +40,27 @@ function fixture() {
       if (options?.shouldCancel?.()) throw Error('cancelled stale directory projection');
       return { data: { sourceId: 'local', bookId: params.bookId, chapters: [{ chapterIndex: 0, state: 'completed' }] } };
     }
-    if (method === 'bookmark.list') return { data: { bookmarks: [] } };
+    if (method === 'bookmark.list') return { data: { bookmarks } };
     throw Error(`unexpected command ${method}`);
   } };
+  setRuntime(owner);
   const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), [
     'openLocalBookDetail', 'openReading', 'presentPreparedReading', 'nextNavigationGeneration',
-    'isKnownDetailChapter', 'mergeDirectoryBookmarks', 'applyReaderDirectoryProjection',
-  ], { LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner }, LocalReadingFlowGateway,
+    'isKnownDetailChapter', 'applyReaderDirectoryProjection',
+  ], {ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'}, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner }, LocalReadingFlowGateway,
     DOMAIN: 0, hilog: { info() {}, error() {} } });
   const p = Object.assign(new Index(), {
+    searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,readableAdmissions:[],offlineMutationGeneration:0,remoteSessionGeneration:0,
     route: 'bookshelf', readingOriginRoute: 'bookshelf', navigationGeneration: 0,
     readingSessionActive: false, shelfReadingPreparation: false, detailToc: [],
-    bookshelfRemovalActiveKey: '', directoryBookmarkMutationGeneration: 0, directoryBookmarkMutationActiveKey: '',
+    shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, directoryBookmarkMutationGeneration: 0, directoryBookmarkMutationActiveKey: '',
     installRemoteReadingSession(session) { this.remoteReadingSession = session; },
     readingDetailForShelf: selection => ({ ...selection }), hasDeclaredCoverUrl: () => true,
     showReadingFailure: (...args) => failures.push(args),
   });
   const openReading = p.openReading.bind(p);
   p.openReading = index => { calls.push('reader-mount-request'); openReading(index); };
-  return { p, book, calls, failures, tocReads, statusReads };
+  return { p, book, calls, failures, tocReads, statusReads,setBookmarks:rows=>{bookmarks=rows.map(row=>({bookName:book.title,bookAuthor:book.author,chapterIndex:0,chapterName:'第一章',chapterPos:0,content:'新书签',...row}));} };
 }
 async function admit(f) {
   f.p.openLocalBookDetail(f.book, true);
@@ -73,7 +76,7 @@ async function admit(f) {
   assert.deepEqual(f.calls, ['reader-mount-request']);
   f.p.presentPreparedReading(0); await settle();
   assert.equal(f.p.route, 'reading');
-  assert.deepEqual(f.calls, ['reader-mount-request', 'cache.book.status', 'bookmark.list']);
+  assert.deepEqual(f.calls, ['reader-mount-request', 'cache.book.status'], 'optional cache metadata precedes the canonical shared bookmark projection');
   f.statusReads[0].resolve(); await settle();
   assert.equal(f.p.detailToc[0].downloadState, 'completed');
   f.p.presentPreparedReading(0); await settle();
@@ -91,7 +94,7 @@ async function admit(f) {
   const f = fixture(); await admit(f);
   f.p.applyReaderDirectoryProjection([{index:0,title:'第一章',navigable:true,downloadState:'unknown'}]);
   f.p.presentPreparedReading(0); await settle();
-  f.p.directoryBookmarkMutationGeneration++;
+  f.setBookmarks([{time:42,bookText:'新书签'}]);
   f.p.detailToc[0].bookmarks = [{time:42,bookText:'最新书签'}];
   f.statusReads[0].resolve(); await settle();
   assert.equal(f.p.detailToc[0].downloadState, 'completed');
@@ -105,7 +108,7 @@ for (const cancel of [false, true]) {
   if (cancel) {
     assert.deepEqual(f.calls, ['local_book.toc']); assert.equal(f.p.route, 'search');
   } else {
-    assert.deepEqual(f.calls, ['local_book.toc', 'cache.book.status', 'bookmark.list']);
+    assert.deepEqual(f.calls, ['local_book.toc', 'cache.book.status']);
     f.statusReads[0].resolve(); await settle();
     assert.equal(f.p.detailToc[0].downloadState, 'completed');
   }
@@ -121,7 +124,7 @@ for (const cancel of [false, true]) {
 {
   const f = fixture(); f.p.openLocalBookDetail(f.book, false);
   f.tocReads[0].resolve(); await settle();
-  f.p.directoryBookmarkMutationGeneration++;
+  f.setBookmarks([{time:42,bookText:'新书签'}]);
   f.p.detailToc = f.p.detailToc.map(entry => ({ ...entry, bookmarks: [{ time: 42, bookText: '新书签' }] }));
   f.statusReads[0].resolve(); await settle();
   assert.equal(f.p.detailToc[0].downloadState, 'completed');

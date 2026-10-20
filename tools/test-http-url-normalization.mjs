@@ -31,6 +31,22 @@ const Host=new Function('http','url','util','connection','prepareNetworkTarget',
 const host=new Host();
 const run=params=>host.execute({url:params.url,...params});
 
+for (const timeoutMs of [0, -1, 0.1, '5', null]) {
+ await assert.rejects(run({url:'https://example.test/',timeoutMs}),/timeoutMs must be a positive integer/);
+}
+assert.equal(dispatched.length,0,'invalid budgets cannot start I/O');
+await run({url:'https://example.test/',timeoutMs:17});
+assert.ok(dispatched.at(-1).options.connectTimeout<=17);
+assert.ok(dispatched.at(-1).options.readTimeout<=17);
+let finishLate;
+responses.push(new Promise(resolve=>{finishLate=resolve;}));
+await assert.rejects(run({url:'https://example.test/',timeoutMs:20}),/deadline/);
+const atTimeout=dispatched.length;
+finishLate({responseCode:200,result:new ArrayBuffer(0),header:{}});
+await Promise.resolve();
+await Promise.resolve();
+assert.equal(dispatched.length,atTimeout,'late responses cannot start a new retry');
+
 const examples=[
  ['https://Source.Example/中文 目录?key=鸣龙 公子#章节 一','https://source.example/%E4%B8%AD%E6%96%87%20%E7%9B%AE%E5%BD%95?key=%E9%B8%A3%E9%BE%99%20%E5%85%AC%E5%AD%90#%E7%AB%A0%E8%8A%82%20%E4%B8%80'],
  ['https://source.example/search?q=%D6%D0%CE%C4&literal=%2520&plus=+&amp=%26#kept','https://source.example/search?q=%D6%D0%CE%C4&literal=%2520&plus=+&amp=%26#kept'],

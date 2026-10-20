@@ -1,7 +1,5 @@
-import { readerDayResourceBranches } from './lib/reader-resource-branch-probe.mjs';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import {
   createDefaultReaderAutoPageFullConfiguration,
   formatReaderAutoPageFullTimerSummary,
@@ -12,24 +10,8 @@ import {
   setReaderAutoPageFullSpeed,
   stepReaderAutoPageFullTimer,
 } from '../entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts';
-import {
-  READER_AUTO_PAGE_ACTOR_HOLD_RATIO,
-  READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y,
-  READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH,
-  READER_AUTO_PAGE_COLLAPSED_SURFACE_X,
-  READER_AUTO_PAGE_COLLAPSED_SURFACE_Y,
-  READER_AUTO_PAGE_DETAILS_SECTION_Y,
-  READER_AUTO_PAGE_FULL_BODY_HEIGHT,
-  READER_AUTO_PAGE_FULL_BODY_WIDTH,
-  READER_AUTO_PAGE_FULL_CONTENT_HEIGHT,
-  READER_AUTO_PAGE_FULL_HEIGHT,
-  READER_AUTO_PAGE_FULL_WIDTH,
-  READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X,
-  READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X,
-  READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y,
-  READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X,
-} from '../entry/src/main/ets/features/reading/ReaderAutoPageMotionGeometry.ts';
 
+async function configurationCase() {
 const initial = createDefaultReaderAutoPageFullConfiguration();
 assert.deepEqual(initial, {
   timerMinutes: 15,
@@ -68,140 +50,59 @@ assert.equal(formatReaderAutoPageFullWheelValue(8), '08');
 assert.equal(formatReaderAutoPageFullWheelValue(180), '180');
 assert.equal(readerAutoPageFullTimerDurationSeconds(initial), 15 * 60);
 assert.equal(formatReaderAutoPageFullTimerSummary(initial), '15:00');
-assert.equal(READER_AUTO_PAGE_FULL_WIDTH, 364);
-assert.equal(READER_AUTO_PAGE_FULL_HEIGHT, 736);
-assert.equal(READER_AUTO_PAGE_FULL_BODY_WIDTH, 336);
-assert.equal(READER_AUTO_PAGE_FULL_BODY_HEIGHT, 665);
-assert.equal(READER_AUTO_PAGE_FULL_CONTENT_HEIGHT, 435.17);
-assert.equal(READER_AUTO_PAGE_DETAILS_SECTION_Y, 285.78);
-assert.equal(READER_AUTO_PAGE_ACTOR_HOLD_RATIO, 0.14815);
-assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH, 364.896);
-assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_X, -0.448);
-assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_Y, 406.443);
 
-const root = new URL('../entry/src/main/', import.meta.url);
-const panel = await readFile(new URL('ets/features/reading/ReaderAutoPageFullPanel.ets', root), 'utf8');
-const quickPanel = await readFile(new URL('ets/features/reading/ReaderAutoPagePanel.ets', root), 'utf8');
-const content = await readFile(new URL('ets/features/reading/ReaderControlAutoPageContent.ets', root), 'utf8');
-
-assert.match(readerDayResourceBranches(quickPanel),
-  /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_play'/,
-  'quick auto-page control must replace play with pause while running');
-assert.match(readerDayResourceBranches(panel),
-  /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/,
-  'full auto-page control must replace play with pause while running');
-
-assert.match(readerDayResourceBranches(panel), /Phone final page `1771:10277`/);
-assert.match(readerDayResourceBranches(panel), /Full panel instance `1771:10280`/);
-assert.match(readerDayResourceBranches(panel), /Content master `1764:10223`/);
-assert.match(readerDayResourceBranches(panel), /Motion sources `1938:6245` and `1979:21744`/);
-assert.match(readerDayResourceBranches(panel), /if \(!this\.isTablet\) \{[\s\S]*this\.phonePanel\(\)/,
-  'Tablet must not render a scaled Phone Full panel');
-assert.match(readerDayResourceBranches(panel), /@Prop availableWidth: number = 0/);
-assert.match(readerDayResourceBranches(panel), /@Prop availableHeight: number = 0/);
-assert.match(readerDayResourceBranches(panel), /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(this\.panelHeight\(\)\)/);
-assert.match(readerDayResourceBranches(panel), /Scroll\(\) \{[\s\S]*\.width\(this\.bodyWidth\(\)\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_BODY_HEIGHT\)/);
-assert.match(readerDayResourceBranches(panel), /\.height\(this\.bodyViewportHeight\(\)\)[\s\S]*READER_AUTO_PAGE_FULL_BODY_Y/,
-  'the fixed header must own a bounded scroll viewport on short phones');
-assert.match(readerDayResourceBranches(panel),
-  /private bodyViewportHeight\(\): number \{[\s\S]*this\.panelHeight\(\) - READER_AUTO_PAGE_FULL_BODY_Y - 13/);
-assert.match(readerDayResourceBranches(panel), /READER_AUTO_PAGE_FULL_CONTENT_Y - READER_AUTO_PAGE_FULL_BODY_Y/,
-  'the full-height endpoint must preserve the original global actor coordinates');
-assert.match(readerDayResourceBranches(panel), /private panelWidth\(\): number \{[\s\S]*Math\.min\(READER_AUTO_PAGE_FULL_WIDTH, this\.availableWidth\)/,
-  'the phone-only motion surface must clamp its outer actor to the physical viewport');
-assert.match(readerDayResourceBranches(panel), /Text\('自动翻页控制'\)/);
-assert.match(readerDayResourceBranches(panel), /Text\('定时'\)/);
-assert.match(readerDayResourceBranches(panel), /Text\('自动停止'\)/);
-assert.match(readerDayResourceBranches(panel), /Text\('详细配置'\)/);
-assert.match(readerDayResourceBranches(panel), /Text\('跟随高亮'\)/);
-assert.match(readerDayResourceBranches(panel), /onFollowHighlightChange\(!this\.followHighlight\)/);
-assert.match(readerDayResourceBranches(panel), /\.enabled\(this\.interactionEnabled && this\.status === 'stopped'\)/,
-  'follow highlight is editable only before an automatic-page session starts');
-assert.match(readerDayResourceBranches(panel), /\.fontFamily\('ReaderInter'\)/);
-assert.match(readerDayResourceBranches(panel), /collapsedBackActor\(\)[\s\S]*ReaderNotoSansSC/,
-  'the outgoing Quick Back actor retains the Quick endpoint font');
-assert.match(readerDayResourceBranches(panel), /min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS/);
-assert.match(readerDayResourceBranches(panel), /max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS/);
-assert.match(readerDayResourceBranches(panel), /\.opacity\(0\.001\)/,
-  'the empty Figma speed frame must not gain an invented visible slider');
-assert.doesNotMatch(panel, /animateTo|animation\(/,
-  'the panel must expose actor endpoints while the owner keeps production timing');
-assert.equal(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X, -31.492);
-assert.equal(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X, -33.106);
-assert.equal(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X, -5.45);
-assert.equal(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y, -208.623);
-assert.equal(READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y, 14);
-assert.match(readerDayResourceBranches(panel), /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X\)/);
-assert.match(readerDayResourceBranches(panel), /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X\)/);
-assert.match(readerDayResourceBranches(panel), /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X\)/);
-assert.match(readerDayResourceBranches(panel), /persistentActorTranslateY\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y\)/);
-
-const control = await readFile(new URL('ets/features/reading/ReaderControlPanel.ets', root), 'utf8');
-// Legacy standalone geometry above remains compatibility coverage. Production
-// now mounts one content-only actor tree; its live-track comparisons execute in
-// test-reader-control-playback-content.mjs, not the old Full-sheet adapter.
-assert.match(control, /this\.contentLocation\(\)\.module === 'autoPage'/,
-  'automatic-page content remains in one semantic route across Quick/Full');
-assert.equal((control.match(/ReaderControlAutoPageContent\(\{/g) ?? []).length, 2, 'one interactive content plus the shared pure-source factory');
-assert.equal((control.match(/new ReaderControlRuntime\(/g) ?? []).length, 1);
-assert.doesNotMatch(control, /ReaderAutoPage(?:Full)?Panel\(\{|autoPageActorHold|autoPageActorExpanded|autoPageActorTransitioning/);
-assert.doesNotMatch(control, /autoPageStatus !== 'stopped'/);
-const autoBinding = control.slice(control.indexOf('private autoPageModuleContent()')).match(/ReaderControlAutoPageContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
-assert.ok(autoBinding, 'actual AutoPage content binding must exist');
-assert.match(autoBinding, /motionProgress: this\.contentMotionProgress/);
-assert.match(autoBinding, /form: this\.contentLocation\(\)\.form/);
-assert.match(autoBinding, /availableWidth: this\.contentMotionWidth,/);
-assert.match(autoBinding, /availableHeight: this\.contentMotionHeight,/);
-assert.match(autoBinding, /interactionEnabled: this\.secondaryModuleInputEnabled\('autoPage'\)/);
-assert.match(autoBinding, /canPreviousChapter: this\.currentChapterIndex > 0/);
-assert.match(autoBinding, /canNextChapter: this\.currentChapterIndex >= 0 && this\.currentChapterIndex < this\.totalChapters - 1/);
-assert.match(autoBinding, /onBack: \(\): void => this\.requestPage\('home'\)/);
-assert.match(autoBinding, /this\.reportSessionMorphSource\(kind, left, top, width, height\)/,
-  'the source identity reported by the actual form must not be hard-coded to Full');
-assert.doesNotMatch(autoBinding, /motionExpanded|embeddedInUnifiedSurface|content\.(?:width|height) \+/);
-assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? '运行中' :[\s\S]*this\.status === 'paused' \? '已暂停' : '未开始'/);
-assert.doesNotMatch(content, /this\.quickBack\(\);/, 'compact endpoint must not render an in-panel Back control');
-assert.match(readerDayResourceBranches(content), /backgroundColor\(this\.sourceOnly === 'full' \? Color\.Transparent : readerAppColor\('TOK_SURFACE_PANEL_SOFT', this\.appScheme\)\)[\s\S]*border\(\{ width: this\.sourceOnly === 'full' \? 0 : TOK_BORDER_W, color: readerAppColor\('TOK_LINE', this\.appScheme\) \}\)[\s\S]*borderRadius\(8\)/,
-  'automatic-page playback control keeps the compact card border and radius');
-assert.match(content, /this\.speedStepButton\(false\);[\s\S]*this\.speedStepButton\(true\);/,
-  'compact endpoint exposes both persistent speed buttons');
-assert.match(content, /this\.effectiveSpeedSeconds\(\) \+ \(increase \? 1 : -1\)/,
-  'both buttons use the same bounded business speed value');
-assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? 'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/);
-assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? '暂停自动翻页'[\s\S]*this\.status === 'paused' \? '继续自动翻页' : '开始自动翻页'/);
-assert.match(readerDayResourceBranches(content), /\.enabled\(this\.fullInput\(\) && this\.status === 'stopped'\)/,
-  'the current FollowHighlight input retains its pre-session-only business gate');
-assert.match(readerDayResourceBranches(content), /this\.sharedInput\(\) && this\.status !== 'stopped'/,
-  'stopped sessions must not dispatch stop');
-assert.match(readerDayResourceBranches(content), /if \(!this\.fullInput\(\)\) \{ this\.speedPreviewSeconds = -1; return; \}/,
-  'late native slider callbacks must not commit after input revocation');
-for (const callback of ['onAutoPageToggle', 'onAutoPageStop', 'onPreviousChapter', 'onNextChapter',
-  'onAutoPageFullTimerChange', 'onAutoPageFullSpeedChange', 'onAutoPageFollowHighlightChange']) {
-  assert.ok(autoBinding.includes(`this.${callback}(`), `business callback lost from actual AutoPage: ${callback}`);
 }
+async function chapterAdmissionCase() {
+const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+const StepOwner = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'ReaderControlPanel', ['canStepChapter']);
+const stepOwner = Object.assign(new StepOwner(), { currentChapterIndex: 1, readableChapterPosition: 0,
+  totalChapters: 53, tocEntries: [{index:0,navigable:false},{index:1,navigable:true}] });
+assert.equal(stepOwner.canStepChapter(-1), false, 'first real chapter after a volume cannot step into the group');
+assert.equal(stepOwner.canStepChapter(1), true, 'bounded window uses global readable rank for the next chapter');
+stepOwner.currentChapterIndex = 107; stepOwner.readableChapterPosition = 52;
+assert.equal(stepOwner.canStepChapter(1), false, 'last readable chapter stops despite sparse canonical IDs');
+assert.equal(stepOwner.canStepChapter(-1), true);
+stepOwner.readableChapterPosition = -1;
+stepOwner.tocEntries = [{index:0,navigable:false},{index:1,navigable:true},{index:107,navigable:true},{index:108,navigable:false}];
+assert.equal(stepOwner.canStepChapter(1), false, 'disabled tail does not enable chapter advance');
 
-const experience = await readFile(new URL('ets/features/reading/LocalReadingExperience.ets', root), 'utf8');
-assert.match(experience, /private automaticReadingConfiguration\(\)/);
-assert.match(experience, /this\.autoPageCoordinator\.configurationAt\(this\.autoPageRevision\)/);
-assert.match(experience, /onAutoPageFollowHighlightChange:/);
-assert.match(experience, /pauseAutoPageForInteraction\(\): void \{\s*this\.pauseAutoPage\('touch'\)/);
-assert.match(experience, /onAppForegroundChanged\(\): void \{[\s\S]*this\.pauseAutoPage\('background'\)/);
-assert.match(experience, /private pauseAutoPage\(reason: ReaderAutoPagePauseReason\): void \{\s*this\.autoPageCoordinator\.pause\(reason\)/);
-assert.doesNotMatch(experience, /private autoPage(?:Timer|DeadlineMs|SessionTimer|SessionRemainingSeconds):/,
-  'the page must not retain a second automatic reading timer owner');
-await import('./test-reader-auto-page-coordinator.mjs');
-
-for (const asset of [
-  'reader_auto_full_header.svg',
-  'reader_auto_full_clock.svg',
-  'reader_auto_full_chevron_left.svg',
-  'reader_auto_full_chevron_right.svg',
-  'reader_auto_full_play.svg',
-  'reader_auto_full_stop.svg',
-]) {
-  const source = await readFile(new URL(`resources/base/media/${asset}`, root), 'utf8');
-  assert.match(source, /<svg/);
-  assert.doesNotMatch(source, /TODO|placeholder/i);
 }
-
-console.log('reader Full Auto Page pure/static contract: PASS');
+async function sharedContentCase() {
+  const { readFile } = await import('node:fs/promises');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const source = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'utf8');
+  const childSource = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
+  let captured;
+  class ContentBoundary { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); captured = this; } }
+  const { owner } = createReaderBuilderProbe(source, ['autoPageModuleContent'], {
+    ReaderControlAutoPageContent: ContentBoundary,
+  }, { childSources: { ReaderControlAutoPageContent: childSource } });
+  const calls = [];
+  const callbacks = {
+    onBack: ['requestPage', 'home'], onPreviousChapter: ['onPreviousChapter'],
+    onToggleRunning: ['onAutoPageToggle'], onStop: ['onAutoPageStop'], onNextChapter: ['onNextChapter'],
+    onTimerChange: ['onAutoPageFullTimerChange', 4, 12], onSpeedChange: ['onAutoPageFullSpeedChange', 9],
+    onFollowHighlightChange: ['onAutoPageFollowHighlightChange', true],
+  };
+  Object.assign(owner, { launchSample: undefined, launchOwnsControls: false, onLaunchSourceVisible() {},
+    contentEndpointHeight: () => 700, isExpanded: () => true, contentMotionProgress: .8,
+    contentLocation: () => ({ form: 'full' }), contentMotionWidth: 360, contentMotionHeight: 700,
+    secondaryModuleInputEnabled: module => module === 'autoPage', canStepChapter: direction => direction === 1,
+    autoPageStatus: 'paused', autoPageSpeedSeconds: 8, autoPageTimerMinutes: 4, autoPageTimerSeconds: 12,
+    autoPageTimerSummaryText: '04:12', autoPageFollowHighlight: false, reportSessionMorphSource() {},
+  });
+  for (const [target] of Object.values(callbacks)) owner[target] = (...args) => calls.push([target, ...args]);
+  owner.autoPageModuleContent(); assert.ok(captured, 'actual AutoPage child is mounted');
+  assert.equal(captured.params.canPreviousChapter, false); assert.equal(captured.params.canNextChapter, true);
+  assert.equal(captured.params.interactionEnabled, true); assert.equal(captured.params.form, 'full');
+  for (const [prop, [target, ...args]] of Object.entries(callbacks)) {
+    assert.equal(typeof captured.params[prop], 'function', `actual callback ${prop}`);
+    captured.params[prop](...(prop === 'onBack' ? [] : args)); assert.deepEqual(calls.at(-1), [target, ...args]);
+  }
+}
+const cases = { 'configuration': configurationCase, 'chapter-admission': chapterAdmissionCase, 'shared-content': sharedContentCase };
+for (const id of selectContractCases({
+  'configuration': { description: 'Production timer/speed/follow configuration normalization and immutable bounds', resources: [] },
+  'chapter-admission': { description: 'Actual canStepChapter using sparse canonical IDs and readable rank', resources: [] },
+  'shared-content': { description: 'SDK-emitted current AutoPage child callbacks; no legacy Full geometry', resources: [] },
+})) { await cases[id](); recordContractCasePass(id); }

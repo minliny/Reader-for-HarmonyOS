@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const { dirname, resolve }=await import('node:path');
+const { fileURLToPath }=await import('node:url');
+const { runtimeOwnerIdentityProbe }=await import('./lib/reader-runtime-admission-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
@@ -28,19 +33,17 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
+const sharedFacts=read('entry/src/main/ets/app/ReaderOperationFacts.ts').replace(/^export /gm,'');
+const persistedFacts=read('entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
+const writeEvidence=read('entry/src/main/ets/app/ReaderWriteEvidence.ts').replace(/^export /gm,'');
 const executable = stripTypeScriptTypes(
-  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${gatewaySource}\n${orchestratorSource}`,
+  `${sharedFacts}\n${persistedFacts}\n${writeEvidence}\n${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${gatewaySource.replace(/^import[^\n]+\n/gm,'')}\n${orchestratorSource.replace(/^import[^\n]+\n/gm,'')}`,
 );
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
-globalThis.hilog = {
-  warn() {}, error() {}, info() {}, debug() {}, fatal() {},
-};
-
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { SourceToolsOrchestrator } = await import(moduleUrl);
-
-const tick = () => new Promise((resolveTick) => setTimeout(resolveTick, 0));
+let currentOwner;const owned=[];const {isReaderCoreTransactionPendingError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
+const {SourceGateway,SourceToolsOrchestrator}=new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError','hilog',executable.replace(/^export /gm,'')+';return{SourceGateway,SourceToolsOrchestrator};')(runtimeOwnerIdentityProbe(()=>currentOwner),isReaderCoreTransactionPendingError,{warn(){},error(){},info(){},debug(){},fatal(){}});
+const tick = () => new Promise((resolveTick) => setImmediate(resolveTick));
 
 async function waitUntil(predicate, label) {
   for (let attempt = 0; attempt < 500; attempt += 1) {
@@ -73,7 +76,7 @@ function rawSource(item) {
 
 function checkEnvelope(sourceId, available, requestId) {
   const durationMs = available ? 24 : 19;
-  const levelsPassed = available ? ['L1', 'L2', 'L3', 'L4', 'L5'] : ['L1'];
+  const levelsPassed = available ? ['L1', 'L2'] : ['L1'];
   const result = {
     sourceId,
     available,
@@ -103,6 +106,7 @@ function controlledOwner(sources) {
   };
   return {
     state,
+    supportsCoreCapability: capability => capability === 'source.check.mode.v1',
     request(method, params, options) {
       if (method === 'source.list') {
         return Promise.resolve({ data: { sources: sources.map(rawSource) } });
@@ -124,14 +128,15 @@ function controlledOwner(sources) {
   };
 }
 
-function capture(owner) {
+function capture(owner, consume = () => {}) {
+  currentOwner=owner;
   const snapshots = [];
   const orchestrator = new SourceToolsOrchestrator(
-    (snapshot) => snapshots.push(snapshot),
+    (snapshot) => { snapshots.push(snapshot); consume(snapshot); },
     () => true,
     owner,
   );
-  return { orchestrator, snapshots };
+  owned.push({orchestrator,owner});return { orchestrator, snapshots };
 }
 
 const latest = (snapshots) => snapshots[snapshots.length - 1];
@@ -145,16 +150,122 @@ async function openReady(orchestrator, snapshots, sources) {
   );
 }
 
-function privateMethod(sourceText, signature, nextSignature) {
-  const start = sourceText.indexOf(signature);
-  const end = sourceText.indexOf(nextSignature, start + signature.length);
-  assert.ok(start >= 0 && end > start, `expected ${signature} before ${nextSignature}`);
-  return sourceText.slice(start, end);
+function reportEnvelope(sourceId, version, timeoutMs) {
+  const envelope = checkEnvelope(sourceId, true, 55);
+  if (version !== undefined) {
+    const report = {
+      version, mode: 'search', traceId: envelope.data.traceId,
+      ruleDigest: 'a'.repeat(64), inputDigest: 'b'.repeat(64),
+      steps: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level, index) => ({
+        level, requested: index < 2, executed: index < 2,
+        status: index < 2 ? 'pass' : 'not_requested', durationMs: index === 0 ? 1 : index === 1 ? 23 : 0,
+      })),
+    };
+    if (version === 2) {
+      report.executionOptions = { timeoutMs };
+      report.executionOptionsDigest = 'c'.repeat(64);
+    }
+    envelope.data.results[0].report = report;
+  }
+  return envelope;
 }
 
-// One controlled sweep proves that progress is observable before terminal
-// completion, that every source publishes its own verdict, and that a thrown
-// single-source execution error stays distinct and does not abort later sources.
+function reportOwner(version, mutate = () => {}, history = []) {
+  const calls = [];
+  return {
+    calls,
+    supportsCoreCapability: capability => capability === 'source.check.mode.v1' ||
+      (version !== undefined && capability === `source.check.report.v${version}`),
+    async request(method, params, options) {
+      calls.push({ method, params: structuredClone(params), options });
+      if (method === 'source.list') return { data: { sources: [{
+        ...rawSource(source('report-source', '报告源')), sourceVersion: 'a'.repeat(64), checkReports: history,
+      }] } };
+      assert.equal(method, 'source.check.run');
+      const envelope = reportEnvelope(params.sourceIds[0], version, params.timeoutMs);
+      mutate(envelope);
+      return envelope;
+    },
+    takeSourceHttpDiagnostics() { return []; },
+  };
+}
+
+const reportMutationCases = [
+  report => { delete report.executionOptions; },
+  report => { delete report.executionOptionsDigest; },
+  report => { report.executionOptions.timeoutMs = 1235; },
+  report => { report.executionOptions.timeoutMs = 1.5; },
+  report => { report.executionOptions.timeoutMs = -1; },
+  report => { report.executionOptions.timeoutMs = 4294967296; },
+  report => { report.executionOptions.cookie = 'PRIVATE'; },
+  report => { report.executionOptionsDigest = 'not-a-digest'; },
+  report => { report.version = 1; },
+  report => { report.version = 3; },
+  report => { report.rawBody = 'PRIVATE'; },
+  report => { report.steps[0].header = 'PRIVATE'; },
+];
+const legacyHistory = { checkedAtMs: 10, stale: false, report: reportEnvelope('report-source', 1, 1234).data.results[0].report };
+const currentHistory = { checkedAtMs: 20, stale: false, report: reportEnvelope('report-source', 2, 1234).data.results[0].report };
+
+try{
+if(id==='followup-feedback'){
+const SourceToolsFeedback = productionMotionMethods(new URL(
+  '../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), ['feedbackIdentity', 'showTransientFeedback']);
+
+// Retained batch results do not own feedback from later operations. Exercise
+// real check progress, editor/export Gateway calls, receipt facts and the
+// production Page feedback method together for both terminal batch states.
+for (const phase of ['completed', 'stopped']) for (const action of ['saved', 'readbackFailed', 'exported']) {
+  const sources = [source('https://after-a.example', '甲源'), source('https://after-b.example', '乙源')];
+  const owner = controlledOwner(sources), originalRequest = owner.request.bind(owner);
+  let failReadback = false, imports = 0, exports = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'source.list' && failReadback) { failReadback = false; throw new Error('readback unavailable'); }
+    if (method === 'source.export') {
+      const selected = sources.filter(item => params.sourceIds === undefined || params.sourceIds.includes(item.sourceId));
+      return { data: { data: JSON.stringify(selected.map(item => ({ bookSourceUrl: item.sourceId, bookSourceName: item.name, enabled: true }))), count: selected.length, format: 'json' } };
+    }
+    if (method === 'source.import') { options.onDispatch(); imports++; return { data: { imported: true, sourceId: params.sourceId, name: params.bookSource.bookSourceName } }; }
+    return originalRequest(method, params, options);
+  };
+  owner.saveBookSourceJson = async () => { exports++; return 'saved-sources.json'; };
+  const notices = [],page = Object.assign(new SourceToolsFeedback(), { mounted: true, lastFeedbackIdentity: '',
+    getUIContext: () => ({ getPromptAction: () => ({ showToast: notice => notices.push(notice) }) }) });
+  const { orchestrator, snapshots } = capture(owner, snapshot => { page.snapshot = snapshot; page.showTransientFeedback(); });
+  await openReady(orchestrator, snapshots, sources);
+  const selected = sources.map(item => item.sourceId);
+  orchestrator.setSelection(selected);orchestrator.checkSelected(selected);
+  await waitUntil(() => owner.state.pending.has('https://after-a.example'), 'feedback regression first source');
+  owner.state.pending.get('https://after-a.example').resolve(checkEnvelope('https://after-a.example', true, 701));
+  await waitUntil(() => owner.state.pending.has('https://after-b.example'), 'feedback regression second source');
+  if (phase === 'stopped') { orchestrator.stopCheckSelected();owner.state.pending.get('https://after-b.example').reject(new Error('request cancelled')); }
+  else owner.state.pending.get('https://after-b.example').resolve(checkEnvelope('https://after-b.example', true, 702));
+  await orchestrator.operationTail;
+  const retained = structuredClone(latest(snapshots).batchCheck);
+  assert.equal(retained.phase, phase);assert.ok(retained.results.length > 0);
+  assert.deepEqual(notices, [], 'initial read/selection/batch messages keep their own existing carriers');
+  assert.equal(latest(snapshots).statusEvent, 'batch');
+  if (action === 'exported') orchestrator.exportSelected(['https://after-a.example']);
+  else {
+    orchestrator.openEditor('https://after-a.example');await orchestrator.operationTail;
+    assert.deepEqual(notices, [], 'opening the editor does not replay the retained batch result');
+    failReadback = action === 'readbackFailed';orchestrator.saveEditor();
+  }
+  await orchestrator.operationTail;
+  assert.deepEqual(latest(snapshots).batchCheck, retained, 'later operations preserve original progress, counts and item results');
+  assert.equal(latest(snapshots).statusEvent, 'feedback');
+  assert.equal(notices.length, 1, `${phase}/${action}: later operation emits one own result`);
+  page.showTransientFeedback();assert.equal(notices.length, 1, 'repainting a terminal operation cannot replay feedback');
+  if (action === 'exported') { assert.equal(exports, 1);assert.match(notices[0].message, /已导出 1 个书源/); }
+  else {
+    assert.equal(imports, 1, 'follow-up read failure never repeats source.import');
+    assert.equal(latest(snapshots).receipt.receipt.confirmation, 'confirmed');
+    if (action === 'readbackFailed') { assert.equal(latest(snapshots).receipt.receipt.fact, 'confirmedRefreshFailed');assert.match(notices[0].message, /已确认.*刷新失败/);assert.ok(latest(snapshots).editorText.length > 0, 'failed readback retains the original draft'); }
+    else { assert.equal(latest(snapshots).editorSourceId, '');assert.match(notices[0].message, /校验并保存/); }
+  }
+}
+}
+if(id==='streaming'){
 {
   const sources = [source('alpha', '甲源'), source('beta', '乙源'), source('gamma', '丙源')];
   const owner = controlledOwner(sources);
@@ -209,10 +320,26 @@ function privateMethod(sourceText, signature, nextSignature) {
   assert.deepEqual(owner.state.calls, selectedIds, 'a failed item must not abort the remaining selection');
   assert.deepEqual(completed.selectedSourceIds, selectedIds, 'completed checks retain the selected scope');
 }
-
-// Stopping cancels the in-flight request through the real shouldContinue /
-// shouldCancel boundary. Cancellation is not a source verdict, so it must not
-// increment completed or failed and the next selected source must not start.
+}
+if(id==='mode-proof'){
+for (const mode of ['search', 'explore']) {
+  const sources = [source('mode-check', 'Mode')];
+  const owner = controlledOwner(sources);
+  const { orchestrator, snapshots } = capture(owner);
+  await openReady(orchestrator, snapshots, sources);
+  orchestrator.updateCheckSelection(mode, 2);
+  orchestrator.checkSelected(['mode-check']);
+  await waitUntil(() => owner.state.pending.has('mode-check'), `${mode} check to start`);
+  owner.state.pending.get('mode-check').resolve(checkEnvelope('mode-check', true, 120));
+  await waitUntil(() => latest(snapshots)?.batchCheck.phase === 'completed', `${mode} check to finish`);
+  const message = latest(snapshots).batchCheck.results[0].message;
+  assert.match(message, mode === 'explore' ? /^发现 / : /^搜索 /);
+  orchestrator.updateCheckSelection(mode === 'explore' ? 'search' : 'explore', 5);
+  assert.equal(latest(snapshots).batchCheck.results[0].message, message,
+    'a later selection cannot relabel the completed capability evidence');
+}
+}
+if(id==='stop'){
 {
   const sources = [source('stop-a', '停止甲'), source('stop-b', '停止乙')];
   const owner = controlledOwner(sources);
@@ -245,25 +372,18 @@ function privateMethod(sourceText, signature, nextSignature) {
   assert.deepEqual(owner.state.calls, ['stop-a'], 'stop prevents the next selected source from starting');
   assert.deepEqual(stopped.selectedSourceIds, selectedIds, 'stopping retains the selected scope');
 }
-
-// The route adapter used to consume (clear) selection immediately before
-// starting detection. Keep this integration edge guarded even though Index is
-// an ArkUI component and cannot be executed in plain Node.
-{
-  const index = read('entry/src/main/ets/pages/Index.ets');
-  const start = index.indexOf('private checkSelectedSources(');
-  const end = index.indexOf('private setSelectedSourcesEnabled(', start);
-  assert.ok(start >= 0 && end > start, 'Index exposes the selected-source check adapter');
-  const adapter = index.slice(start, end);
-  assert.match(adapter, /checkSelected\(sourceIds\)/);
-  assert.doesNotMatch(adapter, /consumeSourceToolsSelection/,
-    'starting detection must not clear the visible selected scope');
 }
+if(id==='index-selection'){
+const sources=[source('selected-a','甲'),source('selected-b','乙')],owner=controlledOwner(sources);const {orchestrator,snapshots}=capture(owner);await openReady(orchestrator,snapshots,sources);orchestrator.setSelection(sources.map(s=>s.sourceId));
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('entry/src/main/ets/features/source/SourceToolsPage.ets');sdk.hooks.childSources.SourceToolsPage=pageSource;
+const leaf=sdk.consumer(pageSource,['snapshot','onCheckSelected'],{EMPTY_SOURCE_TOOLS_SNAPSHOT:latest(snapshots)}).constructor;
+const index=sdk.consumer(read('entry/src/main/ets/pages/Index.ets'),['sourceToolsContent','sourceToolsSurface','isCurrentSourceToolsPresentation','isCurrentRuntime'],{SourceToolsPage:leaf,ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>currentOwner)});
+Object.assign(index,{navigationGeneration:1,mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,sourceToolsOrchestrator:orchestrator,sourceToolsPresentationIdentity:'source-tools:1',sourceToolsSnapshot:latest(snapshots),shelfReceiptRetired:false,route:'sourceTools'});orchestrator.attachPresentation('source-tools:1',snapshot=>{snapshots.push(snapshot);index.sourceToolsSnapshot=snapshot;},()=>true);
+index.sourceToolsContent();const child=sdk.walk(index).find(actor=>actor instanceof leaf);assert.ok(child);const check=child.onCheckSelected;check(['selected-a','selected-b']);await waitUntil(()=>owner.state.pending.has('selected-a'),'actual Index starts canonical first selection');assert.deepEqual(orchestrator.current().selectedSourceIds,['selected-a','selected-b']);orchestrator.stopCheckSelected();owner.state.pending.get('selected-a').reject(Error('cancelled'));await orchestrator.operationTail;
+const count=owner.state.calls.length;index.navigationGeneration++;check(['selected-b']);await tick();assert.equal(owner.state.calls.length,count,'old physical callback cannot start successor check');
 
-// Scale contract for the actual imported-source cardinality seen by the
-// product. Selecting all 1,777 sources must remain one normalized O(N) state
-// transition: it must not invalidate the source catalog revision (which is the
-// virtual-list mount key), and detection/stopping must retain that scope.
+}
+if(id==='scale-selection'){
 {
   const sourceCount = 1777;
   const sources = Array.from({ length: sourceCount }, (_unused, index) =>
@@ -314,71 +434,76 @@ function privateMethod(sourceText, signature, nextSignature) {
   assert.equal(stopped.batchCheck.errors, 0,
     'cancelling an in-flight item is not an execution-error result');
 }
-
-// ArkUI structure guard: each reusable row receives a precomputed membership
-// value. A row must never scan the whole selectedSourceIds array, and selection
-// changes update the IDataSource instead of remounting the 1,777-item list.
-{
-  const page = read('entry/src/main/ets/features/source/SourceToolsPage.ets');
-  const sourceCard = privateMethod(page, 'private sourceCard(', 'private sourceRow(');
-  const sourceRow = privateMethod(page, 'private sourceRow(', 'private editorCard(');
-
-  assert.match(page, /class\s+\w*Source\w*DataSource\s+implements\s+IDataSource/,
-    'large source rows are owned by an ArkUI IDataSource');
-  assert.match(sourceCard, /LazyForEach\(/,
-    'the 1,777-row catalog uses LazyForEach virtualization');
-  assert.doesNotMatch(sourceCard, /Repeat\(/,
-    'Repeat virtualScroll is not a valid replacement for LazyForEach in this @Component');
-  assert.doesNotMatch(page, /\.virtualScroll\(/,
-    'Repeat virtualScroll is illegal in this @Component; growing results must use an IDataSource/LazyForEach path');
-  assert.match(page, /class\s+SourceToolListRow[\s\S]*?readonly\s+selected:\s*boolean/,
-    'source rows carry precomputed selection membership');
-  assert.match(sourceRow, /row\.selected/,
-    'source-row rendering consumes the precomputed membership bit');
-  assert.doesNotMatch(sourceRow, /selectedSourceIds/,
-    'a reusable source row must receive precomputed selection membership');
-  assert.doesNotMatch(sourceRow, /\.indexOf\(/,
-    'a reusable source row must not linearly scan selection for every one of 1,777 rows');
-  assert.match(sourceCard,
-    /sourceId[^\n]*row\.selected[\s\S]*row\.actionsEnabled|sourceId[^\n]*\$\{row\.selected[^\n]*\$\{row\.actionsEnabled/,
-    'LazyForEach row identity must change when selection or enabled state changes');
-  assert.doesNotMatch(page, /ForEach\(\[`\$\{this\.snapshot\.sourceListRevision\}/,
-    'source-list updates must not be implemented by changing a one-item ForEach mount key');
-  assert.match(page, /ForEach\(\[this\.batchControlsRenderKey\(\)\]/,
-    'the small V1 batch-control subtree must remount when captured enabled/selection inputs change');
-  assert.match(page, /ForEach\(\[this\.batchProgressRenderKey\(\)\]/,
-    'the small V1 progress subtree must remount for each observable batch transition');
-  const controlsRenderKey = privateMethod(
-    page,
-    'private batchControlsRenderKey(',
-    'private batchProgressRenderKey(',
-  );
-  assert.match(controlsRenderKey, /selectionRevision/);
-  assert.match(controlsRenderKey, /selectedSourceCount/);
-  assert.match(controlsRenderKey, /snapshot\.busy/);
-  assert.match(controlsRenderKey, /batchCheck\.phase/);
-  assert.doesNotMatch(controlsRenderKey, /sourceListRevision/,
-    'control refresh must not couple selection changes back to the catalog revision');
-  const progressRenderKey = privateMethod(
-    page,
-    'private batchProgressRenderKey(',
-    'private debugLogsIdentity(',
-  );
-  assert.match(progressRenderKey, /progress\.completed/);
-  assert.match(progressRenderKey, /progress\.currentSourceId/);
-  assert.match(progressRenderKey, /batchResultsIdentity\(\)/);
-
-  const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsOrchestrator.ets');
-  const publish = privateMethod(orchestratorSource, 'private publish(', 'private copySnapshot(');
-  const revisionAssignment = publish.slice(
-    publish.indexOf('const sourceListRevision'),
-    publish.indexOf('const selectionRevision'),
-  );
-  assert.doesNotMatch(revisionAssignment, /selectedSourceIds/,
-    'sourceListRevision is catalog-only and must not change for selection updates');
-  const normalize = privateMethod(orchestratorSource, 'private normalizeSourceIds(', 'private enqueue(');
-  assert.doesNotMatch(normalize, /normalized\.(?:indexOf|includes)/,
-    'normalizing a 1,777-source selection must use O(1) duplicate membership checks');
 }
+if(id==='list-notifications'){
+const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();const sourceText=read('entry/src/main/ets/features/source/SourceToolsPage.ets');const tree=ts.createSourceFile('SourceToolsData.ets',sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+const names=['SourceToolListRow','SourceToolListDataSource','SourceCheckResultDataSource','SourceDebugLogDataSource'];const declarations=tree.statements.filter(n=>n.name&&names.includes(n.name.getText(tree)));assert.equal(declarations.length,names.length);
+const code=ts.transpileModule(declarations.map(n=>n.getText(tree)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;const types=new Function(code+';return{'+names.join(',')+'};')();
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const snapshot={sources:Array.from({length:1777},(_,i)=>source('row-'+i,'源'+i)),selectedSourceIds:[],sourceListRevision:1,selectionRevision:1,busy:false,batchCheck:{results:[]},debugLogs:[],debugSourceId:''};
+const page=sdk.consumer(sourceText,['snapshot','sourceDataSource','batchResultDataSource','debugLogDataSource','projectedSourceListRevision','projectedSelectionRevision','projectedBusy','projectedCanWrite','projectedBatchResultsIdentity','projectedDebugLogsIdentity','mounted','lastFeedbackIdentity','feedbackIdentity','showTransientFeedback','syncListDataSources','canWriteSources','batchResultsIdentity','debugLogsIdentity'],{...types,EMPTY_SOURCE_TOOLS_SNAPSHOT:snapshot},{snapshot});
+let reloads=0,resultReloads=0;const listener={onDataReloaded(){reloads++;}};page.sourceDataSource.registerDataChangeListener(listener);page.sourceDataSource.registerDataChangeListener(listener);page.batchResultDataSource.registerDataChangeListener({onDataReloaded(){resultReloads++;}});
+page.syncListDataSources();assert.equal(reloads,1);assert.equal(page.sourceDataSource.totalCount(),1777);assert.deepEqual(page.sourceDataSource.getData(1776).source,snapshot.sources[1776]);
+page.snapshot={...snapshot,selectionRevision:2,selectedSourceIds:['row-100','row-1776']};page.syncListDataSources();assert.equal(reloads,2);assert.equal(page.sourceDataSource.getData(100).selected,true);assert.equal(page.sourceDataSource.getData(0).selected,false);assert.equal(page.sourceDataSource.getData(1776).actionsEnabled,true);
+page.snapshot={...page.snapshot,batchCheck:{results:[{sourceId:'row-100',traceId:'t',state:'passed',message:'ok'}]}};page.syncListDataSources();assert.equal(reloads,2,'progress-only update does not reload source catalog');assert.equal(resultReloads,2,'actual results IDataSource receives changed result identity');
+page.snapshot={...page.snapshot,busy:true};page.syncListDataSources();assert.equal(reloads,3);assert.equal(page.sourceDataSource.getData(100).actionsEnabled,false);page.sourceDataSource.unregisterDataChangeListener(listener);page.snapshot={...page.snapshot,busy:false};page.syncListDataSources();assert.equal(reloads,3,'unregistered listener receives no later reload');assert.equal(page.sourceDataSource.getData(100).actionsEnabled,true);
 
-console.log('source check streaming progress contract: PASS');
+}
+if(id==='report-negotiation'){
+for (const version of [undefined, 1, 2]) {
+  const owner = reportOwner(version);
+  const gateway = new SourceGateway(owner);
+  const outcome = await gateway.checkSource('report-source', () => true, undefined, 'search', ['L1', 'L2'], 1234);
+  assert.equal(owner.calls[0].params.reportVersion, version);
+  assert.equal(owner.calls[0].params.timeoutMs, 1234);
+  assert.equal(owner.calls[0].options.timeoutMs, 6234);
+  assert.equal(outcome.report?.version, version);
+  assert.equal(outcome.report?.executionOptions?.timeoutMs, version === 2 ? 1234 : undefined);
+  await gateway.loadSources(undefined, true);
+  assert.equal(owner.calls[1].params.includeCheckReports, version === undefined ? undefined : true);
+  assert.equal(owner.calls[1].params.checkReportVersion, version === 2 ? 2 : undefined,
+    'older Core never receives a new parameter');
+}
+}
+if(id==='report-schema'){
+for (const mutate of reportMutationCases) {
+  const owner = reportOwner(2, envelope => mutate(envelope.data.results[0].report));
+  await assert.rejects(new SourceGateway(owner).checkSource('report-source', () => true, undefined,
+    'search', ['L1', 'L2'], 1234), /report|execution options/);
+}
+}
+if(id==='v1-fields'){
+for (const field of ['executionOptions', 'executionOptionsDigest']) {
+  const owner = reportOwner(1, envelope => { envelope.data.results[0].report[field] = null; });
+  await assert.rejects(new SourceGateway(owner).checkSource('report-source'), /unknown fields/,
+    'strict v1 rejects v2-only fields even when null');
+}
+}
+if(id==='budget'){
+for (const timeout of [0, -1, 1.5, 4294967296, NaN]) {
+  const owner = reportOwner(2);
+  await assert.rejects(new SourceGateway(owner).checkSource('report-source', () => true, undefined,
+    'search', ['L1', 'L2'], timeout), /Core budget/);
+  assert.equal(owner.calls.length, 0, 'invalid budget is rejected before dispatch');
+}
+}
+if(id==='report-history'){
+{
+  const owner = reportOwner(2, undefined, [currentHistory, legacyHistory]);
+  const sources = await new SourceGateway(owner).loadSources(undefined, true);
+  assert.deepEqual(sources[0].checkReports.map(row => row.report.version), [2, 1]);
+  assert.match(sources[0].lastCheckSummary, /Core 预算 1234ms/);
+  const legacy = await new SourceGateway(reportOwner(1, undefined, [legacyHistory])).loadSources(undefined, true);
+  assert.match(legacy[0].lastCheckSummary, /预算未知（旧版记录）/);
+  await assert.rejects(new SourceGateway(reportOwner(1, undefined, [currentHistory])).loadSources(undefined, true),
+    /unrequested report version/);
+  const ordinaryOwner = reportOwner(2, undefined, [null]);
+  delete ordinaryOwner.supportsCoreCapability;
+  const ignored = await new SourceGateway(ordinaryOwner).loadSources();
+  assert.equal(ignored[0].checkReports, undefined, 'history remains opt-in');
+  assert.deepEqual(ordinaryOwner.calls[0].params, {}, 'ordinary listing never requires diagnostic capability negotiation');
+}
+}
+}finally{for(const {orchestrator,owner}of owned){orchestrator.stopCheckSelected();for(const pending of owner.state?.pending?.values()??[])pending.reject(Error('fixture cleanup'));await Promise.allSettled([orchestrator.operationTail]);}currentOwner=undefined;}
+}
+const definitions={"followup-feedback": "followup-feedback actual scoped owner/gateway/storage path; controlled Core/OS ports", "streaming": "streaming actual scoped owner/gateway/storage path; controlled Core/OS ports", "mode-proof": "mode-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "stop": "stop actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-selection": "index-selection actual scoped owner/gateway/storage path; controlled Core/OS ports", "scale-selection": "scale-selection actual scoped owner/gateway/storage path; controlled Core/OS ports", "list-notifications": "list-notifications actual scoped owner/gateway/storage path; controlled Core/OS ports", "report-negotiation": "report-negotiation actual scoped owner/gateway/storage path; controlled Core/OS ports", "report-schema": "report-schema actual scoped owner/gateway/storage path; controlled Core/OS ports", "v1-fields": "v1-fields actual scoped owner/gateway/storage path; controlled Core/OS ports", "budget": "budget actual scoped owner/gateway/storage path; controlled Core/OS ports", "report-history": "report-history actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

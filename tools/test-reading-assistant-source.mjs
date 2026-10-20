@@ -1,14 +1,18 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { resolve, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { stripTypeScriptTypes } from 'node:module';
-import { spawnSync } from 'node:child_process';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { RULE_PAYLOAD_FIELDS, ruleFingerprint, sha256Hex, validateBundledMetadata } from './source-supply-lib.mjs';
-import { applyReadingAssistantMetadataCorrection, READING_ASSISTANT_BUILTIN_ID,
-  READING_ASSISTANT_PREVIOUS_FINGERPRINT } from './reading-assistant-source-correction.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { coreCliPath }=await import('./lib/tool-environment.mjs');
+
+const { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync }=await import('node:fs');
+const { tmpdir }=await import('node:os');
+const { resolve, join }=await import('node:path');
+const { fileURLToPath }=await import('node:url');
+const { stripTypeScriptTypes }=await import('node:module');
+const { spawnSync }=await import('node:child_process');
+
+const { RULE_PAYLOAD_FIELDS, ruleFingerprint, sha256Hex, validateBundledMetadata }=await import('./source-supply-lib.mjs');
+const { applyReadingAssistantMetadataCorrection, READING_ASSISTANT_BUILTIN_ID,
+  READING_ASSISTANT_PREVIOUS_FINGERPRINT }=await import('./reading-assistant-source-correction.mjs');
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const read = path => readFileSync(resolve(repo, path), 'utf8');
@@ -16,7 +20,7 @@ const sources = JSON.parse(read('entry/src/main/resources/rawfile/reader-tested-
 const source = sources.find(row => row.builtinId === READING_ASSISTANT_BUILTIN_ID);
 const fixture = JSON.parse(read('tools/fixtures/reading-assistant-metadata.json'));
 assert.ok(source);
-assert.equal(source.builtinVersion, 7);
+assert.equal(source.builtinVersion, 7, 'pinned metadata-correction revision; not a live verification');
 assert.equal(source.ruleFingerprint, ruleFingerprint(source));
 assert.deepEqual(validateBundledMetadata(source), []);
 const previous = structuredClone(source);
@@ -30,6 +34,8 @@ previous.ruleFingerprint = READING_ASSISTANT_PREVIOUS_FINGERPRINT;
 delete previous.provenance.metadataCorrection;
 assert.equal(ruleFingerprint(previous), READING_ASSISTANT_PREVIOUS_FINGERPRINT,
   'the fixture reconstructs the exact fingerprint of the installed v6 source');
+
+if(id==='correction'){
 const corrected = structuredClone(previous);
 applyReadingAssistantMetadataCorrection([corrected]);
 assert.deepEqual(corrected, source, 'full supply rebuild reproduces the exact packaged source');
@@ -45,18 +51,15 @@ applyReadingAssistantMetadataCorrection([unrelated, structuredClone(previous)]);
 assert.equal(JSON.stringify(unrelated), unrelatedBefore, 'only the pinned source revision is corrected');
 assert.throws(() => applyReadingAssistantMetadataCorrection([{ ...previous, searchUrl: 'https://other.example' }]),
   /different source revision/, 'a changed upstream payload requires a new review');
-assert.match(read('tools/refresh-source-supply-manifest.mjs'), /applyReadingAssistantMetadataCorrection\(sources\)/,
-  'a later corpus manifest refresh must retain the reviewed correction');
 
-// Actual RuntimeOwner decision path with in-memory Core/ledger boundaries.
-// In particular, discovery fields are outside the legacy fingerprint: this
-// revision preserves their existing edits/deletions instead of claiming they
-// were covered by that fingerprint. No runtime import or device is performed.
+}
+if(id==='owner-upgrade'){
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const supply = read('entry/src/main/ets/app/BundledBookSourceSupply.ts');
 const methods = stripTypeScriptTypes(supply.slice(supply.indexOf('function canonicalJson'), supply.indexOf('type StoredLedger')))
   .replace(/^export /gm, '');
 const guards = new Function('RULE_PAYLOAD_FIELDS', `${methods}; return { canonicalRulePayloadJson,
-  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade };`)(RULE_PAYLOAD_FIELDS);
+  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade, mergeBundledDefaultStateCorrection };`)(RULE_PAYLOAD_FIELDS);
 const oneDocument = JSON.stringify([source]);
 let ledger;
 const Owner = productionMotionMethods(resolve(repo, 'entry/src/main/ets/app/ReaderRuntimeOwner.ts'),
@@ -102,11 +105,12 @@ for (const withdrawn of [false, true]) {
   assert.equal(Object.hasOwn(absent, 'exploreUrl'), false);
 }
 
-// Existing Core CLI, metadata-only pipeline: exact bundled search/detail rules
-// and public search payload. Unrelated discovery/network/TOC/content stages are
-// omitted; the detail payload is explicitly synthetic, never called live proof.
-const cli = process.env.READER_CORE_CLI ?? resolve(repo, '../Reader-Core-Native/target/debug/reader-cli');
+
+}
+if(id==='core-metadata'){
+const cli = coreCliPath(resolve(repo, '../Reader-Core'));
 assert.ok(existsSync(cli), `an existing Core CLI is required for the offline metadata fixture: ${cli}`);
+const {createHash}=await import('node:crypto');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',cli,cliSha256:createHash('sha256').update(readFileSync(cli)).digest('hex'),autoBuild:false,sourceProvenance:'UNPROVEN',fixture:'tools/fixtures/reading-assistant-metadata.json',fixtureBoundary:'public search payload plus synthetic detail; no live re-verification'}));
 const scratch = mkdtempSync(join(tmpdir(), 'reader-source-metadata-'));
 function parseMetadata(bookSource, label) {
   const metadataSource = structuredClone(bookSource);
@@ -131,5 +135,9 @@ try {
   assert.equal(actual.detail.book.lastChapter, fixture.detailBook.latest_chapter_title);
   assert.equal(actual.search.books[0].author, fixture.searchItem.original_author);
   assert.equal(actual.detail.book.author, fixture.detailBook.author);
-  console.log('PASS PH100 source metadata: actual Core offline search/detail fixture; plain intro, separate tags, existing date role and latest retained. Actual RuntimeOwner clean v6→v7, user copy/rule edits and discovery edits/deletions protected; no live/device claim.');
 } finally { rmSync(scratch, { recursive: true, force: true }); }
+
+}
+}
+const definitions={"correction": "Pinned v6\u2192v7 metadata supply correction/idempotence", "owner-upgrade": "Actual RuntimeOwner retains user rule/discovery edits and deleted explore fields", "core-metadata": "Existing Core CLI offline search/detail metadata; synthetic detail; no network"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -2,8 +2,9 @@ import type { JsonObject } from '@reader/core-harmony';
 
 export interface RemoteReadingPositionAnchor { id: string; offset: number; }
 export interface RemoteReadingPositionContext {
-  bodyVersion: string;
-  processingVersion: string;
+  bodyVersion?: string;
+  processingVersion?: string;
+  directoryTargetProof?: JsonObject;
   anchors: RemoteReadingPositionAnchor[];
 }
 export interface RemoteReadingPositionScope {
@@ -62,8 +63,10 @@ export function encodeRemotePositionContext(context: RemoteReadingPositionContex
 }
 export function captureRemotePositionContext(context: RemoteReadingPositionContext | undefined): RemoteReadingPositionContext | undefined {
   if (context === undefined) return undefined;
-  encodeRemotePositionContext(context);
-  return { bodyVersion: context.bodyVersion, processingVersion: context.processingVersion,
+  if (context.bodyVersion !== undefined || context.processingVersion !== undefined) encodeRemotePositionContext(context);
+  else if (context.directoryTargetProof === undefined || context.anchors.length !== 0) throw new Error('position context has no proof');
+  return { ...(context.directoryTargetProof === undefined ? {} : { directoryTargetProof:
+    JSON.parse(JSON.stringify(context.directoryTargetProof)) as JsonObject }), bodyVersion: context.bodyVersion, processingVersion: context.processingVersion,
     anchors: context.anchors.map((anchor: RemoteReadingPositionAnchor): RemoteReadingPositionAnchor => ({ id: anchor.id, offset: anchor.offset })) };
 }
 export function decodeRemotePositionScope(value: unknown): RemoteReadingPositionScope | undefined {
@@ -90,6 +93,7 @@ export function appendExpectedPositionVersions(params: JsonObject, bodyVersion?:
 export function decodeRemotePositionMigration(value: unknown, sourceId: string, bookId: string,
   bodyVersion: string | undefined, processingVersion: string | undefined,
   context?: RemoteReadingPositionContext): RemoteReadingPositionMigration | undefined {
+  if (context?.bodyVersion === undefined) context = undefined;
   if (value === undefined) {
     if (context !== undefined && (context.bodyVersion !== bodyVersion || context.processingVersion !== processingVersion)) {
       throw new Error('chapter response changed position versions without a migration receipt');
@@ -135,4 +139,11 @@ export function decodeRemotePositionMigration(value: unknown, sourceId: string, 
   }
   return { status, reason: optionalText(raw['reason'], 'reason'), previousBodyVersion, bodyVersion: nextBodyVersion,
     previousProcessingVersion, processingVersion: nextProcessingVersion, anchors, progress };
+}
+
+/** Wire directory authority independently from optional body-position authority. */
+export function appendReadingSelectionContext(params: JsonObject, context?: RemoteReadingPositionContext): void {
+  if (context === undefined) return;
+  if (context.bodyVersion !== undefined) params['positionContext'] = encodeRemotePositionContext(context);
+  if (context.directoryTargetProof !== undefined) params['directoryTargetProof'] = context.directoryTargetProof;
 }

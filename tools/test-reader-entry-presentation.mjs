@@ -11,10 +11,11 @@ const gatewayText = readFileSync(new URL('ReaderSettingsGateway.ts', reading), '
 const stores = new WeakMap();
 let reads = 0;
 const preferences = { getPreferences: async owner => stores.get(owner) };
-const dependencies = { preferences, ReaderThemeHost: { prepareUserChange: async () => {} }, ...settings };
-const Gateway = new Function(...Object.keys(dependencies),
+const dependencies = { preferences, ReaderThemeHost: { prepareUserChange: async () => {} }, ReaderRuntimeOwner: { isCurrent: owner => stores.has(owner) }, ...settings };
+const makeGateway = () => new Function(...Object.keys(dependencies),
   `${stripTypeScriptTypes(gatewayText.slice(gatewayText.indexOf('const READER_SETTINGS_PREFERENCES_NAME'))
     .replace('export class ', 'class '))}; return ReaderSettingsGateway;`)(...Object.values(dependencies));
+const Gateway = makeGateway();
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve)); };
 function runtime(snapshot) {
@@ -36,44 +37,47 @@ const previousReads = reads;
 await readerGateway.load();
 assert.equal(reads, previousReads, 'opening another reader does not read the same preference again');
 const other = runtime(settings.createDefaultReaderSettingsSnapshot());
-assert.equal(new Gateway(other.owner).current(), undefined, 'runtime owners cannot inherit another application instance');
+assert.deepEqual(new Gateway(other.owner).current(), saved, 'warm Runtime shares this application Preferences-file current snapshot');
 
 const write = deferred(); first.store.flush = () => write.promise;
 const updated = settings.setReaderSettingsToggle(saved, 'extendIntoCutout', true);
 const saving = gateway.update(updated);
 await settle();
-assert.equal(readerGateway.current().extendIntoCutout, false, 'pending persistence does not masquerade as confirmed settings');
+assert.equal(readerGateway.current().extendIntoCutout, true, 'pending persistence retains current accepted choice');
+assert.equal(readerGateway.writeFacts().pendingReconciliation, true, 'current snapshot is independent of confirmed flush');
 let readCompleted = false;
 const concurrentRead = readerGateway.load().then(value => { readCompleted = true; return value; });
-await settle(); assert.equal(readCompleted, false);
+await settle(); assert.equal(readCompleted, true, 'warm reading does not wait for unreturned flush');
 write.resolve(); await saving;
 assert.equal((await concurrentRead).extendIntoCutout, true);
 first.store.flush = async () => { throw Error('disk failure'); };
 await assert.rejects(gateway.update(saved), /disk failure/);
-assert.equal(readerGateway.current().extendIntoCutout, true, 'failed writes retain the admitted setting');
+assert.equal(readerGateway.current().extendIntoCutout, false, 'unknown writes retain their current accepted setting');
+assert.equal(readerGateway.writeFacts().pendingReconciliation, true);
 first.store.flush = async () => {};
 await gateway.update(saved, true);
 assert.equal(readerGateway.current().extendIntoCutout, false, 'configuration reset updates the same snapshot');
 
-const cold = runtime(saved), coldRead = deferred(), coldGateway = new Gateway(cold.owner);
+const ColdGateway = makeGateway(), cold = runtime(saved), coldRead = deferred(), coldGateway = new ColdGateway(cold.owner);
 let coldPuts = 0;
 cold.store.get = () => coldRead.promise;
 cold.store.put = async () => { coldPuts++; };
 cold.store.flush = async () => { throw Error('pending flush failed'); };
 const initialRead = coldGateway.load();
 await settle();
-const failedUpdate = new Gateway(cold.owner).update(updated);
+const failedUpdate = new ColdGateway(cold.owner).update(updated);
 await settle();
 assert.equal(coldPuts, 0, 'the first read/migration and updates share one access queue');
 coldRead.resolve(JSON.stringify(saved));
 await initialRead;
 await assert.rejects(failedUpdate, /pending flush failed/);
-assert.equal(coldGateway.current().extendIntoCutout, false,
-  'an overlapping failed put cannot become the permanently reused entry setting');
+assert.equal(coldGateway.current().extendIntoCutout, true,
+  'an overlapping unknown put retains the accepted entry setting');
+assert.equal(coldGateway.writeFacts().pendingReconciliation, true);
 
 const file = new URL('LocalReadingExperience.ets', reading);
 const coordinatorRequests = [];
-const Owner = productionMotionMethods(file, ['restoreEntryPresentation', 'loadReaderSettingsSnapshot', 'applyInitialReaderWindowPolicy'], {
+const Owner = productionMotionMethods(file, ['restoreEntryPresentation', 'loadReaderSettingsSnapshot', 'applyInitialReaderWindowPolicy', 'captureReaderSettingsAdmission', 'retryPendingReaderSettings', 'notifyReaderSettingsSavePending'], {
   ReaderWindowCoordinator: { requestReaderWindowPolicy: request => { coordinatorRequests.push(request); return Promise.resolve(); } },
 });
 for (const theme of READER_THEME_DEFINITIONS) {
@@ -93,7 +97,7 @@ for (const cached of [false, true]) for (const outcome of ['current-failure', 'n
   const owner = Object.assign(new Owner(), {
     readerSettingsLoaded: cached, readerSettingsMutationGeneration: 0, mounted: true,
     readerSettingsSnapshot: cached ? saved : settings.createDefaultReaderSettingsSnapshot(),
-    readerSettingsGateway: { load: async () => { assert.equal(cached, false, 'restored settings need no repeat disk read'); return saved; } },
+    readerSettingsGateway: { writeFacts: () => ({pendingReconciliation:false}), load: async () => { assert.equal(cached, false, 'restored settings need no repeat disk read'); return saved; } },
     isSessionActive() { return this.mounted; }, configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {},
     applyReaderWindowPolicy: value => { applied.push(value); return applied.length === 1 ? window.promise : Promise.resolve(); },
     safeWindowSettingsFallback: value => ({ ...value, screenDirection: 'system' }),
@@ -114,4 +118,4 @@ const source = readFileSync(file, 'utf8');
 const appearanceRestore = source.indexOf('this.restoreEntryPresentation();', source.indexOf('aboutToAppear(): void'));
 assert.ok(appearanceRestore < source.indexOf('this.applyWindowChrome();', appearanceRestore),
   'restored paper must own the first system chrome request');
-console.log('PASS entry presentation: all themes, shared confirmed settings, owner isolation, reset/failure, nonblocking window calls and stale callback guards.');
+console.log('PASS entry presentation: all themes, shared current/confirmed settings, warm Runtime sharing, reset/failure, nonblocking window calls and stale callback guards.');

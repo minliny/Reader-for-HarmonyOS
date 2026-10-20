@@ -1,0 +1,186 @@
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"icon-current-admission": {"description": "实际icon公开Props/name/eligible/retired与当前parent callback", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createHash } = await import('node:crypto');
+const { createRequire } = await import('node:module');
+const { iconButtonControls, iconButtonSource, iconButtonSpecSource } = await import('./lib/reader-icon-button-probe.mjs');
+const { readerFoundationTokens, foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const readerFontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
+
+const read = file => readFileSync(file, 'utf8'), root = 'entry/src/main/ets/features/';
+const before = read('tools/fixtures/icon-button-family/ReaderIconButton.before.ets');
+const golden = JSON.parse(read('tools/fixtures/icon-button-family/original-consumers.json'));
+const approved = JSON.parse(read('tools/fixtures/icon-button-family/approved-bookshelf-manga-20261005.json'));
+const searchScale = JSON.parse(read('tools/fixtures/design/search-system-font-scale-successor-20261015.json'));
+const consumerMethods = [...golden.methods.filter(row => row.file !== approved.file), approved];
+
+const sdk = resolveEtsLoaderRoot();
+const req = createRequire(import.meta.url), ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_checker.js').compilerOptions;
+const syntax = req(sdk + '/lib/validate_ui_syntax.js');
+const parse = source => ts.createSourceFile(virtualFilePath('IconConsumer.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const ids = ['toolbar-standard', 'toolbar-wide', 'navigation-back', 'toolbar-compact'];
+const tuples = [[44, 24, 22], [44, 44, 22], [32, 20, 16], [44, 20, 22]];
+const expected = { 'bookshelf/BookshelfShell.ets': ['floating-more'],
+  'discover/DiscoverPage.ets': ['toolbar-standard'], 'search/SearchPage.ets': ['navigation-back'], 'source/SourceManagementPage.ets': ['toolbar-compact'] };
+const labels = { 'bookshelf/BookshelfShell.ets': ['更多'], 'discover/DiscoverPage.ets': ['刷新'],
+  'search/SearchPage.ets': ['返回'], 'source/SourceManagementPage.ets': ['书源工具'] };
+const semanticAttributes = new Set(['enabled', 'focusable', 'accessibilityText', 'accessibilityRole']);
+const physical = node => Object.fromEntries(['type', 'create', 'width', 'height', 'borderRadius', 'backgroundColor'].filter(key => Object.hasOwn(node, key)).map(key => [key, node[key]]));
+const metrics = createDefaultReaderWindowMetrics();
+
+function iconInputs(source) {
+  const tree = parse(source); assert.equal(tree.parseDiagnostics.length, 0);
+  const inputs = [];
+  const visit = node => {
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression.getText(tree) === 'ReaderIconButton') inputs.push(node.arguments[0]);
+    ts.forEachChild(node, visit);
+  }; visit(tree); return { tree, inputs };
+}
+function verifyConsumer(source, file) {
+  const { tree, inputs } = iconInputs(source);
+  assert.equal(inputs.length, expected[file].length, 'every actual declaration remains present');
+  for (const [i, input] of inputs.entries()) {
+    assert.ok(ts.isObjectLiteralExpression(input), 'actual icon props object');
+    assert.deepEqual(input.properties.map(p => p.name.getText(tree)).sort(),
+      (file.startsWith('discover/') ? ['accessibilityLabel', 'actionEnabled', 'icon', 'onTap', 'specId'] :
+        ['accessibilityLabel', 'icon', 'onTap', 'specId']), 'no free icon appearance input');
+    assert.equal(input.properties.find(p => p.name.getText(tree) === 'specId').initializer.text, expected[file][i], 'exact finite real consumer');
+    assert.equal(input.properties.find(p => p.name.getText(tree) === 'accessibilityLabel').initializer.text, labels[file][i]);
+    if (file.startsWith('discover/')) assert.equal(input.properties.find(p => p.name.getText(tree) === 'actionEnabled').initializer.getText(tree), '!this.presentation.loading', 'actual business busy source');
+  }
+}
+for (const frozen of consumerMethods) {
+  const source=read(root+frozen.file);
+  verifyConsumer(source, frozen.file);
+  for (const property of ['boxSize', 'iconSize', 'radius']) {
+    const { tree: t, inputs } = iconInputs(source);
+    for (const input of inputs) {
+      const negative = source.slice(0, input.getStart(t) + 1) + property + ': 99,' + source.slice(input.getStart(t) + 1);
+      assert.throws(() => verifyConsumer(negative, frozen.file), /no free icon appearance input/, 'literal99 cannot return at any of five actual declarations');
+    }
+  }
+}
+assert.doesNotMatch(iconButtonSource, /@Prop\s+(?:boxSize|iconSize|radius)\s*:/, 'remove all free producer fields');
+let comparisons = 0;
+assert.throws(() => iconButtonControls().resolveReaderIconButtonSpec('private99'), /Unknown ReaderIconButton specification/);
+{
+  const actual = iconButtonControls();
+  const invalid = new actual.icon.Component(undefined, { icon: 'actual-icon', specId: 'private99' });
+  assert.throws(() => invalid.initialRender(), /Unknown ReaderIconButton specification/, 'invalid variant is rejected at actual native rendering');
+}
+for (const accessibilityLabel of [undefined, '', '   ']) {
+  const actual = iconButtonControls(); let calls = 0;
+  const params = { icon: 'anonymous-icon', onTap: () => calls++ };
+  if (accessibilityLabel !== undefined) params.accessibilityLabel = accessibilityLabel;
+  const actor = new actual.icon.Component(undefined, params); actor.aboutToAppear(); actor.initialRender();
+  const hit = actual.nodes(actor).find(n => n.onClick);
+  assert.equal(hit.enabled, false); assert.equal(hit.focusable, false); hit.onClick(); assert.equal(calls, 0, 'unnamed actual icon fails closed');
+}
+{
+  // Guard-removal control uses the whole production component and actual SDK.
+  // Native disabled attributes do not replace handler admission for retained
+  // physical callbacks. No alternate touch/click implementation is introduced.
+  const removed = iconButtonSource.replace('if (this.canAct()) this.onTap();', 'this.onTap();');
+  assert.notEqual(removed, iconButtonSource);
+  for (const source of [iconButtonSource, removed]) {
+    const actual = iconButtonControls({ source }); let calls = 0;
+    const actor = new actual.icon.Component(undefined, { icon: 'icon', accessibilityLabel: '当前动作', actionEnabled: false, onTap: () => calls++ });
+    actor.aboutToAppear(); actor.initialRender(); const hit = actual.nodes(actor).find(n => n.onClick);
+    hit.onClick(); actor.aboutToDisappear(); hit.onClick();
+    assert.equal(calls, source === iconButtonSource ? 0 : 2, 'disabled/retired guard removal exposes real callback violation');
+  }
+}
+
+function parent(file, { legacy = false, scheme = 'day', specSource = iconButtonSpecSource, allowNewSearchActor = false } = {}) {
+  const p = iconButtonControls({ source: legacy ? before : iconButtonSource, specSource }), base = foundationControls({});
+  p.hooks.allowEmptyBranchAdmission = allowNewSearchActor;
+  Object.assign(p.dependencies, base.dependencies, readerFoundationTokens, readerTypographyRoles, readerFontFamilies,
+    { ReaderIconButton: p.icon.Component, resolveReaderIconButtonSpec: p.resolveReaderIconButtonSpec, readerAppColor,
+      ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight, bookshelfTemporaryGeneration: 0 });
+  const sources = { AppTopBar: read(root + 'common/AppTopBar.ets'), PageBackBar: read(root + 'common/PageBackBar.ets'), ReaderSearchField: read(root + 'common/ReaderSearchField.ets') };
+  Object.assign(p.hooks.childSources, base.hooks.childSources, sources);
+  for (const name of ['AppTopBar', 'PageBackBar']) syntax.builderParamObjectCollection.set(name, new Set(['trailing']));
+  for (const [name, source] of Object.entries(sources)) p.dependencies[name] = p.consumer(source, boundedMembers(source)).constructor;
+  const frozen = consumerMethods.find(row => row.file === file), live = read(root + file);
+  let source = live;
+  if (legacy) {
+    const tree = parse(live), owner = tree.statements.find(ts.isStructDeclaration), member = owner.members.find(n => n.name?.text === frozen.name);
+    source = live.slice(0, member.getStart(tree)) + frozen.source + live.slice(member.end);
+  }
+  const names = [frozen.name]; if (file.startsWith('bookshelf/')) names.push('moreOpenAction');
+  const owner = p.consumer(source, names); let tap = 0;
+  Object.assign(owner, { appThemeScheme: scheme, onSearchRequested: () => tap++, onRefresh: () => tap++, onBack: () => tap++, onOpenTools: () => tap++,
+    mounted: true, temporaryBackIdentity: 'bookshelf:1', navigationGeneration: 1, moreMenuVisible: false,
+    focusInputOnAppear: false, keyword: '原草稿', viewState: { keywordDraft: '原草稿' }, isTablet: false,
+    presentation: { kind: 'initial', loading: false }, isSweeping: () => false, canSubmit: () => true, contentFrame: () => ({ width: 330 }), submitSearch() {}, searchActionLeading() {}, onStop() {} });
+  owner[frozen.name](); const actors = p.walk(owner).filter(c => c instanceof p.icon.Component);
+  assert.equal(actors.length, expected[file].length, 'actual parent→native child at all authored sites');
+  return { p, owner, actors, tap: () => tap };
+}
+for (const file of Object.keys(expected)) for (const scheme of ['day', 'night']) {
+  const next=parent(file,{scheme});
+  for (let i = 0; i < next.actors.length; i++) {
+
+    const event = next.p.nodes(next.actors[i]).find(n => n.onClick); event.onClick();
+    assert.equal(event.accessibilityText, labels[file][i]); assert.equal(event.accessibilityRole, 'AccessibilityRoleType.BUTTON');
+    assert.equal(event.enabled, true); assert.equal(event.focusable, true);
+    if (file.startsWith('bookshelf/')) {
+      assert.equal(next.owner.moreMenuVisible, true); next.owner.moreMenuVisible = false;
+      next.owner.temporaryBackIdentity = 'bookshelf:2'; event.onClick(); assert.equal(next.owner.moreMenuVisible, false, 'old physical More preserves captured identity refusal');
+    } else assert.equal(next.tap(), 1, file + ': actual original business callback');
+    comparisons++;
+  }
+}
+{
+  const current = parent('discover/DiscoverPage.ets'), actor = current.actors[0], hit = current.p.nodes(actor).find(n => n.onClick);
+  current.owner.presentation = { kind: 'loading', loading: true };
+  current.owner.replay(); current.p.properties.flush();
+  assert.equal(current.p.walk(current.owner).filter(c => c instanceof current.p.icon.Component)[0], actor, 'real busy projection retains the shared icon');
+  assert.equal(hit.enabled, false); assert.equal(hit.focusable, false); hit.onClick(); assert.equal(current.tap(), 0, 'loading business fact blocks fresh or retained click');
+  current.owner.presentation = { kind: 'ready', loading: false };
+  current.owner.replay(); current.p.properties.flush();
+  assert.equal(hit.enabled, true); assert.equal(hit.focusable, true); hit.onClick(); assert.equal(current.tap(), 1, 'settled current fact permits refresh');
+}
+{
+  const current = parent('bookshelf/BookshelfShell.ets', { allowNewSearchActor: true }), generations = [];
+  current.owner.onSearchRequested = generation => generations.push(generation);
+  const oldHeader = [...current.owner.children.values()].find(c => c.title === '书架');
+  const oldHit = current.p.nodes(oldHeader).find(n => n.type === 'Stack' && n.width === 44 && n.onClick);
+  assert.ok(oldHit, 'approved AppTopBar owns the real 44vp leading search');
+  oldHit.onClick(); assert.deepEqual(generations, [1]);
+  current.owner.navigationGeneration = 2;
+  current.owner.replay(); current.p.properties.flush();
+  const newHeader = [...current.owner.children.values()].find(c => c !== oldHeader && c.title === '书架');
+  assert.ok(newHeader, 'only the temporary toolbar actor is keyed by navigation');
+  const newHit = current.p.nodes(newHeader).find(n => n.type === 'Stack' && n.width === 44 && n.onClick);
+  oldHit.onClick(); newHit.onClick();
+  assert.deepEqual(generations, [1, 2], 'old leading callback is refused while the current header carries the new navigation');
+  // This SDK fixture intentionally models retained old closures. The real
+  // native header removal and persistent shelf Scroll remain separate gates.
+}
+
+const changed = iconButtonSpecSource.replace('boxSize: 44, iconSize: 24, radius: 22', 'boxSize: 46, iconSize: 26, radius: 23');
+assert.notEqual(changed, iconButtonSpecSource);
+for (const file of Object.keys(expected)) {
+  const current = parent(file, { specSource: changed });
+  for (const actor of current.actors) {
+    const image = current.p.nodes(actor).find(n => n.type === 'Image'), hit = current.p.nodes(actor).find(n => n.onClick);
+    assert.equal(image.width, actor.specId === 'toolbar-standard' ? 26 : current.p.resolveReaderIconButtonSpec(actor.specId).iconSize);
+    assert.equal(hit.width, actor.specId === 'toolbar-standard' ? 46 : current.p.resolveReaderIconButtonSpec(actor.specId).boxSize);
+  }
+}
+console.log(`PASS F01 actual SDK: ${comparisons} original/current four-spec and four retained/approved-site day/night native comparisons; exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, approved AppTopBar leading Search navigation fence, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 12 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
+
+}

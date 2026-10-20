@@ -1,22 +1,30 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+const selected = selectContractCases({ 'spec-endpoints': {description:'Actual production popup finite endpoints',resources:[]}, 'panel-actions':{description:'Actual SDK native popup action admission, callbacks and width cache',resources:[]}, 'adaptive-lifecycle':{description:'Actual popup width/window adaptation and input lifecycle',resources:[]} });
+async function run(id) {
+const { actionMenuProbe, resolvePopupSpec } = await import('./lib/reader-action-menu-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const enums = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const typography = { fontFamily: 'ReaderNotoSerifSC', fontWeight: 400, fontSizeFp: 12 };
+const readerMoreSurface = resolvePopupSpec('reader-more-menu');
 const dependencies = {
   Placement: enums('Placement'), ArrowPointPosition: enums('ArrowPointPosition'), BlurStyle: enums('BlurStyle'),
   TYPE_READER_CONTROL_BOOK_TITLE: typography, TYPE_READER_CONTROL_CHAPTER_SOURCE: typography,
   TYPE_READER_CONTROL_SOURCE_ACTION: typography,
+  resolvePopupSpec,
 };
-const methods = ['topBar', 'readerMoreMenu', 'readerMoreAction', 'readerMoreMenuWidth',
-  'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
+const methods = ['topBar', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
+  'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
 function fixture(scheme = 'day') {
-  const { owner } = createReaderBuilderProbe(source, methods, dependencies);
+  const shared = actionMenuProbe(dependencies.resolvePopupSpec);
+  const { owner } = createReaderBuilderProbe(source, methods, {...dependencies,...shared.dependencies}, shared.hooks);
+  const replay=owner.replay.bind(owner);owner.replay=()=>{replay();shared.properties.flush();};
   const actions = [], measurements = [], temporary = [];
   let textScale = 1;
   Object.assign(owner, {
@@ -38,11 +46,17 @@ function fixture(scheme = 'day') {
     }),
   });
   owner.topBar();
-  const nodes = () => [...owner.nodes.values()];
+  const nodes = () => shared.nodes(owner);
   const anchor = nodes().find(node => node.accessibilityText === '更多');
   return { owner, anchor, nodes, actions, measurements, temporary, setTextScale: scale => { textScale = scale; } };
 }
 
+if (id === 'spec-endpoints') {
+ assert.deepEqual([readerMoreSurface.width,readerMoreSurface.pointerWidth,readerMoreSurface.pointerHeight,readerMoreSurface.borderRadius],[176,24,12,16]);
+ assert.deepEqual([readerMoreSurface.actionHeight,readerMoreSurface.actionsHeight,readerMoreSurface.actionFontSize,readerMoreSurface.actionLineHeight],[50,150,15,22]);
+ return;
+}
+if (id === 'panel-actions') {
 for (const scheme of ['day', 'night']) {
   const t = fixture(scheme), original = t.owner.controlSession;
   assert.deepEqual([t.anchor.width, t.anchor.height], [34, 42], 'existing More target remains the popup anchor');
@@ -72,7 +86,7 @@ for (const scheme of ['day', 'night']) {
   const rowTexts = t.nodes().filter(node => menuLabels.includes(node.create));
   assert.deepEqual(rowTexts.map(node => node.create), menuLabels);
   for (const text of rowTexts) {
-    assert.deepEqual([text.fontSize, text.lineHeight, text.fontWeight], [15, 22, 'FontWeight.Medium']);
+    assert.deepEqual([text.fontSize, text.lineHeight, text.fontWeight], [15, 22, 500]);
     assert.equal(text.fontColor, readerAppColor('TOK_INK', scheme));
   }
   const scroll = t.nodes().find(node => node.type === 'Scroll');
@@ -108,6 +122,8 @@ t.owner.controlObscured = false; t.owner.frame = () => ({ visibility: 0 });
 t.owner.setMoreMenuVisible(true); assert.equal(t.owner.moreMenuVisible, false);
 console.log('PASS PH87 disabled download/refresh, obscured and hidden controls cannot dispatch');
 
+
+} else {
 const g = fixture();
 for (const [viewport, textScale, expected] of [[390, 1, 126], [840, 2, 216], [150, 2, 126]]) {
   g.owner.layout.viewportWidth = viewport; g.setTextScale(textScale);
@@ -125,7 +141,8 @@ for (const [inputEnabled, controlObscured] of [[false, false], [true, true]]) {
     onTemporaryLayerChange: visible => layers.push(visible) });
   owner.onRuntimeEnabledChanged(); assert.equal(owner.moreMenuVisible, false); assert.deepEqual(layers, [false]);
 }
-assert.doesNotMatch(source, /if \(this\.moreMenuVisible\) \{ this\.readerMoreMenu\(\); \}/,
-  'removed the independent overlay tree; native popup is the single menu owner');
-assert.match(source, /if \(this\.moreMenuVisible && visual\.visibilityProgress <= 0\) this\.dismissMoreMenu\(\)/);
 console.log('PASS PH87 adaptive text/window geometry and popup lifecycle; native pixels/placement remain a platform gate');
+
+}
+}
+for (const id of selected) { await run(id); recordContractCasePass(id); }

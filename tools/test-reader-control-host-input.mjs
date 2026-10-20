@@ -1,10 +1,18 @@
-import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import * as hostPolicy from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
-import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import * as rapidPolicy from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-import * as backdropPolicy from '../entry/src/main/ets/features/reading/ReaderControlBackdropTouch.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'portable-protocol':{description:'Actual ordinary Host input/backdrop methods and queued preparation priority',resources:[]},
+ 'sdk-members':{description:'Required SDK V1 transform and dropped-getter negative reproduction',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { resolveEtsLoaderRoot, virtualFilePath }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { existsSync, readFileSync }=await import('node:fs');
+const { createRequire, stripTypeScriptTypes }=await import('node:module');
+const hostPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+const sessionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const rapidPolicy=await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
+const backdropPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlBackdropTouch.ts');
 
 const source = readFileSync(new URL(
   '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
@@ -120,23 +128,15 @@ function checkBackdrop(HostClass) {
   assert.equal(noDown.dismissCalls, 0, 'an orphan UP cannot close controls');
 }
 
-assert.doesNotMatch(source, /private get (?:controlVisible|controlPage|controlShellExitArmed)\(/,
-  'ArkUI V1 drops hand-written accessors from component members');
-assert.doesNotMatch(source, /this\.(?:controlVisible|controlPage|controlShellExitArmed)\b(?!\()/,
-  'all consumers must call the supported ordinary methods');
-assert.match(source,
-  /tocEntries: readerControlHostVisible\(this\.controlSession\) \|\| this\.controlDirectoryDataRetained\s*\?/,
-  'directory data binding follows the linked session while retaining its identity through dismiss');
-checkInputGate(Host);
-checkBackdrop(Host);
-
+if(selectedCase==='portable-protocol'){checkInputGate(Host);checkBackdrop(Host);}
 // Optional, read-only SDK member transformation. No Hvigor/HAP is built and no
 // device is touched. Portable gates above still run on machines without SDK.
 // We intentionally omit build(): this tests component-member preservation only,
 // and accepts only the expected "missing build" diagnostic from the SDK.
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-if (existsSync(`${sdk}/lib/process_component_class.js`)) {
+if(selectedCase==='sdk-members'){
+const sdk = resolveEtsLoaderRoot();
+assert.ok(existsSync(`${sdk}/lib/process_component_class.js`),'selected SDK member case requires installed ETS loader');
+{
   const require = createRequire(import.meta.url);
   const ts = require(`${sdk}/node_modules/typescript`);
   const compiler = require(`${sdk}/lib/process_component_class.js`);
@@ -145,9 +145,9 @@ if (existsSync(`${sdk}/lib/process_component_class.js`)) {
   main.partialUpdateConfig.partialUpdateMode = true;
   function compileMembers(componentMethods) {
     utils.storedFileInfo.setCurrentArkTsFile();
-    const file = ts.createSourceFile('/tmp/ReaderControlInputProbe.ets',
+    const file = ts.createSourceFile(virtualFilePath('ReaderControlInputProbe.ets'),
       `@Component struct ReaderControlInputProbe { ${componentMethods} }`,
-      ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
+      ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
     const diagnostics = [];
     let output;
     const result = ts.transform(file, [context => node => {
@@ -176,7 +176,9 @@ if (existsSync(`${sdk}/lib/process_component_class.js`)) {
     'reproduces the exact missing control gate on the SDK-transformed Host');
   assert.equal(legacy.rapidPageTurnState.pendingDelta, -1, 'legacy compiled control tap enqueues previous page');
   console.log('Reader control Host: actual SDK V1 member transform reproduces dropped accessor; ordinary-method input/backdrop gates PASS');
-} else {
-  console.log('Reader control Host: SDK member-transform check SKIPPED (ETS loader not available)');
+}
 }
 console.log('Reader control Host input: actual production methods PASS (not device hit-testing/visual acceptance)');
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

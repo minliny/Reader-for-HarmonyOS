@@ -1,2 +1,0 @@
-rustfmt scoped --check: PASS
-git diff --check: PASS

@@ -1,0 +1,733 @@
+{
+  "recordedAt": "2026-09-30T16:56:19.698337+00:00",
+  "scope": "UI header/empty/error/scroll/theme/reading title and known fix propagation; not all Reader features or device states",
+  "sourceSnapshots": {
+    "main": {
+      "root": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "files": {
+        "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets": "55efbe4f8fc0119c47477db4488f8dcc12d3974a5b4cb5f42eeb4fdebdef2320",
+        "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets": "d134b4cd7777e43a4550e8f391eb2501fbec5666732cad0bd16fc2fb603cc104",
+        "entry/src/main/ets/features/common/PageBackBar.ets": "04fae0fe8d07920d9019c4784962f305338c29c412223d8b52562a929e75822d",
+        "entry/src/main/ets/features/settings/SettingsPage.ets": "03fc151e6ce46b5b1b7a30d22f720d010419cebfdb6b05158dd58126098b2c30",
+        "entry/src/main/ets/features/reading/ReadingSurface.ets": "3179bf35517be34a6a0244b660239e74ee520f5f0d72496839b19be5691ca7d6",
+        "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "08d8c55780feba4905582f97ba933fc9fd8d385604d0eede5eff185f4c1f4e03",
+        "entry/src/main/ets/features/reading/ReadingParagraphProjection.ts": "8e6e1fca851d0298bdcff20eea223f9e01540e23ee3fae6cc98622b6d9948848",
+        "tools/test-phone-layout-figma-regressions.mjs": "2af86a9ccdfa06c938a03b12475e816155bf0b0e6d3cffcd030703444b8e066a",
+        "tools/test-app-shell-safe-geometry.mjs": "d756e295340b49c3297c206bb743cc9839681d3c092c3faa34c347de2ec4e0f5",
+        "tools/test-bookshelf-physical-feedback.mjs": "73ae3fe49e570fce961dbd738b96cda380a35168141a7595207edf8efbeffe85"
+      }
+    },
+    "lane": {
+      "root": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+      "files": {
+        "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets": "195f3963fdca154eb1403693a90a0e014e5d9981ef831e8de42b949c69e8208b",
+        "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets": "d134b4cd7777e43a4550e8f391eb2501fbec5666732cad0bd16fc2fb603cc104",
+        "entry/src/main/ets/features/common/PageBackBar.ets": "1d413e42038d7bf84eccc9f55fd75555ccd9c4a815a176e98dec2ad0a91e900a",
+        "entry/src/main/ets/features/settings/SettingsPage.ets": "7995c3ee22aab69d651e3c08626294ba485596be4fea667aa6030761461128e9",
+        "entry/src/main/ets/features/reading/ReadingSurface.ets": "c03c5863e0344f9266d26fa71468e4f3ac35fb642f9d30b6459df350d8a03ea8",
+        "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "e2501eb9d22c6e04050163e89995812e4581ef7f6086500ea26e7c4f9102b939",
+        "entry/src/main/ets/features/reading/ReadingParagraphProjection.ts": "c186c77a6c607da686add8429a9496856d55be7d1b8fff4b047aaf7c16796418",
+        "tools/test-phone-layout-figma-regressions.mjs": "2af86a9ccdfa06c938a03b12475e816155bf0b0e6d3cffcd030703444b8e066a",
+        "tools/test-app-shell-safe-geometry.mjs": "d756e295340b49c3297c206bb743cc9839681d3c092c3faa34c347de2ec4e0f5",
+        "tools/test-bookshelf-physical-feedback.mjs": "c7ddf23a54875416488e9d9ed91e046e92d76c4532c447935623beab98c6eb74"
+      }
+    }
+  },
+  "themeComparisons": {
+    "method": "Existing main tests; only relative import and production source read paths rebound to each workspace. Real SDK emitted observer replay, no native scheduling/pixel claim.",
+    "tests": {
+      "test-theme-page-back-bar.mjs": "07ee34659a8409f872ee14348f0892d22f4302ce5fa8c4bdfc3a8b5243979e6a",
+      "test-settings-theme-icons.mjs": "d0b3c7d92e2c08c2ffaf0fa671528daf98c7050ce870cf0aa239a79e912d263e"
+    },
+    "workspaces": {
+      "main": {
+        "root": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+        "head": "2a21ed02f5ab6e552b1945a7ec651405f61e7319",
+        "files": {
+          "entry/src/main/ets/features/common/PageBackBar.ets": "04fae0fe8d07920d9019c4784962f305338c29c412223d8b52562a929e75822d",
+          "entry/src/main/ets/features/settings/SettingsPage.ets": "03fc151e6ce46b5b1b7a30d22f720d010419cebfdb6b05158dd58126098b2c30",
+          "tools/lib/reader-control-builder-probe.mjs": "e96a9b4606fcbb93a2cddd4f1f677673e211ae2f56617b2267f29aedca969dbd",
+          "entry/src/main/ets/features/common/ReaderThemeRegistry.ts": "a5eb4a3f8d62b6e168d14c2e1ba29fa3f244d110b5cc8a00dbcc6077dfb4841e"
+        }
+      },
+      "lane": {
+        "root": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+        "head": "bf8df66253a40cc08ef82dda55793aa30c337c55",
+        "files": {
+          "entry/src/main/ets/features/common/PageBackBar.ets": "1d413e42038d7bf84eccc9f55fd75555ccd9c4a815a176e98dec2ad0a91e900a",
+          "entry/src/main/ets/features/settings/SettingsPage.ets": "7995c3ee22aab69d651e3c08626294ba485596be4fea667aa6030761461128e9",
+          "tools/lib/reader-control-builder-probe.mjs": "e96a9b4606fcbb93a2cddd4f1f677673e211ae2f56617b2267f29aedca969dbd",
+          "entry/src/main/ets/features/common/ReaderThemeRegistry.ts": "a5eb4a3f8d62b6e168d14c2e1ba29fa3f244d110b5cc8a00dbcc6077dfb4841e"
+        }
+      }
+    },
+    "results": [
+      {
+        "workspace": "main",
+        "test": "test-theme-page-back-bar.mjs",
+        "exitCode": 0,
+        "seconds": 0.553,
+        "script": "/private/tmp/reader-ui-theme-main-lane-20261001/main-test-theme-page-back-bar.mjs",
+        "scriptSha256": "318fadd3ab657e6f9c2213584a12fc2f1f8ccf7beb995041f12841dd104b6961",
+        "log": "/private/tmp/reader-ui-theme-main-lane-20261001/main-test-theme-page-back-bar.mjs.log",
+        "logText": "PASS retained shared PageBackBar Day/Night/Day and reactive Sync override; no palette changes or pixel claim\n(node:2306) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+      },
+      {
+        "workspace": "main",
+        "test": "test-settings-theme-icons.mjs",
+        "exitCode": 0,
+        "seconds": 0.422,
+        "script": "/private/tmp/reader-ui-theme-main-lane-20261001/main-test-settings-theme-icons.mjs",
+        "scriptSha256": "033466eb5528a880563b0a267012464a11c5ccb600fc34a8a668764c869ef135",
+        "log": "/private/tmp/reader-ui-theme-main-lane-20261001/main-test-settings-theme-icons.mjs.log",
+        "logText": "PASS Settings real SDK retained icon/CategoryRow updates from actual call-site expressions Day/Night/Day\n(node:2313) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+      },
+      {
+        "workspace": "lane",
+        "test": "test-theme-page-back-bar.mjs",
+        "exitCode": 1,
+        "seconds": 0.511,
+        "script": "/private/tmp/reader-ui-theme-main-lane-20261001/lane-test-theme-page-back-bar.mjs",
+        "scriptSha256": "dc5dd342c4a8ac04985a2038f65aec062a9aa8584a4663671c9781fa7c6ffa11",
+        "log": "/private/tmp/reader-ui-theme-main-lane-20261001/lane-test-theme-page-back-bar.mjs.log",
+        "logText": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: retained default title follows live App theme\n+ actual - expected\n\n+ '#FF1F1B17'\n- '#FFEADFCE'\n      ^\n\n    at file:///private/tmp/reader-ui-theme-main-lane-20261001/lane-test-theme-page-back-bar.mjs:16:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: '#FF1F1B17',\n  expected: '#FFEADFCE',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+      },
+      {
+        "workspace": "lane",
+        "test": "test-settings-theme-icons.mjs",
+        "exitCode": 1,
+        "seconds": 0.513,
+        "script": "/private/tmp/reader-ui-theme-main-lane-20261001/lane-test-settings-theme-icons.mjs",
+        "scriptSha256": "dce3fc85c55b1cb932965bfc0e36a7a7ee546e65b816cf67c562d612b568f30b",
+        "log": "/private/tmp/reader-ui-theme-main-lane-20261001/lane-test-settings-theme-icons.mjs.log",
+        "logText": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: retained concrete image and child Prop receive current theme resources\n+ actual - expected\n\n  [\n+   'app.media.settings_gen_theme',\n+   'app.media.settings_gen_update',\n+   'app.media.settings_gen_motion'\n-   'app.media.settings_gen_theme_theme_night',\n-   'app.media.settings_gen_update_theme_night',\n-   'app.media.settings_gen_motion_theme_night'\n  ]\n\n    at file:///private/tmp/reader-ui-theme-main-lane-20261001/lane-test-settings-theme-icons.mjs:20:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: [\n    'app.media.settings_gen_theme',\n    'app.media.settings_gen_update',\n    'app.media.settings_gen_motion'\n  ],\n  expected: [\n    'app.media.settings_gen_theme_theme_night',\n    'app.media.settings_gen_update_theme_night',\n    'app.media.settings_gen_motion_theme_night'\n  ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+      }
+    ]
+  },
+  "detailScroll": {
+    "evidenceLayer": "Actual SDK-emitted production detailScroll attributes, production sizing methods and arithmetic; no native layout/pixel execution.",
+    "scroll": {
+      "type": "Scroll",
+      "id": 0,
+      "create": [],
+      "layoutWeight": 1,
+      "width": "100%",
+      "scrollBar": "BarState.Off"
+    },
+    "column": {
+      "type": "Column",
+      "id": 1,
+      "create": {
+        "space": 8
+      },
+      "width": 352,
+      "padding": {
+        "top": 8,
+        "bottom": 112
+      }
+    },
+    "geometry": [
+      {
+        "width": 352,
+        "tocCount": 0,
+        "chapterSectionHeight": 282,
+        "contentHeight": 690.313,
+        "shortContentCenterExtraTopAt800vp": 54.843500000000006,
+        "tailPadding": 112
+      },
+      {
+        "width": 352,
+        "tocCount": 1,
+        "chapterSectionHeight": 108,
+        "contentHeight": 516.313,
+        "shortContentCenterExtraTopAt800vp": 141.8435,
+        "tailPadding": 112
+      },
+      {
+        "width": 352,
+        "tocCount": 3,
+        "chapterSectionHeight": 224,
+        "contentHeight": 632.313,
+        "shortContentCenterExtraTopAt800vp": 83.8435,
+        "tailPadding": 112
+      },
+      {
+        "width": 352,
+        "tocCount": 20,
+        "chapterSectionHeight": 1210,
+        "contentHeight": 1618.313,
+        "shortContentCenterExtraTopAt800vp": 0,
+        "tailPadding": 112
+      },
+      {
+        "width": 720,
+        "tocCount": 0,
+        "chapterSectionHeight": 282,
+        "contentHeight": 668.875,
+        "shortContentCenterExtraTopAt800vp": 65.5625,
+        "tailPadding": 112
+      },
+      {
+        "width": 720,
+        "tocCount": 1,
+        "chapterSectionHeight": 108,
+        "contentHeight": 494.875,
+        "shortContentCenterExtraTopAt800vp": 152.5625,
+        "tailPadding": 112
+      },
+      {
+        "width": 720,
+        "tocCount": 3,
+        "chapterSectionHeight": 224,
+        "contentHeight": 610.875,
+        "shortContentCenterExtraTopAt800vp": 94.5625,
+        "tailPadding": 112
+      },
+      {
+        "width": 720,
+        "tocCount": 20,
+        "chapterSectionHeight": 1210,
+        "contentHeight": 1596.875,
+        "shortContentCenterExtraTopAt800vp": 0,
+        "tailPadding": 112
+      }
+    ]
+  },
+  "scrollInventory": {
+    "recordedAt": "2026-09-30T16:52:43.708212+00:00",
+    "head": "bf8df66253a40cc08ef82dda55793aa30c337c55",
+    "inventoryCount": 45,
+    "fileCount": 33,
+    "categories": {
+      "horizontal": 4,
+      "top-aligned-vertical": 21,
+      "unaligned-vertical": 20
+    },
+    "inventory": [
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderQuickSearchPanel.ets",
+        "line": 158,
+        "category": "unaligned-vertical",
+        "chain": "        }\n        .width('100%')\n        .height(this.resultsHeight())\n        .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderSettingsFullPanel.ets",
+        "line": 87,
+        "category": "unaligned-vertical",
+        "chain": "      }\n      .width(this.viewportWidth())\n      .height(this.viewportHeight())\n      .scrollBar(BarState.Off)\n      .position({ x: 13, y: 57 });"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets",
+        "line": 358,
+        "category": "unaligned-vertical",
+        "chain": "      }\n      .width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)\n      .enableScrollInteraction(this.scrollInput() && this.draggedFontId === '' && this.openSelect === '')\n      .edgeEffect(EdgeEffect.None)\n      .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>\n        this.nativeScrollDelta(y, source))\n      .onAppear((): void => this.syncMorphScroll())\n      .onDidScroll((): void => this.onFullDidScroll());"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "line": 289,
+        "category": "unaligned-vertical",
+        "chain": "      }\n      .width(this.frame().list.width).height(this.frame().list.height)\n      .position({ x: this.frame().list.x, y: this.frame().list.y })\n      .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.layer === '')\n      .edgeEffect(EdgeEffect.None)\n      .onAppear((): void => { this.onSourceChanged(); this.syncMorphScroll(); })\n      .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>\n        this.nativeScrollDelta(y, source))\n      .onDidScroll((): void => this.onFullDidScroll())\n      .clip(true);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "line": 475,
+        "category": "top-aligned-vertical",
+        "chain": "      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "line": 129,
+        "category": "unaligned-vertical",
+        "chain": "        }.width('100%').height(this.panelHeight()).scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "line": 140,
+        "category": "top-aligned-vertical",
+        "chain": "        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))\n          .align(Alignment.TopStart).scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets",
+        "line": 198,
+        "category": "unaligned-vertical",
+        "chain": "    }\n    .width(this.viewportWidth())\n    .height(this.scrollViewportHeight())\n    .scrollBar(BarState.Off)\n    .enableScrollInteraction(this.interactionEnabled && this.draggedFontId === '' && !this.fontDragSettling)\n    .onScrollStart((): void => this.onAppearanceScrollStart())\n    .position({ x: 13, y: 57 })\n    .transition(this.reduceMotion ? TransitionEffect.IDENTITY :\n      TransitionEffect.asymmetric(\n        panelActorTransition('reader.panel.appearance.content.in', 0, 146),\n        TransitionEffect.IDENTITY,\n      ));"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets",
+        "line": 251,
+        "category": "unaligned-vertical",
+        "chain": "    }\n    .width(this.motionFullViewportWidth())\n    .height(this.motionFullViewportHeight())\n    .borderRadius(12)\n    .clip(true)\n    .scrollBar(BarState.Off)\n    .enableScrollInteraction(this.fullEndpointInteractionEnabled() &&\n      this.draggedFontId === '' && !this.fontDragSettling)\n    .enabled(this.fullEndpointInteractionEnabled())\n    .hitTestBehavior(this.fullEndpointInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)\n    .onScrollStart((): void => this.onAppearanceScrollStart())\n    .onDidScroll((_xOffset: number, _yOffset: number, _state: ScrollState): void =>\n      this.captureMotionScrollOffset())\n    .onScrollStop((): void => this.captureMotionScrollOffset())\n    .position({"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+        "line": 171,
+        "category": "unaligned-vertical",
+        "chain": "    }\n    .width(this.availableWidth).height(this.availableHeight)\n    .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)\n    .enableScrollInteraction(this.fullInput())\n    .onAppear((): void => this.syncMorphScroll())\n    .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>\n      this.nativeScrollDelta(y, source))\n    .onDidScroll((): void => this.onFullDidScroll())\n    .enabled(this.interactionEnabled)\n    .clip(true);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+        "line": 237,
+        "category": "unaligned-vertical",
+        "chain": "      }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)\n        .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput())\n        .onAppear((): void => this.syncMorphScroll())\n        .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>\n          this.nativeScrollDelta(y, source))\n        .onDidScroll((): void => this.onFullDidScroll());"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+        "line": 156,
+        "category": "unaligned-vertical",
+        "chain": "      }\n      .width(this.panelWidth())\n      .height(this.bodyViewportHeight())\n      .position({ x: 0, y: READER_AUTO_PAGE_FULL_BODY_Y })\n      .scrollBar(BarState.Off)\n      .edgeEffect(EdgeEffect.None);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+        "line": 13869,
+        "category": "unaligned-vertical",
+        "chain": "    }\n    .width(this.readingLayout().bodyWidth())\n    .height(this.readingLayout().bodyHeight(false))\n    .position({ x: this.readingLayout().contentLeft, y: this.readingLayout().contentTop })\n    .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)\n    .zIndex(6);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+        "line": 122,
+        "category": "unaligned-vertical",
+        "chain": "      }\n      .width(this.scrollWidth())\n      .height(this.scrollHeight())\n      .position({ x: TTS_FULL_SCROLL_X, y: TTS_FULL_SCROLL_TOP })\n      .scrollBar(BarState.Off)\n      .edgeEffect(EdgeEffect.None)\n      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })\n      .borderRadius(12);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+        "line": 1073,
+        "category": "top-aligned-vertical",
+        "chain": "    }.width('100%')\n      .height(Math.min(150, Math.max(0, this.layout.viewportHeight - 36)))\n      .scrollBar(BarState.Auto).align(Alignment.TopStart);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderSearchFullPanel.ets",
+        "line": 162,
+        "category": "unaligned-vertical",
+        "chain": "        }\n        .width('100%')\n        .height(this.resultsHeight())\n        .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+        "line": 370,
+        "category": "unaligned-vertical",
+        "chain": "      }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)\n        .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput() && this.configField === '')\n        .onAppear((): void => this.syncMorphScroll())\n        .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>\n          this.nativeScrollDelta(y, source))\n        .onDidScroll((): void => this.onFullDidScroll());"
+      },
+      {
+        "file": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+        "line": 102,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .align(Alignment.TopStart)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "line": 103,
+        "category": "top-aligned-vertical",
+        "chain": "    }\n    .layoutWeight(1)\n    .width('100%')\n    .align(Alignment.Top)\n    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })\n    .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "line": 173,
+        "category": "horizontal",
+        "chain": "    }\n    .width('100%')\n    .height(32)\n    .scrollable(ScrollDirection.Horizontal)\n    .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/shell/SettingsShell.ets",
+        "line": 62,
+        "category": "top-aligned-vertical",
+        "chain": "          }\n          .layoutWeight(1)\n          .width('100%')\n          .align(Alignment.Top)\n          .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/shell/SettingsShell.ets",
+        "line": 80,
+        "category": "top-aligned-vertical",
+        "chain": "          }\n          .layoutWeight(1)\n          .width('100%')\n          .align(Alignment.TopStart)\n          .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "line": 289,
+        "category": "horizontal",
+        "chain": "    }\n    .scrollable(ScrollDirection.Horizontal)\n    .scrollBar(BarState.Off)\n    .width(this.contentFrame().width)\n    .height(40)\n    .margin({ top: TOK_SPACE_XS });"
+      },
+      {
+        "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+        "line": 200,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .align(Alignment.TopStart)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/rss/RssPage.ets",
+        "line": 308,
+        "category": "top-aligned-vertical",
+        "chain": "    }\n    .width('100%')\n    .layoutWeight(1)\n    .align(Alignment.Top)\n    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })\n    .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/rss/RssPage.ets",
+        "line": 651,
+        "category": "top-aligned-vertical",
+        "chain": "    }\n    .width('100%')\n    .layoutWeight(1)\n    .align(Alignment.Top)\n    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })\n    .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+        "line": 68,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .scrollBar(BarState.Off)\n      .align(Alignment.Top)\n      .padding({ left: this.contentFrame().left, right: this.contentFrame().right });"
+      },
+      {
+        "file": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "line": 69,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .scrollBar(BarState.Off)\n      .align(Alignment.Top)\n      .padding({ left: this.contentFrame().left, right: this.contentFrame().right });"
+      },
+      {
+        "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+        "line": 85,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .width('100%')\n      .layoutWeight(1)\n      .align(Alignment.Top)\n      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+        "line": 61,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .align(Alignment.TopStart)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets",
+        "line": 101,
+        "category": "unaligned-vertical",
+        "chain": "        }\n        .width(this.menuWidth())\n        .height(Math.max(0, this.visiblePanelHeight() - POINTER_HEIGHT))\n        .clip(true)\n        .scrollBar(BarState.Auto)\n        .position({ x: 0, y: POINTER_HEIGHT });"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+        "line": 61,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .align(Alignment.TopStart)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+        "line": 203,
+        "category": "horizontal",
+        "chain": "      }\n      .width('100%')\n      .scrollable(ScrollDirection.Horizontal)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+        "line": 69,
+        "category": "top-aligned-vertical",
+        "chain": "          }\n          .layoutWeight(1)\n          .width('100%')\n          .align(Alignment.Top)\n          .padding({ left: this.contentFrame().left, right: this.contentFrame().right })\n          .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+        "line": 136,
+        "category": "unaligned-vertical",
+        "chain": "    }\n    .layoutWeight(1)\n    .width('100%')\n    .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/BookRemovalDialog.ets",
+        "line": 31,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .width('100%')\n      .height(Math.min(Math.max(50, this.measuredMessageHeight), this.messageMaxHeight()))\n      .align(Alignment.TopStart)\n      .scrollBar(BarState.Auto)\n      .margin({ bottom: 30 });"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "line": 303,
+        "category": "unaligned-vertical",
+        "chain": "        }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))\n          .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "line": 410,
+        "category": "unaligned-vertical",
+        "chain": "      }\n      .width('100%')\n      .height(this.resultItemsPanelHeight())\n      .padding(1)\n      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultItemsPanel.color.FFE8E2D9', this.appThemeScheme) })\n      .borderRadius(12)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/search/SearchPage.ets",
+        "line": 567,
+        "category": "top-aligned-vertical",
+        "chain": "      Scroll() { this.initialContent(); }.width('100%').height('100%')\n        .align(Alignment.TopStart).scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/search/SearchPage.ets",
+        "line": 574,
+        "category": "top-aligned-vertical",
+        "chain": "      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/search/SearchPage.ets",
+        "line": 581,
+        "category": "top-aligned-vertical",
+        "chain": "      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/search/SearchPage.ets",
+        "line": 677,
+        "category": "horizontal",
+        "chain": "      }\n      .scrollable(ScrollDirection.Horizontal)\n      .scrollBar(BarState.Off)\n      .width('100%')\n      .height(41.5)\n      .align(Alignment.Start);"
+      },
+      {
+        "file": "entry/src/main/ets/features/search/SearchPage.ets",
+        "line": 1023,
+        "category": "unaligned-vertical",
+        "chain": "    }\n    .width('100%')\n    .layoutWeight(1)\n    .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "line": 96,
+        "category": "top-aligned-vertical",
+        "chain": "      }\n      .layoutWeight(1)\n      .width('100%')\n      .align(Alignment.TopStart)\n      .scrollBar(BarState.Off);"
+      },
+      {
+        "file": "entry/src/main/ets/pages/ReaderParagraphDiagnostic.ets",
+        "line": 356,
+        "category": "unaligned-vertical",
+        "chain": "    }.width('100%').layoutWeight(1)"
+      }
+    ],
+    "confirmedSourceGap": {
+      "file": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "line": 136,
+      "evidence": "Production SDK builder emits no align; local SDK CommonMethod align default Alignment.Center. Scroll receives leftover height and its child uses natural body extent. Not a modal or deliberately centered status card.",
+      "trigger": "Short catalog or tall available window: Scroll viewport height exceeds natural detail content height.",
+      "numericExample": "Width352,1chapter:content516.313vp; width720,1chapter:494.875vp. Center adds (viewport-content)/2 above intended8vp top gap when positive.",
+      "tests": "test-bookshelf-physical-feedback.mjs verifies chapter preview0/3/20/40 counts and height, but does not instantiate detailScroll or assert Scroll.align. test-phone-layout-figma-regressions.mjs verifies detail width/frame/button sizing only.",
+      "probe": "/private/tmp/source-demo-scroll-audit-probe-20261001.json",
+      "pixelBoundary": "No native layout, VM screenshot, physical-device or user-acceptance test this audit."
+    },
+    "risksOnly": [
+      {
+        "file": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+        "line": 143,
+        "risk": "112vp fixed bottom padding remains while77vp actionArea is separate normal-flow sibling; possible legacy overlay clearance. Design intent not established, not declared bug."
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+        "line": 79,
+        "risk": "116vp bottom padding remains with normal-flow MainTabBar; trailing whitespace/short viewport scroll possible. Figma intent unverified, not declared bug."
+      },
+      {
+        "file": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+        "line": 551,
+        "risk": "Zero-catalog height fixed282vp vs1chapter108vp; large empty card may be intended, current test explicitly retains282vp."
+      },
+      {
+        "file": "entry/src/main/ets/features/search/SearchPage.ets",
+        "line": 1023,
+        "risk": "Empty-search illustration/action surface uses defaultcenter plus50top/40bottom. Distinct from list/history; Figma/intent not audited so not confirmed defect."
+      },
+      {
+        "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+        "line": 13869,
+        "risk": "Reading failure overlay uses body rect/defaultcenter. Existing test covers rect/action callbacks; centering may be intended, not confirmed defect."
+      }
+    ],
+    "excludedReasons": [
+      "21 vertical Scrolls explicitlyTop/TopStart, including currently fixedBookshelfEmpty and Search history/sourceRequired/sourceLoadError.",
+      "4 horizontal Scrolls do not produce the vertical-center mechanism.",
+      "Remaining unaligned containers include fixed/morphing reader control panels, search panels, measured modal bodies/menu, and diagnostic-onlypage; did not treat lack ofalign as defect.",
+      "Index consumes App safeTop once; AppTopBar/PageBackBar do not add another. MainTabShell rail uses host-local coordinates and has regression. SourceSwitchWindow uses consumeTopInset=false in App route and own inset only for edge-to-edgeReader context."
+    ]
+  },
+  "evidenceBoundary": [
+    "No new HAP, installation, VM or physical-device operations in this audit.",
+    "Negative local regression results do not imply every native pixel symptom reproduced.",
+    "No production code edits or main workspace merge in this audit."
+  ],
+  "oldReadingFixComparisons": {
+    "summary": {
+      "recordedAt": "2026-09-30T16:57:53.500192+00:00",
+      "mainHead": "2a21ed02f5ab6e552b1945a7ec651405f61e7319",
+      "laneHead": "bf8df66253a40cc08ef82dda55793aa30c337c55",
+      "method": "Original main title tests copied into private directory; only relative import specifiers and import.meta.url base redirected to selected root. Rewrite reverse-checked byte-exact to original. Each root uses its own helper and production dependencies. All assertions retained.",
+      "matrix": [
+        {
+          "check": "prepared-title-boundary",
+          "main": "PASS0.801s",
+          "lane": "BEHAVIOR_RED0.779s",
+          "failure": "For bounded chapter resident startScalar600, actual prepared showChapterTitle=true, expectedfalse.",
+          "completedScope": "Main whole test passed. Lane aborts at first offending600/next assertion; later cases not claimed run."
+        },
+        {
+          "check": "chapter-first-title-publication",
+          "main": "PASS0.836s",
+          "lane": "BEHAVIOR_RED0.572s",
+          "failure": "First emitted native recipe is body instead of exact chapterA measured title recipe through live fragments provider.",
+          "completedScope": "Main whole SDK stage/slot/texture/retained-native-resource test passed. Lane aborts on first cold-title recipe assertion; later scenarios not claimed run."
+        },
+        {
+          "check": "paragraph-tail-single-logical-newline",
+          "main": "PASS6/6EOF plus6/6interior-controls,0.117s",
+          "lane": "BEHAVIOR_RED6/6EOF;PASS6/6interior-controls,0.101s",
+          "failure": "LF,CR,CRLF each with empty orspace-tab trailing suffix remain inside final shaped range in lane. Main excludes separator while canonical content/offsets remain unchanged.",
+          "completedScope": "Actual synchronous collect and cooperative asynchronous prepare agree perroot in all6EOF cases; separate interior-break lineSeparated/blankLineSeparated controls pass in both."
+        }
+      ],
+      "paragraphExample": {
+        "input": "第一章\n\n这是独立的目录验证样书，不包含用户内容。🙂\n",
+        "mainRanges": [
+          {
+            "startUtf16": 0,
+            "endUtf16": 3
+          },
+          {
+            "startUtf16": 5,
+            "endUtf16": 27
+          }
+        ],
+        "laneRanges": [
+          {
+            "startUtf16": 0,
+            "endUtf16": 3
+          },
+          {
+            "startUtf16": 5,
+            "endUtf16": 28
+          }
+        ],
+        "mainLastParagraph": "这是独立的目录验证样书，不包含用户内容。🙂",
+        "laneLastParagraph": "这是独立的目录验证样书，不包含用户内容。🙂\n"
+      },
+      "dependencyFailures": [],
+      "timeouts": [],
+      "batchBudget": "Title batch~2.99s;paragraph batch~0.22s;each<120s",
+      "sourceHashes": {
+        "main": {
+          "entry/src/main/ets/features/reading/ReadingParagraphProjection.ts": "8e6e1fca851d0298bdcff20eea223f9e01540e23ee3fae6cc98622b6d9948848",
+          "entry/src/main/ets/features/reading/ReadingSurface.ets": "3179bf35517be34a6a0244b660239e74ee520f5f0d72496839b19be5691ca7d6",
+          "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets": "bb96fe053d23a37d022ca6fc418e47cd82351d32b250f3d56d948ec910709ac6",
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "08d8c55780feba4905582f97ba933fc9fd8d385604d0eede5eff185f4c1f4e03",
+          "entry/src/main/ets/features/reading/ReaderNativeParagraph.ets": "94e4c9669367ab0888001596d152bf1864b2a7544f372f1e64fb398c28217430",
+          "tools/lib/reader-motion-method-probe.mjs": "0de7d59ecf474465bf5e404504fdd92feb66338d21d3af9a0054c0c7ceba331d",
+          "tools/lib/reader-control-builder-probe.mjs": "e96a9b4606fcbb93a2cddd4f1f677673e211ae2f56617b2267f29aedca969dbd"
+        },
+        "lane": {
+          "entry/src/main/ets/features/reading/ReadingParagraphProjection.ts": "c186c77a6c607da686add8429a9496856d55be7d1b8fff4b047aaf7c16796418",
+          "entry/src/main/ets/features/reading/ReadingSurface.ets": "c03c5863e0344f9266d26fa71468e4f3ac35fb642f9d30b6459df350d8a03ea8",
+          "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets": "bb96fe053d23a37d022ca6fc418e47cd82351d32b250f3d56d948ec910709ac6",
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "e2501eb9d22c6e04050163e89995812e4581ef7f6086500ea26e7c4f9102b939",
+          "entry/src/main/ets/features/reading/ReaderNativeParagraph.ets": "94e4c9669367ab0888001596d152bf1864b2a7544f372f1e64fb398c28217430",
+          "tools/lib/reader-motion-method-probe.mjs": "699bfd1a90eaa15e22fd40c181db67bc889395625cf9149f7249453a259a7a9d",
+          "tools/lib/reader-control-builder-probe.mjs": "e96a9b4606fcbb93a2cddd4f1f677673e211ae2f56617b2267f29aedca969dbd"
+        }
+      },
+      "evidence": [
+        "title-results.json",
+        "paragraph-executions.json",
+        "main-paragraph-results.json",
+        "lane-paragraph-results.json"
+      ],
+      "boundary": "This is local production-method/SDK-Builder/instrumented resource evidence, not native shaping, pixel layout, VM or physical-device acceptance. No repository files changed by this audit; all outputs private/tmp."
+    },
+    "titleRuns": {
+      "at": "2026-09-30T16:56:17.619915+00:00",
+      "mainHead": "2a21ed02f5ab6e552b1945a7ec651405f61e7319",
+      "laneHead": "bf8df66253a40cc08ef82dda55793aa30c337c55",
+      "runs": [
+        {
+          "test": "test-reader-prepared-title-boundary.mjs",
+          "target": "main",
+          "root": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+          "exitCode": 0,
+          "timedOut": false,
+          "elapsedSeconds": 0.801,
+          "originalTestSHA256": "fe5313462c4e5f4f44cbf47b5337d4362774ec8c305959237f793ae94b8b6312",
+          "rewrittenTestSHA256": "020555efd7e7072e17c43c2cbe97148cd34fb7c33949846e5fa53933e747a9ca",
+          "pathOnlyRewriteReversible": true,
+          "changes": [
+            [
+              "from './lib/reader-motion-method-probe.mjs'",
+              "from \"file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs\""
+            ],
+            [
+              "from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts'",
+              "from \"file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderPageChromeModel.ts\""
+            ],
+            [
+              "import.meta.url",
+              "\"file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-prepared-title-boundary.mjs\""
+            ]
+          ],
+          "stdout": "PASS actual prepared next/previous title admission matches promoted full chapter versus bounded window\n",
+          "stderr": "(node:6242) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+        },
+        {
+          "test": "test-reader-prepared-title-boundary.mjs",
+          "target": "lane",
+          "root": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+          "exitCode": 1,
+          "timedOut": false,
+          "elapsedSeconds": 0.779,
+          "originalTestSHA256": "fe5313462c4e5f4f44cbf47b5337d4362774ec8c305959237f793ae94b8b6312",
+          "rewrittenTestSHA256": "d4950708f6ed4102f3c14e407e4619fd02e6ea7512607edcc588423295fa07e4",
+          "pathOnlyRewriteReversible": true,
+          "changes": [
+            [
+              "from './lib/reader-motion-method-probe.mjs'",
+              "from \"file:///Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs\""
+            ],
+            [
+              "from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts'",
+              "from \"file:///Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderPageChromeModel.ts\""
+            ],
+            [
+              "import.meta.url",
+              "\"file:///Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-prepared-title-boundary.mjs\""
+            ]
+          ],
+          "stdout": "",
+          "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: resident window start is not semantic chapter start\n\ntrue !== false\n\n    at file:///private/tmp/source-demo-old-fix-probes-20261001/lane-test-reader-prepared-title-boundary.mjs:16:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: true,\n  expected: false,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+        },
+        {
+          "test": "test-reader-chapter-first-title-publication.mjs",
+          "target": "main",
+          "root": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+          "exitCode": 0,
+          "timedOut": false,
+          "elapsedSeconds": 0.836,
+          "originalTestSHA256": "0bf84794be29181403fd0907b43544f74121968745fabf31ebb8417bd1e5c65a",
+          "rewrittenTestSHA256": "21b66abe1608c152130abfb0bc0a2f64f157b29fafd89d99ced72daf9a7e4d22",
+          "pathOnlyRewriteReversible": true,
+          "changes": [
+            [
+              "from './lib/reader-control-builder-probe.mjs'",
+              "from \"file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs\""
+            ],
+            [
+              "from './lib/reader-motion-method-probe.mjs'",
+              "from \"file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs\""
+            ],
+            [
+              "import.meta.url",
+              "\"file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-chapter-first-title-publication.mjs\""
+            ]
+          ],
+          "stdout": "PASS actual SDK stage/slot/texture -> ReadingSurface and native resource owner: measured title/body origin stable through resident promotion, warm update, old-live/texture negative control, legacy array, empty owner and non-first page\n",
+          "stderr": "(node:6284) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+        },
+        {
+          "test": "test-reader-chapter-first-title-publication.mjs",
+          "target": "lane",
+          "root": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+          "exitCode": 1,
+          "timedOut": false,
+          "elapsedSeconds": 0.572,
+          "originalTestSHA256": "0bf84794be29181403fd0907b43544f74121968745fabf31ebb8417bd1e5c65a",
+          "rewrittenTestSHA256": "d6d72424f1265a592fdb8fedecc20fd8d42ed4d1fb111389499a7afa2cc23f20",
+          "pathOnlyRewriteReversible": true,
+          "changes": [
+            [
+              "from './lib/reader-control-builder-probe.mjs'",
+              "from \"file:///Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs\""
+            ],
+            [
+              "from './lib/reader-motion-method-probe.mjs'",
+              "from \"file:///Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs\""
+            ],
+            [
+              "import.meta.url",
+              "\"file:///Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-chapter-first-title-publication.mjs\""
+            ]
+          ],
+          "stdout": "",
+          "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: first emitted title must be the exact recipe that reserved body space\n+ actual - expected\n... Skipped lines\n\n  {\n    firstLine: 0,\n+   key: 'body',\n+   lastLine: 0,\n-   key: 'chapter A',\n-   lastLine: 1,\n    startScalar: 0,\n    style: {\n      alignment: 'center',\n      breakAll: true,\n      fontFamily: 'ReaderNotoSansSC',\n...\n    },\n+   text: '正文'\n-   text: 'chapter A'\n  }\n\n    at assertMeasuredTitle (file:///private/tmp/source-demo-old-fix-probes-20261001/lane-test-reader-chapter-first-title-publication.mjs:77:10)\n    at file:///private/tmp/source-demo-old-fix-probes-20261001/lane-test-reader-chapter-first-title-publication.mjs:94:21\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: {\n    key: 'body',\n    text: '正文',\n    startScalar: 0,\n    firstLine: 0,\n    lastLine: 0,\n    style: {\n      widthVp: 300,\n      fontFamily: 'ReaderNotoSansSC',\n      fontSize: 24,\n      lineHeight: 32,\n      alignment: 'center',\n      breakAll: true\n    }\n  },\n  expected: {\n    key: 'chapter A',\n    text: 'chapter A',\n    startScalar: 0,\n    firstLine: 0,\n    lastLine: 1,\n    style: {\n      widthVp: 300,\n      fontFamily: 'ReaderNotoSansSC',\n      fontSize: 24,\n      lineHeight: 32,\n      alignment: 'center',\n      breakAll: true\n    }\n  },\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+        }
+      ]
+    }
+  },
+  "installedSourceCorrespondence": {
+    "harmonySourceCommit": "c6ac46d311744dd0d0bbbb8078385ea31e26ab9f",
+    "auditCommit": "bf8df66253a40cc08ef82dda55793aa30c337c55",
+    "productionDiffBetweenCommits": []
+  }
+}

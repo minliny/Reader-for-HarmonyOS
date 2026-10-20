@@ -1,123 +1,85 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (path) => readFileSync(resolve(repo, path), 'utf8');
+async function fullProjectionCase() {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { projectReaderDirectoryEntries } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts');
+  const { projectReaderBookmarkRows, readerBookmarkLoadState } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+  const Full = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets', import.meta.url),
+    'FullDirectoryPanel', ['switchTab', 'rebuildProjection', 'applySearch', 'handleControl', 'selectBookmark'],
+    { projectReaderDirectoryEntries, projectReaderBookmarkRows, readerBookmarkLoadState });
+  const entries = [
+    { index: 1, title: 'first', bookmarks: [{ time: 1, chapterIndex: 1, chapterOffset: 23, chapterTitle: 'first', content: 'needle' }] },
+    { index: 7, title: 'last', bookmarks: [{ time: 2, chapterIndex: 7, chapterOffset: 89, chapterTitle: 'last', content: 'other' }] },
+  ];
+  const owner = Object.assign(new Full(), { admittedEntries: entries, mangaSearch: false, ascending: true,
+    searchQuery: 'needle', beginListPositioning() {}, onTabChange() {}, scheduleProjectionTopScroll() {}, navigationActive: true });
+  let writtenTab;
+  Object.defineProperty(owner, 'activeTab', { configurable: true, get: () => 'directory', set: value => { writtenTab = value; } });
+  owner.switchTab('bookmarks');
+  assert.equal(writtenTab, 'bookmarks'); assert.equal(owner.navigationActive, false);
+  assert.deepEqual(owner.projectedEntries, []);
+  assert.deepEqual(owner.projectedBookmarks.map(row => row.chapterOffset), [23], 'projection uses the explicit new tab despite stale reactive read');
+  assert.equal(owner.bookmarkTabLoading, false);
 
-const modulePanel = read('entry/src/main/ets/features/reading/ReaderDirectoryModulePanel.ets');
-const fullPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
-const directoryList = read('entry/src/main/ets/features/reading/ReaderDirectoryList.ets');
-const bookmarkList = read('entry/src/main/ets/features/reading/ReaderBookmarkList.ets');
-const bookmarkRow = read('entry/src/main/ets/features/reading/ReaderBookmarkRow.ets');
-const bookmarkEmpty = read('entry/src/main/ets/features/reading/ReaderBookmarkEmptyState.ets');
-const bookmarkLoading = read('entry/src/main/ets/features/reading/ReaderBookmarkLoadingState.ets');
-const bookmarkError = read('entry/src/main/ets/features/reading/ReaderBookmarkErrorState.ets');
+  Object.defineProperty(owner, 'activeTab', { configurable: true, value: 'bookmarks' });
+  let writtenQuery;
+  Object.defineProperty(owner, 'searchQuery', { configurable: true, get: () => 'other', set: value => { writtenQuery = value; } });
+  owner.searchDraft = '  needle  '; owner.applySearch();
+  assert.equal(writtenQuery, 'needle'); assert.deepEqual(owner.projectedBookmarks.map(row => row.chapterOffset), [23], 'new trimmed search query is used before reactive publication');
 
-/**
- * Projection functions must receive the tab/search/sort values explicitly:
- * a @State written earlier in the same event still reads as the previous
- * value on the device runtime, which is the stale-projection bug this
- * contract locks out.
- */
-const rebuildBody = (source, signature) => {
-  const match = source.match(signature);
-  assert.ok(match, `parameterized rebuildProjection (${signature}) must exist`);
-  return match[1];
-};
-const moduleRebuildBody = rebuildBody(modulePanel,
-  /private rebuildProjection\(tab: string\): void \{([\s\S]*?)\n  \}/);
-assert.doesNotMatch(moduleRebuildBody, /this\.activeTab/,
-  'module projection must never read activeTab implicitly');
-const fullRebuildBody = rebuildBody(fullPanel,
-  /private rebuildProjection\(tab: string, ascending: boolean, query: string\): void \{([\s\S]*?)\n  \}/);
-assert.doesNotMatch(fullRebuildBody, /this\.activeTab/,
-  'full projection must never read activeTab implicitly');
+  Object.defineProperty(owner, 'activeTab', { configurable: true, value: 'directory' });
+  Object.defineProperty(owner, 'searchQuery', { configurable: true, value: '' });
+  let writtenAscending;
+  Object.defineProperty(owner, 'ascending', { configurable: true, get: () => true, set: value => { writtenAscending = value; } });
+  owner.handleControl('sort');
+  assert.equal(writtenAscending, false); assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [7, 1], 'new sort value is explicit rather than reread from old state');
 
-for (const [name, panel] of [['module', modulePanel], ['full', fullPanel]]) {
-  assert.match(panel, /private switchTab\(nextTab: string\): void \{[\s\S]*?this\.activeTab = nextTab;[\s\S]*?this\.rebuildProjection\(nextTab/,
-    `${name} panel must switch tabs through the explicit-value switchTab`);
-  assert.match(panel, /this\.switchTab\('bookmarks'\)/, `${name} bookmark tab tap must use switchTab`);
-  assert.match(panel, /this\.switchTab\('directory'\)/, `${name} directory tab tap must use switchTab`);
-  assert.doesNotMatch(panel, /\.onClick\(\(\): void => \{\s*this\.activeTab = /,
-    `${name} tab onClick must not write activeTab inline`);
-  assert.match(panel,
-    /onSelectBookmark: \(\(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope\?: RemoteReadingPositionScope\) => void\) \| undefined/,
-    `${name} panel must expose the optional exact-offset bookmark callback`);
-  assert.match(panel,
-    /private selectBookmark\(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope\?: RemoteReadingPositionScope\): void \{[\s\S]*?if \(this\.onSelectBookmark !== undefined\) \{[\s\S]*?this\.onSelectBookmark\(bookmarkId, chapterIndex, chapterOffset, positionScope\);[\s\S]*?this\.onSelectChapter\(chapterIndex\);/,
-    `${name} bookmark tap must pass the exact anchor, degrading to chapter-open only while unwired`);
-
-  assert.match(panel, /if \(this\.bookmarkLoadFailed\) \{\s*ReaderBookmarkErrorState\(/,
-    `${name} error state must come first`);
-  assert.match(panel, /else if \(this\.bookmarkTabLoading\) \{\s*ReaderBookmarkLoadingState\(\);/,
-    `${name} loading state must come before empty/content`);
-  assert.match(panel,
-    /else if \(this\.(bookmarkRows|projectedBookmarks)\.length === 0\) \{\s*ReaderBookmarkEmptyState\(\{\s*onReturnToDirectory: \(\): void => this\.switchTab\('directory'\)/,
-    `${name} empty state must offer return-to-directory`);
-  assert.match(panel, /ReaderBookmarkList\(\{/,
-    `${name} content state must render the bookmark list component`);
+  const selected = [], fallback = [], scope = { sourceId: 'remote', bookId: 'book', chapterIndex: 7, version: 'v1' };
+  owner.onSelectBookmark = (...args) => selected.push(args); owner.onSelectChapter = index => fallback.push(index);
+  owner.selectBookmark('bookmark-7', 7, 89, scope);
+  assert.deepEqual(selected, [['bookmark-7', 7, 89, scope]]); assert.deepEqual(fallback, []);
+  owner.onSelectBookmark = undefined; owner.selectBookmark('bookmark-7', 7, 89, scope);
+  assert.deepEqual(fallback, [7], 'only an unwired legacy owner uses chapter fallback');
 }
 
-assert.match(modulePanel, /readerBookmarkLoadState\(this\.entries\) === 'loading'/);
-assert.match(modulePanel, /projectReaderBookmarkRows\(this\.entries, '', this\.bookmarkIdentity\)/);
-assert.doesNotMatch(modulePanel, /bookmarkedEntries\.push/,
-  'module bookmark tab must not reuse chapter rows as bookmarks');
-assert.match(modulePanel,
-  /rowBuilder: \(repeatItem: RepeatItem<LocalReadingTocEntry>\) => \{\s*this\.chapterRow\(repeatItem\);/,
-  'directory rows must be injected through an inline arrow-closure builder (no method reference)');
-
-assert.match(fullPanel, /@State private projectedBookmarks: ReaderBookmarkRowModel\[\] = \[\]/);
-assert.match(fullPanel, /const nextQuery = this\.searchDraft\.trim\(\);\s*this\.searchQuery = nextQuery;\s*this\.rebuildProjection\(this\.activeTab, this\.ascending, nextQuery\);/,
-  'search must forward the freshly trimmed query explicitly');
-assert.match(fullPanel, /projectReaderBookmarkRows\(\s*sourceEntries, query, this\.bookmarkIdentity\)/);
-assert.match(fullPanel,
-  /rowBuilder: \(repeatItem: RepeatItem<LocalReadingTocEntry>\) => \{\s*this\.chapterRow\(repeatItem\);/,
-  'full directory rows must use the inline arrow-closure builder');
-assert.doesNotMatch(fullPanel, /private bookmarkRow\(/,
-  'full panel must not keep its own bookmark row builder');
-assert.doesNotMatch(fullPanel, /(?:const|let|var)\s+BOOKMARK_ROW_HEIGHT\s*=/,
-  'bookmark row geometry must not be redefined in the panel');
-assert.match(fullPanel, /import \{ BOOKMARK_ROW_HEIGHT \} from '\.\/ReaderBookmarkRow'/,
-  'initial list positioning must consume the real row owner height, not a copied constant');
-
-// Directory list frame: lazy creation with the no-reuse policy intact.
-assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)/);
-assert.match(directoryList,
-  /LazyForEach\(this\.dataSource[\s\S]*reader-directory-row-\$\{entry\.index\}/,
-  'directory list must keep lazy creation and stable chapter identity');
-assert.match(directoryList, /@BuilderParam rowBuilder: \(repeatItem: RepeatItem<LocalReadingTocEntry>\) => void;/);
-assert.match(directoryList, /onFirstLayout/);
-
-// Bookmark list: one row per bookmark, stable per-bookmark identity.
-assert.match(bookmarkList,
-  /Repeat\(this\.rows\)[\s\S]*\.key\(\(row: ReaderBookmarkRowModel\): string => `reader-bookmark-\$\{row\.bookmarkId\}`\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.rows\.length, reusable: false \}\)/,
-  'bookmark rows must key on the stable bookmark id with no node reuse');
-assert.match(bookmarkList, /ReaderBookmarkRow\(\{\s*row: repeatItem\.item,\s*onSelectBookmark: this\.onSelectBookmark,/);
-
-// Bookmark row: exact-anchor tap plus the full field set.
-assert.match(bookmarkRow,
-  /onClick\(\(\): void =>\s*this\.onSelectBookmark\(this\.row\.bookmarkId, this\.row\.chapterIndex, this\.row\.chapterOffset, this\.row\.positionScope\)\)/,
-  'row tap must emit the exact bookmark anchor');
-for (const field of ['chapterTitle', 'excerpt', 'positionLabel', 'timeLabel']) {
-  assert.match(bookmarkRow, new RegExp(`this\\.row\\.${field}`), `row must render ${field}`);
+async function bookmarkRowCase() {
+  const { readFileSync } = await import('node:fs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+  const { sampleReaderControlBookmark } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
+  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets', import.meta.url), 'utf8');
+  const { ts, options } = installedEtsCompiler();
+  const tree = ts.createSourceFile('ReaderBookmarkRow.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const constants = ['BOOKMARK_ROW_HEIGHT', 'BOOKMARK_PENDING_LABEL'];
+  const declarations = constants.map(name => {
+    const declaration = tree.statements.find(statement => ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(variable => variable.name.getText(tree) === name));
+    assert.ok(declaration, `actual row constant ${name}`);
+    return declaration.getText(tree).replace(/^export\s+/, '');
+  }).join('\n');
+  const emitted = ts.transpileModule(declarations, { compilerOptions: { target: ts.ScriptTarget.ES2021 } }).outputText;
+  const rowConstants = new Function(`${emitted}; return { ${constants.join(', ')} };`)();
+  const scope = { sourceId: 'remote', bookId: 'book', chapterIndex: 7, version: 'v1' };
+  for (const embedded of [false, true]) {
+    const calls = [];
+    const { owner } = createReaderBuilderProbe(source, ['build', 'motionBody', 'legacyBody', 'frame'], { sampleReaderControlBookmark, ...rowConstants });
+    Object.assign(owner, { embeddedInControl: embedded, motionProgress: 1, availableWidth: 316, appThemeScheme: 'day',
+      row: { bookmarkId: 'bookmark-7', identityStatus: 'confirmed', chapterIndex: 7, chapterOffset: 89,
+        positionScope: scope, chapterTitle: 'chapter seven', excerpt: 'actual excerpt', positionLabel: '42%', timeLabel: 'known time' },
+      onSelectBookmark: (...args) => calls.push(args),
+    });
+    owner.initialRender(); const nodes = [...owner.nodes.values()];
+    const clickable = nodes.filter(node => typeof node.onClick === 'function');
+    assert.equal(clickable.length, 1, 'one exact-anchor row action'); clickable[0].onClick();
+    assert.deepEqual(calls, [['bookmark-7', 7, 89, scope]]);
+    for (const value of ['chapter seven', 'actual excerpt', '42%', 'known time'])
+      assert.ok(nodes.some(node => node.type === 'Text' && node.create === value), `actual row field ${value}`);
+  }
 }
-assert.match(bookmarkRow, /reader_directory_marker_bookmark_active/);
-assert.match(bookmarkRow, /pendingConfirmation/);
 
-// Strict empty state: icon + title + hint + return button, nothing else.
-assert.match(bookmarkEmpty, /reader_directory_marker_bookmark'/);
-assert.match(bookmarkEmpty, /暂无书签/);
-assert.match(bookmarkEmpty, /在阅读页面点按书签图标即可收藏当前位置/);
-assert.match(bookmarkEmpty, /返回目录/);
-assert.match(bookmarkEmpty, /onClick\(\(\): void => this\.onReturnToDirectory\(\)\)/);
-assert.doesNotMatch(bookmarkEmpty, /List\(/, 'empty state must never render a list');
-
-assert.match(bookmarkLoading, /LoadingProgress\(\)/);
-assert.match(bookmarkLoading, /书签载入中…/);
-assert.match(bookmarkError, /@Prop message: string/);
-assert.match(bookmarkError, /onRetry/);
-assert.match(bookmarkError, /重试/);
-
-console.log('reader bookmark panels static contract: PASS');
+const cases = { 'full-projection': fullProjectionCase, 'row-anchor': bookmarkRowCase };
+for (const id of selectContractCases({
+  'full-projection': { description: 'Actual reachable FullDirectoryPanel tab/query/sort projection under stale reactive reads and exact selection', resources: [] },
+  'row-anchor': { description: 'Actual SDK bookmark row fields and ID/chapter/offset/scope callback in embedded and full-directory forms', resources: [] },
+})) { await cases[id](); recordContractCasePass(id); }

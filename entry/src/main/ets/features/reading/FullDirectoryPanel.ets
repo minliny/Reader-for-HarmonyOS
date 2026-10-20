@@ -1,3 +1,8 @@
+import { mangaDirectoryContextEntries } from '../manga/MangaDirectoryState';
+import { mangaDirectoryPresentation } from '../manga/MangaDirectoryPresentation';
+import { TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_READER_DIRECTORY_TITLE_INTER } from '../common/ReaderTypography';
+import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -28,6 +33,7 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { projectReaderDirectoryEntries } from './ReaderDirectoryProjection';
 import {
   projectReaderBookmarkRows,
@@ -36,6 +42,8 @@ import {
   type ReaderBookmarkRowModel,
 } from './ReaderBookmarkProjection';
 import { ReaderDirectoryList } from './ReaderDirectoryList';
+import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
+import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from './ReaderDirectoryViewport';
 import { ReaderBookmarkList } from './ReaderBookmarkList';
 import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
 import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
@@ -77,8 +85,14 @@ export struct FullDirectoryPanel {
 
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop catalogBusy: boolean = false;
+  onRetryCatalog: () => void = (): void => {};
   @Prop @Watch('onReadingAnchorChanged') currentChapterIndex: number = -1;
+  // Detail catalogs can be browsed before a reading position exists. The
+  // embedded reader still waits for its admitted current chapter.
+  @Prop allowUnanchoredBrowse: boolean = false;
   @Prop chapterDownloadEnabled: boolean = false;
+  @Prop mangaSearch: boolean = false;
   @Prop isTablet: boolean = false;
   // The owner supplies the measured viewport-constrained width. Zero keeps
   // the source-exact standalone Figma endpoint.
@@ -121,6 +135,8 @@ export struct FullDirectoryPanel {
   @State private searchQuery: string = '';
   @State private ascending: boolean = true;
   @State private projectedEntries: LocalReadingTocEntry[] = [];
+  @State private navigationInteracted: boolean = false;
+  @State private navigationActive: boolean = false;
   @State private projectedBookmarks: ReaderBookmarkRowModel[] = [];
   @State private bookmarkTabLoading: boolean = false;
   // Optional stable book identity supplied by the owner. Undefined keeps the
@@ -188,6 +204,8 @@ export struct FullDirectoryPanel {
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   // The marker is chapter-level while Core identities are bookmark-level.
   // Forward every existing identity represented by the marker so the owner
@@ -203,6 +221,8 @@ export struct FullDirectoryPanel {
   onExit: () => void = (): void => {};
 
   aboutToAppear(): void {
+    this.navigationInteracted = false;
+    this.navigationActive = false;
     // Invalidate callbacks left by a previous retained instance before
     // admitting the new session's source snapshot.
     this.deferredLifecycleGeneration += 1;
@@ -380,10 +400,10 @@ export struct FullDirectoryPanel {
             .height(16);
         }
         Text(this.activeTab === 'bookmarks' ? '书签' : '目录')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(14)
-          .lineHeight(20)
+          .fontFamily(TYPE_READER_DIRECTORY_HEADING.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_HEADING.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_HEADING.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_HEADING.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
@@ -393,10 +413,10 @@ export struct FullDirectoryPanel {
       Stack({ alignContent: Alignment.Center }) {
         Text('收起')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
-          .lineHeight(14)
+          .fontFamily(TYPE_READER_DIRECTORY_COLLAPSE.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_COLLAPSE.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_COLLAPSE.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -422,12 +442,12 @@ export struct FullDirectoryPanel {
       } else {
         Stack({ alignContent: Alignment.Center }) {
           this.chapterList();
-          if (this.projectedEntries.length === 0) {
-            Text(this.catalogEmptyMessage())
-              .fontSize(13)
-              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-              .textAlign(TextAlign.Center)
-              .padding({ left: 20, right: 20 });
+          if (this.projectedEntries.length === 0 && !this.navigationActive) {
+            ReaderPageState({ loading: this.catalogBusy && this.entries.length === 0,
+              message: this.catalogBusy && this.entries.length === 0 ? '正在加载目录' : this.catalogEmptyMessage(),
+              actionLabel: this.catalogRetryVisible() ? '重试加载目录' : '',
+              mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+              onAction: (): void => { if (this.catalogRetryVisible()) this.onRetryCatalog(); } });
           }
         }
         .width('100%')
@@ -446,6 +466,11 @@ export struct FullDirectoryPanel {
   private catalogEmptyMessage(): string {
     if (this.entries.length > 0) return '没有匹配的章节';
     return this.catalogMessage.trim().length > 0 ? this.catalogMessage : '暂无可用章节，可返回阅读页重试或更换书源';
+  }
+
+  private catalogRetryVisible(): boolean {
+    if (this.entries.length > 0 || this.navigationActive) return false;
+    return !this.catalogBusy;
   }
 
   @Builder
@@ -472,10 +497,10 @@ export struct FullDirectoryPanel {
     Stack({ alignContent: Alignment.Bottom }) {
       Row() {
         Text('目录')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(600)
-          .fontSize(11)
-          .lineHeight(16)
+          .fontFamily(TYPE_READER_DIRECTORY_TAB.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_TAB.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_TAB.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number)
           .fontColor(this.activeTab === 'directory' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -518,10 +543,10 @@ export struct FullDirectoryPanel {
             .height(15);
         }
         Text('书签')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(600)
-          .fontSize(11)
-          .lineHeight(16)
+          .fontFamily(TYPE_READER_DIRECTORY_TAB.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_TAB.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_TAB.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number)
           .fontColor(this.activeTab === 'bookmarks' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%')
@@ -626,7 +651,52 @@ export struct FullDirectoryPanel {
     // Quick viewport moves every row below the Stage's Quick clip.
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        ReaderDirectoryList({
+        if (this.bookmarkIdentity !== undefined) {
+          ReaderDirectoryNavigationSurface({
+            sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
+            currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey,
+            showLoadStatus: this.projectedEntries.length > 0 || this.navigationActive,
+            interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
+            interactionEnabled: !this.motionActive,
+            listPaddingX: this.directoryListPaddingX(), listPaddingY: this.embeddedInControl ? 0 : 5,
+            edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
+            chapterEntries: this.admittedEntries,
+            chapterDownloadEnabled: this.chapterDownloadEnabled,
+            chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+            fallbackBuilder: (): void => { this.flatChapterList(); },
+            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
+            },
+            onFirstLayout: (): void => this.onListFirstLayout(),
+            onUserScrollIntent: (): void => this.onListUserScroll(),
+            onTreeStateChange: (active: boolean): void => {
+              this.navigationActive = active;
+              if (active) this.initialListPositionReady = true;
+            },
+            onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+            onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+              this.onCreateChapterStartBookmark(request),
+          });
+        } else {
+          this.flatChapterList();
+        }
+      }
+      .width(this.directoryListWidth())
+      .height(this.directoryListViewportHeight())
+    }
+    .width('100%')
+    .height(this.chapterListHeight())
+    .clip(true)
+    .opacity(this.projectedEntries.length > 0 || this.navigationActive ? 1 : 0)
+    .enabled(this.initialListPositionReady)
+    .accessibilityLevel(this.initialListPositionReady ? 'auto' : 'no-hide-descendants')
+    .hitTestBehavior(this.initialListPositionReady ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  @Builder
+  private flatChapterList() {
+    ReaderDirectoryList({
         entries: this.projectedEntries,
         deferEntriesDuringMotion: this.embeddedInControl && this.controlProgress() > 0 && this.controlProgress() < 1,
         rowHeight: this.directoryListRowHeight(),
@@ -642,22 +712,7 @@ export struct FullDirectoryPanel {
         rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => {
           this.chapterRow(repeatItem);
         },
-        });
-      }
-      .width(this.directoryListWidth())
-      .height(this.directoryListViewportHeight())
-    }
-    .width('100%')
-    .height(this.chapterListHeight())
-    .clip(true)
-    // Chapter rows are persistent Figma actors: they have no opacity track in
-    // either direction.  Keep them painted while the asynchronous centering
-    // command is pending; hiding the whole List here made the Quick directory
-    // look empty and produced the f5->f6 reveal seam during expansion.
-    .opacity(this.projectedEntries.length > 0 ? 1 : 0)
-    .enabled(this.initialListPositionReady)
-    .accessibilityLevel(this.initialListPositionReady ? 'auto' : 'no-hide-descendants')
-    .hitTestBehavior(this.initialListPositionReady ? HitTestMode.Default : HitTestMode.None);
+    });
   }
 
   @Builder
@@ -672,12 +727,13 @@ export struct FullDirectoryPanel {
             .borderRadius(999);
         }
         Stack({ alignContent: Alignment.Center }) {
-          Text(repeatItem.item.title)
+          Text(repeatItem.item.title.trim().length > 0 && repeatItem.item.title.trim() !== '第话' && repeatItem.item.title.trim() !== '第 话' ?
+            repeatItem.item.title : `第${Math.max(1, repeatItem.item.index + 1)}话`)
             .width('100%')
             .padding({ left: 9 + readerDirectoryIndentVp(repeatItem.item), right: 9 })
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(11)
+            .fontFamily(TYPE_READER_DIRECTORY_TITLE_INTER.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_TITLE_INTER.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_TITLE_INTER.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -713,6 +769,7 @@ export struct FullDirectoryPanel {
     this.rebuildProjection(nextTab, this.ascending, this.searchQuery);
     this.beginListPositioning(nextTab);
     this.onTabChange(nextTab);
+    if (nextTab === 'bookmarks') this.navigationActive = false;
   }
 
   private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
@@ -821,21 +878,28 @@ export struct FullDirectoryPanel {
         .height(1)
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+        Text('当前章节')
+          .flexShrink(0)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(9)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+          .maxLines(1);
         Text(this.currentTitle())
           .layoutWeight(1)
           .constraintSize({ minWidth: 0 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(11)
+          .fontFamily(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
         Text(this.currentPosition())
           .flexShrink(0)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
+          .fontFamily(TYPE_READER_DIRECTORY_POSITION_INTER.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_POSITION_INTER.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_POSITION_INTER.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textAlign(TextAlign.End);
@@ -863,13 +927,21 @@ export struct FullDirectoryPanel {
       return;
     }
     if (kind === 'top') {
+      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity !== undefined ?
+        readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
+      if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Top);
+      if (localBookId !== undefined) readerDirectorySignalScrollCommand(localBookId);
       return;
     }
     if (kind === 'bottom') {
+      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity !== undefined ?
+        readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
+      if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Bottom);
+      if (localBookId !== undefined) readerDirectorySignalScrollCommand(localBookId);
       return;
     }
     // Do not read @State back in the same event after assigning it. On the
@@ -1043,8 +1115,11 @@ export struct FullDirectoryPanel {
     this.initialListPositionReady = false;
     const ordinal = this.canonicalOrdinal(this.currentChapterIndex);
     if (!this.positioningMounted || ordinal < 0) {
-      this.awaitingReadingAnchor = true;
+      const browseWithoutAnchor = this.positioningMounted && ordinal < 0 &&
+        this.allowUnanchoredBrowse && !this.embeddedInControl;
+      this.awaitingReadingAnchor = !browseWithoutAnchor;
       this.listPositioning = endReaderControlListOpen(this.listPositioning);
+      this.initialListPositionReady = browseWithoutAnchor;
       return;
     }
     this.awaitingReadingAnchor = false;
@@ -1077,6 +1152,7 @@ export struct FullDirectoryPanel {
   private onListUserScroll(): void {
     this.listPositioning = markReaderControlListUserScrolled(
       this.listPositioning, this.listPositioning.listOpenRevision);
+    this.navigationInteracted = true;
     this.leadingRowAnchor = undefined;
     this.projectionRestoreOffset = undefined;
     this.awaitingReadingAnchor = false;
@@ -1086,7 +1162,7 @@ export struct FullDirectoryPanel {
   }
 
   private scheduleOpenPositioning(): void {
-    if (!this.positioningMounted || this.listPositioning.status !== 'pending') return;
+    if (!this.positioningMounted || this.navigationActive || this.listPositioning.status !== 'pending') return;
     const openRevision = this.listPositioning.listOpenRevision;
     const generation = this.projectionScrollGeneration;
     setTimeout((): void => {
@@ -1235,7 +1311,7 @@ export struct FullDirectoryPanel {
     const revision = this.motionLayoutRevision;
     const openRevision = this.listPositioning.listOpenRevision;
     setTimeout((): void => {
-      if (!this.positioningMounted || revision !== this.motionLayoutRevision ||
+      if (!this.positioningMounted || this.navigationActive || revision !== this.motionLayoutRevision ||
         openRevision !== this.listPositioning.listOpenRevision) return;
       try {
         // Preserve the same leading row as its layout height changes. This is
@@ -1256,7 +1332,7 @@ export struct FullDirectoryPanel {
     // intentionally sends an empty sentinel while the control is hidden; the
     // snapshot keeps the already-painted directory rows alive until a real
     // data/session commit reaches a stable endpoint.
-    const sourceEntries = this.admittedEntries;
+    const sourceEntries = this.mangaSearch ? mangaDirectoryContextEntries(this.admittedEntries, mangaDirectoryPresentation(this.admittedEntries)) : this.admittedEntries;
     if (tab === 'bookmarks') {
       this.projectedEntries = [];
       this.bookmarkTabLoading = readerBookmarkLoadState(sourceEntries) === 'loading';
@@ -1264,7 +1340,7 @@ export struct FullDirectoryPanel {
         sourceEntries, query, this.bookmarkIdentity);
       return;
     }
-    this.projectedEntries = projectReaderDirectoryEntries(sourceEntries, query, ascending);
+    this.projectedEntries = projectReaderDirectoryEntries(sourceEntries, query, ascending, this.mangaSearch);
     this.projectedBookmarks = [];
     this.bookmarkTabLoading = false;
   }
@@ -1585,21 +1661,23 @@ export struct FullDirectoryPanel {
 
   private currentTitle(): string {
     const entry = this.currentEntry();
-    return entry === undefined ? '' : entry.title;
+    if (entry === undefined) return '尚未开始阅读';
+    return entry.title.trim().length > 0 && entry.title.trim() !== '第话' && entry.title.trim() !== '第 话' ?
+      entry.title : `第${Math.max(1, entry.index + 1)}话`;
   }
 
   private currentPosition(): string {
     const entry = this.currentEntry();
     if (entry === undefined) {
-      return '';
+      return '—';
     }
     let ordinal = 0;
-    for (let index = 0; index < this.admittedEntries.length; index += 1) {
-      if (this.admittedEntries[index].index === entry.index) {
-        ordinal = index + 1;
-        break;
-      }
+    let count = 0;
+    for (const chapter of this.admittedEntries) {
+      if (chapter.navigable === false) continue;
+      count += 1;
+      if (chapter.index === entry.index) ordinal = count;
     }
-    return ordinal === 0 ? '' : `${ordinal} / ${this.admittedEntries.length}`;
+    return ordinal === 0 ? '' : `${ordinal} / ${count}`;
   }
 }

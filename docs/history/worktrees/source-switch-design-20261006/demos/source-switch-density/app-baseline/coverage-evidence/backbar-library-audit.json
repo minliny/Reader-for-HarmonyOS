@@ -1,0 +1,216 @@
+{
+  "sourceHead": "bb68a364248022e8ecaa3c16ecce03851f845be2",
+  "scope": {
+    "modules": 21,
+    "states": 215,
+    "libraryModules": 11,
+    "libraryStates": 89,
+    "settingsModules": 10,
+    "settingsStates": 126,
+    "actualCssLoadOrder": [
+      "tokens.css",
+      "app.css",
+      "library.css",
+      "settings.css",
+      "reading.css",
+      "delivery.css"
+    ]
+  },
+  "groups": [
+    {
+      "group": "PageBackBar secondary pages",
+      "screens": [
+        "bookshelf-settings",
+        "general",
+        "sources",
+        "source-tools"
+      ],
+      "states": 107,
+      "returnAction": "back",
+      "geometry": "44x44/r22 icon24, title24/33 single-line ellipsis, gap10, max20/safe gutters; sources trailing44/icon20",
+      "sources": [
+        "features/common/PageBackBar.ets:32-100",
+        "features/bookshelf/BookshelfSettingsPage.ets:117",
+        "features/shell/SettingsShell.ets:104",
+        "features/source/SourceManagementPage.ets:244",
+        "features/source/SourceToolsPage.ets:273"
+      ]
+    },
+    {
+      "group": "floating detail return",
+      "screens": [
+        "detail"
+      ],
+      "states": 14,
+      "returnAction": "back",
+      "geometry": "floating52, return44/icon24, centered19/28 with symmetric44 tail; external top safe+8/internal4",
+      "sources": [
+        "features/bookshelf/LocalBookDetail.ets:92-114",
+        "features/common/PageBackBar.ets:32-100"
+      ]
+    },
+    {
+      "group": "search field return",
+      "screens": [
+        "search"
+      ],
+      "states": 22,
+      "returnAction": "go:bookshelf",
+      "geometry": "32x32/r16 icon20, header52/56, input flex/min0, submit36/40",
+      "sources": [
+        "features/search/SearchPage.ets:555-596",
+        "features/common/ReaderControlSpecs.ets:25"
+      ]
+    },
+    {
+      "group": "selection cancel",
+      "screens": [
+        "multiselect"
+      ],
+      "states": 6,
+      "returnAction": "go:bookshelf (cancel)",
+      "geometry": "source58, symmetric72 slots, centered24/34.49 max1; draft pressure header naturally grows with both action widths max72/4em",
+      "sources": [
+        "features/bookshelf/BookshelfMultiSelectPage.ets:101-141"
+      ]
+    },
+    {
+      "group": "home and active navigation",
+      "screens": [
+        "bookshelf",
+        "shelf-filter",
+        "settings"
+      ],
+      "states": 29,
+      "returnAction": "main-tabs/sidebar navigation; settings active scroll:settings",
+      "geometry": "home has no back; shelf floating52 symmetric44 search/more, settings home58/title29; current nav repeats remain own navigation semantics",
+      "sources": [
+        "features/common/AppTopBar.ets:37-111",
+        "features/shell/SettingsShell.ets:95-146",
+        "features/bookshelf/BookshelfShell.ets:116-218"
+      ]
+    },
+    {
+      "group": "ArkWeb login cancel/complete",
+      "screens": [
+        "source-login"
+      ],
+      "states": 3,
+      "returnAction": "cancel -> sources; complete -> source check",
+      "geometry": "56 bar/18 gutters/12 gap; heading15 and URL11, both single-line ellipsis; 200% two-line natural content80 requires pressure adaptation",
+      "sources": [
+        "app/ArkWebExecutionHost.ets:118-158"
+      ]
+    },
+    {
+      "group": "modal close/cancel, no page back",
+      "screens": [
+        "shelf-more",
+        "book-actions",
+        "group-select",
+        "local-import",
+        "book-removal",
+        "json-import",
+        "restore-defaults",
+        "source-result",
+        "source-export",
+        "source-delete"
+      ],
+      "states": 34,
+      "returnAction": "close/cancel presentation; no PageBackBar",
+      "geometry": "respective common dialog/menu or approved book action close structure; not classified as missing page-back buttons",
+      "sources": [
+        "features/common/ReaderSurfaceSpecs.ets",
+        "features/bookshelf/LocalImportDialog.ets",
+        "features/common/JsonImportDialog.ets"
+      ]
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "title": "empty top-actions consumes extra gap in no-trailing shared bar",
+      "draft": "shared.mjs:6",
+      "source": "PageBackBar.ets:54-60",
+      "status": "ROOT_FIXED",
+      "result": "root conditionally omits empty trailing slot"
+    },
+    {
+      "title": "200% global topbar aligns fixed return target to top instead of center",
+      "draft": "delivery.css:1",
+      "source": "PageBackBar.ets:74",
+      "status": "FIXED_IN_DESIGN",
+      "result": "align-items:center while retaining min-height76 pressure rule"
+    },
+    {
+      "title": "detail repeats safeTop already reserved by app-screen; pressure override creates hero overlap",
+      "draft": [
+        "delivery.css:1",
+        "library.css:76"
+      ],
+      "source": "LocalBookDetail.ets:108-114",
+      "status": "FIXED_IN_DESIGN",
+      "result": "inside inset app-screen uses top8/scroll76; 200% scroll100 gives stable16 clearance"
+    },
+    {
+      "title": "multiselect title min-width:auto squeezes side controls; fixed58 overflows pressure text",
+      "draft": "library.css:11",
+      "source": "BookshelfMultiSelectPage.ets:101-141",
+      "status": "FIXED_IN_DESIGN",
+      "result": "min0/ellipsis title, symmetric nonshrinking max72/4em actions, natural header outside scroll plus12 clearance"
+    },
+    {
+      "title": "search back target uses generic radius10 instead of navigation radius16",
+      "draft": "library.css:9",
+      "source": "ReaderControlSpecs.ets:25",
+      "status": "FIXED_IN_DESIGN",
+      "result": "32/20 geometry retained, radius16 restored"
+    },
+    {
+      "title": "login heading plus URL exceeds fixed56 height at200%",
+      "draft": "settings.css:137-142",
+      "source": "ArkWebExecutionHost.ets:118-158",
+      "status": "DELEGATED_SETTINGS",
+      "result": "settings agent owns pressure header sizing/clearance"
+    }
+  ],
+  "auditCorrections": [
+    "base h1 min0/nowrap/ellipsis already added by final delivery.css, so initial wrap finding withdrawn",
+    "safe gutters already provided by final delivery.css, so general PageBackBar cutout finding withdrawn",
+    "all 215 library/settings state templates have no reading-action/reading-icon-action class; those selectors do not pollute this scope"
+  ],
+  "modifiedFiles": [
+    "library.css",
+    "delivery.css",
+    "spec-library.mjs"
+  ],
+  "checks": {
+    "profiles": 9,
+    "textScales": 3,
+    "geometryCases": 27,
+    "targetedRenderCalls": 46,
+    "checks": [
+      "search32/20/r16",
+      "multiselect symmetric nonshrinking action slots",
+      "title min0/single-line ellipsis",
+      "natural header growth and flow-owned list clearance",
+      "detail safeTop applied once; 16px clearance at 100/200%",
+      "200% app-topbar vertically centered",
+      "reading-back-extra variables retained"
+    ],
+    "limitations": "CSS/model/template checks only; no browser or native visual execution"
+  },
+  "boundaries": [
+    "pure template/CSS/model checks only",
+    "no browser/screenshots/Playwright or native runtime",
+    "pressure sizing is documented migration adaptation, not native behavior claim"
+  ],
+  "notModifiedByThisAgent": [
+    "ui-library.mjs",
+    "ui-settings.mjs",
+    "settings.css",
+    "shared.mjs",
+    "app.css",
+    "native source",
+    "generated outputs"
+  ]
+}

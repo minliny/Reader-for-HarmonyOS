@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-05T13:48:36.965Z",
+  "status": "DESIGN_REDRAW_OFFLINE_VERIFIED_VISUAL_PENDING",
+  "scope": "用户要求参考漫画更多菜单重绘小说更多菜单，仅UI/逻辑稿及演示交互。",
+  "hostHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+  "coreHead": "2166576ff5f2091b1d921c9a018cd7c7b536fdd4",
+  "sourceTreeSha256": "7ba0dbddfab49fe87a7b36d4993b301dc0e38e1ef5cd05dbd0d6f60075201c2b",
+  "designSourceSha256": "3f4d55ca9890cc6870c7368f2e5da9320227eed2300aece49b0274e5bdf9a238",
+  "logicSha256": "961bde71244bb54a1bf8ea860d053b208b2f7e13835cc821ebde0607d65ac4bf",
+  "bundleSha256": "7b8cf7ccb49565d049615731b3eb030b99a7405bd1226dc209b54b2e9a1e1c99",
+  "productionSourceChangedByThisTask": false,
+  "nativeReality": {
+    "novelMore": "ReaderControlPanel.ReaderActionMenuSurface / bindPopup",
+    "sources": [
+      "entry/src/main/ets/features/reading/ReaderControlPanel.ets:1062",
+      "entry/src/main/ets/features/reading/ReaderControlPanel.ets:1078",
+      "entry/src/main/ets/features/reading/ReaderControlPanel.ets:1539"
+    ],
+    "nativeSheetImplemented": false
+  },
+  "designChoice": {
+    "sharedRenderer": "ui-reading.mjs:mangaSheet",
+    "sharedStyle": "reading.css:manga-panel-overlay / manga-sheet / manga-operation",
+    "phone": "底部sheet、r22、抓手、标题与关闭、48高/r14动作行",
+    "wide": "同漫画稿右侧贴边sheet，关闭34，隐藏抓手",
+    "novelActions": [
+      "书籍信息",
+      "刷新本章",
+      "下载全部章节"
+    ],
+    "busyLabel": "正在下载章节…",
+    "downloadDisabledWhen": [
+      "local book",
+      "download-busy"
+    ],
+    "theme": "小说跟应用日夜，不读取漫画底色偏好",
+    "annotations": "样式调整、源码事实与未验项均在画布外"
+  },
+  "interactionRepair": {
+    "problem": "旧jump通用background分支先匹配reader-controls，打开更多会换掉原活动阅读子栏。",
+    "fix": "reader-more保留原活动模块与variant的分支优先于通用background初始化。关闭恢复原模块；动作先消费更多菜单，详情返回不重开菜单。",
+    "stateModelOrigins": [
+      "reader-controls/full",
+      "reader-appearance/full",
+      "reader-search/full-results",
+      "reader-directory/full",
+      "reader-autopage/full-paused"
+    ],
+    "modelMethod": "Node VM执行当前jump/close函数，仅路由状态，无DOM、网络、浏览器或渲染。",
+    "modal": "reader-more接入已有modal focus/background隔离；复用漫画抓手关闭策略，不使用小说Quick/Full morph抓手。"
+  },
+  "repairInputs": {
+    "ui-reading.mjs": "898d150ba0d3102e442dd144349be535234b5f34fae1586e42f3b70bc9e4b9b0",
+    "reading.css": "36509d1202e11d2bba321bfc7b1c1bd435461faa072e9f4c7462c249a44d821e",
+    "spec-reading.mjs": "6cd81c5305825fc768b3aa83ee484f3e91b46a39948ed42fbb69dd00ea664caf",
+    "routes-reading.json": "276829c0780a20a6eb42e873b9a511a9035d7a39a1d3b47112ca42e8d0e236b8",
+    "app.mjs": "7b110888abc4dc03167d183454358d83521712e401103de05013d0d810a709c9"
+  },
+  "sourceRefresh": {
+    "from": "bb68a364248022e8ecaa3c16ecce03851f845be2",
+    "to": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+    "sourceChanges": [
+      "entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts:216 保留contentKind"
+    ],
+    "menuSourceChanged": false
+  },
+  "verification": {
+    "record": "repair-verification.json",
+    "checks": 20,
+    "failures": 0,
+    "modules": 41,
+    "states": 441,
+    "staticMarkupRenders": 882,
+    "readingChecks": 24,
+    "readingMarkupRenders": 904,
+    "returnLayoutModels": 27,
+    "routeGrammar": {
+      "tool": "Mermaid 11.12.0 flowchart grammar/database",
+      "modules": 41,
+      "overviewDiagrams": 6,
+      "totalDiagrams": 47,
+      "parsePassed": 47,
+      "rendered": false,
+      "domSanitizationExecuted": false
+    },
+    "browser": false,
+    "nativeVisual": false,
+    "backend": false
+  },
+  "bounds": {
+    "visual": "本轮未执行浏览器渲染、截图或原生视觉验收；旧PNG为历史。",
+    "gestures": "共用现有单向sheet稳定端点适配；ArkUI spring时间曲线未验。",
+    "business": "演示保留真实调用语义说明；不执行真实退出保存、刷新或下载。"
+  },
+  "intermediateProbeCorrections": [
+    "首次新增断言仅匹配单个class，未匹配reading-text-button manga-operation复合class；已修正断言后通过。"
+  ]
+}

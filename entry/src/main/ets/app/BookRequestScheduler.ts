@@ -31,7 +31,7 @@ type RequestJob = {
   reject: (error: Error) => void;
 };
 
-class BookRequestNotDispatchedError extends Error {}
+export class BookRequestNotDispatchedError extends Error {}
 
 function priorityRank(priority: BookRequestPriority): number {
   return priority === 'foreground' ? 0 : priority === 'search' ? 1 : 2;

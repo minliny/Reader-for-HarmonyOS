@@ -1,0 +1,538 @@
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "sdk-public-slots": {
+    "description": "Current public Builder slots and actual native overlay collision negative; installed SDK",
+    "resources": []
+  },
+  "header-paint-owner": {
+    "description": "Actual retained HeaderHost policy/paint/clip/measurement with bad policy and omitted-paint counterexamples",
+    "resources": []
+  },
+  "scaffold-slots": {
+    "description": "Actual Scaffold slots, common layer order and measurement callbacks; no route-wide scan",
+    "resources": []
+  },
+  "footer-safe-lane": {
+    "description": "Actual retained bounded footer viewport/safe lane and omitted clip/paint negatives",
+    "resources": []
+  },
+  "standard-page-layout": {
+    "description": "Actual shared frame text/manga safe-area facts and measured standard page delegation",
+    "resources": []
+  },
+  "framework-route-coverage": {
+    "description": "Explicit full current route/branch architecture inventory with missing host/route/quiet-notice negatives; no product full test",
+    "resources": []
+  },
+  "directory-layout-succession": {
+    "description": "Explicit controlled full-directory baseline succession and bad callback/layout mutations",
+    "resources": []
+  },
+  "sync-cold-layout": {
+    "description": "Actual SDK cold/ready sync branch and explicit controlled baseline mutation",
+    "resources": []
+  }
+};
+
+async function case_sdk_public_slots() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+for (const [name, file, slots] of [
+  ['ReaderPageScaffold', 'common/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['ReaderStandardPage', 'common/ReaderStandardPage.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['MainTabShell', 'shell/MainTabShell.ets', ['content', 'header', 'overlayContent']],
+]) {
+  const source = readFileSync(`entry/src/main/ets/features/${file}`, 'utf8');
+  assert.deepEqual([...readerPageBuilderSlots(source, name)], slots, `${name}: all original public slots retain their actual declarations`);
+  const collision = source.replaceAll('overlayContent', 'overlay');
+  assert.notEqual(collision, source);
+  assert.throws(() => readerPageBuilderSlots(collision, name), /collides.*native CustomComponent/,
+    `${name}: the focused SDK gate must reject the compiler-only native overlay collision`);
+}
+
+}
+
+async function case_header_paint_owner() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
+
+const painted = new Map([
+  ['standard', 'TOK_SURFACE_SOLID'], ['directoryTools', 'TOK_SURFACE_SOLID'],
+  ['home', 'TOK_PAPER'], ['selection', 'TOK_PAPER'], ['search', 'TOK_PAPER'], ['rss', 'TOK_PAPER'],
+  ['download', 'TOK_DOWNLOAD_PAPER'],
+]);
+function headerProof(kind, scheme, dependencies = {}) {
+  const probe = actual('ReaderFixedHeaderHost', dependencies);
+  let mounted = 0; const measured = [];
+  Object.assign(probe.owner, { kind, appThemeScheme: scheme, content: () => mounted++, onHeightChange: height => measured.push(height) });
+  probe.owner.initialRender();
+  const header = [...probe.owner.nodes.values()].find(node => node.type === 'Column');
+  assert.equal(mounted, 1, 'the real header slot mounts once');
+  assert.equal(header.width, '100%'); assert.ok(header.zIndex>0,'fixed header is above the body');
+  if (painted.has(kind)) {
+    assert.equal(header.backgroundColor, readerAppColor(painted.get(kind), scheme), `${kind}/${scheme}: actual opaque mask`);
+    assert.equal(header.clip, true);
+    assert.match(header.backgroundColor, /^#FF[0-9a-f]{6}$/i, 'declared solid header really paints an opaque color');
+  } else {
+    assert.equal(header.backgroundColor, 'Color.Transparent', 'bounded floating/manga/reader actors retain their own surface');
+    assert.equal(header.clip, false, 'bounded card shadows remain outside the host');
+  }
+  for (const height of [88, '95vp', -1, 'invalid']) header.onAreaChange({}, { height });
+  assert.deepEqual(measured, [88, 95], 'real native measurement callbacks reject malformed/negative sizes');
+  return probe;
+}
+for (const scheme of ['day', 'night']) for (const kind of [...painted.keys(), 'floating', 'mangaDirectory', 'reader']) headerProof(kind, scheme);
+
+// Actual shared-policy changes must reach every affected actual SDK consumer.
+// Reusing the same native node must clear previously solid paint and clip.
+{
+  const probe = headerProof('standard', 'day');
+  const node = [...probe.owner.nodes.values()][0];
+  probe.owner.surface = 'transparent'; probe.properties.flush();
+  assert.equal(node.backgroundColor, 'Color.Transparent'); assert.equal(node.clip, true);
+  probe.owner.surface = 'solid'; probe.properties.flush();
+  assert.equal(node.backgroundColor, readerAppColor('TOK_SURFACE_SOLID', 'day'));
+  probe.owner.kind = 'floating'; probe.properties.flush();
+  assert.equal(node.backgroundColor, 'Color.Transparent'); assert.equal(node.clip, false,
+    'standard-to-floating reuse cannot retain a clipping mask around card shadows');
+}
+const changedPolicy = policySource.replace("? 'TOK_SURFACE_SOLID'", "? 'TOK_PRIMARY_DARK'");
+assert.notEqual(changedPolicy, policySource, 'mutation targets the real solid-surface policy');
+for (const kind of ['standard', 'directoryTools']) {
+  const probe = actual('ReaderFixedHeaderHost', actualReaderPageShell(changedPolicy));
+  probe.owner.kind = kind; probe.owner.initialRender();
+  assert.equal([...probe.owner.nodes.values()][0].backgroundColor, readerAppColor('TOK_PRIMARY_DARK', 'day'));
+}
+const omittedPaint = policySource.replace('if (this.surface === \'solid\') instance.backgroundColor', 'if (false) instance.backgroundColor');
+assert.notEqual(omittedPaint, policySource);
+assert.throws(() => headerProof('rss', 'day', actualReaderPageShell(omittedPaint)), /actual opaque mask/,
+  'the historical solid-declaration/no-paint defect cannot pass runtime evidence');
+
+}
+
+async function case_scaffold_slots() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
+
+for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail', 'directory', 'mangaDirectory', 'search', 'selection', 'download', 'reader', 'readerDirectory']) {
+  const probe = actual('ReaderPageScaffold');
+  const slots = [], headerHeights = [], footerHeights = [];
+  Object.assign(probe.owner, { variant, headerKind: variant === 'reader' ? 'reader' : 'standard',
+    frameInsetLeft: 13, frameInsetRight: 17, headerTop: 6, footerBottom: 28,
+    content: () => slots.push('body'), header: () => slots.push('header'), footer: () => slots.push('footer'), overlayContent: () => slots.push('overlay'),
+    onHeaderHeightChange: height => headerHeights.push(height), onFooterHeightChange: height => footerHeights.push(height) });
+  probe.owner.initialRender();
+  assert.deepEqual(slots, ['body', 'header', 'footer', 'overlay'], 'actual finite host delegates every slot exactly once');
+  const root = [...probe.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding?.left === 13 && node.padding?.right === 17);
+  assert.deepEqual(root.padding, { left: 13, right: 17 }, 'measured safe/rail offsets go through the common frame');
+  assert.equal(root.clip, variant === 'reader' ? false : true);
+  const layers = [...probe.owner.nodes.values()].filter(node => [10, 20, 30].includes(node.zIndex));
+  assert.deepEqual(layers.map(node => node.zIndex), [10, 20, 30], 'header, footer and overlay have one shared ordering');
+  assert.ok(layers.every(node => node.hitTestBehavior === 'HitTestMode.Transparent'), 'empty hosts preserve body hit testing');
+  const header = flatten(probe.owner).find(node => node.type === 'Column' && node.onAreaChange && node.zIndex === 10);
+  header.onAreaChange({}, { height: 97 });
+  const footer = [...probe.owner.nodes.values()].find(node => node.type === 'Column' && node.onAreaChange);
+  footer.onAreaChange({}, { height: 54 });
+  assert.deepEqual(headerHeights, [97]); assert.deepEqual(footerHeights, [54]);
+}
+
+}
+
+async function case_footer_safe_lane() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
+
+function footerProof(scaffoldSource = read('ReaderPageScaffold'), dependencies = {}, scheme = 'day') {
+  const probe = actual('ReaderPageScaffold', dependencies, {}, scaffoldSource);
+  const heights = []; let mounts = 0;
+  Object.assign(probe.owner, { variant: 'mangaDirectory', footerSurface: 'solid', appThemeScheme: scheme,
+    contentEndInset: 98, footerBottom: 42, footerInsetLeft: 20, footerInsetRight: 20,
+    content: () => mounts++, footer: () => {}, onFooterHeightChange: height => heights.push(height) });
+  probe.owner.initialRender();
+  const nodes = [...probe.owner.nodes.values()];
+  const viewport = nodes.find(node => node.type === 'Stack' && node.height === 'calc(100% - 98vp)');
+  assert.ok(viewport, 'the public frame owns a bounded native content viewport above the fixed dock');
+  assert.equal(viewport.clip, true, 'rows cannot paint or receive input below that viewport');
+  const backing = nodes.find(node => node.type === 'Column' && node.padding?.bottom === 42);
+  assert.ok(backing, 'the paper lane includes the complete bottom safe area rather than a transparent margin');
+  assert.equal(backing.width, '100%', 'paper covers both card gutters'); assert.equal(backing.clip, true);
+  assert.equal(backing.backgroundColor, mangaDirectoryColor('paper', scheme));
+  const measurement = nodes.find(node => node.type === 'Column' && node.onAreaChange);
+  measurement.onAreaChange({}, { height: '54vp' }); assert.deepEqual(heights, [54], 'dock measurement excludes the already reserved bottom safe lane');
+  probe.owner.footerSurface = 'transparent'; probe.owner.contentEndInset = 0; probe.properties.flush();
+  assert.equal(backing.backgroundColor, 'Color.Transparent'); assert.equal(backing.clip, false);
+  assert.deepEqual(backing.padding, { bottom: 0 }); assert.deepEqual(backing.margin, { bottom: 42 });
+  assert.equal(viewport.height, '100%'); assert.equal(viewport.clip, false); assert.equal(mounts, 1, 'footer style/inset updates retain the body actor');
+}
+footerProof();
+footerProof(undefined, {}, 'night');
+const scaffoldSource = read('ReaderPageScaffold');
+const noViewportClip = scaffoldSource.replace('.clip(this.contentEndInset > 0)', '.clip(false)');
+assert.notEqual(noViewportClip, scaffoldSource); assert.throws(() => footerProof(noViewportClip), assert.AssertionError);
+const noSafeLane = scaffoldSource.replace("bottom: this.footerSurface === 'solid' ? this.footerBottom : 0", 'bottom: 0');
+assert.notEqual(noSafeLane, scaffoldSource); assert.throws(() => footerProof(noSafeLane), assert.AssertionError);
+const noFooterPaint = policySource.replace('new ReaderPageFrameModifier(this.scheme, this.kind, this.readingUnderlayColor).applyNormalAttribute(instance);', 'instance.backgroundColor(Color.Transparent);');
+assert.notEqual(noFooterPaint, policySource); assert.throws(() => footerProof(scaffoldSource, actualReaderPageShell(noFooterPaint)), assert.AssertionError);
+
+{
+  const policy = actualReaderPageShell();
+  assert.throws(() => policy.readerStandardPageSpec('private99'), /Unknown|unknown/);
+  assert.throws(() => policy.readerPageInitialHeaderHeight('private99'), /Unknown|unknown/);
+}
+
+{
+  const probe = actual('ReaderPageScaffold');
+  probe.owner.variant = 'reader'; probe.owner.headerKind = 'reader';
+  let mounts = 0; probe.owner.content = () => mounts++;
+  probe.owner.initialRender();
+  const root = [...probe.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding);
+  assert.equal(root.backgroundColor, readerAppColor('app.window.background', 'day'), 'reader first frame consumes the real window paper fact');
+  probe.owner.readingUnderlayColor = '#FF314159'; probe.properties.flush();
+  assert.equal(root.backgroundColor, '#FF314159', 'updated window paper reaches the retained common reading frame');
+  assert.equal(mounts, 1, 'window paper updates do not remount reading content');
+  probe.owner.pageVisible = false; probe.properties.flush();
+  assert.equal(root.opacity, 0); assert.equal(root.hitTestBehavior, 'HitTestMode.Transparent');
+  probe.owner.pageVisible = true; probe.properties.flush();
+  assert.equal(root.opacity, 1); assert.equal(root.hitTestBehavior, 'HitTestMode.Default');
+  assert.equal(mounts, 1, 'page visibility toggles preserve the persistent reader actor');
+
+}
+
+}
+
+async function case_standard_page_layout() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
+
+const variants = ['management', 'settings', 'rssManagement', 'rssEditor', 'rssFeed', 'rssDetail', 'tools', 'sync', 'sourceManagement', 'settingsHome', 'settingsGeneral'];
+// Native reading geometry belongs to the same actual frame as the body.
+// These finite runtime facts are not a caller-owned style/attribute bag.
+{
+ const probe=actual('ReaderPageScaffold');let mounts=0;
+ Object.assign(probe.owner,{variant:'reader',readingContentKind:'text',content:()=>mounts++});probe.owner.initialRender();
+ const root=[...probe.owner.nodes.values()].find(node=>node.type==='Stack'&&node.padding);
+ assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']]);
+ assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
+ probe.owner.readingContentKind='manga';probe.properties.flush();
+ assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']]);
+ assert.deepEqual(root.ignoreLayoutSafeArea,[['LayoutSafeAreaType.SYSTEM'],['LayoutSafeAreaEdge.ALL']]);
+ probe.owner.variant='standard';probe.properties.flush();
+ assert.deepEqual(root.expandSafeArea,[[],[]],'reader-to-ordinary reuse clears native expansion');
+ assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]],'reader-to-ordinary reuse clears native ignore policy');
+ assert.equal(mounts,1,'native geometry fact changes retain the same body actor');
+}
+for (const variant of variants) {
+  const metrics = createDefaultReaderWindowMetrics();
+  metrics.windowRect.width = 393; metrics.windowRect.height = 852;
+  metrics.systemInsets.top = 32; metrics.cutoutInsets.top = 40;
+  metrics.systemInsets.left = 24; metrics.cutoutInsets.right = 30;
+  const probe = actual('ReaderStandardPage', { ReaderWindowCoordinator: { metrics: () => metrics } });
+  let bodyMounted = 0;
+  Object.assign(probe.owner, { variant, content: () => bodyMounted++ });
+  probe.owner.initialRender();
+  const body = [...probe.owner.nodes.values()].find(node => node.type === 'Column' && node.padding);
+  assert.deepEqual([body.padding.left, body.padding.right, body.padding.top], [24, 30, 66],
+    'conventional content obeys visual safe sides without charging the system top twice');
+  assert.equal(bodyMounted, 1);
+  const header = findChild(probe.owner, child => child.kind !== undefined && child.surface !== undefined);
+  assert.ok(header, 'actual StandardPage → Scaffold → HeaderHost child delegation');
+  const measured = [...header.nodes.values()].find(node => node.onAreaChange);
+  measured.onAreaChange({}, { height: '93vp' }); probe.properties.flush();
+  assert.equal(body.padding.top, 101, 'measured expanded header updates the actual Scroll content clearance');
+  assert.equal(bodyMounted, 1, 'a measured chrome update does not remount business content');
+  const outer = [...probe.owner.nodes.values()].find(node => node.type === '__Common__' && node.onAreaChange);
+  assert.ok(outer, 'the real component instance retains its measured viewport callback');
+  outer.onAreaChange({}, { width: '365vp' }); probe.properties.flush();
+  assert.equal(probe.owner.viewportWidth, 365, 'native vp area strings preserve narrow-host measurement');
+  assert.equal(probe.owner.contentFrame().width, 311, 'layout uses the measured host instead of window width');
+  assert.equal(bodyMounted, 1, 'resizing measured chrome keeps the retained content slot');
+
+  measured.onAreaChange({}, { height: -1 }); probe.properties.flush();
+  assert.equal(body.padding.top, 101);
+}
+
+}
+
+async function case_framework_route_coverage() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const coverageContract = JSON.parse(readFileSync('tools/fixtures/reader-page-framework-coverage.json', 'utf8'));
+const coverage = verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract);
+assert.ok(coverage.routes>0);
+const source = file => readFileSync(`entry/src/main/ets/${file}`, 'utf8');
+const indexSource = source('pages/Index.ets');
+for (const [name, before, after] of [
+  ['extra naked text catalog sibling', 'ReaderFullDirectory({', "Column() { Text('unregistered text catalog'); }\n        ReaderFullDirectory({"],
+  ['extra unknown text catalog actor', 'ReaderFullDirectory({', 'UnregisteredCatalogPage({});\n        ReaderFullDirectory({'],
+  ['retained reading naked sibling', 'if (this.readingSessionActive && this.detailBook !== undefined) {', "if (this.readingSessionActive && this.detailBook !== undefined) {\n        Text('unregistered retained reader');"],
+  ['new side page outside primary chain', 'if (this.readingSessionActive && this.detailBook !== undefined) {', "if (this.privateCatalogVisible) { Text('unregistered side page'); }\n      if (this.readingSessionActive && this.detailBook !== undefined) {"],
+  ['manga preview naked sibling', 'if (this.mangaSourceSwitchSelection !== undefined) {\n      BookDirectoryPage({', "if (this.mangaSourceSwitchSelection !== undefined) {\n      Text('unregistered manga preview');\n      BookDirectoryPage({"],
+  ['cold sync returns to private body', "ReaderPageScaffold({ variant: 'standard', content: (): void => { this.syncPreparingContent(); } });", 'this.syncPreparingContent();'],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name + ': actual mutation target');
+  assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract, file => file === 'pages/Index.ets' ? changed : source(file)),
+    /category\/common-host|actual registration|registered page\/window actor/, name + ': retaining a sibling common frame cannot hide this bare branch');
+}
+for (const [name, before, after] of [
+  ['quiet feedback cannot claim full screen', ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)", ".height('100%').align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)"],
+  ['quiet feedback cannot mask page input', ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)", ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Block)"],
+  ['quiet feedback cannot drop route admission', 'this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true', 'this.indexRecoveryNotice.visible'],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name);
+  assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+    file => file === 'pages/Index.ets' ? changed : source(file)), /quiet feedback/, name);
+}
+const readerSource=source('features/shell/ReaderShell.ets');
+const detachedKind=readerSource.replace('readingContentKind: this.contentKind',"readingContentKind: 'text'");assert.notEqual(detachedKind,readerSource);
+assert.throws(()=>verifyReaderPageFrameworkCoverage(process.cwd(),coverageContract,file=>file==='features/shell/ReaderShell.ets'?detachedKind:source(file)),/exact page\/runtime fact/);
+const missingHostFile = 'features/bookshelf/BookshelfManagementPage.ets';
+const original = source(missingHostFile);
+const missingHost = original.replace('ReaderStandardPage({', 'PrivatePageHost({');
+assert.notEqual(missingHost, original);
+assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+  file => file === missingHostFile ? missingHost : source(file)), /category\/common-host binding removed/,
+  'a local page reverting to a private host fails reverse coverage');
+const bareUiSlot = original.replace('this.pageHeader();', "PageBackBar({ title: '管理' });");
+assert.notEqual(bareUiSlot, original);
+assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+  file => file === missingHostFile ? bareUiSlot : source(file)), /bare UI component inside shared BuilderParam/,
+  'component calls inside ordinary lambdas cannot pretend to be SDK-emitted native Builder slots');
+const extraRoute = source('pages/Index.ets').replace("type ReaderRoute = 'bookshelf'", "type ReaderRoute = 'privateUnregisteredPage' | 'bookshelf'");
+assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+  file => file === 'pages/Index.ets' ? extraRoute : source(file)), /every actual route requires exactly one/,
+  'new routes cannot bypass category registration');
+
+}
+
+async function case_directory_layout_succession() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const readWorkspace=file=>readFileSync(file,'utf8');const architectureBaseline=JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
+const fullFile = 'entry/src/main/ets/features/reading/ReaderFullDirectory.ets', fullSource = readWorkspace(fullFile);
+verifyFullDirectoryLayoutSuccession(architectureBaseline, readWorkspace, sharedProducerShape);
+for (const [before, after] of [
+  ['header: (): void => { this.topBar(); }', 'header: (): void => {}'],
+  ['content: (): void => { this.directoryContent(); }', 'content: (): void => {}'],
+  ['overlayContent: (): void => { this.directoryOverlay(); }', 'overlayContent: (): void => { this.offlineBookMenu(); }'],
+  ['Column() { this.recoveryContent(); }', 'Column() {}'],
+  ['Column() { this.recoveryContent(); }', 'Column() { this.recoveryContent(); this.unregisteredPendingMessage(); }'],
+  ['onReconcileBookmarks: this.onReconcileBookmarks', 'onReconcileBookmarks: this.onContinueBookmarks'],
+  ['.zIndex(8).hitTestBehavior(HitTestMode.Transparent)', '.height(999).zIndex(8).hitTestBehavior(HitTestMode.Block)'],
+  ['.height(this.panelViewportHeight())', '.height(Math.max(0, this.panelViewportHeight() - 100))'],
+  ["allowUnanchoredBrowse: this.catalogContext === 'detail'", 'allowUnanchoredBrowse: false'],
+  ['.opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)\n      .clip(true)', '.opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)\n      .clip(false)'],
+  ['.fontSize(TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp)', '.fontSize(99)'],
+  ["if (this.catalogContext === 'detail') return 18;", "if (this.catalogContext === 'detail') return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));"],
+  ['return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));', 'return 18;'],
+  ['if (this.readerWindowMetricsRevision < 0) return 18;', 'if (false) return 18;'],
+]) {
+  const changed = fullSource.replace(before, after); assert.notEqual(changed, fullSource);
+  assert.throws(() => verifyFullDirectoryLayoutSuccession(architectureBaseline, file => file === fullFile ? changed : readWorkspace(file), sharedProducerShape));
+}
+
+}
+
+async function case_sync_cold_layout() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
+const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
+const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
+const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
+const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
+const findChild = (owner, predicate) => {
+  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
+};
+function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
+    { ...properties.hooks, ...hooks }), properties };
+}
+
+const source=file=>readFileSync(`entry/src/main/ets/${file}`,'utf8');const indexSource=source('pages/Index.ets');const readWorkspace=file=>readFileSync(file,'utf8');const architectureBaseline=JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
+verifyIndexSyncColdLayoutSuccession(architectureBaseline, readWorkspace);
+for (const [before, after] of [
+  ['content: (): void => { this.syncPreparingContent(); }', 'content: (): void => {}'],
+  ["Text('正在读取安全配置…');", "Text('正在读取安全配置…').fontSize(99);"],
+  ["}.width('100%').height('100%').justifyContent(FlexAlign.Center);", "}.width('100%').height('100%').justifyContent(FlexAlign.Center).backgroundColor('#FF010203');"],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource);
+  assert.throws(() => verifyIndexSyncColdLayoutSuccession(architectureBaseline, file => file === 'entry/src/main/ets/pages/Index.ets' ? changed : readWorkspace(file)));
+}
+for (const ready of [false, true]) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  class OtherActor { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); this.nodes = new Map(); this.children = new Map(); } }
+  const components = { BookshelfMultiSelectPage: 'features/bookshelf/BookshelfMultiSelectPage.ets', ReaderShell: 'features/shell/ReaderShell.ets',
+    SyncPage: 'features/sync/SyncPage.ets', ReaderLayoutDebugOverlay: 'features/common/ReaderLayoutDebugOverlay.ets', ArkWebExecutionHost: 'app/ArkWebExecutionHost.ets' };
+  const metrics = createDefaultReaderWindowMetrics();
+  const { owner } = createReaderBuilderProbe(indexSource, ['build', 'syncContent', 'syncSurface', 'syncPreparingContent', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset', 'detailPendingNoticeVisible'],
+    { ...properties.sdk, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
+      ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop, isReaderProductSurfaceEnabled: () => true, deviceInfo: { deviceType: 'phone' } },
+    { ...properties.hooks, mountChildren: true, childSources: Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) });
+  Object.assign(owner, { route: 'sync', syncSnapshotReady: ready, syncSnapshot: {}, navigationGeneration: 7,
+    detailShelfAdmissionMount: 3, syncPresentationIdentity: 'sync-window', getSyncOrchestrator: () => ({}),
+    readingSessionActive: false, jsonImportVisible: false, appThemeScheme: 'day', readerWindowMetricsRevision: 0 });
+  owner.initialRender();
+  const descendants = actor => [actor, ...[...(actor.children?.values() ?? [])].flatMap(descendants)];
+  const actors = descendants(owner);
+  if (ready) {
+    const sync = actors.find(actor => actor.params?.snapshot === owner.syncSnapshot);
+    assert.ok(sync, 'actual ready branch still mounts the original SyncPage with its current snapshot');
+    assert.equal(actors.filter(actor => actor.variant === 'standard').length, 0, 'cold frame cannot cover the ready branch');
+  } else {
+    const frame = actors.find(actor => actor.variant === 'standard'); assert.ok(frame, 'actual cold branch owns its own common frame');
+    const label = flatten(owner).find(node => node.type === 'Text' && node.create === '正在读取安全配置…'); assert.ok(label);
+    const column = [...owner.nodes.values()].find(node => node.type === 'Column' && node.justifyContent === 'FlexAlign.Center');
+    assert.deepEqual([column.width, column.height], ['100%', '100%']);
+    assert.equal(column.backgroundColor, undefined); assert.equal(label.fontSize, undefined, 'original native AUTO survives the real cold slot');
+    const root = [...frame.nodes.values()].find(node => node.type === 'Stack' && node.padding);
+    for (const scheme of ['day', 'night']) { frame.appThemeScheme = scheme; properties.flush(); assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme)); }
+  }
+}
+
+}
+
+const implementations = {'sdk-public-slots':case_sdk_public_slots,'header-paint-owner':case_header_paint_owner,'scaffold-slots':case_scaffold_slots,'footer-safe-lane':case_footer_safe_lane,'standard-page-layout':case_standard_page_layout,'framework-route-coverage':case_framework_route_coverage,'directory-layout-succession':case_directory_layout_succession,'sync-cold-layout':case_sync_cold_layout};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

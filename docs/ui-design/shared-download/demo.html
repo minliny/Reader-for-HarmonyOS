@@ -1,0 +1,467 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@700&display=swap">
+<style>
+  #shared-reader-download { width:100%; }
+  #shared-reader-download [hidden] { display:none !important; }
+  #shared-reader-download .demo-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding-right:90px; margin-bottom:12px; }
+  #shared-reader-download .preview { padding:12px 0; }
+  #shared-reader-download .phone {
+    --paper:light-dark(#f8f4ec,#1c1e1a); --surface:light-dark(#fffcf8,#282c25);
+    --ink:light-dark(#1f1b17,#eae7de); --muted:light-dark(#756f69,#aba99f);
+    --line:light-dark(#e7e0d5,#3b4036); --soft:light-dark(#f0ece3,#30342d);
+    --green:light-dark(#1f3528,#b9ceb1); --green-ink:light-dark(#fffcf8,#1c1e1a);
+    --soft-green:light-dark(#e8eddf,#333f2d); --danger:light-dark(#a53d32,#efb4a8);
+    --scrim:light-dark(#00000057,#00000080); --shadow:light-dark(#00000012,#00000032);
+    width:min(100%,365.714px); aspect-ratio:1280/2832; margin:0 auto; position:relative; isolation:isolate;
+    overflow:hidden; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink);
+    font:400 13px/21px "Noto Sans SC","PingFang SC",sans-serif;
+  }
+  #shared-reader-download .phone * { box-sizing:border-box; }
+  #shared-reader-download .phone button, #shared-reader-download .phone input, #shared-reader-download .phone select { font:inherit; color:inherit; }
+  #shared-reader-download .phone button { border:0; background:transparent; }
+  #shared-reader-download .phone button:disabled { opacity:.5; }
+  #shared-reader-download .phone svg { width:18px; height:18px; flex-shrink:0; }
+  #shared-reader-download .statusbar { position:absolute; inset:0 0 auto; height:28px; padding:4px 20px; display:flex; align-items:center; justify-content:space-between; background:var(--paper); font-size:11px; z-index:3; }
+  #shared-reader-download .status-icons { display:flex; align-items:center; gap:6px; }
+  #shared-reader-download .status-icons svg { width:13px; height:13px; }
+  #shared-reader-download .header { position:absolute; top:38px; left:16px; right:16px; height:52px; display:grid; grid-template-columns:80px minmax(0,1fr) 80px; align-items:center; padding:3px; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:0 2px 10px var(--shadow); z-index:3; }
+  #shared-reader-download .header h2 { margin:0; text-align:center; font:700 18px/26px "Noto Serif SC","Songti SC",serif; white-space:nowrap; }
+  #shared-reader-download .header-tail { display:flex; justify-content:flex-end; align-items:center; }
+  #shared-reader-download .icon-action { display:inline-flex; align-items:center; justify-content:center; width:40px; height:44px; flex:0 0 auto; padding:0; }
+  #shared-reader-download .header-text { width:40px; min-height:44px; padding:0; font-size:12px !important; color:var(--green) !important; }
+  #shared-reader-download .scroll { position:absolute; inset:28px 0 0; overflow-y:auto; overscroll-behavior:contain; padding:78px 18px 130px; scrollbar-width:thin; }
+  #shared-reader-download .tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; background:var(--soft); border-radius:13px; padding:4px; margin:12px 0 7px; }
+  #shared-reader-download .tabs button { min-height:36px; padding:5px 8px; border-radius:10px; font-size:13px; }
+  #shared-reader-download .tabs button[aria-selected="true"] { background:var(--surface); color:var(--green); box-shadow:0 1px 4px var(--shadow); font-weight:500; }
+  #shared-reader-download .searchbar { display:flex; align-items:center; gap:8px; padding:0 11px; min-height:44px; border-radius:13px; background:var(--surface); border:1px solid var(--line); }
+  #shared-reader-download .searchbar > svg { color:var(--muted); width:16px; height:16px; }
+  #shared-reader-download .searchbar input { min-width:0; flex:1; border:0; background:transparent; padding:9px 0; }
+  #shared-reader-download .searchbar input::placeholder { color:var(--muted); }
+  #shared-reader-download .searchbar .icon-action { width:28px; }
+  #shared-reader-download .list-tools { display:flex; align-items:center; gap:12px; min-height:39px; margin-bottom:3px; }
+  #shared-reader-download .list-tools button { display:inline-flex; align-items:center; gap:5px; min-height:38px; padding:4px 0; font-size:12px; }
+  #shared-reader-download .list-tools svg { width:14px; height:14px; }
+  #shared-reader-download .list-tools > span:last-child { margin-left:auto; color:var(--muted); font-size:11px; }
+  #shared-reader-download .sort-pair { display:inline-flex; align-items:center; gap:3px; }
+  #shared-reader-download .sort-pair .direction-toggle { width:24px; justify-content:center; }
+  #shared-reader-download .direction-toggle svg { width:18px; height:18px; transform-origin:center; }
+  #shared-reader-download [data-ui="sort-up"] svg { transform:rotate(90deg); }
+  #shared-reader-download [data-ui="sort-down"] svg { transform:scaleY(-1) rotate(90deg); }
+  #shared-reader-download .book { border-bottom:1px solid var(--line); padding:15px 0; }
+  #shared-reader-download .book-summary { display:grid; grid-template-columns:54px minmax(0,1fr); gap:11px; align-items:stretch; min-height:80px; }
+  #shared-reader-download .book-summary[data-open-book] { position:relative; }
+  #shared-reader-download .cover { width:54px; height:auto; min-height:80px; align-self:stretch; border:1px solid var(--line); border-radius:5px; background:var(--soft); display:flex; align-items:center; justify-content:center; padding:4px; text-align:center; font:700 12px/18px "Noto Serif SC","Songti SC",serif; }
+  #shared-reader-download .cover.manga { background:var(--soft-green); }
+  #shared-reader-download .book-copy { min-width:0; min-height:80px; display:flex; flex-direction:column; }
+  #shared-reader-download .book-top { display:flex; align-items:center; gap:6px; justify-content:space-between; min-height:24px; }
+  #shared-reader-download .book-title { flex:1; min-width:0; text-align:left; padding:0; display:flex; gap:4px; align-items:center; font:700 16px/24px "Noto Serif SC","Songti SC",serif !important; }
+  #shared-reader-download .book-title > span { overflow-wrap:anywhere; }
+  #shared-reader-download .book-title svg { width:13px; height:13px; color:var(--muted); }
+  #shared-reader-download .tags { display:flex; gap:4px; flex-shrink:0; font-size:10px; line-height:16px; }
+  #shared-reader-download .tags span { padding:0 5px; border-radius:3px; background:var(--soft); color:var(--muted); }
+  #shared-reader-download .tags span:first-child { background:var(--green); color:var(--green-ink); }
+  #shared-reader-download .source { margin-top:1px; font-size:11px; line-height:18px; color:var(--muted); overflow-wrap:anywhere; }
+  #shared-reader-download .book-progress { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:2px; font-size:11px; }
+  #shared-reader-download .book-progress > .task-status:not(.status-action) { min-height:28px; display:inline-flex; align-items:center; }
+  #shared-reader-download .phone .task-status { color:var(--green); white-space:nowrap; }
+  #shared-reader-download .phone .task-status.failed { color:var(--danger); }
+  #shared-reader-download .phone .task-status.idle { color:var(--muted); }
+  #shared-reader-download .status-action { flex:0 0 78px; width:78px; height:28px; min-height:28px; display:inline-grid; grid-template-columns:14px minmax(0,1fr); align-items:center; column-gap:4px; padding:0 6px; border-radius:7px; background:var(--soft) !important; font-size:11px !important; }
+  #shared-reader-download .status-action svg { width:14px; height:14px; }
+  #shared-reader-download .status-action > span { display:block; min-width:0; width:100%; text-align:center; }
+  #shared-reader-download .book-more { display:inline-flex; align-items:center; justify-content:center; flex:0 0 28px; width:28px; height:24px; min-height:24px; padding:0; }
+  #shared-reader-download .book-more svg { width:18px; height:18px; }
+  #shared-reader-download .progress-track { height:3px; background:var(--soft); border-radius:3px; overflow:hidden; margin-top:7px; }
+  #shared-reader-download .book-copy > .progress-track { margin-top:auto; flex-shrink:0; }
+  #shared-reader-download .progress-fill { height:100%; background:var(--green); border-radius:3px; }
+  #shared-reader-download .active-line { display:flex; align-items:center; justify-content:flex-end; gap:6px; margin:8px 0 0 60px; min-height:30px; }
+  #shared-reader-download .active-line > span { min-width:0; flex:1; font-size:11px; color:var(--muted); overflow-wrap:anywhere; }
+  #shared-reader-download .small-action { min-height:32px; padding:4px 9px; border-radius:9px; background:var(--soft) !important; color:var(--green) !important; font-size:11px !important; white-space:nowrap; }
+  #shared-reader-download .small-action.danger { color:var(--danger) !important; }
+  #shared-reader-download .chapter-panel { margin-top:12px; border-top:1px solid var(--line); }
+  #shared-reader-download .chapter-toolbar { display:flex; justify-content:space-between; align-items:center; gap:6px; padding:9px 0 5px; font-size:11px; color:var(--muted); }
+  #shared-reader-download .chapter-toolbar select { min-width:0; max-width:145px; padding:5px; border:0; border-radius:6px; background:var(--soft); }
+  #shared-reader-download .chapter-tail { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  #shared-reader-download .chapter-tail .icon-action { width:30px; }
+  #shared-reader-download .chapter-heading { font:700 16px/24px "Noto Serif SC","Songti SC",serif; }
+  #shared-reader-download .chapter-menu { display:flex; flex-direction:column; }
+  #shared-reader-download .chapter-menu button { min-height:46px; padding:9px 0; text-align:left; border-bottom:1px solid var(--line); }
+  #shared-reader-download .chapter-menu button.danger { color:var(--danger); }
+  #shared-reader-download .text-action { min-height:34px; padding:4px 0; color:var(--green) !important; font-size:11px !important; display:inline-flex; align-items:center; gap:4px; }
+  #shared-reader-download .chapter-row { display:flex; gap:9px; align-items:center; min-height:53px; padding:9px 3px; border-bottom:1px solid var(--line); }
+  #shared-reader-download .chapter-copy { min-width:0; flex:1; }
+  #shared-reader-download .chapter-title { width:100%; text-align:left; padding:0; font-size:12px !important; }
+  #shared-reader-download .chapter-sub { display:block; font-size:11px; line-height:18px; color:var(--muted); }
+  #shared-reader-download .chapter-state { color:var(--muted); font-size:11px; text-align:right; white-space:nowrap; }
+  #shared-reader-download .chapter-row.active .chapter-title { color:var(--green); }
+  #shared-reader-download .chapter-row input, #shared-reader-download .book-check { width:17px; height:17px; margin:0; accent-color:var(--green); flex-shrink:0; }
+  #shared-reader-download .group-title { display:flex; align-items:center; justify-content:space-between; min-height:38px; padding:8px; background:var(--soft); font-size:11px; margin-top:8px; }
+  #shared-reader-download .chapter-buttons { display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px; }
+  #shared-reader-download .storage { position:absolute; left:16px; right:16px; bottom:18px; padding:11px 14px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); z-index:3; display:flex; gap:8px; align-items:center; }
+  #shared-reader-download .storage-copy { min-width:0; flex:1; font-size:11px; line-height:20px; }
+  #shared-reader-download .storage-copy small { display:block; font-size:11px; color:var(--muted); }
+  #shared-reader-download .storage .icon-action { width:36px; }
+  #shared-reader-download .manage-dock { position:absolute; bottom:18px; left:16px; right:16px; padding:12px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); z-index:3; }
+  #shared-reader-download .manage-summary { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; margin-bottom:8px; }
+  #shared-reader-download .action-row { display:flex; gap:8px; }
+  #shared-reader-download .action-row button { flex:1; min-width:0; }
+  #shared-reader-download .app-button { min-height:44px; padding:9px 10px; background:var(--soft) !important; border-radius:12px; font-size:12px !important; }
+  #shared-reader-download .app-button.primary { color:var(--green-ink); background:var(--green) !important; }
+  #shared-reader-download .app-button.danger { color:var(--danger); }
+  #shared-reader-download .empty { padding:85px 8px 30px; display:flex; align-items:center; flex-direction:column; text-align:center; gap:12px; }
+  #shared-reader-download .empty > svg { width:32px; height:32px; color:var(--muted); }
+  #shared-reader-download .empty strong { font-size:15px; font-weight:500; }
+  #shared-reader-download .empty span { font-size:12px; color:var(--muted); }
+  #shared-reader-download .sheet-layer { position:absolute; inset:0; z-index:5; }
+  #shared-reader-download .scrim { position:absolute; inset:0; width:100%; height:100%; padding:0; background:var(--scrim) !important; }
+  #shared-reader-download .sheet { position:absolute; left:0; right:0; bottom:0; max-height:82%; display:flex; flex-direction:column; border-radius:22px 22px 0 0; background:var(--surface); box-shadow:0 -4px 24px var(--shadow); }
+  #shared-reader-download .grip { width:42px; height:5px; margin:10px auto 2px; background:var(--line); border-radius:4px; flex-shrink:0; }
+  #shared-reader-download .sheet-title { display:flex; justify-content:space-between; align-items:center; padding:0 14px 0 18px; min-height:48px; flex-shrink:0; }
+  #shared-reader-download .sheet-title strong { font:700 18px/26px "Noto Serif SC","Songti SC",serif; }
+  #shared-reader-download .sheet-body { padding:0 18px 14px; overflow-y:auto; min-height:0; }
+  #shared-reader-download .sheet-footer { padding:10px 18px 22px; border-top:1px solid var(--line); background:var(--surface); flex-shrink:0; }
+  #shared-reader-download .range-book { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
+  #shared-reader-download .range-book select { border:1px solid var(--line); border-radius:9px; padding:8px; width:100%; background:var(--paper); }
+  #shared-reader-download .range-choice { display:flex; gap:10px; align-items:center; min-height:45px; border-bottom:1px solid var(--line); padding:8px 0; }
+  #shared-reader-download .range-choice input { accent-color:var(--green); margin:0; }
+  #shared-reader-download .range-choice > span { min-width:0; flex:1; }
+  #shared-reader-download .range-choice small { display:block; color:var(--muted); font-size:11px; line-height:17px; }
+  #shared-reader-download .range-selection { margin-top:10px; }
+  #shared-reader-download .selection-total { display:flex; justify-content:space-between; gap:10px; color:var(--muted); font-size:11px; margin:0 0 8px; }
+  #shared-reader-download .sheet-footer .app-button { width:100%; }
+  #shared-reader-download .settings-line { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:50px; border-bottom:1px solid var(--line); }
+  #shared-reader-download .settings-line select { padding:5px; max-width:130px; background:var(--soft); border:0; border-radius:6px; }
+  #shared-reader-download .settings-hint { color:var(--muted); font-size:11px; line-height:19px; margin:12px 0; }
+  #shared-reader-download .dialog-layer { position:absolute; inset:0; background:var(--scrim); display:flex; align-items:center; padding:24px; z-index:7; }
+  #shared-reader-download .dialog { width:100%; background:var(--surface); border-radius:18px; padding:22px 18px 18px; }
+  #shared-reader-download .dialog h3 { font-size:16px; line-height:25px; font-weight:600; margin:0 0 10px; }
+  #shared-reader-download .dialog p { color:var(--muted); font-size:12px; line-height:21px; margin:0 0 18px; }
+  #shared-reader-download .toast { position:absolute; left:24px; right:24px; bottom:145px; padding:11px 14px; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 2px 10px var(--shadow); text-align:center; font-size:12px; z-index:8; }
+  @media(pointer:coarse) { #shared-reader-download .small-action { min-height:44px; } #shared-reader-download .chapter-toolbar .text-action { min-height:44px; } #shared-reader-download .sort-pair .direction-toggle { min-width:44px; min-height:44px; } #shared-reader-download .status-action, #shared-reader-download .book-more { position:relative; } #shared-reader-download .status-action::after, #shared-reader-download .book-more::after { content:""; position:absolute; top:50%; left:50%; width:100%; min-width:44px; height:44px; transform:translate(-50%,-50%); } }
+  @media(max-width:420px) { #shared-reader-download .demo-controls { padding-right:0; padding-top:50px; } }
+</style>
+<div id="shared-reader-download">
+  <div class="demo-controls">
+    <label class="form-label">场景 <select class="form-select" data-ui="scenario" aria-label="查看下载页场景"><option value="normal">书架下载情况</option><option value="uncached">全部未下载</option><option value="empty">书架为空</option></select></label>
+    <label class="form-check"><input class="form-check-input" type="checkbox" data-ui="animate"><span class="form-check-label">演示进度</span></label>
+    <span class="text-small text-muted">共用下载页 · 新方案待确认 · 示例数据</span>
+  </div>
+  <div class="preview viz-dotted-background">
+    <div class="phone" aria-label="小说和漫画共用下载管理页面，当前VM比例">
+      <div class="statusbar"><span>09:41</span><span class="status-icons"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div>
+      <header class="header" data-ui="header"><div><button class="icon-action cursor-interaction" type="button" data-action="back" aria-label="返回书籍列表"><i data-lucide="arrow-left" aria-hidden="true"></i></button></div><h2 id="shared-download-page-heading" data-ui="page-title">下载管理</h2><div class="header-tail"><button class="header-text cursor-interaction" type="button" data-action="manage" data-ui="manage-label">管理</button></div></header>
+      <main class="scroll" data-ui="scroll">
+        <div data-ui="list-controls">
+          <label class="searchbar"><i data-lucide="search" aria-hidden="true"></i><input type="search" data-ui="search" placeholder="搜索书名、作者、书源" aria-label="搜索书架书籍"><button class="icon-action cursor-interaction" type="button" data-action="clear-search" data-ui="search-clear" aria-label="清除搜索" hidden><i data-lucide="x" aria-hidden="true"></i></button></label>
+          <div class="tabs" data-ui="tabs" role="tablist" aria-label="书籍类型"><button id="shared-download-all-tab" class="cursor-interaction" type="button" role="tab" aria-selected="true" aria-controls="shared-download-list" data-tab="all">全部</button><button id="shared-download-manga-tab" class="cursor-interaction" type="button" role="tab" aria-selected="false" aria-controls="shared-download-list" data-tab="manga">漫画</button><button id="shared-download-novel-tab" class="cursor-interaction" type="button" role="tab" aria-selected="false" aria-controls="shared-download-list" data-tab="novel">小说</button></div>
+          <div class="list-tools"><button class="cursor-interaction" type="button" data-action="filter"><i data-lucide="sliders-horizontal" aria-hidden="true"></i><span data-ui="filter-label">筛选</span></button><span class="sort-pair"><button class="direction-toggle cursor-interaction" type="button" data-action="toggle-sort-direction" data-ui="sort-direction" aria-label="当前倒序，切换为正序"><span data-ui="sort-up" hidden><i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i></span><span data-ui="sort-down"><i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i></span></button><button class="cursor-interaction" type="button" data-action="sort"><span data-ui="sort-label">最近阅读</span></button></span><span data-ui="list-count" aria-live="polite">6 本书</span></div>
+        </div>
+        <div id="shared-download-list" data-ui="list" role="tabpanel" aria-labelledby="shared-download-all-tab"></div>
+      </main>
+      <footer class="storage" data-ui="storage"><div class="storage-copy"><span data-ui="storage-values">已下载 550 MB</span><small data-ui="storage-free">设备可用 96 MB</small></div><button class="icon-action cursor-interaction" type="button" data-action="settings" aria-label="存储管理"><i data-lucide="settings-2" aria-hidden="true"></i></button></footer>
+      <footer class="manage-dock" data-ui="manage-dock" hidden><div class="manage-summary"><span data-ui="selected-count">已选 0 本书</span><button class="text-action cursor-interaction" type="button" data-action="select-all" data-ui="select-all">全选</button></div><div class="action-row" data-ui="bulk-actions"></div></footer>
+      <div class="sheet-layer" data-ui="sheet-layer" hidden><button class="scrim cursor-interaction" type="button" data-action="close-sheet" aria-label="关闭面板"></button><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="shared-download-sheet-title" data-ui="sheet"><div class="grip" aria-hidden="true"></div><div class="sheet-title"><strong id="shared-download-sheet-title" data-ui="sheet-title">下载范围</strong><button class="icon-action cursor-interaction" type="button" data-action="close-sheet" aria-label="关闭面板"><i data-lucide="x" aria-hidden="true"></i></button></div><div class="sheet-body" data-ui="sheet-body"></div><div class="sheet-footer" data-ui="sheet-footer"></div></section></div>
+      <div class="dialog-layer" data-ui="dialog-layer" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="shared-download-dialog-title"><h3 id="shared-download-dialog-title" data-ui="dialog-title">确认操作</h3><p data-ui="dialog-copy"></p><div class="action-row"><button class="app-button cursor-interaction" type="button" data-action="cancel-dialog">取消</button><button class="app-button danger cursor-interaction" type="button" data-action="confirm-dialog" data-ui="dialog-confirm">确认</button></div></section></div>
+      <div class="toast" role="status" aria-live="polite" data-ui="toast" hidden></div>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const root=document.getElementById('shared-reader-download');if(!root)return;
+  const ui=Object.fromEntries([...root.querySelectorAll('[data-ui]')].map(el=>[el.dataset.ui,el]));
+  const sourceBooks=[
+    {id:'novel-a',title:'长街旧梦',author:'顾林',cover:'长街\n旧梦',kind:'novel',source:'青岚书源',total:300,current:121,grouped:false,initialSaved:120,status:'downloading',recent:6,added:2},
+    {id:'manga-a',title:'山海纪行',author:'周岚',cover:'山海\n纪行',kind:'manga',source:'云间漫画',total:21,current:13,grouped:true,initialSaved:12,status:'paused',recent:5,added:6},
+    {id:'novel-b',title:'夜航灯火',author:'陈言',cover:'夜航\n灯火',kind:'novel',source:'林间书源',total:86,current:19,grouped:false,initialSaved:18,status:'failed',failureReason:'network',recent:4,added:3},
+    {id:'manga-b',title:'远山来信',author:'陆青',cover:'远山\n来信',kind:'manga',source:'青岚漫画',total:18,current:1,grouped:false,initialSaved:0,status:'failed',failureReason:'storage',recent:3,added:1},
+    {id:'novel-c',title:'微光之城',author:'许安',cover:'微光\n之城',kind:'novel',source:'林间书源',total:140,current:1,grouped:false,initialSaved:0,status:null,recent:2,added:5},
+    {id:'manga-c',title:'纸上四季',author:'青禾',cover:'纸上\n四季',kind:'manga',source:'云间漫画',total:16,current:9,grouped:false,initialSaved:16,status:null,recent:1,added:4}
+  ];
+  const ids=(n,start=1)=>Array.from({length:Math.max(0,n)},(_,i)=>start+i);
+  const initialBook=b=>({...b,saved:ids(b.initialSaved),cached:b.status?[...ids(b.initialSaved),...ids(Math.min(3,b.total-b.initialSaved-1),b.initialSaved+2)]:ids(b.initialSaved),partial:b.id==='manga-a'?{13:18}:{},job:b.status?{status:b.status,error:b.failureReason||null,targets:ids(b.total),completed:ids(b.initialSaved),running:b.status==='downloading'?ids(b.total-b.initialSaved,b.initialSaved+1):[],current:b.current}:null});
+  let books=sourceBooks.map(initialBook);
+  const state={version:5,tab:'all',query:'',filterState:'all',filterSource:'all',sort:'recent',sortDirection:'desc',scenario:'normal',detailBook:null,listScroll:0,manage:false,selected:[],chapterSelected:[],actionChapters:[],bookActionIds:[],sheet:null,rangeBook:'manga-a',dialog:null,toast:'',animate:false,cacheLimit:'2 GB',cacheDays:'7 天',readerPreview:null};
+  let timer=null,toastTimer=null,activeModal=null,returnFocus=null;const published=new Set();
+  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
+  const book=id=>books.find(b=>b.id===id);
+  const chapter=(b,n)=>({id:n,title:b.grouped&&n===21?'番外卷 · 山海手札':`第${n}${b.kind==='novel'?'章':'话'} · ${['启程','旧城来客','山雨','远行的人','灯火','归途'][n%6]}`,pages:b.kind==='manga'?(b.grouped&&n===21?96:n===13?30:24):0,group:b.grouped?(n<=10?1:n<=20?2:0):0});
+  const unit=b=>b.kind==='novel'?'章':b.grouped?'个条目':'话';
+  const sortLabels={recent:'最近阅读',added:'最近加入',title:'书名',progress:'下载比例'};
+  const downloadedIds=b=>[...new Set([...b.saved,...b.cached])].sort((a,c)=>a-c);
+  const downloadedCount=b=>downloadedIds(b).length;
+  const downloadCategory=b=>b.job?.targets.some(n=>!b.job.completed.includes(n))?'active':downloadedCount(b)?'downloaded':'none';
+  const visibleBooks=()=>{
+    const query=state.query.trim().toLocaleLowerCase();
+    const filtered=books.filter(b=>(state.tab==='all'||b.kind===state.tab)&&(!query||[b.title,b.author,b.source].some(v=>v.toLocaleLowerCase().includes(query)))&&(state.filterSource==='all'||b.source===state.filterSource)&&(state.filterState==='all'||downloadCategory(b)===state.filterState));
+    const direction=state.sortDirection==='asc'?1:-1;
+    return filtered.sort((a,b)=>direction*(state.sort==='title'?a.title.localeCompare(b.title,'zh-CN'):state.sort==='progress'?downloadedCount(a)/a.total-downloadedCount(b)/b.total:state.sort==='added'?a.added-b.added:a.recent-b.recent)||a.id.localeCompare(b.id));
+  };
+  const taskLabel=b=>b.job?({queued:'等待中',downloading:'下载中',paused:'已暂停',failed:'下载失败'})[b.job.status]:downloadedCount(b)?'已下载':'未下载';
+  const localState=(b,n)=>b.saved.includes(n)||b.cached.includes(n)?'已下载':b.partial[n]?'未完成':'未下载';
+  const eligibleIds=()=>visibleBooks().map(b=>b.id);
+  const detail=()=>book(state.detailBook);
+  const chapterIds=b=>ids(b.total);
+  const syncJob=b=>{if(!b.job)return;const j=b.job;j.completed=j.completed.filter(n=>j.targets.includes(n));j.running=[...new Set(j.running)].filter(n=>j.targets.includes(n)&&!j.completed.includes(n));const missing=j.targets.filter(n=>!j.completed.includes(n));if(!missing.length){b.job=null;return;}if(j.running.length)j.status='downloading';else if(!['queued','failed'].includes(j.status))j.status='paused';j.current=j.running[0]||missing[0];};
+  const openBook=id=>{if(!book(id))return;state.listScroll=ui.scroll.scrollTop;state.detailBook=id;state.manage=false;state.selected=[];state.chapterSelected=[];state.sheet=null;ui.scroll.scrollTop=0;render();persist();};
+  const returnToList=()=>{state.detailBook=null;state.manage=false;state.selected=[];state.chapterSelected=[];state.sheet=null;render();ui.scroll.scrollTop=state.listScroll;persist();};
+  const persist=()=>{
+    const snapshot={...state,dialog:null,toast:'',sheet:null,actionChapters:[],bookActionIds:[],books:books.map(b=>({...b,partial:{...b.partial},saved:[...b.saved],cached:[...b.cached],job:b.job?{...b.job,targets:[...b.job.targets],completed:[...b.job.completed],running:[...b.job.running]}:null}))};
+    published.add(JSON.stringify(snapshot));if(published.size>24)published.delete(published.values().next().value);
+    window.openai?.setWidgetState?.({modelContent:{design:'小说漫画共用下载页',page:state.detailBook?'章节详情':'书架书籍列表',book:detail()?.title||null,type:state.tab,query:state.query,filterState:state.filterState,filterSource:state.filterSource,sort:state.sort,sortDirection:state.sortDirection,scenario:state.scenario,selectedBooks:state.selected.length,selectedChapters:state.chapterSelected.length,pendingDesign:true},privateContent:{demo:'shared-reader-download',version:5,snapshot}})?.catch(()=>{});
+  };
+  const restore=incoming=>{
+    const data=incoming?.privateContent?.demo==='shared-reader-download'&&incoming.privateContent.version===5?incoming.privateContent.snapshot:null;if(!data||!Array.isArray(data.books))return;
+    for(const field of ['tab','query','filterState','filterSource','sort','sortDirection','scenario','rangeBook','cacheLimit','cacheDays'])if(typeof data[field]==='string')state[field]=data[field];
+    if(!['all','manga','novel'].includes(state.tab))state.tab='all';
+    if(!['normal','uncached','empty'].includes(state.scenario))state.scenario='normal';
+    if(['partial','complete'].includes(state.filterState))state.filterState='downloaded';else if(['paused','failed'].includes(state.filterState))state.filterState='active';else if(!['all','active','downloaded','none'].includes(state.filterState))state.filterState='all';
+    if(!sortLabels[state.sort])state.sort='recent';
+    state.manage=!!data.manage;state.selected=Array.isArray(data.selected)?data.selected.filter(id=>sourceBooks.some(b=>b.id===id)):[];
+    state.detailBook=sourceBooks.some(b=>b.id===data.detailBook)?data.detailBook:null;state.listScroll=Math.max(0,Number(data.listScroll)||0);state.chapterSelected=Array.isArray(data.chapterSelected)?data.chapterSelected.filter(n=>Number.isInteger(n)&&detail()&&n>=1&&n<=detail().total):[];
+    books=sourceBooks.map(base=>{
+      const s=data.books.find(b=>b.id===base.id);if(!s)return initialBook(base);
+      const valid=list=>Array.isArray(list)?[...new Set(list.filter(n=>Number.isInteger(n)&&n>=1&&n<=base.total))]:[];
+      return {...initialBook(base),saved:valid(s.saved),cached:valid(s.cached),partial:s.partial&&typeof s.partial==='object'?s.partial:{},job:s.job&&['queued','downloading','paused','failed'].includes(s.job.status)&&valid(s.job.targets).length?{status:s.job.status,error:['network','storage'].includes(s.job.error)?s.job.error:null,targets:valid(s.job.targets),completed:valid(s.job.completed),running:valid(s.job.running),current:Math.max(1,Math.min(base.total,Number(s.job.current)||base.current))}:null};
+    });if(state.scenario==='empty')books=[];state.animate=false;state.sheet=null;state.dialog=null;state.toast='';
+  };
+  const notify=text=>{state.toast=text;clearTimeout(toastTimer);renderChrome();toastTimer=setTimeout(()=>{state.toast='';renderChrome();},2400);};
+  const bookStatus=b=>{
+    const label=taskLabel(b),disabled=state.manage?'disabled':'';
+    if(b.job){
+      const action=b.job.status==='paused'?'resume':b.job.status==='failed'?'retry':'pause';
+      const actionLabel=action==='pause'?'暂停下载':action==='resume'?'继续下载':'重试下载';
+      const glyph=action==='pause'?'pause':action==='resume'?'play':'rotate-cw';
+      return `<button class="task-status status-action cursor-interaction ${b.job.status==='failed'?'failed':''}" type="button" data-job="${action}" data-book="${b.id}" aria-label="${escape(b.title)}${label}，点击${actionLabel}" ${disabled}>${icon(glyph)}<span>${label}</span></button>`;
+    }
+    if(!downloadedCount(b))return `<button class="task-status status-action cursor-interaction idle" type="button" data-book-download="${b.id}" aria-label="下载${escape(b.title)}" ${disabled}>${icon('download')}<span>未下载</span></button>`;
+    return `<span class="task-status status-action">${icon('circle-check')}<span>已下载</span></span>`;
+  };
+  const chapterRow=(b,n)=>{
+    const ch=chapter(b,n),local=localState(b,n),active=b.job?.current===n;
+    const sub=b.kind==='manga'?`${b.partial[n]||((b.saved.includes(n)||b.cached.includes(n))?ch.pages:0)} / ${ch.pages} 页${b.grouped&&n===21?' · 整卷可读':''}`:local==='已下载'?'正文已保存':active&&b.job?.status==='downloading'?'正在获取正文':'';
+    const op=state.manage?`<input type="checkbox" data-select-chapter="${n}" ${state.chapterSelected.includes(n)?'checked':''} aria-label="选择${escape(ch.title)}">`:'';
+    const pending=local!=='已下载'&&b.job?.targets.includes(n)&&!b.job.completed.includes(n);
+    const running=pending&&b.job.running.includes(n);
+    const label=local==='已下载'?'阅读':running?'暂停':pending?(b.job.status==='failed'?'重试':b.job.status==='queued'?'取消':'继续'):local==='未完成'?'补齐':'下载';
+    const action=local==='已下载'?'read':running?'pause':pending?(b.job.status==='queued'?'cancel':'resume'):'download';
+    const tail=state.manage?'':`<span class="chapter-tail"><button class="small-action cursor-interaction" type="button" data-chapter-action="${action}" data-chapter="${n}">${label}</button><button class="icon-action cursor-interaction" type="button" data-chapter-more="${n}" aria-label="${escape(ch.title)}的章节操作">${icon('ellipsis')}</button></span>`;
+    return `<div class="chapter-row ${active?'active':''}" data-chapter-row="${n}">${op}<span class="chapter-copy">${state.manage?`<span>${escape(ch.title)}</span>`:`<button class="chapter-title cursor-interaction" type="button" data-chapter-action="read" data-chapter="${n}">${escape(ch.title)}</button>`}<span class="chapter-sub">${escape(sub)}${sub?' · ':''}${pending&&b.job.status==='failed'?'下载失败':running?'下载中':pending&&local==='未下载'?'待下载':local}</span></span>${tail}</div>`;
+  };
+  const renderBook=(b,secondary=false)=>{
+    const selected=state.selected.includes(b.id);
+    const loaded=downloadedCount(b),count=secondary?`已下载 ${loaded}${unit(b)}`:`已下载 ${loaded} / ${b.total} ${unit(b)}`;
+    const title=secondary?`<strong class="book-title"><span>${escape(b.title)}</span></strong>`:`<button class="book-title cursor-interaction" type="button" data-open-book="${b.id}" aria-label="查看${escape(b.title)}的章节下载"><span>${escape(b.title)}</span>${icon('chevron-right')}</button>`;
+    const more=secondary?'':state.manage?`<input class="book-check" type="checkbox" data-select-book="${b.id}" ${selected?'checked':''} aria-label="选择${b.title}">`:`<button class="book-more cursor-interaction" type="button" data-book-more="${b.id}" aria-label="${escape(b.title)}的书籍操作">${icon('ellipsis')}</button>`;
+    const status=secondary?`<span class="task-status ${b.job?.status==='failed'?'failed':''}">${b.job?.status==='failed'?'下载失败':'目录 '+b.total+unit(b)}</span>`:bookStatus(b);
+    return `<article class="book" data-identity="${b.id}"><div class="book-summary" ${secondary?'':`data-open-book="${b.id}"`}><div class="cover ${b.kind==='manga'?'manga':''}" aria-label="${b.title}示例封面占位">${escape(b.cover).replace(/\n/g,'<br>')}</div><div class="book-copy"><div class="book-top">${title}<span class="tags"><span>${b.kind==='novel'?'小说':'漫画'}</span></span>${more}</div><div class="source">${escape(b.author)} · ${escape(b.source)}</div><div class="book-progress"><span>${count}</span>${status}</div><div class="progress-track" role="progressbar" aria-label="${b.title}已下载内容比例" aria-valuemin="0" aria-valuemax="${b.total}" aria-valuenow="${loaded}"><div class="progress-fill" style="width:${Math.min(100,loaded/b.total*100)}%"></div></div></div></div></article>`;
+  };
+  const renderDetail=b=>{
+    let chapters='';
+    for(const n of chapterIds(b)){
+      if(b.grouped&&(n===1||n===11))chapters+=`<div class="group-title"><span>${n===1?'第一卷 · 启程':'第二卷 · 山海'}</span>${state.manage?`<button class="text-action cursor-interaction" type="button" data-select-group="${n===1?1:2}">选择本卷的10话</button>`:''}</div>`;
+      chapters+=chapterRow(b,n);
+    }
+    return renderBook(b,true)+`<div class="chapter-toolbar"><strong class="chapter-heading">章节内容</strong>${state.manage?'<select data-select-range="true" aria-label="快速选择章节"><option value="">快速选择</option><option value="current">当前章节</option><option value="forward">从当前往后</option><option value="all">全部章节</option></select>':`<span>共 ${b.total}${unit(b)}</span>`}</div>${chapters}`;
+  };
+  const renderSheet=()=>{
+    ui['sheet-layer'].hidden=!state.sheet;
+    if(!state.sheet)return;
+    if(state.sheet==='filter'){
+      ui['sheet-title'].textContent='筛选';ui['sheet-footer'].hidden=false;
+      const statuses=[['all','全部状态'],['active','下载中'],['downloaded','已下载'],['none','未下载']];
+      ui['sheet-body'].innerHTML=`<label class="settings-line"><span>下载状态</span><select data-list-setting="filterState" aria-label="筛选下载状态">${statuses.map(([key,label])=>`<option value="${key}" ${state.filterState===key?'selected':''}>${label}</option>`).join('')}</select></label><label class="settings-line"><span>书源</span><select data-list-setting="filterSource" aria-label="筛选书源"><option value="all">全部书源</option>${[...new Set(books.map(b=>b.source))].map(source=>`<option value="${escape(source)}" ${state.filterSource===source?'selected':''}>${escape(source)}</option>`).join('')}</select></label>`;
+      ui['sheet-footer'].innerHTML='<button class="app-button primary cursor-interaction" type="button" data-action="close-sheet">完成</button>';
+    }else if(state.sheet==='sort'){
+      ui['sheet-title'].textContent='排序';ui['sheet-footer'].hidden=false;
+      ui['sheet-body'].innerHTML=Object.entries(sortLabels).map(([key,label])=>`<label class="range-choice"><input type="radio" name="shared-book-sort" value="${key}" data-list-setting="sort" ${state.sort===key?'checked':''}><span>${label}</span></label>`).join('');
+      ui['sheet-footer'].innerHTML='<button class="app-button primary cursor-interaction" type="button" data-action="close-sheet">完成</button>';
+    }else if(state.sheet==='book-actions'){
+      ui['sheet-title'].textContent=state.bookActionIds.length===1?`${book(state.bookActionIds[0]).title} · 书籍操作`:`书籍操作 · 已选 ${state.bookActionIds.length} 本`;ui['sheet-footer'].hidden=true;
+      const selected=state.bookActionIds.map(book).filter(Boolean);
+      const pausing=selected.some(b=>b.job&&['downloading','queued'].includes(b.job.status));
+      const enabled=action=>action==='pause'?pausing:action==='download'?selected.some(b=>downloadedCount(b)<b.total||b.job?.targets.some(n=>!b.job.completed.includes(n))):action==='cancel'?selected.some(b=>b.job):selected.some(b=>downloadedCount(b)||Object.keys(b.partial).length);
+      ui['sheet-body'].innerHTML='<div class="chapter-menu">'+[[pausing?'pause':'download',pausing?'暂停':'下载'],['cancel','取消下载任务'],['delete','删除本地内容']].map(([action,label])=>`<button class="cursor-interaction ${action==='delete'?'danger':''}" type="button" data-selected-book-action="${action}" ${enabled(action)?'':'disabled'}>${label}</button>`).join('')+'</div>';
+    }else if(state.sheet==='chapter-actions'){
+      ui['sheet-title'].textContent=`章节操作 · 已选 ${state.actionChapters.length}${unit(detail())}`;ui['sheet-footer'].hidden=true;
+      const b=detail(),chosen=state.actionChapters;
+      const pausing=chosen.some(n=>b.job?.running.includes(n));
+      const enabled=action=>action==='pause'?pausing:action==='download'?chosen.some(n=>localState(b,n)!=='已下载'):action==='cancel'?chosen.some(n=>b.job?.targets.includes(n)&&!b.job.completed.includes(n)):chosen.some(n=>b.saved.includes(n)||b.cached.includes(n)||b.partial[n]);
+      ui['sheet-body'].innerHTML='<div class="chapter-menu">'+[[pausing?'pause':'download',pausing?'暂停':'下载'],['cancel','取消下载任务'],['delete','删除本地内容']].map(([action,label])=>`<button class="cursor-interaction ${action==='delete'?'danger':''}" type="button" data-selected-chapter-action="${action}" ${enabled(action)?'':'disabled'}>${label}</button>`).join('')+'</div>';
+    }
+    else if(state.sheet==='settings'){
+      ui['sheet-title'].textContent='存储管理';ui['sheet-footer'].hidden=true;
+      ui['sheet-body'].innerHTML=`<label class="settings-line"><span>自动清理上限</span><select data-setting="cacheLimit" aria-label="自动清理上限">${['512 MB','1 GB','2 GB','4 GB'].map(v=>`<option ${state.cacheLimit===v?'selected':''}>${v}</option>`).join('')}</select></label><label class="settings-line"><span>未阅读清理周期</span><select data-setting="cacheDays" aria-label="清理周期">${['3 天','7 天','14 天','30 天'].map(v=>`<option ${state.cacheDays===v?'selected':''}>${v}</option>`).join('')}</select></label><button class="app-button cursor-interaction" type="button" data-action="clear-cache">立即清理</button>`;
+    }else if(state.sheet==='read'){
+      ui['sheet-title'].textContent='阅读入口 · 待接线';ui['sheet-footer'].hidden=false;
+      ui['sheet-body'].innerHTML=`<div class="range-book"><strong>${escape(state.readerPreview.bookTitle)}</strong></div><p>${escape(state.readerPreview.chapterTitle)}</p><p class="settings-hint">对应${state.readerPreview.kind==='novel'?'小说正文阅读页':'漫画图片阅读页'}，打开这本书的所选章节。当前仅标注目标，尚未接入实际阅读。</p>`;
+      ui['sheet-footer'].innerHTML='<button class="app-button primary cursor-interaction" type="button" data-action="close-sheet">返回章节下载</button>';
+    }
+  };
+  const renderChrome=()=>{
+    const modal=!!state.sheet||!!state.dialog;
+    const nextModal=state.dialog?'dialog:'+state.dialog.type:state.sheet;
+    if(nextModal!==activeModal){if(nextModal){if(!activeModal)returnFocus=document.activeElement;queueMicrotask(()=>{const boundary=state.dialog?ui['dialog-layer']:ui.sheet;boundary.querySelector('button:not([disabled]),input:not([disabled]),select:not([disabled])')?.focus();});}else if(returnFocus){const target=returnFocus.isConnected?returnFocus:ui['manage-label'];queueMicrotask(()=>target.focus());}activeModal=nextModal;}
+    ui.header.inert=modal;ui.scroll.inert=modal;ui.storage.inert=modal;ui['manage-dock'].inert=modal;ui.sheet.inert=!!state.dialog;
+    const currentBook=detail();
+    ui['page-title'].textContent=currentBook?'章节下载':'下载管理';
+    ui['manage-label'].textContent=state.manage?'完成':'管理';ui.storage.hidden=state.manage||!!currentBook;ui['manage-dock'].hidden=!state.manage&&!currentBook;
+    ui['select-all'].hidden=!state.manage;
+    ui['selected-count'].textContent=currentBook?(state.manage?`已选 ${state.chapterSelected.length}${unit(currentBook)}`:`已下载 ${downloadedCount(currentBook)} / ${currentBook.total}${unit(currentBook)}`):`已选 ${state.selected.length} 本书`;
+    const blocked=!(currentBook?state.chapterSelected.length:state.selected.length)?'disabled':'';
+    ui['bulk-actions'].innerHTML=currentBook?(state.manage?`<button class="app-button primary cursor-interaction" type="button" data-action="chapters-download" ${blocked}>下载所选</button><button class="app-button cursor-interaction" type="button" data-action="chapters-pause" ${blocked}>暂停所选</button><button class="app-button cursor-interaction" type="button" data-action="chapters-more" ${blocked}>更多</button>`:'<button class="app-button primary cursor-interaction" type="button" data-action="manage">选择章节</button><button class="app-button cursor-interaction" type="button" data-action="locate-current">定位当前</button>'):`<button class="app-button primary cursor-interaction" type="button" data-action="books-download" ${blocked}>下载所选书籍</button><button class="app-button cursor-interaction" type="button" data-action="books-more" ${blocked}>更多书籍操作</button>`;
+    ui['search-clear'].hidden=!state.query;ui['sort-label'].textContent=sortLabels[state.sort];
+    const ascending=state.sortDirection==='asc';ui['sort-up'].hidden=!ascending;ui['sort-down'].hidden=ascending;
+    ui['sort-direction'].setAttribute('aria-label',ascending?'当前正序，切换为倒序':'当前倒序，切换为正序');
+    const filters=Number(state.filterState!=='all')+Number(state.filterSource!=='all');ui['filter-label'].textContent=filters?`筛选 · ${filters}`:'筛选';
+    if(ui.search.value!==state.query)ui.search.value=state.query;
+    const offlineCount=books.reduce((sum,b)=>sum+b.saved.length,0),cachedCount=books.reduce((sum,b)=>sum+b.cached.filter(n=>!b.saved.includes(n)).length,0);
+    ui['storage-values'].textContent=`已下载 ${(offlineCount*2.84+cachedCount*12.4).toFixed(0)} MB`;
+    ui['storage-free'].textContent='设备可用 96 MB';
+    ui['dialog-layer'].hidden=!state.dialog;
+    if(state.dialog){ui['dialog-title'].textContent=state.dialog.title;ui['dialog-copy'].textContent=state.dialog.copy;ui['dialog-confirm'].textContent=state.dialog.label;}
+    ui.toast.hidden=!state.toast;ui.toast.textContent=state.toast;ui.scenario.value=state.scenario;ui.animate.checked=state.animate;
+  };
+  const renderList=()=>{
+    const visible=visibleBooks();
+    ui.tabs.hidden=!!detail();ui['list-controls'].hidden=!!detail();
+    root.querySelectorAll('[data-tab]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.tab===state.tab)));
+    ui.list.setAttribute('role',detail()?'region':'tabpanel');
+    ui.list.setAttribute('aria-labelledby',detail()?'shared-download-page-heading':`shared-download-${state.tab}-tab`);
+    ui['list-count'].textContent=`${visible.length} / ${books.length} 本书`;
+    ui.list.innerHTML=detail()?renderDetail(detail()):visible.length?visible.map(b=>renderBook(b)).join(''):`<div class="empty">${icon(books.length?'search':'book-open')}<strong>${books.length?'没有匹配的书籍':'书架为空'}</strong><span>${books.length?'调整搜索关键词或筛选条件':'加入书架后，可在这里管理下载'}</span></div>`;
+  };
+  const render=()=>{renderList();renderSheet();renderChrome();if(window.lucide)window.lucide.createIcons({attrs:{width:18,height:18}});};
+  const closeSheet=()=>{state.sheet=null;renderChrome();ui['sheet-layer'].hidden=true;};
+  const dialog=(type,bookIds,chapterSelection=null)=>{
+    const targets=bookIds.filter(id=>!!book(id));if(!targets.length)return;
+    const labels={cancel:['取消下载任务？','已下载的内容会保留，可以继续阅读。','取消任务'],release:['取消离线保留？','允许自动清理所选书籍的内容。书架与阅读记录保留。','取消保留'],delete:['删除本地内容？','删除所选书籍的本地内容，之后阅读需要重新获取。书架与阅读记录保留。','删除内容']};
+    const [title,copy,label]=labels[type];
+    const scope=chapterSelection?`${chapterSelection.length}${unit(book(targets[0]))}`:`${targets.length}本书`;
+    const chapterCopy={cancel:'仅取消所选章节的剩余下载，已下载内容保留。',release:'允许自动清理所选章节的内容，其他章节不受影响。',delete:'仅删除所选章节的本地内容，并取消这些章节的剩余下载。书架和阅读记录保留。'};
+    state.dialog={type,bookIds:targets,chapters:chapterSelection?[...chapterSelection]:null,title:chapterSelection?`确认${label} · ${scope}？`:`${title}（${scope}）`,copy:chapterSelection?chapterCopy[type]:copy,label};renderChrome();
+  };
+  const start=(b,targets,wholeBook=false)=>{
+    if(!targets.length)return;
+    if(state.scenario==='empty')state.scenario='normal';
+    const combined=[...new Set([...(b.job?.targets||[]),...targets])].sort((a,c)=>a-c);
+    const cached=targets.filter(n=>b.cached.includes(n)||b.saved.includes(n));b.saved=[...new Set([...b.saved,...cached])].sort((a,c)=>a-c);
+    const completed=[...new Set([...(b.job?.completed||[]),...cached])];
+    const missing=combined.filter(n=>!completed.includes(n));
+    const priorRunning=b.job?.running||[];
+    const running=wholeBook?missing:[...new Set([...priorRunning,...targets.filter(n=>!completed.includes(n))])];
+    if(missing.length)b.job={status:running.length?'downloading':'paused',error:null,targets:combined,completed,running,current:running[0]||missing[0]};else b.job=null;
+    syncJob(b);
+    state.sheet=null;state.manage=false;state.selected=[];state.chapterSelected=[];
+    if(wholeBook)state.detailBook=null;
+    render();persist();notify(missing.length?'下载已加入任务':'下载完成');
+  };
+  const chapterAction=(action,numbers)=>{
+    const b=detail();if(!b)return;const selected=[...new Set(numbers)].filter(n=>Number.isInteger(n)&&n>=1&&n<=b.total);if(!selected.length)return;
+    if(action==='read'){const n=selected[0];state.readerPreview={bookTitle:b.title,chapterTitle:chapter(b,n).title,kind:b.kind,bookId:b.id,chapterIndex:n};state.sheet='read';render();return;}
+    if(['cancel','release','delete'].includes(action)){state.sheet=null;renderSheet();dialog(action,[b.id],selected);return;}
+    if(action==='download'||action==='resume'){start(b,selected);return;}
+    if(action==='pause'&&b.job){b.job.running=b.job.running.filter(n=>!selected.includes(n));syncJob(b);}
+    state.sheet=null;render();persist();notify('所选章节已暂停');
+  };
+  const bookAction=(action,bookIds)=>{
+    if(detail())return;const selected=[...new Set(bookIds)].map(book).filter(Boolean);if(!selected.length)return;
+    if(['cancel','release','delete'].includes(action)){state.sheet=null;renderSheet();dialog(action,selected.map(b=>b.id));return;}
+    if(action==='download'){for(const b of selected)start(b,b.job?.targets||chapterIds(b),true);return;}
+    for(const b of selected){if(!b.job||action==='pause'&&!['downloading','queued'].includes(b.job.status))continue;b.job.running=action==='pause'?[]:b.job.targets.filter(n=>!b.job.completed.includes(n));b.job.status=b.job.running.length?'downloading':'paused';if(action!=='pause')b.job.error=null;syncJob(b);}
+    state.sheet=null;render();persist();notify(action==='pause'?'所选书籍下载已暂停':'所选书籍下载已继续');
+  };
+  const locateCurrent=()=>{const b=detail();if(!b)return;const row=ui.list.querySelector(`[data-chapter-row="${b.job?.current||b.current}"]`);if(row)ui.scroll.scrollTop=Math.max(0,row.offsetTop-ui.scroll.offsetTop-12);};
+  const tick=()=>{
+    if(!root.isConnected){clearInterval(timer);timer=null;return;}
+    if(!state.animate)return;
+    let changed=false;
+    if(!books.some(b=>b.job?.status==='downloading')){const next=books.find(b=>b.job?.status==='queued');if(next){next.job.status='downloading';next.job.running=next.job.targets.filter(n=>!next.job.completed.includes(n));changed=true;}}
+    for(const b of books){
+      if(b.job?.status!=='downloading')continue;
+      const pending=b.job.running.find(n=>!b.job.completed.includes(n));
+      if(pending===undefined){syncJob(b);changed=true;continue;}
+      const ch=chapter(b,pending);b.job.current=pending;
+      if(b.kind==='manga')b.partial[pending]=b.cached.includes(pending)?ch.pages:Math.min(ch.pages,(b.partial[pending]||0)+6);
+      if(b.kind==='novel'||b.partial[pending]===ch.pages){b.saved=[...new Set([...b.saved,pending])].sort((a,c)=>a-c);b.cached=[...new Set([...b.cached,pending])];b.job.completed=[...new Set([...b.job.completed,pending])];delete b.partial[pending];}
+      syncJob(b);
+      changed=true;
+    }
+    if(changed){renderList();renderChrome();if(window.lucide)window.lucide.createIcons({attrs:{width:18,height:18}});persist();}
+  };
+  root.addEventListener('click',event=>{
+    const button=event.target.closest('button');
+    const bookActionButton=button&&(button.dataset.job||button.dataset.bookDownload||button.dataset.bookMore);
+    const opening=event.target.closest('[data-open-book]');
+    if(opening?.dataset.openBook&&!bookActionButton&&!event.target.closest('input')&&!detail()){
+      if(state.manage){const id=opening.dataset.openBook;state.selected=state.selected.includes(id)?state.selected.filter(n=>n!==id):[...state.selected,id];render();persist();}else openBook(opening.dataset.openBook);return;
+    }
+    if(!button||!root.contains(button)||button.disabled)return;
+    if(button.dataset.tab){if(detail())return;state.tab=button.dataset.tab;state.manage=false;state.selected=[];ui.scroll.scrollTop=0;render();persist();return;}
+    if(button.dataset.openBook){if(!detail())openBook(button.dataset.openBook);return;}
+    if(button.dataset.bookDownload){if(!detail())start(book(button.dataset.bookDownload),chapterIds(book(button.dataset.bookDownload)),true);return;}
+    if(button.dataset.bookMore){if(detail())return;state.bookActionIds=[button.dataset.bookMore];state.sheet='book-actions';render();return;}
+    if(button.dataset.selectedBookAction){bookAction(button.dataset.selectedBookAction,state.bookActionIds);return;}
+    if(button.dataset.selectGroup){const b=detail();if(!b||!state.manage)return;const startAt=Number(button.dataset.selectGroup)===1?1:11;state.chapterSelected=[...new Set([...state.chapterSelected,...ids(10,startAt)])];render();persist();return;}
+    if(button.dataset.chapterAction){chapterAction(button.dataset.chapterAction,[Number(button.dataset.chapter)]);return;}
+    if(button.dataset.chapterMore){if(!detail())return;state.actionChapters=[Number(button.dataset.chapterMore)];state.sheet='chapter-actions';render();return;}
+    if(button.dataset.selectedChapterAction){chapterAction(button.dataset.selectedChapterAction,state.actionChapters);return;}
+    if(button.dataset.job){if(detail())return;const b=book(button.dataset.book);if(!b?.job)return;const action=button.dataset.job;if(action==='cancel'){dialog('cancel',[b.id]);return;}b.job.running=action==='pause'?[]:b.job.targets.filter(n=>!b.job.completed.includes(n));b.job.status=action==='pause'||!b.job.running.length?'paused':'downloading';if(action!=='pause')b.job.error=null;syncJob(b);render();persist();return;}
+    switch(button.dataset.action){
+      case 'back':if(detail()){returnToList();return;}state.manage=false;state.selected=[];ui.scroll.scrollTop=0;break;
+      case 'manage':state.manage=!state.manage;state.selected=[];state.chapterSelected=[];break;
+      case 'clear-search':state.query='';state.selected=[];ui.scroll.scrollTop=0;break;
+      case 'filter':if(detail())return;state.sheet='filter';break;
+      case 'sort':if(detail())return;state.sheet='sort';break;
+      case 'toggle-sort-direction':if(detail())return;state.sortDirection=state.sortDirection==='asc'?'desc':'asc';ui.scroll.scrollTop=0;break;
+      case 'books-download':bookAction('download',state.selected);return;
+      case 'books-more':if(detail()||!state.selected.length)return;state.bookActionIds=[...state.selected];state.sheet='book-actions';break;
+      case 'settings':if(detail())return;state.sheet='settings';break;
+      case 'close-sheet':closeSheet();return;
+      case 'select-all':if(detail())state.chapterSelected=state.chapterSelected.length===detail().total?[]:chapterIds(detail());else state.selected=state.selected.length===eligibleIds().length?[]:eligibleIds();break;
+      case 'bulk-pause':if(detail())return;state.selected.forEach(id=>{const b=book(id);if(b.job){b.job.status='paused';b.job.running=[];}});break;
+      case 'bulk-cancel':if(!detail())dialog('cancel',state.selected);return;
+      case 'release':if(!detail())dialog('release',state.selected);return;
+      case 'delete':if(!detail())dialog('delete',state.selected);return;
+      case 'chapters-download':chapterAction('download',state.chapterSelected);return;
+      case 'chapters-pause':chapterAction('pause',state.chapterSelected);return;
+      case 'chapters-more':if(!detail()||!state.chapterSelected.length)return;state.actionChapters=[...state.chapterSelected];state.sheet='chapter-actions';break;
+      case 'locate-current':locateCurrent();return;
+      case 'cancel-dialog':state.dialog=null;break;
+      case 'confirm-dialog':{
+        const d=state.dialog;if(!d)return;
+        for(const id of d.bookIds){const b=book(id);if(d.chapters){const chosen=d.chapters;if(d.type==='release'){b.cached=[...new Set([...b.cached,...b.saved.filter(n=>chosen.includes(n))])];b.saved=b.saved.filter(n=>!chosen.includes(n));}else if(d.type==='delete'){b.saved=b.saved.filter(n=>!chosen.includes(n));b.cached=b.cached.filter(n=>!chosen.includes(n));chosen.forEach(n=>delete b.partial[n]);}if(d.type!=='release'&&b.job){b.job.targets=b.job.targets.filter(n=>!chosen.includes(n));syncJob(b);}}else if(d.type==='cancel')b.job=null;else if(d.type==='release'){b.cached=[...new Set([...b.cached,...b.saved])];b.saved=[];}else{b.saved=[];b.cached=[];b.partial={};b.job=null;}}
+        state.dialog=null;state.sheet=null;state.manage=false;state.selected=[];state.chapterSelected=[];render();persist();notify(d.type==='cancel'?'任务已取消，已下载内容保留':d.type==='release'?'已取消离线保留':'所选本地内容已删除');return;
+      }
+      case 'clear-cache':books.forEach(b=>{b.cached=b.cached.filter(n=>b.saved.includes(n)||(b.job?.status==='downloading'&&b.job.targets.includes(n)));if(!b.job)b.partial={};});render();persist();notify('已完成清理');return;
+    }
+    render();persist();
+  });
+  root.addEventListener('change',event=>{
+    const el=event.target;
+    if(el===ui.scenario){
+      state.scenario=el.value;state.tab='all';state.query='';state.filterState='all';state.filterSource='all';state.sort='recent';state.sortDirection='desc';state.detailBook=null;state.listScroll=0;state.manage=false;state.selected=[];state.chapterSelected=[];state.sheet=null;state.dialog=null;books=el.value==='empty'?[]:sourceBooks.map(initialBook);ui.scroll.scrollTop=0;
+      if(el.value==='uncached')books.forEach(b=>{b.saved=[];b.cached=[];b.partial={};b.job=null;});
+      render();persist();return;
+    }
+    if(el===ui.animate){state.animate=el.checked;if(timer)clearInterval(timer);timer=state.animate?setInterval(tick,1500):null;persist();return;}
+    if(el.dataset.listSetting){if(detail())return;state[el.dataset.listSetting]=el.value;if(!['sort','sortDirection'].includes(el.dataset.listSetting))state.selected=[];ui.scroll.scrollTop=0;renderList();renderChrome();if(window.lucide)window.lucide.createIcons({attrs:{width:18,height:18}});persist();return;}
+    if(el.dataset.selectBook){if(detail())return;const id=el.dataset.selectBook;state.selected=el.checked?[...new Set([...state.selected,id])]:state.selected.filter(v=>v!==id);renderChrome();persist();return;}
+    if(el.dataset.selectChapter){if(!detail())return;const n=Number(el.dataset.selectChapter);state.chapterSelected=el.checked?[...new Set([...state.chapterSelected,n])]:state.chapterSelected.filter(v=>v!==n);renderChrome();persist();return;}
+    if(el.dataset.selectRange){const b=detail();if(!b)return;state.chapterSelected=el.value==='current'?[b.current]:el.value==='forward'?ids(b.total-b.current+1,b.current):el.value==='all'?chapterIds(b):state.chapterSelected;render();persist();return;}
+    if(el.dataset.setting){state[el.dataset.setting]=el.value;persist();}
+  });
+  root.addEventListener('input',event=>{if(event.target!==ui.search||detail())return;state.query=ui.search.value;state.selected=[];ui.scroll.scrollTop=0;renderList();renderChrome();if(window.lucide)window.lucide.createIcons({attrs:{width:18,height:18}});persist();});
+  root.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){if(state.dialog)state.dialog=null;else if(state.sheet){closeSheet();return;}else if(state.manage){state.manage=false;state.selected=[];state.chapterSelected=[];}else if(detail()){returnToList();return;}render();persist();}
+    if(event.key==='Tab'){
+      const boundary=state.dialog?ui['dialog-layer']:state.sheet?ui.sheet:null;if(!boundary)return;
+      const controls=[...boundary.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled])')].filter(el=>!el.closest('[hidden]'));
+      const first=controls[0],last=controls[controls.length-1];
+      if(!boundary.contains(document.activeElement)){event.preventDefault();first?.focus();}else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    }
+  });
+  restore(window.openai?.widgetState);render();
+  window.addEventListener('openai:set_globals',event=>{const incoming=event.detail?.globals?.widgetState;if(incoming?.privateContent?.demo==='shared-reader-download'&&incoming.privateContent.version===5&&!published.has(JSON.stringify(incoming.privateContent.snapshot))){restore(incoming);render();}});
+})();
+</script>

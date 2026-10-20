@@ -1,0 +1,4533 @@
+{
+  "schema": 2,
+  "domain": "reading",
+  "kind": "NATIVE_CAPTURE_BASED_DEMO_SPEC",
+  "sourceCommit": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+  "visualAcceptance": "OPEN",
+  "referenceViewportPx": {
+    "width": 1280,
+    "height": 2832
+  },
+  "logicalReferenceWidth": 365.714,
+  "captureRoot": "../../../evidence/2026-10-06-native-ui-redo/captures/",
+  "captures": [
+    {
+      "id": "reader-control-nui-001-entry",
+      "acceptedMeaning": "漫画正文，第06话第5/24页",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-05-native-ui-reset/captures/reader-control-nui-001-entry.png",
+      "layout": "../../../evidence/2026-10-05-native-ui-reset/captures/reader-control-nui-001-entry.json",
+      "supersededBy": "reader-control-redo-062-comic-entry",
+      "admittedToCurrentDemo": false
+    },
+    {
+      "id": "reader-control-nui-002-manga-controls",
+      "acceptedMeaning": "漫画顶部及底部阅读控制",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-05-native-ui-reset/captures/reader-control-nui-002-manga-controls.png",
+      "layout": "../../../evidence/2026-10-05-native-ui-reset/captures/reader-control-nui-002-manga-controls.json",
+      "supersededBy": "reader-control-redo-063-comic-controls",
+      "admittedToCurrentDemo": false
+    },
+    {
+      "id": "reader-control-redo-001-resumed",
+      "acceptedMeaning": "换源查找完成34来源；候选未显示",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-001-resumed.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-001-resumed.json"
+    },
+    {
+      "id": "reader-control-redo-003-novel-controls-stable",
+      "acceptedMeaning": "小说正文；控件隐藏，文件名controls错误",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-003-novel-controls-stable.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-003-novel-controls-stable.json"
+    },
+    {
+      "id": "reader-control-redo-004-novel-home",
+      "acceptedMeaning": "小说控制首页稳定态",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-004-novel-home.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-004-novel-home.json"
+    },
+    {
+      "id": "reader-control-redo-005-replace-quick",
+      "acceptedMeaning": "替换Quick实际0规则",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-005-replace-quick.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-005-replace-quick.json"
+    },
+    {
+      "id": "reader-control-redo-006-replace-full",
+      "acceptedMeaning": "替换Full实际0规则",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-006-replace-full.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-006-replace-full.json"
+    },
+    {
+      "id": "reader-control-redo-007-replace-editor",
+      "acceptedMeaning": "新增规则未保存上部",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-007-replace-editor.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-007-replace-editor.json"
+    },
+    {
+      "id": "reader-control-redo-008-replace-editor-options",
+      "acceptedMeaning": "新增规则未保存下部",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-008-replace-editor-options.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-008-replace-editor-options.json"
+    },
+    {
+      "id": "reader-control-redo-009-replace-preview",
+      "acceptedMeaning": "已保存0启用0条仍可预览",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-009-replace-preview.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-009-replace-preview.json"
+    },
+    {
+      "id": "reader-control-redo-011-novel-directory-quick",
+      "acceptedMeaning": "快捷章节目录",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-011-novel-directory-quick.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-011-novel-directory-quick.json"
+    },
+    {
+      "id": "reader-control-redo-012-novel-directory-full",
+      "acceptedMeaning": "拖动展开完整章节目录",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-012-novel-directory-full.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-012-novel-directory-full.json"
+    },
+    {
+      "id": "reader-control-redo-014-novel-bookmarks-settled",
+      "acceptedMeaning": "Full书签约20秒后仍载入中",
+      "scope": "OBSERVED_LOADING_ONLY",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-014-novel-bookmarks-settled.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-014-novel-bookmarks-settled.json"
+    },
+    {
+      "id": "reader-control-redo-015-novel-bookmarks-quick",
+      "acceptedMeaning": "Quick书签仍载入中",
+      "scope": "OBSERVED_LOADING_ONLY",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-015-novel-bookmarks-quick.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-015-novel-bookmarks-quick.json"
+    },
+    {
+      "id": "reader-control-redo-016-content-search-quick",
+      "acceptedMeaning": "Quick正文搜索空查询",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-016-content-search-quick.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-016-content-search-quick.json"
+    },
+    {
+      "id": "reader-control-redo-017-content-search-full",
+      "acceptedMeaning": "Full正文搜索空查询",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-017-content-search-full.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-017-content-search-full.json"
+    },
+    {
+      "id": "reader-control-redo-018-content-search-keyboard",
+      "acceptedMeaning": "输入萧炎；应用避让OS键盘",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-018-content-search-keyboard.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-018-content-search-keyboard.json"
+    },
+    {
+      "id": "reader-control-redo-019-content-search-results",
+      "acceptedMeaning": "萧炎实际结果含章节题/正文/红色关键词/更多结果",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-019-content-search-results.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-019-content-search-results.json"
+    },
+    {
+      "id": "reader-control-redo-020-autopage-quick",
+      "acceptedMeaning": "Quick自动翻页未开始8秒",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-020-autopage-quick.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-020-autopage-quick.json"
+    },
+    {
+      "id": "reader-control-redo-021-autopage-full",
+      "acceptedMeaning": "Full自动翻页15:00/8秒/跟随高亮off",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-021-autopage-full.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-021-autopage-full.json"
+    },
+    {
+      "id": "reader-control-redo-028-tts-quick",
+      "acceptedMeaning": "Quick朗读未开始25分钟1.00x",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-028-tts-quick.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-028-tts-quick.json"
+    },
+    {
+      "id": "reader-control-redo-029-tts-full",
+      "acceptedMeaning": "Full朗读控制语速计时上部",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-029-tts-full.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-029-tts-full.json"
+    },
+    {
+      "id": "reader-control-redo-030-tts-engine",
+      "acceptedMeaning": "系统TTS已选/系统默认/普通话",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-030-tts-engine.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-030-tts-engine.json"
+    },
+    {
+      "id": "reader-control-redo-031-tts-playback-options",
+      "acceptedMeaning": "播放配置音色和4项可见开关",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-031-tts-playback-options.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-031-tts-playback-options.json"
+    },
+    {
+      "id": "reader-control-redo-032-tts-voice-picker",
+      "acceptedMeaning": "中文聆小珊女声已选1行浮层",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-032-tts-voice-picker.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-032-tts-voice-picker.json"
+    },
+    {
+      "id": "reader-control-redo-033-novel-more",
+      "acceptedMeaning": "当前小说右上锚定3项popup",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-033-novel-more.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-033-novel-more.json"
+    },
+    {
+      "id": "reader-control-redo-062-comic-entry",
+      "acceptedMeaning": "漫画正文，第06话第5/24页；底部原生徽标与系统手势条不纳入内容资产",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-062-comic-entry.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-062-comic-entry.json"
+    },
+    {
+      "id": "reader-control-redo-063-comic-controls",
+      "acceptedMeaning": "漫画顶部/底部控制，视觉未显示左右分页箭头",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-063-comic-controls.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-063-comic-controls.json"
+    },
+    {
+      "id": "reader-control-redo-064-comic-more",
+      "acceptedMeaning": "漫画更多半屏sheet上部；下部被裁切",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-064-comic-more.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-064-comic-more.json"
+    },
+    {
+      "id": "reader-control-redo-065-comic-more-lower",
+      "acceptedMeaning": "漫画更多滚动下部；确认完整7项",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-065-comic-more-lower.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-065-comic-more-lower.json"
+    },
+    {
+      "id": "reader-control-redo-066-download-manager",
+      "acceptedMeaning": "本书下载sheet实际loading，PNG与树非原子；不是独立下载任务页",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-066-download-manager.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-066-download-manager.json"
+    },
+    {
+      "id": "reader-control-redo-067-comic-download-settled",
+      "acceptedMeaning": "本书下载sheet稳定2项：下载全部章节/清除普通阅读缓存，无任务文字",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-067-comic-download-settled.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-067-comic-download-settled.json"
+    },
+    {
+      "id": "reader-control-redo-068-comic-directory",
+      "acceptedMeaning": "漫画独立底部目录，无小说tab/Quick/Full；05-08中06正在读",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-068-comic-directory.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-068-comic-directory.json"
+    },
+    {
+      "id": "reader-control-redo-069-comic-mode",
+      "acceptedMeaning": "阅读方式，竖向连续/跟随书源被选中",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-069-comic-mode.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-069-comic-mode.json"
+    },
+    {
+      "id": "reader-control-redo-070-comic-settings",
+      "acceptedMeaning": "漫画阅读设置，暖纸/亮度50%/常驻页码on",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-070-comic-settings.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-070-comic-settings.json"
+    },
+    {
+      "id": "reader-control-redo-076-comic-source-switch",
+      "acceptedMeaning": "漫画详情入口换源，查找完成已发现0个来源，明确空结果",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-076-comic-source-switch.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-076-comic-source-switch.json"
+    },
+    {
+      "id": "reader-control-redo-077-comic-source-close",
+      "acceptedMeaning": "漫画详情换源关闭返回detail/manga，而非reader",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-077-comic-source-close.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-077-comic-source-close.json"
+    },
+    {
+      "id": "reader-control-redo-080-replace-quick-preview",
+      "acceptedMeaning": "替换Quick预览：保留快捷高度/亮度/nav，当前章节预览与底层管理标题实景重叠",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-080-replace-quick-preview.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-080-replace-quick-preview.json",
+      "visualQuality": "OBSERVED_DEFECT_NOT_VISUAL_ACCEPTANCE"
+    },
+    {
+      "id": "reader-control-redo-081-tts-bottom",
+      "acceptedMeaning": "TTS播放配置底部重复实景：常亮仅1px文字/部分开关上缘，继续滑动没有显示不可用处理；不是完整最低终态",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-081-tts-bottom.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-081-tts-bottom.json",
+      "captureRole": "duplicate-state",
+      "duplicateOf": "reader-control-redo-031-tts-playback-options",
+      "state": "reader-tts/playback-options",
+      "visualQuality": "OBSERVED_DEFECT_NOT_VISUAL_ACCEPTANCE"
+    },
+    {
+      "id": "reader-control-redo-082-tts-lowest",
+      "acceptedMeaning": "TTS播放配置底部重复实景：常亮仅1px文字/部分开关上缘，继续滑动没有显示不可用处理；不是完整最低终态",
+      "scope": "VISUALLY_INSPECTED_CAPTURE",
+      "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-082-tts-lowest.png",
+      "layout": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-082-tts-lowest.json",
+      "captureRole": "duplicate-state",
+      "duplicateOf": "reader-control-redo-031-tts-playback-options",
+      "state": "reader-tts/playback-options",
+      "visualQuality": "OBSERVED_DEFECT_NOT_VISUAL_ACCEPTANCE"
+    }
+  ],
+  "geometryPx": {
+    "manga-controls": {
+      "appRoot": [
+        0,
+        137,
+        1280,
+        2832
+      ],
+      "topCard": [
+        56,
+        171,
+        1224,
+        353
+      ],
+      "backHit": [
+        59,
+        185,
+        213,
+        339
+      ],
+      "sourceHit": [
+        913,
+        189,
+        1067,
+        336
+      ],
+      "moreHit": [
+        1067,
+        185,
+        1221,
+        339
+      ],
+      "bottomCard": [
+        56,
+        2229,
+        1224,
+        2693
+      ],
+      "slider": [
+        255,
+        2277,
+        1025,
+        2379
+      ],
+      "directoryHit": [
+        108,
+        2455,
+        463,
+        2658
+      ],
+      "modeHit": [
+        463,
+        2455,
+        818,
+        2658
+      ],
+      "settingsHit": [
+        817,
+        2455,
+        1172,
+        2658
+      ]
+    }
+  },
+  "customControlAdjustments": [
+    {
+      "nativeType": "Slider/Toggle/TextInput/Button",
+      "classification": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "replacement": "统一自定义HTML控件",
+      "newPaintDetailsClassification": "unconfirmed-demo",
+      "category": "confirmed-demo-unimplemented",
+      "evidenceMaturity": "user-confirmed-direction"
+    }
+  ],
+  "observedInteractions": [
+    {
+      "from": "reader/body",
+      "to": "reader-controls/home",
+      "label": "正文中心点击",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-003-novel-controls-stable",
+        "reader-control-redo-004-novel-home"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-replace/quick",
+      "label": "选择对应模块",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-028-tts-quick"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-directory/quick",
+      "label": "选择对应模块",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-028-tts-quick"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-search/quick",
+      "label": "选择对应模块",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-028-tts-quick"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-autopage/quick",
+      "label": "选择对应模块",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-028-tts-quick"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-tts/quick",
+      "label": "选择对应模块",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-028-tts-quick"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-replace/quick",
+      "label": "替换",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-replace/quick",
+      "to": "reader-replace/full",
+      "label": "完整管理/展开",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-replace/full",
+      "to": "reader-replace/editor",
+      "label": "新增规则",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-replace/editor",
+      "to": "reader-replace/editor-options",
+      "label": "编辑器滚动",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-replace/editor-options",
+      "to": "reader-replace/full",
+      "label": "取消未保存规则",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-replace/full",
+      "to": "reader-replace/preview",
+      "label": "预览当前章节已保存规则",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-replace/preview",
+      "to": "reader-replace/full",
+      "label": "取消预览",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview"
+      ]
+    },
+    {
+      "from": "reader-directory/quick",
+      "to": "reader-directory/full",
+      "label": "拖动展开/收起",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-012-novel-directory-full"
+      ]
+    },
+    {
+      "from": "reader-directory/full",
+      "to": "reader-bookmarks/full",
+      "label": "切书签/等待/收起",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-012-novel-directory-full",
+        "reader-control-redo-014-novel-bookmarks-settled",
+        "reader-control-redo-015-novel-bookmarks-quick"
+      ]
+    },
+    {
+      "from": "reader-bookmarks/full",
+      "to": "reader-bookmarks/quick",
+      "label": "切书签/等待/收起",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-012-novel-directory-full",
+        "reader-control-redo-014-novel-bookmarks-settled",
+        "reader-control-redo-015-novel-bookmarks-quick"
+      ]
+    },
+    {
+      "from": "reader-search/quick",
+      "to": "reader-search/full",
+      "label": "展开/输入萧炎/提交",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-017-content-search-full",
+        "reader-control-redo-018-content-search-keyboard",
+        "reader-control-redo-019-content-search-results"
+      ]
+    },
+    {
+      "from": "reader-search/full",
+      "to": "reader-search/keyboard",
+      "label": "展开/输入萧炎/提交",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-017-content-search-full",
+        "reader-control-redo-018-content-search-keyboard",
+        "reader-control-redo-019-content-search-results"
+      ]
+    },
+    {
+      "from": "reader-search/keyboard",
+      "to": "reader-search/results",
+      "label": "展开/输入萧炎/提交",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-017-content-search-full",
+        "reader-control-redo-018-content-search-keyboard",
+        "reader-control-redo-019-content-search-results"
+      ]
+    },
+    {
+      "from": "reader-autopage/quick",
+      "to": "reader-autopage/full",
+      "label": "展开/收起",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-021-autopage-full"
+      ]
+    },
+    {
+      "from": "reader-tts/quick",
+      "to": "reader-tts/full",
+      "label": "展开/滚动/打开音色",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-028-tts-quick",
+        "reader-control-redo-029-tts-full",
+        "reader-control-redo-030-tts-engine",
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-032-tts-voice-picker"
+      ]
+    },
+    {
+      "from": "reader-tts/full",
+      "to": "reader-tts/engine",
+      "label": "展开/滚动/打开音色",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-028-tts-quick",
+        "reader-control-redo-029-tts-full",
+        "reader-control-redo-030-tts-engine",
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-032-tts-voice-picker"
+      ]
+    },
+    {
+      "from": "reader-tts/engine",
+      "to": "reader-tts/playback-options",
+      "label": "展开/滚动/打开音色",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-028-tts-quick",
+        "reader-control-redo-029-tts-full",
+        "reader-control-redo-030-tts-engine",
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-032-tts-voice-picker"
+      ]
+    },
+    {
+      "from": "reader-tts/playback-options",
+      "to": "reader-tts/voice-picker",
+      "label": "展开/滚动/打开音色",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-028-tts-quick",
+        "reader-control-redo-029-tts-full",
+        "reader-control-redo-030-tts-engine",
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-032-tts-voice-picker"
+      ]
+    },
+    {
+      "from": "reader-controls/home",
+      "to": "reader-more/popup",
+      "label": "右上更多",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-033-novel-more"
+      ]
+    },
+    {
+      "from": "source-switch/completed-empty-candidates",
+      "to": "reader/body",
+      "label": "关闭后稳定",
+      "evidenceKind": "native-operation",
+      "captureIds": [
+        "reader-control-redo-001-resumed",
+        "reader-control-redo-003-novel-controls-stable"
+      ]
+    },
+    {
+      "from": "manga-reader/body",
+      "to": "manga-reader/controls",
+      "label": "点正文",
+      "captureIds": [
+        "reader-control-nui-001-entry",
+        "reader-control-nui-002-manga-controls"
+      ]
+    },
+    {
+      "from": "manga-reader/controls",
+      "action": "更多",
+      "to": "manga-more/sheet",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-063-comic-controls",
+        "reader-control-redo-064-comic-more"
+      ],
+      "category": "existing-app"
+    },
+    {
+      "from": "manga-more/sheet",
+      "action": "滚动下部",
+      "to": "manga-more/lower",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-064-comic-more",
+        "reader-control-redo-065-comic-more-lower"
+      ],
+      "category": "existing-app"
+    },
+    {
+      "from": "manga-more/lower",
+      "action": "下载管理",
+      "to": "manga-downloads/loading→book-actions",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-065-comic-more-lower",
+        "reader-control-redo-066-download-manager",
+        "reader-control-redo-067-comic-download-settled"
+      ],
+      "category": "existing-app"
+    },
+    {
+      "from": "reader-replace/quick",
+      "action": "预览效果",
+      "to": "reader-replace/quick-preview",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-080-replace-quick-preview"
+      ],
+      "category": "existing-app"
+    },
+    {
+      "from": "reader-replace/quick-preview",
+      "action": "取消",
+      "to": "reader-replace/quick",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-080-replace-quick-preview"
+      ],
+      "boundary": "真实返回树复核，不新增返回实景PNG",
+      "returnLayoutObservation": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-081-tts-bottom-quick-cancel.json",
+      "category": "existing-app"
+    }
+  ],
+  "notYetObserved": [
+    "漫画阅读入口换源/退出/末尾；目录选章/搜索/排序/下载；模式/设置改变；更多其余动作后续",
+    "漫画seek/换章结果",
+    "小说替换保存/导入/导出；Quick预览标题重叠修复后的原生状态",
+    "目录选章/搜索/排序/定位结果",
+    "书签加载终态",
+    "搜索更多/其他query/选结果",
+    "自动翻页运行/暂停/停止/结束",
+    "TTS播放/试听/引擎切换/最底配置",
+    "亮度/外观/设置修改后的读页",
+    "跨平台/夜间/横屏",
+    "漫画更多风格用于小说的最终视觉"
+  ],
+  "policies": [
+    "未捕获状态只在稿件外部清单登记",
+    "不制造错误、成功、操作确认页面",
+    "截图作为内容及取证素材，HTML组件独立重建",
+    "源码用于核实回调条件，不独立关闭视觉验收",
+    "保留原生应用数据与配置"
+  ],
+  "classificationPolicy": [
+    "existing-app: only observed native screen and real route",
+    "confirmed-demo-unimplemented: user approved direction with no native implementation",
+    "unconfirmed-demo: specific new visual details have no final user approval",
+    "source-only证据成熟度独立于设计类别：category/classification=null，pending，candidateCategory=existing-app，admittedBaseline=false"
+  ],
+  "designDecisions": [
+    {
+      "id": "custom-system-controls",
+      "classification": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "basis": "用户明确：系统控件不保留；统一自定义组件供iOS/Android开发",
+      "targets": [
+        "Slider",
+        "Toggle",
+        "TextInput",
+        "Button"
+      ],
+      "detailsClassification": "unconfirmed-demo",
+      "category": "confirmed-demo-unimplemented",
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "id": "novel-more-manga-style",
+      "classification": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "basis": "先前用户明确：按漫画更多菜单重绘小说更多菜单",
+      "baseline": "当前小说仍为popup，未与目标bottomsheet混合",
+      "detailsClassification": "unconfirmed-demo",
+      "category": "confirmed-demo-unimplemented",
+      "evidenceMaturity": "user-confirmed-direction"
+    }
+  ],
+  "componentEvidence": [
+    {
+      "component": "manga-top-card",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-063-comic-controls",
+      "attributes": {
+        "bounds": {
+          "value": [
+            56,
+            171,
+            1224,
+            353
+          ],
+          "classification": "existing-app",
+          "basis": "dump/3.5",
+          "category": "existing-app"
+        },
+        "background": {
+          "value": "#fffcf8",
+          "classification": "existing-app",
+          "basis": "dump #FFFFFCF8",
+          "category": "existing-app"
+        },
+        "labels": {
+          "value": "斗破苍穹/06/换源",
+          "classification": "existing-app",
+          "basis": "PNG/dump",
+          "category": "existing-app"
+        },
+        "icons": {
+          "value": [
+            "book_detail_back",
+            "reader_directory_switch",
+            "reader_directory_more"
+          ],
+          "classification": "existing-app",
+          "basis": "063 PNG glyphs + candidate current source assets; source/artifact binding OPEN",
+          "category": "existing-app"
+        },
+        "radius": {
+          "value": "18vp重建",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "source+PNG，browseroverlayOPEN",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "manga-bottom-card",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-063-comic-controls",
+      "attributes": {
+        "bounds": {
+          "value": [
+            56,
+            2229,
+            1224,
+            2693
+          ],
+          "classification": "existing-app",
+          "basis": "dump/3.5",
+          "category": "existing-app"
+        },
+        "background": {
+          "value": "#fffcf8",
+          "classification": "existing-app",
+          "basis": "dump #FFFFFCF8",
+          "category": "existing-app"
+        },
+        "labels": {
+          "value": "5/24页/目录/阅读方式/设置",
+          "classification": "existing-app",
+          "basis": "PNG/dump",
+          "category": "existing-app"
+        },
+        "icons": {
+          "value": [
+            "reader_directory_directory",
+            "reader_appearance_header",
+            "reader_settings_header"
+          ],
+          "classification": "existing-app",
+          "basis": "063 PNG glyphs + candidate current source assets",
+          "category": "existing-app"
+        },
+        "radius": {
+          "value": "24vp",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "source+PNG，overlayOPEN",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "visualPageArrows": {
+          "value": "063 PNG未显示左右箭头，保留原有slot的布局间距；无可见箭头组件",
+          "classification": "existing-app",
+          "basis": "真实PNG优先；dump仍含两Button节点，不能由节点存在反推可见",
+          "category": "existing-app"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "manga-slider-custom",
+      "classification": "confirmed-demo-unimplemented",
+      "captureId": "reader-control-redo-063-comic-controls",
+      "attributes": {
+        "businessValue": {
+          "value": 5,
+          "classification": "existing-app",
+          "basis": "实际5/24页",
+          "category": "existing-app"
+        },
+        "controlDirection": {
+          "value": "统一自定义Slider",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确指令",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "paint": {
+          "value": "自定义thumb/track最终视觉",
+          "classification": "unconfirmed-demo",
+          "basis": "overlay/用户视觉验收OPEN",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        },
+        "seekResult": {
+          "value": "真实seek/24page内容",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获，禁用假结果",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "component": "novel-body",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-003-novel-controls-stable",
+      "captureIds": [
+        "reader-control-redo-003-novel-controls-stable"
+      ],
+      "attributes": {
+        "paragraphs": {
+          "value": "实际可见正文段、斗破苍穹/00:20/0%",
+          "classification": "existing-app",
+          "basis": "PNG抄录；retained隐藏节点不证明可见",
+          "category": "existing-app"
+        },
+        "typography": {
+          "value": "sourceReaderSerif+PNG行宽；字体对照OPEN",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "ReadingSurface/source未绑定安装产物",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "novel-control-home",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-004-novel-home",
+      "captureIds": [
+        "reader-control-redo-004-novel-home"
+      ],
+      "attributes": {
+        "top": {
+          "value": [
+            53,
+            171,
+            1228,
+            360
+          ],
+          "classification": "existing-app",
+          "basis": "dumpRow，logical=physical/3.5",
+          "category": "existing-app"
+        },
+        "shell": {
+          "value": [
+            46,
+            1579,
+            1235,
+            2734
+          ],
+          "classification": "existing-app",
+          "basis": "dumpStack；Quick高330vp",
+          "category": "existing-app"
+        },
+        "content": {
+          "value": [
+            92,
+            1681,
+            1008,
+            2346
+          ],
+          "classification": "existing-app",
+          "basis": "dumpQuick区域",
+          "category": "existing-app"
+        },
+        "labels": {
+          "value": "第三章客人/0%/共1663/搜索/自动翻页/替换/目录/朗读/界面/设置",
+          "classification": "existing-app",
+          "basis": "PNG+dump",
+          "category": "existing-app"
+        },
+        "brightness": {
+          "value": "手动18%/A按钮",
+          "classification": "existing-app",
+          "basis": "PNG可见值，修改效果未捕获",
+          "category": "existing-app"
+        },
+        "icons": {
+          "value": "源媒体图标逐项",
+          "classification": "existing-app",
+          "basis": "PNG/source资源，不复用旧HTML",
+          "category": "existing-app"
+        },
+        "morph": {
+          "value": "动画/点击已选nav回home",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "sourceactivateModule与motion；未做动态对照",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "replace-quick",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-005-replace-quick",
+      "captureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-009-replace-preview"
+      ],
+      "attributes": {
+        "data": {
+          "value": "实际0条规则",
+          "classification": "existing-app",
+          "basis": "PNG；不造3条fixture",
+          "category": "existing-app"
+        },
+        "titleBack": {
+          "value": "替换规则管理/返回",
+          "classification": "existing-app",
+          "basis": "PNG+dump",
+          "category": "existing-app"
+        },
+        "footer": {
+          "value": "预览效果/完整管理均enabled=true",
+          "classification": "existing-app",
+          "basis": "dump；009实际空集可预览，撤销disabled假设",
+          "category": "existing-app"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "replace-full",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-006-replace-full",
+      "captureIds": [
+        "reader-control-redo-006-replace-full"
+      ],
+      "attributes": {
+        "toolbar": {
+          "value": "新增规则/导入/导出",
+          "classification": "existing-app",
+          "basis": "PNG+dump",
+          "category": "existing-app"
+        },
+        "empty": {
+          "value": "暂无替换规则，点击上方新增规则",
+          "classification": "existing-app",
+          "basis": "实际0条",
+          "category": "existing-app"
+        },
+        "preview": {
+          "value": "预览当前章节已保存规则",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "importExportResults": {
+          "value": "原生输入、文件及结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获，不绘制",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "replace-editor",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-007-replace-editor",
+      "captureIds": [
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options"
+      ],
+      "attributes": {
+        "fields": {
+          "value": [
+            "名称",
+            "匹配内容",
+            "替换为（可留空）",
+            "分组",
+            "包含书名／书源范围（留空为全部）",
+            "排除范围",
+            "排序（整数）",
+            "执行超时（毫秒）"
+          ],
+          "classification": "existing-app",
+          "basis": "2幅PNG/dump8字段",
+          "category": "existing-app"
+        },
+        "defaults": {
+          "value": "scope斗破苍穹;https://api-bc.wtzw.com，order0，timeout3000",
+          "classification": "existing-app",
+          "basis": "原生未保存draft",
+          "category": "existing-app"
+        },
+        "flags": {
+          "value": {
+            "enabled": true,
+            "regex": true,
+            "title": false,
+            "content": true,
+            "sourceImport": false
+          },
+          "classification": "existing-app",
+          "basis": "008PNG/dump",
+          "category": "existing-app"
+        },
+        "scroll": {
+          "value": "上下部差213vp；HTML滚动",
+          "classification": "existing-app",
+          "basis": "007/008移位测量",
+          "category": "existing-app"
+        },
+        "saveResult": {
+          "value": "保存/持久化/列表状态",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未执行native保存，不造规则或成功页",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "replace-preview",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-009-replace-preview",
+      "captureIds": [
+        "reader-control-redo-009-replace-preview"
+      ],
+      "attributes": {
+        "summary": {
+          "value": "第三章客人；保存0启用0；仅截取片段",
+          "classification": "existing-app",
+          "basis": "PNG/dump",
+          "category": "existing-app"
+        },
+        "beforeAfter": {
+          "value": "替换前后相同实际文本",
+          "classification": "existing-app",
+          "basis": "PNG逐段抄录，标题/文本差异仍OPEN",
+          "category": "existing-app"
+        },
+        "cancel": {
+          "value": "取消返回来源管理层",
+          "classification": "existing-app",
+          "basis": "实际取消路径",
+          "category": "existing-app"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "novel-directory",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-011-novel-directory-quick",
+      "captureIds": [
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-012-novel-directory-full"
+      ],
+      "attributes": {
+        "tabs": {
+          "value": "章节/书签",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "quick": {
+          "value": "32vp行/当前第三章高亮/亮度nav保留",
+          "classification": "existing-app",
+          "basis": "011PNG/dump",
+          "category": "existing-app"
+        },
+        "full": {
+          "value": "搜索/上下定位/排序/40vp行/第三章3/1663",
+          "classification": "existing-app",
+          "basis": "012PNG/dump",
+          "category": "existing-app"
+        },
+        "titles": {
+          "value": "仅首屏12个实际标题",
+          "classification": "existing-app",
+          "basis": "PNG抄录，不造1663行",
+          "category": "existing-app"
+        },
+        "results": {
+          "value": "选章/搜索/排序/定位后续",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获，不渲染新业务结果",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "novel-bookmarks-loading",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-014-novel-bookmarks-settled",
+      "captureIds": [
+        "reader-control-redo-014-novel-bookmarks-settled",
+        "reader-control-redo-015-novel-bookmarks-quick"
+      ],
+      "attributes": {
+        "body": {
+          "value": "书签载入中和spinner",
+          "classification": "existing-app",
+          "basis": "Quick/FullPNG",
+          "category": "existing-app"
+        },
+        "terminal": {
+          "value": "加载完成/empty/error",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "约20秒持续loading；unknown不能升为空列表",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "content-search",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-016-content-search-quick",
+      "captureIds": [
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-017-content-search-full",
+        "reader-control-redo-018-content-search-keyboard"
+      ],
+      "attributes": {
+        "quick": {
+          "value": "返回/输入/搜索按钮/居中状态",
+          "classification": "existing-app",
+          "basis": "016PNG/dump",
+          "category": "existing-app"
+        },
+        "full": {
+          "value": "模块header/收起/输入/下部状态区",
+          "classification": "existing-app",
+          "basis": "017PNG/dump",
+          "category": "existing-app"
+        },
+        "keyboardAvoidance": {
+          "value": "输入萧炎后应用底部避让OSIME",
+          "classification": "existing-app",
+          "basis": "018appbounds；OS键盘不绘为应用UI",
+          "category": "existing-app"
+        },
+        "canSearch": {
+          "value": "非空query且非loading",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "ReaderControlSearchContent.canSearch/source",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "content-search-results",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-019-content-search-results",
+      "captureIds": [
+        "reader-control-redo-019-content-search-results"
+      ],
+      "attributes": {
+        "query": {
+          "value": "萧炎",
+          "classification": "existing-app",
+          "basis": "真实输入执行路线",
+          "category": "existing-app"
+        },
+        "structure": {
+          "value": "第一章题/多段正文/红色萧炎/左线/右下加载更多",
+          "classification": "existing-app",
+          "basis": "PNG/Text逐条抄录",
+          "category": "existing-app"
+        },
+        "geometry": {
+          "value": "72vp行；13vp题；28vp两行摘要",
+          "classification": "existing-app",
+          "basis": "dump每行252physical+source",
+          "category": "existing-app"
+        },
+        "moreAndSelect": {
+          "value": "加载更多/选结果/其他查询",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "结果未捕获，不造空/失败/跳转页",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "autopage-stopped",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-020-autopage-quick",
+      "captureIds": [
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-021-autopage-full"
+      ],
+      "attributes": {
+        "status": {
+          "value": "未开始",
+          "classification": "existing-app",
+          "basis": "2张PNG",
+          "category": "existing-app"
+        },
+        "quick": {
+          "value": "上一章/play/stop/下一章/速度8秒±",
+          "classification": "existing-app",
+          "basis": "020实际布局，自动翻页label在Quick裁切",
+          "category": "existing-app"
+        },
+        "full": {
+          "value": "自动翻页控制/15:00定时轮/2–20秒8秒slider/跟随高亮off",
+          "classification": "existing-app",
+          "basis": "021PNG/dump",
+          "category": "existing-app"
+        },
+        "stop": {
+          "value": "opacity.4、enabled=false",
+          "classification": "existing-app",
+          "basis": "dump/source当前stopped",
+          "category": "existing-app"
+        },
+        "bounds": {
+          "value": "分钟0..180；秒0..59；速度2..20",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "ReaderAutoPageFullState源约束，修改后视觉未抓",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "runResult": {
+          "value": "运行/暂停/停止/换章/完成",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "此轮没启动、不更阅读位置",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "tts-quick",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-028-tts-quick",
+      "captureIds": [
+        "reader-control-redo-028-tts-quick"
+      ],
+      "attributes": {
+        "cards": {
+          "value": "播放/定时/语速3卡",
+          "classification": "existing-app",
+          "basis": "PNG可见；retained朗读控制标题不误画",
+          "category": "existing-app"
+        },
+        "values": {
+          "value": "未开始/25分钟/1.00x",
+          "classification": "existing-app",
+          "basis": "实际原开值",
+          "category": "existing-app"
+        },
+        "transport": {
+          "value": "prev/next/stop disabled",
+          "classification": "existing-app",
+          "basis": "PNG/dump/sourcehasActiveQueue",
+          "category": "existing-app"
+        },
+        "effects": {
+          "value": "播放/语速/计时后续",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未执行原生修改",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "tts-full-control",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-029-tts-full",
+      "captureIds": [
+        "reader-control-redo-029-tts-full"
+      ],
+      "attributes": {
+        "playback": {
+          "value": "朗读控制/未开始pill/点状静止波形/大play/当前音色/stop禁用",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "rate": {
+          "value": "0.50–2.00范围，5preset，1.00x选中",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "timer": {
+          "value": "6preset，自定义25分00秒stepper",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "audioResult": {
+          "value": "播放/试听/定时触发",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "此轮没启动native",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "tts-engine-playback",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-030-tts-engine",
+      "captureIds": [
+        "reader-control-redo-030-tts-engine",
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-032-tts-voice-picker",
+        "reader-control-redo-081-tts-bottom",
+        "reader-control-redo-082-tts-lowest"
+      ],
+      "attributes": {
+        "engine": {
+          "value": "系统TTS已选/在线TTS入口/系统默认/普通话",
+          "classification": "existing-app",
+          "basis": "030/031PNG",
+          "category": "existing-app"
+        },
+        "flags": {
+          "value": {
+            "follow": true,
+            "pauseOnCall": true,
+            "mixing": false,
+            "background": true
+          },
+          "classification": "existing-app",
+          "basis": "0314完整可见开关PNG/dump",
+          "category": "existing-app"
+        },
+        "voice": {
+          "value": "女/中文聆小珊女声/普通话；1个已选popup",
+          "classification": "existing-app",
+          "basis": "032PNG",
+          "category": "existing-app"
+        },
+        "lowestRows": {
+          "value": "朗读时屏幕常亮、不可用处理",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "031/081/082最低部截断；081/082重复滑动后maxScroll559.143vp不变。未画完整常亮/不可用控件，源码侧候选高度不足，安装绑定OPEN",
+          "issueId": "tts-full-detail-scroll-clipped",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "engineResults": {
+          "value": "在线/系统engine/language选择后的效果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获，不改变实际服务",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "novel-more-current",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-033-novel-more",
+      "captureIds": [
+        "reader-control-redo-033-novel-more"
+      ],
+      "attributes": {
+        "placement": {
+          "value": "右上锚定popup，3行各50vp",
+          "classification": "existing-app",
+          "basis": "PNG/dump[736,409][1181,934]/3.5",
+          "category": "existing-app"
+        },
+        "actions": {
+          "value": "书籍信息/刷新本章/下载全部章节",
+          "classification": "existing-app",
+          "basis": "PNG+dump",
+          "category": "existing-app"
+        },
+        "downloadPaint": {
+          "value": "第三行浅色；dump文本enabled=true",
+          "classification": "existing-app",
+          "basis": "不单凭浅色断言禁用，businessguard未closed",
+          "category": "existing-app"
+        },
+        "actionResults": {
+          "value": "3项实际后续",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "targetDirection": {
+          "value": "按漫画更多样式重绘小说更多",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确指令",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "source-switch-completed",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-001-resumed",
+      "captureIds": [
+        "reader-control-redo-001-resumed"
+      ],
+      "attributes": {
+        "header": {
+          "value": "X/更换书源/重查",
+          "classification": "existing-app",
+          "basis": "PNG/dump/source",
+          "category": "existing-app"
+        },
+        "context": {
+          "value": "斗破苍穹/天蚕土豆/当前来源优+++",
+          "classification": "existing-app",
+          "basis": "PNG；48x72封面内容单独CSS裁切",
+          "category": "existing-app"
+        },
+        "status": {
+          "value": "查找完成34来源/搜索延迟/其他来源",
+          "classification": "existing-app",
+          "basis": "PNG+dump",
+          "category": "existing-app"
+        },
+        "candidateRegion": {
+          "value": "可见区域无候选行",
+          "classification": "existing-app",
+          "basis": "001稳定capture，不假设0候选、不造34行",
+          "category": "existing-app"
+        },
+        "results": {
+          "value": "重查/候选选择/切换回执",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获，不造首图验证/提交确认",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "custom-sliders",
+      "classification": "confirmed-demo-unimplemented",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-021-autopage-full",
+        "reader-control-redo-029-tts-full"
+      ],
+      "captureId": "reader-control-redo-004-novel-home",
+      "attributes": {
+        "direction": {
+          "value": "统一自定义HTML组件",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确系统控件不保留",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "baseline": {
+          "value": "位置、内容、值、路由各从capture",
+          "classification": "existing-app",
+          "basis": "对应actual组件分项证据",
+          "category": "existing-app"
+        },
+        "newPaint": {
+          "value": "自定义滑块/轨道/焦点/点击态与跨平台绘制参数最终视觉待确认",
+          "classification": "unconfirmed-demo",
+          "basis": "自定义实现；没有最终用户确认",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        }
+      },
+      "category": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "component": "custom-inputs",
+      "classification": "confirmed-demo-unimplemented",
+      "captureIds": [
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-017-content-search-full"
+      ],
+      "captureId": "reader-control-redo-007-replace-editor",
+      "attributes": {
+        "direction": {
+          "value": "统一自定义HTML组件",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确系统控件不保留",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "baseline": {
+          "value": "位置、内容、值、路由各从capture",
+          "classification": "existing-app",
+          "basis": "对应actual组件分项证据",
+          "category": "existing-app"
+        },
+        "newPaint": {
+          "value": "自定义输入框边框/占位字体/焦点/插入光标及跨平台输入态最终视觉待确认",
+          "classification": "unconfirmed-demo",
+          "basis": "自定义实现；没有最终用户确认",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        }
+      },
+      "category": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "component": "custom-switches",
+      "classification": "confirmed-demo-unimplemented",
+      "captureIds": [
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-031-tts-playback-options"
+      ],
+      "captureId": "reader-control-redo-008-replace-editor-options",
+      "attributes": {
+        "direction": {
+          "value": "统一自定义HTML组件",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确系统控件不保留",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "baseline": {
+          "value": "位置、内容、值、路由各从capture",
+          "classification": "existing-app",
+          "basis": "对应actual组件分项证据",
+          "category": "existing-app"
+        },
+        "newPaint": {
+          "value": "自定义轨道/滑块/点击过渡与跨平台绘制参数最终视觉待确认",
+          "classification": "unconfirmed-demo",
+          "basis": "自定义实现；没有最终用户确认",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        }
+      },
+      "category": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "component": "custom-buttons",
+      "classification": "confirmed-demo-unimplemented",
+      "captureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-033-novel-more"
+      ],
+      "captureId": "reader-control-redo-004-novel-home",
+      "attributes": {
+        "direction": {
+          "value": "统一自定义HTML组件",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确系统控件不保留",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "baseline": {
+          "value": "位置、内容、值、路由各从capture",
+          "classification": "existing-app",
+          "basis": "对应actual组件分项证据",
+          "category": "existing-app"
+        },
+        "newPaint": {
+          "value": "自定义文字与图标基线/圆角/焦点/按下态最终视觉待确认",
+          "classification": "unconfirmed-demo",
+          "basis": "自定义实现；没有最终用户确认",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        }
+      },
+      "category": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "component": "manga-content-layer",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-062-comic-entry",
+      "attributes": {
+        "content": {
+          "value": "实际062内容图层，原图不编辑；CSS底部50vp裁切原页码与手势条",
+          "classification": "existing-app",
+          "basis": "PNG内容取景 + dump images [0,0]..[1280,2832]",
+          "category": "existing-app"
+        },
+        "controlsClip": {
+          "value": "controls仅裁掉顶部39.143vp，不平移整个内容图",
+          "classification": "existing-app",
+          "basis": "063 List origBounds[0,0][1280,2832], bounds[0,137][1280,2832]",
+          "category": "existing-app"
+        },
+        "standingPage": {
+          "value": {
+            "text": "5 / 24",
+            "boundsPx": [
+              1069,
+              2711,
+              1238,
+              2790
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "062 PNG/dump，独立HTML徽标",
+          "category": "existing-app"
+        },
+        "contentAsset": {
+          "value": "原始缓存漫画图文件仍未取证；内容层当前使用实景内容截图裁切",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "不把截屏的控制层作为HTML替代",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "manga-more-sheet",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-064-comic-more",
+        "reader-control-redo-065-comic-more-lower"
+      ],
+      "attributes": {
+        "bounds": {
+          "value": [
+            0,
+            1415,
+            1280,
+            2832
+          ],
+          "classification": "existing-app",
+          "basis": "064/065 dump Stack bounds;3.5density",
+          "category": "existing-app"
+        },
+        "background": {
+          "value": "#fffcf8",
+          "classification": "existing-app",
+          "basis": "dump #FFFFFCF8",
+          "category": "existing-app"
+        },
+        "scrim": {
+          "value": "#57000000,从y137起",
+          "classification": "existing-app",
+          "basis": "dump Column app region",
+          "category": "existing-app"
+        },
+        "title": {
+          "value": "更多",
+          "classification": "existing-app",
+          "basis": "PNG/dump",
+          "category": "existing-app"
+        },
+        "grabber": {
+          "value": [
+            567,
+            1459,
+            714,
+            1477
+          ],
+          "classification": "existing-app",
+          "basis": "dump bounds",
+          "category": "existing-app"
+        },
+        "close": {
+          "value": [
+            1112,
+            1499,
+            1238,
+            1625
+          ],
+          "classification": "existing-app",
+          "basis": "dump hit Row,Image63px=18vp",
+          "category": "existing-app"
+        },
+        "scrollViewport": {
+          "value": [
+            0,
+            1660,
+            1280,
+            2735
+          ],
+          "classification": "existing-app",
+          "basis": "dump Scroll clip true",
+          "category": "existing-app"
+        },
+        "menuItems": {
+          "value": [
+            "更换书源",
+            "重新打开本话",
+            "漫画详情",
+            "下载本话",
+            "下载全部章节",
+            "下载管理",
+            "移出书架"
+          ],
+          "classification": "existing-app",
+          "basis": "064上部+065下部实景，不能只取064可见前5项",
+          "category": "existing-app"
+        },
+        "rowHeight": {
+          "value": 48,
+          "classification": "existing-app",
+          "basis": "每行168px/3.5",
+          "category": "existing-app"
+        },
+        "rowGap": {
+          "value": 24,
+          "classification": "existing-app",
+          "basis": "连续行top252px/3.5−48",
+          "category": "existing-app"
+        },
+        "lowerScroll": {
+          "value": 173.143,
+          "classification": "existing-app",
+          "basis": "065原第三行top1558，相对064 top2164；606px/3.5",
+          "category": "existing-app"
+        },
+        "radius": {
+          "value": "22vp容器/14vp菜单，依源码候选并据PNG重建",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "overlay未验收；不宣称精确visual已通过",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "actions": {
+          "value": "未点击动作的后续，保留外部待取证通知",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "不捏造换源/刷新/下载成功/入架结果",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "novel-more-target",
+      "classification": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "referenceCaptureIds": [
+        "reader-control-redo-064-comic-more",
+        "reader-control-redo-065-comic-more-lower"
+      ],
+      "nativeActionEvidence": [
+        "reader-control-redo-033-novel-more"
+      ],
+      "attributes": {
+        "layoutDirection": {
+          "value": "小说更多采用漫画更多底部sheet",
+          "classification": "confirmed-demo-unimplemented",
+          "basis": "用户明确方向；原生小说033为锚定popup",
+          "category": "confirmed-demo-unimplemented",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "actions": {
+          "value": [
+            "书籍信息",
+            "刷新本章",
+            "下载全部章节"
+          ],
+          "classification": "existing-app",
+          "basis": "仅继承033当前小说已有3项，不引入漫画专属动作",
+          "category": "existing-app"
+        },
+        "styleReference": {
+          "value": "漫画064/065实际sheet",
+          "classification": "existing-app",
+          "basis": "参考对象是真实漫画，不当小说当前实景",
+          "category": "existing-app"
+        },
+        "adaptedHeight": {
+          "value": 314,
+          "classification": "unconfirmed-demo",
+          "basis": "3项48h/24间距+70头部+24尾+28安全区的适配提案，最终视觉未确认",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        },
+        "finalPaint": {
+          "value": "尺寸、颜色、动效与交互呈现",
+          "classification": "unconfirmed-demo",
+          "basis": "具体适配尚未用户视觉验收",
+          "category": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        },
+        "actionResults": {
+          "value": "小说已有3个动作的实际后续",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "evidenceKind": "source-reference-only",
+          "basis": "当前native动作名称已被033观察，后续未捕获；不是未确认新功能",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "confirmed-demo-unimplemented",
+      "admittedBaseline": false,
+      "detailsCategory": "unconfirmed-demo",
+      "evidenceMaturity": "user-confirmed-direction"
+    },
+    {
+      "component": "manga-download-actions",
+      "classification": "existing-app",
+      "captureIds": [
+        "reader-control-redo-066-download-manager",
+        "reader-control-redo-067-comic-download-settled"
+      ],
+      "attributes": {
+        "title": {
+          "value": "本书下载",
+          "classification": "existing-app",
+          "basis": "066/067 PNG",
+          "category": "existing-app"
+        },
+        "bounds": {
+          "value": [
+            0,
+            1824,
+            1280,
+            2832
+          ],
+          "classification": "existing-app",
+          "basis": "067 dump + 066 PNG same shell",
+          "category": "existing-app"
+        },
+        "loadingText": {
+          "value": "正在读取下载状态…",
+          "classification": "existing-app",
+          "basis": "066 PNG ONLY，dump已出现稳定2按钮",
+          "category": "existing-app"
+        },
+        "loadedItems": {
+          "value": [
+            "下载全部章节",
+            "清除普通阅读缓存"
+          ],
+          "classification": "existing-app",
+          "basis": "067 PNG/dump",
+          "category": "existing-app"
+        },
+        "rowBounds": {
+          "value": [
+            [
+              63,
+              2069,
+              1217,
+              2237
+            ],
+            [
+              63,
+              2265,
+              1217,
+              2433
+            ]
+          ],
+          "classification": "existing-app",
+          "basis": "067 dump",
+          "category": "existing-app"
+        },
+        "rowGap": {
+          "value": 8,
+          "classification": "existing-app",
+          "basis": "196px/3.5-48",
+          "category": "existing-app"
+        },
+        "taskList": {
+          "value": "没有任务列表和暂无任务文本",
+          "classification": "existing-app",
+          "basis": "067 PNG实际范围，仅记录观察不推断后台没有任务",
+          "category": "existing-app"
+        },
+        "actions": {
+          "value": "下载/清除实际结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未点击，不生成任务/成功页",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "manga-directory-sheet",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-068-comic-directory",
+      "attributes": {
+        "bounds": {
+          "value": [
+            0,
+            782,
+            1280,
+            2832
+          ],
+          "classification": "existing-app",
+          "basis": "068 dump",
+          "category": "existing-app"
+        },
+        "title": {
+          "value": "章节目录",
+          "classification": "existing-app",
+          "basis": "PNG/dump",
+          "category": "existing-app"
+        },
+        "query": {
+          "value": {
+            "placeholder": "搜索章名或序号",
+            "boundsPx": [
+              63,
+              1027,
+              1217,
+              1181
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "PNG/dump",
+          "category": "existing-app"
+        },
+        "tools": {
+          "value": [
+            "定位当前条目",
+            "正序+竖向双列图标"
+          ],
+          "classification": "existing-app",
+          "basis": "068 PNG；source候选assets manga_sheet_locate/vertical_accent",
+          "category": "existing-app"
+        },
+        "listViewport": {
+          "value": [
+            63,
+            1495,
+            1217,
+            2650
+          ],
+          "classification": "existing-app",
+          "basis": "068 dump List clip",
+          "category": "existing-app"
+        },
+        "visibleChapters": {
+          "value": [
+            "05",
+            "06",
+            "07",
+            "08"
+          ],
+          "classification": "existing-app",
+          "basis": "PNG/dump仅采集范围",
+          "category": "existing-app"
+        },
+        "current": {
+          "value": {
+            "title": "06",
+            "label": "正在读",
+            "background": "#e8ede2",
+            "boundsPx": [
+              63,
+              1670,
+              1217,
+              1974
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "068 PNG/dump",
+          "category": "existing-app"
+        },
+        "rowHeight": {
+          "value": 86.857,
+          "classification": "existing-app",
+          "basis": "304px/3.5；不可拿源码58替换真实布局",
+          "category": "existing-app"
+        },
+        "initialScroll": {
+          "value": 36.857,
+          "classification": "existing-app",
+          "basis": "05 origTop1366 vs viewport1495 =129px/3.5",
+          "category": "existing-app"
+        },
+        "rowActions": {
+          "value": "各可见行下载；非当前chevron；当前正在读标签",
+          "classification": "existing-app",
+          "basis": "068 PNG/dump",
+          "category": "existing-app"
+        },
+        "novelTabs": {
+          "value": "无章节/书签tab和小说Quick/Full切换",
+          "classification": "existing-app",
+          "basis": "068 PNG",
+          "category": "existing-app"
+        },
+        "results": {
+          "value": "搜索/定位/排序/选章/下载目标",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "尚未原生取证，demo保留本实景与外部提示",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "fullDirectoryCandidate": {
+          "value": "Fallback存在独立目录回调，但068实际没有该入口",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "source-only，不放进画布",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "manga-mode-sheet",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-069-comic-mode",
+      "attributes": {
+        "bounds": {
+          "value": [
+            0,
+            1456,
+            1280,
+            2832
+          ],
+          "classification": "existing-app",
+          "basis": "069 dump",
+          "category": "existing-app"
+        },
+        "title": {
+          "value": "阅读方式",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "modeChoices": {
+          "value": {
+            "labels": [
+              "竖向连续",
+              "横向分页"
+            ],
+            "selected": "竖向连续",
+            "heightVp": 43
+          },
+          "classification": "existing-app",
+          "basis": "069 PNG/dump",
+          "category": "existing-app"
+        },
+        "fitChoices": {
+          "value": {
+            "labels": [
+              "跟随书源",
+              "适合屏幕",
+              "完整图片"
+            ],
+            "selected": "跟随书源",
+            "heightVp": 46
+          },
+          "classification": "existing-app",
+          "basis": "069 PNG/dump",
+          "category": "existing-app"
+        },
+        "sectionGeometry": {
+          "value": {
+            "firstHeaderTopPx": 1701,
+            "firstChoiceTopVp": 33,
+            "nextHeaderTopVp": 100.286,
+            "gapVp": 24
+          },
+          "classification": "existing-app",
+          "basis": "069 geometry + source labels; HTML重建",
+          "category": "existing-app"
+        },
+        "selectedPaint": {
+          "value": {
+            "fill": "#1f3528",
+            "text": "#fffaf4"
+          },
+          "classification": "existing-app",
+          "basis": "PNG与源对应; overlayOPEN",
+          "category": "existing-app"
+        },
+        "changeResults": {
+          "value": "切方向/适配后的正文和持久化",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未点击配置，不造横向页面",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "manga-settings-sheet",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-070-comic-settings",
+      "attributes": {
+        "bounds": {
+          "value": [
+            0,
+            1491,
+            1280,
+            2832
+          ],
+          "classification": "existing-app",
+          "basis": "070 dump",
+          "category": "existing-app"
+        },
+        "title": {
+          "value": "漫画阅读设置",
+          "classification": "existing-app",
+          "basis": "PNG",
+          "category": "existing-app"
+        },
+        "backgroundChoices": {
+          "value": {
+            "labels": [
+              "暖纸",
+              "深墨"
+            ],
+            "selected": "暖纸"
+          },
+          "classification": "existing-app",
+          "basis": "070 PNG",
+          "category": "existing-app"
+        },
+        "brightness": {
+          "value": {
+            "value": 50,
+            "boundsPx": [
+              63,
+              2196,
+              1217,
+              2280
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "070 PNG/dump Slider text50",
+          "category": "existing-app"
+        },
+        "pageNumbers": {
+          "value": {
+            "label": "常驻页码",
+            "value": true,
+            "boundsPx": [
+              1078,
+              2319,
+              1211,
+              2400
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "070 PNG/dump checkedtrue",
+          "category": "existing-app"
+        },
+        "reset": {
+          "value": "恢复默认",
+          "classification": "existing-app",
+          "basis": "070 PNG/dump",
+          "category": "existing-app"
+        },
+        "controls": {
+          "value": "Slider/Toggle以统一自定义HTML绘制；UI仅本地值变化",
+          "classification": "confirmed-demo-unimplemented",
+          "directionConfirmed": true,
+          "finalVisualApproval": false,
+          "basis": "用户自定义组件方向；具体paint为unconfirmed-demo",
+          "category": "confirmed-demo-unimplemented",
+          "evidenceMaturity": "user-confirmed-direction"
+        },
+        "effectOnNativeReading": {
+          "value": "底色/亮度/页码/重置后的读页与保存",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "没有更改原生设置，demo本地值不声称实景状态已被原生确认",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "source-switch-comic-detail-empty",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-076-comic-source-switch",
+      "attributes": {
+        "header": {
+          "value": {
+            "title": "更换书源",
+            "close": "×",
+            "action": "重查",
+            "boundsPx": [
+              56,
+              164,
+              1224,
+              346
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "076 PNG/source row dump",
+          "category": "existing-app"
+        },
+        "bookCover": {
+          "value": {
+            "boundsPx": [
+              63,
+              415,
+              231,
+              667
+            ],
+            "asset": "076原图仅CSS裁切封面，不使用页UI像素"
+          },
+          "classification": "existing-app",
+          "basis": "076 actualcover PNG/dump",
+          "category": "existing-app"
+        },
+        "bookTitle": {
+          "value": "斗破苍穹",
+          "classification": "existing-app",
+          "basis": "076 PNG/dump",
+          "category": "existing-app"
+        },
+        "metadata": {
+          "value": "知音漫客 x 任翔 · 当前来源：🔖腾讯漫画",
+          "classification": "existing-app",
+          "basis": "076 actualdump全文；emoji按实际source字符串",
+          "category": "existing-app"
+        },
+        "reading": {
+          "value": "正在读 06",
+          "classification": "existing-app",
+          "basis": "076 PNG/dump",
+          "category": "existing-app"
+        },
+        "status": {
+          "value": "查找完成 · 已发现 0 个 / 延迟优先 / 其他来源",
+          "classification": "existing-app",
+          "basis": "076 PNG/dump",
+          "category": "existing-app"
+        },
+        "emptyFeedback": {
+          "value": {
+            "title": "查找完成 · 已发现 0 个",
+            "description": "可重新查找，或返回继续阅读",
+            "boundsPx": [
+              [
+                367,
+                1086,
+                914,
+                1162
+              ],
+              [
+                367,
+                1190,
+                914,
+                1251
+              ]
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "076实际空反馈，不借用小说34来源异常空候选",
+          "category": "existing-app"
+        },
+        "closeTarget": {
+          "value": "detail/manga",
+          "classification": "existing-app",
+          "basis": "root操作+077 PNG复核",
+          "category": "existing-app"
+        },
+        "entryContext": {
+          "value": "漫画详情的换源入口",
+          "classification": "existing-app",
+          "basis": "076前的漫画详情；不能替代漫画reader来源入口",
+          "category": "existing-app"
+        },
+        "recheckResult": {
+          "value": "重查后的实际结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "尚未点击；不造loading/候选/切换成功页",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "category": "existing-app"
+    },
+    {
+      "component": "replace-quick-preview",
+      "classification": "existing-app",
+      "captureId": "reader-control-redo-080-replace-quick-preview",
+      "visualAcceptance": "OPEN_OBSERVED_DEFECT",
+      "attributes": {
+        "bounds": {
+          "value": [
+            92,
+            1681,
+            1008,
+            2346
+          ],
+          "classification": "existing-app",
+          "basis": "080 dump Column，和Quick内容卡同高",
+          "category": "existing-app"
+        },
+        "actor": {
+          "value": "Quick，不自动展开Full；brightness和4nav保留",
+          "classification": "existing-app",
+          "basis": "080 PNG/dump + 当前source preview仅设置temporarylayer",
+          "category": "existing-app"
+        },
+        "header": {
+          "value": {
+            "preview": "当前章节预览",
+            "underlying": "替换规则管理",
+            "cancel": "取消"
+          },
+          "classification": "existing-app",
+          "basis": "080 PNG当前标题重叠",
+          "category": "existing-app"
+        },
+        "headerBounds": {
+          "value": {
+            "preview": [
+              134,
+              1739,
+              536,
+              1805
+            ],
+            "underlying": [
+              325,
+              1749,
+              1053,
+              1798
+            ],
+            "cancel": [
+              564,
+              1723,
+              966,
+              1821
+            ]
+          },
+          "classification": "existing-app",
+          "basis": "080 dump，文本框交叉实际PNG可见",
+          "category": "existing-app"
+        },
+        "scrollViewport": {
+          "value": [
+            134,
+            1849,
+            966,
+            2304
+          ],
+          "classification": "existing-app",
+          "basis": "080 dump Scroll clip=true",
+          "category": "existing-app"
+        },
+        "content": {
+          "value": "第三章客人/已保存0启用0仅展示截取片段/替换前/009同正文片段",
+          "classification": "existing-app",
+          "basis": "080 PNG/dump；之后内容只沿同009已捕获片段滚动",
+          "category": "existing-app"
+        },
+        "cancelTarget": {
+          "value": "reader-replace/quick",
+          "classification": "existing-app",
+          "basis": "root取消操作 + 081-tts-bottom-quick-cancel.json真实返回树复核；当前章节预览消失/Quick动作保留；无新增返回PNG",
+          "category": "existing-app"
+        },
+        "knownFlaw": {
+          "value": "预览标题与底层替换规则管理标题重叠",
+          "classification": "existing-app",
+          "basis": "实际应用可见缺陷必须记录，取证准入不表示视觉合格",
+          "category": "existing-app"
+        }
+      },
+      "category": "existing-app"
+    }
+  ],
+  "sourceCommitScope": "CODE_REFERENCE_ONLY; installed source/artifact binding OPEN",
+  "installedSourceBinding": "OPEN",
+  "logicalReferenceHeight": 809.143,
+  "densityEvidence": {
+    "value": 3.5,
+    "basis": "root preflight hw.lcd.density560; DisplayManager direct confirmation OPEN"
+  },
+  "excludedCaptureFrames": [
+    {
+      "id": "reader-control-nui-003-manga-more",
+      "reason": "仍为漫画控制，不能证明more"
+    },
+    {
+      "id": "reader-control-redo-002-novel-return-source",
+      "reason": "半透明过渡，不能作为静态控制首页"
+    },
+    {
+      "id": "reader-control-redo-010-novel-directory-quick",
+      "reason": "仍是替换Quick，不能证明目录"
+    },
+    {
+      "id": "reader-control-redo-013-novel-directory-bookmarks",
+      "reason": "仅loading，不转empty"
+    }
+  ],
+  "sourceOnlyPolicy": {
+    "category": null,
+    "classificationStatus": "pending",
+    "candidateCategory": "existing-app",
+    "admittedBaseline": false,
+    "meaning": "源码存在但未捕获；取证成熟度与设计类别分离，不反向断言未实现或未确认新方案",
+    "classification": null,
+    "evidenceKind": "source-reference-only",
+    "evidenceMaturity": "pending-native-observation"
+  },
+  "modules": [
+    {
+      "id": "reader",
+      "label": "小说正文",
+      "routeGraph": {
+        "nodes": [
+          "reader/body",
+          "reader-controls/home"
+        ],
+        "edges": [
+          {
+            "from": "reader/body",
+            "to": "reader-controls/home",
+            "label": "正文中心点击",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-003-novel-controls-stable",
+              "reader-control-redo-004-novel-home"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "翻页/离开结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-003-novel-controls-stable",
+        "reader-control-redo-004-novel-home"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-controls",
+      "label": "阅读控制",
+      "routeGraph": {
+        "nodes": [
+          "reader-controls/home",
+          "reader-replace/quick",
+          "reader-directory/quick",
+          "reader-search/quick",
+          "reader-autopage/quick",
+          "reader-tts/quick"
+        ],
+        "edges": [
+          {
+            "from": "reader-controls/home",
+            "to": "reader-replace/quick",
+            "label": "点击替换",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-005-replace-quick"
+            ]
+          },
+          {
+            "from": "reader-controls/home",
+            "to": "reader-directory/quick",
+            "label": "点击目录",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-011-novel-directory-quick"
+            ]
+          },
+          {
+            "from": "reader-controls/home",
+            "to": "reader-search/quick",
+            "label": "点击搜索",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-016-content-search-quick"
+            ]
+          },
+          {
+            "from": "reader-controls/home",
+            "to": "reader-autopage/quick",
+            "label": "点击自动翻页",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-020-autopage-quick"
+            ]
+          },
+          {
+            "from": "reader-controls/home",
+            "to": "reader-tts/quick",
+            "label": "点击朗读",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-028-tts-quick"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "设置/外观修改结果另域",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-028-tts-quick"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-replace",
+      "label": "替换",
+      "routeGraph": {
+        "nodes": [
+          "reader-replace/quick",
+          "reader-replace/full",
+          "reader-replace/editor",
+          "reader-replace/editor-options",
+          "reader-replace/preview",
+          "reader-replace/quick-preview"
+        ],
+        "edges": [
+          {
+            "from": "reader-controls/home",
+            "to": "reader-replace/quick",
+            "label": "点击替换",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-005-replace-quick"
+            ]
+          },
+          {
+            "from": "reader-replace/quick",
+            "to": "reader-replace/full",
+            "label": "完整管理/展开",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-005-replace-quick",
+              "reader-control-redo-006-replace-full"
+            ]
+          },
+          {
+            "from": "reader-replace/full",
+            "to": "reader-replace/editor",
+            "label": "点击新增规则",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-006-replace-full",
+              "reader-control-redo-007-replace-editor"
+            ]
+          },
+          {
+            "from": "reader-replace/editor",
+            "to": "reader-replace/editor-options",
+            "label": "编辑器向下滚动",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-007-replace-editor",
+              "reader-control-redo-008-replace-editor-options"
+            ]
+          },
+          {
+            "from": "reader-replace/editor-options",
+            "to": "reader-replace/full",
+            "label": "取消未保存规则",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-008-replace-editor-options",
+              "reader-control-redo-006-replace-full"
+            ]
+          },
+          {
+            "from": "reader-replace/full",
+            "to": "reader-replace/preview",
+            "label": "预览当前章节已保存规则",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-006-replace-full",
+              "reader-control-redo-009-replace-preview"
+            ]
+          },
+          {
+            "from": "reader-replace/preview",
+            "to": "reader-replace/full",
+            "label": "取消预览",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-009-replace-preview",
+              "reader-control-redo-006-replace-full"
+            ]
+          },
+          {
+            "from": "reader-replace/quick",
+            "to": "reader-replace/quick-preview",
+            "label": "预览效果，在Quick内显示临时预览，标题实际重叠",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-005-replace-quick",
+              "reader-control-redo-080-replace-quick-preview"
+            ]
+          },
+          {
+            "from": "reader-replace/quick-preview",
+            "to": "reader-replace/quick",
+            "label": "取消预览回Quick",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-080-replace-quick-preview"
+            ],
+            "evidenceBoundary": "返回后真实布局树复核，未新增返回PNG；005为同一Quick画面的既有视觉参考",
+            "returnLayoutObservation": {
+              "file": "../../../evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-081-tts-bottom-quick-cancel.json",
+              "meaning": "替换规则管理/预览效果/完整管理保留，当前章节预览消失",
+              "visualFrame": false
+            }
+          }
+        ],
+        "pendingEdges": {
+          "value": "保存/导入/导出结果；预览打开后手动展开结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-005-replace-quick",
+        "reader-control-redo-006-replace-full",
+        "reader-control-redo-007-replace-editor",
+        "reader-control-redo-008-replace-editor-options",
+        "reader-control-redo-009-replace-preview",
+        "reader-control-redo-080-replace-quick-preview"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-directory",
+      "label": "目录",
+      "routeGraph": {
+        "nodes": [
+          "reader-directory/quick",
+          "reader-directory/full"
+        ],
+        "edges": [
+          {
+            "from": "reader-directory/quick",
+            "to": "reader-directory/full",
+            "label": "拖动展开/收起",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-011-novel-directory-quick",
+              "reader-control-redo-012-novel-directory-full"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "选章/搜索/排序/定位",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-011-novel-directory-quick",
+        "reader-control-redo-012-novel-directory-full"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-bookmarks",
+      "label": "书签",
+      "routeGraph": {
+        "nodes": [
+          "reader-directory/full",
+          "reader-bookmarks/full",
+          "reader-bookmarks/quick"
+        ],
+        "edges": [
+          {
+            "from": "reader-directory/full",
+            "to": "reader-bookmarks/full",
+            "label": "点击书签，等待约20秒仍载入中",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-012-novel-directory-full",
+              "reader-control-redo-014-novel-bookmarks-settled"
+            ]
+          },
+          {
+            "from": "reader-bookmarks/full",
+            "to": "reader-bookmarks/quick",
+            "label": "收起后仍载入中",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-014-novel-bookmarks-settled",
+              "reader-control-redo-015-novel-bookmarks-quick"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "loading终态",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-012-novel-directory-full",
+        "reader-control-redo-014-novel-bookmarks-settled",
+        "reader-control-redo-015-novel-bookmarks-quick"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-search",
+      "label": "正文搜索",
+      "routeGraph": {
+        "nodes": [
+          "reader-search/quick",
+          "reader-search/full",
+          "reader-search/keyboard",
+          "reader-search/results"
+        ],
+        "edges": [
+          {
+            "from": "reader-search/quick",
+            "to": "reader-search/full",
+            "label": "拖动把手展开",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-016-content-search-quick",
+              "reader-control-redo-017-content-search-full"
+            ]
+          },
+          {
+            "from": "reader-search/full",
+            "to": "reader-search/keyboard",
+            "label": "输入萧炎，页面避让系统键盘",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-017-content-search-full",
+              "reader-control-redo-018-content-search-keyboard"
+            ]
+          },
+          {
+            "from": "reader-search/keyboard",
+            "to": "reader-search/results",
+            "label": "提交萧炎，展示当前实景结果",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-018-content-search-keyboard",
+              "reader-control-redo-019-content-search-results"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "快捷搜索结果/其他query/更多结果/选择结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-016-content-search-quick",
+        "reader-control-redo-017-content-search-full",
+        "reader-control-redo-018-content-search-keyboard",
+        "reader-control-redo-019-content-search-results"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-autopage",
+      "label": "自动翻页",
+      "routeGraph": {
+        "nodes": [
+          "reader-autopage/quick",
+          "reader-autopage/full"
+        ],
+        "edges": [
+          {
+            "from": "reader-autopage/quick",
+            "to": "reader-autopage/full",
+            "label": "展开/收起",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-020-autopage-quick",
+              "reader-control-redo-021-autopage-full"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "运行/暂停/停止/完成",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-020-autopage-quick",
+        "reader-control-redo-021-autopage-full"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-tts",
+      "label": "朗读",
+      "routeGraph": {
+        "nodes": [
+          "reader-tts/quick",
+          "reader-tts/full",
+          "reader-tts/engine",
+          "reader-tts/playback-options",
+          "reader-tts/voice-picker"
+        ],
+        "edges": [
+          {
+            "from": "reader-tts/quick",
+            "to": "reader-tts/full",
+            "label": "拖动把手展开",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-028-tts-quick",
+              "reader-control-redo-029-tts-full"
+            ]
+          },
+          {
+            "from": "reader-tts/full",
+            "to": "reader-tts/engine",
+            "label": "向下滚动至引擎",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-029-tts-full",
+              "reader-control-redo-030-tts-engine"
+            ]
+          },
+          {
+            "from": "reader-tts/engine",
+            "to": "reader-tts/playback-options",
+            "label": "继续向下滚动至播放配置",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-030-tts-engine",
+              "reader-control-redo-031-tts-playback-options"
+            ]
+          },
+          {
+            "from": "reader-tts/playback-options",
+            "to": "reader-tts/voice-picker",
+            "label": "打开已选音色菜单",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-031-tts-playback-options",
+              "reader-control-redo-032-tts-voice-picker"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "播放/试听/引擎选择/最低部",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        },
+        "repeatObservations": [
+          {
+            "captureId": "reader-control-redo-081-tts-bottom",
+            "state": "reader-tts/playback-options",
+            "meaning": "重复最大滚动偏移559.143vp；未显示完整最低两配置项，不新增状态"
+          },
+          {
+            "captureId": "reader-control-redo-082-tts-lowest",
+            "state": "reader-tts/playback-options",
+            "meaning": "重复最大滚动偏移559.143vp；未显示完整最低两配置项，不新增状态"
+          }
+        ]
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-028-tts-quick",
+        "reader-control-redo-029-tts-full",
+        "reader-control-redo-030-tts-engine",
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-032-tts-voice-picker",
+        "reader-control-redo-081-tts-bottom",
+        "reader-control-redo-082-tts-lowest"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-more",
+      "label": "小说当前更多",
+      "routeGraph": {
+        "nodes": [
+          "reader-controls/home",
+          "reader-more/popup"
+        ],
+        "edges": [
+          {
+            "from": "reader-controls/home",
+            "to": "reader-more/popup",
+            "label": "右上更多",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-004-novel-home",
+              "reader-control-redo-033-novel-more"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "菜单动作结果；目标风格单独列",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-004-novel-home",
+        "reader-control-redo-033-novel-more"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "source-switch",
+      "label": "换源",
+      "routeGraph": {
+        "nodes": [
+          "source-switch/completed-empty-candidates",
+          "reader/body",
+          "detail/manga",
+          "source-switch/comic-detail-empty"
+        ],
+        "edges": [
+          {
+            "from": "source-switch/completed-empty-candidates",
+            "to": "reader/body",
+            "label": "关闭后稳定",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-001-resumed",
+              "reader-control-redo-003-novel-controls-stable"
+            ]
+          },
+          {
+            "from": "detail/manga",
+            "to": "source-switch/comic-detail-empty",
+            "label": "漫画详情点击换源，发现0个来源",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-072-comic-detail",
+              "reader-control-redo-076-comic-source-switch"
+            ],
+            "category": "existing-app"
+          },
+          {
+            "from": "source-switch/comic-detail-empty",
+            "to": "detail/manga",
+            "label": "关闭换源，回漫画详情",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-076-comic-source-switch",
+              "reader-control-redo-077-comic-source-close"
+            ],
+            "category": "existing-app"
+          }
+        ],
+        "pendingEdges": {
+          "value": "重查/选择/实际换源结果；漫画reader上下文来源入口未捕获",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "当前源码候选；实际后续未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-001-resumed",
+        "reader-control-redo-003-novel-controls-stable",
+        "reader-control-redo-076-comic-source-switch",
+        "reader-control-redo-077-comic-source-close"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "manga-reader",
+      "label": "漫画",
+      "routeGraph": {
+        "nodes": [
+          "manga-reader/body",
+          "manga-reader/controls"
+        ],
+        "edges": [
+          {
+            "from": "manga-reader/body",
+            "to": "manga-reader/controls",
+            "label": "点击正文中心显示控制",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-062-comic-entry",
+              "reader-control-redo-063-comic-controls"
+            ]
+          }
+        ],
+        "pendingEdges": {
+          "value": "seek/换章/退出目标；不使用通用浏览器history作为已观察原生退出",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "未捕获",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-062-comic-entry",
+        "reader-control-redo-063-comic-controls"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "manga-directory",
+      "label": "漫画章节目录",
+      "routeGraph": {
+        "nodes": [
+          "manga-reader/controls",
+          "manga-directory/sheet",
+          "manga-reader/chapter-target",
+          "book-directory/manga"
+        ],
+        "edges": [
+          {
+            "from": "manga-reader/controls",
+            "to": "manga-directory/sheet",
+            "label": "点击目录，稳定sheet实景",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-063-comic-controls",
+              "reader-control-redo-068-comic-directory"
+            ],
+            "category": "existing-app"
+          },
+          {
+            "from": "manga-directory/sheet",
+            "to": "manga-reader/controls",
+            "label": "关闭×/返回/向下拖动超过阈值",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1135",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-directory/sheet",
+            "to": "manga-reader/chapter-target",
+            "label": "选章：保存位置，关闭，再派发目录目标",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1055",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-directory/sheet",
+            "to": "book-directory/manga",
+            "label": "Fallback独立完整目录入口",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1713",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          }
+        ],
+        "pendingEdges": {
+          "value": "搜索/排序/定位/选章/下载目标及未捕获区域",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "仅当前源码路径，不认定当前安装包行为",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-068-comic-directory"
+      ],
+      "category": "existing-app",
+      "admittedBaseline": true,
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "manga-mode",
+      "label": "漫画阅读方式",
+      "routeGraph": {
+        "nodes": [
+          "manga-reader/controls",
+          "manga-mode/sheet",
+          "manga-mode/selected-mode-or-fit"
+        ],
+        "edges": [
+          {
+            "from": "manga-reader/controls",
+            "to": "manga-mode/sheet",
+            "label": "点击阅读方式，稳定sheet实景",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-063-comic-controls",
+              "reader-control-redo-069-comic-mode"
+            ],
+            "category": "existing-app"
+          },
+          {
+            "from": "manga-mode/sheet",
+            "to": "manga-mode/selected-mode-or-fit",
+            "label": "竖向连续/横向分页，或跟随书源/适合屏幕/完整图片",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1718",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-mode/sheet",
+            "to": "manga-reader/controls",
+            "label": "关闭sheet",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1135",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          }
+        ],
+        "pendingEdges": {
+          "value": "修改选择后的实际正文/持久化结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "仅当前源码候选",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-069-comic-mode"
+      ],
+      "category": "existing-app",
+      "admittedBaseline": true,
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "manga-settings",
+      "label": "漫画阅读设置",
+      "routeGraph": {
+        "nodes": [
+          "manga-reader/controls",
+          "manga-settings/sheet",
+          "manga-settings/changed-preferences"
+        ],
+        "edges": [
+          {
+            "from": "manga-reader/controls",
+            "to": "manga-settings/sheet",
+            "label": "点击设置，稳定sheet实景",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-063-comic-controls",
+              "reader-control-redo-070-comic-settings"
+            ],
+            "category": "existing-app"
+          },
+          {
+            "from": "manga-settings/sheet",
+            "to": "manga-settings/changed-preferences",
+            "label": "底色/亮度/常驻页码/恢复默认",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1762",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-settings/sheet",
+            "to": "manga-reader/controls",
+            "label": "关闭sheet",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1135",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          }
+        ],
+        "pendingEdges": {
+          "value": "修改选择后的实际正文/持久化结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "仅当前源码候选",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-070-comic-settings"
+      ],
+      "category": "existing-app",
+      "admittedBaseline": true,
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "manga-more",
+      "label": "漫画更多",
+      "routeGraph": {
+        "nodes": [
+          "manga-reader/controls",
+          "manga-more/sheet",
+          "manga-more/lower",
+          "manga-source-switch",
+          "detail/manga",
+          "manga-downloads/sheet",
+          "bookshelf-change"
+        ],
+        "edges": [
+          {
+            "from": "manga-reader/controls",
+            "to": "manga-more/sheet",
+            "label": "顶部更多打开sheet",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-063-comic-controls",
+              "reader-control-redo-064-comic-more"
+            ]
+          },
+          {
+            "from": "manga-more/sheet",
+            "to": "manga-more/lower",
+            "label": "向下滚动，确认7项全菜单",
+            "evidenceKind": "native-operation",
+            "captureIds": [
+              "reader-control-redo-064-comic-more",
+              "reader-control-redo-065-comic-more-lower"
+            ]
+          },
+          {
+            "from": "manga-more/sheet",
+            "to": "manga-source-switch",
+            "label": "更换书源：保存/关闭后派发",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1792",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-more/sheet",
+            "to": "bookshelf-change",
+            "label": "按入架状态加入/移出书架",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1803",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-more/sheet",
+            "to": "manga-reader/controls",
+            "label": "关闭sheet",
+            "category": null,
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "admittedBaseline": false,
+            "evidenceKind": "source-reference-only",
+            "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets:1135",
+            "captureIds": [],
+            "evidenceMaturity": "pending-native-observation"
+          },
+          {
+            "from": "manga-more/lower",
+            "to": "manga-downloads/loading",
+            "label": "点击下载管理，出现本书下载读取状态",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-065-comic-more-lower",
+              "reader-control-redo-066-download-manager"
+            ],
+            "category": "existing-app"
+          },
+          {
+            "from": "manga-more/sheet",
+            "to": "detail/manga",
+            "label": "点击漫画详情",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-071-comic-more-return",
+              "reader-control-redo-072-comic-detail"
+            ],
+            "category": "existing-app"
+          }
+        ],
+        "pendingEdges": {
+          "value": "各动作目标终态/关闭返回；下载管理目标另取证",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "仅当前源码候选",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "observedCaptureIds": [
+        "reader-control-redo-064-comic-more",
+        "reader-control-redo-065-comic-more-lower"
+      ],
+      "category": "existing-app",
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    },
+    {
+      "id": "reader-more-target",
+      "label": "小说更多·漫画风格适配提案",
+      "category": "confirmed-demo-unimplemented",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "routeGraph": {
+        "nodes": [
+          "reader-more/popup",
+          "reader-more-target/comic-style",
+          "reader-controls/home"
+        ],
+        "edges": [
+          {
+            "from": "reader-more/popup",
+            "to": "reader-more-target/comic-style",
+            "label": "用户确认参照漫画样式方向",
+            "category": "confirmed-demo-unimplemented",
+            "evidenceKind": "user-confirmed-direction",
+            "referenceCaptureIds": [
+              "reader-control-redo-064-comic-more"
+            ],
+            "nativeActionCaptureId": "reader-control-redo-033-novel-more"
+          },
+          {
+            "from": "reader-more-target/comic-style",
+            "to": "reader-controls/home",
+            "label": "关闭适配提案",
+            "category": "unconfirmed-demo",
+            "evidenceKind": "demo-only",
+            "basis": "具体目标交互未原生实现"
+          }
+        ],
+        "pendingEdges": {
+          "value": "适配稿最终314vp高度、3项布局、字体、圆角、颜色与动效",
+          "category": "unconfirmed-demo",
+          "classification": "unconfirmed-demo",
+          "finalVisualApproval": false,
+          "admittedBaseline": false,
+          "basis": "方向已确认；具体适配视觉尚未确认，不是当前原生UI",
+          "evidenceMaturity": "unconfirmed-visual-detail"
+        },
+        "pendingNativeActionResults": {
+          "value": "小说已有3个动作的实际后续",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "evidenceKind": "source-reference-only",
+          "basis": "当前native动作名称已被033观察，后续未捕获；不是未确认新功能",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "classification": "confirmed-demo-unimplemented",
+      "admittedBaseline": false,
+      "evidenceMaturity": "user-confirmed-direction-with-demo-proposal",
+      "detailsCategory": "unconfirmed-demo"
+    },
+    {
+      "id": "manga-downloads",
+      "label": "漫画本书下载",
+      "category": "existing-app",
+      "admittedBaseline": true,
+      "observedCaptureIds": [
+        "reader-control-redo-066-download-manager",
+        "reader-control-redo-067-comic-download-settled"
+      ],
+      "routeGraph": {
+        "nodes": [
+          "manga-more/lower",
+          "manga-downloads/loading",
+          "manga-downloads/book-actions",
+          "manga-reader/controls"
+        ],
+        "edges": [
+          {
+            "from": "manga-more/lower",
+            "to": "manga-downloads/loading",
+            "label": "下载管理入口实际打开本书下载sheet",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-065-comic-more-lower",
+              "reader-control-redo-066-download-manager"
+            ],
+            "category": "existing-app"
+          },
+          {
+            "from": "manga-downloads/loading",
+            "to": "manga-downloads/book-actions",
+            "label": "等待加载，稳定2项操作",
+            "evidenceKind": "native-operation",
+            "classification": "existing-app",
+            "captureIds": [
+              "reader-control-redo-066-download-manager",
+              "reader-control-redo-067-comic-download-settled"
+            ],
+            "category": "existing-app"
+          }
+        ],
+        "pendingEdges": {
+          "value": "实际下载/清除普通缓存结果",
+          "category": null,
+          "classification": null,
+          "classificationStatus": "pending",
+          "candidateCategory": "existing-app",
+          "admittedBaseline": false,
+          "basis": "没有执行数据变更；不画任务/成功页",
+          "evidenceMaturity": "pending-native-observation"
+        }
+      },
+      "classification": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "baselineScope": "仅observedCaptureIds对应状态与已捕获属性；源码候选和未捕获动作另列pending",
+      "visualAcceptance": "OPEN"
+    }
+  ],
+  "issues": [
+    {
+      "id": "bookmark-loading-persistent",
+      "status": "OPEN",
+      "phenomenon": "Full等待约20秒仍载入中；Quick也载入中",
+      "nativeEvidence": [
+        "reader-control-redo-014-novel-bookmarks-settled",
+        "reader-control-redo-015-novel-bookmarks-quick"
+      ],
+      "sourceAudit": [
+        "DirectoryModel未知entry.bookmarks=>loading",
+        "BookmarkProjection unknown=>loading而非仅pendingbool",
+        "loadControlBookmarks有generation/openRevision/lifecycle/source/book guards",
+        "Index/DirectoryHost retireguard可能丢弃publication",
+        "Core成功返回projection会给所有章[]"
+      ],
+      "notConcluded": "未确认请求挂起/guardretire/unknown发布根因，不认empty/nativebug",
+      "remaining": "真实bookmark.list回执、currentguard和publication日志；未改native"
+    },
+    {
+      "id": "preview-title-text-scope",
+      "status": "OPEN",
+      "phenomenon": "009第三章标题和004可见正文不同；按实景保留",
+      "remaining": "Corepreview截取契约尚未核验，不直接判nativebug"
+    },
+    {
+      "id": "demo-native-overlay",
+      "status": "OPEN",
+      "remaining": "parent独占浏览器逐状态365.714x809.143截图叠加；native/model/跨平台/用户验收分别记账"
+    },
+    {
+      "id": "capture066-png-tree-nonatomic",
+      "status": "RECORDED",
+      "phenomenon": "066PNG仍loading，同行JSON树已出现2稳定动作；原生capture和dump非原子采样",
+      "nativeEvidence": [
+        "reader-control-redo-066-download-manager",
+        "reader-control-redo-067-comic-download-settled"
+      ],
+      "boundary": "loading文本与可见状态以066PNG为准，2按钮以067PNG为准，不把同一JSON当同一帧完整视觉证明"
+    },
+    {
+      "id": "manga-content-bottom-asset",
+      "status": "OPEN",
+      "phenomenon": "062底部y2657起被系统导航背景/原页码覆盖，063相同区域继续显示漫画；单一正文截图内容层无法恢复这段原漫画像素",
+      "nativeEvidence": [
+        "reader-control-redo-062-comic-entry",
+        "reader-control-redo-063-comic-controls"
+      ],
+      "remaining": "实际缓存漫画图原文件；目前正文主区域取景真实、底部50vp内容缺口保留；不以整页控制截图代替HTML，也不认视觉验收完成"
+    },
+    {
+      "id": "replace-quick-preview-title-overlap",
+      "status": "OPEN_NATIVE_OBSERVED",
+      "phenomenon": "Quick预览临时层标题与底层替换规则管理Text同时可见且重叠",
+      "nativeEvidence": [
+        "reader-control-redo-080-replace-quick-preview"
+      ],
+      "sourceAudit": "ReaderControlReplaceContent临时层只设置layer，当前Quick actor保留；底层quick title层仍绘制。未修改原生源码。",
+      "boundary": "demo当前baseline复现缺陷；native修复/替代视觉提案/用户验收各自另记，不把observed当accepted"
+    },
+    {
+      "id": "tts-full-detail-scroll-clipped",
+      "ledgerIssueId": "UI-TTS-LOWEST-015",
+      "status": "OPEN_NATIVE_OBSERVED_CANDIDATE",
+      "phenomenon": "稳定Full滚动至播放配置底部，朗读时屏幕常亮仅文字1px/开关上缘，未见完整常亮与不可用处理；081两次右侧滑动、082居中滑动后仍相同",
+      "nativeEvidence": [
+        "reader-control-redo-031-tts-playback-options",
+        "reader-control-redo-081-tts-bottom",
+        "reader-control-redo-082-tts-lowest"
+      ],
+      "nativeObservation": {
+        "scrollViewportPx": [
+          92,
+          588,
+          1190,
+          2689
+        ],
+        "scrollViewportVp": 600.2857142857143,
+        "contentStackOrigPx": [
+          92,
+          -1369,
+          1190,
+          2689
+        ],
+        "contentStackVp": 1159.4285714285713,
+        "maximumScrollOffsetVp": 559.1428571428571,
+        "keepScreenOnTextVisiblePx": [
+          188,
+          2688,
+          920,
+          2689
+        ],
+        "keepScreenOnTextOrigPx": [
+          188,
+          2688,
+          920,
+          2749
+        ],
+        "fullLowestRowsObserved": false,
+        "additionalSwipeChangedViewport": false
+      },
+      "candidateRootCause": {
+        "status": "SOURCE_CANDIDATE_CONSISTENT_WITH_NATIVE_GEOMETRY",
+        "sourceScope": "CODE_REFERENCE_ONLY",
+        "installedSourceBinding": "OPEN",
+        "geometrySource": "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts:105-107",
+        "contentSource": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:369-404,833-844,901-958",
+        "frameDetailTopVp": 873.5,
+        "frameDetailHeightVp": 270,
+        "frameContentHeightVp": 1159.5,
+        "authoredChildren": {
+          "headerVp": 18,
+          "gapVp": 8,
+          "voiceVp": 52,
+          "togglesCount": 5,
+          "toggleVp": 48,
+          "failureRowVp": 48,
+          "cardVp": 340,
+          "totalDetailVp": 366
+        },
+        "authoredDetailEndVp": 1239.5,
+        "overflowPastContentVp": 80,
+        "actorHeightDifferenceVp": 96,
+        "explanation": "Full播放配置actor固定270vp，但子Column为18+8+340=366vp；Scroll的Stack高度1159.5vp不足以覆盖detail起点873.5之后完整366vp子内容。底部原生Scroll/外层Stack均clip，滚动边界仍以固定Stack extent计算，不会因为溢出的子行自动延长。",
+        "notConcluded": "当前安装包与源码未绑定，不能将此源码候选当作已闭合原生根因；原生布局引擎对受约束Column的溢出/压缩效果还未验证"
+      },
+      "auditedAlternatives": {
+        "fullScrollGate": "稳定Full且无配置浮层时fullInput=interactionEnabled && p===1；enableScrollInteraction=true，AllowsNative直接放行y",
+        "freeze": "observe在Full更新fullScrollOffset(S)=nativeScrollOffset(N)，fullOnly translation=N-S=0；冻结仅在morph交接时保留锚点",
+        "extent": "readerControlMorphScrollExtent=max(S,N)，只维护已达滚动位置；availableHeight+559.143≈1159.429，不补偿不可达子内容",
+        "layoutWeight": "播放配置Row内layoutWeight只分配横向文字宽度；voice52、5×48和failure48都固定高度，未发现纵向layoutWeight吸收80vp",
+        "overlay": "configField非空会禁原生滚动，但081/082无配置popup；实际maxOffset/Stack尺寸稳定更符合extent边界"
+      },
+      "localVerification": {
+        "method": "Node v26直接导入当前纯TS sampleReaderControlTts/MorphScroll函数，不修改源码或安装包",
+        "results": [
+          "sampleReaderControlTts(1,...):detail.y873.5/detail.height270/contentHeight1159.5",
+          "366vp子内容end1239.5超出extent80vp",
+          "观察maxOffset559.143，Full native scroll allowed=true/fullOnly translate=0",
+          "081/082 Scroll与Stack bounds完全相同；native/source绑定仍OPEN"
+        ],
+        "status": "PASS_SOURCE_CANDIDATE_REPRODUCED",
+        "nativeFix": false
+      },
+      "remaining": [
+        "将当前安装包与源/产物绑定，确认实际运行的geometry版本",
+        "原生高度/extent修复属于应用修复工作，本轮demo重建未改生产源码",
+        "原生修复后重新捕获完整最低配置；当前demo只保留已观察截断范围"
+      ],
+      "boundary": "081/082是已观察缺陷的重复实景，不是最低终态，也不将源码中存在的完整常亮/不可用处理画成已观察应用UI"
+    }
+  ],
+  "sourceAuditCapturePlan": {
+    "updated": "2026-10-06",
+    "scope": "Manga正常面板入口；CODE_REFERENCE_ONLY",
+    "sourceRef": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+    "normalSequence": [
+      "稳定controls→顶部更多→等待open→capture→关闭×→稳定controls",
+      "目录/阅读方式/设置逐一从controls打开→等待open→capture→关闭×"
+    ],
+    "stabilityGuards": [
+      "openPanel有字体/键盘等待和2个postFrame回调；spring onFinish后panelPhase=open",
+      "performPanelAction先保存位置和关闭，generation/controller/chapter guard通过再执行"
+    ],
+    "doNotInfer": [
+      "未捕获项不渲染",
+      "宽屏右侧sheet、条件下载项、切换结果未核验",
+      "无需修改原生配置即可先抓各面板默认值"
+    ]
+  },
+  "historicalCaptureRoots": [
+    "../../../evidence/2026-10-05-native-ui-reset/captures/"
+  ],
+  "stateEvidence": [
+    {
+      "screen": "reader",
+      "variant": "body",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-003-novel-controls-stable",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "reader-controls",
+      "variant": "home",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-004-novel-home",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义亮度Slider的轨道、滑块、焦点和点击态尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-replace",
+      "variant": "quick",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-005-replace-quick",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义亮度Slider的轨道、滑块、焦点和点击态尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-replace",
+      "variant": "quick-preview",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-080-replace-quick-preview",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义亮度Slider的轨道、滑块、焦点和点击态尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-replace",
+      "variant": "full",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-006-replace-full",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "reader-replace",
+      "variant": "editor",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-007-replace-editor",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "新增规则TextInput与Toggle的自定义边框、焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-replace",
+      "variant": "editor-options",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-008-replace-editor-options",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "新增规则TextInput与Toggle的自定义边框、焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-replace",
+      "variant": "preview",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-009-replace-preview",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "reader-directory",
+      "variant": "quick",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-011-novel-directory-quick",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义亮度Slider的轨道、滑块、焦点和点击态尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-directory",
+      "variant": "full",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-012-novel-directory-full",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "完整目录搜索TextInput的自定义焦点、边框和输入态外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-bookmarks",
+      "variant": "quick",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-015-novel-bookmarks-quick",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义亮度Slider的轨道、滑块、焦点和点击态尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-bookmarks",
+      "variant": "full",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-014-novel-bookmarks-settled",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "reader-search",
+      "variant": "quick",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-016-content-search-quick",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "内容搜索TextInput和按钮的自定义焦点、边框、按下态外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-search",
+      "variant": "full",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-017-content-search-full",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "内容搜索TextInput和按钮的自定义焦点、边框、按下态外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-search",
+      "variant": "keyboard",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-018-content-search-keyboard",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "内容搜索TextInput和按钮的自定义焦点、边框、按下态外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-search",
+      "variant": "results",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-019-content-search-results",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "内容搜索TextInput和按钮的自定义焦点、边框、按下态外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-autopage",
+      "variant": "quick",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-020-autopage-quick",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义速度Slider及计时选择器的焦点、滑块、数字排版尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-autopage",
+      "variant": "full",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-021-autopage-full",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "自定义速度Slider及计时选择器的焦点、滑块、数字排版尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-tts",
+      "variant": "quick",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-028-tts-quick",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "语速Slider、计时数字与播放Toggle的自定义焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-tts",
+      "variant": "full",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-029-tts-full",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "语速Slider、计时数字与播放Toggle的自定义焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-tts",
+      "variant": "engine",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-030-tts-engine",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "语速Slider、计时数字与播放Toggle的自定义焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-tts",
+      "variant": "playback-options",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-031-tts-playback-options",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "语速Slider、计时数字与播放Toggle的自定义焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-tts",
+      "variant": "voice-picker",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-032-tts-voice-picker",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "语速Slider、计时数字与播放Toggle的自定义焦点、滑块和过渡外观尚未确认"
+      ]
+    },
+    {
+      "screen": "reader-more",
+      "variant": "popup",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-033-novel-more",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "reader-more-target",
+      "variant": "comic-style",
+      "category": "confirmed-demo-unimplemented",
+      "evidenceMaturity": "user-confirmed-direction-with-demo-proposal",
+      "captureId": null,
+      "referenceCaptureId": "reader-control-redo-064-comic-more",
+      "captureRole": "style-reference",
+      "directionConfirmed": true,
+      "finalVisualApproval": false,
+      "admittedBaseline": false,
+      "unconfirmedControlVisuals": [
+        "314vp面板高度是3个小说动作的适配提案，尚未确认",
+        "3项48vp胶囊、24vp间距与底部安全区的具体排版尚未确认",
+        "采用漫画更多样式的方向已确认；小说适配后的字体、圆角、色彩与动效仍待视觉确认"
+      ]
+    },
+    {
+      "screen": "source-switch",
+      "variant": "completed-empty-candidates",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-001-resumed",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "source-switch",
+      "variant": "comic-detail-empty",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-076-comic-source-switch",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-reader",
+      "variant": "body",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-062-comic-entry",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-reader",
+      "variant": "controls",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-063-comic-controls",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "阅读进度Slider的自定义轨道、滑块和焦点外观尚未确认"
+      ]
+    },
+    {
+      "screen": "manga-more",
+      "variant": "sheet",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-064-comic-more",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-more",
+      "variant": "lower",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-065-comic-more-lower",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-downloads",
+      "variant": "loading",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-066-download-manager",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-downloads",
+      "variant": "book-actions",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-067-comic-download-settled",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-directory",
+      "variant": "sheet",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-068-comic-directory",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "目录搜索TextInput的自定义边框、焦点和输入态外观尚未确认"
+      ]
+    },
+    {
+      "screen": "manga-mode",
+      "variant": "sheet",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-069-comic-mode",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": []
+    },
+    {
+      "screen": "manga-settings",
+      "variant": "sheet",
+      "category": "existing-app",
+      "evidenceMaturity": "native-observed",
+      "captureId": "reader-control-redo-070-comic-settings",
+      "referenceCaptureId": null,
+      "nativeFrameObserved": true,
+      "visualAcceptance": "OPEN",
+      "unconfirmedControlVisuals": [
+        "亮度Slider与常驻页码Toggle的自定义轨道、滑块和过渡外观尚未确认"
+      ]
+    }
+  ],
+  "pendingScreenEvidence": [
+    {
+      "id": "manga-end",
+      "label": "漫画章节结束",
+      "category": null,
+      "classification": null,
+      "classificationStatus": "pending",
+      "candidateCategory": "existing-app",
+      "admittedBaseline": false,
+      "status": "pending-native-capture",
+      "evidenceKind": "source-reference-only"
+    }
+  ],
+  "customPaintReviewBoundary": "实景业务结构、文案、位置和值保持existing-app；自定义替代控件方向属于confirmed-demo-unimplemented，其新paint按属性单列unconfirmed-demo；缺乏实景的源码参数仍source-only/pending，不因此归为新设计",
+  "localVerification": {
+    "updatedAt": "2026-10-06",
+    "scope": "Owned reading files only; source candidate audit not native fix",
+    "syntax": "PASS",
+    "renderedStates": 36,
+    "existingAppStates": 35,
+    "confirmedDirectionProposals": 1,
+    "referencedAssetsChecked": 69,
+    "pendingClassificationEntriesChecked": 58,
+    "routeChecks": [
+      "Quick preview stays Quick; cancel returns Quick",
+      "Novel source close returns reader/body; comic-detail source close returns detail/manga",
+      "Native manga controls have no visible paging chevrons",
+      "Novel more target has referenceCaptureId only; 314vp and final paint unconfirmed",
+      "TTS clipped lowest rows retained; no full unseen controls"
+    ],
+    "nativeCaptureOverlay": "OPEN_PARENT_REVIEW",
+    "crossPlatformDeviceAcceptance": "OPEN",
+    "userVisualAcceptance": "OPEN"
+  }
+}

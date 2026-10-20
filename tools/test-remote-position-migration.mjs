@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context)}catch(error){
   if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 const base=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
@@ -20,6 +23,9 @@ const receipt=()=>({status:'committed',previousBodyVersion:'old-body',bodyVersio
 const response=migration=>({data:{sourceId:'source',bookId:'book',chapterTitle:'第一章',via:'rule',
   content:'清晨的阳光照进房间，故事从这里开始。'.repeat(40),bodyVersion:'new-body',processingVersion:'new-processing',positionMigration:migration}});
 // Exact anchors are captured before awaits, forwarded for both cache reads and forced refreshes.
+
+try{
+if(id==='captured-context'){
 for(const force of [false,true]){
   let release;const gate=new Promise(r=>release=r);const calls=[];
   const gateway=new RemoteReadingFlowGateway({request:async(method,params)=>{calls.push({method,params});await gate;return response(receipt());}});
@@ -33,9 +39,8 @@ for(const force of [false,true]){
   copy.positionMigration.anchors[0].offset=888;copy.positionMigration.progress.chapterOffset=777;
   assert.equal(window.get(0).positionMigration.anchors[0].offset,15);assert.equal(window.get(0).positionMigration.progress.chapterOffset,15);
 }
-// An unscoped prepared body may serve an ordinary read, but it cannot prove
-// resume anchors. Exact context verified by a prior Core request is covered
-// separately in test-shelf-resume-handoff.mjs.
+}
+if(id==='prepared-bypass'){
 {
   const cached={sourceId:'source',bookId:'book',chapterIndex:0,chapterTitle:'第一章',chapterUrl:'/0',content:'正文',images:[],
     bodyVersion:'old-body',processingVersion:'old-processing',contentVersion:'host',extractionVia:'rule'};
@@ -46,7 +51,8 @@ for(const force of [false,true]){
   assert.equal((await gateway.loadChapter('book',0,()=>true)).bodyVersion,'new-body');
   assert.equal(calls.length,2,'a validated newer body retires the older prepared handoff');
 }
-// Context refresh recursion retains the exact anchor receipt contract.
+}
+if(id==='context-recursion'){
 {
   let params;
   const gateway=new RemoteReadingFlowGateway({request:async(_method,p)=>{params=p;return response(receipt());}});
@@ -54,7 +60,8 @@ for(const force of [false,true]){
   await gateway.loadChapter({...session,requiresContextRefresh:true},0,()=>true,true,context());
   assert.deepEqual(params.positionContext,context());assert.equal(params.forceRefresh,true);
 }
-// Malformed/unscoped receipts cannot pair a new body with old offsets.
+}
+if(id==='receipt-schema'){
 for(const mutate of [r=>{r.status='unknown'},r=>{r.bodyVersion='another'},r=>{r.previousProcessingVersion='different'},
   r=>{r.anchors.pop()},r=>{r.anchors[0].previousOffset=99},r=>{r.anchors[0].offset=-1},r=>{r.anchors[1].id='requested'},
   r=>{r.status='preserved'},r=>{r.progress.sourceId='another'}]){
@@ -68,6 +75,9 @@ const preserved={...receipt(),status:'preserved',reason:'anchor_ambiguous',bodyV
 assert.equal(decodeRemotePositionMigration(preserved,'source','book','old-body','old-processing',context()).status,'preserved');
 assert.throws(()=>encodeRemotePositionContext({...context(),anchors:[{id:'requested',offset:1},{id:'requested',offset:2}]}),/duplicate/);
 // Progress and bookmarks retain scope. Persisted writes include expected versions and reject mismatched receipts.
+
+}
+if(id==='scoped-progress'){
 for(const sourceId of ['source','local']){
   const calls=[];let wrong=false;
   const runtime={request:async(method,params)=>{calls.push({method,params});return {data:method==='reading.progress.get'
@@ -79,6 +89,8 @@ for(const sourceId of ['source','local']){
   await gateway.updateProgress(identity,update);assert.equal(calls.at(-1).params.expectedBodyVersion,'new-body');
   wrong=true;await assert.rejects(gateway.updateProgress(identity,update),/different current progress row/);
 }
+}
+if(id==='session-progress'){
 {
   const calls=[];const runtime={request:async(method,params)=>{calls.push({method,params});return {data:{stored:true,...progress()}};}};
   const gateway=new ReadingSessionFlowGateway('source','book',{kind:'remote',session},runtime);
@@ -86,6 +98,8 @@ for(const sourceId of ['source','local']){
     bodyVersion:'new-body',processingVersion:'new-processing'},{viewportWidth:300,viewportHeight:600,fontScale:1});
   assert.equal(calls[0].params.expectedProcessingVersion,'new-processing');assert.equal(restored.bodyVersion,'new-body');
 }
+}
+if(id==='bookmark-scope'){
 {
   const scope={sourceId:'source',bookId:'book',chapterIndex:0,bodyVersion:'body',processingVersion:'processing'};
   const raw={time:42,bookName:'书',bookAuthor:'作者',chapterIndex:0,chapterPos:10,chapterName:'第一章',content:'',bookText:'原文',positionScope:scope};
@@ -95,10 +109,8 @@ for(const sourceId of ['source','local']){
   const toc=await gateway.loadBookmarkProjection('书','作者',[{index:0,title:'第一章',downloadState:'cached'}]);
   assert.deepEqual(toc[0].bookmarks[0].positionScope,scope);
 }
-console.log('PH75 Host: captured anchor context, forced/cache validation, typed receipt rejection, prepared bypass prevention, window ownership, scoped progress/bookmarks PASS');
-
-// A new directory chapter-start bookmark gets zero's proof from a Core cache
-// read, never by relabelling an old bookmark offset with the current body.
+}
+if(id==='chapter-start-proof'){
 {
   const input={bookName:'书',bookAuthor:'作者',chapterIndex:0,chapterTitle:'第一章'};
   const identity={sourceId:'source',bookId:'book'};
@@ -154,8 +166,8 @@ console.log('PH75 Host: captured anchor context, forced/cache validation, typed 
   assert.equal(list[0].bookmarks[0].positionScope,undefined,'read projection never launders unproven old offsets');
   assert.equal(list[0].bookmarks[0].chapterOffset,23);assert.equal(list[0].bookmarks[0].content,'保留备注');
 }
-console.log('PH75 directory chapter-start proof: exact cache read, source/index binding, cancellation/CAS failure preservation, no fetch inputs, unscoped stored offsets untouched PASS');
-
+}
+if(id==='position-conflict'){
 {
  const { classifyRemoteReadingCommandFailure, isRemoteReadingCacheFallbackEligible } = await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
  const { remoteReadingFailureKindOf, isRemoteSourceFailureKind } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
@@ -170,3 +182,27 @@ console.log('PH75 directory chapter-start proof: exact cache read, source/index 
  }
  console.log('PH75 recoverable position conflicts are localized and never treated as source/network failures PASS');
 }
+}
+if(id==='directory-proof'){
+{
+  const proof={sourceId:'source',bookId:'book',catalogRevision:'c',structureRevision:'s',nodeId:'n',url:'/0'};
+  const calls=[];const runtime={request:async(method,params)=>{calls.push({method,params});
+    return method==='chapter.content'?response(undefined):{data:{stored:true,...progress()}};}};
+  const gateway=new ReadingSessionFlowGateway('source','book',{kind:'remote',session},runtime);
+  const chapter=await gateway.loadChapter('book',0,()=>true,false,{anchors:[],directoryTargetProof:proof});
+  assert.deepEqual(calls[0].params.directoryTargetProof,proof);
+  assert.equal(calls[0].params.positionContext,undefined);
+  assert.deepEqual(chapter.directoryTargetProof,proof);
+  await gateway.resolveAndUpdateProgress('book','第一章',{chapterIndex:0,chapterOffset:15,chapterProgress:0.2,
+    bodyVersion:'new-body',processingVersion:'new-processing',directoryTargetProof:chapter.directoryTargetProof},
+    {viewportWidth:300,viewportHeight:600,fontScale:1});
+  assert.deepEqual(calls.at(-1).params.directoryTargetProof,proof,'the actual progress adapter retains directory authority');
+  const before=calls.length;
+  await gateway.loadChapter('book',0,()=>true,false,{anchors:[],directoryTargetProof:proof});
+  assert.equal(calls.length,before+1,'a cached chapter cannot bypass directory revalidation');
+}
+}
+}finally{}
+}
+const definitions={"captured-context": "captured-context actual scoped owner/gateway/storage path; controlled Core/OS ports", "prepared-bypass": "prepared-bypass actual scoped owner/gateway/storage path; controlled Core/OS ports", "context-recursion": "context-recursion actual scoped owner/gateway/storage path; controlled Core/OS ports", "receipt-schema": "receipt-schema actual scoped owner/gateway/storage path; controlled Core/OS ports", "scoped-progress": "scoped-progress actual scoped owner/gateway/storage path; controlled Core/OS ports", "session-progress": "session-progress actual scoped owner/gateway/storage path; controlled Core/OS ports", "bookmark-scope": "bookmark-scope actual scoped owner/gateway/storage path; controlled Core/OS ports", "chapter-start-proof": "chapter-start-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "position-conflict": "position-conflict actual scoped owner/gateway/storage path; controlled Core/OS ports", "directory-proof": "directory-proof actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

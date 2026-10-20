@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -26,28 +27,28 @@ assert.equal(books[2].group, '历史');
 
 const shelfSource = source('BookshelfPage');
 const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
-  'onShelfFiltersChanged','queueShelfProjection','requestCheckUpdates','isSectionActionActive','sectionActionLabel','sectionActionAsset','canonicalFilterActiveAsset'];
+  'onShelfFiltersChanged','queueShelfProjection','isSectionActionActive','sectionActionLabel','sectionActionAsset','canonicalFilterActiveAsset'];
 const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames]);
-Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',sourceFilter:'all',
+Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',contentFilter:'all',sourceFilter:'all',
   filterRowVisible:true, viewMode:'list', mounted:true,projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
 shelf.filterRow();
 const texts = owner => [...owner.nodes.values()].filter(n => n.type === 'Text');
 const button = label => texts(shelf).find(n => n.create === label);
-button('在读').onClick(); shelf.onShelfFiltersChanged(); button('在线').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
+button('漫画').onClick(); shelf.onShelfFiltersChanged(); button('在线').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,1,'same gesture/storage notifications publish the final projection only once');
-assert.equal(shelf.readingFilter,'reading');assert.equal(shelf.sourceFilter,'online');
-assert.equal(button('在读').backgroundColor, readerAppColor('TOK_PRIMARY_SOFT','day'));
-assert.equal(button('未读').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
+assert.equal(shelf.readingFilter,'all','content selection clears obsolete reading-state filtering');assert.equal(shelf.contentFilter,'manga');assert.equal(shelf.sourceFilter,'online');
+assert.equal(button('漫画').backgroundColor, readerAppColor('TOK_PRIMARY_SOFT','day'));
+assert.equal(button('小说').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
 shelf.filterRowVisible=false;
 assert.equal(shelf.isSectionActionActive('bookshelf_filter'),true,'closed filter keeps active-condition indication');
 assert.match(shelf.sectionActionLabel('bookshelf_filter',true),/已有筛选条件/);
 button('清除').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,2,'clearing both dimensions is one reload');
-assert.equal(shelf.readingFilter,'all');assert.equal(shelf.sourceFilter,'all');
+assert.equal(shelf.readingFilter,'all');assert.equal(shelf.contentFilter,'all');assert.equal(shelf.sourceFilter,'all');
 assert.equal(shelf.isSectionActionActive('bookshelf_filter'),false);
 // Run the surviving production filter closure after the group entry is removed.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const tree = ts.createSourceFile('BookshelfPage.ets',shelfSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const callbacks = new Map();
@@ -58,10 +59,12 @@ const invoke = key => new Function(stripTypeScriptTypes(`const action = ${callba
 assert.deepEqual([...callbacks.keys()],['bookshelf_grid','bookshelf_list','bookshelf_filter']);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
-let updates=0; Object.assign(shelf,{hasOnlineBooks:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
-shelf.requestCheckUpdates(); assert.equal(updates,1);
-shelf.backgroundUpdateRunning=true;shelf.requestCheckUpdates();assert.equal(updates,1);
-shelf.backgroundUpdateRunning=false;shelf.hasOnlineBooks=false;shelf.requestCheckUpdates();assert.equal(updates,1);
+const Shell = productionMotionMethods(path('BookshelfShell'), ['dismissMoreMenu','requestCheckUpdates']);
+const shell = new Shell();
+let updates=0; Object.assign(shell,{moreMenuVisible:true,moreSelectionId:"live-menu",canCheckUpdates:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
+shell.requestCheckUpdates(); assert.equal(updates,1);assert.equal(shell.moreMenuVisible,false);assert.equal(shell.moreSelectionId,'');
+shell.backgroundUpdateRunning=true;shell.requestCheckUpdates();assert.equal(updates,1);
+shell.backgroundUpdateRunning=false;shell.canCheckUpdates=false;shell.requestCheckUpdates();assert.equal(updates,1);
 assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow()'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));
 
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection','toggleBook','hasBookKey','toggleAll','allSelected'],{ShelfBookPresentation});
@@ -76,4 +79,5 @@ batch.removeVisibleSelection();assert.equal(removed.length,1);
 for(const text of [shelfSource,source('BookshelfMultiSelectPage')]) {
   for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter','readerBookshelfSourceFilter'])assert.ok(text.includes(`@StorageLink('${key}')`));
 }
-console.log('PASS shelf filters: state/type dimensions and live chips survive gear removal; shared order, legacy data and hidden batch-selection safety');
+assert.ok(shelfSource.includes("@StorageLink('readerBookshelfContentFilter')"),'content type has its own storage dimension');
+console.log('PASS shelf filters: content/origin dimensions and live chips survive gear removal; shared order, legacy data and hidden batch-selection safety');

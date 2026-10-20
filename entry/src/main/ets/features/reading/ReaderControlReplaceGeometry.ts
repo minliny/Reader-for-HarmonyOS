@@ -13,7 +13,6 @@ export interface ReaderControlReplaceFrame {
   toggleWidth: number;
   toggleHeight: number;
   thumbSize: number;
-  nameSize: number;
   back: ReaderControlActorFrame;
   quickFooter: ReaderControlActorFrame;
 }
@@ -64,9 +63,6 @@ export function sampleReaderControlReplace(progress: number, availableWidth: num
     rowPadding: readerControlLerp(5, 13, p),
     toggleWidth: readerControlLerp(27, 44, p), toggleHeight: readerControlLerp(16, 24, p),
     thumbSize: readerControlLerp(12, 20, p),
-    // Execution reference M-02 overrides recovered text scaling: native rule
-    // names keep the Full 12fp size while their row/window geometry changes.
-    nameSize: 12,
     back: sampleReaderControlActor(readerControlActor(10.1, 14.55, 51, 24),
       readerControlActor(10.1, 28.55, 51, 24, 0), p),
     // Existing Quick preview/expand affordances are retained as an explicit

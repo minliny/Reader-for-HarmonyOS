@@ -1,3 +1,4 @@
+import { readerRuleMutationEffects } from '../../app/ReaderRuleMutationEffects';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReadingSessionFlowGateway } from './ReadingSessionFlowGateway';
@@ -11,6 +12,7 @@ import type { ReadingSessionChapter } from './ReadingChapterWindow';
 export interface ReadingEntrySeed {
   sourceId: string;
   bookId: string;
+  contentKind?: 'text' | 'manga' | 'audio';
   bookKind?: string;
   remoteBookSeed?: RemoteReadingBookSeed;
 }
@@ -24,6 +26,7 @@ export interface ReadingEntrySnapshot {
   /** True means toc contains only the entry window, never a complete catalog. */
   catalogPending?: boolean;
   navigation?: ReadingEntryNavigation;
+  resumeOnly?: boolean;
   requestedScalar?: number;
   progress: LocalReadingProgressState;
   chapter: ReadingSessionChapter;
@@ -85,9 +88,11 @@ class PreparationMutationState {
   bookId: string;
   revision: number = 0;
   contentRevision: number = 0;
+  imageContentRevision: number = 0;
   workRevision: number = 0;
   mutations: number = 0;
   contentMutations: number = 0;
+  imageContentMutations: number = 0;
   catalogMutations: number = 0;
 
   constructor(sourceId: string = '', bookId: string = '') { this.sourceId = sourceId; this.bookId = bookId; }
@@ -190,6 +195,7 @@ export class ReadingEntryPreparation {
     let complete = true;
     const prepareTargets = async (seeds: ReadingEntrySeed[], neighborOffset: number): Promise<void> => {
       for (const seed of seeds) {
+        if (!this.textSeed(seed)) continue;
         const targetKey = this.key(seed.sourceId, seed.bookId);
         const offsetBit = 1 << (neighborOffset + 3);
         if (((this.persistedTargets.get(targetKey)?.offsets ?? 0) & offsetBit) !== 0) continue;
@@ -241,10 +247,11 @@ export class ReadingEntryPreparation {
     const prioritySeeds = this.visibleSeeds.slice();
     await prepareTargets(prioritySeeds, 0);
     if (!current()) return;
-    const seeds = this.persistedSeeds ?? await loadSeeds(current);
-    if (seeds === undefined || !current()) return;
+    const suppliedSeeds = this.persistedSeeds ?? await loadSeeds(current);
+    if (suppliedSeeds === undefined || !current()) return;
+    const seeds = suppliedSeeds.filter((seed: ReadingEntrySeed): boolean => this.textSeed(seed));
     if (this.persistedSeeds === undefined) this.persistedSeeds = seeds.map((seed: ReadingEntrySeed): ReadingEntrySeed =>
-      ({ sourceId: seed.sourceId, bookId: seed.bookId }));
+      ({ sourceId: seed.sourceId, bookId: seed.bookId, contentKind: seed.contentKind }));
     const prioritized = new Set(prioritySeeds.map((seed: ReadingEntrySeed): string => this.key(seed.sourceId, seed.bookId)));
     // Every book's current target still precedes every optional neighbour.
     for (const neighborOffset of [0, 1, -1, 2, -2, 3, -3]) {
@@ -263,6 +270,7 @@ export class ReadingEntryPreparation {
     if (this.closed) return;
     const selected: Map<string, ReadingEntrySeed> = new Map();
     for (const seed of seeds) {
+      if (!this.textSeed(seed)) continue;
       if (selected.size >= VISIBLE_BOOK_LIMIT) break;
       if (seed.sourceId.trim().length === 0 || seed.bookId.trim().length === 0) continue;
       const key = this.key(seed.sourceId, seed.bookId);
@@ -288,6 +296,11 @@ export class ReadingEntryPreparation {
     }
     this.visible = next;
     this.drain();
+  }
+
+  /** Manga owns its image-first entry; optional text warm-up cannot acquire it. */
+  private textSeed(seed: ReadingEntrySeed): boolean {
+    return (seed.contentKind ?? seed.remoteBookSeed?.contentKind ?? 'text') === 'text';
   }
 
   setPaused(paused: boolean): void {
@@ -334,6 +347,29 @@ export class ReadingEntryPreparation {
       state.contentRevision === revisions[index] && state.contentMutations === 0 && state.catalogMutations === 0);
   }
 
+  /** Immutable manga pixels survive catalog metadata acquisition. Destructive
+   * content mutations still revoke their original epoch, including failures. */
+  captureMangaImageContentValidity(sourceId: string, bookId: string): () => boolean {
+    const states = this.statesFor(sourceId, bookId);
+    const revisions = states.map((state: PreparationMutationState): number => state.imageContentRevision);
+    const admitted = !this.closed && states.every((state: PreparationMutationState): boolean => state.imageContentMutations === 0);
+    return (): boolean => admitted && !this.closed && states.every((state: PreparationMutationState, index: number): boolean =>
+      state.imageContentRevision === revisions[index] && state.imageContentMutations === 0);
+  }
+
+  /** A global cleanup receipt expires only matching cached preparation; it
+   * never revokes another protected chapter or an owned download image epoch. */
+  invalidateCachedChapters(chapters: { sourceId: string; bookId: string; chapterIndex: number }[]): void {
+    for (const chapter of chapters) {
+      if (!Number.isSafeInteger(chapter.chapterIndex) || chapter.chapterIndex < 0) continue;
+      const key = this.key(chapter.sourceId, chapter.bookId);
+      const entry = this.visible.get(key);
+      if (entry?.snapshot?.chapter?.chapterIndex === chapter.chapterIndex) this.invalidateImagePresentation(chapter.sourceId, chapter.bookId);
+      this.persistedTargets.delete(key);
+    }
+    if (chapters.length > 0) this.persistedCompletedRevision = '';
+  }
+
   /** Await an in-flight mutation before retrying a foreground chapter read. */
   waitForContentIdle(sourceId: string, bookId: string): Promise<void> {
     if (this.contentIdle(sourceId, bookId)) return Promise.resolve();
@@ -359,29 +395,39 @@ export class ReadingEntryPreparation {
 
   /** Both sides of a mutation fence uncertain failures as well as successful writes. */
   beginRequest(method: string, params: JsonObject = {}): boolean {
+    const effect = readerRuleMutationEffects(method, params);
+    method = effect.method;
+    params = effect.params;
     if (method !== 'book.toc' && method !== 'book.detail' && !this.affectsSnapshot(method, params)) return false;
     const catalog = method === 'book.toc' || method === 'book.detail';
     const content = method !== 'reading.progress.update' || params['sourceSwitchTransactionId'] !== undefined;
+    const imageContent = this.affectsMangaImages(method, content);
     for (const scope of this.mutationScopes(method, params)) {
       const state = this.stateForScope(scope);
       if (catalog) state.catalogMutations += 1;
       else state.mutations += 1;
       if (content) state.contentMutations += 1;
-      this.invalidate(scope, catalog, content, method);
+      if (imageContent) state.imageContentMutations += 1;
+      this.invalidate(scope, catalog, content, method, imageContent);
     }
     return true;
   }
 
   finishRequest(method: string, params: JsonObject = {}): void {
+    const effect = readerRuleMutationEffects(method, params);
+    method = effect.method;
+    params = effect.params;
     const catalog = method === 'book.toc' || method === 'book.detail';
     const content = method !== 'reading.progress.update' || params['sourceSwitchTransactionId'] !== undefined;
+    const imageContent = this.affectsMangaImages(method, content);
     const scopes = this.mutationScopes(method, params);
     for (const scope of scopes) {
       const state = this.stateForScope(scope);
-      this.invalidate(scope, catalog, content, method);
+      this.invalidate(scope, catalog, content, method, imageContent);
       if (catalog) state.catalogMutations = Math.max(0, state.catalogMutations - 1);
       else state.mutations = Math.max(0, state.mutations - 1);
       if (content) state.contentMutations = Math.max(0, state.contentMutations - 1);
+      if (imageContent) state.imageContentMutations = Math.max(0, state.imageContentMutations - 1);
     }
     this.discardRetiredStates(method, scopes, content);
     this.settleContentIdleWaiters();
@@ -407,12 +453,19 @@ export class ReadingEntryPreparation {
       method === 'local_book.import' || method === 'local_book.reimport' || method === 'local_book.remove' ||
       method === 'local_book.delete' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
       method === 'bookshelf.add' || method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
-      (method.startsWith('source.switch.') && method !== 'source.switch.pending.list') ||
+      method === 'manga.sourceSwitch.commit' || (method.startsWith('source.switch.') && method !== 'source.switch.pending.list') ||
       method === 'cache.clear' || (method === 'chapter.content' && (params['forceRefresh'] === true || params['upgradeCachedContent'] === true)) ||
       method === 'reader.chinese-conversion.put' || method === 'replace.persist' || method === 'replace.undo' ||
       method === 'replace-rule.create' || method === 'replace-rule.update' || method === 'replace-rule.delete' ||
       method === 'dict-rule.put' || method === 'dict-rule.delete' || method === 'rule-bundle.import' ||
       method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+  }
+
+  private affectsMangaImages(method: string, content: boolean): boolean {
+    // Detail/TOC install metadata; shelf admission records ownership and its
+    // verified first-image receipt without replacing an immutable manifest.
+    // Keep remove, rules, switches, refresh, clear and restore destructive.
+    return content && method !== 'book.detail' && method !== 'book.toc' && method !== 'bookshelf.add';
   }
 
   private statesFor(sourceId: string, bookId: string): PreparationMutationState[] {
@@ -484,13 +537,21 @@ export class ReadingEntryPreparation {
       }
       return scopes;
     }
+    if (method === 'manga.sourceSwitch.commit') {
+      const from = this.bookScope({ sourceId: params['fromSourceId'], bookId: params['fromBookId'] });
+      const receipt = preparationObject(params['firstImage']);
+      const target = this.bookScope(preparationObject(receipt['chapter']));
+      if (from.kind !== 'book' || target.kind !== 'book') return [{ kind: 'global' }];
+      return from.sourceId === target.sourceId && from.bookId === target.bookId ? [from] : [from, target];
+    }
     if (method === 'source.switch.commit') {
       const from = this.bookScope(preparationObject(params['from']));
       const target = this.bookScope(preparationObject(params['target']));
       if (from.kind !== 'book' || target.kind !== 'book') return [{ kind: 'global' }];
       return from.sourceId === target.sourceId && from.bookId === target.bookId ? [from] : [from, target];
     }
-    if (method === 'cache.clear') return params['scope'] === 'book' ? [this.bookScope(params)] : [{ kind: 'global' }];
+    if (method === 'cache.clear') return params['scope'] === 'book' || params['scope'] === 'chapter' ?
+      [this.bookScope(params)] : [{ kind: 'global' }];
     if (method === 'book.detail' || method === 'book.toc') {
       const book = preparationObject(params['book']);
       return [this.bookScope({ sourceId: params['sourceId'], bookId: params['bookId'] ?? book['bookId'] ?? params['bookUrl'] })];
@@ -528,7 +589,7 @@ export class ReadingEntryPreparation {
     }
   }
 
-  private invalidate(scope: PreparationMutationScope, catalog: boolean, content: boolean, method: string): void {
+  private invalidate(scope: PreparationMutationScope, catalog: boolean, content: boolean, method: string, imageContent: boolean): void {
     this.persistedCompletedRevision = '';
     this.persistedMutationRevision += 1;
     if (scope.kind === 'global') this.persistedTargets.clear();
@@ -542,6 +603,7 @@ export class ReadingEntryPreparation {
     const state = this.stateForScope(scope);
     state.revision += 1;
     if (content) state.contentRevision += 1;
+    if (imageContent) state.imageContentRevision += 1;
     // Acquisition itself installs a catalog. Preserve its work until it can
     // capture the new epoch; already-loaded chapter results remain fenced.
     if (!catalog) state.workRevision += 1;
@@ -602,6 +664,7 @@ export class ReadingEntryPreparation {
 
   private async prepare(seed: ReadingEntrySeed, isCurrent: () => boolean,
     onAcquired: () => void): Promise<ReadingEntrySnapshot | undefined> {
+    if (!this.textSeed(seed)) return undefined;
     let remoteSession: RemoteReadingSession | undefined;
     const coordinator = this.runtime.bookAcquisitions?.();
     // All gateway requests use the existing coordinator's background lane.
@@ -613,7 +676,7 @@ export class ReadingEntryPreparation {
         coordinator?.hasCurrentCatalogProjection?.(session) === true,
       request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> => {
         if (!isCurrent() || params['forceRefresh'] === true || params['upgradeCachedContent'] === true || method === 'reading.progress.update' ||
-          (method.startsWith('source.switch.') && method !== 'source.switch.pending.list')) {
+          method === 'manga.sourceSwitch.commit' || (method.startsWith('source.switch.') && method !== 'source.switch.pending.list')) {
           return Promise.reject(new Error('READING_ENTRY_PREPARATION_CANCELLED'));
         }
         const guarded: RequestOptions = { ...options,
@@ -646,12 +709,12 @@ export class ReadingEntryPreparation {
       const navigation = snapshot.navigation;
       const toc: LocalReadingToc = { bookId: seed.bookId, entries: navigation === undefined ?
         [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle,
-          downloadState: 'unknown', navigable: true }] :
+          downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
         [...navigation.before, navigation.current, ...navigation.after] };
       // The work cancellation closure ends on pause/take. Retained data uses
       // the mutation proof instead; it must survive a foreground handoff.
       return { sourceId: seed.sourceId, bookId: seed.bookId, gateway, toc,
-        progress: snapshot.progress, chapter: snapshot.chapter, navigation, requestedScalar: snapshot.requestedScalar,
+        progress: snapshot.progress, chapter: snapshot.chapter, navigation, resumeOnly: snapshot.resumeOnly, requestedScalar: snapshot.requestedScalar,
         catalogPending: true, isCurrent: valid };
     }
     if (seed.sourceId !== 'local') {

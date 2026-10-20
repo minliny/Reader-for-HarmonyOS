@@ -21,6 +21,7 @@ function fixture() {
   const writes = [], commits = [], events = [];
   const chapter = { chapterIndex: 1, chapterTitle: '章', bodyVersion: 'body', processingVersion: 'processing' };
   const gateway = {
+    hasPendingSourceSwitch: () => false,
     capable: true,
     canPersistPresentedProgress() { return this.capable; },
     persistPresentedProgress(_book, _title, anchor, layout) { const gate = deferred(); writes.push({ anchor, layout, gate }); return gate.promise; },
@@ -71,11 +72,11 @@ function fixture() {
   const second = f.present(20);
   assert.equal(f.o.visiblePage, second.page); assert.equal(f.writes.length, 2);
   await flush();
-  f.writes[0].gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 10 });
+  f.writes[0].gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 10, bodyVersion: 'body', processingVersion: 'processing' });
   await first.completion;
   assert.equal(f.o.visiblePage, second.page); assert.equal(f.commits.length, 0, 'old receipt cannot acknowledge the new display');
   assert.equal(f.events.filter(e => e === 'auto').length, 2, 'late receipt cannot re-arm another automatic turn');
-  f.writes[1].gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 20 });
+  f.writes[1].gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 20, bodyVersion: 'body', processingVersion: 'processing' });
   await second.completion;
   assert.equal(f.commits.length, 1); assert.equal(f.commits[0].chapterOffset, 20);
   assert.equal(f.o.canTurnPage(), true);
@@ -89,7 +90,7 @@ function fixture() {
   f.gateway.awaitPresentedProgressPersistence = () => { waited = true; return gate.promise; };
   const barrier = f.o.awaitOrdinaryFirstPagePersistence(); let settled = false; void barrier.then(() => { settled = true; });
   await flush(); assert.equal(waited, true); assert.equal(settled, false, 'exit/content mutation still awaits the owner');
-  gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 30 }); await barrier;
+  gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 30, bodyVersion: 'body', processingVersion: 'processing' }); await barrier;
   assert.equal(f.commits.length, 1);
 }
 {
@@ -108,7 +109,7 @@ function fixture() {
   assert.equal(f.o.rapidPageTurnState.inFlightDirection, undefined, 'same-turn completion runs after caller admission, without awaiting save');
   assert.equal(f.o.rapidPageTurnState.pendingDelta, 0);
   assert.equal(f.o.pageTurnTransactionSerial, 1);
-  f.writes[0].gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 10 }); await flush();
+  f.writes[0].gate.resolve({ bookId: 'book', chapterIndex: 1, chapterOffset: 10, bodyVersion: 'body', processingVersion: 'processing' }); await flush();
   assert.equal(f.o.pageTurnTransactionSerial, 1, 'receipt cannot synthesize a duplicate transaction');
 }
 for (const kind of ['no-ticket', 'layout', 'selection', 'lifecycle', 'chapter', 'old-core', 'source-switch', 'control', 'migration', 'continuous']) {

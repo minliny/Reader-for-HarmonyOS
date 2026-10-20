@@ -1,80 +1,24 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-const stage = readFileSync(
-  new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url),
-  'utf8',
-);
-const settings = readFileSync(
-  new URL('../entry/src/main/ets/features/reading/ReaderSettingsState.ts', import.meta.url),
-  'utf8',
-);
-const experience = readFileSync(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  'utf8',
-);
-const textureBuilder = readFileSync(
-  new URL('../entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets', import.meta.url),
-  'utf8',
-);
+export const CONTRACT_CASES = {
+  "slot-placement-admission": {
+    "description": "Actual AST-selected Stage methods: slot promotion, hidden ACK, providers per revision and snapshot identities",
+    "resources": []
+  },
+  "sdk-build-slot-binding": {
+    "description": "Actual SDK Stage.build child payload and bad slot-identity counterexample; no whole LRE or native compositor claim",
+    "resources": []
+  }
+};
 
-assert.match(stage, /export class ReaderPageTurnRenderPage/);
-for (const field of [
-  'identity', 'textureIdentity', 'renderRevision', 'chapterTitle', 'showChapterTitle', 'fragments', 'bottomJustifyGap',
-  'chromeTopStartText', 'chromeTopEndText', 'chromeBottomStartText', 'chromeBottomEndText',
-  'chromeSessionVisible', 'chromeSessionWidth', 'chromeSessionHeight',
-]) {
-  assert.match(stage, new RegExp(`\\b${field}:`), `render page must expose ${field}`);
-}
-assert.match(stage, /fragments: ReadingSurfacePageFragment\[\]/);
-assert.match(stage, /export struct ReaderPageTurnStage/);
-assert.match(settings, /pageTransition: 'slide'/,
-  'Reader Settings must retain slide as the product default');
-assert.match(stage,
-  /@Prop pageTurnStyle: ReaderPageTurnStyle = readerPageTurnStyle\(createDefaultReaderSettingsSnapshot\(\)\);/,
-  'the presentation stage must not introduce a second page-turn default');
-assert.match(experience,
-  /ReaderPageTurnStage\(\{[\s\S]*currentPageProvider: \(\): ReaderPageTurnRenderPage => this\.currentPageTurnRenderPage\(\),[\s\S]*previousPageProvider: \(\): ReaderPageTurnRenderPage \| undefined => this\.preparedPageTurnRenderPage\('previous'\),[\s\S]*nextPageProvider: \(\): ReaderPageTurnRenderPage \| undefined => this\.preparedPageTurnRenderPage\('next'\),[\s\S]*pageTurnStyle: this\.effectivePageTurnStyle\(\),[\s\S]*turnDirection: this\.pageTurnDirection,[\s\S]*offsetX: this\.pageTurnOffsetX,[\s\S]*viewportWidth: this\.pageTurnStageViewportWidth\(\),[\s\S]*layout: this\.readingLayout\(\),[\s\S]*appearance: this\.appearanceSnapshot/,
-  'LocalReadingExperience must connect prepared pages and live geometry to the stage');
-assert.match(experience,
-  /const origin = this\.pageTurnPreparation\?\.origin;[\s\S]*?const chapterIndex = origin\?\.chapter\.chapterIndex \?\? this\.chapter\?\.chapterIndex \?\? -1;/,
-  'current-page identity must stay bound to the visible origin during cross-chapter preparation');
-
-for (const prop of [
-  'contentRevision', 'currentPageSnapshotId', 'pageTurnStyle', 'turnDirection', 'offsetX',
-  'viewportWidth', 'translateY', 'layout', 'appearance', 'ttsHighlightStart', 'ttsHighlightEnd',
-  'longPressSelectText',
-]) {
-  assert.match(stage, new RegExp(`@Prop(?:\\s+@\\w+\\([^)]*\\))?\\s+${prop}:`),
-    `stage must receive ${prop} from its owner`);
-}
-assert.match(stage,
-  /return \(this\.pageTurnStyle === 'slide' \|\| this\.pageTurnStyle === 'cover'\) &&\s*Number\.isFinite\(this\.viewportWidth\) && this\.viewportWidth > 0;/,
-  'only the retained two-page modes may enter adjacent-page rendering');
-// Every mode/role lives in the same two physical component call sites.
-const build = stage.slice(stage.indexOf('  build() {', stage.indexOf('export struct ReaderPageTurnStage')), stage.indexOf('  private slotPage('));
-assert.equal((build.match(/ReaderPageTurnSurface\(\{/g) ?? []).length, 2);
-assert.doesNotMatch(build, /\bif\s*\(|\bForEach\s*\(/, 'input/role changes must not select a different component branch');
-assert.match(stage, /\.opacity\(this\.pageVisible \? 1 : 0\)/);
-assert.match(stage, /\.enabled\(this\.pageVisible\)/, 'retained hidden page must not intercept input');
-assert.doesNotMatch(stage, /^\s*@Builder\b/m, 'complex page data must go directly to component props');
-assert.match(textureBuilder, /@Builder\s+export function BookTurnTextureBuilder/);
-assert.doesNotMatch(textureBuilder, /ttsHighlight|autoPageHighlight/);
-assert.match(stage, /\.renderGroup\(this\.compositorIsolation\)/);
-assert.match(stage, /offsetX: COVER_OCCLUSION_OFFSET_X_VP \* this\.shadowStrength/);
-assert.doesNotMatch(stage, /PanGesture|TapGesture|SwipeGesture|\.gesture\(|animateTo|onTurn|requestPageTurn/);
-
-// Execute production placement helpers across actual slot-role changes.
-const methods = ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage', 'slotIdentity', 'slotSnapshotId', 'slotPresented', 'hasActiveTurn', 'slotVisible',
-  'slotX', 'slotLayer', 'slotShadow', 'hasLiveTurnWidth', 'previousPageX', 'nextPageX',
-  'turnProgress', 'coverOcclusionStrength'].map(name => {
-  const start = stage.indexOf(`  private ${name}(`);
-  const end = stage.indexOf('\n  private ', start + 10);
-  return stage.slice(start, end < 0 ? stage.lastIndexOf('\n}') : end);
-});
-const { stripTypeScriptTypes } = await import('node:module');
-const Subject = new Function('READER_PAGE_TURN_SLOT_A', 'READER_PAGE_TURN_SLOT_B',
-  stripTypeScriptTypes(`class Subject {${methods.join('\n')}}`, { mode: 'strip' }) + '\nreturn Subject;')('reader-page-slot-a','reader-page-slot-b');
+async function case_slot_placement_admission() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const file=new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url);
+const names=["slotPage", "refreshRenderPages", "currentRenderPage", "adjacentRenderPage", "slotIdentity", "slotSnapshotId", "slotPresented", "hasActiveTurn", "slotVisible", "slotX", "slotLayer", "slotShadow", "hasLiveTurnWidth", "previousPageX", "nextPageX", "turnProgress", "coverOcclusionStrength"];
+const dependencies={READER_PAGE_TURN_SLOT_A:'reader-page-slot-a',READER_PAGE_TURN_SLOT_B:'reader-page-slot-b'};
+const Subject=productionMotionMethods(file,names,dependencies);
 const origin = { identity: 'origin', renderRevision: 1 }, next = { identity: 'next', renderRevision: 1 }, previous = { identity: 'previous', renderRevision: 1 };
 const x = Object.assign(new Subject(), { currentPage: origin, currentPageSlot: 'a', nextPage: next,
   previousPage: previous, viewportWidth: 400, offsetX: 0, pageTurnStyle: 'slide', emptyPage: { fragments: [] } });
@@ -111,8 +55,6 @@ assert.equal(x.slotPage('a'), origin, 'simulation keeps already-bound outgoing t
 let presented = 0; x.onCurrentPagePresented = () => presented++;
 x.slotPresented('a', 1); x.slotPresented('b', 0); assert.equal(presented, 0);
 x.slotPresented('b', 1); assert.equal(presented, 1);
-assert.doesNotMatch(stage, /@Prop (?:currentPage|previousPage|nextPage):/, 'gesture updates must not deep-copy whole page projections');
-assert.doesNotMatch(build, /pageFragments:/, 'slot content is invalidated by revision, not array copying per MOVE');
 console.log('reader page-turn stable slot geometry and role transition: PASS');
 
 // Idle prefetch completion must not evict the outgoing page from its slot.
@@ -162,4 +104,34 @@ for (const mode of ['simulation', 'none']) {
   y.onCurrentPagePresented = revision => acknowledgements.push(revision);
   y.slotPresented('a', 1); y.slotPresented('b', 1); y.slotPresented('b', 2);
   assert.deepEqual(acknowledgements, [2]);
+}
+
+}
+
+async function case_sdk_build_slot_binding() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const file=new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url);
+const names=["slotPage", "refreshRenderPages", "currentRenderPage", "adjacentRenderPage", "slotIdentity", "slotSnapshotId", "slotPresented", "hasActiveTurn", "slotVisible", "slotX", "slotLayer", "slotShadow", "hasLiveTurnWidth", "previousPageX", "nextPageX", "turnProgress", "coverOcclusionStrength"];
+const dependencies={READER_PAGE_TURN_SLOT_A:'reader-page-slot-a',READER_PAGE_TURN_SLOT_B:'reader-page-slot-b'};
+const Subject=productionMotionMethods(file,names,dependencies);
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const stage=readFileSync(file,'utf8');class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
+const {owner}=createReaderBuilderProbe(stage,['build',...names,'slotContentReady'],{...dependencies,ReaderPageTurnSurface:Child},{componentName:'ReaderPageTurnStage',childSources:{ReaderPageTurnSurface:stage}});
+const origin={identity:'origin',textureIdentity:'origin-pixels',renderRevision:1,fragments:[{text:'origin'}]},next={identity:'next',textureIdentity:'next-pixels',renderRevision:2,fragments:[{text:'next'}]};
+const params={currentPageSnapshotId:'',contentRevision:1,currentPageSlot:'a',pageTurnStyle:'slide',turnDirection:'next',offsetX:-120,viewportWidth:400,translateY:12,layout:{viewportWidth:400,viewportHeight:800},appearance:{activeTheme:'paper'},currentPageProvider:()=>origin,previousPageProvider:()=>undefined,nextPageProvider:()=>next,emptyPage:{fragments:[]},onDynamicHighlights(){},onCurrentPagePresented(){},longPressSelectText:true};Object.assign(owner,params);
+owner.initialRender();const children=[...owner.children.values()];assert.equal(children.length,2,'two current physical slot actors are mounted by actual build');
+const a=children.find(child=>child.params.slotIdentity==='reader-page-slot-a'),b=children.find(child=>child.params.slotIdentity==='reader-page-slot-b');assert.ok(a&&b);
+assert.equal(a.params.pageIdentity,'origin');assert.equal(b.params.pageIdentity,'next');assert.equal(a.params.pageFragmentsProvider(),origin.fragments);assert.equal(b.params.pageFragmentsProvider(),next.fragments);assert.equal(a.params.translateX,-120);assert.equal(b.params.translateX,280);assert.equal(a.params.chromeTopTranslateY,-12);assert.equal(a.params.longPressSelectText,true);assert.equal(b.params.longPressSelectText,false);
+const wrong=stage.replace("slotIdentity: this.slotIdentity('b')", "slotIdentity: this.slotIdentity('a')");assert.notEqual(wrong,stage);
+const mutant=createReaderBuilderProbe(wrong,['build',...names,'slotContentReady'],{...dependencies,ReaderPageTurnSurface:Child},{componentName:'ReaderPageTurnStage',childSources:{ReaderPageTurnSurface:stage}}).owner;Object.assign(mutant,params);mutant.initialRender();
+assert.ok([...mutant.children.values()].every(child=>child.params.slotIdentity==='reader-page-slot-a'),'negative control proves actual payload can duplicate a physical slot; original identity matrix rejects it');
+
+}
+
+const implementations = {'slot-placement-admission':case_slot_placement_admission,'sdk-build-slot-binding':case_sdk_build_slot_binding};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
 }

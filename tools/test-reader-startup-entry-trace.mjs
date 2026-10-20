@@ -5,7 +5,8 @@ import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace
 const samples = []; let time = 10;
 const trace = ReaderStartupTrace.install(() => time++, sample => samples.push(sample));
 const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-  ['beginReadingStartupTrace', 'traceStartupStage', 'readingReadyCallback', 'presentPreparedReading'],
+  ['beginReadingStartupTrace', 'traceStartupStage', 'readingReadyCallback', 'presentPreparedReading',
+    'scheduleNavigationBackfillAfterReady'],
   { ReaderStartupTrace, LOCAL_SOURCE_ID: 'local' });
 const index = Object.assign(new Index(), { readingReadyGeneration: 0, startupEntryId: 0,
   readingSessionActive: true, detailBook: { sourceId: 'local', bookId: 'a' },

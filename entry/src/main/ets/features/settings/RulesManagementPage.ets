@@ -1,28 +1,19 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderFormField } from '../common/ReaderFormField';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_CAPTION, TYPE_FORM_STATUS, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_ENTITY_TITLE, TYPE_RULES_INHERITED_DESCRIPTION, TYPE_RULES_INHERITED_NOTE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderToggle } from '../common/ReaderToggle';
-import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_INK,
   TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
-  TOK_PRIMARY_DARK,
-  TOK_SCREEN_INSET,
-  TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
@@ -42,13 +33,18 @@ import type {
   RuleSubscriptionDraft,
   TxtTocRuleDraft,
 } from './RulesManagementGateway';
+import {
+  TYPE_RULES_MANAGEMENT_ACTION,
+  TYPE_RULES_MANAGEMENT_HEADING,
+  TYPE_RULES_MANAGEMENT_INPUT,
+} from '../common/ReaderTypography';
 
 @Component
 export struct RulesManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onSaveReplace: (draft: ReplaceRuleDraft) => void = (_draft: ReplaceRuleDraft): void => {};
   onDeleteReplace: (id: number) => void = (_id: number): void => {};
@@ -97,43 +93,47 @@ export struct RulesManagementPage {
   }
 
   build() {
-    Column() {
-      PageBackBar({ title: '规则实体管理', onBack: (): void => this.onBack() });
-      Scroll() {
-        Column({ space: TOK_SPACE_MD }) {
-          this.statusCard();
-          this.bundleCard();
-          this.replaceCard();
-          this.txtTocCard();
-          this.dictCard();
-          this.subscriptionCard();
-        }
-        .width('100%')
-        .padding({
-          left: this.contentFrame().left,
-          right: this.contentFrame().right,
-          top: TOK_SPACE_XS,
-          bottom: TOK_SPACE_MD,
-        });
-      }
-      .layoutWeight(1)
-      .width('100%')
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Off);
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    ReaderStandardPage({
+      variant: 'management',
+      header: (): void => { this.pageHeader(); },
+      content: (): void => { this.pageContent(); },
+    });
   }
 
   @Builder
+  private pageHeader() {
+    PageBackBar({ title: '规则实体管理', onBack: (): void => this.onBack() });
+  }
+
+  @Builder
+  private pageContent() {
+    this.statusCard();
+    this.recoveryAction();
+    this.bundleCard();
+    this.replaceCard();
+    this.txtTocCard();
+    this.dictCard();
+    this.subscriptionCard();
+  }
+
+
+  @Builder
+  private recoveryAction() {
+    if (this.recovery().canRetry) {
+      ReaderRecoveryAction({ label: this.snapshot.ruleMutation?.canRetryOriginal === true ? '重试原规则操作' : this.snapshot.ruleMutation?.blocked === true ? '核对原规则操作' : '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
+    }
+  }
+
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts, this.snapshot.confirmedParts ?? 0); }
+
+  @Builder
   private statusCard() {
-    Text(this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :
+    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :
       '校验、CRUD、导入导出与持久化均由 Rust Core 负责')
       .width('100%')
-      .fontFamily('ReaderNotoSansSC')
-      .fontSize(12)
-      .lineHeight(18)
+      .fontFamily(TYPE_FORM_STATUS.fontFamily as string)
+      .fontSize(TYPE_FORM_STATUS.fontSizeFp)
+      .lineHeight(TYPE_FORM_STATUS.lineHeightFp as number)
       .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
@@ -146,10 +146,10 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('可携带规则包');
       Text('Core schema v1 包含替换、字典、TXT 目录和规则订阅；导入默认合并且同主键覆盖。')
-        .width('100%').fontSize(11).lineHeight(17).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .width('100%').fontSize(TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
         this.actionButton('导入并合并', false, (): void => this.onImportBundle());
-        this.actionButton('导出全部', true, (): void => this.onExportBundle());
+        this.actionButton('导出全部', true, (): void => this.onExportBundle(), false);
       }.width('100%');
     }
     .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
@@ -164,8 +164,8 @@ export struct RulesManagementPage {
       this.input(this.replacePattern, '查找表达式', (value: string): void => { this.replacePattern = value; });
       this.input(this.replaceValue, '替换为', (value: string): void => { this.replaceValue = value; });
       Row({ space: TOK_SPACE_SM }) {
-        this.booleanField('启用', this.replaceEnabled, (): void => { this.replaceEnabled = !this.replaceEnabled; });
-        this.booleanField('正则', this.replaceRegex, (): void => { this.replaceRegex = !this.replaceRegex; });
+        this.booleanField('启用', this.replaceEnabled, (next: boolean): void => { this.replaceEnabled = next; });
+        this.booleanField('正则', this.replaceRegex, (next: boolean): void => { this.replaceRegex = next; });
       }.width('100%');
       this.input(this.replaceOrder, '排序', (value: string): void => { this.replaceOrder = value; });
       this.actionButton(this.replaceId < 0 ? '新增替换规则' : '保存替换规则', true, (): void => {
@@ -194,11 +194,11 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading(`TXT 目录规则（${this.snapshot.txtTocRules.length}）`);
       Text('启用的规则会在下一次 TXT 导入时由 Core 用于切分章节。')
-        .width('100%').fontSize(11).lineHeight(17).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .width('100%').fontSize(TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       this.input(this.txtName, '名称', (value: string): void => { this.txtName = value; });
       this.input(this.txtRule, '章节标题正则', (value: string): void => { this.txtRule = value; });
       this.input(this.txtExample, '示例标题', (value: string): void => { this.txtExample = value; });
-      this.booleanField('启用', this.txtEnabled, (): void => { this.txtEnabled = !this.txtEnabled; });
+      this.booleanField('启用', this.txtEnabled, (next: boolean): void => { this.txtEnabled = next; });
       this.input(this.txtOrder, '序号', (value: string): void => { this.txtOrder = value; });
       this.actionButton(this.txtId < 0 ? '新增 TXT 规则' : '保存 TXT 规则', true, (): void => {
         const draft: TxtTocRuleDraft = {
@@ -227,7 +227,7 @@ export struct RulesManagementPage {
       this.input(this.dictName, '名称（主键）', (value: string): void => { this.dictName = value; });
       this.input(this.dictUrl, 'URL 规则，使用 {{key}}', (value: string): void => { this.dictUrl = value; });
       this.input(this.dictShow, '展示规则（留空返回原文）', (value: string): void => { this.dictShow = value; });
-      this.booleanField('启用', this.dictEnabled, (): void => { this.dictEnabled = !this.dictEnabled; });
+      this.booleanField('启用', this.dictEnabled, (next: boolean): void => { this.dictEnabled = next; });
       this.input(this.dictOrder, '排序', (value: string): void => { this.dictOrder = value; });
       this.actionButton('保存字典规则', true, (): void => this.onSaveDict({
         name: this.dictName,
@@ -252,12 +252,12 @@ export struct RulesManagementPage {
       this.input(this.subName, '名称', (value: string): void => { this.subName = value; });
       this.input(this.subUrl, '订阅 URL', (value: string): void => { this.subUrl = value; });
       Row({ space: TOK_SPACE_XS }) {
-        this.actionButton('书源', this.subType === 0, (): void => { this.subType = 0; });
-        this.actionButton('RSS 源', this.subType === 1, (): void => { this.subType = 1; });
-        this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; });
+        this.actionButton('书源', this.subType === 0, (): void => { this.subType = 0; }, false);
+        this.actionButton('RSS 源', this.subType === 1, (): void => { this.subType = 1; }, false);
+        this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; }, false);
       }.width('100%');
       this.booleanField('自动更新标记', this.subAutoUpdate,
-        (): void => { this.subAutoUpdate = !this.subAutoUpdate; });
+        (next: boolean): void => { this.subAutoUpdate = next; });
       this.input(this.subOrder, '排序', (value: string): void => { this.subOrder = value; });
       this.actionButton(this.subId < 0 ? '新增订阅' : '保存订阅', true, (): void => {
         const draft: RuleSubscriptionDraft = {
@@ -272,7 +272,7 @@ export struct RulesManagementPage {
         this.onSaveSubscription(draft);
       });
       Text('“拉取”会按类型复用书源、RSS 或替换规则的 Core 导入；自动更新仅保存标记，不启动后台调度。')
-        .width('100%').fontSize(10).lineHeight(16).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .width('100%').fontSize(TYPE_RULES_INHERITED_NOTE.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_NOTE.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       ForEach(this.snapshot.subscriptions, (rule: ManagedRuleSubscription) => {
         this.subscriptionRow(rule);
       }, (rule: ManagedRuleSubscription): string => `managed-sub-${rule.id}`);
@@ -283,47 +283,45 @@ export struct RulesManagementPage {
 
   @Builder
   private heading(value: string) {
-    Text(value).width('100%').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-      .fontSize(14).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+    Text(value).width('100%').fontFamily(TYPE_RULES_MANAGEMENT_HEADING.fontFamily)
+      .fontWeight(TYPE_RULES_MANAGEMENT_HEADING.fontWeight)
+      .fontSize(TYPE_RULES_MANAGEMENT_HEADING.fontSizeFp)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
   private input(value: string, placeholder: string, changed: (value: string) => void) {
-    TextInput({ text: value, placeholder })
-      .width('100%').height(40).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM }).onChange(changed);
+    ReaderFormField({ scheme: this.appThemeScheme, specId: 'rules-input', text: value, placeholder, onTextChange: changed });
   }
 
   @Builder
-  private booleanField(label: string, value: boolean, action: () => void) {
+  private booleanField(label: string, value: boolean, action: (next: boolean) => void) {
     Row() {
-      Text(label).layoutWeight(1).fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      ReaderToggle({ value, onToggle: action });
+      Text(label).layoutWeight(1).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      ReaderToggle({ value, specId: 'standard-toggle', accessibilityLabel: label,
+        inputIdentity: `${label}:${this.replaceId}:${this.txtId}:${this.dictName}:${this.subId}`,
+        // These controls edit the retained local draft, not the pending durable write.
+        actionEnabled: true, onToggle: action });
     }.layoutWeight(1).height(40);
   }
 
   @Builder
-  private actionButton(label: string, primary: boolean, action: () => void) {
-    Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center).fontWeight(FontWeight.Bold)
-      .fontSize(12).fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
-      .opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy) action();
-      });
+  private actionButton(label: string, primary: boolean, action: () => void, mutation: boolean = true) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rules-action', label, primary, layout: 'equal',
+      actionEnabled: !this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown')),
+      onAction: action });
   }
 
   @Builder
   private entityRow(title: string, detail: string, edit: () => void, remove: () => void) {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
-        Text(title.length > 0 ? title : '未命名').width('100%').fontSize(12).fontWeight(FontWeight.Bold)
+        Text(title.length > 0 ? title : '未命名').width('100%').fontSize(TYPE_RULES_ENTITY_TITLE.fontSizeFp).fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
-        Text(detail).width('100%').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
+        Text(detail).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      this.smallButton('编辑', edit);
+      this.smallButton('编辑', edit, false);
       this.smallButton('删除', remove);
     }
     .width('100%').height(56).padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
@@ -334,12 +332,12 @@ export struct RulesManagementPage {
   private subscriptionRow(rule: ManagedRuleSubscription) {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
-        Text(rule.name.length > 0 ? rule.name : '未命名').width('100%').fontSize(12)
-          .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
-        Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(10)
+        Text(rule.name.length > 0 ? rule.name : '未命名').width('100%').fontSize(TYPE_RULES_ENTITY_TITLE.fontSizeFp)
+          .fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
+        Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      this.smallButton('编辑', (): void => this.editSubscription(rule));
+      this.smallButton('编辑', (): void => this.editSubscription(rule), false);
       this.smallButton('拉取', (): void => this.onRefreshSubscription(rule));
       this.smallButton('删除', (): void => this.onDeleteSubscription(rule.id));
     }
@@ -348,13 +346,10 @@ export struct RulesManagementPage {
   }
 
   @Builder
-  private smallButton(label: string, action: () => void) {
-    Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-      .textAlign(TextAlign.Center).fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(7).opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy) action();
-      });
+  private smallButton(label: string, action: () => void, mutation: boolean = true) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rules-compact', label,
+      actionEnabled: !this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown')),
+      onAction: action });
   }
 
   private editReplace(rule: ManagedReplaceRule): void {
@@ -410,16 +405,5 @@ export struct RulesManagementPage {
     return Number.isSafeInteger(parsed) ? parsed : 0;
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
+
 }

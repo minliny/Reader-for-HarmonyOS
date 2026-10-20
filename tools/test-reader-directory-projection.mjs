@@ -31,6 +31,12 @@ assert.deepEqual(entries.map((entry) => entry.index), originalOrder,
   'projection must not mutate the owner-provided TOC');
 
 assert.deepEqual(projectReaderDirectoryEntries(entries, '第 19 章', false).map((entry) => entry.index), [18]);
+const mangaEntries = [{ index: 0, title: '✿·１００回', displayTitle: '１００回', contextTitle: '第一卷' },
+  { index: 1, title: '第二卷', displayTitle: '200回', contextTitle: '第二卷' }];
+assert.deepEqual(projectReaderDirectoryEntries(mangaEntries, '100', true, true).map(entry => entry.index), [0],
+  'manga search normalizes full-width digits and searches display/context titles');
+assert.deepEqual(projectReaderDirectoryEntries(mangaEntries, '第一卷', true, true).map(entry => entry.index), [0],
+  'manga search includes the parent context title');
 // Bookmark-row projection (including excerpt search) moved to
 // test-reader-bookmark-projection.mjs against ReaderBookmarkProjection.ts.
 

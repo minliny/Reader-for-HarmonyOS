@@ -8,7 +8,11 @@ import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyReadingAssistantMetadataCorrection } from './reading-assistant-source-correction.mjs';
+import { applyQidianDirectoryCorrection } from './qidian-directory-source-correction.mjs';
 import { applyPopofreeQuoteCorrection } from './popofree-source-correction.mjs';
+import { applyBaoziImageSourceCorrection } from './baozi-image-source-correction.mjs';
+import { applyTencentPictureSourceCorrection } from './tencent-picture-source-correction.mjs';
+import { applySourceLoginDefaultPolicy } from './source-login-default-policy.mjs';
 import {
   BUILTIN_VERSION,
   SUITE_VERSION,
@@ -20,12 +24,13 @@ import {
 } from './source-supply-lib.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const coreRepo = resolve(repo, '../Reader-Core-Native');
-const workspaceRoot = resolve(repo, '..');
+const coreRepo = resolve(repo, '../Reader-Core');
 const evidenceRelative = 'reports/tooling/corpus-batch-live-full-1945-v5-2026-07-09.json';
-const evidenceFile = resolve(coreRepo, evidenceRelative);
+const privateEvidence = process.env.READER_PRIVATE_SOURCE_EVIDENCE;
+if (!privateEvidence) throw new Error('Set READER_PRIVATE_SOURCE_EVIDENCE to the private archived workspace; raw supply evidence is not a checkout dependency');
+const evidenceFile = resolve(privateEvidence, 'Reader-Core-Native', evidenceRelative);
 const admittedEvidenceRelative = 'evidence/2026-08-31-five-line/supply-admission-results.json';
-const admittedEvidenceFile = resolve(workspaceRoot, admittedEvidenceRelative);
+const admittedEvidenceFile = resolve(privateEvidence, 'Reader-for-HarmonyOS', admittedEvidenceRelative);
 const legacyBundledRelative = 'entry/src/main/resources/rawfile/reader-test-book-sources.json';
 const rawFile = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
@@ -67,7 +72,7 @@ function runGit(repository, args, allowFailure = false) {
 
 function readTestedSource(sourceFile) {
   const relative = `tests/fixtures/corpus/sources/${sourceFile}`;
-  const current = resolve(coreRepo, relative);
+  const current = resolve(privateEvidence, 'Reader-Core-Native', relative);
   if (existsSync(current)) {
     return JSON.parse(readFileSync(current, 'utf8'));
   }
@@ -291,6 +296,10 @@ const ordered = [
 const sources = ordered.map(record => record.source);
 applyReadingAssistantMetadataCorrection(sources);
 applyPopofreeQuoteCorrection(sources);
+applyQidianDirectoryCorrection(sources);
+applyBaoziImageSourceCorrection(sources);
+applyTencentPictureSourceCorrection(sources);
+applySourceLoginDefaultPolicy(sources);
 
 // Keep the portable collection comfortably below the product's bounded JSON
 // import limit. The payload remains ordinary JSON and can be pretty-printed by

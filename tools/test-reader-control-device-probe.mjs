@@ -1,9 +1,13 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { EventEmitter } from 'node:events';
-import { createHash, randomUUID } from 'node:crypto';
-import { basename, isAbsolute, resolve } from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['command-guards','Offline zero-exit loader failure assessment'],['ticket-sequence','Offline ticket, dry-run, SHA, authorization, controlled DOWN origin and revoke'],['sampler-routing','Offline exact argv and shared sampler routing']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { EventEmitter }=await import('node:events');
+const { createHash, randomUUID }=await import('node:crypto');
+const { basename, isAbsolute, resolve }=await import('node:path');
+const delay=async()=>{};
 
 // Execute the actual production runtime closures against an in-memory HDC
 // transport. No HDC, device, lock, executable or filesystem writes occur.
@@ -19,6 +23,7 @@ const guardRecords = [];
 const assessActual = new Function('record', 'redact', 'commandOK', 'fail',
   `${source.slice(assessStart, assessEnd)}; return assess;`)(event => guardRecords.push(event), String,
     guard.commandOK, message => { throw new Error(message); });
+if(selectedCase==='command-guards'){
 for (const message of [
   'Error loading shared library libark_jsruntime.so: (needed by /system/lib64/platformsdk/libace_napi.z.so)',
   'Error relocating /system/lib64/platformsdk/libace_napi.z.so: missing_symbol: symbol not found',
@@ -33,6 +38,8 @@ for (const message of [
     assert.equal(guardRecords.at(-1)[channel], message, 'raw loader error retained');
   }
 }
+}
+if(selectedCase==='ticket-sequence'){
 const start = source.indexOf('    const touchTickets = new Map();');
 const end = source.indexOf('    const sampledDrag = async plan => {', start);
 assert.ok(start >= 0 && end > start, 'exact production touch runtime boundaries');
@@ -46,13 +53,14 @@ elf.write('7f454c46', 0, 'hex'); elf[4] = 2; elf[5] = 1; elf.writeUInt16LE(183, 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
 function fixture({ denied = false, missingRevoke = false, mismatch = false, mkdirCollision = false } = {}) {
-  const events = [], commands = [], timers = [];
+  const events = [], commands = [];let clock=0;
+  const later=(callback,at)=>queueMicrotask(()=>{clock=Math.max(clock,at);callback();});
   const staged = new Map();
   let executionCount = 0;
   const options = { outputDir: '/virtual/evidence', hdc: '/mock/no-device/hdc' };
   const fail = message => { throw new Error(message); };
   const commandOK = guard.commandOK;
-  const record = event => events.push({ at: performance.now(), ...event });
+  const record = event => events.push({ at: clock, ...event });
   const run = plan => {
     commands.push(plan);
     if (mkdirCollision && plan.args[1] === 'mkdir') throw new Error('exclusive mkdir collision');
@@ -73,25 +81,25 @@ function fixture({ denied = false, missingRevoke = false, mismatch = false, mkdi
       if (closed) return; closed = true;
       child.emit('close', code, signal);
     };
-    child.kill = signal => { timers.forEach(clearTimeout); queueMicrotask(() => close(4, signal)); };
+    child.kill = signal => { queueMicrotask(() => close(4, signal)); };
     const emit = event => child.stdout.emit('data', Buffer.from(`${JSON.stringify(event)}\n`));
-    timers.push(setTimeout(() => emit({ event: 'request-authorization', code: denied ? 201 : 0 }), 2));
+    later(() => emit({ event: 'request-authorization', code: denied ? 201 : 0 }), 2);
     if (denied) {
-      timers.push(setTimeout(() => close(3), 8));
+      later(() => close(3), 8);
     } else {
-      timers.push(setTimeout(() => {
+      later(() => {
         emit({ event: 'touch', index: 0, action: 'DOWN', code: 0, scheduledMs: 0, actualMs: .25 });
-      }, 25));
-      timers.push(setTimeout(() => {
+      }, 25);
+      later(() => {
         emit({ event: 'touch', index: 1, action: 'UP', code: 0, scheduledMs: 5, actualMs: 5.25 });
         if (!missingRevoke) emit({ event: 'authorization', phase: 'after-revoke', code: 0, status: 0 });
         emit({ event: 'complete', result: 0 });
         close(0);
-      }, 40));
+      }, 40);
     }
     return child;
   };
-  const deps = { options, record, run, spawn, resolve, randomUUID, delay, fail, commandOK,
+  const deps = { options, record, run, spawn, resolve, randomUUID, delay:async ms=>{clock+=ms;await Promise.resolve();}, performance:{now:()=>clock}, fail, commandOK,
     sha256, lstatSync: () => ({ isFile: () => true, isSymbolicLink: () => false, size: elf.length }),
     readFileSync: () => Buffer.from(elf),
     writeFileSync: (path, bytes, options) => { assert.equal(options.flag, 'wx'); assert.ok(!staged.has(path)); staged.set(path, Buffer.from(bytes)); },
@@ -157,7 +165,9 @@ assert.equal(checks.length, 2, 'execution rechecks both remote artifacts despite
 assert.notEqual(checks[0].localPath, checks[1].localPath);
 const origin = f.events.find(event => event.event === 'touch-sampling-origin');
 const admitted = f.events.find(event => event.event === 'touch-execute-admitted');
-assert.ok(origin.at - admitted.at >= 15, 'authorization wait precedes the DOWN-based origin');
+assert.equal(admitted.at,0,'controlled command admission origin');
+assert.equal(origin.at,25,'origin is the successful DOWN receipt, independent of host scheduling');
+assert.ok(f.events.findIndex(e=>e.event==='touch-sampling-origin')>f.events.findIndex(e=>e.native?.event==='request-authorization'),'authorization record precedes DOWN origin');
 assert.equal(origin.nativeActualMs, .25);
 const samples = f.events.filter(event => event.event === 'sample-trigger');
 assert.equal(samples.length, 2);
@@ -182,6 +192,8 @@ noRevoke.dryRunTouchSequence({ ticket: id });
 await assert.rejects(noRevoke.sampledTouchSequence({ ticket: id, sampleDelaysMs: [0] }), /revoked authorization receipt/);
 assert.ok(!noRevoke.events.some(event => event.event === 'touch-execute-completed'));
 
+}
+if(selectedCase==='sampler-routing'){
 // The new operations must execute the same real production sampler, not a
 // second timing engine. Transport/captures here are in-memory command records.
 const planStart = source.indexOf('const BUNDLE = ');
@@ -189,6 +201,11 @@ const planEnd = source.indexOf('function ownerMatches(');
 assert.ok(planStart >= 0 && planEnd > planStart);
 const actualPlan = new Function('basename', 'isAbsolute', 'resolve',
   `${source.slice(planStart, planEnd)}; return operationPlan;`)(basename, isAbsolute, resolve);
+const clearPlan = actualPlan({ op: 'clearRebuildableCache', preflightConfirmed: true }, '/virtual/evidence');
+assert.deepEqual(clearPlan.args, ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', 'io.reader.minliny', '-m', 'entry',
+  '--pb', 'readerClearRebuildableCache', 'true'], 'VM cache maintenance uses the exact app-owned preserve-data Want');
+assert.throws(() => actualPlan({ op: 'clearRebuildableCache', preflightConfirmed: true, path: '/tmp/x' }, '/virtual/evidence'),
+  /unknown operation field/, 'cache maintenance cannot receive a filesystem path');
 const samplerStart = source.indexOf('    const sampledDrag = async plan => {');
 const samplerEnd = source.indexOf("    record({ event: 'ready'", samplerStart);
 assert.ok(samplerStart >= 0 && samplerEnd > samplerStart);
@@ -211,10 +228,10 @@ async function runSampler(operation, loaderError = false) {
       assert.equal(options.shell, false); calls.push(args);
       const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter();
       child.kill = () => {};
-      setTimeout(() => {
+      queueMicrotask(() => {
         if (loaderError) child.stdout.emit('data', Buffer.from('Error relocating test.so: symbol not found'));
         child.emit('close', 0, null);
-      }, 0);
+      });
       return child;
     },
   };
@@ -239,4 +256,8 @@ async function runSampler(operation, loaderError = false) {
 await runSampler({ op: 'sampledClick', x: 100, y: 200, sampleDelaysMs: [0, 2] });
 await runSampler({ op: 'heldTouch', x: 100, y: 200, durationMs: 500, sampleDelaysMs: [0, 2] });
 await runSampler({ op: 'sampledClick', x: 100, y: 200, sampleDelaysMs: [0, 2] }, true);
+}
 console.log('Device probe actual runtime closures: ticket/dry-run/SHA/auth-denial/DOWN-based sampling/revocation PASS (mock transport only; no HDC/device/filesystem writes).');
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

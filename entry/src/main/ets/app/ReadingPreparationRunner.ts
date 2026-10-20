@@ -92,7 +92,15 @@ export class ReadingPreparationRunner {
       while (!this.closed && this.requested && this.allowed()) {
         this.requested = false;
         const generation = this.generation;
-        await this.run((): boolean => !this.closed && generation === this.generation && this.allowed());
+        // A request can observe preemption before its cancellation receipt
+        // returns. Restored visibility/foreground availability must not revive
+        // that run and turn its confirmed cancellation into a durable block.
+        // A later resume owns a new pass with a fresh validity capture.
+        let current = true;
+        await this.run((): boolean => {
+          current = current && !this.closed && generation === this.generation && this.allowed();
+          return current;
+        });
       }
     });
     this.task = task.finally((): void => { this.task = undefined; });

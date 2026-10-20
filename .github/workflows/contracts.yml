@@ -1,0 +1,81 @@
+name: Host Explicit Checks
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: Comma-separated exact test filenames, in reviewed execution order
+        required: false
+        type: string
+      cases:
+        description: Comma-separated exact file.mjs#case IDs for selected focused files
+        required: false
+        type: string
+      source_hygiene:
+        description: Explicitly run actionlint and current tracked-source gitleaks
+        required: false
+        default: false
+        type: boolean
+      rationale:
+        description: Concrete changed behavior and necessity for each selected check
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: host-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Admit only the explicit selection
+        id: selection
+        env:
+          CHECKS: ${{ inputs.tests }}
+          CASES: ${{ inputs.cases }}
+          SOURCE_HYGIENE: ${{ inputs.source_hygiene }}
+          RATIONALE: ${{ inputs.rationale }}
+        run: |
+          test -n "${RATIONALE//[[:space:]]/}" || { echo 'An item-specific necessity rationale is required.'; exit 2; }
+          if test -n "$CASES" && test -z "$CHECKS"; then
+            echo 'Exact cases require their exact selected test files.'
+            exit 2
+          fi
+          if test -z "$CHECKS" && test "$SOURCE_HYGIENE" != true; then
+            echo 'NOT_RUN: no check selected.'
+          fi
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: inputs.tests != ''
+        with:
+          node-version: 22.23.3
+      - name: Exact declared regressions
+        if: inputs.tests != ''
+        env:
+          CHECKS: ${{ inputs.tests }}
+          CASES: ${{ inputs.cases }}
+          RATIONALE: ${{ inputs.rationale }}
+        run: |
+          args=(--tests "$CHECKS" --rationale "$RATIONALE")
+          if test -n "$CASES"; then args+=(--cases "$CASES"); fi
+          node tools/run-contract-tests.mjs "${args[@]}"
+      - uses: ./.github/actions/source-hygiene
+        if: always() && steps.selection.outcome == 'success' && inputs.source_hygiene
+        with:
+          directory: .
+      - name: Evidence boundary
+        if: always()
+        run: echo 'Only the explicitly selected checks were requested. Unselected tests and SDK, Native, HAP, signing and device acceptance remain NOT_RUN.' >> "$GITHUB_STEP_SUMMARY"
+  host-source-gate:
+    name: host-source-gate
+    if: always()
+    needs: source-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULT: ${{ needs.source-check.result }}
+        run: test "$RESULT" = success

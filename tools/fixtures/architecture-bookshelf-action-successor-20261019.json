@@ -1,0 +1,3292 @@
+{
+  "schema": 1,
+  "authority": "docs/message-ui/bookshelf-action-style-scope-20261019.json",
+  "authoritySha256": "5f94b614ac8c13b7246a67fae1c88348c5ce5b6e4a08d86befed006aa2cfcd0f",
+  "previousSuccessor": {
+    "file": "tools/fixtures/architecture-message-producers-successor-20261019.json",
+    "sha256": "6847a4a3e94cd95bde59da3fffe745f06a79c689f27eb6d2f5ad3b0a39f0cc61"
+  },
+  "shapes": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets",
+      "previousShapeSha256": "20677a2eba86fb89fe4a95bc9e2917bb39b1501bdc1fbea85c2513920c7cb193",
+      "shape": {
+        "types": [
+          {
+            "name": "DrawerSpecId",
+            "type": "'reader-action-sheet' | 'source-switch-drawer'"
+          },
+          {
+            "name": "DialogSpecId",
+            "type": "'book-removal' | 'json-import' | 'shelf-group' | 'local-import'"
+          },
+          {
+            "name": "DialogHeaderFontFamily",
+            "type": "'ReaderMangaSans600' | 'ReaderNotoSerifSCBold'"
+          },
+          {
+            "name": "DialogFrameMode",
+            "type": "'cap' | 'inset' | 'card-inset'"
+          },
+          {
+            "name": "DialogActionsLayout",
+            "type": "'row' | 'stack'"
+          },
+          {
+            "name": "SheetSpecId",
+            "type": "'bookshelf-book-action'"
+          },
+          {
+            "name": "ActionSheetSpecId",
+            "type": "'grouped' | 'quick' | 'bookshelf'"
+          },
+          {
+            "name": "PopupSpecId",
+            "type": "'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "DrawerSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "maxWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "cornerRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "surfaceRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "lineRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "scrimRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "inkRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "minimumContentHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "contentInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideContentInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "compactSideContentInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "compactViewportWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleZone",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeIcon",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeRight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "titleFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleMinFontScale",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleMaxFontScale",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideHeaderHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideHeaderBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "DialogSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "headerFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "maxWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "edgeGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "widthPercent",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "frameMode",
+                "type": "DialogFrameMode",
+                "decorators": []
+              },
+              {
+                "name": "usesKeyboardSafeArea",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "padding",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "backgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "hasShadow",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "hasBorder",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "headerFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "headerFontFamily",
+                "type": "DialogHeaderFontFamily",
+                "decorators": []
+              },
+              {
+                "name": "headerTextAlign",
+                "type": "TextAlign",
+                "decorators": []
+              },
+              {
+                "name": "headerLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "headerGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "bodyActionsGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "bodyActionsOwnMargin",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionsLayout",
+                "type": "DialogActionsLayout",
+                "decorators": []
+              },
+              {
+                "name": "actionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionBorderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionUsesPressFeedback",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "actionExtendsTouchRegion",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "actionPrimarySurfaceRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionPrimaryLabelRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "SheetSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "maxWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "horizontalInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "titleFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "contentBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "titleRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "hostBackgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "hostMaskRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "ActionSheetSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "regularFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "emphasisFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "regularFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "emphasisFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "inkRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "mutedRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "dangerRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "lineRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "groupRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "groupRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "groupGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickIconContainer",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "bookshelfIconContainer",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sectionHeadingHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sectionHeadingFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sectionHeadingLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickActionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickActionGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickLabelFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickLabelLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSecondaryFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSecondaryLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowSecondaryHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowInsetLeft",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowInsetRight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "labelFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "labelLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "secondaryFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "secondaryLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "trailingFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "trailingLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "iconSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "chevronSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSeparatorTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSeparatorBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickActionCount",
+                "type": "number",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "PopupSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "actionFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionMutesContent",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "height",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "width",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "pointerWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "pointerHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionCount",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "trailingExtension",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "anchorOverlap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "shadowRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "shadowOffsetY",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionPaddingLeft",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionPaddingRight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionIconSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "pointerPoints",
+                "type": "Array<Array<number>>",
+                "decorators": []
+              },
+              {
+                "name": "surfaceBackgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "surfaceBorderRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "surfaceShadowRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "pointerFillRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "pointerStrokeRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionTextRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "dividerRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "actionFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionLineHeight",
+                "type": "number",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [],
+        "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nimport { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';\nexport type DrawerSpecId = 'reader-action-sheet' | 'source-switch-drawer';\nexport class DrawerSurfaceSpec {\n    readonly maxWidth: number;\n    readonly cornerRadius: number;\n    readonly surfaceRole: ReaderAppColorRole;\n    readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';\n    readonly scrimRole: ReaderAppColorRole;\n    readonly inkRole: ReaderAppColorRole = 'TOK_INK';\n    readonly minimumContentHeight: number = 260;\n    readonly contentInset: number = 18;\n    readonly sideContentInset: number = 20;\n    readonly compactSideContentInset: number = 16;\n    readonly compactViewportWidth: number = 700;\n    readonly handleWidth: number = 42;\n    readonly handleHeight: number = 5;\n    readonly handleZone: number = 30;\n    readonly closeSize: number = 44;\n    readonly closeIcon: number = 18;\n    readonly closeTop: number = 24;\n    readonly closeRight: number = 12;\n    readonly titleFontFamily: string = 'ReaderMangaSans900';\n    readonly titleFontWeight: number = 900;\n    readonly titleFontSize: number = 18;\n    readonly titleLineHeight: number = 26;\n    readonly titleMinFontScale: number = 0;\n    readonly titleMaxFontScale: number = 2;\n    readonly titleBottom: number = 14;\n    readonly sideTitleFontFamily: string = 'ReaderMangaSans600';\n    readonly sideTitleFontWeight: number = 600;\n    readonly sideTitleFontSize: number = 15;\n    readonly sideTitleLineHeight: number = 24;\n    readonly sideHeaderHeight: number = 66;\n    readonly sideHeaderBottom: number = 17;\n    readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';\n    constructor(id: DrawerSpecId) {\n        this.maxWidth = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerMaxWidth : 0;\n        this.cornerRadius = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerCornerRadius : 22;\n        this.surfaceRole = id === 'source-switch-drawer' ? 'TOK_SS_WINDOW_BG' : 'TOK_DOWNLOAD_SURFACE';\n        this.scrimRole = id === 'source-switch-drawer' ? 'TOK_SS_DRAWER_SCRIM' : 'TOK_DOWNLOAD_SCRIM';\n    }\n}\nconst DRAWER_SPECS: Record<DrawerSpecId, DrawerSurfaceSpec> = {\n    'reader-action-sheet': new DrawerSurfaceSpec('reader-action-sheet'),\n    'source-switch-drawer': new DrawerSurfaceSpec('source-switch-drawer'),\n};\nexport function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return DRAWER_SPECS[id]; }\nexport type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import';\nexport type DialogHeaderFontFamily = 'ReaderMangaSans600' | 'ReaderNotoSerifSCBold';\nexport type DialogFrameMode = 'cap' | 'inset' | 'card-inset';\nexport type DialogActionsLayout = 'row' | 'stack';\nexport interface DialogSurfaceSpecInit {\n    maxWidth: number;\n    edgeGap: number;\n    widthPercent: number;\n    frameMode: DialogFrameMode;\n    usesKeyboardSafeArea: boolean;\n    padding: number;\n    borderRadius: number;\n    backgroundRole: ReaderAppColorRole;\n    hasShadow: boolean;\n    hasBorder: boolean;\n    headerFontSize: number;\n    headerFontFamily: DialogHeaderFontFamily;\n    headerTextAlign: TextAlign;\n    headerLineHeight: number;\n    headerGap: number;\n    bodyActionsGap: number;\n    bodyActionsOwnMargin: number;\n    actionsLayout: DialogActionsLayout;\n    actionHeight: number;\n    actionBorderRadius: number;\n    actionUsesPressFeedback: boolean;\n    actionExtendsTouchRegion: boolean;\n    actionPrimarySurfaceRole: ReaderAppColorRole;\n    actionPrimaryLabelRole: ReaderAppColorRole;\n}\nexport class DialogSurfaceSpec {\n    readonly headerFontWeight: number = 600;\n    readonly maxWidth: number;\n    readonly edgeGap: number;\n    readonly widthPercent: number;\n    readonly frameMode: DialogFrameMode;\n    readonly usesKeyboardSafeArea: boolean;\n    readonly padding: number;\n    readonly borderRadius: number;\n    readonly backgroundRole: ReaderAppColorRole;\n    readonly hasShadow: boolean;\n    readonly hasBorder: boolean;\n    readonly headerFontSize: number;\n    readonly headerFontFamily: DialogHeaderFontFamily;\n    readonly headerTextAlign: TextAlign;\n    readonly headerLineHeight: number;\n    readonly headerGap: number;\n    readonly bodyActionsGap: number;\n    readonly bodyActionsOwnMargin: number;\n    readonly actionsLayout: DialogActionsLayout;\n    readonly actionHeight: number;\n    readonly actionBorderRadius: number;\n    readonly actionUsesPressFeedback: boolean;\n    readonly actionExtendsTouchRegion: boolean;\n    readonly actionPrimarySurfaceRole: ReaderAppColorRole;\n    readonly actionPrimaryLabelRole: ReaderAppColorRole;\n    constructor(init: DialogSurfaceSpecInit) {\n        this.maxWidth = init.maxWidth;\n        this.edgeGap = init.edgeGap;\n        this.widthPercent = init.widthPercent;\n        this.frameMode = init.frameMode;\n        this.usesKeyboardSafeArea = init.usesKeyboardSafeArea;\n        this.padding = init.padding;\n        this.borderRadius = init.borderRadius;\n        this.backgroundRole = init.backgroundRole;\n        this.hasShadow = init.hasShadow;\n        this.hasBorder = init.hasBorder;\n        this.headerFontSize = init.headerFontSize;\n        this.headerFontFamily = init.headerFontFamily;\n        this.headerTextAlign = init.headerTextAlign;\n        this.headerLineHeight = init.headerLineHeight;\n        this.headerGap = init.headerGap;\n        this.bodyActionsGap = init.bodyActionsGap;\n        this.bodyActionsOwnMargin = init.bodyActionsOwnMargin;\n        this.actionsLayout = init.actionsLayout;\n        this.actionHeight = init.actionHeight;\n        this.actionBorderRadius = init.actionBorderRadius;\n        this.actionUsesPressFeedback = init.actionUsesPressFeedback;\n        this.actionExtendsTouchRegion = init.actionExtendsTouchRegion;\n        this.actionPrimarySurfaceRole = init.actionPrimarySurfaceRole;\n        this.actionPrimaryLabelRole = init.actionPrimaryLabelRole;\n    }\n}\nconst DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {\n    'book-removal': new DialogSurfaceSpec({\n        maxWidth: 306, edgeGap: 20, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n    'json-import': new DialogSurfaceSpec({\n        maxWidth: 360, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n    'shelf-group': new DialogSurfaceSpec({\n        maxWidth: 360, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n    'local-import': new DialogSurfaceSpec({\n        maxWidth: 350, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n};\nexport function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {\n    return DIALOG_SPECS[id];\n}\nexport type SheetSpecId = 'bookshelf-book-action';\nexport class SheetSurfaceSpec {\n    readonly maxWidth: number = SOURCE_SWITCH_VISUAL.drawerMaxWidth;\n    readonly horizontalInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;\n    readonly handleWidth: number = SOURCE_SWITCH_VISUAL.gripWidth;\n    readonly handleHeight: number = SOURCE_SWITCH_VISUAL.gripHeight;\n    readonly handleTop: number = SOURCE_SWITCH_VISUAL.gripMarginTop;\n    readonly handleBottom: number = SOURCE_SWITCH_VISUAL.gripMarginBottom;\n    readonly titleInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;\n    readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;\n    readonly titleBottom: number = SOURCE_SWITCH_VISUAL.headingGap;\n    readonly titleFontFamily: string = 'ReaderNotoSerifSCBold';\n    readonly titleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;\n    readonly titleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;\n    readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;\n    readonly contentBottom: number = SOURCE_SWITCH_VISUAL.normalSideInset;\n    readonly borderRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;\n    readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';\n    readonly titleRole: ReaderAppColorRole = 'TOK_INK';\n    readonly hostBackgroundRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';\n    readonly hostMaskRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';\n}\nconst SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {\n    'bookshelf-book-action': new SheetSurfaceSpec(),\n};\nexport function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {\n    return SHEET_SPECS[id];\n}\nexport type ActionSheetSpecId = 'grouped' | 'quick' | 'bookshelf';\nexport interface ActionSheetSurfaceSpecInit {\n    sectionHeadingHeight: number;\n    sectionHeadingFontSize: number;\n    sectionHeadingLineHeight: number;\n    quickActionHeight: number;\n    quickActionGap: number;\n    quickLabelFontSize: number;\n    quickLabelLineHeight: number;\n    quickSecondaryFontSize: number;\n    quickSecondaryLineHeight: number;\n    rowHeight: number;\n    rowSecondaryHeight: number;\n    rowGap: number;\n    rowInsetLeft: number;\n    rowInsetRight: number;\n    labelFontSize: number;\n    labelLineHeight: number;\n    secondaryFontSize: number;\n    secondaryLineHeight: number;\n    trailingFontSize: number;\n    trailingLineHeight: number;\n    iconSize: number;\n    chevronSize: number;\n    dividerHeight: number;\n    dividerInset: number;\n    quickSeparatorTop: number;\n    quickSeparatorBottom: number;\n    quickActionCount: number;\n}\nexport class ActionSheetSurfaceSpec {\n    readonly regularFontFamily: string = 'ReaderNotoSansSCUIRegular';\n    readonly emphasisFontFamily: string = 'ReaderNotoSansSCUIBold';\n    readonly regularFontWeight: number = 400;\n    readonly emphasisFontWeight: number = 700;\n    readonly inkRole: ReaderAppColorRole = 'TOK_INK';\n    readonly mutedRole: ReaderAppColorRole = 'TOK_MUTED';\n    readonly dangerRole: ReaderAppColorRole = 'TOK_DOWNLOAD_DANGER';\n    readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';\n    readonly groupRole: ReaderAppColorRole = 'TOK_DOWNLOAD_SOFT';\n    readonly groupRadius: number = 14;\n    readonly groupGap: number = 12;\n    readonly quickIconContainer: number = 40;\n    readonly bookshelfIconContainer: number = 36;\n    readonly sectionHeadingHeight: number;\n    readonly sectionHeadingFontSize: number;\n    readonly sectionHeadingLineHeight: number;\n    readonly quickActionHeight: number;\n    readonly quickActionGap: number;\n    readonly quickLabelFontSize: number;\n    readonly quickLabelLineHeight: number;\n    readonly quickSecondaryFontSize: number;\n    readonly quickSecondaryLineHeight: number;\n    readonly rowHeight: number;\n    readonly rowSecondaryHeight: number;\n    readonly rowGap: number;\n    readonly rowInsetLeft: number;\n    readonly rowInsetRight: number;\n    readonly labelFontSize: number;\n    readonly labelLineHeight: number;\n    readonly secondaryFontSize: number;\n    readonly secondaryLineHeight: number;\n    readonly trailingFontSize: number;\n    readonly trailingLineHeight: number;\n    readonly iconSize: number;\n    readonly chevronSize: number;\n    readonly dividerHeight: number;\n    readonly dividerInset: number;\n    readonly quickSeparatorTop: number;\n    readonly quickSeparatorBottom: number;\n    readonly quickActionCount: number;\n    constructor(init: ActionSheetSurfaceSpecInit) {\n        this.sectionHeadingHeight = init.sectionHeadingHeight;\n        this.sectionHeadingFontSize = init.sectionHeadingFontSize;\n        this.sectionHeadingLineHeight = init.sectionHeadingLineHeight;\n        this.quickActionHeight = init.quickActionHeight;\n        this.quickActionGap = init.quickActionGap;\n        this.quickLabelFontSize = init.quickLabelFontSize;\n        this.quickLabelLineHeight = init.quickLabelLineHeight;\n        this.quickSecondaryFontSize = init.quickSecondaryFontSize;\n        this.quickSecondaryLineHeight = init.quickSecondaryLineHeight;\n        this.rowHeight = init.rowHeight;\n        this.rowSecondaryHeight = init.rowSecondaryHeight;\n        this.rowGap = init.rowGap;\n        this.rowInsetLeft = init.rowInsetLeft;\n        this.rowInsetRight = init.rowInsetRight;\n        this.labelFontSize = init.labelFontSize;\n        this.labelLineHeight = init.labelLineHeight;\n        this.secondaryFontSize = init.secondaryFontSize;\n        this.secondaryLineHeight = init.secondaryLineHeight;\n        this.trailingFontSize = init.trailingFontSize;\n        this.trailingLineHeight = init.trailingLineHeight;\n        this.iconSize = init.iconSize;\n        this.chevronSize = init.chevronSize;\n        this.dividerHeight = init.dividerHeight;\n        this.dividerInset = init.dividerInset;\n        this.quickSeparatorTop = init.quickSeparatorTop;\n        this.quickSeparatorBottom = init.quickSeparatorBottom;\n        this.quickActionCount = init.quickActionCount;\n    }\n}\ninterface ActionSheetSpecs {\n    grouped: ActionSheetSurfaceSpec;\n    quick: ActionSheetSurfaceSpec;\n    bookshelf: ActionSheetSurfaceSpec;\n}\nconst ACTION_SHEET_SPECS: ActionSheetSpecs = {\n    grouped: new ActionSheetSurfaceSpec({\n        sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,\n        quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,\n        quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,\n        rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,\n        labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,\n        trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,\n        dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,\n    }),\n    quick: new ActionSheetSurfaceSpec({\n        sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,\n        quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,\n        quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,\n        rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,\n        labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,\n        trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,\n        dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,\n    }),\n    bookshelf: new ActionSheetSurfaceSpec({\n        sectionHeadingHeight: 0, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,\n        quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,\n        quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,\n        rowHeight: 56, rowSecondaryHeight: 72, rowGap: 12, rowInsetLeft: 0, rowInsetRight: 0,\n        labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 12, secondaryLineHeight: 18,\n        trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,\n        dividerHeight: 0.5, dividerInset: 48, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,\n    }),\n};\nexport function resolveActionSheetSpec(id: ActionSheetSpecId): ActionSheetSurfaceSpec {\n    return id === 'bookshelf' ? ACTION_SHEET_SPECS.bookshelf :\n        id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;\n}\nexport type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet';\nexport interface PopupSurfaceSpecInit {\n    actionMutesContent?: boolean;\n    height: number;\n    width: number;\n    pointerWidth: number;\n    pointerHeight: number;\n    actionHeight: number;\n    actionCount: number;\n    trailingExtension: number;\n    anchorOverlap: number;\n    borderWidth: number;\n    borderRadius: number;\n    shadowRadius: number;\n    shadowOffsetY: number;\n    actionPaddingLeft: number;\n    actionPaddingRight: number;\n    actionIconSize: number;\n    dividerInset: number;\n    dividerHeight: number;\n    pointerPoints: Array<Array<number>>;\n    surfaceBackgroundRole: ReaderAppColorRole;\n    surfaceBorderRole: ReaderAppColorRole;\n    surfaceShadowRole: ReaderAppColorRole;\n    pointerFillRole: ReaderAppColorRole;\n    pointerStrokeRole: ReaderAppColorRole;\n    actionTextRole: ReaderAppColorRole;\n    dividerRole: ReaderAppColorRole;\n    actionFontFamily: string;\n    actionFontSize: number;\n    actionLineHeight: number;\n}\nexport class PopupSurfaceSpec {\n    readonly actionFontWeight: number = 500;\n    readonly actionMutesContent: boolean;\n    readonly height: number;\n    readonly width: number;\n    readonly pointerWidth: number;\n    readonly pointerHeight: number;\n    readonly actionHeight: number;\n    readonly actionCount: number;\n    readonly trailingExtension: number;\n    readonly anchorOverlap: number;\n    readonly borderWidth: number;\n    readonly borderRadius: number;\n    readonly shadowRadius: number;\n    readonly shadowOffsetY: number;\n    readonly actionPaddingLeft: number;\n    readonly actionPaddingRight: number;\n    readonly actionIconSize: number;\n    readonly dividerInset: number;\n    readonly dividerHeight: number;\n    readonly pointerPoints: Array<Array<number>>;\n    readonly surfaceBackgroundRole: ReaderAppColorRole;\n    readonly surfaceBorderRole: ReaderAppColorRole;\n    readonly surfaceShadowRole: ReaderAppColorRole;\n    readonly pointerFillRole: ReaderAppColorRole;\n    readonly pointerStrokeRole: ReaderAppColorRole;\n    readonly actionTextRole: ReaderAppColorRole;\n    readonly dividerRole: ReaderAppColorRole;\n    readonly actionFontFamily: string;\n    readonly actionFontSize: number;\n    readonly actionLineHeight: number;\n    constructor(init: PopupSurfaceSpecInit) {\n        this.actionMutesContent = init.actionMutesContent ?? false;\n        this.height = init.height;\n        this.width = init.width;\n        this.pointerWidth = init.pointerWidth;\n        this.pointerHeight = init.pointerHeight;\n        this.actionHeight = init.actionHeight;\n        this.actionCount = init.actionCount;\n        this.trailingExtension = init.trailingExtension;\n        this.anchorOverlap = init.anchorOverlap;\n        this.borderWidth = init.borderWidth;\n        this.borderRadius = init.borderRadius;\n        this.shadowRadius = init.shadowRadius;\n        this.shadowOffsetY = init.shadowOffsetY;\n        this.actionPaddingLeft = init.actionPaddingLeft;\n        this.actionPaddingRight = init.actionPaddingRight;\n        this.actionIconSize = init.actionIconSize;\n        this.dividerInset = init.dividerInset;\n        this.dividerHeight = init.dividerHeight;\n        this.pointerPoints = init.pointerPoints;\n        this.surfaceBackgroundRole = init.surfaceBackgroundRole;\n        this.surfaceBorderRole = init.surfaceBorderRole;\n        this.surfaceShadowRole = init.surfaceShadowRole;\n        this.pointerFillRole = init.pointerFillRole;\n        this.pointerStrokeRole = init.pointerStrokeRole;\n        this.actionTextRole = init.actionTextRole;\n        this.dividerRole = init.dividerRole;\n        this.actionFontFamily = init.actionFontFamily;\n        this.actionFontSize = init.actionFontSize;\n        this.actionLineHeight = init.actionLineHeight;\n    }\n    get actionsHeight(): number {\n        return this.actionHeight * this.actionCount;\n    }\n    get expandedHeight(): number {\n        return this.pointerHeight + this.actionsHeight;\n    }\n    get collapsedHeight(): number {\n        return this.pointerHeight + this.actionHeight;\n    }\n}\nconst POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {\n    'bookshelf-more-menu': new PopupSurfaceSpec({\n        actionMutesContent: true,\n        height: 0,\n        width: 176, pointerWidth: 24, pointerHeight: 12,\n        actionHeight: 50, actionCount: 4,\n        trailingExtension: 11, anchorOverlap: 5,\n        borderWidth: 1, borderRadius: 16,\n        shadowRadius: 28, shadowOffsetY: 10,\n        actionPaddingLeft: 18, actionPaddingRight: 16,\n        actionIconSize: 24, dividerInset: 16, dividerHeight: 1,\n        pointerPoints: [[0, 12], [12, 0], [24, 12]],\n        surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',\n        surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',\n        surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',\n        pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',\n        pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',\n        actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',\n        dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',\n        actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,\n    }),\n    'reader-more-menu': new PopupSurfaceSpec({\n        height: 0,\n        width: 176, pointerWidth: 24, pointerHeight: 12,\n        actionHeight: 50, actionCount: 3,\n        trailingExtension: 11, anchorOverlap: 5,\n        borderWidth: 1, borderRadius: 16,\n        shadowRadius: 28, shadowOffsetY: 10,\n        actionPaddingLeft: 18, actionPaddingRight: 18,\n        actionIconSize: 0, dividerInset: 16, dividerHeight: 1,\n        pointerPoints: [[0, 12], [12, 0], [24, 12]],\n        surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',\n        surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',\n        surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',\n        pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',\n        pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',\n        actionTextRole: 'TOK_INK',\n        dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',\n        actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,\n    }),\n    'source-switch-window': new PopupSurfaceSpec({\n        height: 385,\n        width: 300, pointerWidth: 0, pointerHeight: 0,\n        actionHeight: 0, actionCount: 0,\n        trailingExtension: 0, anchorOverlap: 0,\n        borderWidth: 1, borderRadius: 20,\n        shadowRadius: 0, shadowOffsetY: 0,\n        actionPaddingLeft: 0, actionPaddingRight: 0,\n        actionIconSize: 0, dividerInset: 0, dividerHeight: 0,\n        pointerPoints: [],\n        surfaceBackgroundRole: 'TOK_SS_WINDOW_BG',\n        surfaceBorderRole: 'TOK_SS_WINDOW_BORDER',\n        surfaceShadowRole: 'TOK_SS_WINDOW_BORDER',\n        pointerFillRole: 'TOK_SS_WINDOW_BG',\n        pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',\n        actionTextRole: 'TOK_SS_FOOTER_TEXT',\n        dividerRole: 'TOK_SS_WINDOW_BORDER',\n        actionFontFamily: 'ReaderInter', actionFontSize: 0, actionLineHeight: 0,\n    }),\n    'tts-config-manager': new PopupSurfaceSpec({\n        height: 0, width: 364, pointerWidth: 0, pointerHeight: 0,\n        actionHeight: 0, actionCount: 0,\n        trailingExtension: 0, anchorOverlap: 0,\n        borderWidth: 0.5, borderRadius: 22,\n        shadowRadius: 48, shadowOffsetY: 18,\n        actionPaddingLeft: 0, actionPaddingRight: 0,\n        actionIconSize: 0, dividerInset: 0, dividerHeight: 0,\n        pointerPoints: [],\n        surfaceBackgroundRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',\n        surfaceBorderRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',\n        surfaceShadowRole: 'app.ReaderTtsConfigOverlay.build.color.471F1B17',\n        pointerFillRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',\n        pointerStrokeRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',\n        actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',\n        actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,\n    }),\n    'settings-select-tablet': new PopupSurfaceSpec({\n        height: 0, width: 160, pointerWidth: 0, pointerHeight: 0,\n        actionHeight: 42, actionCount: 0,\n        trailingExtension: 0, anchorOverlap: 6,\n        borderWidth: 1, borderRadius: 10,\n        shadowRadius: 24, shadowOffsetY: 8,\n        actionPaddingLeft: 14, actionPaddingRight: 14,\n        actionIconSize: 14, dividerInset: 14, dividerHeight: 1,\n        pointerPoints: [],\n        surfaceBackgroundRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',\n        surfaceBorderRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',\n        surfaceShadowRole: 'app.SettingsSelectOverlay.tabletPanel.color.1F1B171F',\n        pointerFillRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',\n        pointerStrokeRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',\n        actionTextRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17',\n        dividerRole: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD',\n        actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 13, actionLineHeight: 16,\n    }),\n};\nexport function resolvePopupSpec(id: PopupSpecId): PopupSurfaceSpec {\n    return POPUP_SPECS[id];\n}\n"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurface.ets",
+      "previousShapeSha256": "231ebc2651a657a785e0d50dbe8019400acfceb996b3f2bf6c5428872788a2f5",
+      "shape": {
+        "types": [
+          {
+            "name": "ReaderBoundedSurfaceId",
+            "type": "'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | 'bookshelf-book-action' | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "ReaderBoundedFrameModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderBoundedSurface",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderBoundedSurfaceId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "surfaceWidth",
+                "type": "number | string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "surfaceHeight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "maxSurfaceHeight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "placement",
+                "type": "'bottom' | 'side'",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scheme",
+                "type": "'auto' | 'day' | 'night'",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "safeInsets",
+                "type": "ReaderInsetsVp",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "header",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "body",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "actions",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "{ topLeft: spec.cornerRadius, topRight: spec.cornerRadius }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.surfaceRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "constraintSize",
+            "args": [
+              "{ maxWidth: spec.maxWidth }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "shadow",
+            "args": [
+              "{ radius: side ? 32 : 48, color: side ? '#11000000' : this.scheme === 'night' ? '#66000000' : '#33000000',\n    offsetX: side ? -14 : 0, offsetY: side ? 0 : -16 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "{ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "border",
+            "args": [
+              "side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.surfaceRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "padding",
+            "args": [
+              "{ left: this.insets.left, right: this.insets.right, top: this.insets.top, bottom: this.insets.bottom }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: side ? 0 : Math.min(spec.minimumContentHeight, contentMax) + this.insets.top + this.insets.bottom, maxHeight: this.maxHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "side ? this.height : undefined"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "shadow",
+            "args": [
+              "{ radius: 50,\n    color: readerAppColor(this.id === 'local-import-selection' ? 'app.LocalImportDialog.fileSelectionPanel.color.40000000' : 'app.LocalImportDialog.build.color.40000000', this.scheme), offsetX: 0, offsetY: 25 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "spec.borderRadius"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.backgroundRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "12"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_SURFACE_SOLID', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "padding",
+            "args": [
+              "12"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "padding",
+            "args": [
+              "{ bottom: spec.contentBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "this.id === 'tts-config-picker' ? 14 : spec.borderRadius"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "border",
+            "args": [
+              "{ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.surfaceBackgroundRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "shadow",
+            "args": [
+              "{\n    radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,\n    color: readerAppColor(this.id === 'tts-config-picker' ? 'app.ReaderTtsConfigOverlay.build.color.381F1B17' : spec.surfaceShadowRole, this.scheme),\n    offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,\n}"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "constraintSize",
+            "args": [
+              "{\n    maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',\n}"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { PopupSurfaceSpec, resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';\nimport { ReaderInsetsVp } from './ReaderWindowMetrics';\nexport type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | 'bookshelf-book-action' | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';\nexport class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly id: ReaderBoundedSurfaceId;\n    private readonly width: number | string;\n    private readonly height: number;\n    private readonly scheme: string;\n    private readonly placement: 'bottom' | 'side';\n    private readonly maxHeight: number;\n    private readonly insets: ReaderInsetsVp;\n    constructor(id: ReaderBoundedSurfaceId, width: number | string, height: number, scheme: string, placement: 'bottom' | 'side' = 'bottom', maxHeight: number = 0, insets: ReaderInsetsVp = new ReaderInsetsVp(0, 0, 0, 0)) {\n        this.id = id;\n        this.width = width;\n        this.height = height;\n        this.scheme = scheme;\n        this.placement = placement;\n        this.maxHeight = maxHeight;\n        this.insets = insets;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.id === 'source-switch-drawer') {\n            const spec = resolveDrawerSpec(this.id);\n            instance.width(this.width).height(this.height).constraintSize({ maxWidth: spec.maxWidth })\n                .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))\n                .borderRadius({ topLeft: spec.cornerRadius, topRight: spec.cornerRadius }).clip(true);\n            return;\n        }\n        if (this.id === 'reader-action-sheet') {\n            const spec = resolveDrawerSpec(this.id);\n            const side = this.placement === 'side';\n            const contentMax = Math.max(1, this.maxHeight - this.insets.top - this.insets.bottom);\n            instance.width(this.width).height(side ? this.height : undefined)\n                .constraintSize({ minHeight: side ? 0 : Math.min(spec.minimumContentHeight, contentMax) + this.insets.top + this.insets.bottom, maxHeight: this.maxHeight })\n                .padding({ left: this.insets.left, right: this.insets.right, top: this.insets.top, bottom: this.insets.bottom })\n                .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))\n                .border(side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined)\n                .borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })\n                .clip(true).shadow({ radius: side ? 32 : 48, color: side ? '#11000000' : this.scheme === 'night' ? '#66000000' : '#33000000',\n                offsetX: side ? -14 : 0, offsetY: side ? 0 : -16 });\n            return;\n        }\n        if (this.id === 'local-import-selection' || this.id === 'local-import-progress' || this.id === 'local-import-result-content') {\n            const spec = resolveDialogSpec('local-import');\n            instance.width(this.width).height(this.height);\n            if (this.id !== 'local-import-result-content')\n                instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))\n                    .borderRadius(spec.borderRadius).shadow({ radius: 50,\n                    color: readerAppColor(this.id === 'local-import-selection' ? 'app.LocalImportDialog.fileSelectionPanel.color.40000000' : 'app.LocalImportDialog.build.color.40000000', this.scheme), offsetX: 0, offsetY: 25 });\n            return;\n        }\n        if (this.id === 'reader-replace-editor') {\n            instance.width(this.width).height(this.height).padding(12)\n                .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.scheme)).borderRadius(12);\n            return;\n        }\n        if (this.id === 'bookshelf-book-action') {\n            const spec = resolveSheetSpec('bookshelf-book-action');\n            instance.width('100%').padding({ bottom: spec.contentBottom });\n            return;\n        }\n        const spec = resolvePopupSpec(this.id === 'source-switch-window' ? 'source-switch-window' : 'tts-config-manager');\n        instance.width(this.width).height(this.height)\n            .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.scheme))\n            .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })\n            .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius);\n        if (this.id !== 'source-switch-window')\n            instance.constraintSize({\n                maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',\n            }).shadow({\n                radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,\n                color: readerAppColor(this.id === 'tts-config-picker' ? 'app.ReaderTtsConfigOverlay.build.color.381F1B17' : spec.surfaceShadowRole, this.scheme),\n                offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,\n            }).clip(true);\n    }\n}\n@Component\nexport struct ReaderBoundedSurface extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderBoundedSurfaceId;\n        surfaceWidth?: number | string;\n        surfaceHeight?: number;\n        maxSurfaceHeight?: number;\n        placement?: 'bottom' | 'side';\n        scheme?: 'auto' | 'day' | 'night';\n        safeInsets?: ReaderInsetsVp;\n        header?: () => void;\n        body?: () => void;\n        actions?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderBoundedSurfaceId = 'source-switch-window';\n    @Prop\n    surfaceWidth: number | string = 300;\n    @Prop\n    surfaceHeight: number = 385;\n    @Prop\n    maxSurfaceHeight: number = 0;\n    @Prop\n    placement: 'bottom' | 'side' = 'bottom';\n    @Prop\n    scheme: 'auto' | 'day' | 'night' = 'auto';\n    @Prop\n    safeInsets: ReaderInsetsVp = new ReaderInsetsVp(0, 0, 0, 0);\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    body: () => void = this.emptySlot;\n    @BuilderParam\n    actions: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        if (this.specId === 'bookshelf-book-action') {\n            .alignItems<\n      >(HorizontalAlign.Start)\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n        else if (this.specId === 'local-import-progress') {\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n        else if (this.specId === 'local-import-result-content') {\n            .alignItems<\n      >(HorizontalAlign.Start)\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n        else {\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n    }\n    private frameModifier(): AttributeModifier<CommonAttribute> {\n        return new ReaderBoundedFrameModifier(this.specId, this.surfaceWidth, this.surfaceHeight, this.scheme === 'auto' ? this.appThemeScheme : this.scheme, this.placement, this.maxSurfaceHeight, this.safeInsets);\n    }\n}\n"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+      "previousShapeSha256": "a9b37becfe4bdfd4875eef7ba926b52474bc863d8648526968e604ebd700233d",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderBoundedTitleModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderBoundedSurfaceHeader",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderBoundedSurfaceId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "title",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "surfaceWidth",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "placement",
+                "type": "'bottom' | 'side'",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scheme",
+                "type": "'auto' | 'day' | 'night'",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "leading",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "accessory",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "onAreaChanged",
+                "type": "(oldValue: Area, next: Area) => void",
+                "decorators": []
+              },
+              {
+                "name": "onClose",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onHandlePanStart",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onHandlePanUpdate",
+                "type": "(offset: number) => void",
+                "decorators": []
+              },
+              {
+                "name": "onHandlePanEnd",
+                "type": "(offset: number, velocity: number) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.id === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontSize",
+            "args": [
+              "type.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontWeight",
+            "args": [
+              "type.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontFamily",
+            "args": [
+              "type.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "margin",
+            "args": [
+              "{ left: 7 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "16"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "28"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "34"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_LINE', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "1"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "Math.max(0, this.surfaceWidth - 1)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "margin",
+            "args": [
+              "{ bottom: this.drawerSpec().sideHeaderBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "padding",
+            "args": [
+              "{ left: this.drawerInset(), right: this.drawerInset() }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "border",
+            "args": [
+              "{ width: { bottom: 1 }, color: readerAppColor(this.drawerSpec().lineRole, this.drawerScheme()) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "height",
+            "args": [
+              "this.drawerSpec().sideHeaderHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "maxFontScale",
+            "args": [
+              "this.drawerSpec().titleMaxFontScale"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "minFontScale",
+            "args": [
+              "this.drawerSpec().titleMinFontScale"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "lineHeight",
+            "args": [
+              "this.drawerSpec().sideTitleLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontSize",
+            "args": [
+              "this.drawerSpec().sideTitleFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontWeight",
+            "args": [
+              "this.drawerSpec().sideTitleFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontFamily",
+            "args": [
+              "this.drawerSpec().sideTitleFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "height",
+            "args": [
+              "this.drawerSpec().handleZone"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.drawerSpec().handleRole, this.drawerScheme())"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "borderRadius",
+            "args": [
+              "3"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "height",
+            "args": [
+              "this.drawerSpec().handleHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "this.drawerSpec().handleWidth"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "padding",
+            "args": [
+              "{ left: this.drawerSpec().contentInset, right: this.drawerSpec().contentInset + this.drawerSpec().closeSize, bottom: this.drawerSpec().titleBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "maxFontScale",
+            "args": [
+              "this.drawerSpec().titleMaxFontScale"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "minFontScale",
+            "args": [
+              "this.drawerSpec().titleMinFontScale"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "lineHeight",
+            "args": [
+              "this.drawerSpec().titleLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontSize",
+            "args": [
+              "this.drawerSpec().titleFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontWeight",
+            "args": [
+              "this.drawerSpec().titleFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "actionSheetHeader",
+            "property": "fontFamily",
+            "args": [
+              "this.drawerSpec().titleFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "drawerClose",
+            "property": "margin",
+            "args": [
+              "this.placement === 'side' ? {} : { top: this.drawerSpec().closeTop, right: this.drawerSpec().closeRight }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "drawerClose",
+            "property": "height",
+            "args": [
+              "this.drawerSpec().closeSize"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "drawerClose",
+            "property": "width",
+            "args": [
+              "this.drawerSpec().closeSize"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "drawerClose",
+            "property": "height",
+            "args": [
+              "this.drawerSpec().closeIcon"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "drawerClose",
+            "property": "width",
+            "args": [
+              "this.drawerSpec().closeIcon"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "padding",
+            "args": [
+              "{ left: 20, right: 20, top: 20, bottom: 17 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "padding",
+            "args": [
+              "{ left: 20, right: 20, top: 20, bottom: 17 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontSize",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.specId === 'local-import-selection' ?\n    'app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9' : 'app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "height",
+            "args": [
+              "1"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontSize",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "margin",
+            "args": [
+              "{ bottom: this.sheetSpec().titleBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "margin",
+            "args": [
+              "{ top: this.sheetSpec().handleTop, bottom: this.sheetSpec().handleBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "borderRadius",
+            "args": [
+              "999"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "height",
+            "args": [
+              "this.sheetSpec().handleHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "this.sheetSpec().handleWidth"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "padding",
+            "args": [
+              "{ left: this.sheetSpec().titleInset, right: this.sheetSpec().titleInset }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.sheetSpec().titleHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "lineHeight",
+            "args": [
+              "this.sheetSpec().titleLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontSize",
+            "args": [
+              "this.sheetSpec().titleFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontWeight",
+            "args": [
+              "this.sheetSpec().titleFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontFamily",
+            "args": [
+              "this.sheetSpec().titleFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "padding",
+            "args": [
+              "this.specId === 'source-switch-window' ? 0 : {\n    left: this.specId === 'tts-config-manager' ? 18 : 12, right: this.specId === 'tts-config-manager' ? 24 : 16,\n}"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "height",
+            "args": [
+              "this.specId === 'source-switch-window' ? 33 : this.specId === 'tts-config-manager' ? 58 : 40"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "margin",
+            "args": [
+              "{ left: 9 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "height",
+            "args": [
+              "18"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "width",
+            "args": [
+              "18"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "height",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "width",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "margin",
+            "args": [
+              "{ left: 1 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "borderRadius",
+            "args": [
+              "8"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "22"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "22"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "responseRegion",
+            "args": [
+              "{ x: -6, y: -6, width: 28, height: 28 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "16"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "16"
+            ]
+          }
+        ],
+        "implementation": "import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { SheetSurfaceSpec, DrawerSurfaceSpec, resolveSheetSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';\nimport type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';\nexport class ReaderBoundedTitleModifier implements AttributeModifier<TextAttribute> {\n    private readonly id: ReaderBoundedSurfaceId;\n    private readonly scheme: string;\n    constructor(id: ReaderBoundedSurfaceId, scheme: string) { this.id = id; this.scheme = scheme; }\n    applyNormalAttribute(instance: TextAttribute): void {\n        const type = this.id === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING :\n            this.id === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE : TYPE_READER_TTS_CONFIGURATION_TITLE;\n        instance.fontFamily(type.fontFamily).fontWeight(type.fontWeight).fontSize(type.fontSizeFp)\n            .fontColor(readerAppColor(this.id === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.scheme));\n        if (this.id === 'source-switch-window')\n            instance.constraintSize({ minWidth: 0 }).height(16)\n                .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number).margin({ left: 7 });\n    }\n}\n@Component\nexport struct ReaderBoundedSurfaceHeader extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderBoundedSurfaceId;\n        title?: string;\n        surfaceWidth?: number;\n        actionEnabled?: boolean;\n        placement?: 'bottom' | 'side';\n        scheme?: 'auto' | 'day' | 'night';\n        leading?: () => void;\n        accessory?: () => void;\n        onAreaChanged?: (oldValue: Area, next: Area) => void;\n        onClose?: () => void;\n        onHandlePanStart?: () => void;\n        onHandlePanUpdate?: (offset: number) => void;\n        onHandlePanEnd?: (offset: number, velocity: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderBoundedSurfaceId = 'source-switch-window';\n    @Prop\n    title: string = '';\n    @Prop\n    surfaceWidth: number = 300;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    placement: 'bottom' | 'side' = 'bottom';\n    @Prop\n    scheme: 'auto' | 'day' | 'night' = 'auto';\n    @BuilderParam\n    leading: () => void = this.emptySlot;\n    @BuilderParam\n    accessory: () => void = this.emptySlot;\n    onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => { };\n    onClose: () => void = (): void => { };\n    onHandlePanStart: () => void = (): void => { };\n    onHandlePanUpdate: (offset: number) => void = (_offset: number): void => { };\n    onHandlePanEnd: (offset: number, velocity: number) => void = (_offset: number, _velocity: number): void => { };\n    @Builder\n    private emptySlot() { }\n    build() {\n        if (this.specId === 'reader-action-sheet') {\n            this.actionSheetHeader();\n        }\n        else if (this.specId === 'local-import-selection' || this.specId === 'local-import-result-content') {\n            this.localImportHeader();\n        }\n        else if (this.specId === 'reader-replace-editor') {\n            .width<\n      >('100%').height<\n      >(28);\n        }\n        else if (this.specId === 'bookshelf-book-action') {\n            this.sheetHeader();\n        }\n        else if (this.specId === 'source-switch-window') {\n            .width<\n      >('100%').height<\n      >(34);\n        }\n        else {\n            this.headerRow();\n        }\n    }\n    private drawerSpec(): DrawerSurfaceSpec { return resolveDrawerSpec('reader-action-sheet'); }\n    private drawerScheme(): string { return this.scheme === 'auto' ? this.appThemeScheme : this.scheme; }\n    private drawerInset(): number {\n        const spec = this.drawerSpec();\n        return this.surfaceWidth <= spec.compactViewportWidth ? spec.compactSideContentInset : spec.sideContentInset;\n    }\n    @Builder\n    private actionSheetHeader() {\n        if (this.placement === 'side') {\n            .width<\n      >('100%').padding<\n      >({ left: this.drawerInset(), right: this.drawerInset() })\n                .margin<\n      >({ bottom: this.drawerSpec().sideHeaderBottom });\n        }\n        else {\n            .width<\n      >('100%');\n        }\n    }\n    @Builder\n    private drawerClose() {\n        .width<\n    >(this.drawerSpec().closeSize).height<\n    >(this.drawerSpec().closeSize).justifyContent<\n    >(FlexAlign.Center)\n            .margin<\n    >(this.placement === 'side' ? {} : { top: this.drawerSpec().closeTop, right: this.drawerSpec().closeRight })\n            .enabled<\n    >(this.actionEnabled).accessibilityText<\n    >(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板')\n            .onClick<\n    >((): void => { if (this.actionEnabled)\n            this.onClose(); });\n    }\n    @Builder\n    private localImportHeader() {\n        .width<\n    >('100%').onAreaChange<\n    >((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));\n    }\n    @Builder\n    private importTitle() {\n        .fontFamily<\n    >(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight<\n    >(TYPE_FILE_IMPORT_TITLE.fontWeight)\n            .fontSize<\n    >(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight<\n    >(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)\n            .fontColor<\n    >(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines<\n    >(1);\n    }\n    private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }\n    @Builder\n    private sheetHeader() {\n        .width<\n    >('100%').margin<\n    >({ bottom: this.sheetSpec().titleBottom });\n    }\n    @Builder\n    private headerRow() {\n        .width<\n    >('100%').height<\n    >(this.specId === 'source-switch-window' ? 33 : this.specId === 'tts-config-manager' ? 58 : 40)\n            .alignItems<\n    >(VerticalAlign.Center)\n            .padding<\n    >(this.specId === 'source-switch-window' ? 0 : {\n            left: this.specId === 'tts-config-manager' ? 18 : 12, right: this.specId === 'tts-config-manager' ? 24 : 16,\n        });\n    }\n    @Builder\n    private titleText() {\n        .layoutWeight<\n    >(1).attributeModifier<\n    >(new ReaderBoundedTitleModifier(this.specId, this.appThemeScheme));\n    }\n    @Builder\n    private closeAction() {\n        if (this.specId === 'source-switch-window') {\n            .width<\n      >(44).height<\n      >(44).margin<\n      >({ left: 1 }).enabled<\n      >(this.actionEnabled)\n                .onClick<\n      >((): void => { if (this.actionEnabled)\n                this.onClose(); });\n        }\n        else {\n            .width<\n      >(16).height<\n      >(16)\n                .responseRegion<\n      >({ x: -6, y: -6, width: 28, height: 28 }).enabled<\n      >(this.actionEnabled)\n                .accessibilityText<\n      >('关闭 TTS 配置').onClick<\n      >((): void => { if (this.actionEnabled)\n                this.onClose(); });\n        }\n    }\n}\n"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSheetActionList.ets",
+      "previousShapeSha256": "edbe361daba6f2b70feb03a1f4620c9910475a8e2bf493ac7d5fb21aa6a86f1d",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderSheetActionList",
+            "publicFields": [
+              {
+                "name": "presentationId",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "isCurrent",
+                "type": "(presentationId: string) => boolean",
+                "decorators": []
+              },
+              {
+                "name": "onMultiSelect",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onBookInfo",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onEditGroup",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onRemoveFromBookshelf",
+                "type": "() => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset }"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderActionSheetAction, ReaderActionSheetContent } from './ReaderActionSheetContent';\nimport { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';\n@Component\nexport struct ReaderSheetActionList extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        presentationId?: string;\n        isCurrent?: (presentationId: string) => boolean;\n        onMultiSelect?: () => void;\n        onBookInfo?: () => void;\n        onEditGroup?: () => void;\n        onRemoveFromBookshelf?: () => void;\n        private mounted?: boolean;\n        private dispatchedId?: string;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    presentationId: string = '';\n    isCurrent: (presentationId: string) => boolean = (_id: string): boolean => false;\n    onMultiSelect: () => void = (): void => { };\n    onBookInfo: () => void = (): void => { };\n    onEditGroup: () => void = (): void => { };\n    onRemoveFromBookshelf: () => void = (): void => { };\n    private mounted: boolean = false;\n    private dispatchedId: string = '';\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    private surfaceSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }\n    private actionToken(id: string, actionId: string): string {\n        return `${id}::${actionId}`;\n    }\n    private actionId(token: string): string {\n        const separator = token.lastIndexOf('::');\n        return separator < 0 ? '' : token.slice(separator + 2);\n    }\n    private presentationFromToken(token: string): string {\n        const separator = token.lastIndexOf('::');\n        return separator < 0 ? '' : token.slice(0, separator);\n    }\n    private actionItems(id: string): ReaderActionSheetAction[] {\n        const night = this.appThemeScheme === 'night';\n        return [\n            new ReaderActionSheetAction(this.actionToken(id, 'multi-select'), '多选', '', '', '', true, night ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch'), 'default', false),\n            new ReaderActionSheetAction(this.actionToken(id, 'book-info'), '书籍信息', '', '', '', true, night ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about'), 'default', false),\n            new ReaderActionSheetAction(this.actionToken(id, 'edit-group'), '编辑分组', '', '', '', true, night ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'), 'default', false),\n            new ReaderActionSheetAction(this.actionToken(id, 'remove'), '移除书架', '', '移除后可在书籍详情中重新加入', '', true, night ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash'), 'danger', false),\n        ];\n    }\n    private dispatch(id: string, action: () => void): void {\n        if (!this.mounted || id.length === 0 || id !== this.presentationId ||\n            this.dispatchedId === id)\n            return;\n        try {\n            if (!this.isCurrent(id))\n                return;\n        }\n        catch (_error) {\n            return;\n        }\n        this.dispatchedId = id;\n        action();\n    }\n    private dispatchToken(token: string): void {\n        const id = this.presentationFromToken(token);\n        const actionId = this.actionId(token);\n        if (actionId === 'multi-select')\n            this.dispatch(id, (): void => this.onMultiSelect());\n        else if (actionId === 'book-info')\n            this.dispatch(id, (): void => this.onBookInfo());\n        else if (actionId === 'edit-group')\n            this.dispatch(id, (): void => this.onEditGroup());\n        else if (actionId === 'remove')\n            this.dispatch(id, (): void => this.onRemoveFromBookshelf());\n    }\n    build() {\n        .width<\n    >('100%')\n            .padding<\n    >({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset });\n    }\n}\n"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderActionMenuSurface.ets",
+      "previousShapeSha256": "62c61dcc381fdaae97d6b8dec47e66dc0caec0b997d633b38bfff28486bcd33a",
+      "shape": {
+        "types": [
+          {
+            "name": "ReaderActionMenuVariant",
+            "type": "'menu' | ActionSheetSpecId"
+          },
+          {
+            "name": "ReaderActionTone",
+            "type": "'default' | 'danger'"
+          },
+          {
+            "name": "ReaderActionMenuSpecId",
+            "type": "'bookshelf-more-menu' | 'reader-more-menu'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "ReaderMenuActionView",
+            "publicFields": [
+              {
+                "name": "id",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "label",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "enabled",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "icon",
+                "type": "Resource | undefined",
+                "decorators": []
+              },
+              {
+                "name": "accessibilityLabel",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "section",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "secondary",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "trailing",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "tone",
+                "type": "ReaderActionTone",
+                "decorators": []
+              },
+              {
+                "name": "showChevron",
+                "type": "boolean",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "ReaderActionMenuSurface",
+            "publicFields": [
+              {
+                "name": "variant",
+                "type": "ReaderActionMenuVariant",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "specId",
+                "type": "ReaderActionMenuSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scheme",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actions",
+                "type": "ReaderMenuActionView[]",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "availableWidth",
+                "type": "string | number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "viewportHeight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onAction",
+                "type": "(id: string) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "menuActions",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "menuActions",
+            "property": "height",
+            "args": [
+              "Math.max(0, Math.min(this.spec().actionHeight * this.actions.length, this.viewportHeight))"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "menuActions",
+            "property": "width",
+            "args": [
+              "this.availableWidth"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "menuActions",
+            "property": "height",
+            "args": [
+              "this.spec().actionHeight * this.actions.length"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "menuActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "opacity",
+            "args": [
+              "this.action(id).enabled || this.spec().actionMutesContent ? 1 : 0.45"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "backgroundColor",
+            "args": [
+              "Color.Transparent"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "height",
+            "args": [
+              "this.spec().actionHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "padding",
+            "args": [
+              "{ left: this.spec().actionPaddingLeft, right: this.spec().actionPaddingRight }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "height",
+            "args": [
+              "this.spec().actionHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "opacity",
+            "args": [
+              "this.action(id).enabled || !this.spec().actionMutesContent ? 1 : 0.45"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "height",
+            "args": [
+              "this.spec().actionIconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "width",
+            "args": [
+              "this.spec().actionIconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(!this.action(id).enabled && this.spec().actionMutesContent ?\n    'TOK_MUTED' : this.spec().actionTextRole, this.effectiveScheme())"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "lineHeight",
+            "args": [
+              "this.spec().actionLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "fontSize",
+            "args": [
+              "this.spec().actionFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "fontWeight",
+            "args": [
+              "this.spec().actionFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "fontFamily",
+            "args": [
+              "this.spec().actionFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.spec().dividerRole, this.effectiveScheme())"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "height",
+            "args": [
+              "this.spec().dividerHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionRow",
+            "property": "width",
+            "args": [
+              "this.dividerWidth()"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "groupedActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "bookshelfActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.actionSheetSpec().quickActionHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "margin",
+            "args": [
+              "{ top: this.actionSheetSpec().quickSeparatorTop, bottom: this.actionSheetSpec().quickSeparatorBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "backgroundColor",
+            "args": [
+              "this.color('line')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().dividerHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickActions",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionGroup",
+            "property": "margin",
+            "args": [
+              "{ bottom: this.actionSheetSpec().groupGap }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionGroup",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionGroup",
+            "property": "borderRadius",
+            "args": [
+              "this.actionSheetSpec().groupRadius"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionGroup",
+            "property": "backgroundColor",
+            "args": [
+              "this.color('group')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "actionGroup",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "padding",
+            "args": [
+              "{ top: 4, bottom: 4 }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.actionSheetSpec().sectionHeadingHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "fontWeight",
+            "args": [
+              "this.actionSheetSpec().emphasisFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "fontFamily",
+            "args": [
+              "this.actionSheetSpec().emphasisFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().sectionHeadingLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "sectionHeading",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().sectionHeadingFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "opacity",
+            "args": [
+              "this.action(id).enabled ? 1 : 0.48"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "padding",
+            "args": [
+              "{ top: 12, bottom: 12 }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.actionSheetSpec().quickActionHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "borderRadius",
+            "args": [
+              "this.actionSheetSpec().groupRadius"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "backgroundColor",
+            "args": [
+              "this.color('group')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().quickIconContainer"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "width",
+            "args": [
+              "this.actionSheetSpec().quickIconContainer"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().iconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "width",
+            "args": [
+              "this.actionSheetSpec().iconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontColor",
+            "args": [
+              "this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontWeight",
+            "args": [
+              "this.actionSheetSpec().emphasisFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontFamily",
+            "args": [
+              "this.actionSheetSpec().emphasisFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().quickLabelLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().quickLabelFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontWeight",
+            "args": [
+              "this.actionSheetSpec().regularFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontFamily",
+            "args": [
+              "this.actionSheetSpec().regularFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().quickSecondaryLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "quickAction",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().quickSecondaryFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "opacity",
+            "args": [
+              "this.action(id).enabled ? 1 : 0.48"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "padding",
+            "args": [
+              "{ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,\n    top: this.variant === 'bookshelf' ? 8 : 10, bottom: this.variant === 'bookshelf' ? 8 : 10 }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.action(id).secondary.length > 0 ? this.actionSheetSpec().rowSecondaryHeight : this.actionSheetSpec().rowHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "borderRadius",
+            "args": [
+              "this.actionSheetSpec().groupRadius"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.action(id).tone === 'danger' ? 'TOK_DOWNLOAD_DANGER' : 'TOK_GREEN', this.effectiveScheme())"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().bookshelfIconContainer"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "this.actionSheetSpec().bookshelfIconContainer"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "colorFilter",
+            "args": [
+              "this.bookshelfIconFilter()"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().iconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "this.actionSheetSpec().iconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().iconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "this.actionSheetSpec().iconSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontColor",
+            "args": [
+              "this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontWeight",
+            "args": [
+              "this.action(id).tone === 'danger' ? this.actionSheetSpec().emphasisFontWeight : this.actionSheetSpec().regularFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontFamily",
+            "args": [
+              "this.action(id).tone === 'danger' ? this.actionSheetSpec().emphasisFontFamily : this.actionSheetSpec().regularFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().labelLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().labelFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontWeight",
+            "args": [
+              "this.actionSheetSpec().regularFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontFamily",
+            "args": [
+              "this.actionSheetSpec().regularFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().secondaryLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().secondaryFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontWeight",
+            "args": [
+              "this.actionSheetSpec().regularFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontFamily",
+            "args": [
+              "this.actionSheetSpec().regularFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().secondaryLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().secondaryFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontWeight",
+            "args": [
+              "this.actionSheetSpec().regularFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontFamily",
+            "args": [
+              "this.actionSheetSpec().regularFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "lineHeight",
+            "args": [
+              "this.actionSheetSpec().trailingLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "fontSize",
+            "args": [
+              "this.actionSheetSpec().trailingFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().chevronSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "this.actionSheetSpec().chevronSize"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "margin",
+            "args": [
+              "{ left: this.actionSheetSpec().dividerInset }"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "opacity",
+            "args": [
+              "this.variant === 'bookshelf' ? 1 : 0.45"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "backgroundColor",
+            "args": [
+              "this.variant === 'bookshelf' ? readerAppColor('TOK_ROW_DIVIDER', this.effectiveScheme()) : this.color('line')"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "height",
+            "args": [
+              "this.actionSheetSpec().dividerHeight"
+            ]
+          },
+          {
+            "owner": "ReaderActionMenuSurface",
+            "method": "row",
+            "property": "width",
+            "args": [
+              "`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`"
+            ]
+          }
+        ],
+        "implementation": "import { ColorMetrics } from '@kit.ArkUI';\nimport { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActionSheetSpec, type ActionSheetSpecId } from './ReaderSurfaceSpecs';\nimport { readerAppColor } from './ReaderThemeRegistry';\nexport type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;\nexport type ReaderActionTone = 'default' | 'danger';\nexport type ReaderActionMenuSpecId = 'bookshelf-more-menu' | 'reader-more-menu';\nexport class ReaderMenuActionView {\n    readonly id: string;\n    readonly label: string;\n    readonly enabled: boolean;\n    readonly icon: Resource | undefined;\n    readonly accessibilityLabel: string;\n    readonly section: string;\n    readonly secondary: string;\n    readonly trailing: string;\n    readonly tone: ReaderActionTone;\n    readonly showChevron: boolean;\n    constructor(id: string, label: string, enabled: boolean = true, icon: Resource | undefined = undefined, accessibilityLabel: string = label, section: string = '', secondary: string = '', trailing: string = '', tone: ReaderActionTone = 'default', showChevron: boolean = false) {\n        this.id = id;\n        this.label = label;\n        this.enabled = enabled;\n        this.icon = icon;\n        this.accessibilityLabel = accessibilityLabel;\n        this.section = section;\n        this.secondary = secondary;\n        this.trailing = trailing;\n        this.tone = tone;\n        this.showChevron = showChevron;\n    }\n}\n@Component\nexport struct ReaderActionMenuSurface extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        variant?: ReaderActionMenuVariant;\n        specId?: ReaderActionMenuSpecId;\n        scheme?: string;\n        actions?: ReaderMenuActionView[];\n        availableWidth?: string | number;\n        viewportHeight?: number;\n        onAction?: (id: string) => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    variant: ReaderActionMenuVariant = 'menu';\n    @Prop\n    specId: ReaderActionMenuSpecId = 'reader-more-menu';\n    @Prop\n    scheme: string = 'day';\n    @Prop\n    actions: ReaderMenuActionView[] = [];\n    @Prop\n    availableWidth: string | number = '100%';\n    @Prop\n    viewportHeight: number = 0;\n    onAction: (id: string) => void = (): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    build() {\n        if (this.variant === 'menu') {\n            this.menuActions();\n        }\n        else if (this.variant === 'quick') {\n            this.quickActions();\n        }\n        else if (this.variant === 'bookshelf') {\n            this.bookshelfActions();\n        }\n        else {\n            this.groupedActions();\n        }\n    }\n    @Builder\n    private menuActions() {\n        .width<\n    >(this.availableWidth)\n            .height<\n    >(Math.max(0, Math.min(this.spec().actionHeight * this.actions.length, this.viewportHeight)))\n            .clip<\n    >(true).scrollBar<\n    >(BarState.Auto).align<\n    >(Alignment.TopStart);\n    }\n    @Builder\n    private actionRow(id: string, showDivider: boolean) {\n        .width<\n    >('100%').height<\n    >(this.spec().actionHeight)\n            .backgroundColor<\n    >(Color.Transparent)\n            .opacity<\n    >(this.action(id).enabled || this.spec().actionMutesContent ? 1 : 0.45)\n            .enabled<\n    >(this.action(id).enabled)\n            .accessibilityText<\n    >(this.action(id).accessibilityLabel)\n            .onClick<\n    >((): void => this.commitAction(id));\n    }\n    @Builder\n    private groupedActions() {\n        .width<\n    >('100%');\n    }\n    @Builder\n    private bookshelfActions() {\n        .width<\n    >('100%');\n    }\n    @Builder\n    private quickActions() {\n        .width<\n    >('100%');\n    }\n    @Builder\n    private actionGroup(id: string, first: number) {\n        .width<\n    >('100%').margin<\n    >({ bottom: this.actionSheetSpec().groupGap });\n    }\n    @Builder\n    private sectionHeading(id: string) {\n        if (this.action(id).section.length > 0) {\n            .fontSize<\n      >(this.actionSheetSpec().sectionHeadingFontSize).lineHeight<\n      >(this.actionSheetSpec().sectionHeadingLineHeight)\n                .fontFamily<\n      >(this.actionSheetSpec().emphasisFontFamily).fontWeight<\n      >(this.actionSheetSpec().emphasisFontWeight)\n                .fontColor<\n      >(this.color('muted')).width<\n      >('100%').constraintSize<\n      >({ minHeight: this.actionSheetSpec().sectionHeadingHeight }).padding<\n      >({ top: 4, bottom: 4 });\n        }\n    }\n    @Builder\n    private quickAction(id: string) {\n        .layoutWeight<\n    >(1).constraintSize<\n    >({ minHeight: this.actionSheetSpec().quickActionHeight }).padding<\n    >({ top: 12, bottom: 12 })\n            .justifyContent<\n    >(FlexAlign.Center).opacity<\n    >(this.action(id).enabled ? 1 : 0.48).enabled<\n    >(this.action(id).enabled)\n            .accessibilityGroup<\n    >(true).accessibilityText<\n    >(this.accessibilityLabel(this.action(id))).onClick<\n    >((): void => this.commitAction(id));\n    }\n    @Builder\n    private row(id: string, index: number) {\n        .width<\n    >('100%');\n    }\n    private startsSection(index: number): boolean {\n        if (index < 0 || index >= this.actions.length)\n            return false;\n        return index === 0 || this.actions[index].section !== this.actions[index - 1].section;\n    }\n    private actionIndex(id: string): number {\n        return this.actions.findIndex((item: ReaderMenuActionView): boolean => item.id === id);\n    }\n    private sectionIds(first: number): string[] {\n        return this.actions.filter((_item: ReaderMenuActionView, index: number): boolean => index >= first && (index === first || this.startsSection(index)))\n            .map((item: ReaderMenuActionView): string => item.id);\n    }\n    private groupActions(id: string, first: number): ReaderMenuActionView[] {\n        const start = Math.max(first, this.actionIndex(id));\n        let end = start + 1;\n        while (end < this.actions.length && !this.startsSection(end))\n            end++;\n        return this.actions.slice(start, end);\n    }\n    private actionSheetSpec(): ActionSheetSurfaceSpec {\n        return resolveActionSheetSpec(this.variant === 'bookshelf' ? 'bookshelf' : this.variant === 'quick' ? 'quick' : 'grouped');\n    }\n    private bookshelfIconFilter(): ColorFilter {\n        const color = ColorMetrics.resourceColor(readerAppColor('TOK_DOWNLOAD_GREEN_INK', this.effectiveScheme()));\n        return new ColorFilter([\n            0, 0, 0, 0, color.red,\n            0, 0, 0, 0, color.green,\n            0, 0, 0, 0, color.blue,\n            0, 0, 0, color.alpha / 255, 0,\n        ]);\n    }\n    private spec(): PopupSurfaceSpec { return resolvePopupSpec(this.specId); }\n    private action(id: string): ReaderMenuActionView {\n        return this.actions.find((action: ReaderMenuActionView): boolean => action.id === id) ??\n            new ReaderMenuActionView(id, '', false);\n    }\n    private dividerWidth(): string | number {\n        return typeof this.availableWidth === 'number' ?\n            Math.max(0, this.availableWidth - this.spec().dividerInset * 2) :\n            `calc(100% - ${this.spec().dividerInset * 2}vp)`;\n    }\n    private effectiveScheme(): string { return this.scheme === 'auto' ? this.appThemeScheme : this.scheme; }\n    private color(role: 'ink' | 'muted' | 'danger' | 'line' | 'group'): string {\n        const spec = this.actionSheetSpec();\n        return readerAppColor(role === 'ink' ? spec.inkRole : role === 'muted' ? spec.mutedRole : role === 'danger' ? spec.dangerRole : role === 'group' ? spec.groupRole : spec.lineRole, this.effectiveScheme());\n    }\n    private accessibilityLabel(action: ReaderMenuActionView): string {\n        const state = action.enabled ? '' : '，当前不可用';\n        const detail = action.secondary.length > 0 ? `，${action.secondary}` : '';\n        const trailing = action.trailing.length > 0 ? `，${action.trailing}` : '';\n        return `${action.label}${detail}${trailing}${state}`;\n    }\n    private commitAction(id: string): void {\n        if (this.mounted && this.action(id).enabled)\n            this.onAction(id);\n    }\n}\n"
+      }
+    }
+  ],
+  "consumerUpdates": [
+    {
+      "component": "ReaderActionSheetContent",
+      "previousConsumers": [
+        {
+          "file": "features/common/ReaderSheetActionList.ets",
+          "method": "features/common/ReaderSheetActionList.ets#ReaderSheetActionList#build",
+          "component": "ReaderActionSheetContent",
+          "specId": "'quick'",
+          "keys": [
+            "variant",
+            "actions",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/manga/MangaDownloadOperationsPanel.ets",
+          "method": "features/manga/MangaDownloadOperationsPanel.ets#MangaDownloadOperationsPanel#build",
+          "component": "ReaderActionSheetContent",
+          "specId": "'grouped'",
+          "keys": [
+            "variant",
+            "actions",
+            "scheme",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#morePanel",
+          "component": "ReaderActionSheetContent",
+          "specId": "this.moreMenuVariant",
+          "keys": [
+            "variant",
+            "actions",
+            "scheme",
+            "onAction"
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/common/ReaderSheetActionList.ets",
+          "method": "features/common/ReaderSheetActionList.ets#ReaderSheetActionList#build",
+          "component": "ReaderActionSheetContent",
+          "specId": "'bookshelf'",
+          "keys": [
+            "variant",
+            "actions",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/manga/MangaDownloadOperationsPanel.ets",
+          "method": "features/manga/MangaDownloadOperationsPanel.ets#MangaDownloadOperationsPanel#build",
+          "component": "ReaderActionSheetContent",
+          "specId": "'grouped'",
+          "keys": [
+            "variant",
+            "actions",
+            "scheme",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#morePanel",
+          "component": "ReaderActionSheetContent",
+          "specId": "this.moreMenuVariant",
+          "keys": [
+            "variant",
+            "actions",
+            "scheme",
+            "onAction"
+          ]
+        }
+      ]
+    }
+  ],
+  "budgetUpdates": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderActionMenuSurface.ets",
+      "kind": "backgroundColor",
+      "previous": 6,
+      "current": 7
+    }
+  ]
+}

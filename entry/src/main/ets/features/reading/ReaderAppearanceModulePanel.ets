@@ -1,3 +1,5 @@
+import { TYPE_READER_THEME_SUMMARY_PHONE, TYPE_READER_THEME_SUMMARY_TABLET } from '../common/ReaderTypography';
+import { TYPE_READER_APPEARANCE_QUICK_COMPAT_COMPACT_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_QUICK_COMPAT_FONT_SECTION_LABEL, TYPE_READER_APPEARANCE_QUICK_COMPAT_THEME_SECTION_LABEL } from '../common/ReaderTypography';
 import { readerControlAppearanceThemeSwatch, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts, readerRegisteredFontFamily } from '../common/ReaderFonts';
@@ -74,20 +76,20 @@ export struct ReaderAppearanceModulePanel {
           .layoutWeight(1)
           .constraintSize({ maxWidth: this.themeTitleWidth() })
           .height(10)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(9)
-          .lineHeight(9.9)
+          .fontFamily(TYPE_READER_APPEARANCE_QUICK_COMPAT_THEME_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_APPEARANCE_QUICK_COMPAT_THEME_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_READER_APPEARANCE_QUICK_COMPAT_THEME_SECTION_LABEL.fontSizeFp)
+          .lineHeight(TYPE_READER_APPEARANCE_QUICK_COMPAT_THEME_SECTION_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
 
         Text(this.themeSummary())
           .width(88)
           .height(9)
           .margin({ left: this.themeSummaryGap(), top: 3.95 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(this.isTablet ? 8 : 7.5)
-          .lineHeight(8)
+          .fontFamily(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontFamily : TYPE_READER_THEME_SUMMARY_PHONE.fontFamily)
+          .fontWeight(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontWeight : TYPE_READER_THEME_SUMMARY_PHONE.fontWeight)
+          .fontSize(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontSizeFp : TYPE_READER_THEME_SUMMARY_PHONE.fontSizeFp)
+          .lineHeight((this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.lineHeightFp : TYPE_READER_THEME_SUMMARY_PHONE.lineHeightFp) as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.End)
           .maxLines(1);
@@ -161,10 +163,10 @@ export struct ReaderAppearanceModulePanel {
         .width('100%')
         .constraintSize({ maxWidth: this.sectionWidth() - 6 })
         .height(10)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(9)
-        .lineHeight(9.9)
+        .fontFamily(TYPE_READER_APPEARANCE_QUICK_COMPAT_FONT_SECTION_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_APPEARANCE_QUICK_COMPAT_FONT_SECTION_LABEL.fontWeight)
+        .fontSize(TYPE_READER_APPEARANCE_QUICK_COMPAT_FONT_SECTION_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_APPEARANCE_QUICK_COMPAT_FONT_SECTION_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .position({ x: 0, y: 4 });
 
@@ -204,9 +206,9 @@ export struct ReaderAppearanceModulePanel {
       .backgroundColor(this.isActiveFont(fontId) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
       .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceFontSlotFamily(this.snapshot, fontId)))
-      .fontWeight(FontWeight.Regular)
-      .fontSize(8)
-      .lineHeight(10)
+      .fontWeight(TYPE_READER_APPEARANCE_QUICK_COMPAT_COMPACT_FONT_CELL_PREVIEW.fontWeight as number)
+      .fontSize(TYPE_READER_APPEARANCE_QUICK_COMPAT_COMPACT_FONT_CELL_PREVIEW.fontSizeFp)
+      .lineHeight(TYPE_READER_APPEARANCE_QUICK_COMPAT_COMPACT_FONT_CELL_PREVIEW.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .maxLines(1)

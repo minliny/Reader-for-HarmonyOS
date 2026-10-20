@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-06",
+  "scope": "Three genuinely separate page layouts requested by user; supersedes accidental one-layout/four-state interpretation.",
+  "worktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+  "artifactKind": "unconfirmed custom design alternatives",
+  "targetLogicalViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "dataKind": "fictional source samples, not live source metrics",
+  "actualDisplayedOrder": "1 bookshelf-context continuous list, 2 chapter comparison ledger, 3 reading-context fixed drawer",
+  "options": [
+    {
+      "displayedOption": 1,
+      "file": "01-bookshelf-list.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-0af0cb7d-90fd-445c-8cdd-dd471a17b438.png",
+      "direction": "bookshelf book context plus source-name-first grouped list",
+      "sha256": "b5e1f3c8a0aca04e2ea077b760434acb11e7abe2b8635e8143ef737c399bd606",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedOption": 2,
+      "file": "02-chapter-ledger.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-5e02c3eb-7b83-4341-86aa-c7a8ef299703.png",
+      "direction": "unboxed compact book summary and chapter-emphasis two-column ledger",
+      "sha256": "412157d305c5170d9177c780cb16bf5ac9b9a2cf6c23406fe2db8efc9abc7d70",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedOption": 3,
+      "file": "03-reading-drawer.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-4bed4d27-e7d0-4a77-816b-eb021d3b4cc9.png",
+      "direction": "fixed-height source drawer retaining reading context",
+      "sha256": "3f8b750ef470d8daf7c3ed8654b7d0cd1e237df6a4a1af9b7fbbb01323224eb8",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    }
+  ],
+  "references": [
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/bookshelf--list--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/search--results--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/book-actions--default--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/reader--normal--day--phone.png"
+  ],
+  "contentInventory": {
+    "bookContext": [
+      "title",
+      "author",
+      "latest chapter",
+      "current source"
+    ],
+    "discovery": [
+      "ongoing state",
+      "distinct-source count",
+      "stop while ongoing; retry/recheck when ended"
+    ],
+    "candidate": [
+      "source identity",
+      "candidate latest chapter or explicit unknown",
+      "search request latency or local pending/failure state",
+      "inline retry when appropriate"
+    ],
+    "selection": [
+      "tap target row to switch",
+      "preserve old choice and chapter/progress until transaction confirmed",
+      "switching state prevents duplicate selection"
+    ]
+  },
+  "dynamicDesignConstraints": [
+    "Candidate identity uses sourceId and bookUrl in implementation; illustration uses unique fictional sources.",
+    "New candidates append, existing metadata updates in place; touch/scroll delay reordering.",
+    "Reserved metadata/status slots and consistent row height within each layout.",
+    "Rechecking preserves candidates and chapter data; unknown metrics have no numeric fabrication.",
+    "Search latency indicates search request duration, not body reading speed, quality or proven readability.",
+    "Drawer height remains fixed; longer candidates use internal scroll region.",
+    "Selected option still needs stopped, rechecking, switching, error/empty and long-text refinements."
+  ],
+  "staticImageLimitations": [
+    "Image 1 omits an explicit latest-chapter label in book summary and redundantly prefixes unknown candidate chapters with Latest; refine if selected.",
+    "Image 1 current-source name glyph is generated imperfectly; implementation must use exact 青溪书阁 data.",
+    "Generated covers vary between alternatives; selected direction must reuse one actual cover asset.",
+    "Actual interaction, incremental updates, sorting anchors, long texts, accessibility, other themes/viewports, native and device behavior have not been tested by these mockups."
+  ],
+  "verification": {
+    "staticImageReview": true,
+    "dynamicInteraction": false,
+    "native": false,
+    "userAcceptance": false
+  },
+  "demoModifiedInThisIteration": false,
+  "nativeModifiedInThisIteration": false,
+  "supersededBy": "../page-alternatives-success-only/manifest.json",
+  "supersededReason": "Human corrected rule: selectable candidates require successful source checks."
+}

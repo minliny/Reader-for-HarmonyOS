@@ -3,6 +3,7 @@ import {
   cancelReaderPagePan,
   createReaderPageGestureState,
   finishReaderPagePan,
+  READER_PAGE_GESTURE_BOOKMARK_SLOP,
   READER_PAGE_GESTURE_LONG_PRESS_MS,
   readerPageGestureCanTap,
   readerPagePointerCoordinate,
@@ -40,13 +41,13 @@ export struct ReaderPageInteractionLayer {
   currentTapOnly: (() => boolean) | undefined = undefined;
   @Prop @Watch('onReadinessChanged') readinessRevision: number = 0;
   @Prop @Watch('onInputRevisionChanged') inputRevision: number = 0;
-  @Prop viewportWidth: number = 0;
-  @Prop viewportHeight: number = 0;
+  @Prop @Watch('onPointerGeometryChanged') viewportWidth: number = 0;
+  @Prop @Watch('onPointerGeometryChanged') viewportHeight: number = 0;
   @Prop allowTextSelection: boolean = false;
   /** Pointer streams beginning in system-owned edge bands never enter the reader arena. */
-  @Prop systemGestureLeftInset: number = 16;
-  @Prop systemGestureRightInset: number = 16;
-  @Prop systemGestureBottomInset: number = 24;
+  @Prop @Watch('onPointerGeometryChanged') systemGestureLeftInset: number = 16;
+  @Prop @Watch('onPointerGeometryChanged') systemGestureRightInset: number = 16;
+  @Prop @Watch('onPointerGeometryChanged') systemGestureBottomInset: number = 24;
 
   onTurn: (direction: ReaderPageTurnDirection) => ReaderPageTurnOutcome =
     (_direction: ReaderPageTurnDirection): ReaderPageTurnOutcome => ({ kind: 'busy' });
@@ -60,6 +61,8 @@ export struct ReaderPageInteractionLayer {
   onBookmarkStateChange: (state: ReaderPageGestureState) => void =
     (_state: ReaderPageGestureState): void => {};
   onBookmarkRelease: (changed: boolean) => void = (_changed: boolean): void => {};
+  onBookmarkUnavailable: (reason: 'busy' | 'unavailable') => void =
+    (_reason: 'busy' | 'unavailable'): void => {};
   onOpenControl: () => void = (): void => {};
   onManualInteraction: () => void = (): void => {};
   onRegrab: (width: number, height: number, x: number, y: number, time: number) => ReaderPageGestureState | undefined =
@@ -94,6 +97,21 @@ export struct ReaderPageInteractionLayer {
   private longPressTimer: number = -1;
   private pointerLastActivityMs: number = 0;
   private inputClock: ReaderPageInputClock = new ReaderPageInputClock();
+  private pointerGeometryFrozen: boolean = false;
+  private pointerTargetWidth: number = 0;
+  private pointerTargetHeight: number = 0;
+  private pointerStageWidth: number = 0;
+  private pointerStageHeight: number = 0;
+  private pointerTargetX: number = 0;
+  private pointerTargetY: number = 0;
+  private pointerLeftInset: number = 0;
+  private pointerRightInset: number = 0;
+  private pointerBottomInset: number = 0;
+  private pointerInputStartX: number = 0;
+  private pointerInputStartY: number = 0;
+  private lastInputX: number = 0;
+  private lastInputY: number = 0;
+  private bookmarkUnavailableReported: boolean = false;
 
   aboutToDisappear(): void {
     this.cancelPan();
@@ -168,6 +186,7 @@ export struct ReaderPageInteractionLayer {
       return;
     }
     if (!this.onPointerStart(pointer.id)) return;
+    this.freezePointerGeometry(event, pointer);
     this.inputClock = new ReaderPageInputClock();
     const eventTimeMs = this.eventTimeMs(event);
     const localX = this.pageLocalX(event, pointer);
@@ -213,9 +232,18 @@ export struct ReaderPageInteractionLayer {
     this.armLongPressTimer();
   }
 
-  private updateRawPointer(event: TouchEvent, pointer: TouchObject, allowRegrab: boolean = true): void {
+  private updateRawPointer(event: TouchEvent, pointer: TouchObject, allowRegrab: boolean = true,
+    finalSample: boolean = false): void {
+    if (!this.pointerGeometryMatches(event)) {
+      this.onPointerGeometryChanged();
+      return;
+    }
     const localX = this.pageLocalX(event, pointer);
     const localY = this.pageLocalY(event, pointer);
+    const inputOffsetX = pointer.x - this.pointerInputStartX;
+    const inputOffsetY = pointer.y - this.pointerInputStartY;
+    this.lastInputX = pointer.x;
+    this.lastInputY = pointer.y;
     if (this.tapOnlyPointer) {
       const eventTimeMs = this.eventTimeMs(event);
       this.updateVelocity(localX, localY, eventTimeMs);
@@ -229,6 +257,9 @@ export struct ReaderPageInteractionLayer {
         localY,
         this.velocityY,
         eventTimeMs,
+        inputOffsetX,
+        inputOffsetY,
+        finalSample,
       );
       // A new DOWN may still be the next rapid tap. Replacing the in-flight
       // intent on DOWN made every second tap merely re-release the same page.
@@ -243,6 +274,16 @@ export struct ReaderPageInteractionLayer {
             this.deferredSegmentReserved = false;
             this.onDeferredSegmentPromote();
           }
+          // The re-grab's visible pose is in stage coordinates. Preserve that
+          // pose in physical vp too, instead of restarting its commit distance
+          // at the small movement made since this new DOWN.
+          const inputPose = readerPagePointerCoordinate(regrab.currentOffsetX,
+            this.pointerStageWidth, Math.max(1,
+              this.pointerTargetWidth - this.pointerLeftInset - this.pointerRightInset));
+          this.pointerInputStartX = pointer.x - inputPose;
+          this.pointerInputStartY = pointer.y;
+          regrab.inputOffsetX = inputPose;
+          regrab.inputOffsetY = 0;
           this.gestureState = regrab;
           this.reportManualInteraction();
           this.clearLongPressTimer();
@@ -250,6 +291,7 @@ export struct ReaderPageInteractionLayer {
           this.ownPointer(event);
         }
       }
+      if (this.tapOnlyPointer) this.reportBookmarkUnavailable('busy');
       this.lastLocalX = localX;
       this.lastLocalY = localY;
       this.armPointerWatchdog();
@@ -267,7 +309,11 @@ export struct ReaderPageInteractionLayer {
         localY,
         this.velocityY,
         eventTimeMs,
+        inputOffsetX,
+        inputOffsetY,
+        finalSample,
       );
+      this.reportBookmarkUnavailable('unavailable');
       this.lastLocalX = localX;
       this.lastLocalY = localY;
       this.armPointerWatchdog();
@@ -287,6 +333,9 @@ export struct ReaderPageInteractionLayer {
       localY,
       this.velocityY,
       eventTimeMs,
+      inputOffsetX,
+      inputOffsetY,
+      finalSample,
     );
     const pageOwnerBlocked = priorOwner === 'undecided' && this.isPageOwner(this.gestureState) &&
       this.gestureState.direction !== undefined && !this.canStartTurn(this.gestureState.direction);
@@ -305,6 +354,7 @@ export struct ReaderPageInteractionLayer {
       if (pageOwnerBlocked && this.gestureState.direction !== undefined) {
         this.onPreparationNeeded(this.gestureState.direction);
       }
+      if (bookmarkBlocked) this.reportBookmarkUnavailable('unavailable');
       return;
     }
     this.onGestureStateChange(this.gestureState);
@@ -323,7 +373,8 @@ export struct ReaderPageInteractionLayer {
   private finishRawPointer(event: TouchEvent, pointer: TouchObject): void {
     // UP can contain the only threshold-crossing sample. Admission, direction
     // and the last visible posture must consume it before tap/settle dispatch.
-    this.updateRawPointer(event, pointer, false);
+    this.updateRawPointer(event, pointer, false, true);
+    if (this.activePointerId < 0) return;
     const localX = this.pageLocalX(event, pointer);
     const localY = this.pageLocalY(event, pointer);
     const viewportWidth = this.pageViewportWidth(event);
@@ -347,6 +398,8 @@ export struct ReaderPageInteractionLayer {
           localY,
           this.velocityY,
           eventTimeMs,
+          pointer.x - this.pointerInputStartX,
+          pointer.y - this.pointerInputStartY,
         ).direction;
       }
       this.gestureState = createReaderPageGestureState();
@@ -371,6 +424,8 @@ export struct ReaderPageInteractionLayer {
         localY,
         this.velocityY,
         eventTimeMs,
+        pointer.x - this.pointerInputStartX,
+        pointer.y - this.pointerInputStartY,
       );
       this.gestureState = createReaderPageGestureState();
       this.onGestureStateChange(this.gestureState);
@@ -409,6 +464,8 @@ export struct ReaderPageInteractionLayer {
       localY,
       this.velocityY,
       eventTimeMs,
+      pointer.x - this.pointerInputStartX,
+      pointer.y - this.pointerInputStartY,
     );
     decision = this.onGestureDecision(decision);
     this.gestureState = decision.state;
@@ -428,6 +485,10 @@ export struct ReaderPageInteractionLayer {
   }
 
   private cancelPan(): void {
+    if (this.tapOnlyPointer) {
+      this.gestureState = createReaderPageGestureState();
+      return;
+    }
     if (this.pointerRejected) {
       this.gestureState = createReaderPageGestureState();
       this.onGestureStateChange(this.gestureState);
@@ -439,6 +500,10 @@ export struct ReaderPageInteractionLayer {
     }
     this.gestureState = cancelled;
     this.onGestureStateChange(this.gestureState);
+    if (cancelled.owner === 'bookmark') {
+      this.onBookmarkStateChange(cancelled);
+      this.onBookmarkRelease(false);
+    }
   }
 
   private handleRawTap(localX: number, viewportWidth: number): void {
@@ -496,24 +561,73 @@ export struct ReaderPageInteractionLayer {
   }
 
   private pageLocalX(event: TouchEvent, pointer: TouchObject): number {
-    const left = this.finiteInset(this.systemGestureLeftInset);
-    const right = this.finiteInset(this.systemGestureRightInset);
-    const logicalExtent = Math.max(1, this.eventViewportWidth(event) - left - right);
+    const left = this.pointerGeometryFrozen ? this.pointerLeftInset : this.finiteInset(this.systemGestureLeftInset);
+    const right = this.pointerGeometryFrozen ? this.pointerRightInset : this.finiteInset(this.systemGestureRightInset);
+    const logicalExtent = Math.max(1,
+      (this.pointerGeometryFrozen ? this.pointerTargetWidth : this.eventViewportWidth(event)) - left - right);
     return readerPagePointerCoordinate(
       Math.max(0, Math.min(logicalExtent, pointer.x - left)),
       logicalExtent,
-      this.pageViewportWidth(event),
+      this.pointerGeometryFrozen ? this.pointerStageWidth : this.pageViewportWidth(event),
     );
   }
 
   private pageLocalY(event: TouchEvent, pointer: TouchObject): number {
-    const bottom = this.finiteInset(this.systemGestureBottomInset);
-    const logicalExtent = Math.max(1, this.eventViewportHeight(event) - bottom);
+    const bottom = this.pointerGeometryFrozen ? this.pointerBottomInset : this.finiteInset(this.systemGestureBottomInset);
+    const logicalExtent = Math.max(1,
+      (this.pointerGeometryFrozen ? this.pointerTargetHeight : this.eventViewportHeight(event)) - bottom);
     return readerPagePointerCoordinate(
       Math.max(0, Math.min(logicalExtent, pointer.y)),
       logicalExtent,
-      this.pageViewportHeight(event),
+      this.pointerGeometryFrozen ? this.pointerStageHeight : this.pageViewportHeight(event),
     );
+  }
+
+  private eventTargetPosition(value: Length | undefined): number {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string' && value.indexOf('%') < 0) {
+      const parsed = Number.parseFloat(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return 0;
+  }
+
+  private freezePointerGeometry(event: TouchEvent, pointer: TouchObject): void {
+    this.pointerTargetWidth = this.eventViewportWidth(event);
+    this.pointerTargetHeight = this.eventViewportHeight(event);
+    this.pointerStageWidth = this.pageViewportWidth(event);
+    this.pointerStageHeight = this.pageViewportHeight(event);
+    this.pointerTargetX = this.eventTargetPosition(event.target.area.globalPosition?.x);
+    this.pointerTargetY = this.eventTargetPosition(event.target.area.globalPosition?.y);
+    this.pointerLeftInset = this.finiteInset(this.systemGestureLeftInset);
+    this.pointerRightInset = this.finiteInset(this.systemGestureRightInset);
+    this.pointerBottomInset = this.finiteInset(this.systemGestureBottomInset);
+    this.pointerInputStartX = pointer.x;
+    this.pointerInputStartY = pointer.y;
+    this.lastInputX = pointer.x;
+    this.lastInputY = pointer.y;
+    this.bookmarkUnavailableReported = false;
+    this.pointerGeometryFrozen = true;
+  }
+
+  private pointerGeometryMatches(event: TouchEvent): boolean {
+    return this.pointerGeometryFrozen &&
+      this.pointerTargetWidth === this.eventViewportWidth(event) &&
+      this.pointerTargetHeight === this.eventViewportHeight(event) &&
+      this.pointerStageWidth === this.pageViewportWidth(event) &&
+      this.pointerStageHeight === this.pageViewportHeight(event) &&
+      this.pointerTargetX === this.eventTargetPosition(event.target.area.globalPosition?.x) &&
+      this.pointerTargetY === this.eventTargetPosition(event.target.area.globalPosition?.y) &&
+      this.pointerLeftInset === this.finiteInset(this.systemGestureLeftInset) &&
+      this.pointerRightInset === this.finiteInset(this.systemGestureRightInset) &&
+      this.pointerBottomInset === this.finiteInset(this.systemGestureBottomInset);
+  }
+
+  private onPointerGeometryChanged(): void {
+    if (this.activePointerId < 0) return;
+    this.cancelPan();
+    this.resolveDeferredSegment(undefined);
+    this.resetRawPointer();
   }
 
   private pointerForEvent(event: TouchEvent): TouchObject | undefined {
@@ -598,6 +712,10 @@ export struct ReaderPageInteractionLayer {
     this.pointerRejected = false;
     this.deferredSegmentReserved = false;
     this.manualInteractionReported = false;
+    this.pointerGeometryFrozen = false;
+    this.bookmarkUnavailableReported = false;
+    this.pointerInputStartX = 0; this.pointerInputStartY = 0;
+    this.lastInputX = 0; this.lastInputY = 0;
     if (pointerId >= 0) this.onPointerEnd(pointerId);
   }
 
@@ -605,6 +723,13 @@ export struct ReaderPageInteractionLayer {
     if (this.manualInteractionReported) return;
     this.manualInteractionReported = true;
     this.onManualInteraction();
+  }
+
+  private reportBookmarkUnavailable(reason: 'busy' | 'unavailable'): void {
+    if (this.bookmarkUnavailableReported || this.gestureState.owner !== 'bookmark' ||
+      this.gestureState.inputOffsetY < READER_PAGE_GESTURE_BOOKMARK_SLOP) return;
+    this.bookmarkUnavailableReported = true;
+    this.onBookmarkUnavailable(reason);
   }
 
   private isPageOwner(state: ReaderPageGestureState): boolean {
@@ -626,6 +751,8 @@ export struct ReaderPageInteractionLayer {
         this.lastLocalY,
         0,
         this.pointerDownTimeMs + READER_PAGE_GESTURE_LONG_PRESS_MS,
+        this.lastInputX - this.pointerInputStartX,
+        this.lastInputY - this.pointerInputStartY,
       );
       this.reportManualInteraction();
       this.onGestureStateChange(this.gestureState);
@@ -705,6 +832,8 @@ export struct ReaderPageInteractionLayer {
       this.lastLocalY,
       0,
       this.lastSampleTimeMs,
+      this.lastInputX - this.pointerInputStartX,
+      this.lastInputY - this.pointerInputStartY,
     );
     this.onGestureStateChange(this.gestureState);
   }
@@ -718,12 +847,15 @@ export struct ReaderPageInteractionLayer {
         this.onDeferredSegmentPromote();
       }
       this.tapOnlyPointer = false;
+      this.pointerInputStartX = this.lastInputX;
+      this.pointerInputStartY = this.lastInputY;
+      this.coldPointerRebased = true;
       this.gestureState = startReaderPagePan(
-        this.viewportWidth,
+        this.pointerStageWidth,
         this.lastLocalX,
         this.lastLocalY,
         this.lastSampleTimeMs,
-        this.viewportHeight,
+        this.pointerStageHeight,
       );
       this.onGestureStateChange(this.gestureState);
       this.armLongPressTimer();

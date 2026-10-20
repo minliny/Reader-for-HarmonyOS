@@ -1,0 +1,9 @@
+{
+  "upstream": "@radix-ui/react-icons",
+  "version": "1.3.2",
+  "license": "MIT",
+  "export": "ArrowLeftIcon",
+  "sourceSha256": "c348e4a0cc6fb72e95c11bf6d07a91d49420b58e42c10365206e1243709ea16e",
+  "svgSha256": "9b281d3aa0c46ddd0f23a0bcd760e396ff9dbd1e8707fc62f0c0f56690b31018",
+  "adaptation": "Only currentColor replaced by finite demo palette; exact path/viewBox retained."
+}

@@ -1,9 +1,12 @@
-import assert from 'node:assert/strict';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingPaginationIndex, ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({'prefix-pending':{description:'Actual prefix early commit, pending suffix/title and packing omission negative',resources:[]},'image-admission':{description:'Unknown image minimum versus known pending/failed geometry admission',resources:[]},'bounds-title':{description:'Actual local/canonical page-end precedence and native title ownership transfer',resources:[]}});
+async function run(id){
+const {default:assert}=await import('node:assert/strict');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
 
 const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 class Fragment { constructor(id, text) { Object.assign(this, { id, text }); } }
@@ -44,6 +47,7 @@ function owner(batch) {
     beginFirstPageCommit() { this.committed = true; }, fail(error) { throw error; },
   });
 }
+if(id==='prefix-pending'){
 const full = owner([paragraph('a', [10, 10, 10]), paragraph('b', [10], false)]);
 full.captureMeasurementAfterLayout();
 assert.deepEqual(full.measuredIds, ['aaa'], 'unneeded suffix is never shaped');
@@ -52,6 +56,12 @@ assert.deepEqual(full.pendingPageFragments.map(f => f.text), ['a', 'a']);
 assert.equal(full.pendingPageFragments[0].nativeParagraph,full.pendingPageFragments[1].nativeParagraph);
 assert.deepEqual(full.pendingPageFragments.map(f=>f.nativeParagraphFirst),[true,false]);
 assert.equal(full.pendingPageFragments[0].nativeParagraph.lastLine,1,'overflow line cannot enter the displayed paragraph window');
+
+const missingPacking = owner([paragraph('a', [10,10,10])]);
+missingPacking.physicalPagination.appendFragment = () => {};
+missingPacking.captureMeasurementAfterLayout();
+assert.throws(() => assert.deepEqual(missingPacking.pendingPageFragments.map(fragment => fragment.text), ['a','a']),
+  'the real native consumer regression catches omitted physical-owner packing');
 
 const pending = paragraph('b', [10], false);
 const partial = owner([paragraph('a', [10]), pending]);
@@ -86,6 +96,8 @@ later.captureMeasurementAfterLayout();
 assert.equal(later.committed, true);
 console.log('Production measurement prefix: full-page early commit, pending suffix resume and cancellation PASS');
 
+
+}else if(id==='image-admission'){
 for (const remaining of [0, 0.5, 1, 5]) {
   const nextImage = owner([paragraph('image', [1], true, 3)]);
   nextImage.appearanceSnapshot.lineHeightMultiplier = 1.5;
@@ -119,6 +131,8 @@ for (const state of ['pending', 'failed']) {
 }
 console.log('PASS known immutable local image geometry admits following text synchronously; pixel failure cannot collapse page height');
 
+
+}else{
 // These fixtures use the production bound resolver and real local/index facts.
 // A shorter reverse page must not grow when it is rematerialized forward, even
 // if the same layout also has an older chapter-head manifest.
@@ -180,3 +194,7 @@ const Title = productionMotionMethods(source, ['captureChapterTitleMeasurementAf
  assert.equal(takes,1);assert.equal(sets,1,'title ownership transfers once across body batches');
 }
 console.log('PASS production title transfer: same geometry and one retained native layout across body batches');
+
+}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

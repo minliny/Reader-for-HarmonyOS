@@ -1,0 +1,447 @@
+{
+  "schema": 1,
+  "mappingFile": "docs/audits/icons-20261020/duplicate-cleanup-map.json",
+  "scope": "Production ETS/TS resource literal migration only; fixed approved map, no UI actions or image geometry changes.",
+  "filesScanned": 498,
+  "filesChanged": [
+    {
+      "file": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "beforeSha256": "8ecddd0d00b349bb883cb33dcdea87be20dab78dd1f9b822d62b7a6b89489cb0",
+      "afterSha256": "642493998ee65cbfff12cd9e9992d4d4a05393092d8860781b6d0e5a2e7472f9",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+      "beforeSha256": "e580944f43e40938b005dd539ee0ba2bae26b2dc01d820549ae556798575e242",
+      "afterSha256": "5bab03c527492a12a3139601cb43d8b23790586f636cebc2d29e22d62ce57b0b",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "beforeSha256": "5aa6dfb3270c9d24150f039bd56f941d81595c234a0678674cff2cf6aebc732e",
+      "afterSha256": "c553f765a74051c87b8fbc8f7e5fc5f09e6e2c0683db19ff2951e3366f9ef7f5",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+      "beforeSha256": "1798e6d39b68fb5d1d155b8c22fc2c8ec6fbf7884302fab438204378a9cec5aa",
+      "afterSha256": "e5a35d4e39b8c5a6087c3da6a883b1ba3371973bce4be2e4a25a2371135d9d93",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPagePanel.ets",
+      "beforeSha256": "c7dc951d544d55882c16f28227e078bb5fd883fe3b94afca378a92583f92e9b5",
+      "afterSha256": "3872e64b95e0b3ec23cb7500942f585c0742f4c189914b6a98af1819b3722d29",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderChapterLoadingState.ets",
+      "beforeSha256": "a8a10a475283fb424cd5aa0ba0900218171d24ec35d05f79d2a63395ccd39b71",
+      "afterSha256": "b58e5d1e790b728067bfbe9378629eb001b67e1f98724623e4965eb41829bd93",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "beforeSha256": "1218953e7d603a9ce5be236f8628b031459ef6b990e426c8300d5be40f6f8b5a",
+      "afterSha256": "b2df061d6933d1b66cf62929388b94fe742c907b003cbabf551d0a624e4d92ce",
+      "count": 4
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+      "beforeSha256": "709f7babfa5bdbb3f7bb6948f8126c2e6f981cb7020e2a40cd5d80cecc13e86d",
+      "afterSha256": "e9d4c81ba1e87817c759b0f693d2371b04d4ca6beb3f13791dfdb03c513b9ff2",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
+      "beforeSha256": "224161b60a0caaf38368ce923316e2917be1f58f548690d7bf56963301310492",
+      "afterSha256": "bec5d4e49e67e3b15b5617ffdd15b927d9306bae30f08fda0919782a95cc5e7a",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+      "beforeSha256": "2603a817deb35d79efc66b25c18056163189026792831bc1447b433ae4c39cac",
+      "afterSha256": "82461ae155493aa3737b60b04bc1c26329f364e81fda467822546e9dc99e090d",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/search/SearchPage.ets",
+      "beforeSha256": "2236b161414431d58d245d6672c7f9dacb9626361cf625b1b68ceb25e1102065",
+      "afterSha256": "15e29eaf5ca51f3d2a5d2f761abba4f3d78b842482eda438288463a6f8c0a3f9",
+      "count": 2
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "beforeSha256": "f1aeaa687dd4306135a8fe83a4e8c0b2908944848bbd5c3577300fb5dede4c8e",
+      "afterSha256": "e41762fbdab84f5a9cc41360150a14411fc1701a0cb52d74c924e9da73a94ae9",
+      "count": 4
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "beforeSha256": "dded5610faf5da71ce4f15e6bc68c17b68289cdb44f19db5cce591dc93fe83ba",
+      "afterSha256": "6361263e732cd46c83b7c13a74776fb52179d3f9f0102f051c7f6c3f8eed9854",
+      "count": 5
+    },
+    {
+      "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "beforeSha256": "014f7e38f9af60e9eed06c9c2974a40443085cd9ec0fb1992488c3f6e0a2babb",
+      "afterSha256": "32b3bcf45e89e2976792c01f2492daaaccf5c6d13549bdca4971542c5c55e667",
+      "count": 2
+    }
+  ],
+  "literalChanges": [
+    {
+      "file": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "line": 46,
+      "alias": "search_back",
+      "canonical": "book_detail_back",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "line": 46,
+      "alias": "search_back_theme_night",
+      "canonical": "book_detail_back_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+      "line": 297,
+      "alias": "reader_quick_search",
+      "canonical": "reader_directory_search",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+      "line": 297,
+      "alias": "reader_quick_search_theme_night",
+      "canonical": "reader_directory_search_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "line": 1542,
+      "alias": "download_visual_clear",
+      "canonical": "download_visual_close",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "line": 1542,
+      "alias": "download_visual_clear_theme_night",
+      "canonical": "download_visual_close_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+      "line": 205,
+      "alias": "reader_auto_full_header",
+      "canonical": "rc_autopage",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+      "line": 205,
+      "alias": "reader_auto_full_header_theme_night",
+      "canonical": "rc_autopage_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPagePanel.ets",
+      "line": 238,
+      "alias": "reader_auto_play",
+      "canonical": "reader_auto_full_play",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderAutoPagePanel.ets",
+      "line": 238,
+      "alias": "reader_auto_play_theme_night",
+      "canonical": "reader_auto_full_play_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderChapterLoadingState.ets",
+      "line": 43,
+      "alias": "search_back",
+      "canonical": "book_detail_back",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderChapterLoadingState.ets",
+      "line": 43,
+      "alias": "search_back_theme_night",
+      "canonical": "book_detail_back_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "line": 1487,
+      "alias": "rc_arrow_left",
+      "canonical": "book_detail_back",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "line": 1487,
+      "alias": "rc_arrow_left_theme_night",
+      "canonical": "book_detail_back_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "line": 1157,
+      "alias": "reader_auto_full_header",
+      "canonical": "rc_autopage",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "line": 1157,
+      "alias": "reader_auto_full_header_theme_night",
+      "canonical": "rc_autopage_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+      "line": 278,
+      "alias": "reader_tts_play",
+      "canonical": "reader_auto_full_play",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+      "line": 278,
+      "alias": "reader_tts_play_theme_night",
+      "canonical": "reader_auto_full_play_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
+      "line": 156,
+      "alias": "reader_tts_play",
+      "canonical": "reader_auto_full_play",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
+      "line": 156,
+      "alias": "reader_tts_play_theme_night",
+      "canonical": "reader_auto_full_play_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+      "line": 323,
+      "alias": "rss_manage_refresh",
+      "canonical": "discover_refresh",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+      "line": 323,
+      "alias": "rss_manage_refresh_theme_night",
+      "canonical": "discover_refresh_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/search/SearchPage.ets",
+      "line": 673,
+      "alias": "search_back",
+      "canonical": "book_detail_back",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/search/SearchPage.ets",
+      "line": 673,
+      "alias": "search_back_theme_night",
+      "canonical": "book_detail_back_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "line": 372,
+      "alias": "settings_gen_motion",
+      "canonical": "settings_gen_animation",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "line": 372,
+      "alias": "settings_gen_motion_theme_night",
+      "canonical": "settings_gen_animation_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "line": 371,
+      "alias": "settings_gen_update",
+      "canonical": "settings_row_download",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "line": 371,
+      "alias": "settings_gen_update_theme_night",
+      "canonical": "settings_row_download_theme_night",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "line": 188,
+      "alias": "bookshelf_rss",
+      "canonical": "bookshelf_rss_outline",
+      "form": "bare-or-template-value"
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "line": 188,
+      "alias": "bookshelf_rss_theme_night",
+      "canonical": "bookshelf_rss_outline_theme_night",
+      "form": "bare-or-template-value"
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "line": 187,
+      "alias": "bookshelf_compass",
+      "canonical": "bookshelf_compass_outline",
+      "form": "bare-or-template-value"
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "line": 187,
+      "alias": "bookshelf_compass_theme_night",
+      "canonical": "bookshelf_compass_outline_theme_night",
+      "form": "bare-or-template-value"
+    },
+    {
+      "file": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "line": 186,
+      "alias": "bookshelf_library",
+      "canonical": "bookshelf_library_active",
+      "form": "bare-or-template-value"
+    },
+    {
+      "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "line": 179,
+      "alias": "sync_folder",
+      "canonical": "source_group_folder",
+      "form": "full-resource-string"
+    },
+    {
+      "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "line": 179,
+      "alias": "sync_folder_theme_night",
+      "canonical": "source_group_folder_theme_night",
+      "form": "full-resource-string"
+    }
+  ],
+  "unresolvedMappedLiterals": [],
+  "dynamicPathsReviewed": [
+    "MainTabBar.tabIconResource -> app.media template Image; normal/active/night returns migrated",
+    "ReaderControlPanel.quickActionIcon/moduleIcon and supplied asset names -> app.media template Image; affected full_header return migrated",
+    "ReaderChoiceSpecs full resource strings -> ReaderChoiceRow $r; no mapped alias remains",
+    "FullDirectoryPanel/ReaderDirectoryModulePanel downloadMarker append night suffix; neither marker base is retired",
+    "PageBackBar default, SearchPage, ChapterLoadingState: direct resource defaults migrated",
+    "Old/closed AutoPage/TTS/RSS/Sync components included, not only current visible files"
+  ],
+  "notRun": [
+    "application tests",
+    "gates",
+    "build",
+    "sign",
+    "install",
+    "device"
+  ],
+  "changeCount": 35,
+  "sourceCommentUpdates": [
+    {
+      "file": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "detail": "Default icon comment synchronized to book_detail_back."
+    }
+  ],
+  "retainedSameByteGroupIds": [
+    "B002",
+    "B008",
+    "B009",
+    "B010",
+    "B017",
+    "B018",
+    "B021",
+    "B022",
+    "B024",
+    "B025",
+    "B026",
+    "B027",
+    "B028",
+    "B032"
+  ],
+  "mappingSha256AtMigration": "e2e1dc7e79bee3a95d6a7d039b1654bec6cbe213f78bd816365ebd3850bd74ef",
+  "mappingStatusAtFinalReceipt": "CONSUMERS_MIGRATED_AND_ASSETS_RETIRED",
+  "resourceRetirementObserved": {
+    "svgCount": 429,
+    "retiredAssetsAbsent": 27,
+    "remainingByteGroups": 14,
+    "remainingExtraCopies": 15,
+    "groups": [
+      [
+        "book_detail_back_theme_night",
+        "reader_directory_back_theme_night"
+      ],
+      [
+        "bookshelf_settings_active",
+        "reader_replace_manage"
+      ],
+      [
+        "bookshelf_settings_outline",
+        "rss_manage"
+      ],
+      [
+        "discover_filter_chevron_theme_night",
+        "discover_source_chevron_theme_night"
+      ],
+      [
+        "rc_dots_theme_night",
+        "reader_directory_more_theme_night"
+      ],
+      [
+        "rc_switch_horizontal_theme_night",
+        "reader_directory_switch_theme_night"
+      ],
+      [
+        "reader_directory_input_search_theme_night",
+        "search_mag_theme_night"
+      ],
+      [
+        "reader_directory_marker_check_theme_night",
+        "settings_select_check_theme_night"
+      ],
+      [
+        "reader_directory_search_theme_night",
+        "settings_row_shelf_search_theme_night"
+      ],
+      [
+        "reader_directory_top_theme_night",
+        "settings_gen_tap_top_theme_night"
+      ],
+      [
+        "reader_tts_rate_theme_night",
+        "settings_gen_animation_theme_night"
+      ],
+      [
+        "reader_tts_timer_cycle_theme_night",
+        "rss_refresh_theme_night",
+        "settings_gen_refresh_theme_night"
+      ],
+      [
+        "rss_filter_chevron_theme_night",
+        "rss_item_chevron_theme_night"
+      ],
+      [
+        "settings_reset_defaults",
+        "settings_reset_defaults_theme_night"
+      ]
+    ]
+  },
+  "frozenAliasTargetsSha256": "74963840020f30487320011ecafd5a602b16af6e3a569178cf027c3311564ac7"
+}

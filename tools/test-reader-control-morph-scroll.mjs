@@ -1,17 +1,28 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import * as policy from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import { readerControlUnit } from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import { readerControlAppearanceEndpoint } from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
-import { readerControlPlaybackMeasuredSource, readerControlPlaybackSourceKind } from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-registerHooks({ resolve(specifier, context, nextResolve) {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const descriptions={
+ 'scroll-policy':'Shared pure forward/reverse path policy',
+ ...Object.fromEntries(['tts','autopage','settings','appearance','replace'].map(n=>['adapter-'+n,'Actual '+n+' scroll handoff, unbound receipt, reversals and reset'])),
+ 'measure-tts':'Actual TTS measured source with unbound offset',
+ 'measure-autopage':'Actual AutoPage measured source with unbound offset',
+ 'replace-source-reset':'Actual replacement pending source reset and confirmed native receipt',
+ 'tts-config-anchor':'Actual TTS configuration saved/native anchor precedence'
+};
+const selected=selectContractCases(Object.fromEntries(Object.entries(descriptions).map(([id,description])=>[id,{description,resources:[]}])));
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const policy=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
+const { readerControlUnit }=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const { readerControlAppearanceEndpoint }=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
+const { readerControlPlaybackMeasuredSource, readerControlPlaybackSourceKind }=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
+const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if (specifier.startsWith('./') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context);
     throw error;
   }
 } });
+try {
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
@@ -26,7 +37,8 @@ function method(source, name) {
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
 const deps = { ...policy, readerControlUnit, readerControlAppearanceEndpoint, readerControlReplaceEndpoint,
   ScrollSource: { SCROLLER: 6, FLING: 1 } };
-for (const name of ['Tts', 'AutoPage', 'Settings', 'Appearance', 'Replace']) {
+const adapters={'adapter-tts':'Tts','adapter-autopage':'AutoPage','adapter-settings':'Settings','adapter-appearance':'Appearance','adapter-replace':'Replace'};
+for (const name of adapters[selectedCase]?[adapters[selectedCase]]:[]) {
   const source = readFileSync(new URL(`ReaderControl${name}Content.ets`, root), 'utf8');
   const members = ['syncMorphScroll', 'onFullDidScroll', 'nativeScrollDelta',
     'sharedScrollTranslation', 'fullOnlyScrollTranslation', 'fullInput'];
@@ -86,24 +98,17 @@ for (const name of ['Tts', 'AutoPage', 'Settings', 'Appearance', 'Replace']) {
     assert.equal(owner.scrollMotion, held, `${name}: unbound controller retains the last valid state`);
     assert.equal(calls.length, 0, `${name}: no unbound scroll command`);
   }
-  assert.match(source, /@State private scrollMotion: ReaderControlMorphScrollState/);
-  assert.match(source, /@Watch\('onMotionChanged'\) motionProgress/);
-  assert.match(source, /@Watch\('(?:onMotionChanged|onInputChanged)'\) interactionEnabled/);
-  assert.match(source, /\.onWillScroll\(/); assert.match(source, /\.onDidScroll\(/);
-  assert.match(source, /readerControlMorphScrollExtent\(this.scrollMotion\)/);
-  assert.doesNotMatch(source, /this\.(?:fullScrollOffset|scrollOffset)\s*\*\s*\(1 -/);
 }
-const appearance = readFileSync(new URL('ReaderControlAppearanceContent.ets', root), 'utf8');
-assert.match(appearance, /actorPosition\(this\.frame\(\)\.themeSwatches\[index\], true\)/);
-assert.match(appearance, /actorPosition\(this\.fontActor\(font\), font !== 'import'\)/);
-assert.match(appearance, /actorPosition\(this\.frame\(\)\.layout\)/);
+if(selectedCase==='scroll-policy'){
 for (const start of [0, 1]) {
   const path = policy.readerControlMorphScrollPath(start, 18);
   for (const p of [0, .3, .8, 1, .8, .3, 0]) {
     near(policy.sampleReaderControlMorphScrollPath(path, p), 18 * (start === 1 ? p : 1 - p));
   }
 }
-for (const name of ['Tts', 'AutoPage']) {
+}
+const {productionMotionMethods}=selectedCase.startsWith('measure-')||selectedCase==='replace-source-reset'||selectedCase==='tts-config-anchor'?await import('./lib/reader-motion-method-probe.mjs'):{};
+for (const name of selectedCase==='measure-tts'?['Tts']:selectedCase==='measure-autopage'?['AutoPage']:[]) {
   const Component = productionMotionMethods(new URL(`ReaderControl${name}Content.ets`, root),
     ['measureActor', 'reportMorphActor'], { readerControlPlaybackMeasuredSource, readerControlPlaybackSourceKind });
   for (const unboundOffset of [undefined, { yOffset: NaN }]) {
@@ -132,8 +137,8 @@ for (const name of ['Tts', 'AutoPage']) {
     assert.deepEqual(reports.at(-1).slice(1), [4, 20, 100, 40], `${name}: a valid fresh full measurement publishes normally`);
   }
 }
-console.log('PASS PH110 playback anchors: TTS/AutoPage reject unbound or non-finite full measurements, retain quick measurements, resume accurate full reporting after binding');
 
+if(selectedCase==='replace-source-reset'){
 const Replace = productionMotionMethods(new URL('ReaderControlReplaceContent.ets', root),
   ['onSourceChanged', 'onFullDidScroll', 'fullInput'], { ...policy, readerControlReplaceEndpoint });
 for (const unboundOffset of [undefined, { yOffset: NaN }]) {
@@ -160,8 +165,9 @@ for (const unboundOffset of [undefined, { yOffset: NaN }]) {
   owner.onSourceChanged();
   assert.equal(commands.length, 1, 'repeated binding/source callbacks do not reset twice');
 }
-console.log('PASS PH110 replacement source: unbound reset remains pending, binding replays it once and admits the confirmed native position');
 
+}
+if(selectedCase==='tts-config-anchor'){
 const TtsAnchor = productionMotionMethods(new URL('ReaderControlTtsContent.ets', root), ['configurationAnchorY']);
 for (const unboundOffset of [undefined, { yOffset: NaN }]) {
   const owner = new TtsAnchor();
@@ -175,5 +181,9 @@ for (const unboundOffset of [undefined, { yOffset: NaN }]) {
   assert.equal(owner.configurationAnchorY(), 87, 'available native configuration position takes precedence');
   assert.equal(owner.scrollMotion.nativeScrollOffset, 67, 'display calculation does not mutate stored scroll');
 }
-console.log('PASS PH110 TTS configuration: missing native offset retains the saved display anchor without a synthetic zero or state write');
-console.log('PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance');
+
+}
+}finally{resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

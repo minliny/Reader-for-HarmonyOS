@@ -34,18 +34,30 @@ export struct ReaderDirectoryList {
   @Prop @Watch('onEntriesChanged') deferEntriesDuringMotion: boolean = false;
   private readonly dataSource: DirectoryListDataSource = new DirectoryListDataSource();
   @Prop @Watch('onRowHeightChanged') rowHeight: number = 40;
+  /** Manga titles wrap naturally; text keeps its existing fixed virtual extent. */
+  @Prop naturalRowHeight: boolean = false;
   @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(40);
   @Prop listPaddingX: number = 0;
+  @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 0;
+  @Prop contentStartInset: number = 0;
+  @Prop contentEndInset: number = 0;
+  @Prop listPaddingTop: number = -1;
+  @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   scroller: Scroller | undefined = undefined;
   onFirstLayout: () => void = (): void => {};
+  onScrollOffset: (offset: number) => void = (_offset: number): void => {};
   onViewportChanged: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   onUserScrollIntent: () => void = (): void => {};
   // Only the fixed DEBUG diagnostic page supplies a sink. No book data is logged.
   @Prop geometryProbeEnabled: boolean = false;
   onGeometryProbe: (event: string) => void = (_event: string): void => {};
   @BuilderParam rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => void;
+  @BuilderParam emptyBuilder: () => void = this.emptyContent;
+
+  @Builder
+  private emptyContent() {}
 
   private layoutReady: boolean = false;
   private measuredWidth: number = -1;
@@ -142,6 +154,9 @@ export struct ReaderDirectoryList {
 
   build() {
     List({ space: 0, scroller: this.scroller }) {
+      if (this.naturalRowHeight && this.entries.length === 0) {
+        ListItem() { this.emptyBuilder(); }.width('100%');
+      }
       // Repeat.virtualScroll retained an empty native range when the control
       // mounted hidden before its TOC arrived. Explicit data notifications
       // admit that empty -> populated transition without remounting the List.
@@ -150,19 +165,25 @@ export struct ReaderDirectoryList {
             this.rowBuilder({ item: entry, index: index });
           }
           .width('100%')
-          .height(this.rowHeight);
+          .height(this.naturalRowHeight ? undefined : this.rowHeight);
         }, (entry: LocalReadingTocEntry): string => `reader-directory-row-${entry.index}-${JSON.stringify(entry)}`);
     }
     .width('100%')
     .height('100%')
-    .childrenMainSize(this.itemSizes)
+    .childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)
     .padding({
       left: this.listPaddingX,
-      right: this.listPaddingX,
-      top: this.listPaddingY,
-      bottom: this.listPaddingY,
+      right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
+      top: this.naturalRowHeight ? 0 : this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY,
+      bottom: this.naturalRowHeight ? 0 : this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY,
     })
-    .scrollBar(BarState.Off)
+    // Publish one pair: text keeps the parent's overlay clearance, while
+    // natural manga rows carry their own padding inside the scroll content.
+    .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : this.contentStartInset)
+    .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : this.contentEndInset)
+    .scrollBar(this.naturalRowHeight ? BarState.Auto : BarState.Off)
+    .scrollBarWidth(this.naturalRowHeight ? 4 : undefined)
+    .scrollBarColor(this.naturalRowHeight ? '#47000000' : undefined)
     .edgeEffect(this.edgeEffectMode)
     // API 21 drag ownership is reported even before a positive scroll delta.
     // A Scroller.scrollTo callback is not evidence of user scroll intent.
@@ -177,6 +198,8 @@ export struct ReaderDirectoryList {
     })
     .onDidScroll((offset: number, _state: ScrollState): void => {
       this.probeGeometry(`did delta=${offset}`);
+      const current = this.scroller?.currentOffset().yOffset;
+      if (current !== undefined && Number.isFinite(current)) this.onScrollOffset(current);
     })
     .onScrollIndex((start: number, _end: number, _center: number): void => {
       this.firstVisibleIndex = start;

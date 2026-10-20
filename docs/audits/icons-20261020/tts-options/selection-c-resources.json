@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "selectedVariant": "C",
+  "resourceCount": 12,
+  "resourceNamesUnchanged": true,
+  "componentSizesAndActionsUnchanged": true,
+  "sourceRecord": "docs/ui-design/svg-provenance/tts-selected-c/SOURCE.json",
+  "entries": [
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_previous.svg",
+      "sha256": "3ce5b6cab307c278ba43383354c16b1b362573d8c23d871eb64283c28ae23700"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_previous_theme_night.svg",
+      "sha256": "25090c43c535d67dbf79bd1bc7c7df2337eddddf41b85086425b9e38517c8931"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_next.svg",
+      "sha256": "25df7a76627a7752dc5fd878d62e1ad0ffaa680015b529070a9f67bba7df7923"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_next_theme_night.svg",
+      "sha256": "a0936b6f844a82e465ba8decfb81fe1f506f90cad703bc71c93ddd7605be05a0"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_previous_quick.svg",
+      "sha256": "24ff3a049c017d7e7dd44284bfe04cd1aa0bc763bd605dfd0787094e7e63c9be"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_previous_quick_theme_night.svg",
+      "sha256": "12f978cf666fbdaf89bbd67409d916d7e4d1cccd9a0d87406f841fc3b1572e6d"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_next_quick.svg",
+      "sha256": "1a9f1760c8ec971e953e22642bb53fcc661745205893007247bc4d28d71fd591"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_make_next_quick_theme_night.svg",
+      "sha256": "c02bc675d75418b7b6d3d05078f0cfe6de3fc175d2a1e75a95b44147230460a2"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_previous.svg",
+      "sha256": "12c3b38fd52003c41838884de7c7b50014514367e6cb825d4d33c9d4b95edf48"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_previous_theme_night.svg",
+      "sha256": "c0e877e4541bde6e62322aaeae0a610469db1d1ac1f75aa0883b2d42848b7f6b"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_next.svg",
+      "sha256": "f1efe2122f52d0fc52a52e05488d20ff00f6f574c5c66c2084320cb858757040"
+    },
+    {
+      "file": "entry/src/main/resources/base/media/reader_tts_next_theme_night.svg",
+      "sha256": "7ac1485c6a102e05dc5f5ec3a5d1754f6f067cfe3adb6faee85401f19ae98a46"
+    }
+  ],
+  "platformPaintAdaptation": "Both C paths explicitly carry fill=\"none\"; no geometry, stroke, size, palette or action change"
+}

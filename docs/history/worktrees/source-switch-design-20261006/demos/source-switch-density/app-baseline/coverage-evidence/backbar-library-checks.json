@@ -1,0 +1,16 @@
+{
+  "profiles": 9,
+  "textScales": 3,
+  "geometryCases": 27,
+  "targetedRenderCalls": 46,
+  "checks": [
+    "search32/20/r16",
+    "multiselect symmetric nonshrinking action slots",
+    "title min0/single-line ellipsis",
+    "natural header growth and flow-owned list clearance",
+    "detail safeTop applied once; 16px clearance at 100/200%",
+    "200% app-topbar vertically centered",
+    "reading-back-extra variables retained"
+  ],
+  "limitations": "CSS/model/template checks only; no browser or native visual execution"
+}

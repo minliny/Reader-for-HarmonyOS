@@ -1,0 +1,49 @@
+same title/showTitle/revision captures: [{"body":["chapter-14:body"],"title":"one measured title","images":[]},{"body":["chapter-14:body"],"title":"one measured title","images":[]},{"body":["chapter-14:body"],"title":"one measured title","images":[]},{"body":["chapter-14:body"],"title":"one measured title","images":[]}]
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: same-revision retained captures must publish current text/image body, including warm return
++ actual - expected
+
+  [
+    [
+      'chapter-14:body'
+    ],
+    [
++     'chapter-14:body'
+-     'chapter-15:image:image:file:///chapter-15:image.png:file',
+-     'chapter-15:body'
+    ],
+    [
++     'chapter-14:body'
+-     'chapter-16:body'
+    ],
+    [
+      'chapter-14:body'
+    ]
+  ]
+
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-reader-offscreen-fragment-publication.mjs:133:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    [ 'chapter-14:body' ],
+    [ 'chapter-14:body' ],
+    [ 'chapter-14:body' ],
+    [ 'chapter-14:body' ]
+  ],
+  expected: [
+    [ 'chapter-14:body' ],
+    [
+      'chapter-15:image:image:file:///chapter-15:image.png:file',
+      'chapter-15:body'
+    ],
+    [ 'chapter-16:body' ],
+    [ 'chapter-14:body' ]
+  ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

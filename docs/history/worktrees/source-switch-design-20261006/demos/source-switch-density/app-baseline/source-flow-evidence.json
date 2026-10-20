@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-06T04:52:37.745Z",
+  "status": "IMPLEMENTED_LOCAL_LOGIC_PASSED_VISUAL_BLOCKED",
+  "scope": "User selected latest option 3; standalone demo full source-switch interaction",
+  "visualTruth": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-concepts-20261006/page-alternatives-success-only/03-reading-drawer.png",
+  "selectedVisualSha256": "c9ca2789a959b881b9fc0769f5585e81e49f7c07146842fa02afcc531f3b6140",
+  "worktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+  "branch": "codex/source-switch-design-20261006",
+  "head": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+  "nativeSourceTreeSha256": "7ba0dbddfab49fe87a7b36d4993b301dc0e38e1ef5cd05dbd0d6f60075201c2b",
+  "inputs": {
+    "index.html": {
+      "sha256": "899797b422860528a0cfce45464815d3aaa256a2dc67996cebc5794e5271bd13",
+      "bytes": 3294
+    },
+    "catalogue.html": {
+      "sha256": "50cbd7c1f183c4c4486fa9af24a3b8737b1278c0f78b219b05ca4dc5fd06b243",
+      "bytes": 4219
+    },
+    "source-flow.mjs": {
+      "sha256": "aa2eeb2aef32b7a9840b0e1f37d9a2b34ba656b278251d9bea588479531ab0a6",
+      "bytes": 11470
+    },
+    "source-flow-model.mjs": {
+      "sha256": "f8a4075058c080e4d1389c77c8a870eba01fa5f7b89c914cd333f07dc48f9236",
+      "bytes": 8112
+    },
+    "source-flow-pointer.mjs": {
+      "sha256": "0ab63d39a3e1e2f91ae15a48c6838708226f6738ec1db8f25225ff4f397a9dfe",
+      "bytes": 661
+    },
+    "source-flow-renderer.mjs": {
+      "sha256": "42d0e9a60bc79869184a9f6cddd993fb6ad5a96f1059373e386ac8e777bb245a",
+      "bytes": 3372
+    },
+    "source-flow.css": {
+      "sha256": "56908824565d9f1d30d044ae39318dfad99a56c3a8c774fe14ccb175966a8926",
+      "bytes": 11231
+    },
+    "source-flow.bundle.js": {
+      "sha256": "2a606163119148cddb580cc80d44be83868032fb5c6800f473081c539c5b3e54",
+      "bytes": 205796
+    },
+    "assets/source-flow-cover.png": {
+      "sha256": "a4760ecc3ec0f5742444cb6780fb9d7fb9186ed484a1e074761b4419582ff7a2",
+      "bytes": 2116978
+    },
+    "FLOW.md": {
+      "sha256": "e1d197e61f9870026b58a58408b2b7a7274722b7b470cca2b897eeb9f83fc1ba",
+      "bytes": 1986
+    },
+    "design-qa.md": {
+      "sha256": "4187ee4d2f31fcf41b14d46c8dec2235fb8f89be086b6b98c44e8d1437c281f9",
+      "bytes": 3093
+    }
+  },
+  "steps": [
+    "reading controls source action",
+    "320ms fixed drawer entrance",
+    "success-only candidates append over 6 seconds",
+    "select candidate and freeze discovery",
+    "drawer dismiss plus 900/900/600ms switch phases",
+    "commit current source and latest chapter, retain reading chapter"
+  ],
+  "model": {
+    "status": "pass",
+    "checks": 11,
+    "verified": [
+      "incremental success-only admission and immutable snapshots",
+      "stop preserves results and ignores late callbacks",
+      "restart retains, deduplicates and appends by composite key",
+      "selection freezes discovery and commits source only after all switch phases",
+      "completed source is excluded when controls reopen the sheet",
+      "a lower latest chapter follows the chosen source while reading position survives reopening",
+      "dismiss during opening cancels and cannot revive an old sheet",
+      "dismiss during discovery retains successful rows across reopening",
+      "reset and destroy invalidate every outstanding phase",
+      "reduced motion skips entrance movement, preserves asynchronous discovery and switching",
+      "a change listener can cancel a phase before its timers are queued"
+    ],
+    "evidence": "injected-time model only"
+  },
+  "markup": {
+    "status": "pass",
+    "rendererFrames": 21,
+    "switchPhaseTemplates": 3,
+    "pointerContracts": 5,
+    "entry": "existing reading-control source button",
+    "resources": 9,
+    "stableRowUpdateContract": true,
+    "browser": false,
+    "native": false
+  },
+  "assets": {
+    "cover": "Image Gen supplied 1060x1484 single PNG",
+    "icons": "existing Reader SVG files",
+    "fonts": "existing Reader Noto font files"
+  },
+  "verification": {
+    "build": true,
+    "syntax": true,
+    "model": true,
+    "markup": true,
+    "browserRendered": false,
+    "browserPlayback": false,
+    "visualComparison": false,
+    "native": false,
+    "realSources": false,
+    "userAcceptance": false
+  },
+  "browserRestriction": "Prior explicit denial of file protocol. No server or alternate browser workaround was used.",
+  "issuesClosed": [
+    "release/hover no longer blocks candidate clicks",
+    "chosen latest chapter commits independently of reading chapter",
+    "chapter fixture text synchronized with selected reference",
+    "fixed status icon slot retained when discovery stops",
+    "discovery and switch progress use existing reading-spinner loading ring, not rotating source-action arrows"
+  ],
+  "remaining": [
+    "actual browser rendering/playback",
+    "keyboard and scrolling in browser",
+    "narrow viewport visual QA"
+  ],
+  "productionSourceChanged": false,
+  "loadingCorrection": {
+    "reason": "User identified rotating action icon as inappropriate list refresh representation",
+    "indicator": "shared reading.css reading-spinner",
+    "actualRefresh": "success-only candidate append and global count update",
+    "sortingButtonRotation": false
+  }
+}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Reader · 共同视觉规格换源参考</title>
+  <link rel="stylesheet" href="rebased/tokens.css">
+  <link rel="stylesheet" href="rebased/app.css">
+  <link rel="stylesheet" href="rebased/library.css">
+  <link rel="stylesheet" href="rebased/reading.css">
+  <link rel="stylesheet" href="rebased/source-flow.css">
+  <link rel="stylesheet" href="source-switch-reference.css">
+  <link rel="stylesheet" href="reference-shell.css">
+</head>
+<body class="source-flow-demo" data-reduced="false">
+  <header class="source-flow-demo-header">
+    <div>
+      <p class="source-flow-demo-eyebrow">Reader · 共同视觉规格参考</p>
+      <h1>小说换源完整流程</h1>
+      <p>从阅读控制栏打开换源窗口，查看书源逐条加入，再选择书源继续阅读。</p>
+    </div>
+    <a href="catalogue.html#reader-controls">原页面索引（历史稿）</a>
+  </header>
+  <main class="source-flow-demo-layout">
+    <section class="source-flow-preview" aria-label="换源流程交互预览">
+      <div class="source-flow-viewport-holder">
+        <div id="viewport" class="viewport" data-size="phone" data-theme="day" aria-label="Reader 阅读页面">
+          <div id="flow-reader" class="source-flow-layer"></div>
+          <div id="flow-controls" class="source-flow-layer"></div>
+          <div id="flow-modal" class="source-flow-layer"></div>
+          <div id="flow-transition" class="source-flow-layer"></div>
+          <div id="flow-toast" class="source-flow-layer"></div>
+        </div>
+      </div>
+    </section>
+    <aside class="source-flow-demo-tools" aria-label="流程演示工具">
+      <h2>完整演示</h2>
+      <div class="reference-profile-controls">
+        <label>窗口<select id="reference-preset"><option value="selected">原稿390×844</option><option value="vm">VM365.714×809.143</option><option value="narrow">窄宽320×640</option><option value="short">短屏320×480</option><option value="tiny">极短270×240·2倍字</option></select></label>
+        <label>宽<input id="reference-width" data-reference-profile-input type="number" value="390" min="1" step="0.001"></label>
+        <label>高<input id="reference-height" data-reference-profile-input type="number" value="844" min="1" step="0.001"></label>
+        <label>字体倍率<input id="reference-scale" data-reference-profile-input type="number" value="1" min="0.1" step="0.05"></label>
+        <details><summary>安全边距</summary><label>上<input id="reference-safe-top" data-reference-profile-input type="number" value="0" min="0" step="0.001"></label><label>下<input id="reference-safe-bottom" data-reference-profile-input type="number" value="0" min="0" step="0.001"></label><label>左<input id="reference-safe-left" data-reference-profile-input type="number" value="0" min="0" step="0.001"></label><label>右<input id="reference-safe-right" data-reference-profile-input type="number" value="0" min="0" step="0.001"></label></details>
+        <output id="reference-profile-status"></output>
+      </div>
+      <p class="source-flow-demo-instruction">点击画布控制栏中的“换源”，也可以自动播放全过程。</p>
+      <div class="source-flow-demo-actions">
+        <button id="flow-auto" class="source-flow-demo-primary" type="button">自动演示全过程</button>
+        <button id="flow-reset" type="button">回到控制栏</button>
+      </div>
+      <label class="source-flow-demo-reduced"><input id="flow-reduced" type="checkbox">减少动画</label>
+      <ol id="flow-steps" class="source-flow-demo-steps" aria-label="流程步骤">
+        <li data-step="controls" aria-current="step"><span>控制栏</span><small>从阅读入口点击换源</small></li>
+        <li data-step="opening"><span>换源抽屉</span><small>展开书籍摘要和书源列表</small></li>
+        <li data-step="discovering"><span>成功书源增量加入</span><small>检查成功后才进入列表</small></li>
+        <li data-step="switching"><span>换源动画</span><small>选择书源并衔接阅读位置</small></li>
+        <li data-step="completed"><span>恢复阅读</span><small>显示新书源并继续当前章节</small></li>
+      </ol>
+      <output id="flow-status" class="source-flow-demo-status" role="status" aria-live="polite">已进入阅读控制栏，点击“换源”开始。</output>
+      <p class="source-flow-demo-boundary">使用选定稿的模拟书源与阅读内容；布局、字体和动画来自共同规格。定位章节开头文案与当前业务一致。源码校验不代表浏览器或VM视觉验收。</p>
+    </aside>
+  </main>
+  <script src="source-switch-reference.bundle.js"></script>
+</body>
+</html>

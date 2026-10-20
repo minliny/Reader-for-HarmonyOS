@@ -1,3 +1,4 @@
+import { TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE, TYPE_READER_REPLACE_QUICK_COMPAT_HEADER_LABEL, TYPE_READER_REPLACE_QUICK_COMPAT_RULE_BODY_LABEL, TYPE_READER_REPLACE_QUICK_COMPAT_RULE_ROW_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
@@ -98,10 +99,10 @@ export struct ReaderReplaceQuickPanel {
         .constraintSize({ maxWidth: this.contentWidth() - 50 })
         .height(14)
         .margin({ left: 8 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(14.04)
+        .fontFamily(TYPE_READER_REPLACE_QUICK_COMPAT_HEADER_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_REPLACE_QUICK_COMPAT_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_REPLACE_QUICK_COMPAT_HEADER_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_REPLACE_QUICK_COMPAT_HEADER_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1);
 
@@ -133,9 +134,9 @@ export struct ReaderReplaceQuickPanel {
             Text('暂无替换规则')
               .width('100%')
               .height(REPLACE_RULES_VIEWPORT_HEIGHT)
-              .fontFamily('ReaderNotoSansSC')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(9)
+              .fontFamily(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_BODY_LABEL.fontFamily)
+              .fontWeight(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_BODY_LABEL.fontWeight)
+              .fontSize(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_BODY_LABEL.fontSizeFp)
               .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
               .textAlign(TextAlign.Center);
           } else {
@@ -187,10 +188,10 @@ export struct ReaderReplaceQuickPanel {
         .constraintSize({ maxWidth: this.ruleTextWidth() })
         .height(13)
         .margin({ left: 10, right: 5 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(9)
-        .lineHeight(13)
+        .fontFamily(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_ROW_TITLE.fontFamily)
+        .fontWeight(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_ROW_TITLE.fontWeight)
+        .fontSize(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_ROW_TITLE.fontSizeFp)
+        .lineHeight(TYPE_READER_REPLACE_QUICK_COMPAT_RULE_ROW_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -221,9 +222,9 @@ export struct ReaderReplaceQuickPanel {
         .width(11)
         .height(11);
       Text(kind === 'preview' ? '预览效果' : '完整管理')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(8)
+        .fontFamily(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontWeight)
+        .fontSize(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontSizeFp)
         .fontColor(kind === 'preview' ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('app.ReaderReplaceQuickPanel.footerButton.fontColor.FFFFFFFF', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);

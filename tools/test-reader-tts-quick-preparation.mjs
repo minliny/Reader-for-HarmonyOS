@@ -1,15 +1,19 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
 import * as state from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
 import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
 import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+import { ReaderTtsConfigurationHost } from './lib/reader-tts-configuration-fixture.mjs';
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const lre = new URL('LocalReadingExperience.ets', root).pathname;
+const lre = localFilePath(new URL('LocalReadingExperience.ets', root));
 const source = readFileSync(lre, 'utf8');
 const defaults = { version: 1, language: 'zh-CN', person: 0, pauseOnInterruption: true,
   allowMixing: false, failurePolicy: 'stop', followHighlight: true, backgroundPlayback: true, keepScreenOn: false };
@@ -18,21 +22,25 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 async function drain() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 let runtime;
 class Frame { constructor(fn) { this.fn = fn; } onFrame() { this.fn(); } }
-const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderUIFrameCallback: Frame,
+const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderTtsConfigurationHost,
+  ReaderTtsCredentialStore: { instance: { create: async () => {}, remove: async () => {} } }, ReaderUIFrameCallback: Frame,
   ReaderRuntimeOwner: { current: () => runtime },
   ReaderTtsGateway: class { constructor(owner) { return owner.gateway; } },
   ReaderHttpTtsGateway: class { constructor(owner) { return owner.http; } },
   hilog: { error: () => {} } };
 const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
-  'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
-  'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate'];
+  'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'retryPendingTtsPreferences', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
+  'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate', 'requireTtsConfigurationHost',
+  'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier'];
 function fixture(file = lre) {
   const Owner = productionMotionMethods(file, methods, dependencies);
-  const owner = new Owner(), frames = [], events = [], http = deferred(), prefs = deferred(), voice = deferred();
+  const frames = [], events = [], http = deferred(), prefs = deferred(), voice = deferred();
   const gateway = new FakeGateway(), host = new FakeHost();
+  gateway.putConfig = async (config, onDispatch) => { onDispatch?.(); return { ...config }; };
   gateway.getConfig = async () => { gateway.calls.push('config'); return { engine: 'system', rate: 4, ratePercent: 75, pitch: 0, followSys: false }; };
   host.listSystemVoices = () => { events.push('voices'); return voice.promise; };
   runtime = { gateway, getTtsHost: () => host, http: { list: () => { events.push('http'); return http.promise; } } };
+  const owner=new Owner();
   Object.assign(owner, { mounted: true, exitRequested: false, lifecycleToken: 1, phase: 'ready', sourceId: 'source', bookId: 'book',
     chapter: { chapterIndex: 0, chapterTitle: 'chapter', images: [] }, visiblePage: { startScalar: 0, fragments: [] },
     chapterSelectionToken: 1, visiblePageSelectionToken: 1,
@@ -46,9 +54,8 @@ function fixture(file = lre) {
     getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
     onChapterCommitted: () => events.push('committed'), onReadingReady: () => events.push('ready'),
     onSessionLaunchTtsState: s => events.push(`state:${s.status}`),
-    ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; } },
+    ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; }, writeFacts: () => ({ pendingReconciliation: false }) },
     persistTtsPreferences: () => events.push('repairVoice'),
-    persistTtsConfig: async rate => { owner.ttsConfig = { ratePercent: rate * 100 }; },
     logTtsFailure: (op, error) => events.push(`error:${op}:${error.message}`), errorMessage: e => e.message,
   });
   const resolveMetadata = () => { http.resolve([]); prefs.resolve(defaults); voice.resolve(voices); };
@@ -63,11 +70,16 @@ function readySchedulesAfterObservers(file = lre) {
 }
 // Negative control reconstructs the installed omission: ready never scheduled
 // preparation. This must fail the same production-method assertion.
-const mutant = '/private/tmp/reader-ph44-no-ready-preparation.ets';
+const scratch = mkdtempSync(join(tmpdir(), 'reader-tts-preparation-'));
+try {
+const mutant = join(scratch, 'no-ready-preparation.ets');
 const warmupCall = 'this.scheduleTtsPresentationWarmup();';
 assert.equal(source.split(warmupCall).length, 2, 'the negative control removes the one production scheduling call');
 writeFileSync(mutant, source.replace(warmupCall, 'void 0;'));
 assert.throws(() => readySchedulesAfterObservers(mutant), /ready schedules one deferred TTS preflight/);
+} finally {
+  rmSync(scratch, { recursive: true, force: true });
+}
 
 {
   const f = readySchedulesAfterObservers();

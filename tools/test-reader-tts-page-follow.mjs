@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -8,7 +9,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const tree = ts.createSourceFile('Reading.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
   require(`${sdk}/lib/ets_checker.js`).compilerOptions);

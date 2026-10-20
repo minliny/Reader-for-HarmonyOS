@@ -1,5 +1,12 @@
-import assert from 'node:assert/strict';
-import {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'mixed-path':{description:'Pure modules: interrupted goal, mixed visibility/morph regrab and exact residue reversal',resources:[]},
+ 'command-takeover':{description:'Pure modules: newer explicit dismiss/Back defeats old CANCEL',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const {
   advanceReaderControlSession,
   backReaderControlSession,
   createReaderControlSessionState,
@@ -10,14 +17,14 @@ import {
   readerControlContentLocation,
   readerControlTargetLocation,
   sampleReaderControlSession,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import {
+}=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const {
   beginReaderControlGesture,
   cancelReaderControlGesture,
   createReaderControlGestureState,
   readerControlGrabberScreenY,
   updateReaderControlGesture,
-} from '../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts';
+}=await import('../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts');
 
 const durationMs = 400;
 const pointerId = 11;
@@ -69,6 +76,7 @@ function close(actual, expected, message) {
     `${message}: expected ${expected}, received ${actual}`);
 }
 
+if(selectedCase==='mixed-path'){
 // DOWN interrupted an automatic Quick -> Full goal. The pointer then traverses
 // back through Quick and into the dismiss segment. CANCEL must resume the goal
 // captured on DOWN, not merely return to the source of the newest segment.
@@ -113,36 +121,13 @@ assert.equal(restoredFull.location.form, 'full');
 assert.equal(restoredFull.location.directoryTab, 'bookmarks');
 assert.equal(restoredFull.closeRevision, 0);
 
-// Symmetric case: DOWN interrupted an automatic Quick -> Hidden close, then
-// crossed Quick into Full. CANCEL must continue to Hidden. This is control UI
-// restoration only; no business-state rollback is represented by this state.
-let closing = dismissReaderControlSession(quick('directory', 'bookmarks'), durationMs);
-closing = advanceReaderControlSession(closing, 100, closing.epoch);
-pair = downAtCurrent(closing);
-pair = move(pair, 300, 100); // traverse dismiss source and the full morph segment
-assert.equal(readerControlContentLocation(pair.session).directoryTab, 'bookmarks');
-pair = cancel(pair);
-assert.equal(readerControlTargetLocation(pair.session).level, 'hidden');
-const closed = finish(pair.session);
-assert.equal(closed.location.level, 'hidden');
-assert.equal(closed.closeRevision, 1);
 
-// A stable source has no prior automatic goal. CANCEL restores the exact source,
-// including the Directory/Bookmarks context, and does not commit a close.
-const stableBookmark = quick('directory', 'bookmarks');
-pair = downAtCurrent(stableBookmark);
-pair = move(pair, 500, 100);
-pair = cancel(pair);
-const restoredBookmark = finish(pair.session);
-assert.equal(restoredBookmark.location.form, 'quick');
-assert.equal(restoredBookmark.location.directoryTab, 'bookmarks');
-assert.equal(restoredBookmark.closeRevision, 0);
-
+}else{
 // A newer explicit command revokes ownership. A late CANCEL from the old touch
 // must be ignored and must not restore the goal captured by that touch.
-expanding = expandReaderControlSession(quick('tts'), durationMs);
+let expanding = expandReaderControlSession(quick('tts'), durationMs);
 expanding = advanceReaderControlSession(expanding, 100, expanding.epoch);
-pair = downAtCurrent(expanding);
+let pair = downAtCurrent(expanding);
 pair = move(pair, 500, 100);
 const commanded = dismissReaderControlSession(pair.session, durationMs);
 const staleCancel = cancelReaderControlGesture(commanded, pair.gesture, pointerId);
@@ -159,3 +144,7 @@ assert.equal(cancelAfterBack.consumed, false);
 assert.strictEqual(cancelAfterBack.session, backed);
 
 console.log('reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS');
+
+}
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

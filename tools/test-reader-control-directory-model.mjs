@@ -43,7 +43,8 @@ assert.equal(project(withBookmarks, 'bookmarks', '章节 52', true, 500).targetR
 console.log('Production directory model: late load, centering ownership, route/data independence PASS');
 
 const ui = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets', import.meta.url), 'utf8');
-const methods = ['captureLeadingRow', 'onProgressChanged', 'queueLeadingCorrection', 'onInputChanged', 'rowHeight', 'value', 'userScroll',
+const methods = ['captureLeadingRow', 'onProgressChanged', 'queueLeadingCorrection', 'onInputChanged', 'rowHeight', 'value',
+  'cancelPendingPlacement', 'userScroll',
   'queuePosition', 'listHeight', 'listTop', 'openList', 'refreshData', 'leadingAnchorIsAligned'].map(name => {
   const start=ui.indexOf('  private '+name+'('); assert.ok(start>=0);
   const open=ui.indexOf('{',start); let depth=1,end=open+1;

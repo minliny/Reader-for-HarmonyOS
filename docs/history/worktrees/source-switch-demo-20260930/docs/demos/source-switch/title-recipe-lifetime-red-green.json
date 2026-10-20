@@ -1,0 +1,123 @@
+{
+  "task": "reader-title-recipe-lifetime",
+  "baseSourceCommit": "86fce31f780a77fd26410324f0820ab623ac483a",
+  "finding": "native title observer assigned an undefined incoming recipe before outgoing native actor disposal; SDK Prop reset invoked production prepare Watch and read recipe.key",
+  "productionFix": "Bind native title actor to the measured recipe key in ForEach; outgoing actor keeps its own recipe until disposal. Provider remains authority for incoming key selection. Native recipe invariant unchanged.",
+  "scope": [
+    "entry/src/main/ets/features/reading/ReadingSurface.ets",
+    "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+    "tools/test-reader-title-recipe-lifetime.mjs",
+    "tools/test-reader-chapter-first-title-publication.mjs",
+    "tools/test-reader-fragment-authority.mjs"
+  ],
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "sha256": "4c04437409ef35f5d4163189872f2687c35708c61a594f181267a51d67b33113"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "sha256": "63480ad8a0ae350db31a9ce1b0bd893907720588f8a92867593d51ac7de58adf"
+    },
+    {
+      "path": "tools/test-reader-title-recipe-lifetime.mjs",
+      "sha256": "9d66eea324d2ba739a350347bc81bf51e9a701e97f3b7bcd372f12f2b2103c81"
+    },
+    {
+      "path": "tools/test-reader-chapter-first-title-publication.mjs",
+      "sha256": "4e6fb6677a7a96579f211900ac49be8ceb013996739c2b26293a9d84db9d6f2e"
+    },
+    {
+      "path": "tools/test-reader-fragment-authority.mjs",
+      "sha256": "e5f38d7d14d89628657a0e49f1eef549a3dac0420f3fd9048b69dc228d1566c3"
+    }
+  ],
+  "red": {
+    "paged": {
+      "exitCode": 1,
+      "log": ".reader-local/title-lifetime-paged-red.log"
+    },
+    "continuous": {
+      "exitCode": 1,
+      "log": ".reader-local/title-lifetime-continuous-red.log"
+    },
+    "both": "Actual SDK retained child observer -> Prop.reset -> Watch prepare -> Cannot read properties of undefined (reading key)"
+  },
+  "green": {
+    "testCount": 10,
+    "passed": 10,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "durationMs": 2429.983208,
+    "log": ".reader-local/title-lifetime-related-result.log",
+    "persistentNegativeControls": true
+  },
+  "sdkLint": {
+    "status": "NO_NEW_DIAGNOSTICS",
+    "strictProbeExitCode": 1,
+    "baselineStrictProbeExitCode": 1,
+    "newDiagnostics": 0,
+    "arkts": [],
+    "unresolvedImports": [],
+    "baseline": {
+      "elapsedSeconds": 1.001,
+      "targets": [
+        "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurface.ets",
+        "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets"
+      ],
+      "sourceFiles": 333,
+      "semantic": [
+        {
+          "file": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+          "line": 236,
+          "code": 28040,
+          "message": "Function may throw exceptions. Special handling is required."
+        },
+        {
+          "file": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+          "line": 487,
+          "code": 2345,
+          "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'.\n  Type 'undefined' is not assignable to type 'string'."
+        }
+      ],
+      "arkts": [],
+      "unresolvedImports": []
+    },
+    "fixed": {
+      "elapsedSeconds": 0.937,
+      "targets": [
+        "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurface.ets",
+        "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets"
+      ],
+      "sourceFiles": 333,
+      "semantic": [
+        {
+          "file": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+          "line": 236,
+          "code": 28040,
+          "message": "Function may throw exceptions. Special handling is required."
+        },
+        {
+          "file": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+          "line": 493,
+          "code": 2345,
+          "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'.\n  Type 'undefined' is not assignable to type 'string'."
+        }
+      ],
+      "arkts": [],
+      "unresolvedImports": []
+    },
+    "note": "Targeted strict SDK probe retains two existing ReadingSurface diagnostics: toast may throw 28040 line236 and optional id argument2345 baseline487 -> fixed493; no new title-callsite errors. Canonical HAP remains root responsibility."
+  },
+  "boundaries": "SDK compiler/property/proxy classes and production Watch/prepare are executed. Native node removal, measurement geometry and compositor pixels are instrumented; no VM/HAP execution in this subtask.",
+  "unchanged": [
+    "ReaderNativeParagraphView.ets",
+    "Core",
+    "LocalReadingExperience.ets",
+    "progress",
+    "text recipes",
+    "title shape/measurement"
+  ],
+  "frozen": true
+}

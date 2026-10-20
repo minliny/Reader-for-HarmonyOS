@@ -1,5 +1,11 @@
+import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from './ReadingDirectoryRecovery';
+import { TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER, TYPE_READER_DIRECTORY_OFFLINE_ACTION, TYPE_READER_DIRECTORY_SOURCE_ACTION } from '../common/ReaderTypography';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -47,20 +53,32 @@ export struct ReaderFullDirectory {
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop catalogBusy: boolean = false;
+  onRetryCatalog: () => void = (): void => {};
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
+  onContinueOffline: (generation: number, identity: string) => void = (): void => {};
+
   @Prop currentChapterIndex: number = -1;
+  @Prop catalogContext: 'detail' | 'reader' = 'reader';
   // Source switch is only reachable for remote books (sourceId !== 'local');
   // local books render the top-bar 换源 affordance disabled. This is the
   // third copy of the LOCAL_SOURCE_ID sentinel (also Index.ets:70 and
   // LocalReadingFlowGateway.ts:89) — consolidated if those files are touched.
   @Prop sourceId: string = '';
+  @Prop mangaSearch: boolean = false;
   // True only for Module Directory -> Full Directory. Detail -> Directory
   // keeps its existing route semantics and does not borrow the Phone motion.
   @Prop animateFromControl: boolean = false;
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
   // chapter-start fallback, so this stays a zero-regression opt-in.
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
@@ -85,23 +103,31 @@ export struct ReaderFullDirectory {
   @State private panelProgress: number = 1;
   @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
+  @State private catalogHeaderHeight: number = 0;
+  @State private catalogHeaderTop: number = -1;
   @State private offlineMenuVisible: boolean = false;
   private animationGeneration: number = 0;
   private collapseStarted: boolean = false;
+  private mounted: boolean = false;
+  private collapseExit: (() => void) | undefined = undefined;
 
   aboutToAppear(): void {
     // Figma maps the Reader control’s Songti faces to the shipped Noto Serif
     // SC pair.  Do not fall back to a system or synthetic font here.
     registerReaderFonts(this.getUIContext().getFont());
+    this.mounted = true;
     this.collapseStarted = false;
+    this.collapseExit = undefined;
     this.animationGeneration += 1;
     const generation = this.animationGeneration;
     if (this.shouldAnimatePanel()) {
       this.panelProgress = 0;
       setTimeout((): void => {
-        if (generation !== this.animationGeneration || this.collapseStarted) {
+        if (!this.mounted || generation !== this.animationGeneration || this.collapseStarted) {
           return;
         }
+        // Admission is repeated at the actual scheduled animation boundary.
+        if (!this.shouldAnimatePanel()) { this.panelProgress = 1; return; }
         this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
           this.panelProgress = 1;
         });
@@ -112,25 +138,93 @@ export struct ReaderFullDirectory {
   }
 
   aboutToDisappear(): void {
+    this.mounted = false;
     this.animationGeneration += 1;
+    this.collapseExit = undefined;
+  }
+
+  private onReduceMotionChanged(): void {
+    if (!this.mounted || !this.reduceMotion) return;
+    const generation = ++this.animationGeneration;
+    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+      this.panelProgress = this.collapseStarted ? 0 : 1;
+    });
+    if (this.collapseStarted) this.finishCollapse(generation);
+  }
+
+  private finishCollapse(generation: number): void {
+    if (!this.mounted || generation !== this.animationGeneration || !this.collapseStarted) return;
+    const exit = this.collapseExit;
+    this.collapseExit = undefined;
+    exit?.();
+  }
+
+  @Builder
+  private recoveryContent() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+      ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
+        onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+        onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+    }
+  }
+
+  @Builder
+  private directoryOverlay() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+      Column() { this.recoveryContent(); }
+        .width(this.panelWidth()).position({ x: this.panelLeft(), y: this.panelTop() })
+        .zIndex(8).hitTestBehavior(HitTestMode.Transparent);
+    }
+    this.offlineBookMenu();
   }
 
   build() {
+    ReaderPageScaffold({
+      variant: this.catalogContext === 'detail' ? 'directory' : 'readerDirectory', headerKind: 'floating',
+      headerMeasurementKey: this.topBarTop(),
+      header: (): void => { this.topBar(); },
+      content: (): void => { this.directoryContent(); },
+      overlayContent: (): void => { this.directoryOverlay(); },
+      onHeaderHeightChange: (height: number, presentedTop: number): void => {
+        if (this.mounted && presentedTop === this.topBarTop() && Number.isFinite(height) && height > 0) {
+          this.catalogHeaderTop = presentedTop;
+          if (Math.abs(height - this.catalogHeaderHeight) > .1) this.catalogHeaderHeight = height;
+        }
+      },
+    }).onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = readerPageAreaLength(newValue.width);
+      const height = readerPageAreaLength(newValue.height);
+      if (Number.isFinite(width) && width > 0 && Math.abs(width - this.containerWidth) >= 0.01) {
+        this.containerWidth = width;
+      }
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.containerHeight) >= 0.01) {
+        this.containerHeight = height;
+      }
+    });
+  }
+
+  @Builder
+  private directoryContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.topBar();
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({
           entries: this.entries,
           catalogMessage: this.catalogMessage,
+          catalogBusy: this.catalogBusy,
+          onRetryCatalog: (): void => this.onRetryCatalog(),
           currentChapterIndex: this.currentChapterIndex,
+          allowUnanchoredBrowse: this.catalogContext === 'detail',
           chapterDownloadEnabled: this.sourceId !== 'local',
+          mangaSearch: this.mangaSearch,
           isTablet: this.usesExpandedLayout(),
           panelWidthOverride: this.panelWidth(),
           panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
-          onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
+          onDownloadChapter: (index: number): void => { if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(index); },
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -143,22 +237,11 @@ export struct ReaderFullDirectory {
       .position({ x: this.panelLeft(), y: this.panelTop() })
       .opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)
       .clip(true);
-      this.offlineBookMenu();
     }
     .width('100%')
-    .height('100%')
-    .clip(true)
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      const height = this.numericAreaLength(newValue.height);
-      if (width > 0 && Math.abs(width - this.containerWidth) >= 0.01) {
-        this.containerWidth = width;
-      }
-      if (height > 0 && Math.abs(height - this.containerHeight) >= 0.01) {
-        this.containerHeight = height;
-      }
-    });
+    .height('100%');
   }
+
 
   @Builder
   private topBar() {
@@ -181,9 +264,9 @@ export struct ReaderFullDirectory {
           Text(this.bookTitle)
             .width('100%')
             .height(22)
-            .fontFamily('ReaderNotoSerifSCBold')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(16)
+            .fontFamily(TYPE_READER_DIRECTORY_BOOK_TITLE.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_BOOK_TITLE.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -191,9 +274,9 @@ export struct ReaderFullDirectory {
           Text(this.chapterTitle)
             .width('100%')
             .height(17)
-            .fontFamily('ReaderNotoSerifSCRegular')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
+            .fontFamily(TYPE_READER_DIRECTORY_CHAPTER.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_CHAPTER.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_CHAPTER.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -211,9 +294,9 @@ export struct ReaderFullDirectory {
           Text('换源')
             .width(24)
             .height(15)
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(12)
+            .fontFamily(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .textAlign(TextAlign.Center)
             .alignSelf(ItemAlign.Center);
@@ -239,7 +322,7 @@ export struct ReaderFullDirectory {
         .height(42)
         .margin({ left: 8 })
         .opacity(this.isLocalBook() || this.offlineBookOperationActive ? 0.4 : 1)
-        .enabled(!this.isLocalBook() && !this.offlineBookOperationActive)
+        .enabled(!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true)
         .accessibilityText(this.offlineBookOperationActive ? '离线操作进行中' : '离线管理')
         .onClick((): void => {
           if (!this.isLocalBook() && !this.offlineBookOperationActive) {
@@ -268,15 +351,15 @@ export struct ReaderFullDirectory {
           .width('100%')
           .height(42)
           .padding({ left: 16 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(13)
+          .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .accessibilityText('下载整书')
           .onClick((): void => {
             this.offlineMenuVisible = false;
-            this.onDownloadBook();
+            if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadBook();
           });
         Divider()
           .color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
@@ -285,15 +368,15 @@ export struct ReaderFullDirectory {
           .width('100%')
           .height(42)
           .padding({ left: 16 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(13)
+          .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .accessibilityText('清除本书离线内容')
           .onClick((): void => {
             this.offlineMenuVisible = false;
-            this.onClearBookOffline();
+            if (this.directoryRecovery.offlineBlocked !== true) this.onClearBookOffline();
           });
       }
       .width(142)
@@ -317,6 +400,8 @@ export struct ReaderFullDirectory {
   }
 
   private topBarTop(): number {
+    if (this.readerWindowMetricsRevision < 0) return 18;
+    if (this.catalogContext === 'detail') return 18;
     return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));
   }
 
@@ -327,19 +412,18 @@ export struct ReaderFullDirectory {
   }
 
   private requestCollapse(): void {
-    if (this.collapseStarted) {
+    if (!this.mounted || this.collapseStarted) {
       return;
     }
     this.collapseStarted = true;
+    this.collapseExit = this.onExit;
+    const generation = ++this.animationGeneration;
     if (!this.shouldAnimatePanel()) {
-      this.onExit();
+      this.finishCollapse(generation);
       return;
     }
-    const generation = this.animationGeneration;
     this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse', (): void => {
-      if (generation === this.animationGeneration) {
-        this.onExit();
-      }
+      this.finishCollapse(generation);
     }), (): void => {
       this.panelProgress = 0;
     });
@@ -400,7 +484,9 @@ export struct ReaderFullDirectory {
   private fullPanelTop(): number {
     // Figma keeps 16vp between the 54vp top bar and the full directory sheet:
     // 18 + 54 + 16 = 88. Preserve that relationship when safeTop moves.
-    return this.topBarTop() + 70;
+    const top = this.topBarTop();
+    return this.catalogHeaderHeight > 0 && Math.abs(this.catalogHeaderTop - top) < .1 ?
+      this.catalogHeaderHeight + 16 : top + 70;
   }
 
   private panelHeightDelta(): number {
@@ -435,17 +521,6 @@ export struct ReaderFullDirectory {
 
   private usesExpandedLayout(): boolean {
     return this.liveContainerWidth() >= 600;
-  }
-
-  private numericAreaLength(value: Length): number {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : 0;
-    }
-    if (typeof value === 'string') {
-      const parsed = Number.parseFloat(value);
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-    return 0;
   }
 
   private isLocalBook(): boolean {

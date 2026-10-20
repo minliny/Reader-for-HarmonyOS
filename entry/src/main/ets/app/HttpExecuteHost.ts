@@ -9,6 +9,7 @@ import { CookieSessionStore } from './CookieSessionStore';
 import { errorMessageOf } from './ErrorMessage';
 import {
   allowNextRedirect,
+  httpUrlHostname,
   isCrossOriginSensitiveHeader,
   isPrivateNetworkTarget,
   mergeCookieHeader,
@@ -212,6 +213,7 @@ class SourceHttpTransportError extends Error {
  */
 export class HttpExecuteHost {
   private static targetTails: Map<string, Promise<void>> = new Map();
+  private static pendingDnsCleanup: Set<string> = new Set();
   private static reportedDiagnostics: Set<string> = new Set();
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
   private readonly activeByRequestId = new Map<number, DeadlineState>();
@@ -303,7 +305,13 @@ export class HttpExecuteHost {
     // argument remains the sole operation key for host.complete / host.error.
     const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
     const diagnosticStartedAt = Date.now();
-    const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
+    const requestedTimeout = params['timeoutMs'];
+    if (requestedTimeout !== undefined && (typeof requestedTimeout !== 'number' ||
+      !Number.isSafeInteger(requestedTimeout) || requestedTimeout <= 0)) {
+      throw new Error('http.execute: timeoutMs must be a positive integer');
+    }
+    const deadline = this.createDeadline(typeof requestedTimeout === 'number' ?
+      Math.min(TOTAL_DEADLINE_MS, requestedTimeout) : TOTAL_DEADLINE_MS);
     deadline.binarySink = binarySink;
     deadline.responseMaxBytes = responseMaxBytes;
     deadline.httpsOnly = httpsOnly === true;
@@ -754,14 +762,18 @@ export class HttpExecuteHost {
     requestCharset: string | undefined,
     deadline: DeadlineState,
   ): Promise<HopResponse> {
-    const target = await prepareNetworkTarget(requestUrl);
-    this.assertWithinDeadline(deadline);
-    const hostname = target.host;
-    if (target.route === 'systemProxy' || hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
-      return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, target.route);
+    const hostname = httpUrlHostname(requestUrl);
+    if (hostname === undefined || isPrivateNetworkTarget(hostname)) {
+      throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
     }
-    // The platform DNS override is application-wide. Serialize leases for
-    // this host so another hop cannot remove a pin while it is in use.
+    this.assertWithinDeadline(deadline);
+    if (hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
+      const target = await this.raceDeadline(prepareNetworkTarget(requestUrl), deadline);
+      this.assertWithinDeadline(deadline);
+      return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, target.route, target.systemProxy);
+    }
+    // Custom rules also override getAddressesByName. Hold the same-host lease
+    // before DNS admission, so it cannot read another hop's temporary pin.
     const priorLease = HttpExecuteHost.targetTails.get(hostname);
     const prior = priorLease ?? Promise.resolve();
     let release: () => void = (): void => {};
@@ -776,27 +788,52 @@ export class HttpExecuteHost {
     try {
       await this.raceDeadline(prior.catch((): void => {}), deadline);
       this.assertWithinDeadline(deadline);
-      // Recheck after waiting for the host lease; network/proxy settings may
-      // have changed while another request held the direct DNS pin.
-      const admitted = priorLease === undefined ? target : await prepareNetworkTarget(requestUrl);
+      // A failed cleanup can leave a VPN synthetic address in the application
+      // resolver. Restore only this Host's rule before consulting current DNS,
+      // including when the next request now selects a system proxy.
+      await this.clearOwnedDnsRule(hostname);
+      this.assertWithinDeadline(deadline);
+      // Read-only native DNS/proxy getters may fail to settle during a network
+      // transition. Cancellation must release this lease; their late result
+      // cannot install a pin or send a retired request.
+      const admitted = await this.raceDeadline(prepareNetworkTarget(requestUrl), deadline);
+      this.assertWithinDeadline(deadline);
       if (admitted.route === 'systemProxy') {
-        return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route), deadline);
+        return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route, admitted.systemProxy), deadline);
       }
       const addresses = admitted.addresses;
       this.assertWithinDeadline(deadline);
-      await connection.addCustomDnsRule(hostname, addresses);
+      try {
+        await connection.addCustomDnsRule(hostname, addresses);
+      } catch (error) {
+        throw NetworkEnvironmentError.fromPlatform('dns', '无法准备当前网络地址，请稍后重试',
+          'addCustomDnsRule', error);
+      }
       pinned = true;
+      HttpExecuteHost.pendingDnsCleanup.add(hostname);
       this.assertWithinDeadline(deadline);
       return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route), deadline);
     } finally {
       if (pinned) {
-        try { await connection.removeCustomDnsRule(hostname); } catch (_) {
-          // A retained rule contains only addresses admitted for the system route.
+        try { await this.clearOwnedDnsRule(hostname); } catch (_) {
+          // Keep ownership until removal succeeds. The next hop must recover
+          // this rule or fail with a retryable network error before dispatch.
           hilog.warn(LOG_DOMAIN, 'Reader', 'DNS pin cleanup deferred');
         }
       }
       release();
     }
+  }
+
+  private async clearOwnedDnsRule(hostname: string): Promise<void> {
+    if (!HttpExecuteHost.pendingDnsCleanup.has(hostname)) return;
+    try {
+      await connection.removeCustomDnsRule(hostname);
+    } catch (error) {
+      throw NetworkEnvironmentError.fromPlatform('dns', '当前网络地址尚未恢复，请稍后重试',
+        'removeCustomDnsRule', error);
+    }
+    HttpExecuteHost.pendingDnsCleanup.delete(hostname);
   }
 
   private async singleHopTransport(
@@ -807,7 +844,11 @@ export class HttpExecuteHost {
     requestCharset: string | undefined,
     deadline: DeadlineState,
     route: NetworkTarget['route'] = 'direct',
+    systemProxy?: connection.HttpProxy,
   ): Promise<HopResponse> {
+    if (route === 'systemProxy' && systemProxy === undefined) {
+      throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', 'proxy.snapshot');
+    }
     const request = http.createHttp();
     deadline.activeRequest = request;
     let stage = 'request.interceptors';
@@ -836,7 +877,10 @@ export class HttpExecuteHost {
         // owns the Core response conversion decision.
         expectDataType: http.HttpDataType.ARRAY_BUFFER,
         usingCache: false,
-        usingProxy: route === 'systemProxy',
+        // `true` rereads mutable defaults in native dispatch and can fall back
+        // to unvalidated direct DNS if the proxy was just disabled. Keep the
+        // admitted system endpoint for this hop; the next hop reads it afresh.
+        usingProxy: route === 'systemProxy' ? systemProxy : false,
         maxLimit: deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
         connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),

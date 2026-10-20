@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -45,7 +46,9 @@ assert.equal(handoff.current('local', 'large'), undefined, 'optional data has a 
 let metrics = { ready: true, densityPixels: 3, windowRect: { width: 390, height: 844 } };
 let paused = false;
 const runtime = { optionalReadingEntryMemoryEnabled: () => true, readingEntryPreparations: () => ({ setPaused(value) { paused = value; } }) };
-const Owner = productionMotionMethods(file, ['restoreRetainedReadingPresentation', 'admitInitialWindowGeometry'], {
+const Owner = productionMotionMethods(file, ['restoreRetainedReadingPresentation', 'admitInitialWindowGeometry',
+  'admitRetainedReadingRecency', 'isVisiblePageCurrent', 'isSelectionCurrent',
+  'onWindowChromeActiveChanged', 'onAppForegroundChanged'], {
   ReadingPaginationPrefix,
   ReaderRuntimeOwner: { current: () => runtime }, ReaderWindowCoordinator: { metrics: () => metrics },
 });
@@ -59,10 +62,13 @@ function fixture() {
     gateway: { hasPendingSourceSwitch: () => false, remoteSession: () => undefined },
     context: { chapter, contentVersion: 'body', paginationDraft: new ReadingPaginationPrefix(key,
     { requestScalar: 124, startScalar: 123, endScalarExclusive: 150 }) }, page, toc: [{ index: 4, title: chapter.chapterTitle, level: 2 }],
-    progress: { chapterIndex: 4, chapterOffset: 123, chapterProgress: 0.4 },
+    progress: { sourceId: 'local', bookId: 'book', chapterIndex: 4, chapterOffset: 123,
+      chapterProgress: 0.4, updatedAt: 1, locationRevision: 'retained-r1' },
     appearanceKey: JSON.stringify(appearance), settingsKey: JSON.stringify(settings),
     layoutKey: 'real-window-font-layout', densityPixels: 3 };
   const owner = Object.assign(new Owner(), { sourceId: 'local', bookId: 'book', readerSettingsLoaded: true,
+    mounted: true, lifecycleToken: 1, appForeground: true, windowChromeActive: true,
+    retainedReadingRecencyReceipt: undefined, retainedReadingRecencyVisible: false,
     appearanceSnapshot: appearance, readerSettingsSnapshot: settings, chapterSelectionToken: 1,
     entryPresentationProvider: () => snapshot, hasMeasuredViewport: () => true,
     isSelectionActive(_lifecycle, selection) { return this.chapterSelectionToken === selection; },
@@ -71,10 +77,14 @@ function fixture() {
     chapterWindow: { configure() {}, setCurrent() {} },
     restoreMaterializedChapterContext(context, admit) { assert.equal(admit, true); this.chapter = context.chapter; },
     rebuildChapterImageIndexes() {},
-    publishMeasuredFirstPage(next) { this.visiblePage = next; this.visibleFragments = next.fragments; events.push('body'); },
+    publishMeasuredFirstPage(next, _chapter, selection) {
+      this.visiblePage = next; this.visiblePageSelectionToken = selection;
+      this.visibleFragments = next.fragments; events.push('body');
+    },
     admitCommittedProgress(progress) { this.lastCommittedProgress = progress; },
     configureReaderScreenAwakeLease(value) { assert.equal(value, settings); },
     applyReaderSystemEventPolicy(value) { assert.equal(value, settings); }, beginReadingRecordClock() {},
+    onControlInputBoundaryChanged() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {},
     onDirectoryProjectionChanged() {}, onRemoteSessionReady() {}, schedulePageTurnPreparation() {},
     notifyControlSelectionReadingReady() { events.push('ready'); },
   });
@@ -89,6 +99,34 @@ function fixture() {
   assert.equal(f.owner.tocEntries[0].level, 2, 'same-book fast reopen keeps EPUB hierarchy');
   assert.deepEqual(f.events, ['body', 'ready'], 'synchronous body exists before ready without any I/O');
   assert.equal(paused, true);
+  assert.equal(f.owner.retainedReadingRecencyReceipt, f.owner.lastCommittedProgress);
+  assert.equal(f.owner.retainedReadingRecencyVisible, true,
+    'foreground retained body admits one real visit without delaying first paint for I/O');
+}
+for (const hidden of ['windowChromeActive', 'appForeground']) {
+  const f = fixture(); f.owner[hidden] = false;
+  assert.equal(f.owner.restoreRetainedReadingPresentation(1), true);
+  assert.equal(f.owner.retainedReadingRecencyVisible, false,
+    `${hidden}: mounting a retained body invisibly cannot count a reading visit`);
+  f.owner[hidden] = true;
+  if (hidden === 'windowChromeActive') f.owner.onWindowChromeActiveChanged();
+  else f.owner.onAppForegroundChanged();
+  assert.equal(f.owner.retainedReadingRecencyVisible, true,
+    `${hidden}: the first actual reader ownership admits the visit`);
+  const receipt = f.owner.retainedReadingRecencyReceipt;
+  f.owner.admitRetainedReadingRecency();
+  assert.equal(f.owner.retainedReadingRecencyReceipt, receipt, 'repeat visibility keeps one same-position receipt');
+}
+for (const retired of ['selection', 'identity', 'exit', 'page']) {
+  const f = fixture(); f.owner.windowChromeActive = false;
+  f.owner.restoreRetainedReadingPresentation(1);
+  if (retired === 'selection') f.owner.chapterSelectionToken++;
+  if (retired === 'identity') f.owner.isReaderIdentityCurrent = () => false;
+  if (retired === 'exit') f.owner.exitRequested = true;
+  if (retired === 'page') f.owner.visiblePage = { ...f.page, startScalar: 124 };
+  f.owner.windowChromeActive = true;
+  f.owner.admitRetainedReadingRecency();
+  assert.equal(f.owner.retainedReadingRecencyVisible, false, `${retired}: retired body cannot renew reading time`);
 }
 for (const reason of ['stale', 'book', 'chapter-request', 'bookmark', 'transaction', 'gateway-transaction', 'content-version', 'page-end', 'observation-missing',
   'font', 'appearance', 'settings', 'layout', 'density', 'viewport', 'settings-unknown', 'missing']) {
@@ -133,9 +171,9 @@ for (const callback of ['admitCommittedProgress', 'onDirectoryProjectionChanged'
 // SessionGateway it creates. Resource assertions must inspect the resulting
 // reference graph, not only the displayed chapter's images flag.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree = ts.createSourceFile('/tmp/ReaderEntryRetain.ets', readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderEntryRetain.ets'), readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const classes = Object.fromEntries(['ReaderRetainedPresentation', 'ReaderMaterializedChapterContext'].map(name => {
   const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
   assert.ok(node, name);

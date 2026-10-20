@@ -1,6 +1,14 @@
-import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'current-toolbar':{description:'Current control-only directory SDK authored Toolbar parent/child coordinates, inherited alpha and callbacks',resources:[]},
+ 'legacy-embedded':{description:'Explicit historical FullDirectory embedded implementation diagnostics; excluded from current release',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+ if(selectedCase==='legacy-embedded'){
+const { themeDayDesignSource }=await import('./lib/reader-theme-design-source.mjs');
+const {default:assert}=await import('node:assert/strict');
+const {default:fs}=await import('node:fs');
 
 // Structural wiring checks only. These do not claim ArkTS compilation, touch,
 // first-frame ordering, or visual parity; production policy executes separately.
@@ -117,7 +125,8 @@ for (const [p, expectedY, expectedAlpha] of [[0, 124, 0], [0.25, 116.5, 0.0625],
 assert.match(content, /this\.rebuildProjection\(nextTab, this\.ascending, this\.searchQuery\);\s*this\.beginListPositioning\(nextTab\);\s*this\.onTabChange\(nextTab\);/);
 assert.match(content, /beginReaderControlListOpen\(this\.listPositioning, `\$\{sessionKey\}:\$\{tab\}`, ordinal\)/);
 assert.equal((content.match(/onViewportChanged:/g) ?? []).length, 2);
-assert.equal((content.match(/onUserScrollIntent:/g) ?? []).length, 2);
+assert.equal((content.match(/onUserScrollIntent:/g) ?? []).length, 3,
+  'the local EPUB navigation list shares the scroll-intent guard');
 assert.match(content, /prepareReaderControlListPosition\(this\.listPositioning, openRevision/);
 assert.match(content, /readerControlListPositionIsCurrent\(this\.listPositioning, command\)/);
 assert.match(content, /commitReaderControlListPosition\(this\.listPositioning, command\)/);
@@ -126,16 +135,17 @@ assert.match(content, /this\.listPositioning = commitReaderControlListPosition[\
   'initial positioning still commits a single safe scroll before enabling list input');
 assert.match(content, /onFirstLayout: \(\): void => this\.onListFirstLayout\(\)/,
   'first native layout must be able to kick positioning even when an ancestor is clipped');
-assert.match(content, /\.opacity\(this\.projectedEntries\.length > 0 \? 1 : 0\)/,
-  'persistent chapter actors stay painted while positioning is pending');
+assert.match(content, /\.opacity\(this\.projectedEntries\.length > 0 \|\| this\.navigationActive \? 1 : 0\)/,
+  'persistent chapter and EPUB navigation actors stay painted while positioning is pending');
 assert.match(content, /\.opacity\(this\.projectedBookmarks\.length > 0 \? 1 : 0\)/,
   'persistent bookmark actors stay painted while positioning is pending');
 assert.match(content, /private onEntriesChanged\(\): void \{[\s\S]*?this\.pendingEntries = this\.entries;\s*this\.scheduleDeferredMutationFlush\(\);/,
   'entries changes are queued without copying a large TOC during the render callback');
 assert.match(content, /private flushDeferredMutations\(\): void \{[\s\S]*?this\.admittedEntries = snapshotReaderDirectoryData\(queuedEntries as LocalReadingTocEntry\[\]\);/,
   'an independent business snapshot is admitted only after the motion endpoint');
-assert.match(content, /const sourceEntries = this\.admittedEntries;/,
-  'projection must consume the admitted snapshot, not the transient hidden empty sentinel');
+assert.match(content, /const sourceEntries = this\.mangaSearch \? mangaDirectoryContextEntries\(this\.admittedEntries, mangaDirectoryPresentation\(this\.admittedEntries\)\) : this\.admittedEntries;/,
+  'only manga enriches the admitted immutable snapshot; text stays raw and hidden empty sentinel is never used');
+assert.doesNotMatch(content, /const sourceEntries =[^;]*this\.entries(?:\s|[,;)])/,'projection cannot regain the transient parent entries sentinel');
 assert.doesNotMatch(content, /projectionMountPrimary|this\.projectionMountPrimary/,
   'the directory List remains one persistent native actor');
 assert.match(content, /@Prop @Watch\('onListSessionKeyChanged'\) listSessionKey: string = '';/,
@@ -184,3 +194,36 @@ assert.match(panel, /this\.layout\.dockBottomGap, this\.controlQuickHeight\(\)/,
   'Stage receives the same responsive Quick endpoint used by directory sizing');
 assert.match(panel, /private controlQuickHeight\(\): number/);
 console.log('reader control directory content: structural wiring passed (not runtime or visual evidence)');
+
+ return;
+ }
+ const {default:assert}=await import('node:assert/strict');const {readFileSync}=await import('node:fs');
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const {readerControlNativeTree}=await import('./fixtures/reader-control-native-tree.mjs');
+ const {sampleReaderControlMotionPresentation}=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets',import.meta.url),'utf8');
+ const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets',import.meta.url),'utf8');
+ for(const tab of ['directory','bookmarks'])for(const p of [0,.25,.5,.75,1]){
+  const tree=readerControlNativeTree();
+  class Toolbar {constructor(owner,params){this.owner=owner;this.params=params;}initialRender(){}updateStateVars(next){Object.assign(this.params,next);}}
+  const {owner}=createReaderBuilderProbe(source,['build','directoryToolbar','value','presentation'],
+   {...tree.dependencies,ReaderDirectoryToolbar:Toolbar,sampleReaderControlMotionPresentation},
+   {...tree.hooks,childSources:{ReaderDirectoryToolbar:childSource}});
+  const calls=[];Object.assign(owner,{tab,progress:p,availableWidth:286+52*p,availableHeight:190+476*p,appThemeScheme:'day',draft:'词',ascending:true,
+   tabButton(){},listBody(){},listHeight:()=>100,listTop:()=>48,snapshot:{currentTitle:'章',currentPosition:'1/2'},placeholder:()=> '搜索',
+   search:()=>calls.push('search'),scrollCatalogEdge:end=>calls.push(end?'bottom':'top'),sort:()=>calls.push('sort')});
+  owner.initialRender();assert.equal(tree.remaining(),0);
+  const divider=[...owner.nodes.entries()].find(([,n])=>n.type==='Row'&&n.position?.x===0&&n.position?.y===63-12*p&&n.opacity===p);
+  assert.ok(divider,'actual nested Toolbar divider');
+  const inner=owner.nodes.get(divider[1].parentId),outer=owner.nodes.get(inner.parentId);
+  assert.equal(inner.height,52);assert.deepEqual(outer.position,{x:1,y:61-18*p});
+  assert.equal(outer.opacity,p*sampleReaderControlMotionPresentation(p).contentOpacity);
+  assert.equal(outer.position.y+divider[1].position.y,124-30*p,'compose authored parent and local coordinates');
+  assert.ok(Math.abs(outer.opacity*divider[1].opacity-p*p*sampleReaderControlMotionPresentation(p).contentOpacity)<1e-12,'composed alpha differs only by float association');
+  const toolbar=[...owner.children.values()].find(n=>n instanceof Toolbar);assert.ok(toolbar);
+  assert.equal(toolbar.params.showChapterTools,tab==='directory');toolbar.params.onTextChange('新词');assert.equal(owner.draft,'新词');
+  toolbar.params.onSearch();toolbar.params.onTop();toolbar.params.onBottom();toolbar.params.onToggleSort();
+  assert.deepEqual(calls,['search','top','bottom','sort']);
+ }
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

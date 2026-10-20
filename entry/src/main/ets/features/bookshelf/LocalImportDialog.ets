@@ -1,7 +1,17 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../common/ReaderMessageStyle';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { localImportResultLayout, LocalImportResultLayout } from './LocalImportLayout';
+import type { LocalImportDialogState } from './LocalImportPresentationOwner';
 import type { LocalImportBatch, LocalImportItem } from './LocalBookImportGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -9,6 +19,7 @@ import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
+import { DialogSurfaceSpec, resolveDialogSpec } from '../common/ReaderSurfaceSpecs';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -27,15 +38,11 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_BORDER_W,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 
-const LOCAL_IMPORT_PANEL_MAX_WIDTH = 350;
-const LOCAL_IMPORT_EDGE_GAP = 20;
-
-export type LocalImportDialogState = 'fileSelection' | 'pickerOpening' | 'importing' | 'result';
+export type { LocalImportDialogState } from './LocalImportPresentationOwner';
 
 /**
  * Figma `Library/LocalImportDialog` (node 2657:918, 390×844), centered in
@@ -48,6 +55,7 @@ export type LocalImportDialogState = 'fileSelection' | 'pickerOpening' | 'import
  */
 @Component
 export struct LocalImportDialog {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -55,6 +63,11 @@ export struct LocalImportDialog {
   @Prop @Watch('onBatchChanged') batch: LocalImportBatch | undefined;
   @Prop @Watch('onPresentationChanged') reduceMotion: boolean = false;
   @Prop failureMessage: string = '';
+  @Prop selectionEnabled: boolean = true;
+  @Prop selectionBlockedMessage: string = '';
+  @Prop originalPending: boolean = false;
+  @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onPresentationChanged') private foreground: boolean = true;
   @State private viewportHeight: number = 0;
   @State private measuredItemsHeight: number = 0;
@@ -64,9 +77,6 @@ export struct LocalImportDialog {
   @State private shellHeight: number = 228;
   @State private importingOpacity: number = 1;
   @State private resultOpacity: number = 0;
-  @State private spinnerAngle: number = 0;
-  private spinnerStartedAt: number = 0;
-  private spinnerRunning: boolean = false;
   private mounted: boolean = false;
   private motionGeneration: number = 0;
   private pendingHandoff: boolean = false;
@@ -77,14 +87,20 @@ export struct LocalImportDialog {
   onSelectFiles: () => void = (): void => {};
   onClose: () => void = (): void => {};
 
+  private surfaceSpec(): DialogSurfaceSpec {
+    return resolveDialogSpec('local-import');
+  }
+
   aboutToAppear(): void {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.onPresentationChanged();
+    this.onRecoveryChanged();
   }
 
   aboutToDisappear(): void {
-    this.mounted = false; this.motionGeneration += 1; this.stopSpinner();
+    this.transientFeedback.reset();
+    this.mounted = false; this.motionGeneration += 1;
   }
 
   build() {
@@ -99,16 +115,21 @@ export struct LocalImportDialog {
           this.fileSelectionPanel();
         } else {
           // One persistent opaque shell owns the importing -> result handoff.
-          Row().width(this.panelFrame().width).height(this.shellHeight)
-            .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(20)
-            .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.build.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
-          this.importingPanel();
-          if (this.batch !== undefined) this.resultPanel();
+          ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
+            surfaceHeight: this.shellHeight, body: (): void => { this.progressLayers(); } });
         }
       }
       .width('100%')
       .height('100%')
       .padding({ left: this.panelFrame().left, right: this.panelFrame().right });
+      if (this.pendingImport()) {
+        Column() {
+          ReaderRecoveryNotice({ view: this.recovery, tag: '导入待确认', actionLabel: '核对导入结果',
+            onReconcile: (generation: number): void => this.onReconcile(generation) });
+        }.width('100%').padding({ left: this.panelFrame().left, right: this.panelFrame().right,
+          top: 8 })
+          .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
+      }
     }
     .width('100%')
     .height('100%')
@@ -127,23 +148,43 @@ export struct LocalImportDialog {
   }
 
   @Builder
+  private progressLayers() { this.importingPanel(); if (this.batch !== undefined) this.resultPanel(); }
+
+  @Builder
   private fileSelectionPanel() {
-    Column() {
-      Row() {
-        Text('导入本地书籍')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(18)
-          .lineHeight(24.75)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width('100%')
-      .padding({ left: 20, right: 20, top: 20, bottom: 17 })
-      .alignItems(VerticalAlign.Center);
+    ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width,
+      surfaceHeight: this.selectionPanelHeight(), body: (): void => { this.selectionDocument(); } });
+  }
 
-      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9', this.appThemeScheme));
+  @Builder
+  private selectionDocument() {
+    Scroll() {
+      Column() { this.fileSelectionHeader(); this.fileSelectionBody(); this.fileSelectionActions(); }.width('100%');
+    }.width('100%').height(this.selectionPanelHeight()).scrollBar(BarState.Auto);
+  }
 
+  private selectionPanelHeight(): number {
+    const scale = Math.max(1, ReaderWindowCoordinator.metrics().systemFontScale);
+    return Math.min(this.availableHeight(), 399.75 * scale);
+  }
+
+  @Builder
+  private fileSelectionHeader() {
+    this.importHeader('导入本地书籍');
+  }
+
+  @Builder
+  private fileSelectionActions() {
+    Row({ space: 10 }) {
+      ReaderRecoveryAction({ label: '选择文件', actionEnabled: this.state !== 'pickerOpening' && this.selectionEnabled,
+        isBusy: this.state === 'pickerOpening', onReconcile: (): void => { if (this.selectionEnabled) this.onSelectFiles(); } }).layoutWeight(1);
+      ReaderRecoveryAction({ label: '取消', onReconcile: (): void => this.onClose() }).layoutWeight(1);
+    }.width('100%').padding(17);
+
+  }
+
+  @Builder
+  private fileSelectionBody() {
       Column({ space: 0 }) {
         // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.
         Column({ space: TOK_SPACE_SM }) {
@@ -157,18 +198,18 @@ export struct LocalImportDialog {
 
           Column({ space: 0 }) {
             Text('从系统文件中选择')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
+              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
             Text('支持多选 TXT、EPUB、MOBI、AZW3')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(16.5)
-              .letterSpacing(0.0645)
+              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .margin({ top: 2 });
           }
@@ -190,115 +231,66 @@ export struct LocalImportDialog {
         .borderRadius(14)
         // The illustrated drop zone is itself the primary picker affordance;
         // keep it equivalent to the explicit bottom action for touch users.
-        .enabled(this.state !== 'pickerOpening')
-        .onClick((): void => this.onSelectFiles());
+        .enabled(this.state !== 'pickerOpening' && this.selectionEnabled)
+        .onClick((): void => { if (this.selectionEnabled) this.onSelectFiles(); });
 
         Row({ space: TOK_SPACE_XS }) {
           Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))
             .width(13)
             .height(13)
             .margin({ top: 2 });
-          Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
+          Text(this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage :
+            this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
             .layoutWeight(1)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .letterSpacing(0.0645)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            .fontFamily(MESSAGE_BODY.fontFamily)
+            .fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp)
+            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
         }
         .width('100%')
         .padding({ top: TOK_SPACE_MD });
 
-        // Primary 211 / outlined cancel; row height 84 (20 top + 44 + 20 bottom).
-        Row({ space: TOK_SPACE_SM }) {
-          Row({ space: TOK_SPACE_XS }) {
-            Image($r('app.media.import_choose_file')).width(15).height(15);
-            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-          }
-          .layoutWeight(1)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-          .borderRadius(22)
-          .enabled(this.state !== 'pickerOpening')
-        .onClick((): void => this.onSelectFiles());
-
-          Row({ space: 6 }) {
-            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);
-            Text('取消')
-              .fontFamily('ReaderInter')
-              .fontWeight(600)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          }
-          .height(44)
-          .padding({ left: 21, right: 21 })
-          .justifyContent(FlexAlign.Center)
-          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-          .borderRadius(22)
-          .onClick((): void => this.onClose());
-        }
-        .width('100%')
-        .padding({ top: 20, bottom: 20 });
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 20 });
-    }
-    .width(this.panelFrame().width)
-    .height(399.75)
-    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .borderRadius(20)
-    .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.fileSelectionPanel.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
   }
 
   @Builder
   private importingPanel() {
     Column() {
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_halo_theme_night') : $r('app.media.importing_halo'))).width(56).height(56);
-        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_track_theme_night') : $r('app.media.importing_spinner_track'))).width(32).height(32);
-        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_arc_theme_night') : $r('app.media.importing_spinner_arc'))).width(32).height(32)
-          .rotate({ angle: this.spinnerAngle });
-      }
-      .width(56)
-      .height(56)
-      .margin({ top: 35 });
+      this.importHeader('正在导入');
+      Column({ space: 16 }) {
+        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+        Text('请稍候，完成后将显示导入结果。')
+          .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
+      }.width('100%').padding({ left: 17, right: 17, top: 23, bottom: 14 });
+    }.width(this.panelFrame().width).height(228).alignItems(HorizontalAlign.Start)
+      .opacity(this.importingOpacity).hitTestBehavior(HitTestMode.None);
+  }
 
-      Text('正在导入')
-        .fontFamily('ReaderInter')
-        .fontWeight(600)
-        .fontSize(14)
-        .lineHeight(21)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .margin({ top: 20 });
-
-      Text('请稍候')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16.5)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .margin({ top: 8 });
-    }
-    .width(this.panelFrame().width)
-    .height(228)
-    .alignItems(HorizontalAlign.Center)
-    .opacity(this.importingOpacity)
-    .hitTestBehavior(HitTestMode.None);
+  @Builder
+  private importHeader(title: string) {
+    Text(title).width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
+      .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+      .padding({ left: 17, right: 17, top: 17, bottom: 16 });
   }
 
   @Builder
   private resultPanel() {
-    Column() {
+    ReaderBoundedSurface({ specId: 'local-import-result-content', surfaceWidth: this.panelFrame().width,
+      surfaceHeight: this.resultPanelHeight(), header: (): void => { this.resultBoundedHeader(); }, body: (): void => { this.resultBody(); }, actions: (): void => { this.resultFooter(); } })
+      .opacity(this.resultOpacity).hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  @Builder
+  private resultBoundedHeader() { if (!this.resultLayout().compact) this.resultHeader(); }
+
+  @Builder
+  private resultBody() {
       if (this.resultLayout().compact) {
         Scroll() {
           Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }
@@ -306,102 +298,38 @@ export struct LocalImportDialog {
         }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))
           .scrollBar(BarState.Off);
       } else {
-        this.resultHeader();
         this.resultSummary();
         this.resultItemsPanel();
       }
-      this.resultFooter();
-    }
-    .width(this.panelFrame().width).height(this.resultPanelHeight())
-    .alignItems(HorizontalAlign.Start).opacity(this.resultOpacity)
-    .hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
   private resultHeader() {
-    Column() {
-      Text('导入结果').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-        .fontSize(18).lineHeight(24.75).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
-        .padding({ left: 20, right: 20, top: 20, bottom: 17 });
-      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));
-    }.width('100%').onAreaChange((_old: Area, next: Area): void => {
-      this.measuredHeaderHeight = this.numericAreaLength(next.height);
-      this.updateMeasuredResult();
-    });
+    Column() { this.importHeader(this.summaryTitle()); }.width('100%')
+      .onAreaChange((_old: Area, next: Area): void => {
+        this.measuredHeaderHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      });
   }
 
   @Builder
   private resultFooter() {
     Column() {
-      Row({ space: 6 }) {
-        Image($r('app.media.import_done')).width(14).height(14);
-        Text('完成').fontFamily('ReaderInter').fontWeight(800).fontSize(13).lineHeight(19.5)
-          .letterSpacing(-0.0762).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }.width(this.resultButtonWidth()).height(40).justifyContent(FlexAlign.Center)
-        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(20).onClick((): void => this.onClose());
-    }.width('100%').padding({ left: 16, right: 16,
-      top: Math.min(16, Math.max(0, (this.availableHeight() - 40) / 2)),
-      bottom: Math.min(20, Math.max(0, (this.availableHeight() - 40) / 2)) })
+      ReaderRecoveryAction({ label: '完成', onReconcile: (): void => this.onClose() }).width('100%');
+    }.width('100%').padding(17)
       .onAreaChange((_old: Area, next: Area): void => {
-        this.measuredFooterHeight = this.numericAreaLength(next.height);
-        this.updateMeasuredResult();
+        this.measuredFooterHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
       });
   }
 
   @Builder
   private resultSummary() {
-    Column() {
-      Row({ space: TOK_SPACE_SM }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Image(this.summaryIcon()).width(18).height(18);
-        }
-        .width(36)
-        .height(36)
-        .backgroundColor(this.allSucceeded() ? readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFE8F4ED', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFFDECEA', this.appThemeScheme))
-        .borderRadius(18);
-        Column({ space: 1 }) {
-          Text(this.summaryTitle())
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(19.5)
-            .letterSpacing(-0.0762)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          Text(this.resultCountText())
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .letterSpacing(0.0645)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start);
-        Stack({ alignContent: Alignment.Center }) {
-          // Figma 2657:818 keeps an 18vp slot; rotated Icon 2657:819 paints
-          // a 23.754vp bound. The 24px export already bakes in that rotation.
-          // Restore its paint scale without shrinking it twice or changing layout.
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))
-            .width(18)
-            .height(18)
-            .scale({ x: 23.754 / 18, y: 23.754 / 18 });
-        }
-        .width(18)
-        .height(18);
-      }
-      .width('100%')
-      .constraintSize({ minHeight: 52 })
-      .padding({ left: 17, right: 17, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultSummary.color.FFE8E2D9', this.appThemeScheme) })
-      .borderRadius(12);
-    }
-    .width('100%')
-    .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_MD })
-    .onAreaChange((_old: Area, next: Area): void => {
-      this.measuredSummaryHeight = this.numericAreaLength(next.height);
-      this.updateMeasuredResult();
-    });
+    Text(this.resultCountText()).width('100%').fontFamily(MESSAGE_BODY.fontFamily)
+      .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+      .padding({ left: 17, right: 17, bottom: 15 })
+      .onAreaChange((_old: Area, next: Area): void => {
+        this.measuredSummaryHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      });
   }
 
   @Builder
@@ -413,19 +341,19 @@ export struct LocalImportDialog {
       .width('100%')
       .height(this.resultItemsPanelHeight())
       .padding(1)
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultItemsPanel.color.FFE8E2D9', this.appThemeScheme) })
-      .borderRadius(12)
+
       .scrollBar(BarState.Off);
     }
     .width('100%')
-    .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_SM });
+    .padding({ left: 17, right: 17 });
   }
 
   @Builder
   private resultItemsNatural() {
     Column() {
       ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
-        this.resultItem(item, index !== this.resultItems().length - 1);
+        this.resultItem((): LocalImportItem => this.currentResultItem(item, index),
+          (): boolean => index !== this.resultItems().length - 1);
       }, (item: LocalImportItem, index: number): string => `${item.fileName}-${item.state}-${index}`);
     }.width('100%').onAreaChange((_old: Area, next: Area): void => {
       this.measuredItemsHeight = this.numericAreaLength(next.height);
@@ -435,77 +363,41 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private resultItem(item: LocalImportItem, hasDivider: boolean) {
+  private resultItem(item: () => LocalImportItem, hasDivider: () => boolean) {
     Column({ space: 0 }) {
-      Row({ space: TOK_SPACE_SM }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))).width(16).height(16);
-        }
-        .width(32)
-        .height(32)
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .borderRadius(8);
-        Column({ space: 3 }) {
-          Text(item.fileName)
-            .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(600)
-            .fontSize(12)
-            .lineHeight(18)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          this.resultBadge(item.state === 'success' ?
-            (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :
-            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
-          if (item.failure !== undefined) {
-            Text(item.failure.message).fontSize(11).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
+      Row({ space: 9 }) {
+        Image(this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))
+          .width(16).height(16).margin({ top: 3 });
+        Column({ space: 4 }) {
+          Text(item().fileName).width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(500)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
+          Text(item().state === 'success' ? (item().disposition === 'created' ? '新增成功' :
+            item().disposition === 'existing' ? '已在书架' : '成功') :
+            item().failure?.code === 'recoveryPending' ? '待确认' : '失败')
+            .fontFamily(MESSAGE_META.fontFamily).fontSize(MESSAGE_META.fontSizeFp)
+            .lineHeight(MESSAGE_META.lineHeightFp as number)
+            .fontColor(readerAppColor(item().state === 'success' ? 'TOK_MESSAGE_SOFT_INK' :
+              item().failure?.code === 'recoveryPending' ? 'TOK_MESSAGE_MUTED' : 'TOK_MESSAGE_DANGER', this.appThemeScheme));
+          if (item().failure !== undefined) {
+            Text(item().failure?.message ?? '').width('100%').fontFamily(MESSAGE_META.fontFamily)
+              .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
           }
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start);
-        if (item.state === 'success') {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success'))).width(17).height(17);
-        } else {
-          Image($r('app.media.import_failure')).width(17).height(17);
-        }
-      }
-      .width('100%')
-      .constraintSize({ minHeight: 61 })
-      .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
-      .alignItems(VerticalAlign.Center);
-      if (hasDivider) {
-        Divider()
-          .width('100%')
-          .color(readerAppColor('app.LocalImportDialog.resultItem.color.FFE8E2D9', this.appThemeScheme))
-          .strokeWidth(1);
-      }
-    }
-    .width('100%');
-  }
-
-  @Builder
-  private resultBadge(label: string, color: string) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(10)
-      .lineHeight(15)
-      .letterSpacing(0.3672)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .backgroundColor(color)
-      .borderRadius(4);
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+      }.width('100%').alignItems(VerticalAlign.Top).padding({ top: 13, bottom: 13 })
+        .border({ width: { top: 1 }, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) });
+    }.width('100%');
   }
 
   @Builder
   private formatBadge(label: string, color: string) {
     Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(10)
-      .lineHeight(15)
-      .letterSpacing(0.3672)
+      .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
+      .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
+      .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
+      .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
+      .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       .backgroundColor(color)
@@ -514,6 +406,13 @@ export struct LocalImportDialog {
 
   private resultItems(): LocalImportItem[] {
     return this.batch === undefined ? [] : this.batch.items;
+  }
+
+  /** Stable ForEach identity keeps its current DTO, rather than the first
+   * same-name/state snapshot. Removed identities only finish their old paint. */
+  private currentResultItem(snapshot: LocalImportItem, index: number): LocalImportItem {
+    const current = this.resultItems()[index];
+    return current !== undefined && current.fileName === snapshot.fileName && current.state === snapshot.state ? current : snapshot;
   }
 
   private panelFrame(): SurfaceHorizontalFrame {
@@ -527,9 +426,9 @@ export struct LocalImportDialog {
       readerInteractiveSafeLeft(metrics),
       readerInteractiveSafeRight(metrics),
       new SurfaceWidthSpec(
-        LOCAL_IMPORT_PANEL_MAX_WIDTH,
-        LOCAL_IMPORT_EDGE_GAP,
-        LOCAL_IMPORT_EDGE_GAP,
+        this.surfaceSpec().maxWidth,
+        this.surfaceSpec().edgeGap,
+        this.surfaceSpec().edgeGap,
       ),
     );
   }
@@ -560,7 +459,8 @@ export struct LocalImportDialog {
   }
 
   private summaryTitle(): string {
-    if (this.resultItems().some((item: LocalImportItem): boolean => item.failure?.code === 'recoveryPending')) return '部分结果待确认';
+    if (this.resultItems().some((item: LocalImportItem): boolean => item.failure?.code === 'recoveryPending'))
+      return this.resultItems().some((item: LocalImportItem): boolean => item.state === 'success') ? '部分结果待确认' : '导入结果待确认';
     return this.allSucceeded() ? '导入完成' : (this.batch?.imported === 0 ? '导入未完成' : '部分导入完成');
   }
 
@@ -582,10 +482,10 @@ export struct LocalImportDialog {
       this.shellHeight = Math.min(228, this.availableHeight());
       this.importingOpacity = 1;
       this.resultOpacity = 0;
-      if (this.foreground && !this.reduceMotion) this.startSpinner(); else this.stopSpinner();
+
       return;
     }
-    this.stopSpinner();
+
     if (this.state === 'result') {
       this.pendingHandoff = true;
       this.updateMeasuredResult();
@@ -593,23 +493,6 @@ export struct LocalImportDialog {
       this.motionGeneration += 1;
       this.wasImporting = false;
     }
-  }
-
-  private startSpinner(): void {
-    if (this.spinnerRunning) return;
-    this.spinnerRunning = true;
-    this.spinnerStartedAt = readerMotionNowMs();
-    this.spinnerAngle = 0;
-    // Authorized §7.4 candidate: not claimed as a Figma import timing.
-    this.getUIContext().animateTo({ duration: 1000, curve: Curve.Linear, iterations: -1 },
-      (): void => { this.spinnerAngle = 360; });
-  }
-
-  private stopSpinner(): void {
-    if (!this.spinnerRunning) return;
-    this.spinnerRunning = false;
-    const angle = ((readerMotionNowMs() - this.spinnerStartedAt) % 1000) * .36;
-    this.getUIContext().animateTo({ duration: 0 }, (): void => { this.spinnerAngle = angle; });
   }
 
   private updateMeasuredResult(): void {
@@ -647,6 +530,19 @@ export struct LocalImportDialog {
       return Number.isFinite(parsed) ? parsed : 0;
     }
     return 0;
+  }
+
+  private pendingImport(): boolean {
+    return this.recovery.visible && (this.originalPending ||
+      this.resultItems().some((item: LocalImportItem): boolean => item.failure?.code === 'recoveryPending'));
+  }
+
+  private lastRecoveryFeedback: string = '';
+  private onRecoveryChanged(): void {
+    if (!this.recovery.visible || !this.recovery.canRetry || this.pendingImport()) { this.lastRecoveryFeedback = ''; return; }
+    if (!this.mounted || this.recovery.message === this.lastRecoveryFeedback) return;
+    this.lastRecoveryFeedback = this.recovery.message;
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   private resultCountText(): string {

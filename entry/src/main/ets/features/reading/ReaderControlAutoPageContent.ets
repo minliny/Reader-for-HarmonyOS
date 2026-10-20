@@ -1,3 +1,5 @@
+import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK } from '../common/ReaderTypography';
+import { TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -265,9 +267,9 @@ export struct ReaderControlAutoPageContent {
   @Builder
   private quickHeader() {
     Row() {
-      Text('自动翻页').layoutWeight(1).fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
-        .fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
-      Text(this.headerMeta('control')).fontFamily('ReaderInter').fontSize(10)
+      Text('自动翻页').layoutWeight(1).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
+      Text(this.headerMeta('control')).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme)).maxLines(1);
     }.width(this.frame().quickHeader.width).height(this.frame().quickHeader.height)
       .alignItems(VerticalAlign.Center)
@@ -282,8 +284,8 @@ export struct ReaderControlAutoPageContent {
   private quickBack() {
     Row({ space: 4 }) {
       Image($r(this.appScheme === 'night' ? 'app.media.reader_quick_back_theme_night' : 'app.media.reader_quick_back')).width(11).height(11);
-      Text('返回').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(10).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+      Text('返回').fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
     }.width(this.frame().back.width).height(this.frame().back.height)
       .padding({ left: 9, right: 9 }).backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme)).borderRadius(8)
       .alignItems(VerticalAlign.Center).position({ x: this.frame().back.x, y: this.frame().back.y })
@@ -308,9 +310,9 @@ export struct ReaderControlAutoPageContent {
   @Builder
   private moduleHeader(kind: 'control' | 'details') {
     Row() {
-      Text(kind === 'control' ? '自动翻页控制' : '详细配置').layoutWeight(1).fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
-        .fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
-      Text(this.headerMeta(kind)).fontFamily('ReaderInter').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
+      Text(kind === 'control' ? '自动翻页控制' : '详细配置').layoutWeight(1).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
+      Text(this.headerMeta(kind)).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
     }.width(this.headerActor(kind).width).height(this.headerActor(kind).height).alignItems(VerticalAlign.Center)
       .position({ x: this.headerActor(kind).x, y: this.headerActor(kind).y })
       .translate({ y: this.fullOnlyScrollTranslation() })
@@ -350,8 +352,8 @@ export struct ReaderControlAutoPageContent {
           .width(16).height(16).position({ x: 8, y: 5.5 });
       }.width(27).height(27).backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(8).position({ x: 22.5, y: 5 });
-      Text(previous ? '上一章' : '下一章').width(27).height(9).fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold).fontSize(9).lineHeight(9).fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
+      Text(previous ? '上一章' : '下一章').width(27).height(9).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.fontWeight).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .textAlign(TextAlign.Center).position({ x: 22.5, y: 39 });
     }.width(this.chapterActor(previous).width).height(this.chapterActor(previous).height)
       .position({ x: this.chapterActor(previous).x, y: this.chapterActor(previous).y })
@@ -375,8 +377,8 @@ export struct ReaderControlAutoPageContent {
         .position({ x: this.frame().playIcon.x, y: this.frame().playIcon.y });
       // 1939:803 is static inside its parent. The -31.492/-2.5 track belongs
       // to 1939:801 above, not this label (the previous Full adapter mixed them).
-      Text('自动翻页').width(36).height(9).fontFamily('ReaderInter').fontWeight(800).fontSize(9)
-        .lineHeight(9).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).textAlign(TextAlign.Center)
+      Text('自动翻页').width(36).height(9).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.fontWeight).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).textAlign(TextAlign.Center)
         .position({ x: 29.4921875, y: 39 });
     }.width(this.frame().toggle.width).height(this.frame().toggle.height)
       .position({ x: this.frame().toggle.x, y: this.frame().toggle.y }).clip(true)
@@ -395,7 +397,7 @@ export struct ReaderControlAutoPageContent {
       .enabled(this.sharedInput() && this.status !== 'stopped').opacity(this.status === 'stopped' ? 0.4 : 1)
       .accessibilityText('停止自动翻页').onClick((): void => { if (this.sharedInput() && this.status !== 'stopped') this.onStop(); });
     Text('停止').width(this.frame().stopLabel.width).height(this.frame().stopLabel.height)
-      .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(9).lineHeight(9)
+      .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.fontWeight).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL.lineHeightFp as number)
       .fontColor(readerAppColor('app.control.paint.8C3D36', this.appScheme)).textAlign(TextAlign.Center)
       .position({ x: this.frame().stopLabel.x, y: this.frame().stopLabel.y }).hitTestBehavior(HitTestMode.None);
   }
@@ -414,7 +416,7 @@ export struct ReaderControlAutoPageContent {
       value: this.currentTimerValue(minutes),
       minimum: minutes ? READER_AUTO_PAGE_FULL_MIN_MINUTES : READER_AUTO_PAGE_FULL_MIN_SECONDS,
       maximum: minutes ? READER_AUTO_PAGE_FULL_MAX_MINUTES : READER_AUTO_PAGE_FULL_MAX_SECONDS,
-      wheelWidth: this.timerWheelWidth(), rowHeight: 34, neighbours: 1, selectedSize: 17, neighbourSize: 11,
+      wheelWidth: this.timerWheelWidth(), rowHeight: 34, neighbours: 1,
       unit: minutes ? '分' : '秒', interactionEnabled: this.fullInput(),
       onStep: (delta: number): void => this.commitTimerStep(minutes, delta),
     }).position({ x: minutes ? 0 : this.timerWheelWidth() + 24, y: 0 });
@@ -427,20 +429,20 @@ export struct ReaderControlAutoPageContent {
           .layoutWeight(1)
           .constraintSize({ maxWidth: 270.2 })
           .height(14.4)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .lineHeight(14.4)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL.fontSizeFp)
+          .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1);
         Text(this.timerSummaryText)
           .width(27.8)
           .height(12)
           .margin({ left: 8 })
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(10)
-          .lineHeight(12)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META.fontFamily)
+          .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META.fontWeight)
+          .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META.fontSizeFp)
+          .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .textAlign(TextAlign.End)
           .maxLines(1);
@@ -460,10 +462,10 @@ export struct ReaderControlAutoPageContent {
           .height(30)
           .borderRadius(15);
           Text('自动停止')
-          .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
-            .lineHeight(11)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.fontFamily)
+            .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.fontWeight)
+            .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.fontSizeFp)
+            .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
             .maxLines(1);
         }
@@ -477,10 +479,10 @@ export struct ReaderControlAutoPageContent {
           Text(':')
             .width(8)
             .height(22)
-          .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(18)
-            .lineHeight(22)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY.fontFamily)
+            .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY.fontWeight)
+            .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY.fontSizeFp)
+            .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
             .textAlign(TextAlign.Center)
             .position({ x: this.timerWheelWidth() + 8, y: 40.5 });
@@ -524,7 +526,7 @@ export struct ReaderControlAutoPageContent {
   @Builder
   private speedStepButton(increase: boolean) {
     Stack({ alignContent: Alignment.Center }) {
-      Text(increase ? '+' : '−').width(18).height(18).fontFamily('ReaderInter').fontSize(18).lineHeight(18)
+      Text(increase ? '+' : '−').width(18).height(18).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_ICON', this.appScheme)).textAlign(TextAlign.Center);
     }.width(24).height(24).borderRadius(12)
       .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
@@ -546,14 +548,14 @@ export struct ReaderControlAutoPageContent {
       Stack({ alignContent: Alignment.TopStart }) {
         Text('翻页速度').id(this.speedActorId('title'))
           .width(this.speedActor('title').width).height(this.speedActor('title').height)
-          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
-          .fontSize(readerControlLerp(11, 10, this.p())).lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontFamily).fontWeight(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontWeight)
+          .fontSize(readerControlLerp(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_LABEL_FULL.fontSizeFp, this.p())).lineHeight(TYPE_READER_AUTO_SPEED_LABEL_QUICK.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
           .position({ x: this.speedActor('title').x, y: this.speedActor('title').y });
         Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current'))
           .width(this.speedActor('current').width).height(this.speedActor('current').height)
-          .fontFamily('ReaderInter').fontWeight(Math.round(readerControlLerp(900, 400, this.p())))
-          .fontSize(readerControlLerp(11, 10, this.p())).lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontFamily).fontWeight(Math.round(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontWeight, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontWeight, this.p())))
+          .fontSize(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontSizeFp, this.p())).lineHeight(TYPE_READER_AUTO_SPEED_VALUE_QUICK.lineHeightFp as number)
           .fontColor(readerAppColor(this.p() === 0 ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
           .textAlign(TextAlign.Center).maxLines(1)
           .position({ x: this.speedActor('current').x, y: this.speedActor('current').y });
@@ -561,7 +563,7 @@ export struct ReaderControlAutoPageContent {
         this.speedStepButton(true);
         Text('2 秒').id(this.speedActorId('minimum'))
           .width(this.speedActor('minimum').width).height(this.speedActor('minimum').height)
-          .fontFamily('ReaderInter').fontSize(9).lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme)).maxLines(1)
           .position({ x: this.speedActor('minimum').x, y: this.speedActor('minimum').y })
           .opacity(this.speedActor('minimum').opacity)
@@ -589,7 +591,7 @@ export struct ReaderControlAutoPageContent {
           .position({ x: this.speedActor('slider').x, y: this.speedActor('slider').y });
         Text('20 秒').id(this.speedActorId('maximum'))
           .width(this.speedActor('maximum').width).height(this.speedActor('maximum').height)
-          .fontFamily('ReaderInter').fontSize(9).lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme)).textAlign(TextAlign.End).maxLines(1)
           .position({ x: this.speedActor('maximum').x, y: this.speedActor('maximum').y })
           .opacity(this.speedActor('maximum').opacity)
@@ -611,10 +613,10 @@ export struct ReaderControlAutoPageContent {
         .layoutWeight(1)
         .constraintSize({ maxWidth: 236 })
         .height(13)
-          .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(10)
-        .lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .maxLines(1);
       // The soft Night surface shares the thumb's RGB. Use the shared off-track

@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scratch = mkdtempSync(path.join(tmpdir(), 'reader-bookturn-solver-'));
-const binary = path.join(scratch, 'bookturn_solver_test');
+const binary = path.join(scratch, process.platform === 'win32' ? 'bookturn_solver_test.exe' : 'bookturn_solver_test');
 try {
-  const compile = spawnSync('c++', [
+  const compile = spawnSync(process.env.CXX || (process.platform === 'win32' ? 'clang++' : 'c++'), [
     '-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror',
     path.join(root, 'entry/src/main/cpp/bookturn/bookturn_solver.cpp'),
     path.join(root, 'entry/src/main/cpp/tests/bookturn_solver_test.cpp'),

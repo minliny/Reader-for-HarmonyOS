@@ -1,7 +1,12 @@
+import type { SearchResultRelevance } from './SearchResultRelevance';
+
+export type SearchContentType = '全部类型' | '小说' | '漫画';
+
 /** Navigation-owned presentation state. No network work or Core facts live here. */
 export class SearchViewState {
   revision: number = 0;
   category: string = '全部';
+  contentType: SearchContentType = '全部类型';
   keywordDraft: string = '';
   private inputFocusRequested: boolean = false;
   anchorKey: string = '';
@@ -13,10 +18,13 @@ export class SearchViewState {
   anchorNeighbors: string[] = [];
   redirects: Map<string, string> = new Map();
   order: Map<string, number> = new Map();
+  private relevanceKeyword: string | undefined = undefined;
+  private queryRelevance: SearchResultRelevance | undefined = undefined;
 
   reset(keyword: string = ''): void {
     this.revision += 1;
     this.category = '全部';
+    this.contentType = '全部类型';
     this.keywordDraft = keyword;
     this.inputFocusRequested = false;
     this.anchorKey = '';
@@ -27,6 +35,19 @@ export class SearchViewState {
     this.anchorNeighbors = [];
     this.redirects.clear();
     this.order.clear();
+    this.relevanceKeyword = undefined;
+    this.queryRelevance = undefined;
+  }
+
+  /** The query survives a Detail round trip. Its exact-title normalization
+   * must survive too, rather than repeating locale setup on native remount.
+   * A fresh submit/reset or a different keyword discards the whole scorer. */
+  relevanceFor(keyword: string, create: () => SearchResultRelevance): SearchResultRelevance {
+    if (this.queryRelevance === undefined || this.relevanceKeyword !== keyword) {
+      this.queryRelevance = create();
+      this.relevanceKeyword = keyword;
+    }
+    return this.queryRelevance;
   }
 
   requestInputFocus(): void { this.inputFocusRequested = true; }

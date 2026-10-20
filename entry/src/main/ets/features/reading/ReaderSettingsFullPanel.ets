@@ -1,3 +1,4 @@
+import { TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_OPTION_VALUE, TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_COLLAPSE, TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_LABEL, TYPE_READER_SETTINGS_FULL_COMPAT_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_FULL_COMPAT_SECTION_TITLE_LABEL, TYPE_READER_SETTINGS_FULL_COMPAT_TOGGLE_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
@@ -92,7 +93,7 @@ export struct ReaderSettingsFullPanel {
           this.controlSection();
         }
         .width(this.viewportWidth())
-        .height(742);
+        .height(780);
       }
       .width(this.viewportWidth())
       .height(this.viewportHeight())
@@ -116,10 +117,10 @@ export struct ReaderSettingsFullPanel {
         .width(28)
         .height(17)
         .margin({ left: 8 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(14)
-        .lineHeight(16.8)
+        .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1);
       Blank();
@@ -128,9 +129,9 @@ export struct ReaderSettingsFullPanel {
         .height(26)
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .borderRadius(8)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(10)
+        .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_COLLAPSE.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_COLLAPSE.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_COLLAPSE.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .accessibilityText('收起阅读设置')
@@ -166,9 +167,9 @@ export struct ReaderSettingsFullPanel {
       Text(this.groupLabel(group))
         .width('100%')
         .height(16)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(11)
+        .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_ROW_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_ROW_VALUE.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_ROW_VALUE.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1)
         .position({ x: 0, y: 8 });
@@ -197,9 +198,9 @@ export struct ReaderSettingsFullPanel {
       .height(27)
       .backgroundColor(this.isSegmentActive(group, option) ? readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme) : Color.Transparent)
       .borderRadius(6)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Medium)
-      .fontSize(9)
+      .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_OPTION_VALUE.fontFamily)
+      .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_OPTION_VALUE.fontWeight)
+      .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_OPTION_VALUE.fontSizeFp)
       .fontColor(this.isSegmentActive(group, option) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .maxLines(1)
@@ -213,15 +214,16 @@ export struct ReaderSettingsFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       this.sectionTitle('导航状态栏', true);
       Stack({ alignContent: Alignment.TopStart }) {
-        this.toggleRow('隐藏导航栏', 'hideNavigationBar', 0);
-        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 1);
+        this.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+        this.toggleRow('隐藏底部导航栏', 'hideNavigationBar', 1);
+        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 2);
       }
       .width(this.sectionWidth())
-      .height(76)
+      .height(114)
       .position({ x: 0, y: 43 });
     }
     .width(this.sectionWidth())
-    .height(131)
+    .height(169)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .position({ x: 14, y: 262 });
   }
@@ -241,7 +243,7 @@ export struct ReaderSettingsFullPanel {
     .width(this.sectionWidth())
     .height(131)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .position({ x: 14, y: 393 });
+    .position({ x: 14, y: 431 });
   }
 
   @Builder
@@ -260,7 +262,7 @@ export struct ReaderSettingsFullPanel {
     .width(this.sectionWidth())
     .height(169)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .position({ x: 14, y: 524 });
+    .position({ x: 14, y: 562 });
   }
 
   @Builder
@@ -268,11 +270,11 @@ export struct ReaderSettingsFullPanel {
     Text(label)
       .width(this.sectionWidth() - 8)
       .height(14)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(12)
-      .lineHeight(14.4)
-      .letterSpacing(0.48)
+      .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_SECTION_TITLE_LABEL.fontFamily)
+      .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_SECTION_TITLE_LABEL.fontWeight)
+      .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_SECTION_TITLE_LABEL.fontSizeFp)
+      .lineHeight(TYPE_READER_SETTINGS_FULL_COMPAT_SECTION_TITLE_LABEL.lineHeightFp as number)
+      .letterSpacing(TYPE_READER_SETTINGS_FULL_COMPAT_SECTION_TITLE_LABEL.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .maxLines(1)
       .position({ x: 0, y: insetTop ? 21 : 8 });
@@ -284,10 +286,10 @@ export struct ReaderSettingsFullPanel {
       Text(label)
         .layoutWeight(1)
         .height(13)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(11)
-        .lineHeight(13.2)
+        .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_TOGGLE_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_TOGGLE_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_TOGGLE_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_SETTINGS_FULL_COMPAT_TOGGLE_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1);
       this.toggleTrack(this.toggleValue(key));
@@ -312,10 +314,10 @@ export struct ReaderSettingsFullPanel {
       Text('文字两端对齐')
         .layoutWeight(1)
         .height(13)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(11)
-        .lineHeight(13.2)
+        .fontFamily(TYPE_READER_SETTINGS_FULL_COMPAT_JUSTIFY_TOGGLE_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_FULL_COMPAT_JUSTIFY_TOGGLE_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_FULL_COMPAT_JUSTIFY_TOGGLE_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_SETTINGS_FULL_COMPAT_JUSTIFY_TOGGLE_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1);
       this.toggleTrack(this.justifyText);
@@ -481,6 +483,9 @@ export struct ReaderSettingsFullPanel {
   }
 
   private toggleValue(key: ReaderSettingsToggleKey): boolean {
+    if (key === 'hideStatusBar') {
+      return this.snapshot.hideStatusBar;
+    }
     if (key === 'hideNavigationBar') {
       return this.snapshot.hideNavigationBar;
     }

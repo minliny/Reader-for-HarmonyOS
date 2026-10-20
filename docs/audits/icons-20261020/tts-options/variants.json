@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "productionApplied": true,
+  "upstream": {
+    "project": "tabler/tabler-icons",
+    "version": "v3.44.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "outline.svg",
+        "sha256": "773ce8abae8fc2b521753115148907f551b15221b6cb6194a2b88c4fe96071d2"
+      },
+      {
+        "file": "filled.svg",
+        "sha256": "cbfa67c2178147119b05dd74fae947bd25054327aebe253180bdc3d1300afee7"
+      },
+      {
+        "file": "track.svg",
+        "sha256": "37fcdfcd3444ed3102ca7242fc4ad899908271f1e3234d92df4fb6a72528f509"
+      }
+    ]
+  },
+  "variants": [
+    {
+      "id": "0",
+      "name": "当前样式",
+      "note": "单竖线靠近折角，间距约1坐标单位",
+      "source": "应用当前资源"
+    },
+    {
+      "id": "A",
+      "name": "传统实心三角 + 单竖线",
+      "note": "播放器常见的上一项 / 下一项轮廓",
+      "source": "Tabler player-skip-back · MIT"
+    },
+    {
+      "id": "B",
+      "name": "传统空心三角 + 单竖线",
+      "note": "与当前描边控件更接近，三角和直线分离",
+      "source": "Tabler player-skip-back · MIT"
+    },
+    {
+      "id": "C",
+      "name": "折角 + 单竖线，增加间距",
+      "note": "保留折角形，先解决贴线的问题",
+      "source": "基于应用现有形状的有限间距调整"
+    },
+    {
+      "id": "D",
+      "name": "折角 + 双竖线，分离留白",
+      "note": "按你的描述：多加一根竖线，并留出清晰间距",
+      "source": "按用户要求增加竖线；基于现有折角"
+    },
+    {
+      "id": "E",
+      "name": "实心三角 + 双竖线",
+      "note": "传统三角形与双竖线组合，视觉更厚实",
+      "source": "用户双竖线要求 + 传统三角形有限适配"
+    }
+  ],
+  "selectedVariant": "C",
+  "productionResources": [
+    "reader_tts_make_previous",
+    "reader_tts_make_previous_theme_night",
+    "reader_tts_make_next",
+    "reader_tts_make_next_theme_night",
+    "reader_tts_make_previous_quick",
+    "reader_tts_make_previous_quick_theme_night",
+    "reader_tts_make_next_quick",
+    "reader_tts_make_next_quick_theme_night",
+    "reader_tts_previous",
+    "reader_tts_previous_theme_night",
+    "reader_tts_next",
+    "reader_tts_next_theme_night"
+  ],
+  "productionEvidence": "Source and generated SVG only; build/device/user acceptance are separate"
+}

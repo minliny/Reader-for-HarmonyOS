@@ -1,0 +1,360 @@
+{
+  "nodes": [
+    {
+      "nodeId": "1307:3126",
+      "nodes": [
+        {
+          "nodeId": "1308:3112",
+          "nodeName": "ImmersiveInfo · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1308_3112_opacity_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1308_3112_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1308:3235",
+          "nodeName": "PageLabel · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1308_3235_opacity_0 3.5s linear, kf_1308_3235_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1308_3235_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1308_3235_translate_0 { 0% { translate: 101.45px 0px; } 2.857% { animation-timing-function: ease-in-out; translate: 101.45px 0px; } 40% { translate: 72px 0px; } 48.571% { animation-timing-function: ease-in-out; translate: 72px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1308:3154",
+          "nodeName": "TopBar · outgoing",
+          "codeSnippets": {
+            "css": "animation: kf_1308_3154_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1308_3154_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px -73px; } 100% { translate: 0px -73px; } }"
+          }
+        },
+        {
+          "nodeId": "1308:3181",
+          "nodeName": "DockShell · outgoing · panel detached",
+          "codeSnippets": {
+            "css": "animation: kf_1308_3181_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1308_3181_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px 348.557px; } 100% { translate: 0px 348.557px; } }"
+          }
+        },
+        {
+          "nodeId": "1308:3236",
+          "nodeName": "TriggerMorphProxy · AutoPagePanel → SessionCapsule",
+          "codeSnippets": {
+            "css": "animation: kf_1308_3236_height_0 3.5s linear, kf_1308_3236_width_0 3.5s linear, kf_1308_3236_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1308_3236_height_0 { 0% { height: 196px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 196px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1308_3236_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } } @keyframes kf_1308_3236_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: 315.898px 273.007px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 315.898px 273.007px; } 65.714% { translate: 243.898px 273.007px; } 100% { translate: 243.898px 273.007px; } }"
+          }
+        },
+        {
+          "nodeId": "1333:3284",
+          "nodeName": "MorphSurface · canonical capsule shell",
+          "codeSnippets": {
+            "css": "animation: kf_1333_3284_height_0 3.5s linear, kf_1333_3284_opacity_0 3.5s linear, kf_1333_3284_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1333_3284_height_0 { 0% { height: 196px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 196px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1333_3284_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1333_3284_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } }"
+          }
+        },
+        {
+          "nodeId": "1408:14834",
+          "nodeName": "SourceRegion · AutoPagePanel · true-scale background + content",
+          "codeSnippets": {
+            "css": "animation: kf_1408_14834_height_0 3.5s linear, kf_1408_14834_opacity_0 3.5s linear, kf_1408_14834_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1408_14834_height_0 { 0% { height: 196px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 196px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1408_14834_opacity_0 { 0% { opacity: 1; } 31.429% { animation-timing-function: ease-out; opacity: 1; } 40% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1408_14834_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } }"
+          }
+        },
+        {
+          "nodeId": "1308:3237",
+          "nodeName": "AutoPagePanel · sharp uniform-scale",
+          "codeSnippets": {
+            "css": "animation: kf_1308_3237_opacity_0 3.5s linear, kf_1308_3237_translate_0 3.5s linear, kf_1308_3237_scale_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1308_3237_opacity_0 { 0% { opacity: 1; } 20% { animation-timing-function: ease-in; opacity: 1; } 31.429% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1308_3237_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -131px -86px; } 100% { translate: -131px -86px; } } @keyframes kf_1308_3237_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.084 0.084; } 100% { scale: 0.084 0.084; } }"
+          }
+        },
+        {
+          "nodeId": "1422:15558",
+          "nodeName": "AutoPagePanel · blurred transition",
+          "codeSnippets": {
+            "css": "animation: kf_1422_15558_opacity_0 3.5s linear, kf_1422_15558_translate_0 3.5s linear, kf_1422_15558_scale_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1422_15558_opacity_0 { 0% { opacity: 0; } 17.143% { animation-timing-function: ease-in-out; opacity: 0; } 25.714% { animation-timing-function: ease-out; opacity: 0.6; } 34.286% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1422_15558_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -131px -86px; } 100% { translate: -131px -86px; } } @keyframes kf_1422_15558_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.084 0.084; } 100% { scale: 0.084 0.084; } }"
+          }
+        },
+        {
+          "nodeId": "1333:3285",
+          "nodeName": "CapsuleContent · reveal clip",
+          "codeSnippets": {
+            "css": "animation: kf_1333_3285_height_0 3.5s linear, kf_1333_3285_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1333_3285_height_0 { 0% { height: 196px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 196px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1333_3285_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } }"
+          }
+        },
+        {
+          "nodeId": "1448:4139",
+          "nodeName": "CapsuleTransitionContent · AutoPage · persistent reveal",
+          "codeSnippets": {
+            "css": "animation: kf_1448_4139_opacity_0 3.5s linear, kf_1448_4139_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1448_4139_opacity_0 { 0% { animation-timing-function: step-end; opacity: 0; } 48.571% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1448_4139_translate_0 { 0% { translate: -72px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: -72px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1430:15120",
+          "nodeName": "CircleState · Pause",
+          "codeSnippets": {
+            "css": "animation: kf_1430_15120_opacity_0 3.5s linear, kf_1430_15120_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1430_15120_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1430_15120_translate_0 { 0% { translate: 0px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 0px 0px; } 65.714% { translate: 72px 0px; } 100% { translate: 72px 0px; } }"
+          }
+        }
+      ]
+    },
+    {
+      "nodeId": "1353:3288",
+      "nodes": [
+        {
+          "nodeId": "1353:3297",
+          "nodeName": "ImmersiveInfo · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3297_opacity_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3297_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3298",
+          "nodeName": "PageLabel · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3298_opacity_0 3.5s linear, kf_1353_3298_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3298_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1353_3298_translate_0 { 0% { translate: 101.452px 0px; } 2.857% { animation-timing-function: ease-in-out; translate: 101.452px 0px; } 40% { translate: 72px 0px; } 48.571% { animation-timing-function: ease-in-out; translate: 72px 0px; } 65.714% { translate: 2px 0px; } 100% { translate: 2px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3299",
+          "nodeName": "TopBar · outgoing",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3299_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3299_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px -73px; } 100% { translate: 0px -73px; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3300",
+          "nodeName": "DockShell · outgoing · panel detached",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3300_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3300_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px 348.557px; } 100% { translate: 0px 348.557px; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3304",
+          "nodeName": "TriggerMorphProxy · TTSPanel → SessionCapsule",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3304_height_0 3.5s linear, kf_1353_3304_width_0 3.5s linear, kf_1353_3304_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3304_height_0 { 0% { height: 190px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 190px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1353_3304_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } } @keyframes kf_1353_3304_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: 315.898px 273.007px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 315.898px 273.007px; } 65.714% { translate: 245.898px 273.007px; } 100% { translate: 245.898px 273.007px; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3305",
+          "nodeName": "MorphSurface · canonical TTS capsule shell",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3305_height_0 3.5s linear, kf_1353_3305_opacity_0 3.5s linear, kf_1353_3305_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3305_height_0 { 0% { height: 190px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 190px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1353_3305_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1353_3305_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3307",
+          "nodeName": "SourceRegion · TTSPanel · true-scale background + content",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3307_height_0 3.5s linear, kf_1353_3307_opacity_0 3.5s linear, kf_1353_3307_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3307_height_0 { 0% { height: 190px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 190px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1353_3307_opacity_0 { 0% { opacity: 1; } 31.429% { animation-timing-function: ease-out; opacity: 1; } 40% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1353_3307_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3308",
+          "nodeName": "TTSPanel · sharp uniform-scale",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3308_opacity_0 3.5s linear, kf_1353_3308_translate_0 3.5s linear, kf_1353_3308_scale_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3308_opacity_0 { 0% { opacity: 1; } 20% { animation-timing-function: ease-in; opacity: 1; } 31.429% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1353_3308_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -131px -83px; } 100% { translate: -131px -83px; } } @keyframes kf_1353_3308_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.084 0.084; } 100% { scale: 0.084 0.084; } }"
+          }
+        },
+        {
+          "nodeId": "1424:4291",
+          "nodeName": "TTSPanel · blurred transition",
+          "codeSnippets": {
+            "css": "animation: kf_1424_4291_opacity_0 3.5s linear, kf_1424_4291_translate_0 3.5s linear, kf_1424_4291_scale_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1424_4291_opacity_0 { 0% { opacity: 0; } 17.143% { animation-timing-function: ease-in-out; opacity: 0; } 25.714% { animation-timing-function: ease-out; opacity: 0.6; } 34.286% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1424_4291_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -131px -83px; } 100% { translate: -131px -83px; } } @keyframes kf_1424_4291_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.084 0.084; } 100% { scale: 0.084 0.084; } }"
+          }
+        },
+        {
+          "nodeId": "1353:3310",
+          "nodeName": "CapsuleContent · TTS reveal clip",
+          "codeSnippets": {
+            "css": "animation: kf_1353_3310_height_0 3.5s linear, kf_1353_3310_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1353_3310_height_0 { 0% { height: 190px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 190px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1353_3310_width_0 { 0% { width: 286px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 286px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } }"
+          }
+        },
+        {
+          "nodeId": "1467:513",
+          "nodeName": "CapsuleTransitionContent · TTS · persistent reveal",
+          "codeSnippets": {
+            "css": "animation: kf_1467_513_opacity_0 3.5s linear, kf_1467_513_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1467_513_opacity_0 { 0% { animation-timing-function: step-end; opacity: 0; } 48.571% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1467_513_translate_0 { 0% { translate: -70px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: -70px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1467:528",
+          "nodeName": "CircleState · TTS Pause · persistent fixed",
+          "codeSnippets": {
+            "css": "animation: kf_1467_528_opacity_0 3.5s linear, kf_1467_528_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1467_528_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1467_528_translate_0 { 0% { translate: 0px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 0px 0px; } 65.714% { translate: 70px 0px; } 100% { translate: 70px 0px; } }"
+          }
+        }
+      ]
+    },
+    {
+      "nodeId": "1392:4012",
+      "nodes": [
+        {
+          "nodeId": "1392:4021",
+          "nodeName": "ImmersiveInfo · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4021_opacity_0 3.5s linear; @keyframes kf_1392_4021_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4022",
+          "nodeName": "PageLabel · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4022_opacity_0 3.5s linear, kf_1392_4022_translate_0 3.5s linear; @keyframes kf_1392_4022_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1392_4022_translate_0 { 0% { translate: 101px 0px; } 2.857% { animation-timing-function: ease-in-out; translate: 101px 0px; } 40% { translate: 72px 0px; } 48.571% { animation-timing-function: ease-in-out; translate: 72px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4023",
+          "nodeName": "TopBar · outgoing",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4023_translate_0 3.5s linear; @keyframes kf_1392_4023_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px -73px; } 100% { translate: 0px -73px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4024",
+          "nodeName": "FullPanel · AutoPage · outgoing",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4024_translate_0 3.5s linear; @keyframes kf_1392_4024_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px 755.5px; } 100% { translate: 0px 755.5px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4862",
+          "nodeName": "TriggerMorphProxy · AutoPagePlaybackModule → SessionCapsule",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4862_height_0 3.5s linear, kf_1392_4862_width_0 3.5s linear, kf_1392_4862_translate_0 3.5s linear; @keyframes kf_1392_4862_height_0 { 0% { height: 104.384px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 104.384px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_4862_width_0 { 0% { width: 316.675px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 316.675px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } } @keyframes kf_1392_4862_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: 304.384px 640.392px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 304.384px 640.392px; } 65.714% { translate: 232.384px 640.392px; } 100% { translate: 232.384px 640.392px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4863",
+          "nodeName": "MorphSurface · canonical capsule shell",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4863_height_0 3.5s linear, kf_1392_4863_opacity_0 3.5s linear, kf_1392_4863_width_0 3.5s linear; @keyframes kf_1392_4863_height_0 { 0% { height: 104.384px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 104.384px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_4863_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1392_4863_width_0 { 0% { width: 316.675px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 316.675px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4864",
+          "nodeName": "SourceRegion · AutoPage playback module · true-scale background + content",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4864_height_0 3.5s linear, kf_1392_4864_opacity_0 3.5s linear, kf_1392_4864_width_0 3.5s linear; @keyframes kf_1392_4864_height_0 { 0% { height: 104.384px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 104.384px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_4864_opacity_0 { 0% { opacity: 1; } 31.429% { animation-timing-function: ease-out; opacity: 1; } 40% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1392_4864_width_0 { 0% { width: 316.675px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 316.675px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5406",
+          "nodeName": "PlaybackModuleContent · AutoPage · true uniform scale",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5406_opacity_0 3.5s linear, kf_1392_5406_translate_0 3.5s linear, kf_1392_5406_scale_0 3.5s linear; @keyframes kf_1392_5406_opacity_0 { 0% { opacity: 1; } 20% { animation-timing-function: ease-in; opacity: 1; } 31.429% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1392_5406_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -146.337px -40.192px; } 100% { translate: -146.337px -40.192px; } } @keyframes kf_1392_5406_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.076 0.076; } 100% { scale: 0.076 0.076; } }"
+          }
+        },
+        {
+          "nodeId": "1406:4040",
+          "nodeName": "PlaybackModuleContent · AutoPage · blurred transition",
+          "codeSnippets": {
+            "css": "animation: kf_1406_4040_opacity_0 3.5s linear, kf_1406_4040_translate_0 3.5s linear, kf_1406_4040_scale_0 3.5s linear; @keyframes kf_1406_4040_opacity_0 { 0% { opacity: 0; } 17.143% { animation-timing-function: ease-in-out; opacity: 0; } 25.714% { animation-timing-function: ease-out; opacity: 0.6; } 34.286% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1406_4040_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -146.337px -40.192px; } 100% { translate: -146.337px -40.192px; } } @keyframes kf_1406_4040_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.076 0.076; } 100% { scale: 0.076 0.076; } }"
+          }
+        },
+        {
+          "nodeId": "1392:4868",
+          "nodeName": "CapsuleContent · AutoPage · reveal-left",
+          "codeSnippets": {
+            "css": "animation: kf_1392_4868_height_0 3.5s linear, kf_1392_4868_width_0 3.5s linear; @keyframes kf_1392_4868_height_0 { 0% { height: 104.384px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 104.384px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_4868_width_0 { 0% { width: 316.675px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 316.675px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 96px; } 100% { width: 96px; } }"
+          }
+        },
+        {
+          "nodeId": "1469:186",
+          "nodeName": "CapsuleTransitionContent · AutoPage Full · persistent reveal",
+          "codeSnippets": {
+            "css": "animation: kf_1469_186_opacity_0 3.5s linear, kf_1469_186_translate_0 3.5s linear; @keyframes kf_1469_186_opacity_0 { 0% { animation-timing-function: step-end; opacity: 0; } 48.571% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1469_186_translate_0 { 0% { translate: -72px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: -72px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1469:201",
+          "nodeName": "CircleState · AutoPage Full Pause · persistent fixed",
+          "codeSnippets": {
+            "css": "animation: kf_1469_201_opacity_0 3.5s linear, kf_1469_201_translate_0 3.5s linear; @keyframes kf_1469_201_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1469_201_translate_0 { 0% { translate: 0px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 0px 0px; } 65.714% { translate: 72px 0px; } 100% { translate: 72px 0px; } }"
+          }
+        }
+      ]
+    },
+    {
+      "nodeId": "1392:5024",
+      "nodes": [
+        {
+          "nodeId": "1392:5033",
+          "nodeName": "ImmersiveInfo · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5033_opacity_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5033_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5034",
+          "nodeName": "PageLabel · incoming",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5034_opacity_0 3.5s linear, kf_1392_5034_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5034_opacity_0 { 0% { opacity: 0; } 2.857% { animation-timing-function: ease-out; opacity: 0; } 14.286% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1392_5034_translate_0 { 0% { translate: 99px 0px; } 2.857% { animation-timing-function: ease-in-out; translate: 99px 0px; } 40% { translate: 70px 0px; } 48.571% { animation-timing-function: ease-in-out; translate: 70px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5035",
+          "nodeName": "TopBar · outgoing",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5035_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5035_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px -73px; } 100% { translate: 0px -73px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5036",
+          "nodeName": "FullPanel · TTS · outgoing",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5036_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5036_translate_0 { 0% { translate: 0px 0px; } 2.857% { animation-timing-function: ease-in; translate: 0px 0px; } 20% { translate: 0px 755px; } 100% { translate: 0px 755px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5053",
+          "nodeName": "TriggerMorphProxy · TTSPlaybackModule → SessionCapsule",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5053_height_0 3.5s linear, kf_1392_5053_width_0 3.5s linear, kf_1392_5053_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5053_height_0 { 0% { height: 128px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 128px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_5053_width_0 { 0% { width: 312px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 312px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } } @keyframes kf_1392_5053_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: 302px 640px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 302px 640px; } 65.714% { translate: 232px 640px; } 100% { translate: 232px 640px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5054",
+          "nodeName": "MorphSurface · canonical TTS capsule shell",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5054_height_0 3.5s linear, kf_1392_5054_opacity_0 3.5s linear, kf_1392_5054_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5054_height_0 { 0% { height: 128px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 128px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_5054_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1392_5054_width_0 { 0% { width: 312px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 312px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5055",
+          "nodeName": "SourceRegion · TTS playback module · true-scale background + content",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5055_height_0 3.5s linear, kf_1392_5055_opacity_0 3.5s linear, kf_1392_5055_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5055_height_0 { 0% { height: 128px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 128px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_5055_opacity_0 { 0% { opacity: 1; } 31.429% { animation-timing-function: ease-out; opacity: 1; } 40% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1392_5055_width_0 { 0% { width: 312px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 312px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5911",
+          "nodeName": "PlaybackModuleContent · TTS · true uniform scale",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5911_opacity_0 3.5s linear, kf_1392_5911_translate_0 3.5s linear, kf_1392_5911_scale_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5911_opacity_0 { 0% { opacity: 1; } 20% { animation-timing-function: ease-in; opacity: 1; } 31.429% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1392_5911_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -144px -52px; } 100% { translate: -144px -52px; } } @keyframes kf_1392_5911_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.077 0.077; } 100% { scale: 0.077 0.077; } }"
+          }
+        },
+        {
+          "nodeId": "1406:4163",
+          "nodeName": "PlaybackModuleContent · TTS · blurred transition",
+          "codeSnippets": {
+            "css": "animation: kf_1406_4163_opacity_0 3.5s linear, kf_1406_4163_translate_0 3.5s linear, kf_1406_4163_scale_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1406_4163_opacity_0 { 0% { opacity: 0; } 17.143% { animation-timing-function: ease-in-out; opacity: 0; } 25.714% { animation-timing-function: ease-out; opacity: 0.6; } 34.286% { opacity: 0; } 100% { opacity: 0; } } @keyframes kf_1406_4163_translate_0 { 0% { translate: 0px 0px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); translate: 0px 0px; } 40% { translate: -144px -52px; } 100% { translate: -144px -52px; } } @keyframes kf_1406_4163_scale_0 { 0% { scale: 1 1; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); scale: 1 1; } 40% { scale: 0.077 0.077; } 100% { scale: 0.077 0.077; } }"
+          }
+        },
+        {
+          "nodeId": "1392:5059",
+          "nodeName": "CapsuleContent · TTS · reveal-left",
+          "codeSnippets": {
+            "css": "animation: kf_1392_5059_height_0 3.5s linear, kf_1392_5059_width_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1392_5059_height_0 { 0% { height: 128px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); height: 128px; } 40% { height: 24px; } 100% { height: 24px; } } @keyframes kf_1392_5059_width_0 { 0% { width: 312px; } 5.714% { animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); width: 312px; } 40% { width: 24px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); width: 24px; } 65.714% { width: 94px; } 100% { width: 94px; } }"
+          }
+        },
+        {
+          "nodeId": "1470:231",
+          "nodeName": "CapsuleTransitionContent · TTS Full · persistent reveal",
+          "codeSnippets": {
+            "css": "animation: kf_1470_231_opacity_0 3.5s linear, kf_1470_231_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1470_231_opacity_0 { 0% { animation-timing-function: step-end; opacity: 0; } 48.571% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1470_231_translate_0 { 0% { translate: -70px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: -70px 0px; } 65.714% { translate: 0px 0px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1470:246",
+          "nodeName": "CircleState · TTS Full Pause · persistent fixed",
+          "codeSnippets": {
+            "css": "animation: kf_1470_246_opacity_0 3.5s linear, kf_1470_246_translate_0 3.5s linear; animation-iteration-count: infinite; @keyframes kf_1470_246_opacity_0 { 0% { opacity: 0; } 31.429% { animation-timing-function: ease-out; opacity: 0; } 40% { opacity: 1; } 100% { opacity: 1; } } @keyframes kf_1470_246_translate_0 { 0% { translate: 0px 0px; } 48.571% { animation-timing-function: cubic-bezier(0.2, 0, 0, 1); translate: 0px 0px; } 65.714% { translate: 70px 0px; } 100% { translate: 70px 0px; } }"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(s + '.ts', c); throw e;
 } } });
@@ -49,6 +52,8 @@ function fixture(content, options = {}) {
   return { runtime, gateway, chapter, data, calls, scalars, invalidate: () => { live = false; } };
 }
 
+
+if(id==='bidirectional'){
 for (const [mode, separator] of [['lineSeparated', '\r\n'], ['blankLineSeparated', '\r\n \t\r\n']]) {
   const paragraphs = ['前😀段', mode === 'blankLineSeparated' ? '目标😀\r\n原段' : '目标😀原段', '后 é אב段', '末段'];
   const text = paragraphs.join(separator), f = fixture(text);
@@ -67,7 +72,8 @@ for (const [mode, separator] of [['lineSeparated', '\r\n'], ['blankLineSeparated
     assert.equal(readingSessionDocuments(f.runtime).read('s', 'b', 4), undefined, 'partial windows never poison complete cache');
   }
 }
-
+}
+if(id==='giant-entry'){
 {
   // This exceeds both entry size and one maximum RPC. The only correct shape
   // input is the whole original paragraph, including emoji and bidi context.
@@ -82,7 +88,8 @@ for (const [mode, separator] of [['lineSeparated', '\r\n'], ['blankLineSeparated
   assert.deepEqual(snapshot.progress, { kind: 'missing' });
   assert.equal(snapshot.chapter.contentVersion.startsWith('reader-entry-scope-v1:'), true);
 }
-
+}
+if(id==='underfill'){
 {
   const text = ('前😀段\r\n').repeat(2000) + '当前\r\n后段', f = fixture(text, { maxScalars: 128 });
   const start = Array.from(('前😀段\r\n').repeat(2000)).length;
@@ -90,7 +97,8 @@ for (const [mode, separator] of [['lineSeparated', '\r\n'], ['blankLineSeparated
   assert.ok(result.documentRange.startScalar < start, '128-part underfill still finds connected previous paragraphs');
   assert.ok(f.calls.length > 1);
 }
-
+}
+if(id==='invalid-window'){
 for (const [name, mutate, pattern] of [
   ['scope', d => ({ ...d, positionScope: { ...scope, bodyVersion: 'changed' } }), /scope mismatch/],
   ['total', d => ({ ...d, totalScalars: d.totalScalars + 1, hasMore: true }), /document mismatch/],
@@ -103,6 +111,8 @@ for (const [name, mutate, pattern] of [
   const f = fixture('前\n中\n后\n末', { mutate });
   await assert.rejects(f.gateway.loadParagraphWindow(f.chapter(2, 3), 3, 'after', 'lineSeparated', () => true), pattern, name);
 }
+}
+if(id==='cancelled'){
 {
   const f = fixture('前\n中\n后', { cancelAfterRequest: true });
   await assert.rejects(f.gateway.loadParagraphWindow(f.chapter(2, 3), 3, 'after', 'lineSeparated', () => true), /cancelled/);
@@ -110,6 +120,8 @@ for (const [name, mutate, pattern] of [
   await assert.rejects(f.gateway.loadParagraphWindow(f.chapter(2, 3), 3, 'after', 'lineSeparated', () => false), /cancelled/);
   assert.equal(f.calls.length, 1, 'cancelled caller never dispatches');
 }
+}
+if(id==='chapter-boundary'){
 {
   const f = fixture('前\n中\n后');
   const result = await extendReadingParagraphWindow(f.runtime, f.chapter(0, 5), 5, 'after', 'lineSeparated', () => true);
@@ -117,6 +129,8 @@ for (const [name, mutate, pattern] of [
   assert.equal(f.calls.length, 0, 'true chapter boundary needs no expansion');
   await assert.rejects(f.gateway.loadParagraphWindow({ ...f.chapter(2, 3), sourceId: 'other' }, 3, 'after', 'lineSeparated', () => true), /cancelled/);
 }
+}
+if(id==='image-overlap'){
 {
   // The overlap itself is an image scalar. Keep the already decoded image
   // handle and reject different metadata even when canonical text matches.
@@ -134,4 +148,237 @@ for (const [name, mutate, pattern] of [
   changed = true;
   await assert.rejects(f.gateway.loadParagraphWindow(admitted, 4, 'after', 'lineSeparated', () => true), /image mismatch/);
 }
-console.log('PASS paragraph windows: actual gateway/scanner, bidirectional original paragraphs, emoji/CRLF/blank lines, giant multi-RPC, part underfill, scope/overlap/no-progress/cancellation, no whole RPC or progress/cache writes');
+}
+if(id==='cooperative-body'){
+const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['openChapter', 'prepareChapterMeasurementProjection'], {
+    RemoteChapterCacheRefreshError: class extends Error {},
+  });
+const chapterFor = (index, content) => ({ sourceId: 's', bookId: 'b', chapterIndex: index,
+  chapterTitle: `第${index + 1}章`, content, images: [], contentVersion: `v-${index}`,
+  bodyVersion: `body-${index}`, processingVersion: 'process' });
+const oldChapter = chapterFor(2, '旧章原文');
+const largeText = ('这是原文😀éאב。\n').repeat(80660);
+function reader(load) {
+  const events = [], failures = [];
+  const owner = Object.assign(new Reader(), {
+    sourceId: 's', bookId: 'b', bookKind: 'text', lifecycleToken: 1, chapterSelectionToken: 1,
+    materializedChapterSelectionToken: 0, chapter: oldChapter, tocEntries: [{ index: 324 }, { index: 325 }],
+    phase: 'loading', requireKnownChapter() {},
+    isSelectionActive(token, selection) { return token === this.lifecycleToken && selection === this.chapterSelectionToken; },
+    loadSessionChapter: load, ensureCurrentContentMetrics: async () => true,
+    admitChapterContentVersion() {}, setCurrentReadingChapter(chapter) { events.push(['admit', chapter.chapterIndex]); },
+    retainCurrentChapterWindow() {}, rebuildChapterImageIndexes() {},
+    configureRestoredAnchor(chapter, map) { this.chapterLayoutMap = map; },
+    hasMeasuredViewport: () => true, beginMeasurement() { events.push(['measure', this.chapter.chapterIndex]); },
+    notifyPreservedContentRefresh() {}, fail(error) { failures.push(error.message); },
+  });
+  owner.paragraphLayout.ranges = [{ id: 'old', startUtf16: 0, endUtf16: 4, startScalar: 0, endScalar: 4 }];
+  return { owner, events, failures };
+}{
+  const chapter = chapterFor(324, largeText);
+  const { owner, events, failures } = reader(async () => chapter);
+  let timerDuringPreparation = false;
+  const timer = new Promise(resolve => setTimeout(() => {
+    timerDuringPreparation = owner.chapter === oldChapter;
+    assert.deepEqual(events, [], 'no admission, native measurement or progress before private preparation finishes');
+    assert.equal(owner.materializedChapterSelectionToken, 0);
+    assert.equal(owner.paragraphLayout.ranges[0].id, 'old', 'partial ranges never publish');
+    resolve();
+  }, 0));
+  await owner.openChapter(324, false, 1, 1);
+  await timer;
+  assert.equal(timerDuringPreparation, true, 'UI timers execute while cold whole-body work is in flight');
+  assert.deepEqual(failures, []);
+  assert.deepEqual(events, [['admit', 324], ['measure', 324]]);
+  assert.equal(owner.chapter, chapter);
+  assert.equal(owner.paragraphLayout.ranges.length, 80660);
+  for (const range of owner.paragraphLayout.ranges) {
+    assert.equal(owner.chapterLayoutMap.utf16ForScalar(range.startScalar), range.startUtf16);
+    assert.equal(owner.chapterLayoutMap.utf16ForScalar(range.endScalar), range.endUtf16);
+  }
+}
+});
+}
+if(id==='cooperative-successor'){
+const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['openChapter', 'prepareChapterMeasurementProjection'], {
+    RemoteChapterCacheRefreshError: class extends Error {},
+  });
+const chapterFor = (index, content) => ({ sourceId: 's', bookId: 'b', chapterIndex: index,
+  chapterTitle: `第${index + 1}章`, content, images: [], contentVersion: `v-${index}`,
+  bodyVersion: `body-${index}`, processingVersion: 'process' });
+const oldChapter = chapterFor(2, '旧章原文');
+const largeText = ('这是原文😀éאב。\n').repeat(80660);
+function reader(load) {
+  const events = [], failures = [];
+  const owner = Object.assign(new Reader(), {
+    sourceId: 's', bookId: 'b', bookKind: 'text', lifecycleToken: 1, chapterSelectionToken: 1,
+    materializedChapterSelectionToken: 0, chapter: oldChapter, tocEntries: [{ index: 324 }, { index: 325 }],
+    phase: 'loading', requireKnownChapter() {},
+    isSelectionActive(token, selection) { return token === this.lifecycleToken && selection === this.chapterSelectionToken; },
+    loadSessionChapter: load, ensureCurrentContentMetrics: async () => true,
+    admitChapterContentVersion() {}, setCurrentReadingChapter(chapter) { events.push(['admit', chapter.chapterIndex]); },
+    retainCurrentChapterWindow() {}, rebuildChapterImageIndexes() {},
+    configureRestoredAnchor(chapter, map) { this.chapterLayoutMap = map; },
+    hasMeasuredViewport: () => true, beginMeasurement() { events.push(['measure', this.chapter.chapterIndex]); },
+    notifyPreservedContentRefresh() {}, fail(error) { failures.push(error.message); },
+  });
+  owner.paragraphLayout.ranges = [{ id: 'old', startUtf16: 0, endUtf16: 4, startScalar: 0, endScalar: 4 }];
+  return { owner, events, failures };
+}{
+  const slow = chapterFor(324, largeText), next = chapterFor(325, '新章节😀\n第二段');
+  const { owner, events, failures } = reader(async index => index === 324 ? slow : next);
+  let successor;
+  const timer = new Promise(resolve => setTimeout(() => {
+    owner.chapterSelectionToken = 2;
+    successor = owner.openChapter(325, false, 1, 2);
+    resolve();
+  }, 0));
+  const predecessor = owner.openChapter(324, false, 1, 1);
+  await timer;
+  await Promise.all([predecessor, successor]);
+  assert.equal(owner.chapter, next, 'new selection wins while old scalar preparation is unfinished');
+  assert.equal(owner.materializedChapterSelectionToken, 2);
+  assert.deepEqual(events, [['admit', 325], ['measure', 325]], 'old preparation never starts a native measurement');
+  assert.deepEqual(failures, []);
+  assert.equal(owner.paragraphLayout.ranges.length, 2);
+}
+});
+}
+if(id==='cancel-scalar-map'){
+const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['openChapter', 'prepareChapterMeasurementProjection'], {
+    RemoteChapterCacheRefreshError: class extends Error {},
+  });
+const chapterFor = (index, content) => ({ sourceId: 's', bookId: 'b', chapterIndex: index,
+  chapterTitle: `第${index + 1}章`, content, images: [], contentVersion: `v-${index}`,
+  bodyVersion: `body-${index}`, processingVersion: 'process' });
+const oldChapter = chapterFor(2, '旧章原文');
+const largeText = ('这是原文😀éאב。\n').repeat(80660);
+function reader(load) {
+  const events = [], failures = [];
+  const owner = Object.assign(new Reader(), {
+    sourceId: 's', bookId: 'b', bookKind: 'text', lifecycleToken: 1, chapterSelectionToken: 1,
+    materializedChapterSelectionToken: 0, chapter: oldChapter, tocEntries: [{ index: 324 }, { index: 325 }],
+    phase: 'loading', requireKnownChapter() {},
+    isSelectionActive(token, selection) { return token === this.lifecycleToken && selection === this.chapterSelectionToken; },
+    loadSessionChapter: load, ensureCurrentContentMetrics: async () => true,
+    admitChapterContentVersion() {}, setCurrentReadingChapter(chapter) { events.push(['admit', chapter.chapterIndex]); },
+    retainCurrentChapterWindow() {}, rebuildChapterImageIndexes() {},
+    configureRestoredAnchor(chapter, map) { this.chapterLayoutMap = map; },
+    hasMeasuredViewport: () => true, beginMeasurement() { events.push(['measure', this.chapter.chapterIndex]); },
+    notifyPreservedContentRefresh() {}, fail(error) { failures.push(error.message); },
+  });
+  owner.paragraphLayout.ranges = [{ id: 'old', startUtf16: 0, endUtf16: 4, startScalar: 0, endScalar: 4 }];
+  return { owner, events, failures };
+}for (const phase of ['scalar-map']) {
+  const chapter = chapterFor(324, phase === 'range-conversion' ? '中\n'.repeat(2048) : largeText);
+  if (phase !== 'scalar-map') readingChapterLayoutMap(chapter);
+  const { owner, events, failures } = reader(async () => chapter);
+  const timer = new Promise(resolve => setTimeout(() => { owner.chapterSelectionToken = 2; resolve(); }, 0));
+  await owner.openChapter(324, false, 1, 1);
+  await timer;
+  assert.equal(owner.chapter, oldChapter, `${phase}: cancellation retains the previous body`);
+  assert.equal(owner.materializedChapterSelectionToken, 0, `${phase}: stale selection has no publication authority`);
+  assert.equal(owner.paragraphLayout.ranges[0].id, 'old', `${phase}: no partially prepared range table`);
+  assert.deepEqual(events, [], `${phase}: no native measurement/progress for cancelled preparation`);
+  assert.deepEqual(failures, [], `${phase}: predecessor cancellation must not fail its successor`);
+}
+});
+}
+if(id==='cancel-paragraph-scan'){
+const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['openChapter', 'prepareChapterMeasurementProjection'], {
+    RemoteChapterCacheRefreshError: class extends Error {},
+  });
+const chapterFor = (index, content) => ({ sourceId: 's', bookId: 'b', chapterIndex: index,
+  chapterTitle: `第${index + 1}章`, content, images: [], contentVersion: `v-${index}`,
+  bodyVersion: `body-${index}`, processingVersion: 'process' });
+const oldChapter = chapterFor(2, '旧章原文');
+const largeText = ('这是原文😀éאב。\n').repeat(80660);
+function reader(load) {
+  const events = [], failures = [];
+  const owner = Object.assign(new Reader(), {
+    sourceId: 's', bookId: 'b', bookKind: 'text', lifecycleToken: 1, chapterSelectionToken: 1,
+    materializedChapterSelectionToken: 0, chapter: oldChapter, tocEntries: [{ index: 324 }, { index: 325 }],
+    phase: 'loading', requireKnownChapter() {},
+    isSelectionActive(token, selection) { return token === this.lifecycleToken && selection === this.chapterSelectionToken; },
+    loadSessionChapter: load, ensureCurrentContentMetrics: async () => true,
+    admitChapterContentVersion() {}, setCurrentReadingChapter(chapter) { events.push(['admit', chapter.chapterIndex]); },
+    retainCurrentChapterWindow() {}, rebuildChapterImageIndexes() {},
+    configureRestoredAnchor(chapter, map) { this.chapterLayoutMap = map; },
+    hasMeasuredViewport: () => true, beginMeasurement() { events.push(['measure', this.chapter.chapterIndex]); },
+    notifyPreservedContentRefresh() {}, fail(error) { failures.push(error.message); },
+  });
+  owner.paragraphLayout.ranges = [{ id: 'old', startUtf16: 0, endUtf16: 4, startScalar: 0, endScalar: 4 }];
+  return { owner, events, failures };
+}for (const phase of ['paragraph-scan']) {
+  const chapter = chapterFor(324, phase === 'range-conversion' ? '中\n'.repeat(2048) : largeText);
+  if (phase !== 'scalar-map') readingChapterLayoutMap(chapter);
+  const { owner, events, failures } = reader(async () => chapter);
+  const timer = new Promise(resolve => setTimeout(() => { owner.chapterSelectionToken = 2; resolve(); }, 0));
+  await owner.openChapter(324, false, 1, 1);
+  await timer;
+  assert.equal(owner.chapter, oldChapter, `${phase}: cancellation retains the previous body`);
+  assert.equal(owner.materializedChapterSelectionToken, 0, `${phase}: stale selection has no publication authority`);
+  assert.equal(owner.paragraphLayout.ranges[0].id, 'old', `${phase}: no partially prepared range table`);
+  assert.deepEqual(events, [], `${phase}: no native measurement/progress for cancelled preparation`);
+  assert.deepEqual(failures, [], `${phase}: predecessor cancellation must not fail its successor`);
+}
+});
+}
+if(id==='cancel-range-conversion'){
+const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['openChapter', 'prepareChapterMeasurementProjection'], {
+    RemoteChapterCacheRefreshError: class extends Error {},
+  });
+const chapterFor = (index, content) => ({ sourceId: 's', bookId: 'b', chapterIndex: index,
+  chapterTitle: `第${index + 1}章`, content, images: [], contentVersion: `v-${index}`,
+  bodyVersion: `body-${index}`, processingVersion: 'process' });
+const oldChapter = chapterFor(2, '旧章原文');
+const largeText = ('这是原文😀éאב。\n').repeat(80660);
+function reader(load) {
+  const events = [], failures = [];
+  const owner = Object.assign(new Reader(), {
+    sourceId: 's', bookId: 'b', bookKind: 'text', lifecycleToken: 1, chapterSelectionToken: 1,
+    materializedChapterSelectionToken: 0, chapter: oldChapter, tocEntries: [{ index: 324 }, { index: 325 }],
+    phase: 'loading', requireKnownChapter() {},
+    isSelectionActive(token, selection) { return token === this.lifecycleToken && selection === this.chapterSelectionToken; },
+    loadSessionChapter: load, ensureCurrentContentMetrics: async () => true,
+    admitChapterContentVersion() {}, setCurrentReadingChapter(chapter) { events.push(['admit', chapter.chapterIndex]); },
+    retainCurrentChapterWindow() {}, rebuildChapterImageIndexes() {},
+    configureRestoredAnchor(chapter, map) { this.chapterLayoutMap = map; },
+    hasMeasuredViewport: () => true, beginMeasurement() { events.push(['measure', this.chapter.chapterIndex]); },
+    notifyPreservedContentRefresh() {}, fail(error) { failures.push(error.message); },
+  });
+  owner.paragraphLayout.ranges = [{ id: 'old', startUtf16: 0, endUtf16: 4, startScalar: 0, endScalar: 4 }];
+  return { owner, events, failures };
+}for (const phase of ['range-conversion']) {
+  const chapter = chapterFor(324, phase === 'range-conversion' ? '中\n'.repeat(2048) : largeText);
+  if (phase !== 'scalar-map') readingChapterLayoutMap(chapter);
+  const { owner, events, failures } = reader(async () => chapter);
+  const timer = new Promise(resolve => setTimeout(() => { owner.chapterSelectionToken = 2; resolve(); }, 0));
+  await owner.openChapter(324, false, 1, 1);
+  await timer;
+  assert.equal(owner.chapter, oldChapter, `${phase}: cancellation retains the previous body`);
+  assert.equal(owner.materializedChapterSelectionToken, 0, `${phase}: stale selection has no publication authority`);
+  assert.equal(owner.paragraphLayout.ranges[0].id, 'old', `${phase}: no partially prepared range table`);
+  assert.deepEqual(events, [], `${phase}: no native measurement/progress for cancelled preparation`);
+  assert.deepEqual(failures, [], `${phase}: predecessor cancellation must not fail its successor`);
+}
+});
+}
+}
+const definitions={"bidirectional": "bidirectional actual production window/paragraph behavior; controlled IO boundary", "giant-entry": "giant-entry actual production window/paragraph behavior; controlled IO boundary", "underfill": "underfill actual production window/paragraph behavior; controlled IO boundary", "invalid-window": "invalid-window actual production window/paragraph behavior; controlled IO boundary", "cancelled": "cancelled actual production window/paragraph behavior; controlled IO boundary", "chapter-boundary": "chapter-boundary actual production window/paragraph behavior; controlled IO boundary", "image-overlap": "image-overlap actual production window/paragraph behavior; controlled IO boundary", "cooperative-body": "cooperative-body actual production window/paragraph behavior; controlled IO boundary", "cooperative-successor": "cooperative-successor actual production window/paragraph behavior; controlled IO boundary", "cancel-scalar-map": "cancel-scalar-map actual production window/paragraph behavior; controlled IO boundary", "cancel-paragraph-scan": "cancel-paragraph-scan actual production window/paragraph behavior; controlled IO boundary", "cancel-range-conversion": "cancel-range-conversion actual production window/paragraph behavior; controlled IO boundary"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

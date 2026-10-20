@@ -1,3 +1,7 @@
+import { decodeReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
+import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import type { BookRequestOptions } from '../../app/BookRequestScheduler';
 import { appendExpectedPositionVersions, decodeRemotePositionScope, encodeRemotePositionScope, type RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
@@ -11,6 +15,10 @@ import type { RemoteReadingIdentity } from './RemoteReadingContract';
 export type LocalReadingTocEntry = {
   index: number;
   title: string;
+  displayTitle?: string;
+  isVip?: boolean;
+  isPay?: boolean;
+  contextTitle?: string;
   /** 1-based navigation depth when the local book has a structured TOC. */
   level?: number;
   downloadState: LocalReadingDownloadState;
@@ -22,7 +30,7 @@ export type LocalReadingTocEntry = {
 };
 
 export type LocalReadingDownloadState =
-  'unknown' | 'missing' | 'queued' | 'inProgress' | 'cached' | 'completed' | 'failed' | 'cancelled';
+  'unknown' | 'missing' | 'queued' | 'paused' | 'inProgress' | 'cached' | 'completed' | 'failed' | 'cancelled';
 
 export type LocalReadingBookmark = {
   positionScope?: RemoteReadingPositionScope;
@@ -93,6 +101,7 @@ export type LocalReadingContentMetrics = {
  * gateway inventing a second position model.
  */
 export type LocalReadingProgress = {
+  progressRevision?: string;
   bodyVersion?: string;
   processingVersion?: string;
   bookId: string;
@@ -111,6 +120,8 @@ export type LocalReadingProgressState =
       presentationPending?: boolean };
 
 export type LocalReadingProgressUpdate = {
+  deviceId?: string;
+  directoryTargetProof?: JsonObject;
   expectedProgressRevision?: string;
   expectedBodyVersion?: string;
   expectedProcessingVersion?: string;
@@ -130,8 +141,14 @@ export type LocalReadingLayout = {
   pageCount?: number;
 };
 
+export type LocalReadingRetainedProgressReceipt = { progressRevision?: string; updatedAt: number; locationRevision?: string; };
+
 /** One Unicode-scalar anchor emitted by the local pagination/measurement layer. */
 export type LocalReadingAnchor = {
+  deviceId?: string;
+  /** Host-only admission: renewing a retained visit cannot move a newer receipt. */
+  retainedProgressReceipt?: LocalReadingRetainedProgressReceipt;
+  directoryTargetProof?: JsonObject;
   bodyVersion?: string;
   processingVersion?: string;
   chapterIndex: number;
@@ -161,7 +178,7 @@ export type LocalReadingAtomicResolution = {
   layout: LocalReadingLayout;
 };
 
-const LOCAL_SOURCE_ID = 'local';
+export const LOCAL_SOURCE_ID = 'local';
 
 /**
  * A reader transaction supplies this guard instead of exposing NAPI request
@@ -187,9 +204,14 @@ export class LocalReadingFlowGateway {
   private progressCommitTail: Promise<void> = Promise.resolve();
   private readonly runtimeOwner: ReadingGatewayRuntime;
 
-  constructor(runtimeOwner: ReadingGatewayRuntime) {
-    this.runtimeOwner = runtimeOwner;
+  private bookmarkIntents?: BookmarkOperationIntentStore;
+  constructor(runtimeOwner: ReadingGatewayRuntime, bookmarkIntents?: BookmarkOperationIntentStore) {
+    this.runtimeOwner = runtimeOwner; this.bookmarkIntents = bookmarkIntents;
   }
+
+  /** Read-only entry construction may precede the presentation. The production
+   * mutation owner attaches its single finite authority before any writes. */
+  installBookmarkAuthority(intents: BookmarkOperationIntentStore): void { this.bookmarkIntents ??= intents; }
 
   async loadToc(bookId: string, isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingToc> {
     this.assertNonBlankString(bookId, 'bookId');
@@ -220,6 +242,7 @@ export class LocalReadingFlowGateway {
       entries.push({
         index,
         title: this.requireString(entry, 'title', 'local_book.toc entry'),
+        ...decodeReaderDirectoryDisplayMetadata(entry),
         level,
         downloadState: 'unknown',
       });
@@ -244,14 +267,23 @@ export class LocalReadingFlowGateway {
       throw new Error('bookAuthor must be a string');
     }
     const requests = await Promise.all([
-      this.runtimeOwner.request('cache.book.status', {
-        sourceId: LOCAL_SOURCE_ID,
-        bookId,
-        includeGlobalStats: false,
-      }, this.requestOptions(isCurrent)),
+      this.loadDownloadProjection(bookId, entries, isCurrent),
       this.loadBookmarkProjection(bookName, bookAuthor, entries, isCurrent),
     ]);
-    const cacheData = requests[0].data;
+    return requests[0].map((entry: LocalReadingTocEntry, index: number): LocalReadingTocEntry => ({
+      ...entry, bookmarks: requests[1][index].bookmarks,
+    }));
+  }
+
+  /** Local durable download facts only. Shared Directory owner separately
+   * owns bookmark read/mutation admission; no second bookmark producer. */
+  async loadDownloadProjection(bookId: string, entries: LocalReadingTocEntry[],
+    isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingTocEntry[]> {
+    this.assertNonBlankString(bookId, 'bookId');
+    const result = await this.runtimeOwner.request('cache.book.status', {
+      sourceId: LOCAL_SOURCE_ID, bookId, includeGlobalStats: false,
+    }, this.requestOptions(isCurrent));
+    const cacheData = result.data;
     this.assertLocalSource(cacheData, 'cache.book.status');
     this.assertMatchingBookId(cacheData, bookId, 'cache.book.status');
     const rawStatuses = cacheData['chapters'];
@@ -272,12 +304,12 @@ export class LocalReadingFlowGateway {
       );
     }
 
-    const bookmarkEntries = requests[1];
     const projected: LocalReadingTocEntry[] = [];
-    for (const entry of bookmarkEntries) {
+    for (const entry of entries) {
       projected.push({
         index: entry.index,
         title: entry.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         level: entry.level,
         downloadState: stateByChapter.get(entry.index) ?? 'unknown',
         navigable: entry.navigable,
@@ -349,6 +381,7 @@ export class LocalReadingFlowGateway {
       projected.push({
         index: entry.index,
         title: entry.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         level: entry.level,
         downloadState: entry.downloadState,
         navigable: entry.navigable,
@@ -367,6 +400,8 @@ export class LocalReadingFlowGateway {
     input: LocalReadingChapterStartBookmarkInput,
     isCurrent?: LocalReadingRequestGuard,
     remoteIdentity?: RemoteReadingIdentity,
+    evidence?: ReaderWriteEvidence,
+    context?: ReadingOperationContext,
   ): Promise<LocalReadingBookmark> {
     const captured: LocalReadingPositionBookmarkInput = {
       bookName: input.bookName, bookAuthor: input.bookAuthor, chapterIndex: input.chapterIndex,
@@ -381,7 +416,7 @@ export class LocalReadingFlowGateway {
         await this.loadChapterStartPositionScope(identity, captured.chapterIndex, isCurrent);
     }
     if (isCurrent?.() === false) throw new Error('bookmark creation superseded');
-    return this.createPositionBookmark(captured, isCurrent);
+    return this.createPositionBookmark(captured, isCurrent, evidence, context);
   }
 
   /** A new chapter-start anchor is always zero in the current Core body.
@@ -422,6 +457,8 @@ export class LocalReadingFlowGateway {
   async createPositionBookmark(
     input: LocalReadingPositionBookmarkInput,
     isCurrent?: LocalReadingRequestGuard,
+    evidence?: ReaderWriteEvidence,
+    context?: ReadingOperationContext,
   ): Promise<LocalReadingBookmark> {
     this.assertNonBlankString(input.bookName, 'bookName');
     if (typeof input.bookAuthor !== 'string') {
@@ -438,8 +475,20 @@ export class LocalReadingFlowGateway {
       if (input.positionScope.chapterIndex !== input.chapterIndex) throw new Error('bookmark position scope chapter mismatch');
       params['positionScope'] = encodeRemotePositionScope(input.positionScope);
     }
-    const result = await this.runtimeOwner.request('bookmark.create', params, this.requestOptions(isCurrent));
-    const rawBookmark = this.requireObject(result.data['bookmark'], 'bookmark.create bookmark');
+    if (isCurrent?.() === false) throw new Error('bookmark creation superseded before dispatch');
+    if (this.bookmarkIntents !== undefined) {
+      if (context === undefined) throw new Error('bookmark mutation requires exact entity context');
+      return this.bookmarkIntents.execute('bookmark.create', params, context,
+        (data): LocalReadingBookmark => this.decodeCreatedBookmark(data, input), evidence, isCurrent ?? ((): boolean => true));
+    }
+    // Legacy API compatibility; production ReaderDirectoryHost supplies the
+    // mandatory finite durable authority, including all page consumers.
+    evidence?.dispatched();
+    const result = await this.runtimeOwner.request('bookmark.create', params, {});
+    const saved = this.decodeCreatedBookmark(result.data, input); evidence?.confirmed(); return saved;
+  }
+  private decodeCreatedBookmark(data: JsonObject, input: LocalReadingPositionBookmarkInput): LocalReadingBookmark {
+    const rawBookmark = this.requireObject(data['bookmark'], 'bookmark.create bookmark');
     const time = this.requireSafeInteger(rawBookmark, 'time', 'bookmark.create bookmark');
     const bookName = this.requireString(rawBookmark, 'bookName', 'bookmark.create bookmark');
     const bookAuthor = this.requireString(rawBookmark, 'bookAuthor', 'bookmark.create bookmark');
@@ -471,35 +520,57 @@ export class LocalReadingFlowGateway {
   async deleteBookmark(
     time: number,
     isCurrent?: LocalReadingRequestGuard,
+    evidence?: ReaderWriteEvidence,
+    context?: ReadingOperationContext,
   ): Promise<boolean> {
     if (!Number.isSafeInteger(time)) {
       throw new Error('time must be a safe integer');
     }
-    const result = await this.runtimeOwner.request('bookmark.delete', {
-      time,
-    }, this.requestOptions(isCurrent));
-    const returnedTime = this.requireSafeInteger(result.data, 'time', 'bookmark.delete');
-    if (returnedTime !== time) {
-      throw new Error('bookmark.delete returned a mismatched time');
+    if (isCurrent?.() === false) throw new Error('bookmark deletion superseded before dispatch');
+    if (this.bookmarkIntents !== undefined) {
+      if (context === undefined) throw new Error('bookmark deletion requires exact entity context');
+      return this.bookmarkIntents.execute('bookmark.delete', { time }, context,
+        (data): boolean => this.decodeDeletedBookmark(data, time), evidence, isCurrent ?? ((): boolean => true));
     }
-    const deleted = result.data['deleted'];
-    if (typeof deleted !== 'boolean') {
-      throw new Error('bookmark.delete returned invalid deleted');
-    }
+    evidence?.dispatched();
+    const result = await this.runtimeOwner.request('bookmark.delete', { time }, {});
+    const deleted = this.decodeDeletedBookmark(result.data, time); evidence?.confirmed(); return deleted;
+  }
+  private decodeDeletedBookmark(data: JsonObject, time: number): boolean {
+    const returnedTime = this.requireSafeInteger(data, 'time', 'bookmark.delete');
+    if (returnedTime !== time) throw new Error('bookmark.delete returned a mismatched time');
+    const deleted = data['deleted']; if (typeof deleted !== 'boolean') throw new Error('bookmark.delete returned invalid deleted');
     return deleted;
+  }
+  async pendingBookmarkOperation(): Promise<ReadingOperationIntent | undefined> { return this.bookmarkIntents?.pending(); }
+  async reconcileBookmarkOperation(context: ReadingOperationContext, current: () => boolean,
+    evidence?: ReaderWriteEvidence, continueOriginal: boolean = false): Promise<ReadingRecoveredOperation | undefined> {
+    const qualify = (data: JsonObject, intent: ReadingOperationIntent): JsonObject => {
+      if (intent.method === 'bookmark.delete') this.decodeDeletedBookmark(data, intent.params['time'] as number);
+      else {
+        const p = intent.params;
+        this.decodeCreatedBookmark(data, { bookName: p['bookName'] as string, bookAuthor: (p['bookAuthor'] ?? '') as string,
+          chapterIndex: (p['chapterIndex'] ?? 0) as number, chapterOffset: (p['chapterPos'] ?? 0) as number,
+          chapterTitle: (p['chapterName'] ?? '') as string, bookText: (p['bookText'] ?? '') as string,
+          positionScope: decodeRemotePositionScope(p['positionScope']) });
+      }
+      return data;
+    };
+    return continueOriginal ? this.bookmarkIntents?.continueOriginal(context, qualify, evidence, current) :
+      this.bookmarkIntents?.reconcile(context, qualify, current);
   }
 
   async loadChapter(
     bookId: string,
     chapterIndex: number,
     isCurrent?: LocalReadingRequestGuard,
+    directoryTargetProof?: JsonObject,
   ): Promise<LocalReadingChapter> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertNonNegativeInteger(chapterIndex, 'chapterIndex');
-    const result = await this.runtimeOwner.request('local_book.chapter.content', {
-      bookId,
-      chapterIndex,
-    }, this.requestOptions(isCurrent));
+    const params: JsonObject = { bookId, chapterIndex };
+    if (directoryTargetProof !== undefined) params['directoryTargetProof'] = directoryTargetProof;
+    const result = await this.runtimeOwner.request('local_book.chapter.content', params, this.requestOptions(isCurrent));
     this.assertLocalSource(result.data, 'local_book.chapter.content');
     this.assertMatchingBookId(result.data, bookId, 'local_book.chapter.content');
     const returnedIndex = this.requireNonNegativeInteger(
@@ -633,7 +704,8 @@ export class LocalReadingFlowGateway {
     return {
       kind: 'restored',
       ...(progressRevision === undefined ? {} : { progressRevision }),
-      progress: this.decodeProgress(rawProgress, bookId, 'reading.progress.get'),
+      progress: { ...this.decodeProgress(rawProgress, bookId, 'reading.progress.get'),
+        ...(progressRevision === undefined ? {} : { progressRevision }) },
     };
   }
 
@@ -729,6 +801,7 @@ export class LocalReadingFlowGateway {
     update: LocalReadingProgressUpdate,
     isCurrent?: LocalReadingRequestGuard,
     resolution?: LocalReadingAtomicResolution,
+    dispatch?: BookRequestOptions,
   ): Promise<LocalReadingProgress> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertChapterIndex(update.chapterIndex, 'chapterIndex');
@@ -756,6 +829,11 @@ export class LocalReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    if (update.deviceId !== undefined) {
+      this.assertNonBlankString(update.deviceId, 'deviceId');
+      params['deviceId'] = update.deviceId;
+    }
+    if (update.directoryTargetProof !== undefined) params['directoryTargetProof'] = update.directoryTargetProof;
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
     if (update.expectedProgressRevision !== undefined) {
@@ -778,7 +856,7 @@ export class LocalReadingFlowGateway {
     const result = await this.runtimeOwner.request(
       'reading.progress.update',
       params,
-      this.requestOptions(isCurrent),
+      { ...this.requestOptions(isCurrent), ...dispatch, canDispatch: dispatch?.canDispatch ?? isCurrent },
     );
     if (result.data['stored'] !== true) {
       throw new Error('reading.progress.update did not confirm storage');
@@ -831,6 +909,7 @@ export class LocalReadingFlowGateway {
     const processingVersion = this.optionalString(progress, 'processingVersion', command);
     appendExpectedPositionVersions({}, bodyVersion, processingVersion);
     const locationRevision = this.optionalString(progress, 'locationRevision', command);
+    const progressRevision = this.optionalString(progress, 'progressRevision', command);
     return {
       bookId: expectedBookId,
       chapterIndex: this.requireChapterIndex(progress, 'chapterIndex', command),
@@ -838,6 +917,7 @@ export class LocalReadingFlowGateway {
       chapterProgress: this.requireProgress(progress, 'chapterProgress', command),
       updatedAt: this.requireNonNegativeInteger(progress, 'updatedAt', command),
       ...(locationRevision === undefined ? {} : { locationRevision }),
+      ...(progressRevision === undefined ? {} : { progressRevision }),
       ...(bodyVersion === undefined ? {} : { bodyVersion }),
       ...(processingVersion === undefined ? {} : { processingVersion }),
     };

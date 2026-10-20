@@ -1,64 +1,76 @@
-import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { MainTabBar } from './MainTabBar';
-import { TOK_PAPER } from '../common/ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerInteractiveSafeBottom,
   readerInteractiveSafeLeft,
   readerVisualSafeTop,
 } from '../common/ReaderWindowMetrics';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import type { ReaderHeaderKind } from '../common/ReaderPageShell';
 
 
 // MainTabShell —— 主页面(书架/发现/RSS/设置)公共骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七)。
-// 页面背景 + 内容区 + 响应式主导航。主页面只提供 content + activeTab + onMainTab，
-// Phone 使用 BottomNav；完成 Tablet 版式的页面可启用共享左侧导航轨道。状态栏 padding
+// 根背景、固定顶栏与叠层由 ReaderPageScaffold 持有；本壳仅组合主导航和页面槽。
+// 顶栏总高度通过共享回调传回滚动内容，导航透明宿主不拦截空白。
+// 完成 Tablet 版式的页面可启用共享左侧导航轨道。状态栏 padding
 // 与安全区仍由 Index 根 Stack 统一处理，避免双 padding。
 @Component
 export struct MainTabShell {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop activeTab: string = 'bookshelf';
   @Prop showBottomNav: boolean = true;
   @Prop showTabletRail: boolean = false;
-  onMainTab: (key: string) => void = (_key: string): void => {};
+  @Prop railVariant: 'standard' | 'bookshelf' = 'standard';
+  @Prop navigationGeneration: number = 0;
+  private mounted: boolean = false;
+  onMainTab: (key: string, presentedGeneration?: number) => void = (_key: string): void => {};
+  @Prop headerKind: ReaderHeaderKind = 'home';
+  @Prop headerTop: number = 0;
+  @Prop headerInsetLeft: number = 0;
+  @Prop headerInsetRight: number = 0;
+  onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
   @BuilderParam content: () => void;
+  @BuilderParam header: () => void = this.emptySlot;
+  @BuilderParam overlayContent: () => void = this.emptySlot;
+  @Builder private emptySlot() {}
+
+  aboutToAppear(): void { this.mounted = true; }
+  aboutToDisappear(): void { this.mounted = false; }
+
+  private requestMainTab(key: string, presentedGeneration: number): void {
+    if (!this.mounted || presentedGeneration !== this.navigationGeneration) return;
+    this.onMainTab(key, presentedGeneration);
+  }
 
   build() {
-    if (this.showTabletRail) {
-      Stack({ alignContent: Alignment.Start }) {
-        Stack({ alignContent: Alignment.TopStart }) {
-          this.content();
-        }
-        .width('100%')
-        .height('100%');
+    ReaderPageScaffold({ variant: 'mainTab', headerKind: this.headerKind,
+      headerTop: this.headerTop, headerInsetLeft: this.headerInsetLeft, headerInsetRight: this.headerInsetRight,
+      content: (): void => { this.content(); },
+      header: (): void => { this.header(); },
+      footer: (): void => { this.bottomNavigation(); },
+      overlayContent: (): void => { this.mainOverlays(); },
+      onHeaderHeightChange: (height: number): void => this.onHeaderHeightChange(height + this.headerTop),
+    });
+  }
 
-        MainTabBar({
-          current: this.activeTab,
-          vertical: true,
-          onSelect: (key: string): void => this.onMainTab(key),
-        })
-          .position({ x: this.railLeft(), y: this.railTop() });
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
-    } else {
-      Column() {
-        Stack({ alignContent: Alignment.TopStart }) {
-          this.content();
-        }
-        .layoutWeight(1)
-        .width('100%');
-
-        if (this.showBottomNav) {
-          MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.onMainTab(key) });
-        }
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+  @Builder
+  private bottomNavigation() {
+    if (this.showBottomNav && !this.showTabletRail) {
+      ForEach([this.navigationGeneration], (generation: number) => {
+        MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation) });
+      }, (generation: number): string => generation.toString());
     }
+  }
+
+  @Builder
+  private mainOverlays() {
+    if (this.showTabletRail) {
+      ForEach([this.navigationGeneration], (generation: number) => {
+        MainTabBar({ current: this.activeTab, vertical: true, railVariant: this.railVariant, onSelect: (key: string): void => this.requestMainTab(key, generation) })
+          .position({ x: this.railLeft(), y: this.railTop() });
+      }, (generation: number): string => generation.toString());
+    }
+    this.overlayContent();
   }
 
   private railLeft(): number {

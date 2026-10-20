@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "id": "novel-source-switch-approved-source-20261007",
+  "origin": "source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline",
+  "archivePolicy": "Exact original bytes; no font or native media duplicates. Runtime resolves shared Host resources through generated reference adapters. Historical catalogue included with its five direct local dependencies.",
+  "files": {
+    "app.css": {
+      "sha256": "77415956ae6aa2548d00f1c6702d8b9aac14ece6cc3ff5f384bbeed6ae454d40",
+      "bytes": 9792
+    },
+    "assets/source-flow-cover.png": {
+      "sha256": "a4760ecc3ec0f5742444cb6780fb9d7fb9186ed484a1e074761b4419582ff7a2",
+      "bytes": 2116978
+    },
+    "catalogue.html": {
+      "sha256": "50cbd7c1f183c4c4486fa9af24a3b8737b1278c0f78b219b05ca4dc5fd06b243",
+      "bytes": 4219
+    },
+    "library.css": {
+      "sha256": "497477593ee24eed663c55fd3444004933590ec57e8e007b126965cc420f8de2",
+      "bytes": 53302
+    },
+    "reading.css": {
+      "sha256": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+      "bytes": 99922
+    },
+    "shared.mjs": {
+      "sha256": "b115e606a2ab0350a8d8bbcde7a560405bc4698dabdd3654c2e0193ed6924b69",
+      "bytes": 3880
+    },
+    "source-flow-model.mjs": {
+      "sha256": "f8a4075058c080e4d1389c77c8a870eba01fa5f7b89c914cd333f07dc48f9236",
+      "bytes": 8112
+    },
+    "source-flow-pointer.mjs": {
+      "sha256": "0ab63d39a3e1e2f91ae15a48c6838708226f6738ec1db8f25225ff4f397a9dfe",
+      "bytes": 661
+    },
+    "source-flow-renderer.mjs": {
+      "sha256": "b0945bcb35a20e9612efd3f6cf9a1030e720f378a6eb63c838a2c790cff08372",
+      "bytes": 4193
+    },
+    "source-flow.css": {
+      "sha256": "9e2a8ef5e5fdbb207f808ce935dd27c11215aaf77a1b0de0c1d18cd1852bb21d",
+      "bytes": 13147
+    },
+    "source-switch-renderer.mjs": {
+      "sha256": "00d8abf9b701ca40ddaa3fbff503d2c3858ab18a77c7db23e28521f78a126bf8",
+      "bytes": 19808
+    },
+    "tokens.css": {
+      "sha256": "921db3f034c6d32ac5b62c39147c27f47eb08e83fcb92ca0c1b3cf89355577ea",
+      "bytes": 158245
+    },
+    "ui-library.mjs": {
+      "sha256": "69416eabc7d80a70c60770ef7bd4daa0825d9a1ead133daf5eac9539806b9da0",
+      "bytes": 55224
+    },
+    "ui-reading.mjs": {
+      "sha256": "0e90f332a983e66bb9c7ebc0eebae19c989f09c5e4eb35fa06ba1a7e06a0caba",
+      "bytes": 110805
+    },
+    "source-flow.mjs": {
+      "sha256": "8731182669e81a5815c61f2557be72141bc2a38d80252beb7155f8e5bf9a6c26",
+      "bytes": 11815
+    },
+    "source-flow-light-toolbar-20261007.json": {
+      "sha256": "1382712dfb081399a357a59c6b2a901b0b9023a69d19469b97cbebf0c47d2b2d",
+      "bytes": 3967
+    },
+    "index.html": {
+      "sha256": "59b05bb2a30a03cd22bb0fede4e77ed71374be359b2faa9ecc8e68fb0b7b0e0a",
+      "bytes": 3284
+    },
+    "settings.css": {
+      "sha256": "847ba2241f936540d596aec3380a0fe8672f425e46e309bd397b4622c2b97d80",
+      "bytes": 20447
+    },
+    "source-switch.css": {
+      "sha256": "0b66eb0d4d60ec4a363ae80678ca18a80ac7e9a5d6c0d1ace9f6c22b5e60e8a5",
+      "bytes": 13311
+    },
+    "delivery.css": {
+      "sha256": "2f8a90cf87d21c6a5b276f45b15157bd005df11deb62e538b3df852492fea81b",
+      "bytes": 8056
+    },
+    "app.bundle.js": {
+      "sha256": "a95c63f14e02929c7c54d3c107859550c259d8609140406a43bbf63783b02d38",
+      "bytes": 1265758
+    },
+    "LOGIC.md": {
+      "sha256": "af63b6f1a1f4bf05079cd4252a5bb8329394be8040b9b6bb1c2f441578ffde37",
+      "bytes": 467575
+    }
+  }
+}

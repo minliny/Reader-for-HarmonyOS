@@ -1,4 +1,23 @@
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
+import type { OperationFacts } from '../../app/ReaderOperationFacts';
+
+export type SearchSourceSkip = {
+  sourceId: string;
+  baseUrl?: string;
+  reason: 'healthFailed' | 'cooldown';
+};
+
+export type SearchHistoryStatus = 'loading' | 'ready' | 'loadFailed' | 'clearFailed';
+
+/** Small summary facts; result rows remain in SearchPresentation. */
+export interface SearchOperationValue {
+  resultCount: number;
+  totalSourceCount: number;
+  completedSourceCount: number;
+  failedSourceCount: number;
+}
+
+export type SearchOperationFacts = OperationFacts<SearchOperationValue>;
 
 /**
  * The search page's full presentation. The three pre-search surfaces retain
@@ -9,11 +28,13 @@ import type { SearchBook, SearchResultDelta } from './SearchGateway';
 export interface SearchInitialPresentation {
   kind: 'initial';
   history: string[];
+  historyStatus?: SearchHistoryStatus;
 }
 
 export interface SearchLoadingPresentation {
   kind: 'loading';
   keyword: string;
+  operation?: SearchOperationFacts;
 }
 
 export interface SearchResultsPresentation {
@@ -38,8 +59,12 @@ export interface SearchResultsPresentation {
   completedSourceCount: number;
   /** Enabled sources whose `book.search` failed so far. */
   failedSourceCount: number;
+  /** Enabled sources omitted by current health evidence or failure cooldown. */
+  skippedSourceCount?: number;
+  skippedSources?: SearchSourceSkip[];
   /** True when the user stopped the sweep early (ACQ-02); partial results stay. */
   stopped?: boolean;
+  operation?: SearchOperationFacts;
 }
 
 export interface SearchEmptyPresentation {
@@ -54,8 +79,12 @@ export interface SearchEmptyPresentation {
   searchedSourceCount: number;
   /** Enabled sources whose `book.search` failed before this verdict. */
   failedSourceCount?: number;
+  /** Enabled sources omitted by current health evidence or failure cooldown. */
+  skippedSourceCount?: number;
+  skippedSources?: SearchSourceSkip[];
   /** True when the sweep was stopped by the user before this verdict (ACQ-02). */
   stopped?: boolean;
+  operation?: SearchOperationFacts;
 }
 
 export interface SearchErrorPresentation {
@@ -70,6 +99,10 @@ export interface SearchErrorPresentation {
   searchedSourceCount: number;
   /** Enabled sources whose `book.search` failed; every source failed here. */
   failedSourceCount?: number;
+  /** Enabled sources omitted by current health evidence or failure cooldown. */
+  skippedSourceCount?: number;
+  skippedSources?: SearchSourceSkip[];
+  operation?: SearchOperationFacts;
 }
 
 /**
@@ -81,12 +114,14 @@ export interface SearchSourceRequiredPresentation {
   kind: 'sourceRequired';
   reason: 'noSources' | 'allDisabled';
   history: string[];
+  historyStatus?: SearchHistoryStatus;
 }
 
 /** `source.list` itself failed; the search chain never started. */
 export interface SearchSourceLoadErrorPresentation {
   kind: 'sourceLoadError';
   history: string[];
+  historyStatus?: SearchHistoryStatus;
 }
 
 export type SearchPresentation =

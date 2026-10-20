@@ -1,3 +1,5 @@
+import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK } from '../common/ReaderTypography';
+import { TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape, RectShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionClipCache, readerControlMotionSourceFullyVisible,
@@ -70,7 +72,7 @@ export struct ReaderControlSettingsContent {
   private p(): number { return readerControlUnit(this.motionProgress); }
   private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
   private scrollContentHeight(): number {
-    return Math.max(readerControlLerp(190, 694, this.p()), this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
+    return Math.max(readerControlLerp(190, 732, this.p()), this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
   }
   private onMotionChanged(): void { this.syncMorphScroll(); }
   private syncMorphScroll(): void {
@@ -192,8 +194,8 @@ export struct ReaderControlSettingsContent {
   @Builder
   private screenGroup() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('屏幕样式').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+      Text('屏幕样式').fontFamily(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.fontFamily).fontWeight(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.fontSizeFp).lineHeight(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .width(this.geometry().title.width)
         .height(this.geometry().title.height)
         .position({ x: this.geometry().title.x,
@@ -211,8 +213,8 @@ export struct ReaderControlSettingsContent {
   @Builder
   private segmentRow(group: ReaderControlSettingsGroup, row: number) {
     Text(this.groupLabel(group)).width(this.label(row).width).height(this.label(row).height)
-      .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-      .fontSize(10 + this.p()).lineHeight(this.label(row).height)
+      .fontFamily(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontFamily).fontWeight(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontWeight)
+      .fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())).lineHeight(this.label(row).height)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
       .position({ x: this.label(row).x, y: this.label(row).y })
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -224,8 +226,8 @@ export struct ReaderControlSettingsContent {
       Stack({ alignContent: Alignment.TopStart }) {
         ForEach(this.groupOptions(group), (option: string, index: number) => {
           Text(this.optionLabel(group, option))
-            .borderRadius(6).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium)
-            .fontSize(9).textAlign(TextAlign.Center).maxLines(1)
+            .borderRadius(6).fontFamily(TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE.fontFamily).fontWeight(TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE.fontWeight)
+            .fontSize(TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE.fontSizeFp).textAlign(TextAlign.Center).maxLines(1)
             .attributeModifier(this.optionModifier(group, row, index, option));
         }, (option: string): string => `reader-control-settings-${group}-${option}`);
       }
@@ -246,13 +248,14 @@ export struct ReaderControlSettingsContent {
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme)).opacity(this.child('divider', 0).opacity)
         .position({ x: this.child('divider', 0).x, y: this.child('divider', 0).y });
       Text(title).width(this.child('title', 0).width).height(this.child('title', 0).height)
-        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+        .fontFamily(TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL.fontFamily).fontWeight(TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL.fontSizeFp).lineHeight(TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .opacity(this.child('title', 0).opacity)
         .position({ x: this.child('title', 0).x, y: this.child('title', 0).y });
       if (group === 'status') {
-        this.toggleRow('隐藏导航栏', 'hideNavigationBar', 0);
-        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 1);
+        this.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+        this.toggleRow('隐藏底部导航栏', 'hideNavigationBar', 1);
+        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 2);
       } else if (group === 'typography') {
         this.justifyToggleRow();
         this.toggleRow('底部对齐', 'alignPageBottom', 1);
@@ -276,8 +279,8 @@ export struct ReaderControlSettingsContent {
   @Builder
   private toggleRow(label: string, key: ReaderSettingsToggleKey, index: number) {
     Row({ space: 20 }) {
-      Text(label).layoutWeight(1).height(16).fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium).fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
+      Text(label).layoutWeight(1).height(16).fontFamily(TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL.fontWeight).fontSize(TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL.fontSizeFp).lineHeight(TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
       ReaderControlSwitchTrack({ value: this.toggleValue(key) });
     }
     .width(this.child('row', index).width).height(this.child('row', index).height)
@@ -292,8 +295,8 @@ export struct ReaderControlSettingsContent {
   @Builder
   private justifyToggleRow() {
     Row({ space: 20 }) {
-      Text('文字两端对齐').layoutWeight(1).height(16).fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium).fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
+      Text('文字两端对齐').layoutWeight(1).height(16).fontFamily(TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL.fontWeight).fontSize(TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL.fontSizeFp).lineHeight(TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
       ReaderControlSwitchTrack({ value: this.justifyText });
     }
     .width(this.child('row', 0).width).height(this.child('row', 0).height)
@@ -416,6 +419,9 @@ export struct ReaderControlSettingsContent {
   }
 
   private toggleValue(key: ReaderSettingsToggleKey): boolean {
+    if (key === 'hideStatusBar') {
+      return this.snapshot.hideStatusBar;
+    }
     if (key === 'hideNavigationBar') {
       return this.snapshot.hideNavigationBar;
     }

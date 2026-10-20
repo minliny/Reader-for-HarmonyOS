@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { installReaderLayoutOwners } from './lib/reader-measurement-owner-fixture.mjs';
 import {
   readerAppearanceParagraphContentScalarOffset,
   readerAppearanceParagraphDisplayText,
@@ -11,7 +12,7 @@ import {
 // Execute production measurement with controlled ArkUI UTF-16 line metrics.
 // This verifies scalar/continuation semantics, not actual platform line wrapping.
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const host = readFileSync(new URL('LocalReadingExperience.ets', reading), 'utf8');
+const host = readFileSync(new URL('ReadingMeasurementModels.ets', reading), 'utf8').replaceAll('export class ', 'class ') + readFileSync(new URL('LocalReadingExperience.ets', reading), 'utf8');
 const lineClass = host.slice(host.indexOf('class MeasuredReadingLine {'), host.indexOf('class PhysicalReadingPage {'));
 const MeasuredReadingLine = new Function(stripTypeScriptTypes(lineClass) + ';return MeasuredReadingLine;')();
 function method(name) {
@@ -67,8 +68,8 @@ const Batch=new Function('MeasurementParagraph','ReadingSurfaceLayoutMap','TextC
 for(const content of ['甲😀 e\u0301 العربية Hebrew אבג 正文','段落'.repeat(16000)]) {
  const map=new ReadingSurfaceLayoutMap(content), target=Math.floor(map.scalarCount()/2);
  const range={id:'p',startUtf16:0,endUtf16:content.length,startScalar:0,endScalar:map.scalarCount()};
- const batch=Object.assign(new Batch(),{requireMeasurementChapter:()=>({content}),requireMeasurementLayoutMap:()=>map,
-  nativeTextMeasurement:{clear(){}},measurementBatch:[],nextRangeIndex:0,firstRangeStartScalar:target,measuringRanges:()=>[range]});
+ const batch=installReaderLayoutOwners(Object.assign(new Batch(),{requireMeasurementChapter:()=>({content}),requireMeasurementLayoutMap:()=>map,
+  nativeTextMeasurement:{clear(){}},measurementBatch:[],nextRangeIndex:0,firstRangeStartScalar:target,measuringRanges:()=>[range]}));
  assert.equal(batch.prepareNextMeasurementBatch(),true);
  assert.equal(batch.measurementBatch.length,1);
  const paragraph=batch.measurementBatch[0];

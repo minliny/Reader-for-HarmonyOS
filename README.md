@@ -1,6 +1,11 @@
 # Reader for HarmonyOS
 
-Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core-Native` 的应用。
+Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core` 的应用。
+
+## UI 与逻辑稿
+
+工作区旧 UI 原型、状态稿与设计归档已按授权清理。新稿以本工作区已接通的应用逻辑为依据。
+入口为 [UI 稿](docs/ui-design/app-baseline/index.html) 与 [逻辑稿](docs/ui-design/app-baseline/LOGIC.md)。两者共用逐页参数，包含 iOS / Android 布局、排版、动效、平台适配与验收要求；当前模块索引、准入状态和证据统计以逻辑稿及其分类说明为准。逻辑稿提供各业务章节的入口、动作和返回路线图。预览可检查安全区、键盘和大字体，原生还原仍需逐端验收。
 
 ## 开发准入
 
@@ -27,17 +32,17 @@ manifest。`entry/build/` 不再是交付目录，`check-local.sh --hap` 已停�
 
 `test-*-server.mjs` 是常驻 fixture server，不计入测试数量，也不会由本命令启动。
 
-## 仅编译诊断
+## DevEco 原生开发构建与安装
 
 ```bash
-/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw \
-  assembleHap --mode module \
-  -p product=default -p module=entry@default -p buildMode=debug \
-  --no-daemon --no-incremental
+node scripts/deveco-build.mjs
 ```
 
-该命令绕过源码内容绑定、产物自校验和 immutable manifest，只能用于本地编译诊断，产物不得安装、
-分发或作为任何验收证据。
+按用户 2026-10-12 的明确要求，DevEco Build/Run 可直接使用此入口。Hvigor 在内存中注入
+`.reader-local/signing/build-profile.json5` 的指定私有签名，复用流水线的证书/Profile、Native/SDK
+预检和 signed HAP 验签；增量命中也检查最终签名输出。DevEco 的安装元数据指向
+`entry-default-signed.hap`，不得卸载或清除应用数据。开发构建不运行每次全量合同，
+不声称 immutable manifest 或发布验收通过；agent 交付与 acceptance 仍使用隔离流水线。
 
 当前开发 HAP 会编译尚未纳入 L0 验收的 RSS、Discover、Sync 等扩展页面；开发构建成功不代表这些
 页面已进入发布范围。最近一次已审计交付 HAP 的精确哈希、安装结果、阅读生命周期、冲突项和证据边界见

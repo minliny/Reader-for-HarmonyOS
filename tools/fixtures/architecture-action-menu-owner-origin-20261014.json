@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "previousLegacySharedOwnersSha256": "82c4c61426bf926ad9708e8953b6a7b6e45478f9cf84e1ffcfe524c87cec0521",
+  "row": {
+    "file": "entry/src/main/ets/features/common/ReaderActionMenuSurface.ets",
+    "counts": {
+      "fontSize": 1,
+      "backgroundColor": 2
+    },
+    "kind": "spec-driven-shared-menu-implementation",
+    "proof": "tools/test-action-menu-surface.mjs"
+  }
+}

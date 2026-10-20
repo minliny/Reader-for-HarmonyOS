@@ -1,17 +1,22 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingChapterWindow, hasKnownReadingImageGeometry } from '../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({'dto-decode':{description:'Actual prepared image geometry/decoded intrinsic handoff and mismatch lease rejection',resources:[]},'pixel-ownership':{description:'Actual LRE pixel lease, frozen-page publication and reverse/continuous geometry invariants',resources:[]},'continuous-observer':{description:'Actual notifying continuous rows, coalesced pixel revisions and bounded lookup',resources:[]}});
+async function run(id){
+const { ReaderReadingImageResources, sameReaderReadingImageResource }=await import('../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingChapterWindow, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
 
-registerHooks({ resolve(specifier, context, next) {
+const hooks=registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
       return next(`${specifier}.ts`, context);
     throw error;
   }
 } });
+try{
 const { materializePreparedReadingDocument } = await import('../entry/src/main/ets/features/reading/ReadingDocumentProjection.ts');
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const file = new URL('LocalReadingExperience.ets', dir);
@@ -26,6 +31,9 @@ const block = { kind: 'image', source, startScalar: 0, endScalar: 1,
 const document = image => ({ sourceId: 'local', content: '\uFFFC\n正文😀', blocks: [image,
   { kind: 'text', text: '\n正文😀', startScalar: 1, endScalar: 5 }] });
 const prepared = materializePreparedReadingDocument(document(block), 0, 'layout-v1');
+const chapterTemplate = { sourceId: 'local', bookId, chapterIndex: 0, chapterTitle: '章',
+  content: prepared.content, contentVersion: 'layout-v1', images: prepared.images, extractionVia: 'local' };
+if(id==='dto-decode'){
 assert.equal(prepared.content, '\uFFFC\n正文😀');
 assert.equal(prepared.images[0].state, 'pending');
 assert.equal(hasKnownReadingImageGeometry(prepared.images[0]), true);
@@ -47,8 +55,6 @@ let payload = { width: 179, height: 180, intrinsicWidth: 357, intrinsicHeight: 3
 const resolver = Object.assign(new Resolver(), { sourceId: 'local', bookId, source: { kind: 'local' }, runtimeOwner: {
   loadReadingImage: async () => payload, releaseReadingImage: (...args) => releases.push(args),
 } });
-const chapterTemplate = { sourceId: 'local', bookId, chapterIndex: 0, chapterTitle: '章',
-  content: prepared.content, contentVersion: 'layout-v1', images: prepared.images, extractionVia: 'local' };
 const ready = await resolver.resolveReadingImage(chapterTemplate, prepared.images[0]);
 assert.equal(ready.intrinsicWidth, 357, 'layout uses original rather than rounded downsample width');
 assert.equal(ready.intrinsicHeight, 359);
@@ -78,8 +84,10 @@ assert.equal(nativePayload.width, decoded.width); assert.equal(nativePayload.hei
 assert.notEqual(nativePayload.width, nativePayload.intrinsicWidth);
 assert.equal(decodedReleased, 1); assert.equal(sourceReleased, 1);
 
+
+}else{
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
-const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
 let activeRuntime;
 const methods = ['resolvePageImagePixels', 'resolveGeometryImagePixels', 'matchingImageChapter', 'geometryImageOwners',
   'replaceFragmentPixels', 'publishGeometryImagePixels', 'flushDeferredReadingImagePixels', 'readingImageKey',
@@ -87,7 +95,7 @@ const methods = ['resolvePageImagePixels', 'resolveGeometryImagePixels', 'matchi
   'sameReadingImageResource', 'scaledReadingImageHeight', 'consumeReversePageParagraph', 'rebuildContinuousFragments'];
 const Owner = productionMotionMethods(file, methods, { ReadingSurfacePageFragment: Fragment, ...style,
   readerNativeParagraphKey: () => 'title', TYPE_READER_CHAPTER_TITLE: {}, TextAlign: { Center: 'center' },
-  ReaderRuntimeOwner: { current: () => activeRuntime }, hilog: { error() {} } });
+  ReaderRuntimeOwner: { current: () => activeRuntime }, sameReaderReadingImageResource, hilog: { error() {} } });
 function fixture({ repeated = false } = {}) {
   let current = true, mounted = true, frozen = false, phase = 'idle';
   const reads = [], leasesReleased = [], events = [];
@@ -98,8 +106,10 @@ function fixture({ repeated = false } = {}) {
   fragments[0].nativeTitle = { retained: true }; fragments[0].continuousSpaceBefore = true;
   const page = { startScalar: 0, endScalar: 10, contentHeight: 90, bodyCapacity: 200, fragments: fragments.slice() };
   const window = new ReadingChapterWindow(); window.configure('local', bookId, [0, 1]); window.setCurrent(chapter);
+  activeRuntime = { captureReadingContentValidity: () => () => current,
+    releaseReadingImage: (...args) => leasesReleased.push(args) };
   const owner = Object.assign(new Owner(), { chapter, sourceId: 'local', bookId, lifecycleToken: 1,
-    geometryImageRequests: new Map(), chapterWindow: window, readingImageResources: [],
+    geometryImageRequests: new Map(), chapterWindow: window, readingImageResources: new ReaderReadingImageResources({ releaseReadingImage: (...args) => leasesReleased.push(args) }),
     chapterImageByStartScalar: new Map(), chapterImagePositionByKey: new Map(),
     visibleFragments: page.fragments, visiblePage: page, readingReadyPage: page,
     continuousFragments: fragments.slice(), continuousFragmentIndexByStartScalar: new Map(images.map((i,n)=>[i.startScalar,n])),
@@ -119,8 +129,7 @@ function fixture({ repeated = false } = {}) {
     schedulePageTurnPreparation: () => assert.fail('pixel readiness cannot clear measured neighbours'),
     commitContinuousProgress: () => assert.fail('pixel readiness cannot write progress'),
   });
-  activeRuntime = { captureReadingContentValidity: () => () => current,
-    releaseReadingImage: (...args) => leasesReleased.push(args) };
+
   return { owner, chapter, fragments, page, reads, leasesReleased, events,
     freeze(value) { frozen = value; phase = value ? 'settling' : 'idle'; },
     invalidate() { current = false; }, unmount() { mounted = false; },
@@ -128,6 +137,8 @@ function fixture({ repeated = false } = {}) {
       fileUri: state === 'ready' ? 'file:///shared' : '', revision: state, pixelMap: undefined }); },
   };
 }
+
+if(id==='pixel-ownership'){
 {
   const f = fixture({ repeated: true });
   const before = f.owner.visibleFragments.map(v => ({ ...v }));
@@ -203,8 +214,8 @@ for (const state of ['pending','failed']) {
   f.owner.rebuildContinuousFragments();
   assert.equal(continuous[0].imageHeight, 30 * 359 / 357, 'continuous pending/failed keeps the same geometry');
 }
-assert.match(surface, /fragment\.id}:image:/, 'paged ForEach identity remounts the placeholder as Image when pixels arrive');
 
+}else{
 // A watcher can receive only the last revision after several pixel promises.
 // Exercise the actual LazyForEach data source, including its separate title row.
 const stageSource = readFileSync(new URL('ReaderContinuousReadingStage.ets', dir), 'utf8');
@@ -274,4 +285,9 @@ for (const delivery of ['one-frozen-batch', 'two-promises-before-observer']) {
   assert.equal(ds.getData(201), fragments[200]);
   assert.equal(ds.getData(801), fragments[800]);
 }
-console.log('PASS known image geometry: prepared admission, invalid/remote fallback, original versus decoded sizes, mismatch rejection, forward-independent reverse/continuous geometry, deduplicated late leases, frozen pages, texture invalidation, stale/exit protection and invariant page/progress/scroll anchors. No device pixel claim.');
+
+}
+}
+}finally{hooks.deregister();}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

@@ -1,8 +1,26 @@
-import { createBookTurnTextureOwner } from './lib/reader-book-turn-owner-fixture.mjs';
-import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
-import assert from 'node:assert/strict';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingSurfaceLayoutMap, readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "adjacent-context": {
+    "description": "Actual LRE adjacent materialized context isolation and rejection; fake measurement owner",
+    "resources": []
+  },
+  "neighbor-acquisition": {
+    "description": "Actual ChapterWindow eviction, delayed exact-neighbor acquisition, deep resident reverse and preparation epoch",
+    "resources": []
+  },
+  "snapshot-lifecycle": {
+    "description": "Actual texture capture with worker/decoder ports: physical IDs, PixelMap lifetime, bounded160001 retry, one tree, pending-pixel reuse",
+    "resources": []
+  }
+};
+
+async function case_adjacent_context() {
+const { createBookTurnTextureOwner } = await import('./lib/reader-book-turn-owner-fixture.mjs');
+const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
 const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
 class ReaderMaterializedChapterContext {
   constructor(chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar){Object.assign(this,{chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar});}
@@ -28,51 +46,20 @@ console.log('production adjacent measurement isolation, cancellation and rejecte
 
 const draft={matches:()=>true};owner.adjacentMeasurementContext={chapter:origin,paginationDraft:draft};owner.finishAdjacentMeasurementContext();assert.equal(owner.paginationDraft,draft,'completed adjacent measurement keeps observed exact-page facts');assert.equal(owner.adjacentMeasurementContext,undefined);
 
-// A clock-only refresh after promotion must read the physical current subtree,
-// never the stale role ID registered on the now-empty reserve subtree.
-class PendingSnapshot { constructor(identity,pageGeneration,pixelMap){Object.assign(this,{identity,pageGeneration,pixelMap});} }
-const Capture = productionMotionMethods(file, ['sessionLaunchRenderWorkBlocked', 'captureBookTurnTexture','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
-  ReaderBookTurnSnapshot:PendingSnapshot,
-  BOOK_TURN_TEXTURE_CURRENT: 0, READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID: 'native-current',
-  errorMessageOf: e => String(e),
-});
-const reads = [], uploads = [];
-const capture = Object.assign(new Capture(), {
-  mounted: true, phase: 'ready', pageTurnGeneration:1, bookTurnRuntimeFailed: false, bookTurnTextureCaptureGeneration: 9,
-  usesBookTurnSimulation: () => true, controlVisible: () => false, pageTurnInputPhase: () => 'idle',
-  bookTurnCapturedIdentity: () => '', bookTurnTextureSnapshotScale: () => 1,
-  setBookTurnCapturedIdentity: () => {}, failBookTurnTextureCapture: (_s,_g,m) => { throw Error(m); },
-  bookTurnSession: createBookTurnTextureOwner((slot, pixels) => { uploads.push(pixels.id); return true; }),
-  getUIContext: () => ({getComponentSnapshot: () => ({get: async (id, opts) => {
-    assert.equal(opts.waitUntilRenderFinished, true); reads.push(id);
-    assert.equal(id, `native-current-${capture.pageTurnCurrentSlot}`);
-    return {id, release() {}};
-  }})}),
-});
-for (const physical of ['a', 'b', 'a']) {
-  capture.pageTurnCurrentSlot = physical;
-  assert.equal(await capture.captureBookTurnTexture(0, {textureIdentity:`page-${physical}-new-minute`,fragments:[]}, 9), true);
+
 }
-assert.deepEqual(reads, ['native-current-a','native-current-b','native-current-a']);
-assert.deepEqual(uploads, reads);
-console.log('production current snapshot remains bound to physical slot after promotion: PASS');
 
-// A late worker completion cannot enqueue pixels or disable the capability.
-let finishCopy;
-let released = 0;
-capture.getUIContext = () => ({getComponentSnapshot: () => ({get: async () => ({release() { released++; }})})});
-capture.bookTurnSession.uploadTexture = (_slot, _map, _identity, canPublish) =>
-  new Promise(resolve => { finishCopy = () => resolve(canPublish()); });
-const lateCopy = capture.captureBookTurnTexture(0, {textureIdentity:'old-clock',fragments:[]}, 9);
-await Promise.resolve();
-assert.equal(released, 0, 'PixelMap remains alive while the native worker reads it');
-capture.bookTurnTextureCaptureGeneration = 10;
-capture.pageTurnGeneration++;
-finishCopy();
-assert.equal(await lateCopy, false);
-assert.equal(released, 1, 'stale copied pixels still release their PixelMap');
-console.log('async texture copy preserves lifetime and rejects superseded capture: PASS');
-
+async function case_neighbor_acquisition() {
+const { createBookTurnTextureOwner } = await import('./lib/reader-book-turn-owner-fixture.mjs');
+const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+class ReaderMaterializedChapterContext {
+  constructor(chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar){Object.assign(this,{chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar});}
+}
+class ReaderPageTurnPreparation {constructor(direction,origin,originChapterIndex,originPageStartScalar,generation){Object.assign(this,{direction,origin,originChapterIndex,originPageStartScalar,generation});}}
 // Reproduce eviction after walking forward across many chapters, then coming
 // back four chapter boundaries: a pagination target is not a materialized body.
 const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
@@ -167,6 +154,59 @@ nextTasks[0]();assert.equal(orderOwner.drains,0,'obsolete preparation epoch cann
 nextTasks[1]();assert.equal(orderOwner.drains,1);
 console.log('production promotion preparation honors requested direction and stale callback guard: PASS');
 
+
+}
+
+async function case_snapshot_lifecycle() {
+const { createBookTurnTextureOwner } = await import('./lib/reader-book-turn-owner-fixture.mjs');
+const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+class PendingSnapshot { constructor(identity,pageGeneration,pixelMap){Object.assign(this,{identity,pageGeneration,pixelMap});} }
+const Capture = productionMotionMethods(file, ['sessionLaunchRenderWorkBlocked', 'captureBookTurnTexture','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
+  ReaderBookTurnSnapshot:PendingSnapshot,
+  BOOK_TURN_TEXTURE_CURRENT: 0, READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID: 'native-current',
+  errorMessageOf: e => String(e),
+});
+const reads = [], uploads = [];
+const capture = Object.assign(new Capture(), {
+  mounted: true, phase: 'ready', pageTurnGeneration:1, bookTurnRuntimeFailed: false, bookTurnTextureCaptureGeneration: 9,
+  usesBookTurnSimulation: () => true, controlVisible: () => false, pageTurnInputPhase: () => 'idle',
+  bookTurnCapturedIdentity: () => '', bookTurnTextureSnapshotScale: () => 1,
+  setBookTurnCapturedIdentity: () => {}, failBookTurnTextureCapture: (_s,_g,m) => { throw Error(m); },
+  bookTurnSession: createBookTurnTextureOwner((slot, pixels) => { uploads.push(pixels.id); return true; }),
+  getUIContext: () => ({getComponentSnapshot: () => ({get: async (id, opts) => {
+    assert.equal(opts.waitUntilRenderFinished, true); reads.push(id);
+    assert.equal(id, `native-current-${capture.pageTurnCurrentSlot}`);
+    return {id, release() {}};
+  }})}),
+});
+for (const physical of ['a', 'b', 'a']) {
+  capture.pageTurnCurrentSlot = physical;
+  assert.equal(await capture.captureBookTurnTexture(0, {textureIdentity:`page-${physical}-new-minute`,fragments:[]}, 9), true);
+}
+assert.deepEqual(reads, ['native-current-a','native-current-b','native-current-a']);
+assert.deepEqual(uploads, reads);
+console.log('production current snapshot remains bound to physical slot after promotion: PASS');
+
+// A late worker completion cannot enqueue pixels or disable the capability.
+let finishCopy;
+let released = 0;
+capture.getUIContext = () => ({getComponentSnapshot: () => ({get: async () => ({release() { released++; }})})});
+capture.bookTurnSession.uploadTexture = (_slot, _map, _identity, canPublish) =>
+  new Promise(resolve => { finishCopy = () => resolve(canPublish()); });
+const lateCopy = capture.captureBookTurnTexture(0, {textureIdentity:'old-clock',fragments:[]}, 9);
+await Promise.resolve();
+assert.equal(released, 0, 'PixelMap remains alive while the native worker reads it');
+capture.bookTurnTextureCaptureGeneration = 10;
+capture.pageTurnGeneration++;
+finishCopy();
+assert.equal(await lateCopy, false);
+assert.equal(released, 1, 'stale copied pixels still release their PixelMap');
+console.log('async texture copy preserves lifetime and rejects superseded capture: PASS');
+
 // A successful layout-only bitmap can still omit a file image. Exercise the
 // production checked capture and publication path with cold decoder replies.
 const bodyCaptures=[];
@@ -255,3 +295,11 @@ for (const invalidation of ['pointer','page','exit']) {
  o.releaseBookTurnPendingSnapshot();assert.equal(releaseCount,1,'retained CPU pixels released exactly once');
 }
 console.log('snapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS');
+
+}
+
+const implementations = {'adjacent-context':case_adjacent_context,'neighbor-acquisition':case_neighbor_acquisition,'snapshot-lifecycle':case_snapshot_lifecycle};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

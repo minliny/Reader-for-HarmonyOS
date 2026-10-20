@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -10,14 +11,14 @@ const {SearchViewState}=await import('../entry/src/main/ets/features/search/Sear
 const {searchResultRelevance}=await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/${name}`,import.meta.url),'utf8');
 const clean=source=>source.replace(/^import[\s\S]*?;\n/gm,'');
-const combined=['features/common/BookAuthorMetadata.ts','features/source/ReaderSourceCategory.ts','app/ErrorMessage.ts',
+const combined=['features/common/BookAuthorMetadata.ts','features/common/BookSearchTiming.ts','features/source/ReaderSourceCategory.ts','features/source/SourceSwitchProviderFamily.ts','app/ErrorMessage.ts',
   'features/search/SearchBookProjection.ts','features/search/SearchGateway.ts','app/BookRequestScheduler.ts',
   'features/common/BookAcquisitionPresentation.ts','features/source/SourceSwitchGateway.ts'].map(n=>clean(read(n))).join('\n');
 const {SearchGateway,SourceSwitchGateway}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(combined)).toString('base64')}`);
 
 // Core executes these same expectations against its actual SQLite alias key,
 // including old-index migration. Keep both platform adapters on one corpus.
-const coreRoot=process.env.READER_CORE_ROOT??new URL('../../Reader-Core-Native/',import.meta.url).pathname;
+const coreRoot=process.env.READER_CORE_ROOT??localFilePath(new URL('../../Reader-Core/',import.meta.url));
 const fixture=JSON.parse(readFileSync(resolve(coreRoot,'fixtures/metadata/book-author-labels.json'),'utf8'));
 assert.equal(fixture.version,1);
 for(const row of fixture.cases){

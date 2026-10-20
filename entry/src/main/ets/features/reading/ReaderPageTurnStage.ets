@@ -37,9 +37,10 @@ const COVER_OCCLUSION_OFFSET_X_VP = 6;
 /**
  * Immutable-by-convention input for one already measured physical page.
  *
- * Pagination and progress remain owned by LocalReadingExperience. The stage
- * only places these presentation models next to one another for the selected
- * flat-page transition.
+ * Paragraph/physical-page producers and the session durable progress owner
+ * supply admitted facts; LocalReadingExperience owns their page publication.
+ * This stage places retained presentation models next to one another for the
+ * selected flat-page transition.
  */
 export class ReaderPageTurnRenderPage {
   /** Stable mounted ArkUI subtree ID used only by ComponentSnapshot. */
@@ -150,16 +151,34 @@ struct ReaderPageTurnSurface {
   onContentReady: (revision: number) => void = (_revision: number): void => {};
   /** Scheduling acknowledgement only; never evidence of physical scanout. */
   onPresented: (revision: number) => void = (_revision: number): void => {};
+  private mounted: boolean = false;
+  private lifecycle: number = 0;
+  private frameGeneration: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.lifecycle += 1;
     this.onRenderRevisionChanged();
   }
 
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.lifecycle += 1;
+    this.frameGeneration += 1;
+  }
+
   private onRenderRevisionChanged(): void {
+    if (!this.mounted) return;
     const revision = this.renderRevision;
+    const lifecycle = this.lifecycle;
+    const frameGeneration = ++this.frameGeneration;
+    const pageIdentity = this.pageIdentity;
+    const slotIdentity = this.slotIdentity;
     this.onContentReady(revision);
     // Keep content admission separate from the following scheduling callback.
     this.getUIContext().postFrameCallback(new ReaderPageTurnFrameCallback((): void => {
+      if (!this.mounted || lifecycle !== this.lifecycle || frameGeneration !== this.frameGeneration ||
+        revision !== this.renderRevision || pageIdentity !== this.pageIdentity || slotIdentity !== this.slotIdentity) return;
       this.onPresented(revision);
     }));
   }

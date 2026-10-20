@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "status": "SUPERSEDED_PENDING_NEW_FIX",
+  "runId": "20260930T175802Z-86fce31f-6a4cab9e",
+  "sourceCommit": "86fce31f780a77fd26410324f0820ab623ac483a",
+  "signedArtifactSha256": "7e5fd7f83ab7bbbed9b4fdca49011397c2189a2ebf013ece31c32a0f87ce7937",
+  "gate": {
+    "files": 394,
+    "passed": 394,
+    "failed": 0,
+    "cancelled": 0,
+    "durationSeconds": 65.221788584
+  },
+  "vm": {
+    "target": "127.0.0.1:5555",
+    "nativePixels": [
+      1280,
+      2832
+    ],
+    "density": 3.5,
+    "originalShelfEmpty": true,
+    "dataPreserved": true,
+    "normalFixtureImports": 3
+  },
+  "observations": {
+    "emptyShelfTopbar": "PASS",
+    "retainedSettingsDayNightDay": "PASS",
+    "shortChapterTitleAndTerminalNewline": "PASS",
+    "shortDetailTopAlignment": "PASS",
+    "longDetailTopAlignmentAndScroll": "PASS",
+    "chapter2Title": "PASS",
+    "continueReadingAfterBookChange": "FAIL_SDK_REPRODUCED_PENDING_FIX",
+    "longChapterSliderMidpointExit": "FAIL_JSCRASH_PENDING_FIX",
+    "loadingFailureVm": "NOT_TRIGGERED_SDK_COVERED"
+  },
+  "fixtures": [
+    {
+      "name": "UI回归短目录20261001.txt",
+      "bytes": 284,
+      "sha256": "07484a96ba0956178bc73064407aa46a0791fb6b3158c308f47806e40deb303a",
+      "purpose": "controlled local UI validation fixture; normal import only"
+    },
+    {
+      "name": "UI回归长目录20261001.txt",
+      "bytes": 49697,
+      "sha256": "3132e95f2e9076ef907fac1dd0b71bfb1f6c43c02f8b25c276088ee470381f2f",
+      "purpose": "controlled local UI validation fixture; normal import only"
+    },
+    {
+      "name": "UI回归驻留窗口20261001.txt",
+      "scalars": 37211,
+      "bytes": 109229,
+      "sha256": "5b479346ce9a542b218e7b31fdb5ad57eff8b91621f38d88317ad1e7d567470d",
+      "purpose": "one long chapter; normal progress slider exit/reopen only"
+    }
+  ],
+  "evidence": [
+    {
+      "file": ".reader-local/ui-regression-full-vm/jscrash-io.reader.minliny-20261001024520927.log",
+      "bytes": 41535,
+      "sha256": "1f1c77974aed2c3a0fb232a7435e192fed56fce2626995ef52daf51e757d7c76"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-before-picker.jpeg",
+      "bytes": 133306,
+      "sha256": "f002a27dc2b2a8c63a0f650d9993f1db4e58a55aa9d40eb1ac5e83c25d3aead7"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-before-picker.json",
+      "bytes": 32751,
+      "sha256": "b5575f5908e615daf86e19b3dad879701830d7762757be329a2e996a95e57fc9"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-empty-day.jpeg",
+      "bytes": 133953,
+      "sha256": "7199afc97f2da44100669e0390aea2338ab1df144d0936b0af996a468ca171ae"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-empty-day.json",
+      "bytes": 32655,
+      "sha256": "9a26f09265c0459765906dde12506311e0d302482111f6723c3eac78013c1f9b"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-general-day.jpeg",
+      "bytes": 130687,
+      "sha256": "11530480c963784663a3600817e8e7b99f0433fb7a549c3c650bb408c7b52624"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-general-day.json",
+      "bytes": 36024,
+      "sha256": "bd0b02e3ff90d8269e0df2babecfb26dccfd703d27588fd846d58682a8c64a54"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-general-night.jpeg",
+      "bytes": 138146,
+      "sha256": "ec7330635702cef3b4ee53e77b3a090a5110e523132a438cedd2caee8eee5bee"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-general-night.json",
+      "bytes": 36024,
+      "sha256": "86851392c1a936b343a3b003569fd2dc082115bb303384897874de8cdcdff587"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-general-restored.jpeg",
+      "bytes": 130933,
+      "sha256": "ee3bca7d9dab46746e7aad805d578d0d708ab43e952992b61a07140965c2c778"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-general-restored.json",
+      "bytes": 36030,
+      "sha256": "52619861be770ce89dbbfc866c7cf8e4fae55c92ec262005da0d5470b75b6104"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-import-dialog.jpeg",
+      "bytes": 145558,
+      "sha256": "73b04650a9c93f4a8aca4e3fc1897a7dcdbc918e69fe6131d34b11fd4952cbcf"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-import-dialog.json",
+      "bytes": 78105,
+      "sha256": "bbe64584cf84279b54bd29fb84087623145b9d560ad3cde1c9f280d44d204ced"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-detail-scroll.jpeg",
+      "bytes": 151129,
+      "sha256": "bba38d9f3e103e24b9c5c62f623a8352ce6d6905793c159a1c28748d16e1240b"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-detail-scroll.json",
+      "bytes": 27227,
+      "sha256": "9126ecd1be32609a9219a908575394634b92789659eeef08633521cff08cfa3d"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-detail.jpeg",
+      "bytes": 164153,
+      "sha256": "62304a242c8d2a2d94bb0d0a6c36e40db4422aeb2ae42dadb4f172b089d53404"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-detail.json",
+      "bytes": 34389,
+      "sha256": "d93ff64a61652b5566f5aee110f58fa0af8083fe83615281bd53cdd4b3817f0a"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-reading-chapter2.jpeg",
+      "bytes": 327356,
+      "sha256": "ffa2538dee0a3e77649cce7f125d325c73e9a63bc9926bad2a2fe8d20c5274d5"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-reading-chapter2.json",
+      "bytes": 42646,
+      "sha256": "b984ac7092033803d45ae8ef57ce7adb816c53ab17603f0960695cc6e29d5656"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-reading-first.jpeg",
+      "bytes": 325968,
+      "sha256": "654b8ce61a42ed1d161d7bce860032ade3f884669c1ef3b82e8a09e3b651e01a"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-reading-first.json",
+      "bytes": 46735,
+      "sha256": "f68c5d1348ed3ebbcaf09d661134f1ef32766c93b0d2c0e79395682d93072ce2"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-reading-page2.jpeg",
+      "bytes": 319839,
+      "sha256": "cb2a2ed2ecf345ad3219b33cc92b1fb25c2f7ff995c3d6a60db962f67527b6c8"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-long-reading-page2.json",
+      "bytes": 46741,
+      "sha256": "f9de0ac75fb3861f6581cb13ad8e189ea4640547db005c4ae2fb6ad3049b9e22"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-populated-one.jpeg",
+      "bytes": 114858,
+      "sha256": "eeb29903c1712824966cc650e78f2b1d1132e59e00fef47dd40b54ac97982006"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-populated-one.json",
+      "bytes": 54703,
+      "sha256": "a84eb2a07a9527bd404cf9b3c013860f12ecd84317a9bbc407e044588e88756b"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-populated-two.jpeg",
+      "bytes": 124715,
+      "sha256": "49325a454ef0633eac9eba79d06ad9c8a47196a99fd8d64a54d9e4627956d948"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-populated-two.json",
+      "bytes": 72992,
+      "sha256": "d22ad1f88d79754f4916ed2bc23901028c2ad6ab5b2fc6e019e2f6add26b45a0"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-controls.jpeg",
+      "bytes": 263616,
+      "sha256": "ce195e2f0057e9c7b7ccd80556d237d8155b91e7aba739f6cf124ddcdf3a6b6a"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-controls.json",
+      "bytes": 95482,
+      "sha256": "ee632eabfb36b43f244a16d3ba869ee4db6d2cc5ef554c5a52f43c232283d416"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-first.jpeg",
+      "bytes": 328861,
+      "sha256": "7ee16cbb0befd2d2ae939c3c4e7164a06e2a5478b0caf78c50b86432fbaf6fb8"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-first.json",
+      "bytes": 47201,
+      "sha256": "9b4cb249c29591dd8ec6676a301c651880805a720f0b0243ea96ce70aac293f3"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-mid-controls.jpeg",
+      "bytes": 125748,
+      "sha256": "edd0ee8263437d4f692bd62681c69847ea115b24c4616a6c044bf936a7b88200"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-mid-controls.json",
+      "bytes": 420,
+      "sha256": "3903f846601b88dfc395b5ffdf9a88d3bae49b032acf4c857363d8c9a7dadebe"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-mid.jpeg",
+      "bytes": 125748,
+      "sha256": "edd0ee8263437d4f692bd62681c69847ea115b24c4616a6c044bf936a7b88200"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-mid.json",
+      "bytes": 420,
+      "sha256": "3903f846601b88dfc395b5ffdf9a88d3bae49b032acf4c857363d8c9a7dadebe"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-shelf.jpeg",
+      "bytes": 125748,
+      "sha256": "edd0ee8263437d4f692bd62681c69847ea115b24c4616a6c044bf936a7b88200"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-resident-shelf.json",
+      "bytes": 420,
+      "sha256": "3903f846601b88dfc395b5ffdf9a88d3bae49b032acf4c857363d8c9a7dadebe"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-settings-day.jpeg",
+      "bytes": 102672,
+      "sha256": "b8bcf33474b6b790239e3c3e812fce047eaeef888d348a8b74cf759a5c15490c"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-settings-day.json",
+      "bytes": 24852,
+      "sha256": "e937cc58af74d983249016cc1adb50c87e17b7df38dba6de75da7eb61198a9fe"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-settings-night.jpeg",
+      "bytes": 109416,
+      "sha256": "24909dffdbd7b43c422cb6de80bda50067b727bfe8f37ee18f33f97cd0fc8cb2"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-settings-night.json",
+      "bytes": 24860,
+      "sha256": "7b333af6c6d31f40e1dce04e16915a19b2d70a792d763db5e5b17ec2ebdb14d0"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-shelf-settings-night.jpeg",
+      "bytes": 98377,
+      "sha256": "8d005dfb81eabc0e530c1aaf52b3be91ab56dc65ab1547b0b553edcb73fd44eb"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-shelf-settings-night.json",
+      "bytes": 12656,
+      "sha256": "ca199ba81369677feab651c88a057c27d899ed55fce38104b927cb397fa3bb59"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-detail.jpeg",
+      "bytes": 144664,
+      "sha256": "9ed418000b7861bc5a7f92e8071524174a513d49d785ee9acf02dc23bea60364"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-detail.json",
+      "bytes": 29026,
+      "sha256": "be941b53c328684e6a3bc1eb23822ef32d8f4d10c7cc5c05c63bcd28c2818531"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading-authority.jpeg",
+      "bytes": 153853,
+      "sha256": "ca336e5c77c0e4a5ebb24699794ffe91c88fd8c5097db2b6aeb008ffc967ec69"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading-authority.json",
+      "bytes": 38626,
+      "sha256": "345b3af432f46f0578d3e7497e5540e63672e90effcfc658c387442acb52005c"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading-private.jpeg",
+      "bytes": 152935,
+      "sha256": "6cfeae8725a29f409e54d3cadf67ea11119d9e91a0e3cc8cecf1b7362a8c5eac"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading-private.json",
+      "bytes": 52913,
+      "sha256": "05f12a068476a9942a8944da05844982227fb3adce473545174c33a6d5a42cfe"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading-valid.jpeg",
+      "bytes": 154154,
+      "sha256": "8c74fccf87b7a697acf532c7a1b80e263d9440cd46ae76c40430112d6d1d6879"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading-valid.json",
+      "bytes": 38629,
+      "sha256": "127ad081e53cbc888e87ed37c52236dc660362c53f0dcfd17085e8d99895231c"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading.jpeg",
+      "bytes": 138354,
+      "sha256": "7da3bf0032f8702324424a010fc850ae4237bc7be94d16fe586e0d3e7c6f0877"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-short-reading.json",
+      "bytes": 37362,
+      "sha256": "af89675a3bfa290e970476f96482458cb5298cf889342d376f3f454b637db2c9"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-single-book-menu.jpeg",
+      "bytes": 121386,
+      "sha256": "4d91aefa8da13147b7d1e7e6357a9a69372b9673aebf35ca7e54a3a43be0a799"
+    },
+    {
+      "file": ".reader-local/ui-regression-full-vm/ui-full-single-book-menu.json",
+      "bytes": 67502,
+      "sha256": "cacdef51ab7fb23b873385041f90ff2d23d3e0b1e70a88eddd532bb4a47ab613"
+    }
+  ],
+  "boundary": "VM captures bind only this immutable package; subsequent fixes need a new full gate/package/install. Original user data was not cleared. Private fixture staging used official HDC app debug file channel then normal ViewData import transactions. An accidental hilog -r buffer clear is separately recorded; saved faultlogger crash evidence remains available."
+}

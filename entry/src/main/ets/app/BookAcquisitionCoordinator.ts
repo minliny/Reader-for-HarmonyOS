@@ -1,4 +1,9 @@
+import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
 import { readBookAuthorIdentity, bookAuthorIdentity, bookIdentityText } from '../features/common/BookAuthorMetadata';
+import { classifyReaderSource, readerSourceCategoryIsReadable, type ReaderSourceCategory } from '../features/source/ReaderSourceCategory';
+import type { ReadingGatewayRuntime, ReadingGatewayImage } from '../features/reading/ReadingGatewayRuntime';
+import type { image } from '@kit.ImageKit';
+import { MangaAdmissionGateway } from '../features/manga/MangaAdmissionGateway';
 import { acquisitionFailureCategoryConfirmed } from '../features/common/BookAcquisitionPresentation';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from './BookRequestScheduler';
@@ -65,12 +70,20 @@ function objectValue(value: unknown): JsonObject | undefined {
 export class BookAcquisitionCoordinator {
   private scheduler: BookRequestScheduler;
   private versions: Map<string, string> = new Map();
+  private sourceCategories: Map<string, ReaderSourceCategory> = new Map();
   private sourceLoad: Promise<void> | undefined = undefined;
   private sourceLoads: Map<string, Promise<void>> = new Map();
   private knownSources: Set<string> = new Set();
   private registryReady: boolean = false;
   private registryRevision: number = 0;
   private projectionRevision: number = 0;
+  private downloadRevision: number = 0;
+  private downloadResetRevision: number = 0;
+  private downloadRevisions: Map<string, number> = new Map();
+  private downloadListeners: Set<(change: BookAcquisitionChange) => void> = new Set();
+  private downloadIdentities: Map<string, RemoteReadingIdentity> = new Map();
+  private downloadReset: boolean = false;
+  private downloadNotifyTimer: number = -1;
   private jobs: Map<string, BookJob> = new Map();
   private refreshes: Map<string, BookJob> = new Map();
   private prepared: Map<string, PreparedSession> = new Map();
@@ -102,8 +115,11 @@ export class BookAcquisitionCoordinator {
 
   private execute: BookRequestExecutor;
   private supportsCapability: (capability: string) => boolean;
+  private readonly mangaRuntime: ReadingGatewayRuntime | undefined;
 
-  constructor(execute: BookRequestExecutor, supportsCapability: (capability: string) => boolean = (): boolean => false) {
+  constructor(execute: BookRequestExecutor, supportsCapability: (capability: string) => boolean = (): boolean => false,
+    mangaRuntime?: ReadingGatewayRuntime) {
+    this.mangaRuntime = mangaRuntime;
     this.execute = execute;
     this.supportsCapability = supportsCapability;
     this.scheduler = new BookRequestScheduler(execute);
@@ -124,14 +140,36 @@ export class BookAcquisitionCoordinator {
     return (): void => { this.listeners.delete(listener); };
   }
 
+  /** A runtime progress owner has qualified its original background receipt.
+   * Notify the existing shelf subscriber without changing acquisition epochs
+   * or issuing another Core request for every foreground page turn. */
+  backgroundReadingProgressConfirmed(sourceId: string, bookId: string): void {
+    if (this.closed || sourceId.trim().length === 0 || bookId.trim().length === 0) return;
+    this.changedIdentities.set(acquisitionBookKey(sourceId, bookId), { sourceId, bookId });
+    this.changedShelf = true;
+    this.changed();
+  }
+
   /** Changes on both sides of a source mutation, including uncertain restore failures. */
   sourceRegistryRevision(): number { return this.registryRevision; }
 
   readingProjectionRevision(): number { return this.projectionRevision; }
 
+  /** Download facts have their own clock: filling a cache must not retire an
+   * active reader session, prepared catalog, image or display lease. */
+  downloadStatusRevision(sourceId: string, bookId: string): number {
+    return Math.max(this.downloadResetRevision, this.downloadRevisions.get(acquisitionBookKey(sourceId, bookId)) ?? 0);
+  }
+
+  subscribeDownloadStatus(listener: (change: BookAcquisitionChange) => void): () => void {
+    this.downloadListeners.add(listener);
+    return (): void => { this.downloadListeners.delete(listener); };
+  }
+
   /** Only reuse the exact Core projection still owned by this coordinator. */
   hasCurrentCatalogProjection(session: RemoteReadingSession): boolean {
     if (this.closed || session.catalogVersion === undefined || session.contextVersion === undefined ||
+      !this.sourceIsReadable(session.identity.sourceId) ||
       this.versions.get(session.identity.sourceId) !== session.sourceVersion) return false;
     const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion]);
     const ready = this.prepared.get(key);
@@ -145,6 +183,7 @@ export class BookAcquisitionCoordinator {
     this.registryRevision += 1;
     this.registryReady = false;
     this.versions.clear();
+    this.sourceCategories.clear();
     this.knownSources.clear();
     this.prepared.clear();
     this.attempted.clear();
@@ -162,21 +201,34 @@ export class BookAcquisitionCoordinator {
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {},
     priority?: BookRequestPriority): Promise<ReaderCoreResultEvent> {
     if (this.closed) throw new Error('书籍任务已关闭');
-    const changesSources = (method === 'source.supply' && (params['operation'] === 'apply' || params['operation'] === 'withdraw')) || method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
-      method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+    const { method: effectMethod, params: effectParams } = readerRuleMutationEffects(method, params);
+    const changesSources = (effectMethod === 'source.supply' && (effectParams['operation'] === 'apply' || effectParams['operation'] === 'withdraw')) || effectMethod === 'source.import' || effectMethod === 'source.update' || effectMethod === 'source.delete' ||
+      effectMethod === 'runtime.storage.apply' || effectMethod === 'runtime.storage.restore';
     // Ordinary prefetch fills missing bodies and materializes assets without
     // replacing a cached body. It must not cancel another book's validated
     // chapter handoff or active body admission.
-    const changesProjection = changesSources || method === 'reader.chinese-conversion.put' ||
-      method === 'replace.persist' || method === 'replace-rule.put' || method === 'replace-rule.delete' ||
-      method === 'dict-rule.put' || method === 'dict-rule.delete' || method === 'rule-bundle.import' ||
-      method === 'cache.clear' ||
-      (method === 'chapter.content' && (params['forceRefresh'] === true || params['upgradeCachedContent'] === true));
+    const changesDownloadStatus = changesSources || effectMethod === 'cache.clear' || effectMethod === 'cache.storage.cleanup' ||
+      effectMethod === 'cache.book.prefetch' || effectMethod.startsWith('cache.download.') ||
+      effectMethod === 'chapter.content' || effectMethod === 'manga.chapter.get' || effectMethod === 'book.toc' ||
+      effectMethod === 'manga.retention.set' || effectMethod.startsWith('manga.cache.materialization.') ||
+      effectMethod === 'manga.cache.eviction.complete' || effectMethod === 'manga.sourceSwitch.commit' ||
+      effectMethod === 'source.switch.commit' || effectMethod === 'source.switch.rollback';
+    const downloadIdentity = objectValue(effectParams['chapter']) ?? objectValue(effectParams['book']) ?? effectParams;
+    const downloadSource = downloadIdentity['sourceId'];
+    const downloadBook = downloadIdentity['bookId'];
+    const downloadChange = (): void => this.changedDownloadStatus(changesSources ? undefined : downloadSource,
+      changesSources ? undefined : downloadBook);
+    if (changesDownloadStatus) downloadChange();
+    const changesProjection = changesSources || effectMethod === 'manga.sourceSwitch.commit' || effectMethod === 'reader.chinese-conversion.put' ||
+      effectMethod === 'replace.persist' || effectMethod === 'replace-rule.put' || effectMethod === 'replace-rule.delete' ||
+      effectMethod === 'dict-rule.put' || effectMethod === 'dict-rule.delete' || effectMethod === 'rule-bundle.import' ||
+      effectMethod === 'cache.clear' ||
+      (effectMethod === 'chapter.content' && (effectParams['forceRefresh'] === true || effectParams['upgradeCachedContent'] === true));
     // Cancellation happens before a destructive/configuration request begins.
     // A completed clear/remove must never restart this optional acquisition.
-    const changesAddedBook = changesProjection || method === 'replace.undo' || method === 'replace-rule.create' ||
-      method === 'replace-rule.update' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
-      (method.startsWith('source.switch.') && method !== 'source.switch.pending.list');
+    const changesAddedBook = changesProjection || effectMethod === 'replace.undo' || effectMethod === 'replace-rule.create' ||
+      effectMethod === 'replace-rule.update' || effectMethod === 'bookshelf.remove' || effectMethod === 'bookshelf.removeBatch' ||
+      (effectMethod.startsWith('source.switch.') && effectMethod !== 'source.switch.pending.list');
     if (changesAddedBook) {
       this.preparationMutations += 1;
       this.preparationGeneration += 1;
@@ -189,22 +241,26 @@ export class BookAcquisitionCoordinator {
     let foregroundRequest = false;
     try {
       if (changesAddedBook) {
-        if (this.preparationRetirementError !== undefined) throw this.preparationRetirementError;
-        try { await this.scheduler.settleCancelledRequests(Array.from(this.preparationRequests)); }
-        catch (_) {
-          this.preparationRetirementError = new Error('后台书籍请求尚未确认终止，已保留数据，请重新打开应用后重试清理');
-          throw this.preparationRetirementError;
-        }
+        await this.settleCancelledPreparations();
       }
       const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
       const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
-        method === 'chapter.content' || method === 'cache.book.prefetch' || method === 'change.bookSource';
+        method === 'chapter.content' || method === 'manga.chapter.get' || method === 'cache.book.prefetch' || method === 'change.bookSource';
       const actualPriority = priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground');
       foregroundRequest = network && actualPriority === 'foreground';
       if (foregroundRequest) {
         this.foregroundRequests += 1;
         const bookId = params['bookId'] ?? objectValue(params['book'])?.['bookId'];
         this.preemptBackgroundAcquisitions(sourceId, typeof bookId === 'string' ? bookId : '');
+        if (method === 'cache.book.prefetch' && params['preparationRevision'] === undefined) {
+          // A manual range must enter Core after the cancelled preparation
+          // releases its InProgress claim, or Core legitimately skips it as
+          // already queued. This fence belongs to explicit offline download;
+          // ordinary chapter reads never wait for background retirement.
+          this.readingPreparations.suspend();
+          this.scheduler.visibilityChanged();
+          await this.settleCancelledPreparations();
+        }
       }
       // Cached-only preparation also consumes the single Core/SQLite resource.
       // A background label must reach the scheduler, not bypass it merely
@@ -234,6 +290,7 @@ export class BookAcquisitionCoordinator {
             throw new RemoteReadingGatewayError('invalidResponse', 'source.list returned a different source identity', 'source.list');
           }
           this.versions.delete(exactSource);
+          this.sourceCategories.delete(exactSource);
         }
         this.observeSources(result.data, params['enabledOnly'] !== true && exactSource === undefined);
         if (exactSource !== undefined && Array.isArray(result.data['sources'])) this.knownSources.add(exactSource);
@@ -256,6 +313,11 @@ export class BookAcquisitionCoordinator {
         this.observeChangedBooks(method, params, result.data);
         this.changed();
       }
+      if (method === 'manga.sourceSwitch.commit') {
+        this.prepared.clear();
+        this.changedShelf = true;
+        this.changed(true);
+      }
       if (method === 'bookshelf.add') {
         this.changedShelf = true;
         this.observeChangedBooks(method, params, result.data);
@@ -272,8 +334,18 @@ export class BookAcquisitionCoordinator {
         this.scheduler.visibilityChanged();
         this.drainPreparations();
       }
+      if (changesDownloadStatus) downloadChange();
       if (changesProjection) this.projectionRevision += 1;
       if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
+    }
+  }
+
+  private async settleCancelledPreparations(): Promise<void> {
+    if (this.preparationRetirementError !== undefined) throw this.preparationRetirementError;
+    try { await this.scheduler.settleCancelledRequests(Array.from(this.preparationRequests)); }
+    catch (_) {
+      this.preparationRetirementError = new Error('后台书籍请求尚未确认终止，已保留数据，请重新打开应用后重试');
+      throw this.preparationRetirementError;
     }
   }
 
@@ -405,6 +477,10 @@ export class BookAcquisitionCoordinator {
       preparationRevision: intent.revision };
     const session = await this.acquireBook(this.preparationSeed(book), options, priority);
     this.assertCandidateCurrent(options, Number.POSITIVE_INFINITY);
+    if (session.contentKind === 'manga') {
+      return this.mangaGateway(options, priority, current).admit(session, book, intent.revision, current);
+    }
+    if (session.contentKind === 'audio') throw new Error('UNSUPPORTED_CONTENT_KIND');
     const readable = await this.verifyCandidateBody(session, options, priority);
     this.assertCandidateCurrent(options, Number.POSITIVE_INFINITY);
     const chapterIndex = readable.preparedChapter?.chapter.chapterIndex;
@@ -464,6 +540,7 @@ export class BookAcquisitionCoordinator {
     let failure: Error = new Error('没有可用的同书候选');
     for (const candidate of ordered) {
       this.assertCandidateCurrent(options, deadline);
+      if ((candidate.seed.contentKind ?? 'text') !== (primary?.contentKind ?? 'text')) continue;
       // A display grouping is not proof of identity. In particular, blank
       // authors cannot authorize automatic substitution between sources.
       if (primary !== undefined && (candidate.seed.sourceId !== primary.sourceId || candidate.seed.bookId !== primary.bookId) &&
@@ -477,7 +554,8 @@ export class BookAcquisitionCoordinator {
       try {
         let admission = await this.waitForCandidate(this.acquireBookWithBackgroundRefresh(candidate.seed, actualOptions, priority), options, deadline);
         this.assertCandidateCurrent(options, deadline);
-        if (normalize(admission.session.book.title) !== title ||
+        if ((admission.session.contentKind ?? 'text') !== (primary?.contentKind ?? 'text') ||
+          normalize(admission.session.book.title) !== title ||
           (author.length > 0 && bookAuthorIdentity(admission.session.book.author, admission.session.book.authorIdentity, admission.session.sourceVersion) !== author)) {
           throw new RemoteReadingGatewayError('invalidResponse', '详情书名或作者与所选书籍不一致', 'book.detail');
         }
@@ -529,9 +607,16 @@ export class BookAcquisitionCoordinator {
 
   private async verifyCandidateBody(session: RemoteReadingSession, options: BookPreparationOpenOptions,
     priority: BookRequestPriority): Promise<RemoteReadingSession> {
+    this.assertReadableSource(session.identity.sourceId);
     const revision = this.readingProjectionRevision();
+    const isCurrent = (): boolean => options.isCurrent?.() !== false && revision === this.readingProjectionRevision() &&
+      this.sourceIsReadable(session.identity.sourceId);
+    if (session.contentKind === 'manga') {
+      await this.mangaGateway(options, priority, isCurrent).verify(session, isCurrent, options.preparationRevision);
+      return session;
+    }
+    if (session.contentKind === 'audio') throw new Error('UNSUPPORTED_CONTENT_KIND');
     if (preparedRemoteChapterMatches(session.preparedChapter, session, undefined, revision)) return session;
-    const isCurrent = (): boolean => options.isCurrent?.() !== false && revision === this.readingProjectionRevision();
     const gateway = new RemoteReadingFlowGateway({ bookAcquisitions: (): BookAcquisitionCoordinator => this,
       supportsCoreCapability: (capability: string): boolean => this.supportsCapability(capability),
       request: (method: string, params: JsonObject = {}, requestOptions: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
@@ -564,6 +649,25 @@ export class BookAcquisitionCoordinator {
     throw new RemoteReadingSourceError('SOURCE_CONTENT_EMPTY', '目录没有可验证的正文章节', 'chapter.content');
   }
 
+  private mangaGateway(options: BookPreparationOpenOptions, priority: BookRequestPriority,
+    current: () => boolean): MangaAdmissionGateway {
+    const owner = this.mangaRuntime;
+    if (owner === undefined) throw new Error('MANGA_ADMISSION_HOST_REQUIRED');
+    return new MangaAdmissionGateway({
+      supportsCoreCapability: (capability: string): boolean => this.supportsCapability(capability),
+      request: (method: string, params: JsonObject = {}, requestOptions: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
+        this.request(method, params, { ...requestOptions, canContinue: current, canDispatch: options.canDispatch }, priority),
+      loadReadingImage: async (sourceId: string, bookId: string, chapterIndex: number, contentVersion: string,
+        imageUrl: string, baseUrl: string | undefined, allowNetwork: boolean, isCurrent?: () => boolean,
+        resourceRef?: string, mangaPosition?: number, expectedSourceVersion?: string, mangaPreview?: boolean, mangaDecodeRevision?: string): Promise<ReadingGatewayImage> => {
+        if (owner.loadReadingImage === undefined) throw new Error('MANGA_RESOURCE_HOST_UNAVAILABLE');
+        return owner.loadReadingImage(sourceId, bookId, chapterIndex, contentVersion, imageUrl, baseUrl,
+          allowNetwork, isCurrent, resourceRef, mangaPosition, expectedSourceVersion, mangaPreview, mangaDecodeRevision);
+      },
+      releaseReadingImage: (fileUri: string, pixelMap?: image.PixelMap): void => owner.releaseReadingImage?.(fileUri, pixelMap),
+    });
+  }
+
   private canRetainPreparedBody(key: string, chapter: ReadingSessionChapter): boolean {
     let bytes = readingChapterRetainedBytes(chapter);
     if (bytes > 1024 * 1024) return false;
@@ -583,6 +687,15 @@ export class BookAcquisitionCoordinator {
     // in this same turn, but must not orphan a request this caller now needs.
     if (!this.registryReady) await this.ensureSources(seed.sourceId);
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+    // Apply the same category boundary before prepared or on-disk cache reuse.
+    // A type-0 review directory is not a novel even when its old body is cached.
+    this.assertReadableSource(seed.sourceId);
+    // Durable add metadata uses the existing Core shelf schema, which has no
+    // media hint. Recover an omitted hint from the current source registry so
+    // a cold manga add can use the same first-image admission as a warm one.
+    if (seed.contentKind === undefined && this.sourceCategories.get(seed.sourceId) === 'comic') {
+      seed = { ...seed, contentKind: 'manga' };
+    }
     const version = this.versions.get(seed.sourceId);
     const cacheKey = JSON.stringify([seed.sourceId, seed.bookId, version]);
     const key = options.preparationRevision === undefined ? cacheKey : JSON.stringify([seed.sourceId, seed.bookId, version, options.preparationRevision]);
@@ -757,6 +870,9 @@ export class BookAcquisitionCoordinator {
     this.jobs.clear();
     this.refreshes.clear();
     this.listeners.clear();
+    this.downloadListeners.clear(); this.downloadRevisions.clear(); this.downloadIdentities.clear();
+    if (this.downloadNotifyTimer >= 0) clearTimeout(this.downloadNotifyTimer);
+    this.downloadNotifyTimer = -1;
     this.failureIdentities.clear();
     if (this.notifyTimer >= 0) clearTimeout(this.notifyTimer);
     this.notifyTimer = -1;
@@ -818,7 +934,8 @@ export class BookAcquisitionCoordinator {
         actual.searchVariables = seed.sourceVersion === version ? seed.searchVariables : [];
       }
     }
-    const processCurrent = (): boolean => !this.bookJobCancelled(job) && this.versions.get(seed.sourceId) === version;
+    const processCurrent = (): boolean => !this.bookJobCancelled(job) && this.versions.get(seed.sourceId) === version &&
+      this.sourceIsReadable(seed.sourceId);
     const isCurrent = (): boolean => processCurrent();
     const canDispatch = (): boolean => (job.priority !== 'background' || !this.hasForegroundAcquisition()) &&
       (job.started || job.consumers.some((consumer: BookConsumer): boolean =>
@@ -837,7 +954,9 @@ export class BookAcquisitionCoordinator {
         if (this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', 'cache.book.status');
         if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', 'cache.book.status');
         if (!isCurrent()) throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试', 'cache.book.status');
-        return this.withCatalogFreshness({ ...cached, sourceVersion: version,
+        return this.withCatalogFreshness({ ...cached, sourceVersion: version ?? (seed.contentKind === 'manga' ? cached.sourceVersion : undefined),
+          contentKind: current && facts?.['contentKind'] === 'manga' ? 'manga' :
+            current && facts?.['contentKind'] === 'audio' ? 'audio' : seed.contentKind ?? 'text',
           catalogAt: cached.catalogAt ?? (typeof facts?.['catalogAt'] === 'number' ? facts['catalogAt'] as number : undefined),
           requiresContextRefresh: (!contextIsCurrent || cached.requiresContextRefresh === true) && version !== undefined });
       } catch (error) {
@@ -854,7 +973,7 @@ export class BookAcquisitionCoordinator {
     }
     let session: RemoteReadingSession;
     try {
-      session = await gateway.openSession(actual, { isCurrent });
+      session = await gateway.openSession(actual, { isCurrent, allowMangaCatalog: seed.contentKind === 'manga' });
     } catch (error) {
       if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
       const classified = classifyRemoteReadingCommandFailure('book.toc', error);
@@ -935,15 +1054,35 @@ export class BookAcquisitionCoordinator {
     const rows = data['sources'];
     if (!Array.isArray(rows)) return;
     const versions = complete ? new Map<string, string>() : new Map(this.versions);
+    const categories = complete ? new Map<string, ReaderSourceCategory>() : new Map(this.sourceCategories);
     for (const value of rows) {
       const source = objectValue(value);
       if (source === undefined || typeof source['sourceId'] !== 'string') continue;
       const id = source['sourceId'] as string;
+      const raw = objectValue(source['bookSource']);
+      categories.set(id, classifyReaderSource({ bookSourceType: raw?.['bookSourceType'], sourceId: id,
+        name: typeof source['name'] === 'string' ? source['name'] as string :
+          typeof raw?.['bookSourceName'] === 'string' ? raw['bookSourceName'] as string : undefined,
+        group: typeof raw?.['bookSourceGroup'] === 'string' ? raw['bookSourceGroup'] as string : undefined,
+        baseUrl: typeof source['baseUrl'] === 'string' ? source['baseUrl'] as string :
+          typeof raw?.['bookSourceUrl'] === 'string' ? raw['bookSourceUrl'] as string : undefined }));
       if (source['enabled'] !== true || typeof source['sourceVersion'] !== 'string') { versions.delete(id); continue; }
       versions.set(id, source['sourceVersion'] as string);
     }
     this.versions = versions;
+    this.sourceCategories = categories;
     if (complete) this.registryReady = true;
+  }
+
+  private sourceIsReadable(sourceId: string): boolean {
+    const category = this.sourceCategories.get(sourceId);
+    // A stopped/deleted ordinary source may still have a readable offline book.
+    return category === undefined || readerSourceCategoryIsReadable(category);
+  }
+
+  private assertReadableSource(sourceId: string): void {
+    if (!this.sourceIsReadable(sourceId)) throw new RemoteReadingGatewayError('invalidInput',
+      '此书源提供书评或其他非阅读内容，请返回搜索选择小说正文书源', 'source.list');
   }
 
   private observeChangedBooks(method: string, params: JsonObject, data: JsonObject): void {
@@ -961,6 +1100,27 @@ export class BookAcquisitionCoordinator {
     } else {
       admit(params['sourceId'] ?? params['origin'], params['bookId'] ?? params['bookUrl'] ?? objectValue(params['book'])?.['bookId']);
     }
+  }
+
+  private changedDownloadStatus(sourceId: unknown, bookId: unknown): void {
+    if (this.closed) return;
+    const revision = ++this.downloadRevision;
+    if (typeof sourceId === 'string' && sourceId.length > 0 && typeof bookId === 'string' && bookId.length > 0) {
+      const key = acquisitionBookKey(sourceId, bookId);
+      this.downloadRevisions.set(key, revision);
+      this.downloadIdentities.set(key, { sourceId, bookId });
+    } else {
+      this.downloadResetRevision = revision; this.downloadRevisions.clear(); this.downloadReset = true;
+    }
+    if (this.downloadNotifyTimer >= 0) return;
+    this.downloadNotifyTimer = setTimeout((): void => {
+      this.downloadNotifyTimer = -1;
+      const change: BookAcquisitionChange = { reset: this.downloadReset, identities: Array.from(this.downloadIdentities.values()) };
+      this.downloadReset = false; this.downloadIdentities.clear();
+      for (const listener of this.downloadListeners) {
+        try { listener(change); } catch (_) { /* A retired page cannot block other download consumers. */ }
+      }
+    }, 16);
   }
 
   private changed(reset: boolean = false): void {

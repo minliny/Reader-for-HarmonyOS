@@ -1,61 +1,87 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const index = read('entry/src/main/ets/pages/Index.ets');
-const reader = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
+export const CONTRACT_CASES = {
+  "late-identity": {
+    "description": "Actual Index onReadingFailure ignores stale source/book and retains owned reader/session",
+    "resources": []
+  },
+  "retained-failure-owner": {
+    "description": "Actual LRE.fail revokes asynchronous selection while retaining mount and recovery ownership; fake platform ports",
+    "resources": []
+  },
+  "probe-chapter-context": {
+    "description": "Actual Index and real session-evidence predicate forward exact chapter/context to current Host scope; body admission is separate coverage",
+    "resources": []
+  },
+  "source-switch-route": {
+    "description": "Actual Index source switch chooses mounted-reader owner or explicit detail fallback",
+    "resources": []
+  }
+};
 
-const buildStart = index.indexOf('build() {');
-const readerShellStart = index.indexOf('// Batch 2: the reading session UI', buildStart);
-const buildRouteBlock = index.slice(buildStart, readerShellStart);
-assert.match(buildRouteBlock,
-  /this\.detailBook !== undefined && \(this\.route === 'detail' \|\|[\s\S]*!this\.readingSessionActive && \(this\.route === 'reading' \|\| this\.route === 'directory'\)/,
-  'P0: a stale reading/directory route without a live ReaderShell must still render controllable book detail');
+async function case_late_identity() {
+const { default: assert } = await import('node:assert/strict');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const Index=productionMotionMethods(indexFile,['onReadingFailure'],{hilog:{warn(){}},DOMAIN:0});
+for(const active of [false,true])for(const sourceId of ['s','other'])for(const bookId of ['b','other']){
+ const page=Object.assign(new Index(),{readingSessionActive:active,detailBook:{sourceId:'s',bookId:'b'},detailLoadingMessage:'old',detailCatalogBusy:true,route:'reading',remoteReadingSession:{kept:true}});
+ const before=page.remoteReadingSession;page.onReadingFailure(sourceId,bookId,'target failed','SOURCE_HTTP_FAILED');
+ const accepted=active&&sourceId==='s'&&bookId==='b';assert.equal(page.detailLoadingMessage,accepted?'target failed':'old');assert.equal(page.detailCatalogBusy,!accepted);
+ assert.equal(page.readingSessionActive,active);assert.equal(page.route,'reading');assert.equal(page.remoteReadingSession,before,'failure retains mount/session, never compensates source switch');
+}
 
-assert.match(index, /onExit: \(\): void => this\.onReaderExited\(\)/,
-  'the reader exit callback must retain the normal serialized exit route');
-const exitStart = index.indexOf('private onReaderExited(): void');
-const exitEnd = index.indexOf('private closeDirectory(): void', exitStart);
-const exitBlock = index.slice(exitStart, exitEnd);
-assert.doesNotMatch(exitBlock, /pendingReadingFailureAction|openDetailSourceSwitch\(/,
-  'PH116: source-error recovery belongs to the mounted reader, not an exit-then-detail detour');
-assert.match(exitBlock, /this\.returnToReadingOrigin\(\);\s*\}/,
-  'ordinary reader exit must still return to its original route');
+}
 
-const failureStart = index.indexOf('private onReadingFailure(');
-const failureEnd = index.indexOf('private onRemoteSessionReady(', failureStart);
-const failureBlock = index.slice(failureStart, failureEnd);
-assert.doesNotMatch(failureBlock, /showAlertDialog|requestExit\(|readingSessionActive = false|rollbackPendingSourceSwitch/,
-  'PH116 failure remains inside the owned reader instead of exiting or rolling back');
-assert.match(failureBlock, /this\.detailBook\?\.sourceId !== sourceId[\s\S]*this\.detailBook\?\.bookId !== bookId/,
-  'a late error from another identity cannot affect this reader');
-const errorSurface = reader.slice(reader.indexOf('private readingFailureContent()'), reader.indexOf('private errorMessage('));
-for (const label of ['重试', '阅读设置', '切换书源']) assert.ok(errorSurface.includes(`Button('${label}')`));
-assert.match(errorSurface, /this\.retryReading\(\)/);
-assert.match(errorSurface, /this\.openReaderControl\(\)/);
-assert.match(errorSurface, /this\.onSwitchSource\(\)/);
+async function case_retained_failure_owner() {
+const { default: assert } = await import('node:assert/strict');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+const Reader=productionMotionMethods(file,['fail']);
+for(const active of [false,true]){
+ const events=[];const page=Object.assign(new Reader(),{isSessionActive:()=>active,pageTurnPreparation:undefined,previousChapterMeasurement:undefined,recoverControlSelectionFailure:()=>false,errorMessage:e=>e.message,chapterSelectionToken:4,mounted:true,exitRequested:false,sourceId:'s',bookId:'b',phase:'ready',autoPageCoordinator:{stop:why=>events.push(['stop',why])},nativeAlertOwner:{retire:()=>events.push('retire')},physicalPagination:{index:{invalidateMeasurement:()=>events.push('invalidate')}},onReadingFailure:(...args)=>events.push(['failure',...args]),beginExit:()=>assert.fail('failure cannot dispose recovery owner')});
+ for(const name of ['finishPageTurnPerf','captureReadingRecordElapsed','clearReadingRecordTimer','clearAutoPageTimer','clearAutoPageSessionTimer','cancelMeasurementDeadline','cancelFirstPageReadyDeadline','cancelFirstPageCompletionDeadline','cancelPageTurnPreparationRetry','resetPaginationDraft'])page[name]=()=>events.push(name);
+ page.fail(Error('BODY_FAILED'),1);assert.equal(page.phase,active?'failed':'ready');assert.equal(page.chapterSelectionToken,active?5:4);assert.equal(page.mounted,true);assert.equal(page.exitRequested,false);
+ if(active){assert.equal(events.filter(e=>Array.isArray(e)&&e[0]==='failure').length,1);assert.ok(events.includes('invalidate'));}else assert.deepEqual(events,[]);
+}
 
-const openSwitchStart = index.indexOf('private openSourceSwitch(): void');
-const openSwitchEnd = index.indexOf('private openDetailSourceSwitch(): void', openSwitchStart);
-const openSwitchBlock = index.slice(openSwitchStart, openSwitchEnd);
-assert.match(openSwitchBlock,
-  /if \(!this\.readingSessionActive\) \{[\s\S]*this\.returnToReadingOrigin\(\)[\s\S]*this\.openDetailSourceSwitch\(\)/,
-  'the reader-owned source switch entry must fail safe to detail when no ReaderShell owns the route');
+}
 
-const probeStart = index.indexOf('private async probeRemoteContentVerdict(');
-const probeEnd = index.indexOf('private remoteContentVerdictLabel(', probeStart);
-const probeBlock = index.slice(probeStart, probeEnd);
-assert.match(probeBlock,
-  /preferredChapterIndex\?: number[\s\S]*entry\.index === preferredChapterIndex/,
-  'explicit detail probes must honor their requested chapter');
-assert.match(probeBlock,
-  /await gateway\.loadChapter[\s\S]*this\.remoteContentVerdict = 'readable'[\s\S]*return readableEntries\[attempt\]\.index/,
-  'only an admitted chapter body may mark a detail probe readable');
-const terminalFailure = reader.slice(reader.indexOf('private fail('), reader.indexOf('private retryReading('));
-assert.match(terminalFailure, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)/);
-assert.match(terminalFailure, /this\.chapterSelectionToken \+= 1/,
-  'keeping the reader mounted must still revoke obsolete asynchronous work');
-assert.doesNotMatch(terminalFailure, /this\.beginExit\(\)/,
-  'PH116: failure must not dispose the only settings/retry owner');
+async function case_probe_chapter_context() {
+const { default: assert } = await import('node:assert/strict');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const {readFileSync}=await import('node:fs');
+const {stripTypeScriptTypes}=await import('node:module');
+const raw=readFileSync(new URL('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts',import.meta.url),'utf8');
+const start=raw.indexOf('export function sameRemoteSessionEvidence('),end=raw.indexOf('/** A full refreshed catalog',start);
+assert.ok(start>=0&&end>start);const sameRemoteSessionEvidence=new Function(stripTypeScriptTypes(raw.slice(start,end)).replace(/^export /,'')+';return sameRemoteSessionEvidence;')();
+const Index=productionMotionMethods(indexFile,['probeRemoteContentVerdict'],{sameRemoteSessionEvidence});
+const session={identity:{sourceId:'s',bookId:'b'},sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',acquisitionMode:'online'};const context={bodyVersion:'body',processingVersion:'p',anchors:[{id:'a',offset:17}]};
+for(const active of [false,true])for(const matching of [false,true])for(const scope of [8,9]){
+ const calls=[];const page=Object.assign(new Index(),{readingEntryScopeId:8,remoteReadingSession:matching?session:{...session,identity:{sourceId:'other',bookId:'b'}},getReadingEntryHost:()=>({snapshot:()=>({scopeId:scope}),probe:(...args)=>{calls.push(args);return 324;}})});
+ const result=await page.probeRemoteContentVerdict({},session,()=>active,324,context);const accepted=active&&matching&&scope===8;assert.equal(result,accepted?324:undefined);assert.deepEqual(calls,accepted?[[8,324,context]]:[],'actual Index forwards exact chapter/context only to current entry scope');
+}
 
-console.log('reader source-failure P0 route contract: PASS');
+}
+
+async function case_source_switch_route() {
+const { default: assert } = await import('node:assert/strict');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const Index=productionMotionMethods(indexFile,['openSourceSwitch'],{LOCAL_SOURCE_ID:'local'});
+for(const reading of [false,true]){
+ const calls=[];const host={open:(context,lease)=>calls.push(['open',context,lease])};const page=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b'},sourceSwitchVisible:false,readingSessionActive:reading,route:reading?'reading':'detail',getSourceSwitchHost:()=>host,nextNavigationGeneration:()=>calls.push('navigation'),bindReadingEntryReader:()=>calls.push('bind'),sourceSwitchContext:()=>({book:'b'}),sourceSwitchLease:()=>({scope:8}),returnToReadingOrigin:()=>calls.push('origin'),openDetailSourceSwitch:()=>calls.push('detail')});
+ page.openSourceSwitch();assert.deepEqual(calls,reading?['navigation','bind',['open',{book:'b'},{scope:8}]]:['origin','detail']);if(reading)assert.equal(page.route,'reading');
+}
+
+}
+
+const implementations = {'late-identity':case_late_identity,'retained-failure-owner':case_retained_failure_owner,'probe-chapter-context':case_probe_chapter_context,'source-switch-route':case_source_switch_route};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}
+
+export const coverageAdoption = [{target:'H-reader-recoverable-entry#failure-actions-input',protects:'Actual SDK retry/settings/source action callbacks and retained input arena'}];

@@ -1,29 +1,39 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as motion from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
-import * as session from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import * as metrics from '../entry/src/main/ets/features/reading/ReaderControlGeometry.ts';
-import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ReaderControlRuntime.ts';
-import { ReaderPageInputClock } from '../entry/src/main/ets/features/reading/ReaderPageInputClock.ts';
-registerHooks({ resolve(specifier, context, nextResolve) {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'grabber-ownership':{description:'Actual root SDK painted/input gates, held hidden terminal, captured reversal and two negative controls',resources:[]},
+ 'progress-slider':{description:'Actual native Slider preview versus committed End/Click callbacks',resources:[]},
+ 'cold-lifecycle':{description:'Actual SDK cold omitted subtree, first command admission and retained close',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { createRequire, registerHooks }=await import('node:module');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const motion=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+const session=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const metrics=await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
+const { ReaderControlRuntime }=await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
+const { ReaderPageInputClock }=await import('../entry/src/main/ets/features/reading/ReaderPageInputClock.ts');
+const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
       return nextResolve(`${specifier}.ts`, context);
     throw error;
   }
 } });
+try {
 const hostPolicy = await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const Host = productionMotionMethods(
+const Host = selectedCase==='grabber-ownership'?productionMotionMethods(
   new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  ['isControlInputEnabled'], hostPolicy);
+  ['isControlInputEnabled'], hostPolicy):undefined;
 
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = (resolveEtsLoaderRoot());
 const ts = require(`${sdk}/node_modules/typescript`), syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const children = ['topBar', 'controlContent', 'controlHeader', 'brightnessRail', 'moduleNavBar', 'readerMoreMenu', 'launchSourceContent'];
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };
@@ -35,7 +45,7 @@ const Panel = productionMotionMethods(file, names, { ...session, TouchType, Read
 function mount(text, module = 'settings', full = false, width = 364, height = 736, quick = 330, initialClosed = false) {
   // Only unrelated business children are replaced; the production root Builder,
   // grabber, painted bar, parents and enabled/hit-test expressions stay intact.
-  const tree = ts.createSourceFile('Panel.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
+  const tree = ts.createSourceFile('Panel.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
   const type = tree.statements.find(n => n.members?.some(m => m.name?.getText(tree) === 'build'));
   for (const n of type.members.filter(n => children.includes(n.name?.getText(tree))).sort((a, b) => b.pos - a.pos)) {
     text = text.slice(0, n.body.pos) + ' { Column() {} }' + text.slice(n.body.end);
@@ -96,6 +106,7 @@ function assertPaintedActor(text) {
     assert.equal(hit.width, 72); assert.equal(hit.zIndex, 3);
   }
 }
+if(selectedCase==='grabber-ownership'){
 assertPaintedActor(source);
 const implicit = source.replace(/\.position\(\{ x: this\.frame\(\)\.grabber\.x - \(this\.layout\.fullPanelWidth - 72\) \/ 2,\s*y: this\.frame\(\)\.grabber\.y - this\.frame\(\)\.shell\.y \}\)/, '.margin({ top: 9 })');
 assert.notEqual(implicit, source);
@@ -103,7 +114,8 @@ assert.throws(() => assertPaintedActor(implicit), /visible grabber consumes/);
 
 function checkHeldAtHidden(text, module, full) {
   const f = mount(text, module, full), y = full ? f.config.axis.fullGrabberScreenY : f.config.axis.quickGrabberScreenY;
-  f.send(TouchType.Down, y); f.send(TouchType.Move, y + 22);
+  const hiddenY=f.config.axis.hiddenGrabberScreenY+4;
+  f.send(TouchType.Down, y); f.send(TouchType.Move, hiddenY);
   assert.equal(f.runtime.owner(), 7); assert.equal(f.owner.frame().visibility, 0);
   assert.equal(f.node('reader-control-motion-dock').enabled, true,
     'a held pointer at hidden must keep its native ancestor enabled until UP/CANCEL');
@@ -116,8 +128,8 @@ function checkHeldAtHidden(text, module, full) {
   host.controlObscured = true; assert.equal(host.isControlInputEnabled(), false,
     'preserve real route/window/overlay ownership; holding is not a global admission bypass');
   // It remains the same pointer after it moves outside the small hit target.
-  f.send(TouchType.Move, y + 12); assert.ok(f.owner.frame().visibility > 0);
-  f.send(TouchType.Move, y + 25); f.send(TouchType.Up, y + 25);
+  f.send(TouchType.Move, hiddenY-10); assert.ok(f.owner.frame().visibility > 0);
+  f.send(TouchType.Move, hiddenY+3); f.send(TouchType.Up, hiddenY+3);
   assert.equal(f.runtime.owner(), -1); assert.equal(f.owner.controlSession.location.level, 'hidden',
     JSON.stringify({module,full,visual:f.owner.visualSession,host:f.owner.controlSession}));
   assert.equal(f.node('reader-control-motion-dock').enabled, false, 'released hidden descendants become inert');
@@ -127,12 +139,13 @@ for (const module of ['directory', 'search', 'settings', 'appearance', 'tts', 'a
   for (const full of [false, true]) {
     for (const terminal of [TouchType.Up, TouchType.Cancel]) {
       const f = mount(source, module, full), y = full ? f.config.axis.fullGrabberScreenY : f.config.axis.quickGrabberScreenY;
-      f.send(TouchType.Down, y); f.send(TouchType.Move, y + 25);
-      f.send(TouchType.Move, y + 25, 7, 2000);
+      const hiddenY=f.config.axis.hiddenGrabberScreenY+7;
+      f.send(TouchType.Down, y); f.send(TouchType.Move, hiddenY);
+      f.send(TouchType.Move, hiddenY, 7, 2000);
       assert.equal(f.runtime.owner(), 7, 'two-second stationary hold cannot settle or lose the pointer');
       assert.equal(f.owner.frame().visibility, 0); assert.equal(f.owner.controlSession.closeRevision, 0);
       assert.equal(f.node('reader-control-motion-dock').enabled, true);
-      f.send(terminal, y + 25, 7, 1000);
+      f.send(terminal, hiddenY, 7, 1000);
       assert.equal(f.runtime.owner(), -1, 'terminal still arrives after the long hidden hold');
       const ticket = f.runtime.ticket();
       for (const time of [0, 10000]) {
@@ -193,6 +206,8 @@ for (const terminal of ['tap', 'cancel']) {
   assert.equal(f.owner.visualSession.location.level, 'secondary');
 }
 
+}
+if(selectedCase==='progress-slider'){
 // The actual native Slider observer owns continuous pointer previews and emits
 // only committed End/Click values; a second interaction needs no module reopen.
 const { owner: slider } = createReaderBuilderProbe(source,
@@ -205,9 +220,10 @@ track.onChange(25, 'SliderChangeMode.Moving'); assert.deepEqual(values, []);
 track.onChange(25, 'SliderChangeMode.End'); track.onChange(75, 'SliderChangeMode.End');
 track.onChange(40, 'SliderChangeMode.Click');
 assert.deepEqual(values, [25, 75, 40]);
-console.log('PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.');
+}
+console.log(`PASS selected control scope ${selectedCase}; actual SDK authored attributes/callbacks, native compositor and touch remain separate`);
 
-{
+if(selectedCase==='cold-lifecycle'){
  const f=mount(source,'settings',false,364,736,330,true);
  assert.equal(f.node('reader-control-motion-dock'),undefined,'cold reading does not create hidden control actors');
  const opened=session.openReaderControlSession(f.owner.controlSession,100);
@@ -218,4 +234,9 @@ console.log('PH48/49/55 PASS: authoritative grabber actor, actual Host/native-pa
  f.owner.controlSession=closed;f.owner.acceptRuntime(f.runtime.command(closed));f.owner.replay();
  assert.ok(f.node('reader-control-motion-dock'),'close retains the existing actor tree for later interactions');
 }
-console.log('PASS actual SDK cold-control subtree omission, first-open command and retained close ownership');
+if(selectedCase==='cold-lifecycle')console.log('PASS actual SDK cold-control subtree omission, first-open command and retained close ownership');
+
+}finally{resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

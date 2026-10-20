@@ -107,6 +107,51 @@ pair = step(pair.state, event('move', 100, 200, 200));
 assert.equal(up(pair, 100, 200, 100).shouldDismiss, false);
 assert.equal(up(down(), NaN, 200).shouldDismiss, false);
 
+// The Host supplies native Path.contains for R24 outlines. This gate verifies
+// ownership and forwarding; it does not replace the native curve algorithm.
+const roundedCalls = [];
+let nativeContains = false;
+const roundedContext = {
+  ...context,
+  excludedRects: context.excludedRects.map(rect => ({ ...rect, borderRadius: 24 })),
+  containsRoundedRect(rect, x, y) {
+    roundedCalls.push({ rect, x, y });
+    return nativeContains;
+  },
+};
+for (const rect of roundedContext.excludedRects) {
+  for (const [x, y] of [[rect.x + 1, rect.y + 1], [rect.x + rect.width - 1, rect.y + 1],
+    [rect.x + 1, rect.y + rect.height - 1], [rect.x + rect.width - 1, rect.y + rect.height - 1]]) {
+    const count = roundedCalls.length;
+    pair = down(x, y, roundedContext);
+    assert.equal(pair.state.eligible, true, 'native transparent corner belongs to backdrop');
+    assert.deepEqual(roundedCalls[count], { rect, x, y });
+    assert.equal(up(pair, x, y, 100, 1, roundedContext).shouldDismiss, true);
+    assert.equal(roundedCalls.length, count + 1, 'only DOWN classifies the visual outline');
+    pair = down(x, y, roundedContext);
+    pair = step(pair.state, event('move', x, y + 9, 20), roundedContext);
+    assert.equal(up(pair, x, y, 100, 1, roundedContext).shouldDismiss, false,
+      'dragging across a transparent corner keeps the existing backdrop no-dismiss rule');
+  }
+}
+nativeContains = true;
+pair = down(195, 40, roundedContext);
+assert.equal(pair.state.eligible, false, 'native painted outline remains control-owned');
+nativeContains = false;
+assert.equal(up(pair, 195, 40, 100, 1, roundedContext).shouldDismiss, false,
+  'a rejected control DOWN cannot acquire ownership from a later geometry change');
+for (const c of [
+  { ...roundedContext, containsRoundedRect: undefined },
+  { ...roundedContext, containsRoundedRect() { throw Error('native path unavailable'); } },
+  { ...roundedContext, excludedRects: [{ x: 13, y: 19, width: 364, height: 54, borderRadius: NaN }] },
+  { ...roundedContext, excludedRects: [{ x: 13, y: 19, width: 364, height: 54, borderRadius: -1 }] },
+]) assert.equal(up(down(14, 20, c), 14, 20, 100, 1, c).shouldDismiss, false,
+  'missing/native-invalid rounded geometry fails closed');
+assert.equal(up(down(13, 19, { ...roundedContext, excludedRects: [
+  { x: 13, y: 19, width: 364, height: 54, borderRadius: 0 },
+] }), 13, 19, 100, 1, roundedContext).shouldDismiss, false,
+  'zero radius retains inclusive rectangular edges');
+
 const frozenState = Object.freeze(down().state);
 const frozenEvent = Object.freeze(event('move', 101, 201, 20));
 step(frozenState, frozenEvent, Object.freeze(context), Object.freeze(config));

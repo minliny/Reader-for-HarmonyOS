@@ -1,0 +1,231 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@700&display=swap">
+<style>
+  #reader-storage-demo { width:100%; }
+  #reader-storage-demo [hidden] { display:none !important; }
+  #reader-storage-demo .preview { padding:12px 0; }
+  #reader-storage-demo .phone {
+    --paper:light-dark(#f8f4ec,#1c1e1a); --surface:light-dark(#fffcf8,#282c25);
+    --ink:light-dark(#1f1b17,#eae7de); --muted:light-dark(#756f69,#aba99f);
+    --line:light-dark(#e7e0d5,#3b4036); --soft:light-dark(#f0ece3,#30342d);
+    --green:light-dark(#1f3528,#b9ceb1); --green-ink:light-dark(#fffcf8,#1c1e1a);
+    --soft-green:light-dark(#e8eddf,#333f2d); --danger:light-dark(#a53d32,#efb4a8);
+    --scrim:light-dark(#00000057,#00000080); --shadow:light-dark(#00000012,#00000032);
+    width:min(100%,365.714px); aspect-ratio:1280/2832; margin:0 auto; position:relative; isolation:isolate;
+    overflow:hidden; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink);
+    font:400 13px/21px "Noto Sans SC","PingFang SC",sans-serif;
+  }
+  #reader-storage-demo .phone * { box-sizing:border-box; }
+  #reader-storage-demo .phone button, #reader-storage-demo .phone select { font:inherit; color:inherit; }
+  #reader-storage-demo .phone button { border:0; background:transparent; }
+  #reader-storage-demo .phone button:disabled { opacity:.5; }
+  #reader-storage-demo .phone svg { width:18px; height:18px; flex-shrink:0; }
+  #reader-storage-demo .statusbar { height:28px; padding:4px 20px; display:flex; align-items:center; justify-content:space-between; font-size:11px; }
+  #reader-storage-demo .status-icons { display:flex; align-items:center; gap:6px; }
+  #reader-storage-demo .status-icons svg { width:13px; height:13px; }
+  #reader-storage-demo .header { margin:10px 16px 16px; height:52px; display:grid; grid-template-columns:66px minmax(0,1fr) 66px; align-items:center; padding:3px; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:0 2px 10px var(--shadow); }
+  #reader-storage-demo .header h2 { margin:0; text-align:center; font:700 18px/26px "Noto Serif SC","Songti SC",serif; }
+  #reader-storage-demo .header-tail { text-align:right; padding-right:11px; font-size:12px; color:var(--green); }
+  #reader-storage-demo .icon { display:flex; align-items:center; justify-content:center; width:40px; height:44px; padding:0; }
+  #reader-storage-demo .list-content { padding:0 18px; }
+  #reader-storage-demo .searchbar { display:flex; align-items:center; gap:8px; padding:0 11px; height:44px; border-radius:13px; background:var(--surface); border:1px solid var(--line); color:var(--muted); }
+  #reader-storage-demo .searchbar svg { width:16px; height:16px; }
+  #reader-storage-demo .tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; background:var(--soft); border-radius:13px; padding:4px; margin:12px 0 7px; text-align:center; }
+  #reader-storage-demo .tabs span { padding:7px 8px; border-radius:10px; }
+  #reader-storage-demo .tabs .active { background:var(--surface); color:var(--green); box-shadow:0 1px 4px var(--shadow); font-weight:500; }
+  #reader-storage-demo .tools { display:flex; align-items:center; gap:8px; height:39px; }
+  #reader-storage-demo .tools .count { margin-left:auto; font-size:11px; color:var(--muted); }
+  #reader-storage-demo .book { display:grid; grid-template-columns:54px minmax(0,1fr); gap:11px; padding:15px 0; border-bottom:1px solid var(--line); }
+  #reader-storage-demo .cover { display:flex; align-items:center; justify-content:center; min-height:80px; border:1px solid var(--line); border-radius:5px; background:var(--soft); font:700 12px/18px "Noto Serif SC","Songti SC",serif; text-align:center; }
+  #reader-storage-demo .cover.manga { background:var(--soft-green); }
+  #reader-storage-demo .book-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  #reader-storage-demo .book-title { font:700 16px/24px "Noto Serif SC","Songti SC",serif; margin-right:auto; }
+  #reader-storage-demo .tag { padding:0 5px; border-radius:3px; background:var(--green); color:var(--green-ink); font-size:10px; line-height:16px; }
+  #reader-storage-demo .source { color:var(--muted); font-size:11px; line-height:18px; margin-top:1px; }
+  #reader-storage-demo .progress-line { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:2px; font-size:11px; }
+  #reader-storage-demo .state { color:var(--green); background:var(--soft); border-radius:7px; padding:4px 9px; white-space:nowrap; }
+  #reader-storage-demo .track { height:3px; background:var(--soft); border-radius:3px; margin-top:7px; overflow:hidden; }
+  #reader-storage-demo .track span { display:block; width:38%; height:100%; background:var(--green); }
+  #reader-storage-demo .dock { position:absolute; left:16px; right:16px; bottom:18px; padding:11px 14px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); display:flex; align-items:center; justify-content:space-between; }
+  #reader-storage-demo .dock-copy { font-size:11px; line-height:20px; }
+  #reader-storage-demo .dock-copy small { display:block; font:inherit; color:var(--muted); }
+  #reader-storage-demo .overlay { position:absolute; inset:0; z-index:5; display:flex; align-items:flex-end; }
+  #reader-storage-demo .scrim { position:absolute; inset:0; width:100%; background:var(--scrim) !important; padding:0; }
+  #reader-storage-demo .sheet { position:relative; width:100%; max-height:82%; overflow:auto; background:var(--surface); border-radius:22px 22px 0 0; box-shadow:0 -4px 24px var(--shadow); }
+  #reader-storage-demo .grip { width:42px; height:5px; margin:10px auto 2px; border-radius:4px; background:var(--line); }
+  #reader-storage-demo .sheet-title { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 14px 0 18px; min-height:48px; }
+  #reader-storage-demo .sheet-title h3 { margin:0; font:700 18px/26px "Noto Serif SC","Songti SC",serif; }
+  #reader-storage-demo .sheet-body { padding:6px 18px 0; }
+  #reader-storage-demo .summary-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  #reader-storage-demo .total { font-size:22px; line-height:30px; min-height:30px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #reader-storage-demo .breakdown { display:flex; flex-direction:column; gap:12px; margin:14px 0 0; }
+  #reader-storage-demo .breakdown > div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:start; }
+  #reader-storage-demo .breakdown dt { display:flex; flex-direction:column; gap:2px; color:var(--ink); font-size:13px; line-height:21px; }
+  #reader-storage-demo .breakdown dt small { color:var(--muted); font-size:11px; line-height:18px; }
+  #reader-storage-demo .breakdown dd { margin:0; font-size:14px; line-height:22px; min-height:22px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #reader-storage-demo .free-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:11px 0 9px; font-size:11px; color:var(--muted); }
+  #reader-storage-demo .free-row output { font-variant-numeric:tabular-nums; }
+  #reader-storage-demo .settings { border-top:1px solid var(--line); }
+  #reader-storage-demo .settings-title { margin:9px 0 0; font-size:11px; line-height:18px; color:var(--muted); font-weight:400; }
+  #reader-storage-demo .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:50px; border-bottom:1px solid var(--line); }
+  #reader-storage-demo .settings-row span { min-width:0; }
+  #reader-storage-demo .settings-row select { width:88px; min-height:31px; flex-shrink:0; padding:5px; background:var(--soft); color:var(--ink); border:0; border-radius:6px; }
+  #reader-storage-demo .sheet-footer { padding:14px 18px 22px; }
+  #reader-storage-demo .clean-button { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; min-height:44px; padding:9px 10px; border-radius:12px; background:var(--green) !important; color:var(--green-ink) !important; font-size:12px !important; }
+  #reader-storage-demo .clean-button:disabled { background:var(--soft) !important; color:var(--muted) !important; opacity:1; }
+  #reader-storage-demo .clean-button svg { width:16px; height:16px; }
+  #reader-storage-demo .feedback { margin:8px 0 0; text-align:center; font-size:11px; line-height:18px; color:var(--muted); }
+  #reader-storage-demo .dialog-layer { position:absolute; inset:0; z-index:7; padding:24px; display:flex; align-items:center; background:var(--scrim); }
+  #reader-storage-demo .dialog { position:relative; width:100%; padding:22px 18px 18px; border-radius:18px; background:var(--surface); }
+  #reader-storage-demo .dialog h3 { margin:0 0 10px; font-size:16px; line-height:25px; font-weight:600; }
+  #reader-storage-demo .dialog p { margin:0 0 18px; font-size:12px; line-height:21px; color:var(--muted); }
+  #reader-storage-demo .dialog-actions { display:flex; gap:8px; }
+  #reader-storage-demo .dialog-actions button { flex:1; min-width:0; min-height:44px; padding:9px 10px; border-radius:12px; background:var(--soft); font-size:12px; }
+  #reader-storage-demo .dialog-actions .confirm { color:var(--danger); }
+  #reader-storage-demo .gesture { position:absolute; height:5px; width:108px; left:50%; bottom:7px; transform:translateX(-50%); background:var(--line); border-radius:4px; pointer-events:none; z-index:9; }
+  @media(pointer:coarse) { #reader-storage-demo .settings-row select { min-height:44px; font-size:16px; } }
+</style>
+<div id="reader-storage-demo">
+  <div class="preview viz-dotted-background">
+    <div class="phone" aria-label="小说和漫画共用下载页的存储管理草案">
+      <div class="statusbar"><span>09:41</span><span class="status-icons"><i data-lucide="signal" aria-hidden="true"></i><i data-lucide="wifi" aria-hidden="true"></i><i data-lucide="battery-full" aria-hidden="true"></i></span></div>
+      <div data-ui="background">
+        <header class="header"><span class="icon"><i data-lucide="arrow-left" aria-hidden="true"></i></span><h2>下载管理</h2><span class="header-tail">管理</span></header>
+        <div class="list-content">
+          <div class="searchbar"><i data-lucide="search" aria-hidden="true"></i><span>搜索书名、作者、书源</span></div>
+          <div class="tabs"><span class="active">全部</span><span>漫画</span><span>小说</span></div>
+          <div class="tools"><i data-lucide="sliders-horizontal" aria-hidden="true"></i><span>筛选</span><i data-lucide="list-filter" aria-hidden="true"></i><span>最近阅读</span><span class="count">2 / 2 本书</span></div>
+          <article class="book"><div class="cover">北境<br>行记</div><div><div class="book-top"><span class="book-title">北境行记</span><span class="tag">小说</span><i data-lucide="ellipsis" aria-hidden="true"></i></div><div class="source">陈远 · 云墨书库</div><div class="progress-line"><span>已下载 42 / 110 章</span><span class="state">已下载</span></div><div class="track"><span></span></div></div></article>
+          <article class="book"><div class="cover manga">山海<br>纪行</div><div><div class="book-top"><span class="book-title">山海纪行</span><span class="tag">漫画</span><i data-lucide="ellipsis" aria-hidden="true"></i></div><div class="source">叶青 · 青岚漫画</div><div class="progress-line"><span>已下载 13 / 34 话</span><span class="state">已下载</span></div><div class="track"><span></span></div></div></article>
+        </div>
+        <footer class="dock"><div class="dock-copy"><span data-ui="dock-total">已下载 2.0 GB</span><small data-ui="dock-free">设备可用 12.6 GB</small></div><button class="icon cursor-interaction" type="button" data-action="open" aria-label="存储管理"><i data-lucide="settings-2" aria-hidden="true"></i></button></footer>
+      </div>
+      <div class="overlay" data-ui="overlay">
+        <button class="scrim cursor-interaction" type="button" data-action="close" aria-label="关闭存储管理"></button>
+        <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="reader-storage-title" data-ui="sheet">
+          <div class="grip" aria-hidden="true"></div>
+          <div class="sheet-title"><h3 id="reader-storage-title">存储管理</h3><button class="icon cursor-interaction" type="button" data-action="close" aria-label="关闭存储管理"><i data-lucide="x" aria-hidden="true"></i></button></div>
+          <div class="sheet-body">
+            <div class="summary-top"><span>已下载内容</span><output class="total" data-ui="total">2.0 GB</output></div>
+            <dl class="breakdown">
+              <div><dt><span>保留下载</span><small>长期保留，仅手动删除</small></dt><dd data-ui="retained">1.2 GB</dd></div>
+              <div><dt><span>自动保存</span><small>阅读时保存，按设置自动清理</small></dt><dd data-ui="automatic">768 MB</dd></div>
+            </dl>
+            <div class="free-row"><span>设备可用空间</span><output data-ui="free">12.6 GB</output></div>
+            <div class="settings">
+              <h4 class="settings-title">自动保存设置</h4>
+              <label class="settings-row"><span>空间上限</span><select class="cursor-interaction" data-ui="limit" aria-label="自动保存空间上限"><option value="512">512 MB</option><option value="1024">1 GB</option><option value="2048" selected>2 GB</option><option value="4096">4 GB</option></select></label>
+              <label class="settings-row"><span>多久未阅读后清理</span><select class="cursor-interaction" data-ui="days" aria-label="多久未阅读后清理"><option value="3">3 天</option><option value="7" selected>7 天</option><option value="14">14 天</option><option value="30">30 天</option></select></label>
+            </div>
+          </div>
+          <div class="sheet-footer"><button class="clean-button cursor-interaction" type="button" data-action="clean" data-ui="clean"><i data-lucide="trash-2" aria-hidden="true"></i><span data-ui="clean-label">清理自动保存 · 600 MB</span></button><p class="feedback" data-ui="feedback" role="status" aria-live="polite" hidden></p></div>
+        </section>
+      </div>
+      <div class="dialog-layer" data-ui="dialog-layer" hidden>
+        <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="reader-storage-confirm-title">
+          <h3 id="reader-storage-confirm-title">清理自动保存？</h3><p data-ui="confirm-copy">将清理 600 MB 自动保存的内容。保留下载、正在阅读和下载的内容不受影响，书架与阅读记录保留。</p>
+          <div class="dialog-actions"><button class="cursor-interaction" type="button" data-action="cancel">取消</button><button class="confirm cursor-interaction" type="button" data-action="confirm" data-ui="confirm">清理 600 MB</button></div>
+        </section>
+      </div>
+      <div class="gesture" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('reader-storage-demo');
+  if (!root) return;
+  const ui = Object.fromEntries([...root.querySelectorAll('[data-ui]')].map(el => [el.dataset.ui, el]));
+  const state = { demo: 'reader-storage-management', version: 2, scenario: 'normal', limitMb: 2048, days: 7, retainedMb: 1250, automaticMb: 768, eligibleMb: 600, freeMb: 12902.4, open: true, dialog: false, busy: false, result: '' };
+  const published = new Set();
+  const size = mb => mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`;
+  const restore = incoming => {
+    const saved = incoming?.privateContent;
+    if (saved?.demo !== state.demo || saved.version !== 2) return;
+    for (const key of ['retainedMb', 'automaticMb', 'eligibleMb', 'freeMb']) if (Number.isFinite(saved[key]) && saved[key] >= 0) state[key] = saved[key];
+    state.eligibleMb = Math.min(state.eligibleMb, state.automaticMb);
+    if ([512, 1024, 2048, 4096].includes(saved.limitMb)) state.limitMb = saved.limitMb;
+    if ([3, 7, 14, 30].includes(saved.days)) state.days = saved.days;
+    if (['normal', 'none', 'unknown'].includes(saved.scenario)) state.scenario = saved.scenario;
+    if (typeof saved.open === 'boolean') state.open = saved.open;
+    if (typeof saved.result === 'string') state.result = saved.result.slice(0, 60);
+  };
+  const persist = () => {
+    const snapshot = { ...state, dialog: false, busy: false };
+    published.add(JSON.stringify(snapshot));
+    if (published.size > 16) published.delete(published.values().next().value);
+    window.openai?.setWidgetState?.({ modelContent: { design: '共用下载页存储管理', status: '待确认草案', scenario: state.scenario, limitMb: state.limitMb, days: state.days, cleanableMb: state.eligibleMb }, privateContent: snapshot })?.catch(() => {});
+  };
+  const render = () => {
+    const known = state.scenario !== 'unknown';
+    const total = size(state.retainedMb + state.automaticMb);
+    ui.total.textContent = known ? total : '';
+    ui.retained.textContent = known ? size(state.retainedMb) : '';
+    ui.automatic.textContent = known ? size(state.automaticMb) : '';
+    ui.free.textContent = known ? size(state.freeMb) : '';
+    ui['dock-total'].textContent = known ? `已下载 ${total}` : '';
+    ui['dock-free'].textContent = known ? `设备可用 ${size(state.freeMb)}` : '';
+    ui.limit.value = String(state.limitMb); ui.days.value = String(state.days);
+    ui.clean.disabled = !known || state.eligibleMb === 0 || state.busy;
+    ui['clean-label'].textContent = !known ? '清理自动保存' : state.busy ? '正在清理…' : state.eligibleMb > 0 ? `清理自动保存 · ${size(state.eligibleMb)}` : '暂无可清理的自动保存';
+    ui.overlay.hidden = !state.open;
+    ui['dialog-layer'].hidden = !state.dialog;
+    ui.background.inert = state.open || state.dialog;
+    ui.sheet.inert = state.dialog;
+    ui.limit.disabled = state.busy; ui.days.disabled = state.busy;
+    ui.feedback.textContent = state.result; ui.feedback.hidden = !state.result;
+    ui['confirm-copy'].textContent = `将清理 ${size(state.eligibleMb)} 自动保存的内容。保留下载、正在阅读和下载的内容不受影响，书架与阅读记录保留。`;
+    ui.confirm.textContent = `清理 ${size(state.eligibleMb)}`;
+  };
+  root.addEventListener('click', event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button || button.disabled) return;
+    if (button.dataset.action === 'open') { state.open = true; render(); ui.sheet.querySelector('button').focus(); persist(); }
+    if (button.dataset.action === 'close' && !state.busy) { state.open = false; render(); root.querySelector('[data-action="open"]').focus(); persist(); }
+    if (button.dataset.action === 'clean' && state.eligibleMb > 0 && state.scenario !== 'unknown') { state.dialog = true; render(); root.querySelector('[data-action="cancel"]').focus(); }
+    if (button.dataset.action === 'cancel') { state.dialog = false; render(); ui.clean.focus(); }
+    if (button.dataset.action === 'confirm' && state.dialog && !state.busy) {
+      const released = state.eligibleMb;
+      state.dialog = false; state.busy = true; state.result = ''; render();
+      setTimeout(() => {
+        state.automaticMb = Math.max(0, state.automaticMb - released);
+        state.freeMb += released; state.eligibleMb = 0; state.busy = false;
+        state.result = `已清理自动保存 ${size(released)}`; render(); ui.limit.focus(); persist();
+      }, 600);
+    }
+  });
+  root.addEventListener('change', event => {
+    if (event.target === ui.limit) state.limitMb = Number(event.target.value);
+    else if (event.target === ui.days) state.days = Number(event.target.value);
+    else return;
+    render(); persist();
+  });
+  root.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !state.busy) {
+      if (state.dialog) { state.dialog = false; render(); ui.clean.focus(); }
+      else if (state.open) { state.open = false; render(); root.querySelector('[data-action="open"]').focus(); persist(); }
+    }
+    if (event.key !== 'Tab') return;
+    const boundary = state.dialog ? ui['dialog-layer'] : state.open ? ui.sheet : null;
+    if (!boundary) return;
+    const controls = [...boundary.querySelectorAll('button:not([disabled]),select:not([disabled])')];
+    const first = controls[0], last = controls[controls.length - 1];
+    if (!boundary.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
+    else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
+  restore(window.openai?.widgetState); render();
+  window.addEventListener('openai:set_globals', event => {
+    const incoming = event.detail?.globals?.widgetState;
+    if (incoming?.privateContent?.demo !== state.demo || published.has(JSON.stringify(incoming.privateContent))) return;
+    restore(incoming); render();
+  });
+  if (globalThis.Tweak) {
+    const tweak = new Tweak({ container: root, onChange: () => {
+      state.retainedMb = 1250; state.automaticMb = state.scenario === 'none' ? 168 : 768;
+      state.eligibleMb = state.scenario === 'none' ? 0 : 600; state.freeMb = 12902.4;
+      state.open = true; state.dialog = false; state.result = ''; render(); persist();
+    } });
+    tweak.addSelect(state, 'scenario', { label: '容量状态', options: [{ label: '有可清理内容', value: 'normal' }, { label: '暂无可清理内容', value: 'none' }, { label: '容量数据缺失', value: 'unknown' }] });
+  }
+})();
+</script>

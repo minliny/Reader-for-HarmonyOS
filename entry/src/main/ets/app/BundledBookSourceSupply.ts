@@ -115,6 +115,34 @@ export function isUserModifiedBuiltinCopy(stored: JsonObject, storedActualFinger
   return storedActualFingerprint !== recorded;
 }
 
+function canonicalFieldJson(source: JsonObject, field: string): string {
+  const picked: JsonObject = {};
+  picked[field] = source[field];
+  return canonicalJson(picked);
+}
+
+/** Targeted corrections may also replace legacy aliases outside the original
+ * fingerprint. Only their reviewed before/after values belong to the bundle;
+ * any other value (including a user deletion) remains user-owned. A null
+ * before value records that the original field did not exist. */
+function hasCorrectionConflict(stored: JsonObject, bundled: JsonObject): boolean {
+  const provenance = bundled['provenance'] as JsonObject | undefined;
+  const correction = provenance?.['contentCorrection'] as JsonObject | undefined;
+  const previous = correction?.['previousUnfingerprintedFields'];
+  if (previous === undefined) return false;
+  if (previous === null || typeof previous !== 'object' || Array.isArray(previous)) return true;
+  const fields = previous as JsonObject;
+  for (const field of Object.keys(fields)) {
+    const hasStored = Object.prototype.hasOwnProperty.call(stored, field);
+    const matchesBefore = fields[field] === null ? !hasStored :
+      hasStored && canonicalFieldJson(stored, field) === canonicalFieldJson(fields, field);
+    const matchesAfter = hasStored && Object.prototype.hasOwnProperty.call(bundled, field) &&
+      canonicalFieldJson(stored, field) === canonicalFieldJson(bundled, field);
+    if (!matchesBefore && !matchesAfter) return true;
+  }
+  return false;
+}
+
 /**
  * Compares a bundled candidate against a clean stored builtin copy. A stored
  * copy whose rules no longer hash to their recorded fingerprint is a user
@@ -125,8 +153,10 @@ export function decideBundledUpgrade(
   bundledFingerprint: string,
   stored: JsonObject,
   storedActualFingerprint: string,
+  bundled?: JsonObject,
 ): BundledSourceDecision {
-  if (isUserModifiedBuiltinCopy(stored, storedActualFingerprint)) {
+  if (isUserModifiedBuiltinCopy(stored, storedActualFingerprint) ||
+    (bundled !== undefined && hasCorrectionConflict(stored, bundled))) {
     return 'userCopy';
   }
   const storedVersion = typeof stored['builtinVersion'] === 'number'
@@ -140,6 +170,32 @@ export function decideBundledUpgrade(
     return 'unchanged';
   }
   return 'upgrade';
+}
+
+/** This reviewed revision changes distribution defaults only. Copy the
+ * stored document so fields outside the legacy rule fingerprint, including
+ * user deletions and future extensions, cannot be replaced by bundle values. */
+export function mergeBundledDefaultStateCorrection(
+  bundled: JsonObject,
+  stored: JsonObject,
+  storedActualFingerprint: string,
+): JsonObject | undefined {
+  const provenance = bundled['provenance'] as JsonObject | undefined;
+  const correction = provenance?.['defaultStateCorrection'] as JsonObject | undefined;
+  if (stored['readerBuiltinWithdrawn'] === true || stored['readerTestBuiltinWithdrawn'] === true ||
+    correction?.['version'] !== 1 || correction?.['policy'] !== 'reader-login-defaults/1' ||
+    correction?.['preserveUserFields'] !== true || !hasBuiltinMarker(stored) ||
+    isUserModifiedBuiltinCopy(stored, storedActualFingerprint) ||
+    typeof stored['ruleFingerprint'] !== 'string' ||
+    stored['ruleFingerprint'] !== bundled['ruleFingerprint'] ||
+    correction?.['previousRuleFingerprint'] !== stored['ruleFingerprint']) {
+    return undefined;
+  }
+  const updated: JsonObject = { ...stored };
+  for (const field of ['builtinId', 'builtinVersion', 'defaultEnabled', 'provenance']) {
+    if (Object.prototype.hasOwnProperty.call(bundled, field)) updated[field] = bundled[field];
+  }
+  return updated;
 }
 
 type StoredLedger = {

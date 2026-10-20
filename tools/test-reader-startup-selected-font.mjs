@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
+import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
+import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
 import { createDefaultReaderAppearanceSnapshot, setReaderAppearanceFont, setReaderAppearanceCustomFont,
   ReaderCustomFontDescriptor } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import { readerAppearanceSnapshotFontFamily } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 
 const path = new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url);
+const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture({});
 const descriptor = new ReaderCustomFontDescriptor('Custom', 'ReaderCustom_aaaaaaaaaaaaaaaa',
   '/files/reader-fonts/' + 'a'.repeat(64) + '.ttf', 'a'.repeat(64));
 const custom = () => setReaderAppearanceCustomFont(createDefaultReaderAppearanceSnapshot(), descriptor);
@@ -128,8 +132,11 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
     '/files/reader-fonts/' + 'b'.repeat(64) + '.ttf', 'b'.repeat(64));
   const Ability = productionMotionMethods(path, ['onCreate', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
     DEBUG: false, BUILD_MODE_NAME: 'release', DOMAIN: 0,
+    errorMessageOf, localReadFailureSummary,
+    installMangaAtomicPayloadReader,
+    ReaderMangaPlatformDiagnostic: { install: () => undefined }, // Separate focused production-module probe owns SDK diagnostics.
     ReaderStartupTrace: {install: () => ({mark() {}, measure: (_stage, task) => task()})}, readerMotionNowMs: () => 0,
-    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false,
+    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: {install: () => owner},
     ReaderSystemFileOpenHost: {install() {}, receive() {}}, AppStorage: {setOrCreate() {}},
     WebDavCredentialStore: {instance: {attachContext() {}, loadBookshelfViewMode: async () => 'cover'}},

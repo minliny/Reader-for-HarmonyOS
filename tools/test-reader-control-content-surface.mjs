@@ -1,48 +1,56 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { readerControlMotionBounds, sampleReaderControlMotionComposition }
-  from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
-const fixtureLayers = JSON.parse(read('tools/fixtures/reader-control-shared-layer-live-20260906.json'));
-const nodes = fixtureLayers.sources.surfaces.nodes;
-const fixture = JSON.parse(read('tools/fixtures/reader-control-restored-baseline-20260905.json'));
-for (const n of nodes.filter(n => n.name === 'AddedActor/FullContentSurface')) {
-  assert.deepEqual([n.x, n.y, n.width, n.height, n.cornerRadius], [26, 146, 338, 666, 12]);
-  assert.equal(n.parentIndex, 1);
-  const viewport = nodes.find(v => v.parentId === n.parentId && v.parentIndex === 2);
-  assert.deepEqual(viewport.fills, []); assert.deepEqual(viewport.strokes, []);
-  const track = fixture.records.flatMap(r => r.motionContext.nodes).find(v => v.nodeId === n.id);
-  assert.ok(track, n.id);
-  assert.match(track.codeSnippets.css, /opacity: 0;/);
-  assert.match(track.codeSnippets.css, /opacity: 1;/);
-  assert.doesNotMatch(track.codeSnippets.css, /translate:|width:|height:/);
-}
-const bounds = readerControlMotionBounds(364, 736, 19);
-for (const p of [0, .2, .5, .8, 1, .8, .5, .2, 0]) {
-  for (const v of [1, .5, 0]) {
-    const frame = sampleReaderControlMotionComposition({ expansionProgress: p, visibilityProgress: v }, bounds);
-    assert.ok(frame.contentSurface, 'the fixed Full surface must be a separate actor from the morphing content viewport');
-    assert.deepEqual(frame.contentSurface, { x: 13, y: frame.shell.y + 57, width: 338, height: 666, opacity: p });
-    assert.ok(Math.abs(frame.contentSurface.y - frame.content.y - 28 * (1 - p)) < 1e-8);
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'sampler':{description:'Production composition sampler fixed Full surface geometry',resources:[]},
+ 'stage-surface':{description:'Actual SDK Stage surface identity, opacity, order and transparent viewport seam',resources:[]},
+ 'tts-backdrop':{description:'Actual SDK Quick TTS backdrop retires on shared progress and cannot receive input',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+ const {default:assert}=await import('node:assert/strict');
+ const motion=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+ const bounds=motion.readerControlMotionBounds(364,736,19);
+ if(selectedCase==='sampler'){
+  for(const p of [0,.2,.5,.8,1,.8,.5,.2,0])for(const v of [1,.5,0]){
+   const frame=motion.sampleReaderControlMotionComposition({expansionProgress:p,visibilityProgress:v},bounds);
+   assert.deepEqual(frame.contentSurface,{x:13,y:frame.shell.y+57,width:338,height:666,opacity:p});
+   assert.ok(Math.abs(frame.contentSurface.y-frame.content.y-28*(1-p))<1e-8);
   }
+  return;
+ }
+ const {readFileSync}=await import('node:fs');
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ if(selectedCase==='tts-backdrop'){
+  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTtsContent.ets',import.meta.url),'utf8');
+  const {owner}=createReaderBuilderProbe(source,['quickBackdrop']);
+  Object.assign(owner,{availableWidth:286,availableHeight:190,appScheme:'day',p:()=>0});owner.quickBackdrop();
+  assert.equal(owner.nodes.size,1,'one authored backdrop');const node=[...owner.nodes.values()][0];
+  for(const p of [0,.3,1,.7,0]){owner.p=()=>p;owner.replay();assert.equal(node.opacity,1-p);assert.equal(node.hitTestBehavior,'HitTestMode.None');}
+  return;
+ }
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlMotionStage.ets',import.meta.url),'utf8');
+ const {readerControlNativeTree}=await import('./fixtures/reader-control-native-tree.mjs');
+ for(const module of ['directory','tts','appearance','settings','search','autoPage','replace']){
+  const tree=readerControlNativeTree();
+  const {owner}=createReaderBuilderProbe(source,['build','topBarContent','moduleContent','fullHeaderContent','brightnessContent','navigationContent'],{...tree.dependencies,readerControlHasFullContentSurface:motion.readerControlHasFullContentSurface,
+   readerControlContentLocation:()=>({level:'secondary'})},tree.hooks);
+  let frame=motion.sampleReaderControlMotionComposition({expansionProgress:0,visibilityProgress:1},bounds),contentOrder;
+  Object.assign(owner,{frame:()=>frame,bounds:()=>bounds,contentModule:()=>module,visualSession:{heldPointerId:-1},inputEnabled:true,
+   topBarContent(){},topBarWidthValue:()=>364,viewportWidthValue:()=>390,viewportHeightValue:()=>844,topBarTopValue:()=>19,
+   topBarFrame:()=>({opacity:1,translateY:0}),dockLeftValue:()=>13,dockTopValue:()=>88,
+   fullContentMountWidth:()=>338,fullContentMountHeight:()=>666,
+   moduleContent(){contentOrder=owner.nodes.size;},fullHeaderContent(){},brightnessContent(){},navigationContent(){},accessibleControlActions(){}});
+  owner.initialRender();assert.equal(tree.remaining(),0);
+  const surfaces=[...owner.nodes.values()].filter(n=>n.id==='reader-control-verification-content-surface');assert.equal(surfaces.length,1);
+  const surface=surfaces[0],identity=surface;
+  assert.ok(surface.creationOrder<contentOrder,'fixed surface is authored before module viewport');
+  for(const p of [0,.2,.5,1,.5,0]){
+   frame=motion.sampleReaderControlMotionComposition({expansionProgress:p,visibilityProgress:1},bounds);owner.replay();
+   assert.equal([...owner.nodes.values()].find(n=>n.id==='reader-control-verification-content-surface'),identity);
+   assert.equal(surface.width,338);assert.equal(surface.height,666);assert.equal(surface.opacity,motion.readerControlHasFullContentSurface(module)?p:0);
+   assert.equal(surface.visibility,'Visibility.Visible');assert.equal(surface.enabled,false);assert.equal(surface.hitTestBehavior,'HitTestMode.None');
+   const mount=[...owner.nodes.values()].find(n=>n.type==='Stack'&&n.width===338&&n.height===666&&n.clip===true);
+   assert.ok(mount,'module mount retains Full dimensions');assert.equal(mount.backgroundColor,undefined,'module viewport does not paint second Full fill');
+  }
+ }
 }
-const stage = read('entry/src/main/ets/features/reading/ReaderControlMotionStage.ets');
-assert.match(stage, /readerControlHasFullContentSurface\(this\.contentModule\(\)\)/);
-assert.match(stage, /\.width\(this.frame\(\).contentSurface.width\).height\(this.frame\(\).contentSurface.height\)/);
-assert.match(stage, /\.opacity\(readerControlHasFullContentSurface\(this\.contentModule\(\)\)\s*\?\s*this\.frame\(\)\.contentSurface\.opacity\s*:\s*0\)/);
-assert.match(stage, /\.visibility\(Visibility\.Visible\)/);
-assert.doesNotMatch(stage, /readerControlHasFullContentSurface\(this\.contentModule\(\)\)\s*\?\s*Visibility\.Visible\s*:\s*Visibility\.Hidden/);
-assert.ok(stage.indexOf(".id('reader-control-full-content-surface')") < stage.indexOf('this.moduleContent();'));
-const directory = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets').split('private embeddedBody()')[1].split('@Builder')[0];
-assert.doesNotMatch(directory, /backgroundColor\(TOK_SURFACE_PANEL\)|\.border\(/);
-const settings = read('entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets').split('  build()')[1].split('@Builder')[0];
-assert.doesNotMatch(settings, /backgroundColor\(TOK_SURFACE_PANEL\)|\.border\(/);
-for (const name of ['Tts', 'Appearance']) {
-  const body = read(`entry/src/main/ets/features/reading/ReaderControl${name}Content.ets`).split('  build()')[1].split('@Builder')[0];
-  assert.doesNotMatch(body, /Row\(\).width\(this.availableWidth\).height\(this.availableHeight\)/);
-}
-const ttsSurface = read('entry/src/main/ets/features/reading/ReaderControlTtsContent.ets');
-assert.match(ttsSurface, /private quickBackdrop\(\)[\s\S]*?app\.control\.paint\.FFFAF4[\s\S]*?app\.control\.paint\.F6ECDD[\s\S]*?\.opacity\(1 - this\.p\(\)\)\.hitTestBehavior\(HitTestMode.None\)/,
-  'Make Quick parchment backdrop must retire on the same p and never duplicate the Full surface');
-assert.equal((ttsSurface.match(/this\.quickBackdrop\(\)/g) ?? []).length, 1);
-console.log('reader control independent FullContentSurface source geometry and single-background wiring: PASS');
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

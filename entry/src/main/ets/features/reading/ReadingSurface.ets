@@ -1,4 +1,6 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
+import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
 import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
@@ -100,6 +102,7 @@ export class ReadingSurfacePageFragment {
 /** Shared scalar-aware text primitive for paged and continuous reading. */
 @Component
 export struct ReaderReadingTextFragment {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @Prop @Watch('scheduleHighlightGeometry') text: string = '';
   @Prop isParagraphStart: boolean = false;
   @Prop @Watch('scheduleHighlightGeometry') startScalar: number = 0;
@@ -125,6 +128,7 @@ export struct ReaderReadingTextFragment {
   private readonly textController: TextController = new TextController();
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.highlightMounted = false; this.highlightLifecycle += 1; this.highlightQueued = false;
     this.highlightHadGeometry = false;
     if (this.separateHighlight) this.onHighlightGeometry(this.startScalar, []);
@@ -233,7 +237,7 @@ export struct ReaderReadingTextFragment {
       copyReaderSelection(selected);
       this.textController.closeSelectionMenu();
     } catch (_) {
-      this.getUIContext().getPromptAction().showToast({ message: '复制失败，请重试' });
+      this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, (): boolean => this.highlightMounted && this.longPressSelectText);
     }
     return true;
   }
@@ -354,8 +358,14 @@ export struct ReadingSurface {
 
       Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
-          if (this.pageFragments[0]?.nativeTitle !== undefined) {
-            ReaderNativeParagraphView({ recipe: this.pageFragments[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+          if (this.renderFragments()[0]?.nativeTitle !== undefined) {
+            // An outgoing title may update before ArkUI removes its branch.
+            // Bind its recipe to its keyed fragment, just like body actors;
+            // the live provider may already point to a page without a title.
+            ForEach(this.renderFragments().slice(0, 1).filter((fragment: ReadingSurfacePageFragment): boolean =>
+              fragment.nativeTitle !== undefined), (fragment: ReadingSurfacePageFragment) => {
+              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+            }, (fragment: ReadingSurfacePageFragment): string => fragment.nativeTitle!.key);
           } else {
           Text(this.chapterTitle)
             .width('100%')
@@ -411,6 +421,7 @@ export struct ReadingSurface {
                   highlightColor: this.ttsHighlightStart !== undefined ? this.themeStyle().ink :
                     readerThemeDefinition(this.appearance.activeTheme).selection,
                   underline: this.ttsHighlightStart !== undefined,
+                  highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]): void => this.acceptHighlightGeometry(fragment.id, rects),
                 });
@@ -606,10 +617,11 @@ export struct ReadingSurface {
   }
 
   private renderFragments(): ReadingSurfacePageFragment[] {
-    // Primitive revision invalidates the slot; the provider reads its current
-    // owner rather than a complex array copied when the slot first mounted.
+    // Retained offscreen pages can change fragments without changing revision.
+    // Read the reactive prop even when the provider owns the current content.
+    const fragments = this.pageFragments;
     return this.contentRevision >= 0 && this.fragmentsProvider !== undefined ?
-      this.fragmentsProvider() : this.pageFragments;
+      this.fragmentsProvider() : fragments;
   }
 
   private contentInsets(): Padding {

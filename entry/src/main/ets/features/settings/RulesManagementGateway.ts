@@ -1,5 +1,8 @@
-import type { JsonObject } from '@reader/core-harmony';
+import type { RuleSubscriptionStep } from './RulesMutationIntentStore';
+import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { RulesMutationOwner, type RulesMutationSnapshot } from './RulesMutationOwner';
 
 export interface ManagedReplaceRule {
   id: number;
@@ -85,6 +88,19 @@ export interface RuleBundleExport {
 /** Typed boundary for the four Core-owned rule entity families. */
 export class RulesManagementGateway {
   private readonly owner: ReaderRuntimeOwner;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+  private mutationAdmission: (() => boolean) | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined, admission?: () => boolean): void {
+    this.writeEvidence = evidence; this.mutationAdmission = admission;
+  }
+
+  mutationSnapshot(): RulesMutationSnapshot { return RulesMutationOwner.forRuntime(this.owner).snapshot(); }
+
+  async recoverMutation(current: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot> {
+    return RulesMutationOwner.forRuntime(this.owner).recoverOriginal(current,
+      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyMutation(method, params, data), retryOriginal);
+  }
 
   constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.owner = owner;
@@ -119,7 +135,7 @@ export class RulesManagementGateway {
     if (draft.id !== undefined) {
       params['id'] = draft.id;
     }
-    await this.owner.request('replace.persist', {
+    await this.requestMutation('replace.persist', {
       operation: draft.id === undefined ? 'create' : 'update',
       params,
     });
@@ -127,7 +143,7 @@ export class RulesManagementGateway {
 
   async deleteReplaceRule(id: number): Promise<void> {
     this.assertSafeInteger(id, 'replace rule id');
-    await this.owner.request('replace.persist', { operation: 'delete', params: { id } });
+    await this.requestMutation('replace.persist', { operation: 'delete', params: { id } });
   }
 
   async listTxtTocRules(): Promise<ManagedTxtTocRule[]> {
@@ -145,16 +161,16 @@ export class RulesManagementGateway {
       enable: draft.enable,
     };
     if (draft.id === undefined) {
-      await this.owner.request('txt-toc-rule.create', params);
+      await this.requestMutation('txt-toc-rule.create', params);
     } else {
       params['id'] = draft.id;
-      await this.owner.request('txt-toc-rule.update', params);
+      await this.requestMutation('txt-toc-rule.update', params);
     }
   }
 
   async deleteTxtTocRule(id: number): Promise<void> {
     this.assertSafeInteger(id, 'TXT TOC rule id');
-    await this.owner.request('txt-toc-rule.delete', { id });
+    await this.requestMutation('txt-toc-rule.delete', { id });
   }
 
   async listDictRules(): Promise<ManagedDictRule[]> {
@@ -164,7 +180,7 @@ export class RulesManagementGateway {
   }
 
   async saveDictRule(draft: DictRuleDraft): Promise<void> {
-    await this.owner.request('dict-rule.put', {
+    await this.requestMutation('dict-rule.put', {
       name: draft.name.trim(),
       urlRule: draft.urlRule,
       showRule: draft.showRule,
@@ -174,7 +190,7 @@ export class RulesManagementGateway {
   }
 
   async deleteDictRule(name: string): Promise<void> {
-    await this.owner.request('dict-rule.delete', { name });
+    await this.requestMutation('dict-rule.delete', { name });
   }
 
   async listRuleSubscriptions(): Promise<ManagedRuleSubscription[]> {
@@ -184,6 +200,9 @@ export class RulesManagementGateway {
   }
 
   async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<void> {
+    await this.requestMutation('rule-sub.put',this.ruleSubscriptionParams(draft));
+  }
+  private ruleSubscriptionParams(draft: RuleSubscriptionDraft): JsonObject {
     const name = draft.name.trim();
     const subscriptionUrl = draft.url.trim();
     const update = draft.update ?? 0;
@@ -200,7 +219,7 @@ export class RulesManagementGateway {
     if (update < 0) {
       throw new Error('rule subscription update must not be negative');
     }
-    await this.owner.request('rule-sub.put', {
+    return {
       id: draft.id ?? Date.now(),
       name,
       url: subscriptionUrl,
@@ -208,7 +227,7 @@ export class RulesManagementGateway {
       customOrder: draft.customOrder,
       autoUpdate: draft.autoUpdate,
       update,
-    });
+    };
   }
 
   /**
@@ -217,6 +236,9 @@ export class RulesManagementGateway {
    * remains responsible for strict schema validation and atomic merge.
    */
   async importReplaceRuleDocument(json: string): Promise<string> {
+    return this.importBundle(this.replaceRuleDocumentBundle(json), false);
+  }
+  private replaceRuleDocumentBundle(json: string): string {
     const document = json.trim();
     if (document.length === 0) {
       throw new Error('替换规则订阅返回空文档');
@@ -231,12 +253,12 @@ export class RulesManagementGateway {
     }
     const bundle = `{"schemaVersion":1,"replaceRules":${rulesJson},` +
       `"dictRules":[],"txtTocRules":[],"ruleSubscriptions":[]}`;
-    return this.importBundle(bundle, false);
+    return bundle;
   }
 
   async deleteRuleSubscription(id: number): Promise<void> {
     this.assertSafeInteger(id, 'rule subscription id');
-    await this.owner.request('rule-sub.delete', { id });
+    await this.requestMutation('rule-sub.delete', { id });
   }
 
   async exportBundle(): Promise<RuleBundleExport> {
@@ -256,13 +278,97 @@ export class RulesManagementGateway {
   }
 
   async importBundle(json: string, replaceExisting: boolean): Promise<string> {
-    const result = await this.owner.request('rule-bundle.import', { json, replaceExisting });
+    const result = await this.requestMutation('rule-bundle.import', { json, replaceExisting });
     const counts = this.requireObject(result.data['counts'], 'rule-bundle.import counts');
     if (result.data['schemaVersion'] !== 1 || result.data['replaceExisting'] !== replaceExisting) {
       throw new Error('rule-bundle.import returned mismatched data');
     }
-    return `已导入 ${this.requireCount(counts, 'replaceRules') + this.requireCount(counts, 'dictRules') +
+    const status = `已导入 ${this.requireCount(counts, 'replaceRules') + this.requireCount(counts, 'dictRules') +
       this.requireCount(counts, 'txtTocRules') + this.requireCount(counts, 'ruleSubscriptions')} 条 Core 规则实体`;
+    return status;
+  }
+
+  async refreshSubscription(subscription: ManagedRuleSubscription, document: string,
+    sourcePlan: { items: { index: number; sourceId: string; bookSource: JsonObject }[];
+      failures: { index: number; message: string }[] } | undefined,
+    current: () => boolean): Promise<string> {
+    const steps: RuleSubscriptionStep[] = [];
+    const localFailures: { index: number; message: string }[] = [];
+    if (subscription.type === 0) {
+      if (sourcePlan === undefined) throw new Error('书源订阅缺少原准入计划');
+      for (const item of sourcePlan.items) steps.push({ method:'source.import',
+        params:{sourceId:item.sourceId,bookSource:item.bookSource}, sourceIndex:item.index });
+      localFailures.push(...sourcePlan.failures);
+      if (steps.length === 0) throw new Error(`书源订阅没有可导入项；${localFailures.length} 个未完成`);
+    } else if (subscription.type === 1) steps.push({ method:'rss-source.import',params:{json:document,replaceExisting:false} });
+    else if (subscription.type === 2) steps.push({ method:'rule-bundle.import',params:{json:this.replaceRuleDocumentBundle(document),replaceExisting:false} });
+    else throw new Error('未登记的订阅类型');
+    steps.push({ method:'rule-sub.put',params:this.ruleSubscriptionParams({...subscription,update:Date.now()}) });
+    const state = await RulesMutationOwner.forRuntime(this.owner).runSubscription(subscription.type,steps,localFailures,current,
+      (method:string,params:JsonObject,data:JsonObject):void=>this.qualifyMutation(method,params,data),this.writeEvidence);
+    const journey = state.subscription;
+    if (journey?.metadataConfirmed !== true) throw new Error(state.message || '导入已核定但订阅更新时间未保存');
+    return `订阅更新已确认；${Math.max(0,journey.confirmedParts-1)} 个导入步骤已确认` +
+      (journey.failedParts > 0 ? `；${journey.failedParts} 个未完成` : '') + '；订阅更新时间已保存';
+  }
+
+  private async requestMutation(method: string, params: JsonObject): Promise<ReaderCoreResultEvent> {
+    const admission = this.mutationAdmission;
+    return RulesMutationOwner.forRuntime(this.owner).run('Core 规则写入',
+      (): boolean => ReaderRuntimeOwner.isCurrent(this.owner) && (admission?.() ?? true),
+      async (request, confirmed) => {
+        const result = await request(method, params);
+        this.qualifyMutation(method, params, result.data);
+        confirmed(); return result;
+      }, this.writeEvidence);
+  }
+
+  /** Qualification is over this original returned ACK, never a later list. */
+  private qualifyMutation(method: string, params: JsonObject, data: JsonObject): void {
+    if (method === 'source.import') {
+      if (data['imported'] !== true || data['sourceId'] !== params['sourceId'] ||
+        typeof data['name'] !== 'string' || (data['name'] as string).trim().length === 0) throw new Error('source.import 原回执无效');
+      return;
+    }
+    if (method === 'rss-source.import') {
+      if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting']) throw new Error('RSS 导入原回执无效');
+      this.requireCount(data,'imported'); return;
+    }
+    if (method === 'reader.chinese-conversion.put') {
+      const config=this.requireObject(data['config'],'转换原回执');
+      if (config['mode'] !== params['mode'] || config['configId'] !== 1) throw new Error('转换原回执无效'); return;
+    }
+    if (method === 'rule-bundle.import') {
+      if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting'])
+        throw new Error('rule-bundle.import returned mismatched data');
+      const counts = this.requireObject(data['counts'], 'rule import counts');
+      for (const key of ['replaceRules', 'dictRules', 'txtTocRules', 'ruleSubscriptions']) this.requireCount(counts, key);
+      return;
+    }
+    let expected: JsonObject = params;
+    let returned: JsonObject;
+    if (method === 'replace.persist') {
+      if (data['operation'] !== params['operation']) throw new Error('replace operation ACK mismatch');
+      expected = this.requireObject(params['params'], 'replace params');
+      const body = this.requireObject(data['data'], 'replace ACK data');
+      if (params['operation'] === 'delete') {
+        if (body['id'] !== expected['id'] || typeof body['deleted'] !== 'boolean') throw new Error('replace deletion ACK mismatch');
+        return;
+      }
+      returned = this.requireObject(body['rule'], 'replace ACK rule');
+      this.decodeReplaceRule(returned);
+    } else if (method.endsWith('.delete')) {
+      const key = method === 'dict-rule.delete' ? 'name' : 'id';
+      if (data[key] !== params[key] || typeof data['deleted'] !== 'boolean') throw new Error('rule deletion ACK mismatch');
+      return;
+    } else if (method === 'rule-sub.put') {
+      returned = this.requireObject(data['sub'], 'subscription ACK'); this.decodeRuleSubscription(returned);
+    } else {
+      returned = this.requireObject(data['rule'], 'rule ACK');
+      if (method === 'dict-rule.put') this.decodeDictRule(returned); else this.decodeTxtTocRule(returned);
+    }
+    for (const key of Object.keys(expected)) if (returned[key] !== expected[key])
+      throw new Error(`rule field ACK mismatch: ${key}`);
   }
 
   private decodeReplaceRule(value: unknown): ManagedReplaceRule {

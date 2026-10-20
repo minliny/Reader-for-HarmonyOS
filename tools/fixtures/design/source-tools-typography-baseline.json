@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "baselineHostCommit": "cf56c662",
+  "boundary": "Current application typography tuple snapshot; omitted modifiers mean ArkUI AUTO and must remain omitted.",
+  "nodes": [
+    {
+      "method": "batchCard",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_NOTE",
+      "tuple": {
+        "lineHeight": 16,
+        "fontSize": 10,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchCheckCard",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_HEADING",
+      "tuple": {
+        "fontSize": 14,
+        "fontWeight": 700,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchCheckCard",
+      "index": 1,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_COMPACT_ACTION",
+      "tuple": {
+        "fontWeight": 700,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchCheckCard",
+      "index": 2,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_DESCRIPTION",
+      "tuple": {
+        "lineHeight": 17,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchCheckCard",
+      "index": 3,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_HINT",
+      "tuple": {
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchCheckCard",
+      "index": 4,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_COMPACT_ACTION",
+      "tuple": {
+        "fontWeight": 700,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchCounter",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_COMPACT_ACTION",
+      "tuple": {
+        "fontWeight": 700,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchResultRow",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_ACTION",
+      "tuple": {
+        "fontWeight": 700,
+        "fontSize": 12,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchResultRow",
+      "index": 1,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_CAPTION",
+      "tuple": {
+        "fontSize": 10,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "batchResultRow",
+      "index": 2,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_COMPACT_ACTION",
+      "tuple": {
+        "fontWeight": 700,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "statusCard",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_STATUS",
+      "tuple": {
+        "lineHeight": 18,
+        "fontSize": 12,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "exportCard",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_DESCRIPTION",
+      "tuple": {
+        "lineHeight": 17,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "sourceRow",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_ACTION",
+      "tuple": {
+        "fontWeight": 700,
+        "fontSize": 12,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "sourceRow",
+      "index": 1,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_URL",
+      "tuple": {
+        "fontSize": 10,
+        "fontFamily": "ReaderInter"
+      }
+    },
+    {
+      "method": "sourceRow",
+      "index": 2,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_INHERITED_META",
+      "tuple": {
+        "fontSize": 10
+      }
+    },
+    {
+      "method": "editorCard",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_DESCRIPTION",
+      "tuple": {
+        "lineHeight": 17,
+        "fontSize": 11,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "editorCard",
+      "index": 1,
+      "type": "TextArea",
+      "role": "TYPE_SOURCE_TOOLS_CODE_INPUT",
+      "tuple": {
+        "fontSize": 11,
+        "fontFamily": "monospace"
+      }
+    },
+    {
+      "method": "editorCard",
+      "index": 2,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_NOTE",
+      "tuple": {
+        "lineHeight": 16,
+        "fontSize": 10,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "debugCard",
+      "index": 0,
+      "type": "TextInput",
+      "role": "TYPE_SOURCE_TOOLS_BODY",
+      "tuple": {
+        "fontSize": 12,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "debugCard",
+      "index": 1,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_DEBUG_ID",
+      "tuple": {
+        "fontSize": 11,
+        "fontFamily": "ReaderInter"
+      }
+    },
+    {
+      "method": "debugLogRow",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_DEBUG_LOG",
+      "tuple": {
+        "lineHeight": 16,
+        "fontSize": 10,
+        "fontFamily": "monospace"
+      }
+    },
+    {
+      "method": "heading",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_HEADING",
+      "tuple": {
+        "fontSize": 14,
+        "fontWeight": 700,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "smallButton",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_COMPACT_ACTION",
+      "tuple": {
+        "fontSize": 11,
+        "fontWeight": 700,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "actionButton",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_ACTION",
+      "tuple": {
+        "fontSize": 12,
+        "fontWeight": 700,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    },
+    {
+      "method": "fullWidthActionButton",
+      "index": 0,
+      "type": "Text",
+      "role": "TYPE_SOURCE_TOOLS_ACTION",
+      "tuple": {
+        "fontSize": 12,
+        "fontWeight": 700,
+        "fontFamily": "ReaderNotoSansSC"
+      }
+    }
+  ]
+}

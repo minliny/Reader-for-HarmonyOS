@@ -312,7 +312,8 @@ export class ArkWebExecutor {
   }
 
   /** Event-driven admission has no extra polling delay on every request. */
-  private waitForOperation<T>(job: ArkWebJob, operation: Promise<T>): Promise<T> {
+  private waitForOperation<T>(job: ArkWebJob, operation: Promise<T>,
+    phase: 'route' | 'script' | 'session' = 'route'): Promise<T> {
     return new Promise<T>((resolve, reject): void => {
       let settled = false;
       const finish = (value: T | undefined, error?: unknown): void => {
@@ -325,7 +326,7 @@ export class ArkWebExecutor {
       const fail = (error: unknown): void => finish(undefined, error);
       const timer = setTimeout((): void => {
         try { this.assertCurrent(job); } catch (error) { fail(error); return; }
-        fail(this.hostFailure('TIMEOUT', 'WebView network admission timed out', true, { phase: 'route' }));
+        fail(this.hostFailure('TIMEOUT', 'WebView operation timed out', true, { phase }));
       }, Math.max(0, job.deadlineAt - Date.now()));
       job.pendingWaitReject = fail;
       operation.then((value: T): void => finish(value), fail);
@@ -394,7 +395,9 @@ export class ArkWebExecutor {
 
   private releaseProxyLease(lease: ArkWebProxyLease): void {
     lease.releaseRequested = true;
-    if (lease.phase !== 'ready') return;
+    // A synchronous restoration failure leaves our override owned. Retry that
+    // same removal before the next job; no page may load until its native ACK.
+    if (lease.phase !== 'ready' && lease.phase !== 'failed') return;
     if (!lease.direct) {
       lease.phase = 'retired';
       lease.error = undefined;
@@ -412,7 +415,7 @@ export class ArkWebExecutor {
     } catch (error) {
       // Fail closed: no later job may load with an unacknowledged old override.
       lease.phase = 'failed';
-      lease.error = NetworkEnvironmentError.fromPlatform('route', '系统网页代理尚未恢复，请重新打开应用后重试',
+      lease.error = NetworkEnvironmentError.fromPlatform('route', '系统网页代理尚未恢复，请稍后重试',
         'proxy.removeProxyOverride', error);
       this.notifyProxyLease(lease);
     }
@@ -560,7 +563,10 @@ export class ArkWebExecutor {
   private async run(job: ArkWebJob): Promise<JsonObject> {
     this.assertCurrent(job);
     await this.waitForRetiredSurface(job);
-    if (this.proxyLease !== undefined) await this.waitForProxyLease(job, this.proxyLease, true);
+    if (this.proxyLease !== undefined) {
+      if (this.proxyLease.phase === 'failed') this.releaseProxyLease(this.proxyLease);
+      await this.waitForProxyLease(job, this.proxyLease, true);
+    }
     let seeds: ArkWebCookieSeed[] = [];
     let controller: webview.WebviewController | undefined;
     try {
@@ -581,8 +587,14 @@ export class ArkWebExecutor {
       if (seedUrl !== undefined) await this.pinDocumentTarget(job, seedUrl);
       await this.configureProxy(job);
       if (job.profileId !== undefined && seedUrl !== undefined) {
-        seeds = await CookieSessionStore.instance.arkWebSeeds(job.profileId);
+        const sessionSeeds = await this.waitForOperation(job,
+          CookieSessionStore.instance.arkWebSeeds(job.profileId), 'session');
         this.assertCurrent(job);
+        // Cookie capture is exact-host scoped. Reconciliation must use that
+        // same seed scope, so a page cannot delete credentials on unvisited
+        // hosts that happen to belong to the same source profile.
+        seeds = sessionSeeds.filter((seed: ArkWebCookieSeed): boolean =>
+          this.normalizeCookieHost(seed.domain) === job.pinnedHost);
         for (const seed of seeds) {
           webview.WebCookieManager.configCookieSync(seed.url, seed.header, true, true);
         }
@@ -626,7 +638,8 @@ export class ArkWebExecutor {
         // Domain cookie for a parent (or sibling) host; importing that record
         // as hostOnly would otherwise broaden the cookie to a host the
         // network policy never admitted for this job.
-        await this.captureCookies(job.profileId, seeds, job.cookieGeneration, job.pinnedHost);
+        await this.waitForOperation(job,
+          this.captureCookies(job.profileId, seeds, job.cookieGeneration, job.pinnedHost, job), 'session');
       }
       this.assertCurrent(job);
       if (!job.interactive) {
@@ -770,7 +783,7 @@ export class ArkWebExecutor {
   ): Promise<unknown> {
     while (true) {
       this.assertCurrent(job);
-      const raw = await controller.runJavaScript(job.javaScript);
+      const raw = await this.waitForOperation(job, controller.runJavaScript(job.javaScript), 'script');
       this.assertCurrent(job);
       const parsed = this.parseJavaScriptValue(raw);
       if (parsed !== null && parsed !== '') {
@@ -785,8 +798,12 @@ export class ArkWebExecutor {
     seeds: ArkWebCookieSeed[],
     expectedGeneration?: number,
     admittedHost?: string,
+    job?: ArkWebJob,
   ): Promise<void> {
     const records = await webview.WebCookieManager.fetchAllCookies(true);
+    // Native callbacks can finish after cancellation/deadline released the
+    // queue. Never import credentials from that obsolete browser job.
+    if (job !== undefined) this.assertCurrent(job);
     const observed: ArkWebObservedCookie[] = [];
     const normalizedAdmittedHost = admittedHost === undefined ? undefined : this.normalizeCookieHost(admittedHost);
     if (normalizedAdmittedHost === undefined) {

@@ -29,9 +29,9 @@ assert.deepEqual(applyPopofreeQuoteCorrection([structuredClone(corrected)]), cor
 const edited = structuredClone(old);
 edited.ruleContent.content = '#user-edited@text';
 assert.throws(() => applyPopofreeQuoteCorrection([edited]), /edited source revision/);
-const coreTest = readFileSync(new URL('../../Reader-Core-Native/crates/reader-content/tests/popofree_source_quotes.rs', import.meta.url), 'utf8');
+const coreTest = readFileSync(new URL('../../Reader-Core/crates/reader-content/tests/popofree_source_quotes.rs', import.meta.url), 'utf8');
 assert.ok(coreTest.includes('popofree_quote_rule()'), 'Core regression must load the production shared correction');
-const coreCorrection = readFileSync(new URL('../../Reader-Core-Native/crates/reader-content/src/source_corrections.rs', import.meta.url), 'utf8');
+const coreCorrection = readFileSync(new URL('../../Reader-Core/crates/reader-content/src/source_corrections.rs', import.meta.url), 'utf8');
 assert.ok(coreCorrection.includes(corrected.ruleFingerprint), 'offline correction must pin the distributed v8 fingerprint');
 const previous = structuredClone(old);
 previous.builtinVersion = 7;
@@ -46,7 +46,7 @@ const supply = readFileSync(new URL('../entry/src/main/ets/app/BundledBookSource
 const methods = stripTypeScriptTypes(supply.slice(supply.indexOf('function canonicalJson'), supply.indexOf('type StoredLedger')))
   .replace(/^export /gm, '');
 const guards = new Function('RULE_PAYLOAD_FIELDS', `${methods}; return { canonicalRulePayloadJson,
-  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade };`)(RULE_PAYLOAD_FIELDS);
+  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade, mergeBundledDefaultStateCorrection };`)(RULE_PAYLOAD_FIELDS);
 const oneDocument = JSON.stringify([corrected]);
 let ledger;
 const Owner = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url)),

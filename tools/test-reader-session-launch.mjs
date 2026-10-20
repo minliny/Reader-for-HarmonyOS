@@ -7,7 +7,7 @@ import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main
 
 const curves = { flight:p=>bezier(p,.4,0,.2,1), expand:p=>bezier(p,.2,0,0,1),
   easeIn:p=>bezier(p,.42,0,1,1), easeOut:p=>bezier(p,0,0,.58,1), easeInOut:p=>bezier(p,.42,0,.58,1) };
-const archive = JSON.parse(await readFile(new URL('../evidence/2026-09-13-current-gap-register/capsule-figma-live.json', import.meta.url), 'utf8'));
+const archive = JSON.parse(await readFile(new URL('./fixtures/design/session-launch.json', import.meta.url), 'utf8'));
 const kinds = ['quickAutoPage','quickTts','fullAutoPagePlayback','fullTtsPlayback'];
 
 // Test-only reader for the archived CSS output, independent of the production
@@ -61,7 +61,7 @@ function projected(actor,s) {
 let comparisons=0,actors=0;
 const geometries=[];
 for (const [i,scene] of archive.nodes.entries()) {
-  const nodes=JSON.parse(scene.motionContext.content[0].text).nodes.filter(n=>!n.nodeName.startsWith('Review'));
+  const nodes=scene.nodes;
   assert.equal(nodes.length,12);actors+=nodes.length;
   const proxy=tracks(nodes.find(n=>n.nodeName.startsWith('TriggerMorphProxy')));
   const source=new ReaderSessionMorphSourceMeasurement(kinds[i],`source-${i}`,0,0,

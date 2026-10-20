@@ -5,6 +5,8 @@ export type NetworkTarget = {
   host: string;
   addresses: string[];
   route: 'direct' | 'systemProxy' | 'systemSynthetic';
+  /** Selected system proxy for this hop only; never persisted or logged. */
+  systemProxy?: connection.HttpProxy;
   bypassSystemProxy?: boolean;
 };
 
@@ -157,7 +159,8 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
         throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
       }
       if (!pacConfigured || !/^DIRECT(?:\s*;|$)/i.test(pac)) {
-        return { host, addresses: [], route: 'systemProxy' };
+        return { host, addresses: [], route: 'systemProxy',
+          systemProxy: { ...proxy, exclusionList: [...proxy.exclusionList] } };
       }
     }
   } catch (error) {

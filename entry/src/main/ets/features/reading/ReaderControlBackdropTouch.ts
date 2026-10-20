@@ -6,6 +6,8 @@ export interface ReaderControlBackdropRect {
   y: number;
   width: number;
   height: number;
+  /** Visual corner radius; omitted regions retain rectangular ownership. */
+  borderRadius?: number;
 }
 
 export interface ReaderControlBackdropTouchEvent {
@@ -24,6 +26,8 @@ export interface ReaderControlBackdropTouchContext {
   // Actual DOWN-time window-vp input regions: Dock, TopBar and any other
   // control-owned overlay. Include layout compensation in the supplied bounds.
   excludedRects: ReaderControlBackdropRect[];
+  /** Platform path containment in window-vp coordinates, supplied by the Host. */
+  containsRoundedRect?: (rect: ReaderControlBackdropRect, x: number, y: number) => boolean;
   // Optional explicit command/lifecycle invalidation. Do NOT pass session.epoch:
   // an automatic continuation can advance that epoch within the same opening.
   invalidationRevision?: number;
@@ -86,16 +90,25 @@ function mayOwnBackground(context: ReaderControlBackdropTouchContext): boolean {
     validRevision(context.closeRevision) && validRevision(revision(context.invalidationRevision));
 }
 
-/** Inclusive edges are control-owned; an unmeasured/non-finite region fails closed. */
+/** Unmeasured/invalid regions fail closed. Rounded outlines use platform containment. */
 function outsideControls(event: ReaderControlBackdropTouchEvent,
   context: ReaderControlBackdropTouchContext): boolean {
   if (!context.geometryReady) return false;
   for (const rect of context.excludedRects) {
     if (!Number.isFinite(rect.x) || !Number.isFinite(rect.y) || !Number.isFinite(rect.width) ||
       !Number.isFinite(rect.height) || rect.width < 0 || rect.height < 0 ||
-      !Number.isFinite(rect.x + rect.width) || !Number.isFinite(rect.y + rect.height)) return false;
+      !Number.isFinite(rect.x + rect.width) || !Number.isFinite(rect.y + rect.height) ||
+      (rect.borderRadius !== undefined && (!Number.isFinite(rect.borderRadius) || rect.borderRadius < 0))) return false;
     if (event.windowX >= rect.x && event.windowX <= rect.x + rect.width &&
-      event.windowY >= rect.y && event.windowY <= rect.y + rect.height) return false;
+      event.windowY >= rect.y && event.windowY <= rect.y + rect.height) {
+      if ((rect.borderRadius ?? 0) === 0 || context.containsRoundedRect === undefined) return false;
+      try {
+        if (context.containsRoundedRect(rect, event.windowX, event.windowY)) return false;
+      } catch (_error) {
+        // A native geometry failure must never dismiss a control-owned gesture.
+        return false;
+      }
+    }
   }
   return true;
 }

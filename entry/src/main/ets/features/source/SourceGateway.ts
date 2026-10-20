@@ -1,8 +1,12 @@
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { httpUrlHostname, isPrivateNetworkTarget } from '../../app/HttpTransportPolicy';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
+import { RulesMutationOwner, type RulesMutationSnapshot } from '../settings/RulesMutationOwner';
+import type { RuleSubscriptionStep } from '../settings/RulesMutationIntentStore';
 
 export type BookSource = {
   sourceId: string;
@@ -17,6 +21,8 @@ export type BookSource = {
   checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
   checkLevels?: string[];
   checkMessage?: string;
+  checkReports?: SourceCheckHistoryEntry[];
+  lastCheckSummary?: string;
 };
 
 export type SourcePatch = {
@@ -47,6 +53,46 @@ export type SourceCheckOutcome = {
   durationMs: number;
   hostEvidenceCount: number;
   logs: SourceDebugLog[];
+  mode?: 'search' | 'explore';
+  requestedLevels?: string[];
+  capabilities?: SourceCapabilityCheck[];
+  report?: SourceCheckReport;
+};
+
+export type SourceCheckReportStatus = 'pass' | 'fail' | 'not_requested' | 'not_supported' | 'blocked' | 'cancelled';
+
+export type SourceCheckReportStep = {
+  level: string;
+  requested: boolean;
+  executed: boolean;
+  status: SourceCheckReportStatus;
+  durationMs: number;
+  reason?: string;
+};
+
+export type SourceCheckReport = {
+  version: number;
+  mode: 'legacy' | 'search' | 'explore';
+  traceId: string;
+  ruleDigest?: string;
+  inputDigest: string;
+  executionOptions?: SourceCheckExecutionOptions;
+  executionOptionsDigest?: string;
+  steps: SourceCheckReportStep[];
+  contentKind?: string;
+};
+
+export type SourceCheckExecutionOptions = { timeoutMs: number };
+
+export type SourceCheckHistoryEntry = {
+  checkedAtMs: number;
+  stale: boolean;
+  report: SourceCheckReport;
+};
+
+export type SourceCapabilityCheck = {
+  level: string;
+  state: 'passed' | 'failed' | 'blocked' | 'notRequested' | 'notSupported' | 'cancelled';
 };
 
 export type SourceExportResult = {
@@ -91,6 +137,9 @@ const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
  */
 export class SourceGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -104,7 +153,7 @@ export class SourceGateway {
       if (!isCurrent()) return [];
       if (sourceId.trim().length === 0 || sourceId === 'local') continue;
       try {
-        const exact = await this.loadSources(sourceId);
+        const exact = await this.loadSources(sourceId, false, isCurrent);
         if (!isCurrent()) return [];
         for (const source of exact) if (source.sourceId === sourceId) sources.push(source);
       } catch (_) { /* A missing label never erases a valid shelf projection. */ }
@@ -112,8 +161,17 @@ export class SourceGateway {
     return sources;
   }
 
-  async loadSources(sourceId?: string): Promise<BookSource[]> {
-    const result = await this.runtimeOwner.request('source.list', sourceId === undefined ? {} : { sourceId });
+  async loadSources(sourceId?: string, includeReports: boolean = false, current?: () => boolean): Promise<BookSource[]> {
+    const params: JsonObject = sourceId === undefined ? {} : { sourceId };
+    const reportVersion = !includeReports ? undefined :
+      this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
+      this.runtimeOwner.supportsCoreCapability('source.check.report.v1') ? 1 : undefined;
+    const wantsReports = includeReports && reportVersion !== undefined;
+    if (wantsReports) {
+      params['includeCheckReports'] = true;
+      if (reportVersion === 2) params['checkReportVersion'] = 2;
+    }
+    const result = await this.runtimeOwner.request('source.list', params, { canDispatch: current, canContinue: current });
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');
@@ -141,9 +199,22 @@ export class SourceGateway {
         bookSourceType = bookSource['bookSourceType'];
       }
       if (sourceId === undefined || name === undefined) {
-        continue;
+        throw new Error('source.list returned a source without its identity or name');
       }
-      sources.push({
+      const checkReports = wantsReports ? this.readCheckHistory(source['checkReports'], this.optionalString(source, 'sourceVersion'), reportVersion as number) : undefined;
+      const latest = checkReports !== undefined && checkReports.length > 0 ? checkReports[0] : undefined;
+      let lastCheckSummary: string | undefined = undefined;
+      if (latest !== undefined) {
+        const selected = latest.report.steps.filter((step: SourceCheckReportStep): boolean => step.requested);
+        const levels = selected.map((step: SourceCheckReportStep): string => step.level).join('、');
+        const passed = selected.every((step: SourceCheckReportStep): boolean => step.status === 'pass');
+        const mode = latest.report.mode === 'explore' ? '发现' : latest.report.mode === 'search' ? '搜索' : '旧版';
+        const budget = latest.report.executionOptions === undefined ? '预算未知（旧版记录）' :
+          `Core 预算 ${latest.report.executionOptions.timeoutMs}ms`;
+        lastCheckSummary = `${latest.stale ? '已过期' : '历史'} · ${mode} ${levels} ${passed ? '通过' : '未通过'} · ${budget} · ` +
+          new Date(latest.checkedAtMs).toLocaleString();
+      }
+      const entry: BookSource = {
         sourceId,
         name,
         baseUrl: baseUrl ?? '',
@@ -152,7 +223,10 @@ export class SourceGateway {
         group,
         category: classifyReaderSource({ bookSourceType, name, group, sourceId, baseUrl }),
         loginUrl,
-      });
+      };
+      if (checkReports !== undefined) entry.checkReports = checkReports;
+      if (lastCheckSummary !== undefined) entry.lastCheckSummary = lastCheckSummary;
+      sources.push(entry);
     }
     return sources;
   }
@@ -166,22 +240,8 @@ export class SourceGateway {
     text: string,
     shouldContinue: () => boolean = (): boolean => true,
   ): Promise<SourceImportSummary> {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text) as unknown;
-    } catch (error) {
-      const message = errorMessageOf(error);
-      throw new Error(`Book-source document is not valid JSON: ${message}`);
-    }
-    const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-    if (rawSources.length === 0) {
-      throw new Error('Book-source document contains no sources');
-    }
-    if (rawSources.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) {
-      throw new Error(
-        `Book-source document exceeds ${MAX_BOOK_SOURCE_DOCUMENT_ENTRIES} source limit`,
-      );
-    }
+    if (this.supportsOriginalSourceImport()) return this.importOriginalSourceDocument(text,shouldContinue);
+    const rawSources = this.parseBookSourceDocument(text);
 
     // Non-abort item admission: one invalid or failing source must never
     // prevent the remaining items from importing. Each item is validated and
@@ -205,7 +265,7 @@ export class SourceGateway {
         const result = await this.runtimeOwner.request('source.import', {
           sourceId,
           bookSource,
-        });
+        }, { canDispatch: shouldContinue, onDispatch: (): void => this.writeEvidence?.dispatched() });
         const imported = result.data['imported'];
         const echoedSourceId = this.optionalString(result.data, 'sourceId');
         const echoedName = this.optionalString(result.data, 'name');
@@ -214,7 +274,11 @@ export class SourceGateway {
           throw new Error('source.import returned invalid or mismatched data');
         }
         sourceIds.push(echoedSourceId);
+        this.writeEvidence?.confirmed();
       } catch (error) {
+        // An indeterminate dispatched item is a write barrier for this
+        // admitted document. Later rows must not hide or overtake that ACK.
+        if (this.writeEvidence?.confirmation() === 'unknown') throw error;
         const message = errorMessageOf(error);
         failures.push({ index, sourceId, message });
       }
@@ -225,6 +289,106 @@ export class SourceGateway {
       failedCount: failures.length,
       failures,
     };
+  }
+
+  originalMutationSnapshot(): RulesMutationSnapshot | undefined {
+    return this.supportsOriginalSourceImport() ? RulesMutationOwner.forRuntime(this.runtimeOwner).snapshot() : undefined;
+  }
+  async recoverOriginalSource(current: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot | undefined> {
+    if (!this.supportsOriginalSourceImport()) return undefined;
+    return RulesMutationOwner.forRuntime(this.runtimeOwner).recoverOriginal(current,
+      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyOriginalSource(method,params,data),
+      retryOriginal,'source-management',
+      (method: string, params: JsonObject): Promise<boolean> => this.finishOriginalSourceCleanup(method,params));
+  }
+  handlesSourceCleanup(): boolean { return this.supportsOriginalSourceManagement(); }
+  private async finishOriginalSourceCleanup(method: string, params: JsonObject): Promise<boolean> {
+    const ids=method==='source.delete' ? params['sourceIds'] as string[] : [params['sourceId'] as string];
+    let complete=true;
+    for (const id of ids) {
+      if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) return false;
+      try { await this.runtimeOwner.clearSourceCookieSession(id); } catch (_) { complete=false; }
+    }
+    return complete;
+  }
+  private supportsOriginalSourceImport(): boolean {
+    return this.runtimeOwner.supportsCoreCapability?.('rules.mutation.exact.v1') === true;
+  }
+  private supportsOriginalSourceManagement(): boolean {
+    return this.supportsOriginalSourceImport() &&
+      this.runtimeOwner.supportsCoreCapability?.('rules.mutation.source-management.v1') === true;
+  }
+  private async importOriginalSourceDocument(text: string, current: () => boolean): Promise<SourceImportSummary> {
+    const prepared=this.prepareSubscriptionDocument(text),failures: SourceImportFailure[]=prepared.failures.slice();
+    const sourceIds: string[]=[];
+    if (prepared.items.length===0) return {importedCount:0,sourceIds,failedCount:failures.length,failures};
+    const steps: RuleSubscriptionStep[]=prepared.items.map((item): RuleSubscriptionStep => ({
+      method:'source.import',sourceIndex:item.index,params:{sourceId:item.sourceId,bookSource:item.bookSource} }));
+    const result=await RulesMutationOwner.forRuntime(this.runtimeOwner).runSubscription(3,steps,
+      prepared.failures.map((failure): {index:number;message:string} => ({index:failure.index,message:failure.message})),
+      current,(method: string, params: JsonObject, data: JsonObject): void => {
+        this.qualifyOriginalSource(method,params,data);sourceIds.push(data['sourceId'] as string);
+      },this.writeEvidence,(step: RuleSubscriptionStep, data: JsonObject): void => {
+        const error=data['error'] as JsonObject;
+        failures.push({index:step.sourceIndex ?? -1,sourceId:step.params['sourceId'] as string,
+          message:typeof error?.['message']==='string' ? error['message'] as string : 'Core 明确拒绝原书源条目'});
+      });
+    return {importedCount:result.subscription?.confirmedParts ?? 0,sourceIds,
+      failedCount:result.subscription?.failedParts ?? failures.length,failures};
+  }
+  private qualifyOriginalSource(method: string, params: JsonObject, data: JsonObject): void {
+    if (method==='source.import') {
+      if (data['imported']!==true || data['sourceId']!==params['sourceId'] ||
+        typeof data['name']!=='string' || (data['name'] as string).trim().length===0)
+        throw new Error('source.import original ACK does not match its fixed DTO');
+    } else if (method==='source.update') {
+      const source=data['source'] as JsonObject;
+      if (source===null || typeof source!=='object' || Array.isArray(source) ||
+        source['sourceId']!==params['sourceId'] || source['enabled']!==params['enabled'])
+        throw new Error('source.update original ACK does not match its fixed DTO');
+    } else if (method==='source.delete') {
+      const ids=params['sourceIds']; const deleted=data['deleted'];
+      if (!Array.isArray(ids) || typeof deleted!=='number' || !Number.isSafeInteger(deleted) || deleted<0 || deleted>ids.length)
+        throw new Error('source.delete original ACK does not match its fixed DTO');
+    } else throw new Error('不能用书源核定器确认另一家族的原操作');
+  }
+
+  /** Same original admission, without side effects; subscription freezes these
+   * exact DTOs before accepting its first durable operation. */
+  prepareSubscriptionDocument(text: string): {
+    items: { index: number; sourceId: string; bookSource: JsonObject }[];
+    failures: SourceImportFailure[];
+  } {
+    const rawSources = this.parseBookSourceDocument(text);
+    const items: { index: number; sourceId: string; bookSource: JsonObject }[] = [];
+    const failures: SourceImportFailure[] = [];
+    for (let index = 0; index < rawSources.length; index++) {
+      try { const bookSource = this.requireBookSourceObject(rawSources[index],index);
+        const sourceId = this.requireBookSourceUrl(bookSource,index);
+        items.push({index,sourceId,bookSource});
+      } catch (error) { failures.push({index,sourceId:'',message:errorMessageOf(error)}); }
+    }
+    return {items,failures};
+  }
+  private parseBookSourceDocument(text: string): unknown[] {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch (error) {
+      const message = errorMessageOf(error);
+      throw new Error(`Book-source document is not valid JSON: ${message}`);
+    }
+    const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
+    if (rawSources.length === 0) {
+      throw new Error('Book-source document contains no sources');
+    }
+    if (rawSources.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) {
+      throw new Error(
+        `Book-source document exceeds ${MAX_BOOK_SOURCE_DOCUMENT_ENTRIES} source limit`,
+      );
+    }
+
+    return rawSources;
   }
 
   /** Core serializes the exact persisted raw BookSource objects. */
@@ -269,6 +433,12 @@ export class SourceGateway {
    * Persist an edited raw source through the existing Core import command.
    * Primary-key migration is intentionally fail-closed: deleting the old id
    * is a separate destructive action and must not be inferred from an edit.
+   *
+   * This compatibility API intentionally returns only after source.import has
+   * returned a validated identity. It does not expose an ambiguous transport
+   * receipt; observed dispatch/ACK evidence therefore retains unknown writes
+   * while local parse/identity rejection remains undispatched. The
+   * read-only source.list reconciliation belongs to SourceToolsOrchestrator.
    */
   async saveEditableSource(sourceId: string, text: string): Promise<void> {
     let value: unknown;
@@ -344,13 +514,28 @@ export class SourceGateway {
    * or when Core echoes a mismatched state — the page keeps a non-optimistic
    * toggle and reloads the list only after a confirmed success.
    */
-  async updateSource(sourceId: string, patch: SourcePatch): Promise<void> {
+  async updateSource(sourceId: string, patch: SourcePatch, current?: () => boolean): Promise<void> {
     if (patch.enabled === undefined) {
       throw new Error('source.update requires an enabled flag');
+    }
+    if (this.supportsOriginalSourceManagement()) {
+      const params: JsonObject={sourceId,enabled:patch.enabled};
+      await RulesMutationOwner.forRuntime(this.runtimeOwner).run('书源开关',
+        current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)),
+        async (request,confirmed): Promise<void> => {
+          const event=await request('source.update',params);this.qualifyOriginalSource('source.update',params,event.data);confirmed();
+        },this.writeEvidence,patch.enabled===false ?
+          (): Promise<boolean> => this.finishOriginalSourceCleanup('source.update',params) : undefined);
+      return;
     }
     const result = await this.runtimeOwner.request('source.update', {
       sourceId,
       enabled: patch.enabled,
+    }, { canDispatch: current, onDispatch: (): void => this.writeEvidence?.dispatched() }).catch((error: Error) => {
+      // Typed Core admission refusal happens before executing this command.
+      // Generic transport/echo errors retain the actual dispatched evidence.
+      if (isReaderCoreTransactionPendingError(error)) this.writeEvidence?.rejectedBeforeExecution();
+      throw error;
     });
     const updated = result.data['source'];
     if (typeof updated !== 'object' || updated === null || Array.isArray(updated)) {
@@ -363,6 +548,7 @@ export class SourceGateway {
           `got=${source['enabled']}`,
       );
     }
+    this.writeEvidence?.confirmed();
   }
 
   /** Delete sources in Core, then idempotently remove their Host sessions. */
@@ -370,14 +556,32 @@ export class SourceGateway {
     if (sourceIds.length === 0) {
       throw new Error('source.delete requires at least one sourceId');
     }
-    const result = await this.runtimeOwner.request('source.delete', { sourceIds });
-    const deleted = result.data['deleted'];
+    const params: JsonObject={sourceIds:sourceIds.slice()};
+    let data: JsonObject;
+    let cookieCleanupFailures = 0;
+    if (this.supportsOriginalSourceManagement()) {
+      data=await RulesMutationOwner.forRuntime(this.runtimeOwner).run('删除书源',
+        (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner),async (request,confirmed): Promise<JsonObject> => {
+          const event=await request('source.delete',params);this.qualifyOriginalSource('source.delete',params,event.data);confirmed();return event.data;
+        },this.writeEvidence,async (): Promise<boolean> => {
+          for (const id of sourceIds) {
+            if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) { cookieCleanupFailures+=1;continue; }
+            try { await this.runtimeOwner.clearSourceCookieSession(id); } catch (_) { cookieCleanupFailures+=1; }
+          }
+          return cookieCleanupFailures===0;
+        });
+      if (this.originalMutationSnapshot()?.blocked && cookieCleanupFailures===0) cookieCleanupFailures=1;
+    } else {
+      const result=await this.runtimeOwner.request('source.delete',params,{onDispatch:(): void => this.writeEvidence?.dispatched()});
+      data=result.data;
+    }
+    const deleted = data['deleted'];
     if (typeof deleted !== 'number' || !Number.isInteger(deleted) || deleted < 0 ||
       deleted > sourceIds.length) {
       throw new Error('source.delete returned invalid deleted count');
     }
-    let cookieCleanupFailures = 0;
-    for (const sourceId of sourceIds) {
+    if (!this.supportsOriginalSourceManagement()) this.writeEvidence?.confirmed();
+    if (!this.supportsOriginalSourceManagement()) for (const sourceId of sourceIds) {
       try {
         await this.runtimeOwner.clearSourceCookieSession(sourceId);
       } catch (_) {
@@ -390,7 +594,7 @@ export class SourceGateway {
   }
 
   /**
-   * Run the persisted source through Core's production L1-L5 pipeline. Core
+   * Run selected capabilities through Core's production pipeline. Core
    * resolves `ruleSearch.checkKeyWord` per source (falling back to Legado's
    * global "我的"); the page never owns rule semantics or sample keywords.
    */
@@ -398,21 +602,40 @@ export class SourceGateway {
     sourceId: string,
     shouldContinue: () => boolean = (): boolean => true,
     keyword?: string,
+    mode: 'search' | 'explore' = 'search',
+    levels: string[] = ['L1', 'L2'],
+    timeoutMs: number = 180000,
   ): Promise<SourceCheckOutcome> {
     if (sourceId.trim().length === 0) {
       throw new Error('source.check.run requires a non-empty sourceId');
     }
+    const selectedLevels = Array.from(new Set(levels));
+    if (selectedLevels.length === 0 || selectedLevels.some((level: string): boolean =>
+      !['L1', 'L2', 'L3', 'L4', 'L5'].includes(level))) {
+      throw new Error('source.check.run requires known selected levels');
+    }
+    if (!this.runtimeOwner.supportsCoreCapability('source.check.mode.v1')) {
+      throw new Error('当前 Core 不支持分项书源检测，请使用配套 Native；不会将发现检测降级为搜索');
+    }
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 4294967295) {
+      throw new Error('source.check.run requires a positive uint32 Core budget');
+    }
     const params: JsonObject = {
       sourceIds: [sourceId],
-      timeoutMs: 180000,
-      levels: ['L1', 'L2', 'L3', 'L4', 'L5'],
+      timeoutMs,
+      mode,
+      levels: selectedLevels,
     };
+    const reportVersion = this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
+      this.runtimeOwner.supportsCoreCapability('source.check.report.v1') ? 1 : undefined;
+    const wantsReport = reportVersion !== undefined;
+    if (wantsReport) params['reportVersion'] = reportVersion;
     const normalizedKeyword = keyword?.trim();
     if (normalizedKeyword !== undefined && normalizedKeyword.length > 0) {
       params['keyword'] = normalizedKeyword;
     }
     const result = await this.runtimeOwner.request('source.check.run', params, {
-      timeoutMs: 185000,
+      timeoutMs: timeoutMs + 5000,
       shouldCancel: (): boolean => !shouldContinue(),
     });
     const diagnostics = this.runtimeOwner.takeSourceHttpDiagnostics(result.requestId);
@@ -429,26 +652,28 @@ export class SourceGateway {
     const outcome = raw as JsonObject;
     const echoedSourceId = this.optionalString(outcome, 'sourceId');
     const available = outcome['available'];
-    const levels = outcome['levelsPassed'];
+    const rawLevels = outcome['levelsPassed'];
     const failureReason = this.optionalString(outcome, 'failureReason');
     const durationMs = outcome['durationMs'];
     if (echoedSourceId !== sourceId || typeof available !== 'boolean' ||
-      !Array.isArray(levels) || typeof durationMs !== 'number' || !Number.isFinite(durationMs)) {
+      !Array.isArray(rawLevels) || typeof durationMs !== 'number' || !Number.isFinite(durationMs)) {
       throw new Error('source.check.run returned invalid or mismatched data');
     }
     const levelsPassed: string[] = [];
-    for (const level of levels) {
-      if (typeof level !== 'string') {
+    for (const level of rawLevels) {
+      if (typeof level !== 'string' || !selectedLevels.includes(level) || levelsPassed.includes(level)) {
         throw new Error('source.check.run returned an invalid level');
       }
       levelsPassed.push(level);
     }
-    if (available && levelsPassed.length !== 5) {
-      throw new Error('source.check.run marked an incomplete L1-L5 result available');
+    if (available && selectedLevels.some((level: string): boolean => !levelsPassed.includes(level))) {
+      throw new Error('source.check.run marked incomplete selected capabilities available');
     }
     if (!available && (failureReason === undefined || failureReason.trim().length === 0)) {
       throw new Error('source.check.run failed without a failure reason');
     }
+    const report = wantsReport ? this.readCheckReport(outcome['report'], mode, traceId,
+      selectedLevels, levelsPassed, durationMs, reportVersion as number, timeoutMs) : undefined;
     const rawCoreLogs = outcome['debugLogs'];
     if (!Array.isArray(rawCoreLogs) || rawCoreLogs.length === 0) {
       throw new Error('source.check.run returned no structured Core debug logs');
@@ -517,11 +742,133 @@ export class SourceGateway {
       traceId,
       available,
       levelsPassed,
+      mode,
+      requestedLevels: selectedLevels,
+      report,
+      capabilities: report !== undefined ? report.steps.map((step: SourceCheckReportStep): SourceCapabilityCheck => ({
+        level: step.level,
+        state: !step.requested ? 'notRequested' : step.status === 'pass' ? 'passed' :
+          step.status === 'fail' ? 'failed' : step.status === 'not_supported' ? 'notSupported' :
+          step.status === 'cancelled' ? 'cancelled' : 'blocked',
+      })) : ['L1', 'L2', 'L3', 'L4', 'L5'].map((level: string): SourceCapabilityCheck => ({
+        level,
+        state: !selectedLevels.includes(level) ? 'notRequested' :
+          levelsPassed.includes(level) ? 'passed' :
+          failureReason?.startsWith(`${level}:`) === true ? 'failed' : 'blocked',
+      })),
       failureReason,
       durationMs,
       hostEvidenceCount: hostLogs.length,
       logs: coreLogs.concat(hostLogs),
     };
+  }
+
+  private readCheckHistory(value: unknown, sourceVersion: string | undefined, maxVersion: number): SourceCheckHistoryEntry[] {
+    if (!Array.isArray(value) || value.length > 8) throw new Error('source.list returned invalid checkReports');
+    if (sourceVersion === undefined || !/^[a-f0-9]{64}$/.test(sourceVersion)) throw new Error('source.list omitted current rule version');
+    return value.map((item: unknown): SourceCheckHistoryEntry => {
+      const row = this.requireObject(item, 'source check history');
+      const checkedAtMs = row['checkedAtMs'];
+      const stale = row['stale'];
+      const raw = this.requireObject(row['report'], 'source check history report');
+      this.requireKeys(row, ['checkedAtMs', 'stale', 'report'], 'source check history');
+      const mode = raw['mode'];
+      const trace = this.optionalString(raw, 'traceId');
+      const steps = raw['steps'];
+      if (typeof checkedAtMs !== 'number' || !Number.isSafeInteger(checkedAtMs) || checkedAtMs < 0 ||
+        typeof stale !== 'boolean' || typeof mode !== 'string' || !['legacy', 'search', 'explore'].includes(mode) ||
+        trace === undefined || trace.trim().length === 0 || trace.length > 128 || !Array.isArray(steps)) throw new Error('source.list returned invalid check history');
+      const selected: string[] = [];
+      const passed: string[] = [];
+      let duration = 0;
+      for (const item of steps) {
+        const step = this.requireObject(item, 'source check history step');
+        const level = this.optionalString(step, 'level') ?? '';
+        if (step['requested'] === true) {
+          selected.push(level);
+          if (step['status'] === 'pass') passed.push(level);
+        }
+        if (typeof step['durationMs'] === 'number') duration += step['durationMs'] as number;
+      }
+      if (selected.length === 0) throw new Error('source.list history has no selected capabilities');
+      const version = raw['version'];
+      if (typeof version !== 'number' || ![1, 2].includes(version) || version > maxVersion) {
+        throw new Error('source.list returned an unrequested report version');
+      }
+      const report = this.readCheckReport(raw, mode as 'legacy' | 'search' | 'explore', trace, selected, passed, duration, version);
+      if (stale !== (report.ruleDigest !== sourceVersion)) throw new Error('source.list history version mismatch');
+      return { checkedAtMs, stale, report };
+    });
+  }
+
+  private readCheckReport(value: unknown, mode: 'legacy' | 'search' | 'explore', traceId: string,
+    selected: string[], passed: string[], durationMs: number, version: number, timeoutMs?: number): SourceCheckReport {
+    const raw = this.requireObject(value, 'source.check.run report');
+    const allowed = ['version', 'mode', 'traceId', 'ruleDigest', 'inputDigest', 'steps', 'contentKind'];
+    if (version === 2) allowed.push('executionOptions', 'executionOptionsDigest');
+    this.requireKeys(raw, allowed, 'source.check.run report');
+    const ruleDigest = this.optionalString(raw, 'ruleDigest');
+    const inputDigest = this.optionalString(raw, 'inputDigest');
+    const contentKind = this.optionalString(raw, 'contentKind');
+    const steps = raw['steps'];
+    if (![1, 2].includes(version) || raw['version'] !== version || raw['mode'] !== mode || raw['traceId'] !== traceId ||
+      traceId.trim().length === 0 || traceId.length > 128 ||
+      inputDigest === undefined || !/^[a-f0-9]{64}$/.test(inputDigest) ||
+      raw['ruleDigest'] === null || raw['contentKind'] === null ||
+      (ruleDigest !== undefined && !/^[a-f0-9]{64}$/.test(ruleDigest)) ||
+      (contentKind !== undefined && !['text', 'url_only', 'image', 'audio', 'empty', 'unsupported'].includes(contentKind)) ||
+      !Array.isArray(steps) || steps.length !== 5) {
+      throw new Error('source.check.run returned an invalid report');
+    }
+    let executionOptions: SourceCheckExecutionOptions | undefined = undefined;
+    let executionOptionsDigest: string | undefined = undefined;
+    if (version === 2) {
+      const options = this.requireObject(raw['executionOptions'], 'source.check.run execution options');
+      this.requireKeys(options, ['timeoutMs'], 'source.check.run execution options');
+      const budget = options['timeoutMs'];
+      executionOptionsDigest = this.optionalString(raw, 'executionOptionsDigest');
+      if (typeof budget !== 'number' || !Number.isSafeInteger(budget) || budget < 0 || budget > 4294967295 ||
+        (timeoutMs !== undefined && budget !== timeoutMs) || executionOptionsDigest === undefined ||
+        !/^[a-f0-9]{64}$/.test(executionOptionsDigest)) {
+        throw new Error('source.check.run returned invalid or mismatched execution options');
+      }
+      executionOptions = { timeoutMs: budget };
+    }
+    let elapsed = 0;
+    const parsed = steps.map((value: unknown, index: number): SourceCheckReportStep => {
+      const step = this.requireObject(value, 'source.check.run report step');
+      this.requireKeys(step, ['level', 'requested', 'executed', 'status', 'durationMs', 'reason'], 'source.check.run report step');
+      const level = `L${index + 1}`;
+      const requested = step['requested'];
+      const executed = step['executed'];
+      const status = step['status'];
+      const time = step['durationMs'];
+      const reason = this.optionalString(step, 'reason');
+      if (step['level'] !== level || requested !== selected.includes(level) ||
+        typeof executed !== 'boolean' || typeof status !== 'string' ||
+        !['pass', 'fail', 'not_requested', 'not_supported', 'blocked', 'cancelled'].includes(status) ||
+        typeof time !== 'number' || !Number.isSafeInteger(time) || time < 0 || time > 4294967295 ||
+        (requested && (status === 'pass') !== passed.includes(level)) ||
+        (status === 'not_requested' && (requested || executed)) ||
+        (['pass', 'fail', 'not_supported'].includes(status) && !executed) ||
+        (!executed && time !== 0) || step['reason'] === null || (reason !== undefined && reason.length > 128)) {
+        throw new Error('source.check.run returned inconsistent report steps');
+      }
+      elapsed += time;
+      return { level, requested, executed, status: status as SourceCheckReportStatus, durationMs: time, reason };
+    });
+    if (elapsed > durationMs) throw new Error('source.check.run report exceeds total duration');
+    if (parsed[0].status === 'pass' && ruleDigest === undefined) {
+      throw new Error('source.check.run report omitted frozen rule digest');
+    }
+    return { version, mode, traceId, ruleDigest, inputDigest, contentKind, steps: parsed,
+      executionOptions, executionOptionsDigest };
+  }
+
+  private requireKeys(value: JsonObject, allowed: string[], label: string): void {
+    if (Object.keys(value).some((key: string): boolean => !allowed.includes(key))) {
+      throw new Error(`${label} contains unknown fields`);
+    }
   }
 
   private optionalString(value: JsonObject, key: string): string | undefined {

@@ -29,6 +29,9 @@ export type ReaderPageGestureState = {
   viewportHeight: number;
   currentOffsetX: number;
   currentOffsetY: number;
+  /** Physical touch-target vp, independent from the page-stage scale. */
+  inputOffsetX: number;
+  inputOffsetY: number;
   lastOffsetX: number;
   lastOffsetY: number;
   velocityX: number;
@@ -55,6 +58,8 @@ export type ReaderPageGestureDecision = {
 };
 
 export const READER_PAGE_GESTURE_TOUCH_SLOP = 8;
+export const READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP = 16;
+export const READER_PAGE_GESTURE_AXIS_DOMINANCE = 1.5;
 export const READER_PAGE_GESTURE_LONG_PRESS_MS = 500;
 export const READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP = 24;
 export const READER_PAGE_GESTURE_BOOKMARK_SLOP = 48;
@@ -95,10 +100,14 @@ export function moveReaderPageGesture(
   localY: number = state.startLocalY + offsetY,
   velocityY: number = state.velocityY,
   eventTimeMs: number = state.eventTimeMs,
+  inputOffsetX: number = offsetX,
+  inputOffsetY: number = offsetY,
+  finalSample: boolean = false,
 ): ReaderPageGestureState {
   if (!state.active || state.consumed) return state;
   return applyReaderPageGestureSample(
     state, offsetX, offsetY, velocityX, localX, localY, velocityY, eventTimeMs,
+    inputOffsetX, inputOffsetY, finalSample,
   );
 }
 
@@ -111,12 +120,15 @@ export function settleReaderPageGesture(
   localY: number = state.startLocalY + offsetY,
   velocityY: number = state.velocityY,
   eventTimeMs: number = state.eventTimeMs,
+  inputOffsetX: number = offsetX,
+  inputOffsetY: number = offsetY,
 ): ReaderPageGestureDecision {
   if (!state.active || state.consumed) {
     return { state, direction: undefined, bookmarkChanged: false };
   }
   const sampled = moveReaderPageGesture(
     state, offsetX, offsetY, velocityX, localX, localY, velocityY, eventTimeMs,
+    inputOffsetX, inputOffsetY, true,
   );
   const direction = committedDirection(sampled);
   const bookmarkChanged = shouldCommitBookmark(sampled);
@@ -157,9 +169,13 @@ export function updateReaderPagePan(
   localY: number = state.startLocalY + offsetY,
   velocityY: number = state.velocityY,
   eventTimeMs: number = state.eventTimeMs,
+  inputOffsetX: number = offsetX,
+  inputOffsetY: number = offsetY,
+  finalSample: boolean = false,
 ): ReaderPageGestureState {
   return moveReaderPageGesture(
     state, offsetX, offsetY, velocityX, localX, localY, velocityY, eventTimeMs,
+    inputOffsetX, inputOffsetY, finalSample,
   );
 }
 
@@ -173,10 +189,14 @@ export function updateReaderPagePanInPlace(
   localY: number = state.startLocalY + offsetY,
   velocityY: number = state.velocityY,
   eventTimeMs: number = state.eventTimeMs,
+  inputOffsetX: number = offsetX,
+  inputOffsetY: number = offsetY,
+  finalSample: boolean = false,
 ): ReaderPageGestureState {
   if (!state.active || state.consumed) return state;
   return applyReaderPageGestureSample(
-    state, offsetX, offsetY, velocityX, localX, localY, velocityY, eventTimeMs, true,
+    state, offsetX, offsetY, velocityX, localX, localY, velocityY, eventTimeMs,
+    inputOffsetX, inputOffsetY, finalSample, true,
   );
 }
 
@@ -216,9 +236,12 @@ export function finishReaderPagePan(
   localY: number = state.startLocalY + offsetY,
   velocityY: number = state.velocityY,
   eventTimeMs: number = state.eventTimeMs,
+  inputOffsetX: number = offsetX,
+  inputOffsetY: number = offsetY,
 ): ReaderPageGestureDecision {
   return settleReaderPageGesture(
     state, offsetX, offsetY, velocityX, localX, localY, velocityY, eventTimeMs,
+    inputOffsetX, inputOffsetY,
   );
 }
 
@@ -230,11 +253,14 @@ export function cancelReaderPagePan(state: ReaderPageGestureState): ReaderPageGe
 
 function committedDirection(state: ReaderPageGestureState): ReaderPageTurnDirection | undefined {
   if (state.owner === 'horizontalPage' && state.direction !== undefined) {
-    const signedDistance = directionSign(state.direction) * state.currentOffsetX;
-    return signedDistance >= READER_PAGE_GESTURE_TOUCH_SLOP ? state.direction : undefined;
+    const signedDistance = directionSign(state.direction) * state.inputOffsetX;
+    const verticalDominates = Math.abs(state.inputOffsetY) >=
+      Math.abs(state.inputOffsetX) * READER_PAGE_GESTURE_AXIS_DOMINANCE;
+    return signedDistance >= READER_PAGE_GESTURE_TOUCH_SLOP && !verticalDominates ?
+      state.direction : undefined;
   }
   if (state.owner === 'verticalPrevious' &&
-    -state.currentOffsetY >= READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP) {
+    -state.inputOffsetY >= READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP) {
     return 'previous';
   }
   return undefined;
@@ -253,6 +279,9 @@ function applyReaderPageGestureSample(
   localY: number,
   velocityY: number,
   eventTimeMs: number,
+  inputOffsetX: number,
+  inputOffsetY: number,
+  finalSample: boolean,
   reuseState: boolean = false,
 ): ReaderPageGestureState {
   if (!Number.isFinite(offsetX)) return state;
@@ -262,29 +291,42 @@ function applyReaderPageGestureSample(
   const time = Number.isFinite(eventTimeMs) && eventTimeMs >= 0 ? eventTimeMs : state.eventTimeMs;
   const currentX = Number.isFinite(localX) ? localX : state.currentLocalX;
   const currentY = Number.isFinite(localY) ? localY : state.currentLocalY;
-  const distance2D = Math.sqrt(offsetX * offsetX + y * y);
+  const inputX = Number.isFinite(inputOffsetX) ? inputOffsetX : state.inputOffsetX;
+  const inputY = Number.isFinite(inputOffsetY) ? inputOffsetY : state.inputOffsetY;
+  const absoluteX = Math.abs(inputX);
+  const absoluteY = Math.abs(inputY);
+  const distance2D = Math.sqrt(inputX * inputX + inputY * inputY);
   const maxDistance = Math.max(state.maxDistance2D, distance2D);
   let owner = state.owner;
   let direction = state.direction;
   let axis = state.axis;
   let phase = state.phase;
 
-  // Frozen arbitration order. Absolute horizontal displacement wins even
-  // when the same platform sample also crosses a vertical threshold.
+  // Movement outside tap slop stays provisional until one axis is clear.
+  // Confirmation is spatial: a large first MOVE can claim immediately, while
+  // an early small horizontal wobble cannot pre-empt the later downward pull.
+  // UP consumes the same directional rule with each action's commit distance.
   if (owner === 'undecided') {
-    if (Math.abs(offsetX) >= READER_PAGE_GESTURE_TOUCH_SLOP) {
+    const horizontalSlop = finalSample ? READER_PAGE_GESTURE_TOUCH_SLOP :
+      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
+    const upwardSlop = finalSample ? READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP :
+      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
+    const downwardSlop = finalSample ? READER_PAGE_GESTURE_BOOKMARK_SLOP :
+      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
+    if (absoluteX >= horizontalSlop &&
+      absoluteX >= absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
       owner = 'horizontalPage';
-      direction = directionForOffset(offsetX);
+      direction = directionForOffset(inputX);
       axis = 'horizontal';
       phase = 'dragging';
-    } else if (Math.abs(offsetX) < READER_PAGE_GESTURE_TOUCH_SLOP &&
-      -y >= READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP) {
+    } else if (-inputY >= upwardSlop &&
+      absoluteY >= absoluteX * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
       owner = 'verticalPrevious';
       direction = 'previous';
       axis = 'vertical';
       phase = 'dragging';
-    } else if (Math.abs(offsetX) < READER_PAGE_GESTURE_TOUCH_SLOP &&
-      y >= READER_PAGE_GESTURE_BOOKMARK_SLOP) {
+    } else if (inputY >= downwardSlop &&
+      absoluteY >= absoluteX * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
       owner = 'bookmark';
       axis = 'vertical';
       phase = 'dragging';
@@ -300,14 +342,16 @@ function applyReaderPageGestureSample(
   let bookmarkOffsetY = state.bookmarkOffsetY;
   let bookmarkPreviewChanged = state.bookmarkPreviewChanged;
   if (owner === 'bookmark') {
-    const downward = Math.max(0, y);
+    const downward = Math.max(0, inputY);
     bookmarkPeak = Math.max(bookmarkPeak, downward);
-    bookmarkOffsetY = Math.min(state.viewportHeight / 2, downward / 2);
+    bookmarkOffsetY = Math.min(state.viewportHeight / 2,
+      Math.max(0, downward - READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP) / 2);
     bookmarkPreviewChanged = bookmarkPeak >= READER_PAGE_GESTURE_BOOKMARK_SLOP &&
-      downward >= bookmarkPeak / 2;
+      downward >= bookmarkPeak / 2 &&
+      absoluteX < absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE;
   }
 
-  const currentDirection = directionForOffset(offsetX);
+  const currentDirection = owner === 'bookmark' ? undefined : directionForOffset(inputX);
   const reversed = direction !== undefined && currentDirection !== undefined && currentDirection !== direction;
   const progress = state.viewportWidth > 0 ? Math.min(1, Math.abs(offsetX) / state.viewportWidth) : 0;
   if (reuseState) {
@@ -323,6 +367,8 @@ function applyReaderPageGestureSample(
     state.verticalPrevious = owner === 'verticalPrevious';
     state.currentOffsetX = offsetX;
     state.currentOffsetY = y;
+    state.inputOffsetX = inputX;
+    state.inputOffsetY = inputY;
     state.lastOffsetX = lastX;
     state.lastOffsetY = lastY;
     state.velocityX = vx;
@@ -351,6 +397,8 @@ function applyReaderPageGestureSample(
     verticalPrevious: owner === 'verticalPrevious',
     currentOffsetX: offsetX,
     currentOffsetY: y,
+    inputOffsetX: inputX,
+    inputOffsetY: inputY,
     lastOffsetX: state.currentOffsetX,
     lastOffsetY: state.currentOffsetY,
     velocityX: vx,
@@ -373,6 +421,7 @@ function idleReaderPageGestureState(consumed: boolean): ReaderPageGestureState {
     phase: 'idle', active: false, consumed, owner: 'undecided', direction: undefined,
     currentDirection: undefined, axis: 'undecided', verticalPrevious: false,
     viewportWidth: 0, viewportHeight: 0, currentOffsetX: 0, currentOffsetY: 0,
+    inputOffsetX: 0, inputOffsetY: 0,
     lastOffsetX: 0, lastOffsetY: 0, velocityX: 0, velocityY: 0,
     startEventTimeMs: 0, eventTimeMs: 0, startLocalX: 0, startLocalY: 0,
     currentLocalX: 0, currentLocalY: 0, maxDistance2D: 0, progress: 0,

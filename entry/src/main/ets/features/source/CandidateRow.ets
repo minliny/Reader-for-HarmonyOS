@@ -1,6 +1,11 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { LatencyBar } from './LatencyBar';
 import {
+  TYPE_SOURCE_SWITCH_CHAPTER,
+  TYPE_SOURCE_SWITCH_LATENCY,
+  TYPE_SOURCE_SWITCH_NAME,
+} from '../common/ReaderTypography';
+import {
   TOK_BORDER_W,
   TOK_LINE,
   TOK_READ_BODY_INK,
@@ -46,10 +51,10 @@ export struct CandidateRow {
       Text(this.sourceName.length > 0 ? this.sourceName : this.bookName)
         .layoutWeight(1)
         .height(15)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(10)
-        .lineHeight(12)
+        .fontFamily(TYPE_SOURCE_SWITCH_NAME.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_NAME.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_NAME.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_NAME.lineHeightFp)
         .fontColor(this.nameColor())
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -63,10 +68,10 @@ export struct CandidateRow {
       Text(this.latencyText())
         .width(LATENCY_TEXT_W)
         .height(10)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(10)
+        .fontFamily(TYPE_SOURCE_SWITCH_LATENCY.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_LATENCY.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_LATENCY.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_LATENCY.lineHeightFp)
         .fontColor(this.latencyColor())
         .textAlign(TextAlign.End)
         .margin({ left: 4 });
@@ -74,10 +79,10 @@ export struct CandidateRow {
       Text(this.chapterText())
         .width(CHAPTER_TEXT_W)
         .height(10)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(9)
-        .lineHeight(10)
+        .fontFamily(TYPE_SOURCE_SWITCH_CHAPTER.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_CHAPTER.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_CHAPTER.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_CHAPTER.lineHeightFp)
         .fontColor(this.chapterColor())
         .textAlign(TextAlign.End)
         .maxLines(1)

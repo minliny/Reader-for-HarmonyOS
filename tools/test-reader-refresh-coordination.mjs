@@ -1,3 +1,4 @@
+import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -59,16 +60,25 @@ for (const mode of ['success', 'decline', 'leave', 'rules-changed']) {
     return response;
   });
   const owner = { request: (...args) => coordinator.request(...args), bookAcquisitions: () => coordinator };
+  setRuntime(owner);
   const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-    ['refreshCachedChapterFromPrompt'], { ...evidence, ...admission, RemoteReadingFlowGateway,
+    ['refreshCachedChapterFromPrompt','bindReadingEntryReader'], { ReadingEntryHost:ProductionHost, EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},...evidence, ...admission, RemoteReadingFlowGateway,
       ReaderRuntimeOwner: { current: () => owner }, errorMessageOf: e => e.message });
   const failures = [];
-  const page = Object.assign(new Index(), { navigationGeneration: 1, remoteContentVerdict: 'readable',
+  const page = Object.assign(new Index(), { mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'detail',detailToc:session.entries,detailBook:{sourceId:'s',bookId:'b',sourceName:'书源',title:'书',author:'作者'},remoteReadingSession:session,shelfOperation:{generation:0,removalKey:'',busy:false},navigationGeneration: 1, remoteContentVerdict: 'readable',
     showReadingFailure: (...args) => failures.push(args),
     installRemoteReadingSession: value => { page.remoteReadingSession = value; },
-    getUIContext: () => ({ showAlertDialog: dialog => dialog[mode === 'decline' ? 'secondaryButton' : 'primaryButton'].action() }),
+    getUIContext: () => ({ showAlertDialog() { assert.fail('cache verification is nonmodal'); } }),
   });
-  const result = page.refreshCachedChapterFromPrompt(new RemoteChapterCacheRefreshError(session, 0, undefined, false), () => current);
+  page.bindReadingEntryReader();
+  const cacheError = new RemoteChapterCacheRefreshError(session, 0, undefined, false);
+  const probe = await page.refreshCachedChapterFromPrompt(cacheError, () => current);
+  assert.equal(probe, undefined); assert.equal(calls.length, 0, 'a background probe never refreshes content');
+  assert.equal(page.indexRecoveryNotice.visible, true);
+  if (mode === 'decline') { coordinator.close(); continue; }
+  // The real inline action admits this exact error before entering this existing lane.
+  page.remoteCacheRefreshConsent = cacheError;
+  const result = page.refreshCachedChapterFromPrompt(cacheError, () => current);
   await tick();
   if (mode === 'leave') current = false;
   if (mode === 'rules-changed') await coordinator.request('replace-rule.put', {});
@@ -81,7 +91,7 @@ for (const mode of ['success', 'decline', 'leave', 'rules-changed']) {
     assert.equal(failures.length, 0);
   } else {
     assert.equal(selected, undefined, mode);
-    assert.equal(page.remoteReadingSession, undefined, `${mode}: no stale prepared body may be installed`);
+    assert.equal(page.remoteReadingSession.preparedChapter, undefined, `${mode}: no stale prepared body may be installed`);
     if (mode === 'decline') assert.equal(calls.length, 0);
   }
   coordinator.close();

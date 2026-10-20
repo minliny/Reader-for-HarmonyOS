@@ -1,3 +1,4 @@
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import assert from 'node:assert/strict';
 
 import {
@@ -15,6 +16,8 @@ import {
   tickReaderAutoPage,
 } from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
 
+
+async function runCase() {
 let state = createReaderAutoPageState(8);
 assert.deepEqual(state, {
   status: 'stopped',
@@ -152,6 +155,8 @@ assert.equal(retriedPausedState.generation, 2);
 
 console.log('reader auto-page pure state: PASS');
 
-
-// Exercise the production owner rather than extracting obsolete page-owned timers.
-await import('./test-reader-auto-page-coordinator.mjs');
+}
+for (const id of selectContractCases({ 'pure-state': { description: 'Pure production generation, pending commit and retry transitions', resources: [] } })) {
+  await runCase();
+  recordContractCasePass(id);
+}

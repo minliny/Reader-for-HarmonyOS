@@ -1,4 +1,4 @@
-import { TOK_LINE, TOK_ON_PRIMARY, TOK_READ_INK, TOK_READ_PRIMARY, TOK_READ_SURFACE } from '../common/ReaderTokens';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TYPE_READER_SESSION_COUNTDOWN, TYPE_READER_SESSION_LABEL } from '../common/ReaderTypography';
 import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 
@@ -17,9 +17,9 @@ export function readerSessionCapsuleMinimumWidth(type: ReaderSessionCapsuleType)
 export struct ReaderSessionCapsuleLeading {
   @Prop type: ReaderSessionCapsuleType = 'autoPage';
   @Prop countdown: number = 8;
-  @Prop textColor: string = TOK_READ_INK;
-  @Prop primaryColor: string = TOK_READ_PRIMARY;
-  @Prop onPrimaryColor: string = TOK_ON_PRIMARY;
+  @Prop textColor: string = '';
+  @Prop primaryColor: string = '';
+  @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
   @Prop capsuleWidth: number = 96;
 
@@ -36,8 +36,8 @@ export struct ReaderSessionCapsuleLeading {
             // PH89: Noto Sans SC digits sit above the centred line box. Match
             // their ink centre to the circle; fp keeps the correction font-scaled.
             .baselineOffset('-0.65fp')
-            .fontColor(this.onPrimaryColor).textAlign(TextAlign.Center).maxLines(1);
-        }.width(16).height(16).backgroundColor(this.primaryColor).borderRadius(999);
+            .fontColor(this.effectiveOnPrimaryColor()).textAlign(TextAlign.Center).maxLines(1);
+        }.width(16).height(16).backgroundColor(this.effectivePrimaryColor()).borderRadius(999);
       } else {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.themeScheme === 'night' ? $r('app.media.reader_tts_headphones_theme_night') :
@@ -51,11 +51,23 @@ export struct ReaderSessionCapsuleLeading {
         .fontWeight(TYPE_READER_SESSION_LABEL.fontWeight)
         .fontSize(TYPE_READER_SESSION_LABEL.fontSizeFp)
         .lineHeight(TYPE_READER_SESSION_LABEL.lineHeightFp)
-        .fontColor(this.textColor).textAlign(TextAlign.Center).maxLines(1);
+        .fontColor(this.effectiveTextColor()).textAlign(TextAlign.Center).maxLines(1);
     }
     .width(this.capsuleWidth).height(24).padding({ left: 6, right: 6 })
     .justifyContent(FlexAlign.Start).alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.None);
+  }
+
+  private effectiveTextColor(): string {
+    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
+  }
+
+  private effectivePrimaryColor(): string {
+    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
+  }
+
+  private effectiveOnPrimaryColor(): string {
+    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
   }
 }
 
@@ -65,8 +77,8 @@ export struct ReaderSessionCapsulePause {
   @Prop themeScheme: string = 'day';
   @Prop sessionState: ReaderSessionCapsuleState = 'playing';
   @Prop desiredPlaying: boolean = true;
-  @Prop primaryColor: string = TOK_READ_PRIMARY;
-  @Prop onPrimaryColor: string = TOK_ON_PRIMARY;
+  @Prop primaryColor: string = '';
+  @Prop onPrimaryColor: string = '';
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
@@ -76,7 +88,7 @@ export struct ReaderSessionCapsulePause {
         (this.themeScheme === 'night' ? $r('app.media.reader_session_play_theme_night') : $r('app.media.reader_session_play')))
         .width(8).height(8);
     }
-    .width(16).height(16).backgroundColor(this.primaryColor).borderRadius(999)
+    .width(16).height(16).backgroundColor(this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme)).borderRadius(999)
     .hitTestBehavior(HitTestMode.None);
   }
 }
@@ -96,11 +108,11 @@ export struct ReaderSessionCapsule {
   @Prop sessionState: ReaderSessionCapsuleState = 'playing';
   @Prop desiredPlaying: boolean = true;
   @Prop countdown: number = 8;
-  @Prop surfaceColor: string = TOK_READ_SURFACE;
-  @Prop textColor: string = TOK_READ_INK;
-  @Prop surfaceBorderColor: string = TOK_LINE;
-  @Prop primaryColor: string = TOK_READ_PRIMARY;
-  @Prop onPrimaryColor: string = TOK_ON_PRIMARY;
+  @Prop surfaceColor: string = '';
+  @Prop textColor: string = '';
+  @Prop surfaceBorderColor: string = '';
+  @Prop primaryColor: string = '';
+  @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
   @Prop shadowColor: string = '#12463423';
   @Prop interactionEnabled: boolean = true;
@@ -111,20 +123,23 @@ export struct ReaderSessionCapsule {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ReaderSessionCapsuleLeading({
-        type: this.type, countdown: this.countdown, textColor: this.textColor,
-        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor,
+        type: this.type, countdown: this.countdown, textColor: this.effectiveTextColor(),
+        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor(),
         themeScheme: this.themeScheme, capsuleWidth: this.finalWidth(),
       });
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
-        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor })
+        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
         .position({ x: this.finalWidth() - 20, y: 4 });
     }
     .width(this.finalWidth()).height(READER_SESSION_CAPSULE_HEIGHT).clip(true)
-    .backgroundColor(this.surfaceColor).border({ width: 1, color: this.surfaceBorderColor })
+    .backgroundColor(this.effectiveSurfaceColor()).border({ width: 1, color: this.effectiveSurfaceBorderColor() })
     .borderRadius(12).shadow({ radius: 8, color: this.shadowColor, offsetX: 0, offsetY: 3 })
     .responseRegion({ x: 0, y: -10, width: '100%', height: 44 })
     .hitTestBehavior(this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
     .accessibilityText(readerSessionCapsuleAccessibility(this.type, this.sessionState, this.desiredPlaying))
+    // Keep capsule pointers out of the raw page handler, including UP/CANCEL
+    // after playback state changes. Click recognition remains independent.
+    .onTouch((event: TouchEvent): void => event.stopPropagation())
     .onClick((): void => { if (this.interactionEnabled) this.onToggle(); })
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.onMeasured(this.numericLength(newValue.width), this.numericLength(newValue.height));
@@ -133,6 +148,26 @@ export struct ReaderSessionCapsule {
 
   private finalWidth(): number {
     return Math.max(readerSessionCapsuleMinimumWidth(this.type), this.capsuleWidth);
+  }
+
+  private effectiveSurfaceColor(): string {
+    return this.surfaceColor.length > 0 ? this.surfaceColor : readerAppColor('TOK_READ_SURFACE', this.themeScheme);
+  }
+
+  private effectiveSurfaceBorderColor(): string {
+    return this.surfaceBorderColor.length > 0 ? this.surfaceBorderColor : readerAppColor('TOK_LINE', this.themeScheme);
+  }
+
+  private effectiveTextColor(): string {
+    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
+  }
+
+  private effectivePrimaryColor(): string {
+    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
+  }
+
+  private effectiveOnPrimaryColor(): string {
+    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
   }
   private numericLength(value: Length): number {
     const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : 0;

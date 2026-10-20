@@ -47,15 +47,21 @@ export class ReaderWindowChromeStyle {
   contentColor: string;
   /** Non-empty only when the reader paints the matching full paper below chrome. */
   paperThemeId: string;
+  /** Image readers paint through both system bands; their content background stays opaque. */
+  transparentSystemBars: boolean;
+  /** A bottom sheet may paint a different navigation band from the top scrim. */
+  navigationUnderlayColor?: string;
+  navigationContentColor?: string;
 
   constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string,
-    paperThemeId: string = '') {
+    paperThemeId: string = '', transparentSystemBars: boolean = false) {
     this.underlayColor = underlayColor;
     this.tone = tone;
     // Keep tone as a compatibility fallback while reader-owned chrome passes
     // the active theme's exact ink color.
     this.contentColor = contentColor ?? (tone === 'light' ? '#FFFFFFFF' : '#FF000000');
     this.paperThemeId = findReaderTheme(paperThemeId)?.id ?? '';
+    this.transparentSystemBars = transparentSystemBars;
   }
 }
 
@@ -284,12 +290,19 @@ export class ReaderWindowCoordinator {
 
   /** Reapply the latest semantic policy after foreground/window restoration. */
   static reapplyWindowPolicy(): void {
-    if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader') {
-      void ReaderWindowCoordinator.requestReaderWindowPolicy(
-        ReaderWindowCoordinator.desiredReaderWindowPolicy);
-      return;
-    }
-    void ReaderWindowCoordinator.requestAppWindowPolicy();
+    // Native state may have changed while the Ability was in the background.
+    // Revoke only the applied receipt; the ordinary request path still owns
+    // serialization and supersedes this restore when a newer intent arrives.
+    ReaderWindowCoordinator.appliedPolicyRevision = -1;
+    const restore = ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' ?
+      ReaderWindowCoordinator.requestReaderWindowPolicy(ReaderWindowCoordinator.desiredReaderWindowPolicy) :
+      ReaderWindowCoordinator.requestAppWindowPolicy();
+    void restore.catch((error: Error): void => {
+      // A failed restore stays unapplied for the next explicit admission.
+      // Foreground recovery owns this rejection and never starts a retry loop.
+      hilog.warn(0x5244, 'Reader', 'Window policy restore failed: %{public}s',
+        ReaderWindowCoordinator.chromeErrorCode(error as BusinessError));
+    });
   }
 
   static reapplyChrome(): void {
@@ -431,16 +444,27 @@ export class ReaderWindowCoordinator {
     const keyboardInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density);
     const systemFontScale = scaledDensity / density;
     const previous = ReaderWindowCoordinator.metricsSnapshot;
-    const statusMeasurementKey = `${windowRect.left}:${windowRect.top}:${windowRect.width}:` +
-      `${windowRect.height}:${globalRectVp.left}:${globalRectVp.top}:${density}:${displayInfo.id}:${displayInfo.rotation}`;
+    // The status-bar measurement belongs to the physical display/orientation,
+    // not to the app window rectangle.  Full-screen/immersive transitions
+    // legitimately change window and global coordinates while the system bar
+    // is hidden; keeping those values in the key discarded the last measured
+    // height and made the reader fall back to its authored top inset.
+    const statusMeasurementKey = `${density}:${displayInfo.id}:${displayInfo.rotation}`;
     const measuredStatusBarRect = ReaderWindowCoordinator.statusBarRectVp(density);
+    // Some HarmonyOS builds publish a non-zero SYSTEM top inset before the
+    // status-bar rectangle API catches up (and briefly publish an empty
+    // rectangle during a hide/show transition). Preserve that platform fact
+    // as a complete rectangle so downstream reading geometry can reflow from
+    // the same revision instead of falling back to a fixed authored top lane.
+    const statusBarRectWithInset = measuredStatusBarRect.height > 0 || systemInsets.top <= 0 ?
+      measuredStatusBarRect : new ReaderRectVp(0, 0, windowRect.width, systemInsets.top);
     if (measuredStatusBarRect.height > 0 && !ReaderWindowCoordinator.statusBarHiddenApplied &&
       !(ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar)) {
       ReaderWindowCoordinator.statusBarRevealPending = false;
     }
     const statusBarRect = ReaderWindowCoordinator.statusBarMeasurement.observeRect(statusMeasurementKey,
-      windowRect.width > windowRect.height, measuredStatusBarRect,
+      windowRect.width > windowRect.height, statusBarRectWithInset,
       ReaderWindowCoordinator.statusBarHiddenApplied || ReaderWindowCoordinator.statusBarRevealPending ||
       (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar));
@@ -576,7 +600,12 @@ export class ReaderWindowCoordinator {
       ReaderWindowCoordinator.desiredChrome.style.underlayColor === request.style.underlayColor &&
       ReaderWindowCoordinator.desiredChrome.style.tone === request.style.tone &&
       ReaderWindowCoordinator.desiredChrome.style.contentColor === request.style.contentColor &&
+      (ReaderWindowCoordinator.desiredChrome.style.navigationUnderlayColor ?? ReaderWindowCoordinator.desiredChrome.style.underlayColor) ===
+        (request.style.navigationUnderlayColor ?? request.style.underlayColor) &&
+      (ReaderWindowCoordinator.desiredChrome.style.navigationContentColor ?? ReaderWindowCoordinator.desiredChrome.style.contentColor) ===
+        (request.style.navigationContentColor ?? request.style.contentColor) &&
       ReaderWindowCoordinator.desiredChrome.style.paperThemeId === request.style.paperThemeId &&
+      ReaderWindowCoordinator.desiredChrome.style.transparentSystemBars === request.style.transparentSystemBars &&
       ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
       return;
     }
@@ -590,6 +619,7 @@ export class ReaderWindowCoordinator {
   }
 
   private static nativeStatusBarColor(request: ReaderWindowChromeRequest): string {
+    if (request.style.transparentSystemBars) return '#00000000';
     // An opaque native bar hides the authored paper texture even when its RGB
     // base matches. Only a validated reader paper owner supplies that backing;
     // application/legacy callers retain their original opaque status color.
@@ -617,9 +647,9 @@ export class ReaderWindowCoordinator {
         try {
           await win.setWindowSystemBarProperties({
             statusBarColor: ReaderWindowCoordinator.nativeStatusBarColor(request),
-            navigationBarColor: request.style.underlayColor,
+            navigationBarColor: request.style.transparentSystemBars ? '#00000000' : (request.style.navigationUnderlayColor ?? request.style.underlayColor),
             statusBarContentColor: contentColor,
-            navigationBarContentColor: contentColor,
+            navigationBarContentColor: request.style.navigationContentColor ?? contentColor,
           });
         } catch (error) {
           ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest,

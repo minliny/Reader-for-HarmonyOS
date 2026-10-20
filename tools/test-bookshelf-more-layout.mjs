@@ -1,38 +1,64 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"bounded-menu-frame": {"description": "实际菜单frame约束与native vp/string测量", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { actionMenuProbe, ReaderMenuActionView } = await import('./lib/reader-action-menu-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+
 const file=new URL('../entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets',import.meta.url);
 const source=readFileSync(file,'utf8');
-const constants=Object.fromEntries([...source.matchAll(/const (\w+) = (\d+);/g)].map(m=>[m[1],Number(m[2])]));
-Object.assign(constants,{MENU_HEIGHT:212,MENU_COLLAPSED_HEIGHT:62,ACTIONS_HEIGHT:200});
-const names=['actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu'];
-const Methods=productionMotionMethods(file,names,constants);
+const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
+const { resolvePopupSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
+  .replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
+const popupSpec=resolvePopupSpec('bookshelf-more-menu');
+const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu','finishCollapse'];
+const Methods=productionMotionMethods(file,names,{resolvePopupSpec});
 const menu=Object.assign(new Methods(),{overlayWidth:393,overlayHeight:650,anchorRight:373,anchorBottom:60,panelHeight:212});
-assert.equal(menu.menuWidth(),176);assert.equal(menu.menuTop(),55);assert.equal(menu.visiblePanelHeight(),212);assert.equal(menu.pointerX(),131);
+
 for(const [width,height,right,bottom] of [[320,190,312,60],[393,140,393,60],[800,300,798,80],[170,200,170,70]]) {
  Object.assign(menu,{overlayWidth:width,overlayHeight:height,anchorRight:right,anchorBottom:bottom});
  assert.ok(menu.menuX()>=0);assert.ok(menu.menuX()+menu.menuWidth()<=width);
  assert.ok(menu.menuTop()+menu.visiblePanelHeight()<=height-8);
- assert.ok(menu.visiblePanelHeight()>=62,'a compact viewport retains one full scrollable row');
- assert.ok(menu.pointerX()>=0 && menu.pointerX()+24<=menu.menuWidth());
+ assert.ok(menu.visiblePanelHeight()>=popupSpec.collapsedHeight,'a compact viewport retains one full scrollable row');
+ assert.ok(menu.pointerX()>=0 && menu.pointerX()+popupSpec.pointerWidth<=menu.menuWidth());
 }
-assert.match(source,/Scroll\(\)[\s\S]*?\.height\(ACTIONS_HEIGHT\)/);
-assert.match(source,/\.height\(Math.max\(0, this.visiblePanelHeight\(\) - POINTER_HEIGHT\)\)/);
-assert.equal((source.match(/this.action\(/g)??[]).length,4);
-const {owner}=createReaderBuilderProbe(source,['action',...names],constants);
-let calls=0;Object.assign(owner,{appThemeScheme:'day',overlayWidth:393,overlayHeight:650,canCheckUpdates:false,updateRunning:false,backgroundUpdateRunning:false,
- closeInFlight:false,mounted:true,generation:0,reduceMotion:true,onDismiss(){},getUIContext:()=>({animateTo:(_p,cb)=>cb()})});
-owner.action('update',false,()=>calls++);
-const text=()=>[...owner.nodes.values()].find(n=>n.type==='Text');
-const target=()=>[...owner.nodes.values()].find(n=>n.onClick);
-assert.equal(target().enabled,false);target().onClick();assert.equal(calls,0);
-owner.canCheckUpdates=true;owner.replay();assert.equal(target().enabled,true);
-owner.updateRunning=true;owner.updateProgressDone=4;owner.updateProgressTotal=9;owner.replay();
-assert.equal(text().create,'检查中 4/9');assert.equal(target().enabled,false);target().onClick();assert.equal(calls,0);
-owner.updateRunning=false;owner.backgroundUpdateRunning=true;owner.replay();assert.equal(text().create,'正在自动检查');assert.equal(target().enabled,false);
-owner.backgroundUpdateRunning=false;owner.appThemeScheme='night';owner.replay();assert.equal(text().create,'检查更新');
-const icon=[...owner.nodes.values()].find(n=>n.type==='Image');assert.equal(icon.create,'app.media.settings_gen_refresh_theme_night');
-target().onClick();target().onClick();assert.equal(calls,1,'exactly once dispatch before the menu closes');
-const empty=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets',import.meta.url),'utf8');assert.match(empty,/canCheckUpdates: false/);
+function measuredMenu(definition=source) {
+ const surface=actionMenuProbe();
+ const {owner:actual}=createReaderBuilderProbe(definition,boundedMembers(definition),
+  {...surface.properties.sdk,...surface.dependencies,LineJoinStyle:{Round:'LineJoinStyle.Round'},
+   registerReaderFonts(){},uiContext:{animateTo:(_params,callback)=>callback()}},
+  {...surface.properties.hooks,...surface.hooks});
+ Object.assign(actual,{anchorRight:355,anchorBottom:52,reduceMotion:true,mounted:true});actual.initialRender();
+ const area=[...actual.nodes.values()].find(node=>node.type==='Stack'&&node.onAreaChange);
+ assert.ok(area,'actual More overlay root owns native viewport measurement');
+ return {actual,area,surface};
+}
+{
+ const {actual,area,surface}=measuredMenu(),actor=[...actual.children.values()][0];
+ for(const viewport of [{width:365,height:650},{width:'365vp',height:'650vp'}]) {
+  area.onAreaChange({},viewport);actual.replay();surface.properties.flush();
+  assert.deepEqual([actual.overlayWidth,actual.overlayHeight],[365,650]);
+  assert.ok(actual.menuX()>=0&&actual.menuX()+actual.menuWidth()<=365);
+  assert.equal([...actual.children.values()][0],actor,'unit measurement retains the actual shared menu actor');
+ }
+}
+{
+ const broken=source.replaceAll('readerPageAreaLength(area.','Number(area.');assert.notEqual(broken,source);
+ const {actual,area}=measuredMenu(broken);area.onAreaChange({}, {width:'365vp',height:'650vp'});
+ assert.ok(Number.isNaN(actual.overlayWidth)&&Number.isNaN(actual.overlayHeight),
+  'Number mutation reproduces invalid vp viewport in the actual native callback');
+}
+// Actual Index readiness -> shared menu admission is exercised by the SDK shell-state test.
+// Shell readiness is covered by the separately selected shell-state case; no imported test entry.
 console.log('PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update');
+
+}

@@ -1,28 +1,37 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as render from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts';
-import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as select from '../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts';
-import { MotionPointTrack } from '../entry/src/main/ets/features/common/MotionPointTrack.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "retained-lifecycle": {
+    "description": "Actual appearance lifecycle, unknown offsets, retained actors and current font actions; SDK lowering only",
+    "resources": []
+  }
+};
+
+async function case_retained_lifecycle() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const appearance = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+const render = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
+const style = await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts');
+const presentation = await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const scroll = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
+const select = await import('../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
 // Full, unchanged production component: SDK constructors, fields, @Watch,
 // lifecycle and every Builder. Only platform layout/Scroller/font services and
 // child view rendering are instrumented. This does not simulate device pixels.
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
-const parsed = ts.createSourceFile('/tmp/ReaderControlAppearanceContent.ets', source,
+const parsed = ts.createSourceFile(virtualFilePath('ReaderControlAppearanceContent.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const component = parsed.statements.find(node => node.name?.getText(parsed) === 'ReaderControlAppearanceContent');
 const members = component.members.map(node => node.name?.getText(parsed)).filter(Boolean);
@@ -79,7 +88,7 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
   owner.aboutToAppear();
   assert.equal(native.fontRegistrations, 1);
   assert.equal(native.reads, 0, 'aboutToAppear precedes native Scroll binding');
-  assert.equal(owner.fontIds().length, custom ? 10 : 9);
+  assert.deepEqual(owner.fontIds(), appearance.normalizeReaderAppearanceFontOrder(snapshot.fontOrder), 'font actors follow the current allowed snapshot, including custom insertion');
 
   const unknownOffsetChecks = (label, didScroll = () => owner.onFullDidScroll()) => {
     const before = observedScrollState(owner), writeCount = native.writes.length;
@@ -103,7 +112,7 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
   assert.ok(scrollNode, 'complete SDK-generated appearance tree contains its native Scroll');
   assert.equal(typeof scrollNode.onAppear, 'function', 'native Scroll binding owns initial synchronization');
   const initialNodes = owner.nodes.size;
-  assert.ok(initialNodes >= 127, 'all themes, fonts and layout controls were mounted');
+  assert.ok([...owner.nodes.values()].some(node => node.accessibilityText === '导入自定义字体'), 'required import action is mounted without a historical node budget');
   assert.equal([...owner.nodes.values()].filter(node => node.accessibilityText === '切换到测试字体').length, custom ? 1 : 0);
   unknownOffsetChecks('after initialRender', scrollNode.onDidScroll);
   const beforeBinding = observedScrollState(owner), writesBeforeBinding = native.writes.length;
@@ -142,3 +151,11 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
 }
 console.log(JSON.stringify({ contract: 'PH110 full production appearance lifecycle', memberCount: members.length,
   boundary: 'actual SDK compiler and property runtime; native Scroller, font service and child rendering instrumented; no device pixels', results }, null, 2));
+
+}
+
+const implementations = {'retained-lifecycle':case_retained_lifecycle};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

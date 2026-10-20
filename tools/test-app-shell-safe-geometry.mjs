@@ -1,38 +1,41 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-
-const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-
-const appTopBar = read('entry/src/main/ets/features/common/AppTopBar.ets');
-const pageBackBar = read('entry/src/main/ets/features/common/PageBackBar.ets');
-const mainTabBar = read('entry/src/main/ets/features/shell/MainTabBar.ets');
-const mainTabShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
-
-for (const [name, source] of [
-  ['AppTopBar', appTopBar],
-  ['PageBackBar', pageBackBar],
-]) {
-  assert.match(source, /readerInteractiveSafeLeft\(ReaderWindowCoordinator\.metrics\(\)\)/,
-    `${name} must honor the measured left interactive safe edge`);
-  assert.match(source, /readerInteractiveSafeRight\(ReaderWindowCoordinator\.metrics\(\)\)/,
-    `${name} must honor the measured right interactive safe edge independently`);
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"safe-frame": {"description": "真实栏inset、nav frame与宿主局部rail坐标", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase();
+  recordContractCasePass(id);
 }
+async function runSelectedCase() {
 
-assert.match(mainTabBar,
-  /resolveHorizontalFrame\([\s\S]*readerInteractiveSafeLeft\(metrics\)[\s\S]*readerInteractiveSafeRight\(metrics\)[\s\S]*new SurfaceWidthSpec\(360, 15, 15, 'center'\)/,
-  'Phone navigation must resolve its 360vp Figma cap inside live asymmetric safe edges');
-assert.match(mainTabBar, /\.margin\(\{ bottom: Math\.max\(15, this\.interactiveBottom\(\)\) \}\)/,
-  'Phone navigation must preserve the 15vp design gap while clearing the live bottom gesture edge');
-assert.match(mainTabBar, /private verticalRail\(\)[\s\S]*\.width\(82\)\s*\.height\(332\)/,
-  'Tablet navigation must preserve the 82x332 Figma rail');
 
-assert.match(mainTabShell, /return Math\.max\(17, readerInteractiveSafeLeft\(ReaderWindowCoordinator\.metrics\(\)\)\)/,
-  'Tablet rail must preserve its 17vp design gap while clearing the live left gesture edge');
-assert.match(mainTabShell,
-  /const availableHeight = Math\.max\(0, windowHeight - safeTop - safeBottom\);[\s\S]*return Math\.max\(0, \(availableHeight - 332\) \/ 2\);/,
-  'Tablet rail must center in the safe-height span using host-local coordinates');
-assert.doesNotMatch(mainTabShell,
-  /return safeTop \+ Math\.max\(0, \(availableHeight - 332\) \/ 2\)/,
-  'Tablet rail must not apply the Index-owned safeTop twice');
+const {default: assert} = await import('node:assert/strict');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const {resolveHorizontalFrame,SurfaceWidthSpec} = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const base=new URL('../entry/src/main/ets/',import.meta.url);
+let metrics={windowRect:{width:410,height:800},left:51,right:7,top:30,bottom:20};
+const dependencies={ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft:m=>m.left,
+ readerInteractiveSafeRight:m=>m.right,readerVisualSafeTop:m=>m.top,readerInteractiveSafeBottom:m=>m.bottom,
+ TOK_HOME_TOP_BAR_INSET:17,TOK_SPACE_CONTROL_INLINE:20,resolveHorizontalFrame,SurfaceWidthSpec,MAIN_TABS:[{}, {}, {}]};
+for(const [file,name] of [['features/common/AppTopBar.ets','AppTopBar'],['features/common/PageBackBar.ets','PageBackBar']]) {
+ const Owner=selectedProductionMethods(new URL(file,base),name,['leftInset','rightInset'],dependencies);
+ const owner=Object.assign(new Owner(),{floating:false,readerWindowMetricsRevision:0,variant:'standard'});
+ const left=owner.leftInset(),right=owner.rightInset();
+ assert.ok(left>=metrics.left && right>=metrics.right,'independent actual safe boundaries');
+ metrics={...metrics,left:7,right:51};
+ assert.equal(owner.leftInset(),right);assert.equal(owner.rightInset(),left,'asymmetric edges mirror independently');
+ metrics={...metrics,left:51,right:7};
+}
+const Bar=selectedProductionMethods(new URL('features/shell/MainTabBar.ets',base),'MainTabBar',['bottomBarFrame','liveWindowWidth'],dependencies);
+const bar=Object.assign(new Bar(),{readerWindowMetricsRevision:0});
+for(const [width,left,right] of [[410,51,7],[250,3,49],[0,10,20],[NaN,10,20],[90,120,6]]) {
+ metrics={...metrics,windowRect:{...metrics.windowRect,width},left,right};
+ const frame=bar.bottomBarFrame();const w=Number.isFinite(width)?Math.max(0,width):0;
+ assert.ok(Number.isFinite(frame.width)&&frame.width>=0&&frame.left>=0&&frame.right>=0);
+ assert.ok(frame.left+frame.width<=w && frame.right+frame.width<=w,'actual nav frame remains inside live width');
+ if(w>=left+right) {assert.ok(frame.left>=left);assert.ok(frame.right>=right);}
+}
+const Shell=selectedProductionMethods(new URL('features/shell/MainTabShell.ets',base),'MainTabShell',['railTop'],dependencies),shell=new Shell();
+metrics={...metrics,windowRect:{width:410,height:800},top:30,bottom:20};const original=shell.railTop();
+metrics={...metrics,windowRect:{width:410,height:780},top:10};assert.equal(shell.railTop(),original,'same available host span cannot apply safeTop twice');
+metrics={...metrics,windowRect:{width:410,height:0}};assert.equal(shell.railTop(),0);
 
-console.log('app shell safe geometry: PASS');
+}

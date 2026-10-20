@@ -1,20 +1,23 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { httpResponseFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
+import { httpResponseFailureSummary, coreAdmissionFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 const tick = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 function fixture() {
   const timers = [], calls = [], rounds = [];
   const Owner = productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
     ['noteReadingPreparationIntent', 'wakeReadingPreparations', 'requestDirect'], {
       setTimeout: callback => { timers.push(callback); return timers.length; }, LOG_DOMAIN: 0,
-      DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000, httpResponseFailureSummary,
+      DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000, httpResponseFailureSummary, coreAdmissionFailureSummary,
       hilog: { warn() {} },
+      MangaChapterPreparationCoordinator: { forRuntime: () => ({ close: async () => {} }) },
     });
   const owner = Object.assign(new Owner(), { state: 'ready', preparationIntentEpoch: 0,
     preparationForeground: true, preparationCatalogAllowed: false, preparationWakeTimer: -1,
     supportsCoreCapability: () => true, preparationNetwork: { allowed: () => true },
     start: async () => {}, readingEntryPreparations: () => ({ beginRequest: () => false }),
-    runtime: { async request(method, params) { calls.push({ method, params }); return { data: {} }; } },
+    mangaImageTail: Promise.resolve(),
+    readingImageDiskCache: { maintainMangaStorage: async () => {}, clearMangaRebuildableCache: async () => ({ deletedBytes: 0, deletedFiles: 0 }), withMangaStorageRestore: async restore => restore() },
+    runtime: { async request(method, params) { calls.push({ method, params }); return { data: method === 'cache.clear' ? { scope: params.scope } : {} }; } },
     bookAcquisitions: () => ({ async resumeReadingPreparations(allowed, catalogAllowed) {
       rounds.push({ allowed: allowed(), catalogAllowed: catalogAllowed() });
     } }),
@@ -32,7 +35,7 @@ function fixture() {
 for (const method of ['cache.clear', 'bookshelf.remove', 'bookshelf.removeBatch', 'source.delete',
  'source.switch.begin', 'source.switch.commit', 'source.switch.abort', 'runtime.storage.apply', 'runtime.storage.restore']) {
   const f = fixture(); f.owner.noteReadingPreparationIntent('s', 'b');
-  await f.owner.requestDirect(method, { sourceId: 's', bookId: 'b' });
+  await f.owner.requestDirect(method, { sourceId: 's', bookId: 'b', ...(method === 'cache.clear' ? { scope: 'book' } : {}) });
   f.timers.shift()(); await tick();
   assert.equal(f.calls.filter(call => call.method === 'reading.preparation').length, 0,
     `a deferred read intent must not renew permission after ${method}`);

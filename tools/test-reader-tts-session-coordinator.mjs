@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
-
-import { chapter, canonicalRemoteContent, plan, FakeGateway, FakeHost } from './lib/reader-tts-fixtures.mjs';
-
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const owned=[];const createCoordinator=(...args)=>{const c=new ReaderTtsSessionCoordinator(...args);owned.push(c);return c;};
+const { readFile }=await import("node:fs/promises");
+const { ReaderTtsSessionCoordinator }=await import("../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts");
+const { chapter, canonicalRemoteContent, plan, FakeGateway, FakeHost }=await import("./lib/reader-tts-fixtures.mjs");
 async function startBlockedSession(contentVersion) {
   const blockedGateway = new FakeGateway();
   const blockedHost = new FakeHost();
-  const blockedCoordinator = new ReaderTtsSessionCoordinator(
+  const blockedCoordinator = createCoordinator(
     blockedGateway,
     blockedHost,
     async () => {},
@@ -24,10 +24,13 @@ async function startBlockedSession(contentVersion) {
   return { coordinator: blockedCoordinator, gateway: blockedGateway, host: blockedHost, speak, startTask };
 }
 
+
+let blockedContentVersion=4;try{
+if(id==='callback-controls'){
 const gateway = new FakeGateway();
 const host = new FakeHost();
 const progress = [];
-const coordinator = new ReaderTtsSessionCoordinator(
+const coordinator = createCoordinator(
   gateway,
   host,
   async update => { progress.push(update.charEnd); },
@@ -48,17 +51,22 @@ assert.ok(gateway.calls.some(call => call.includes('callback:1:speaking:')));
 host.emit({ type: 'complete', requestId, completion: 'synthesis' });
 await coordinator.whenSettled();
 assert.equal(progress.length, 0, 'synthesis completion cannot advance');
+assert.equal(coordinator.captureCompletedProgress(), undefined, 'queued or synthesized text has not been heard');
 
 host.emit({ type: 'complete', requestId, completion: 'audio' });
 host.emit({ type: 'complete', requestId, completion: 'audio' });
 await coordinator.whenSettled();
 assert.deepEqual(progress, [13], 'duplicate completion must commit one canonical scalar end');
 assert.equal(coordinator.getState().status, 'completed');
+const capturedCompletion = coordinator.captureCompletedProgress();
+assert.equal(capturedCompletion.charEnd, 13); capturedCompletion.charEnd = 999;
+assert.equal(coordinator.captureCompletedProgress().charEnd, 13, 'exit snapshot cannot mutate the audio completion owner');
 assert.equal(gateway.calls.filter(call => call === 'next').length, 0);
 assert.equal(gateway.calls.filter(call => call.includes(':done:')).length, 2,
   'duplicate audio completion must reach Core correlation twice');
 
 await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 2, scalarPosition: 0 });
+assert.equal(coordinator.captureCompletedProgress(), undefined, 'a new TTS session invalidates the previous completed scalar');
 const staleRequestId = host.requests.at(-1).requestId;
 await coordinator.pause();
 host.emit({ type: 'start', requestId: staleRequestId });
@@ -107,6 +115,9 @@ assert.equal(coordinator.getState().status, 'idle');
 assert.ok(host.calls.includes('media:stopped'), 'ordinary stop must publish AVSession stopped');
 await coordinator.dispose();
 
+
+}
+if(id==='immediate-stop'){
 const slowStop = await startBlockedSession(3);
 const slowStopTask = slowStop.coordinator.stop();
 assert.equal(slowStop.coordinator.getState().status, 'stopping');
@@ -122,6 +133,9 @@ await slowStopTask;
 assert.equal(slowStop.coordinator.getState().status, 'idle');
 await slowStop.coordinator.dispose();
 
+
+}
+if(id==='transport-intents'){
 const immediateTransportIntents = [
   { name: 'pause', invoke: current => current.pause() },
   { name: 'background pause', invoke: current => current.pauseForBackground() },
@@ -131,7 +145,7 @@ const immediateTransportIntents = [
   { name: 'rate', invoke: current => current.setRate(1.4) },
   { name: 'voice', invoke: current => current.setVoice('en-US', 7) },
 ];
-let blockedContentVersion = 4;
+
 for (const scenario of immediateTransportIntents) {
   const blocked = await startBlockedSession(blockedContentVersion);
   blockedContentVersion += 1;
@@ -147,6 +161,9 @@ for (const scenario of immediateTransportIntents) {
   await blocked.coordinator.dispose();
 }
 
+
+}
+if(id==='host-events'){
 const immediateHostEvents = [
   { name: 'media pause', event: { type: 'mediaControl', action: 'pause' } },
   { name: 'media stop', event: { type: 'mediaControl', action: 'stop' } },
@@ -172,6 +189,9 @@ for (const scenario of immediateHostEvents) {
   await blocked.coordinator.dispose();
 }
 
+
+}
+if(id==='replacement'){
 const replacement = await startBlockedSession(blockedContentVersion);
 const replacementTask = replacement.coordinator.start({
   chapter,
@@ -190,9 +210,12 @@ await replacementTask;
 assert.equal(replacement.host.requests.length, 2);
 await replacement.coordinator.dispose();
 
+
+}
+if(id==='interruption-stop'){
 const stopOnCallGateway = new FakeGateway();
 const stopOnCallHost = new FakeHost();
-const stopOnCallCoordinator = new ReaderTtsSessionCoordinator(stopOnCallGateway, stopOnCallHost);
+const stopOnCallCoordinator = createCoordinator(stopOnCallGateway, stopOnCallHost);
 await stopOnCallCoordinator.start({
   chapter,
   content: canonicalRemoteContent,
@@ -207,38 +230,11 @@ assert.equal(stopOnCallCoordinator.getState().status, 'idle');
 assert.equal(stopOnCallCoordinator.getState().stopReason, 'systemInterruption');
 assert.ok(stopOnCallGateway.calls.includes('stop'));
 
-const coordinatorSource = await readFile(
-  new URL('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts', import.meta.url),
-  'utf8',
-);
-assert.match(coordinatorSource, /export type HostTtsTransportState/);
-assert.match(coordinatorSource, /private stopHostTransportImmediately\(\): Promise<Error \| undefined>/);
-assert.match(coordinatorSource, /private routeHostEvent\(event: ReaderTtsHostEvent\): void/);
-assert.match(coordinatorSource, /this\.voidLogged\(this\.pauseForSystem\('systemInterruption'\)/,
-  'system interruption must enter the immediate transport-cancel path before serialization');
-assert.match(coordinatorSource, /terminateToError/,
-  'start and callback failures must land in the transactional retryable error state');
-assert.match(coordinatorSource, /armStartWatchdog/,
-  'a speak accepted without a real onStart callback must be bounded by a watchdog');
-assert.match(coordinatorSource, /clearEventListener\(this\.ownerToken\)/,
-  'dispose must only clear its own owner-scoped listener');
-assert.doesNotMatch(
-  coordinatorSource,
-  /beginReaderTtsSession|prepareReaderTtsUtterance|advanceReaderTtsChapter|failReaderTtsUtterance/,
-  'production coordinator must project Core snapshots instead of running a second queue reducer',
-);
-assert.doesNotMatch(coordinatorSource, /task\.catch\(\(\): void => \{\}\)/,
-  'the operation tail must never swallow rejections silently');
-assert.match(coordinatorSource, /MAX_RETAINED_COMPLETED_UTTERANCES = 128/,
-  'late callback retention must have a fixed upper bound');
-assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.requestId\)/,
-  'successful audio completion must enter the bounded late-callback window');
 
-// Exercise the production retention helper directly with synthetic
-// correlations.  This keeps the regression deterministic and avoids needing
-// a 129-slice fake speech engine just to prove the memory bound.
+}
+if(id==='retention'){
 {
-  const bounded = new ReaderTtsSessionCoordinator(new FakeGateway(), new FakeHost());
+  const bounded = createCoordinator(new FakeGateway(), new FakeHost());
   const correlation = {
     identity: { sessionGeneration: 1, contentVersion: 1, chapterKey: 'source-1\\u0000book-1\\u00000' },
     chapter,
@@ -262,12 +258,11 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
   assert.equal(bounded.retainedUtteranceIds.size, 0);
   await bounded.dispose();
 }
-
-// A repeated selection must not orphan the audible utterance; paused rate
-// changes update Core and preferences without starting audio implicitly.
+}
+if(id==='same-value-policy'){
 {
   const g = new FakeGateway(), h = new FakeHost();
-  const c = new ReaderTtsSessionCoordinator(g, h, async () => {});
+  const c = createCoordinator(g, h, async () => {});
   await c.start({ chapter, content: canonicalRemoteContent, contentVersion: 99, scalarPosition: 0 });
   const id = h.requests.at(-1).requestId;
   h.emit({ type: 'start', requestId: id }); await c.whenSettled();
@@ -290,18 +285,17 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
   assert.equal(h.calls.at(-1), 'activate:true', 'active audio session receives the new mixing policy');
   await c.stop(); await c.dispose();
 }
-
-// Engine probing is serialized with playback admission.  A delayed probe must
-// not switch the Host router back to its stale engine after a newer session has
-// already selected and started another engine.
+}
+if(id==='probe-engine-race'){
 {
   class DelayedSelectHost extends FakeHost {
     selectCount = 0;
+    entered=new Promise(resolve=>{this.notifyEntered=resolve;});
     firstSelectEntered;
     releaseFirstSelect;
     async selectEngine(engine) {
       this.calls.push(`engine:${engine ?? 'system'}`);
-      this.selectCount += 1;
+      this.selectCount += 1;this.notifyEntered();
       if (this.selectCount === 1) {
         this.firstSelectEntered = new Promise(resolve => { this.releaseFirstSelect = resolve; });
         await this.firstSelectEntered;
@@ -318,9 +312,9 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
   }
   const g = new ConfigRaceGateway();
   const h = new DelayedSelectHost();
-  const c = new ReaderTtsSessionCoordinator(g, h);
+  const c = createCoordinator(g, h);
   const probeTask = c.probeAvailability();
-  while (h.firstSelectEntered === undefined) await new Promise(resolve => setTimeout(resolve, 0));
+  await h.entered;
   const startTask = c.start({ chapter, content: canonicalRemoteContent, contentVersion: 101, scalarPosition: 0 });
   // The start is admitted synchronously, but its prepare operation waits for
   // the probe's in-flight Host selection. Releasing it lets both transactions
@@ -331,24 +325,23 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
     'a stale probe must not overwrite the newer session engine selection');
   await c.stop(); await c.dispose();
 }
-
-// A stop intent also updates the transport generation synchronously while a
-// platform probe may still be awaiting.  The stale probe must not overwrite
-// the stopping/settled lifecycle state with `unavailable` when it resumes.
+}
+if(id==='probe-stop-race'){
 {
   class DelayedProbeHost extends FakeHost {
+    entered=new Promise(resolve=>{this.notifyEntered=resolve;});
     probeEntered;
     releaseProbe;
     async probe() {
-      this.probeEntered = new Promise(resolve => { this.releaseProbe = resolve; });
+      this.probeEntered = new Promise(resolve => { this.releaseProbe = resolve; });this.notifyEntered();
       await this.probeEntered;
       return { available: false, reason: 'synthetic probe failure' };
     }
   }
   const h = new DelayedProbeHost();
-  const c = new ReaderTtsSessionCoordinator(new FakeGateway(), h);
+  const c = createCoordinator(new FakeGateway(), h);
   const probeTask = c.probeAvailability();
-  while (h.probeEntered === undefined) await new Promise(resolve => setTimeout(resolve, 0));
+  await h.entered;
   const stopTask = c.stop();
   h.releaseProbe();
   await Promise.all([probeTask, stopTask]);
@@ -356,9 +349,8 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
     'a stale probe must not publish unavailable over a newer stop intent');
   await c.dispose();
 }
-
-// A slow progress write must not insert silence before the next slice in the
-// same chapter. It must still settle in the coordinator's ordered write tail.
+}
+if(id==='slow-progress'){
 {
   let entered;
   let release;
@@ -368,7 +360,7 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
   const prefetches = [];
   h.prefetchNext = request => { prefetches.push(request); };
   const writes = [];
-  const c = new ReaderTtsSessionCoordinator(g, h, async update => {
+  const c = createCoordinator(g, h, async update => {
     writes.push(`begin:${update.charEnd}`);
     entered();
     await commitBlocked;
@@ -388,7 +380,8 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
   assert.deepEqual(writes, ['begin:4', 'end:4']);
   await c.dispose();
 }
-
+}
+if(id==='chapter-boundary'){
 class AdvancingChapterGateway extends FakeGateway {
   currentChapter = chapter;
   currentPlan;
@@ -428,9 +421,6 @@ class AdvancingChapterGateway extends FakeGateway {
 
 const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' };
 
-// A Core completed snapshot is an internal boundary. The old page must remain
-// a valid TTS follow owner until its last scalar is durable and the next page
-// has accepted navigation; completed must only surface after the whole book.
 {
   let entered;
   let release;
@@ -441,7 +431,7 @@ const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' }
   let admitted = 0;
   const g = new AdvancingChapterGateway(), h = new FakeHost();
   let c;
-  c = new ReaderTtsSessionCoordinator(g, h, async update => {
+  c = createCoordinator(g, h, async update => {
     writes.push(`begin:${update.chapter.chapterIndex}`);
     entered();
     await commitBlocked;
@@ -475,8 +465,47 @@ const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' }
   assert.equal(h.requests.length, 2);
   await c.dispose();
 }
+}
+if(id==='chapter-stop'){
+class AdvancingChapterGateway extends FakeGateway {
+  currentChapter = chapter;
+  currentPlan;
+  async slice(chapterRef, content) {
+    this.currentChapter = chapterRef;
+    this.currentPlan = {
+      chapter: chapterRef, strategy: 'paragraph-then-sentence',
+      slices: [{ index: 0, text: content, charStart: 0, charEnd: content.length, paragraphIndex: 0 }],
+      sourceCharCount: content.length,
+    };
+    return this.currentPlan;
+  }
+  async play(plan, index) {
+    this.currentChapter = plan.chapter;
+    this.currentPlan = plan;
+    this.cursor = index;
+    this.queueState = 'playing';
+    return this.snapshot('playing');
+  }
+  async reportCallback(_chapter, _index, status) {
+    if (status === 'done') this.queueState = 'completed';
+    return { snapshot: this.snapshot(this.queueState), callbackDisposition: 'applied' };
+  }
+  async chapterPlan(current, next, drainBehavior) {
+    return { current, next, drainBehavior };
+  }
+  snapshot(state) {
+    return {
+      state, currentSliceIndex: 0, totalSlices: 1,
+      completedSlices: state === 'completed' ? 1 : 0,
+      chapter: this.currentChapter, sliceStatuses: [], failurePolicy: 'stop',
+      consecutiveFailures: 0, failureLimit: 3, drainBehavior: 'advance-to-next',
+      restartPolicy: 'reset-on-core-restart',
+    };
+  }
+}
 
-// A user stop while the next chapter is loading invalidates its admission.
+const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' };
+
 {
   let entered;
   let release;
@@ -484,7 +513,7 @@ const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' }
   const loaderBlocked = new Promise(resolve => { release = resolve; });
   const g = new AdvancingChapterGateway(), h = new FakeHost();
   let admitted = 0;
-  const c = new ReaderTtsSessionCoordinator(g, h, async () => {}, undefined, async () => {
+  const c = createCoordinator(g, h, async () => {}, undefined, async () => {
     entered();
     await loaderBlocked;
     return { chapter: secondChapter, content: '第二章。', contentVersion: 112,
@@ -504,9 +533,47 @@ const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' }
   assert.equal(c.getState().status, 'idle');
   await c.dispose();
 }
+}
+if(id==='chapter-replacement'){
+class AdvancingChapterGateway extends FakeGateway {
+  currentChapter = chapter;
+  currentPlan;
+  async slice(chapterRef, content) {
+    this.currentChapter = chapterRef;
+    this.currentPlan = {
+      chapter: chapterRef, strategy: 'paragraph-then-sentence',
+      slices: [{ index: 0, text: content, charStart: 0, charEnd: content.length, paragraphIndex: 0 }],
+      sourceCharCount: content.length,
+    };
+    return this.currentPlan;
+  }
+  async play(plan, index) {
+    this.currentChapter = plan.chapter;
+    this.currentPlan = plan;
+    this.cursor = index;
+    this.queueState = 'playing';
+    return this.snapshot('playing');
+  }
+  async reportCallback(_chapter, _index, status) {
+    if (status === 'done') this.queueState = 'completed';
+    return { snapshot: this.snapshot(this.queueState), callbackDisposition: 'applied' };
+  }
+  async chapterPlan(current, next, drainBehavior) {
+    return { current, next, drainBehavior };
+  }
+  snapshot(state) {
+    return {
+      state, currentSliceIndex: 0, totalSlices: 1,
+      completedSlices: state === 'completed' ? 1 : 0,
+      chapter: this.currentChapter, sliceStatuses: [], failurePolicy: 'stop',
+      consecutiveFailures: 0, failureLimit: 3, drainBehavior: 'advance-to-next',
+      restartPolicy: 'reset-on-core-restart',
+    };
+  }
+}
 
-// A replacement content/source session also supersedes an in-flight chapter
-// loader before that loader can navigate the old page.
+const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' };
+
 {
   let entered;
   let release;
@@ -514,7 +581,7 @@ const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' }
   const loaderBlocked = new Promise(resolve => { release = resolve; });
   const g = new AdvancingChapterGateway(), h = new FakeHost();
   let admitted = 0;
-  const c = new ReaderTtsSessionCoordinator(g, h, async () => {}, undefined, async () => {
+  const c = createCoordinator(g, h, async () => {}, undefined, async () => {
     entered();
     await loaderBlocked;
     return { chapter: secondChapter, content: '旧来源下一章。', contentVersion: 113,
@@ -536,5 +603,8 @@ const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' }
   assert.equal(h.requests.length, 2);
   await c.dispose();
 }
-
-console.log('reader TTS fake-host coordinator: PASS');
+}
+}finally{for(const c of owned)await c.dispose();}
+}
+const definitions={"callback-controls": "callback-controls actual coordinator with controlled boundaries; no regex gate", "immediate-stop": "immediate-stop actual coordinator with controlled boundaries; no regex gate", "transport-intents": "transport-intents actual coordinator with controlled boundaries; no regex gate", "host-events": "host-events actual coordinator with controlled boundaries; no regex gate", "replacement": "replacement actual coordinator with controlled boundaries; no regex gate", "interruption-stop": "interruption-stop actual coordinator with controlled boundaries; no regex gate", "retention": "retention actual coordinator with controlled boundaries; no regex gate", "same-value-policy": "same-value-policy actual coordinator with controlled boundaries; no regex gate", "probe-engine-race": "probe-engine-race actual coordinator with controlled boundaries; no regex gate", "probe-stop-race": "probe-stop-race actual coordinator with controlled boundaries; no regex gate", "slow-progress": "slow-progress actual coordinator with controlled boundaries; no regex gate", "chapter-boundary": "chapter-boundary actual coordinator with controlled boundaries; no regex gate", "chapter-stop": "chapter-stop actual coordinator with controlled boundaries; no regex gate", "chapter-replacement": "chapter-replacement actual coordinator with controlled boundaries; no regex gate"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -1,8 +1,17 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
-import { sampleReaderControlSearch } from '../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'projection':{description:'Current production policy semantic row versus native base and user callback ownership',resources:[]},
+ 'rebase':{description:'Current async normalization receipts, clamped range continuation and invalid input',resources:[]},
+ 'content-origin':{description:'Authored negative/positive content origins, independent padding and rebase ticket identity',resources:[]},
+ 'mutation-controls':{description:'Explicit source mutation/finite pure boundary diagnostics; not product release prerequisite',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
+const { sampleReaderControlSearch }=await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
 
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 1e-7,
   `${label}: ${actual} != ${expected}`);
@@ -45,7 +54,7 @@ function checkProjection(api = scroll) {
   }
   assert.deepEqual(state, before, 'sampling never writes the semantic anchor or native base');
 }
-checkProjection();
+if(selectedCase==='projection')checkProjection();
 
 function checkNativeOwnership(api = scroll) {
   const original = initialScrolled(api);
@@ -68,7 +77,7 @@ function checkNativeOwnership(api = scroll) {
   }
   assert.equal(api.readerControlSearchScrollIsUserSource('unknown'), false);
 }
-checkNativeOwnership();
+if(selectedCase==='projection')checkNativeOwnership();
 
 function checkRebase(api = scroll) {
   let state = initialScrolled(api);
@@ -118,7 +127,7 @@ function checkRebase(api = scroll) {
   assert.ok(resized.command && resized.command.revision > prepared.command.revision);
   assert.equal(api.confirmReaderControlSearchScrollRebase(resized.state, prepared.command, 162.285714), resized.state);
 }
-checkRebase();
+if(selectedCase==='rebase')checkRebase();
 
 function checkClampedRanges(api = scroll) {
   // Remember a deep Quick anchor through a larger Full window, then reverse.
@@ -176,7 +185,7 @@ function checkClampedRanges(api = scroll) {
   assert.equal(api.sampleReaderControlSearchScroll(reset, empty).offsetVp, 0);
   assert.equal(normalize(api, reset, empty, 1).nativeOffsetVp, 0);
 }
-checkClampedRanges();
+if(selectedCase==='rebase')checkClampedRanges();
 
 // Source receipt: Results is the fixed parent below the 51vp Query, not the
 // moving first row. Canonical Full (slot 338x666) has y53/h612. Row local y is
@@ -261,7 +270,7 @@ function checkContentOrigin(api = scroll) {
   assert.deepEqual(api.sampleReaderControlSearchScroll(reset, legacy),
     api.sampleReaderControlSearchScroll(reset, { ...legacy, contentOriginVp: 0, contentEndPaddingVp: 0 }));
 }
-checkContentOrigin();
+if(selectedCase==='content-origin')checkContentOrigin();
 
 function checkOriginRebase(api = scroll) {
   const quick = sourceLayout(0), full = sourceLayout(1);
@@ -291,8 +300,9 @@ function checkOriginRebase(api = scroll) {
     assert.equal(api.prepareReaderControlSearchScrollRebase(initial, invalid, context(1)).command, undefined);
   }
 }
-checkOriginRebase();
+if(selectedCase==='content-origin')checkOriginRebase();
 
+if(selectedCase==='rebase'){
 // Exact reviewer case: Full shows every result and therefore O=0. Merely
 // touching the edge / receiving DRAG with zero actual delta must not consume
 // the remembered Quick row anchor. Sampling back to Quick restores it.
@@ -319,6 +329,8 @@ for (const invalid of [layout(0, -1), { ...layout(0), rowHeightVp: 0 },
   assert.equal(scroll.prepareReaderControlSearchScrollRebase(unchanged, invalid, context(0)).command, undefined);
 }
 
+}
+if(selectedCase==='mutation-controls'){
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts', import.meta.url), 'utf8');
 assert.doesNotMatch(source, /(?:setTimeout|setInterval|animateTo|scrollTo|postFrameCallback)\s*\(/,
   'pure policy cannot own a clock or execute native scrolling');
@@ -350,4 +362,8 @@ assert.throws(() => checkOriginRebase(mutated('pending.contentOriginVp === conte
   'true &&')), 'kills stale rebase ticket retained after an origin-only layout change');
 assert.throws(() => checkOriginRebase(mutated('pending.contentEndPaddingVp === contentEndPadding(layout) &&',
   'true &&')), 'kills stale rebase ticket retained after a padding-only layout change');
-console.log('PASS Search scroll: production row projection, source origin/end-padding, both-end reachability, guarded async rebase, clamp/user continuation, callback ownership and 9 mutations; NOT device acceptance');
+}
+console.log(`PASS pure current Search scroll ${selectedCase}; native List adapter separately owned`);
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

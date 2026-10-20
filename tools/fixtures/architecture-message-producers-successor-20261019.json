@@ -1,0 +1,3166 @@
+{
+  "schema": 1,
+  "authority": "docs/message-ui/approved-scope-20261019.json",
+  "authoritySha256": "f99fb50be5e66fdd6eb8e34fef69bc40162042d4385b6cb2755960cf93ddc6f7",
+  "previousContract": {
+    "file": "tools/fixtures/architecture-shared-producers.json",
+    "sha256": "0a1cf22169eaa828361cdca52aa15174188eaf12971972eac37f7707d0cc9152"
+  },
+  "producerConsumerUpdates": [
+    {
+      "component": "ReaderBoundedSurface",
+      "previousConsumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'bookshelf-book-action'",
+          "keys": [
+            "specId",
+            "header",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-progress'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "body"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionPanel",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-selection'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultPanel",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-result-content'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#actionPanelSurface",
+          "component": "ReaderBoundedSurface",
+          "specId": "'reader-action-sheet'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "maxSurfaceHeight",
+            "placement",
+            "scheme",
+            "safeInsets",
+            "header",
+            "body"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#temporaryOverlay",
+          "component": "ReaderBoundedSurface",
+          "specId": "'reader-replace-editor'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "this.boundedSpecId()",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/source/SourceSwitchWindow.ets",
+          "method": "features/source/SourceSwitchWindow.ets#SourceSwitchWindow#novelDrawer",
+          "component": "ReaderBoundedSurface",
+          "specId": "'source-switch-drawer'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "body"
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'bookshelf-book-action'",
+          "keys": [
+            "specId",
+            "header",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-progress'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "body"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionPanel",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-selection'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "body"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultPanel",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-result-content'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#actionPanelSurface",
+          "component": "ReaderBoundedSurface",
+          "specId": "'reader-action-sheet'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "maxSurfaceHeight",
+            "placement",
+            "scheme",
+            "safeInsets",
+            "header",
+            "body"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#temporaryOverlay",
+          "component": "ReaderBoundedSurface",
+          "specId": "'reader-replace-editor'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "this.boundedSpecId()",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/source/SourceSwitchWindow.ets",
+          "method": "features/source/SourceSwitchWindow.ets#SourceSwitchWindow#novelDrawer",
+          "component": "ReaderBoundedSurface",
+          "specId": "'source-switch-drawer'",
+          "keys": [
+            "specId",
+            "surfaceWidth",
+            "surfaceHeight",
+            "body"
+          ]
+        }
+      ]
+    },
+    {
+      "component": "ReaderBoundedSurfaceHeader",
+      "previousConsumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#sheetHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'bookshelf-book-action'",
+          "keys": [
+            "specId",
+            "title"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'local-import-selection'",
+          "keys": [
+            "specId",
+            "title"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'local-import-result-content'",
+          "keys": [
+            "specId",
+            "title",
+            "onAreaChanged"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#actionPanelHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'reader-action-sheet'",
+          "keys": [
+            "specId",
+            "title",
+            "surfaceWidth",
+            "placement",
+            "scheme",
+            "actionEnabled",
+            "onClose",
+            "onHandlePanStart",
+            "onHandlePanUpdate",
+            "onHandlePanEnd"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#temporaryHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'reader-replace-editor'",
+          "keys": [
+            "specId",
+            "title",
+            "leading",
+            "accessory"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#configurationHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "this.boundedSpecId()",
+          "keys": [
+            "specId",
+            "title",
+            "actionEnabled",
+            "onClose"
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#sheetHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'bookshelf-book-action'",
+          "keys": [
+            "specId",
+            "title"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#actionPanelHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'reader-action-sheet'",
+          "keys": [
+            "specId",
+            "title",
+            "surfaceWidth",
+            "placement",
+            "scheme",
+            "actionEnabled",
+            "onClose",
+            "onHandlePanStart",
+            "onHandlePanUpdate",
+            "onHandlePanEnd"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#temporaryHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'reader-replace-editor'",
+          "keys": [
+            "specId",
+            "title",
+            "leading",
+            "accessory"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#configurationHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "this.boundedSpecId()",
+          "keys": [
+            "specId",
+            "title",
+            "actionEnabled",
+            "onClose"
+          ]
+        }
+      ]
+    },
+    {
+      "component": "ReaderBoundedSurfaceActions",
+      "previousConsumers": [
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionActions",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'local-file-selection'",
+          "keys": [
+            "specId",
+            "primaryLabel",
+            "primaryEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultFooter",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'local-import-result'",
+          "keys": [
+            "specId",
+            "primaryLabel",
+            "actionWidth",
+            "availableHeight",
+            "feedback",
+            "onAction",
+            "onAreaChanged"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#editorActions",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'replace-editor'",
+          "keys": [
+            "specId",
+            "primaryEnabled",
+            "cancelEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerFooter",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'tts-manager'",
+          "keys": [
+            "specId",
+            "primaryEnabled",
+            "cancelEnabled",
+            "onAction"
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#editorActions",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'replace-editor'",
+          "keys": [
+            "specId",
+            "primaryEnabled",
+            "cancelEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerFooter",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'tts-manager'",
+          "keys": [
+            "specId",
+            "primaryEnabled",
+            "cancelEnabled",
+            "onAction"
+          ]
+        }
+      ]
+    },
+    {
+      "component": "ReaderFixedHeaderHost",
+      "previousConsumers": [
+        {
+          "file": "features/bookshelf/BookshelfShell.ets",
+          "method": "features/bookshelf/BookshelfShell.ets#BookshelfShell#shellHeader",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfShell.ets",
+          "method": "features/bookshelf/BookshelfShell.ets#BookshelfShell#shellHeader",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "content"
+          ]
+        },
+        {
+          "file": "features/common/ReaderPageScaffold.ets",
+          "method": "features/common/ReaderPageScaffold.ets#ReaderPageScaffold#build",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "measurementKey",
+            "content",
+            "onHeightChange"
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/common/ReaderPageScaffold.ets",
+          "method": "features/common/ReaderPageScaffold.ets#ReaderPageScaffold#build",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "measurementKey",
+            "content",
+            "onHeightChange"
+          ]
+        }
+      ]
+    },
+    {
+      "component": "ReaderStandardPage",
+      "previousConsumers": [
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "scroller"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "footer",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "scroller"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "footer",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        }
+      ]
+    }
+  ],
+  "specSources": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets",
+      "shape": {
+        "types": [
+          {
+            "name": "DrawerSpecId",
+            "type": "'reader-action-sheet' | 'source-switch-drawer'"
+          },
+          {
+            "name": "DialogSpecId",
+            "type": "'book-removal' | 'json-import' | 'shelf-group' | 'local-import'"
+          },
+          {
+            "name": "DialogHeaderFontFamily",
+            "type": "'ReaderMangaSans600' | 'ReaderNotoSerifSCBold'"
+          },
+          {
+            "name": "DialogFrameMode",
+            "type": "'cap' | 'inset' | 'card-inset'"
+          },
+          {
+            "name": "DialogActionsLayout",
+            "type": "'row' | 'stack'"
+          },
+          {
+            "name": "SheetSpecId",
+            "type": "'bookshelf-book-action'"
+          },
+          {
+            "name": "ActionSheetSpecId",
+            "type": "'grouped' | 'quick'"
+          },
+          {
+            "name": "PopupSpecId",
+            "type": "'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "DrawerSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "maxWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "cornerRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "surfaceRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "lineRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "scrimRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "inkRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "minimumContentHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "contentInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideContentInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "compactSideContentInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "compactViewportWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleZone",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeIcon",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "closeRight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "titleFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleMinFontScale",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleMaxFontScale",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideTitleLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideHeaderHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sideHeaderBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "DialogSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "headerFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "maxWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "edgeGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "widthPercent",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "frameMode",
+                "type": "DialogFrameMode",
+                "decorators": []
+              },
+              {
+                "name": "usesKeyboardSafeArea",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "padding",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "backgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "hasShadow",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "hasBorder",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "headerFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "headerFontFamily",
+                "type": "DialogHeaderFontFamily",
+                "decorators": []
+              },
+              {
+                "name": "headerTextAlign",
+                "type": "TextAlign",
+                "decorators": []
+              },
+              {
+                "name": "headerLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "headerGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "bodyActionsGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "bodyActionsOwnMargin",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionsLayout",
+                "type": "DialogActionsLayout",
+                "decorators": []
+              },
+              {
+                "name": "actionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionBorderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionUsesPressFeedback",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "actionExtendsTouchRegion",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "actionPrimarySurfaceRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionPrimaryLabelRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "SheetSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "titleFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionLabelFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "height",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "horizontalInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "handleTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "titleFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "titleLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionStart",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionStep",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionCount",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionPaddingLeft",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionBorderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "shadowRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "shadowOffsetY",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionLabelFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "actionLabelFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionLabelLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "backgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "borderRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "handleRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "titleRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionTextRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "dangerTextRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionBackgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "dangerBackgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "shadowRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "hostBackgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "hostMaskRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "ActionSheetSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "regularFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "emphasisFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "regularFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "emphasisFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "inkRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "mutedRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "dangerRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "lineRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "groupRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "groupRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "groupGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickIconContainer",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sectionHeadingHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sectionHeadingFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "sectionHeadingLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickActionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickActionGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickLabelFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickLabelLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSecondaryFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSecondaryLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowSecondaryHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowGap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowInsetLeft",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "rowInsetRight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "labelFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "labelLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "secondaryFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "secondaryLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "trailingFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "trailingLineHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "iconSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "chevronSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSeparatorTop",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickSeparatorBottom",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "quickActionCount",
+                "type": "number",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "PopupSurfaceSpec",
+            "publicFields": [
+              {
+                "name": "actionFontWeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionMutesContent",
+                "type": "boolean",
+                "decorators": []
+              },
+              {
+                "name": "height",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "width",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "pointerWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "pointerHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionCount",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "trailingExtension",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "anchorOverlap",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "borderRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "shadowRadius",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "shadowOffsetY",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionPaddingLeft",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionPaddingRight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionIconSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerInset",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "dividerHeight",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "pointerPoints",
+                "type": "Array<Array<number>>",
+                "decorators": []
+              },
+              {
+                "name": "surfaceBackgroundRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "surfaceBorderRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "surfaceShadowRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "pointerFillRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "pointerStrokeRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionTextRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "dividerRole",
+                "type": "ReaderAppColorRole",
+                "decorators": []
+              },
+              {
+                "name": "actionFontFamily",
+                "type": "string",
+                "decorators": []
+              },
+              {
+                "name": "actionFontSize",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "actionLineHeight",
+                "type": "number",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [],
+        "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nimport { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';\nexport type DrawerSpecId = 'reader-action-sheet' | 'source-switch-drawer';\nexport class DrawerSurfaceSpec {\n    readonly maxWidth: number;\n    readonly cornerRadius: number;\n    readonly surfaceRole: ReaderAppColorRole;\n    readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';\n    readonly scrimRole: ReaderAppColorRole;\n    readonly inkRole: ReaderAppColorRole = 'TOK_INK';\n    readonly minimumContentHeight: number = 260;\n    readonly contentInset: number = 18;\n    readonly sideContentInset: number = 20;\n    readonly compactSideContentInset: number = 16;\n    readonly compactViewportWidth: number = 700;\n    readonly handleWidth: number = 42;\n    readonly handleHeight: number = 5;\n    readonly handleZone: number = 30;\n    readonly closeSize: number = 44;\n    readonly closeIcon: number = 18;\n    readonly closeTop: number = 24;\n    readonly closeRight: number = 12;\n    readonly titleFontFamily: string = 'ReaderMangaSans900';\n    readonly titleFontWeight: number = 900;\n    readonly titleFontSize: number = 18;\n    readonly titleLineHeight: number = 26;\n    readonly titleMinFontScale: number = 0;\n    readonly titleMaxFontScale: number = 2;\n    readonly titleBottom: number = 14;\n    readonly sideTitleFontFamily: string = 'ReaderMangaSans600';\n    readonly sideTitleFontWeight: number = 600;\n    readonly sideTitleFontSize: number = 15;\n    readonly sideTitleLineHeight: number = 24;\n    readonly sideHeaderHeight: number = 66;\n    readonly sideHeaderBottom: number = 17;\n    readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';\n    constructor(id: DrawerSpecId) {\n        this.maxWidth = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerMaxWidth : 0;\n        this.cornerRadius = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerCornerRadius : 22;\n        this.surfaceRole = id === 'source-switch-drawer' ? 'TOK_SS_WINDOW_BG' : 'TOK_DOWNLOAD_SURFACE';\n        this.scrimRole = id === 'source-switch-drawer' ? 'TOK_SS_DRAWER_SCRIM' : 'TOK_DOWNLOAD_SCRIM';\n    }\n}\nconst DRAWER_SPECS: Record<DrawerSpecId, DrawerSurfaceSpec> = {\n    'reader-action-sheet': new DrawerSurfaceSpec('reader-action-sheet'),\n    'source-switch-drawer': new DrawerSurfaceSpec('source-switch-drawer'),\n};\nexport function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return DRAWER_SPECS[id]; }\nexport type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import';\nexport type DialogHeaderFontFamily = 'ReaderMangaSans600' | 'ReaderNotoSerifSCBold';\nexport type DialogFrameMode = 'cap' | 'inset' | 'card-inset';\nexport type DialogActionsLayout = 'row' | 'stack';\nexport interface DialogSurfaceSpecInit {\n    maxWidth: number;\n    edgeGap: number;\n    widthPercent: number;\n    frameMode: DialogFrameMode;\n    usesKeyboardSafeArea: boolean;\n    padding: number;\n    borderRadius: number;\n    backgroundRole: ReaderAppColorRole;\n    hasShadow: boolean;\n    hasBorder: boolean;\n    headerFontSize: number;\n    headerFontFamily: DialogHeaderFontFamily;\n    headerTextAlign: TextAlign;\n    headerLineHeight: number;\n    headerGap: number;\n    bodyActionsGap: number;\n    bodyActionsOwnMargin: number;\n    actionsLayout: DialogActionsLayout;\n    actionHeight: number;\n    actionBorderRadius: number;\n    actionUsesPressFeedback: boolean;\n    actionExtendsTouchRegion: boolean;\n    actionPrimarySurfaceRole: ReaderAppColorRole;\n    actionPrimaryLabelRole: ReaderAppColorRole;\n}\nexport class DialogSurfaceSpec {\n    readonly headerFontWeight: number = 600;\n    readonly maxWidth: number;\n    readonly edgeGap: number;\n    readonly widthPercent: number;\n    readonly frameMode: DialogFrameMode;\n    readonly usesKeyboardSafeArea: boolean;\n    readonly padding: number;\n    readonly borderRadius: number;\n    readonly backgroundRole: ReaderAppColorRole;\n    readonly hasShadow: boolean;\n    readonly hasBorder: boolean;\n    readonly headerFontSize: number;\n    readonly headerFontFamily: DialogHeaderFontFamily;\n    readonly headerTextAlign: TextAlign;\n    readonly headerLineHeight: number;\n    readonly headerGap: number;\n    readonly bodyActionsGap: number;\n    readonly bodyActionsOwnMargin: number;\n    readonly actionsLayout: DialogActionsLayout;\n    readonly actionHeight: number;\n    readonly actionBorderRadius: number;\n    readonly actionUsesPressFeedback: boolean;\n    readonly actionExtendsTouchRegion: boolean;\n    readonly actionPrimarySurfaceRole: ReaderAppColorRole;\n    readonly actionPrimaryLabelRole: ReaderAppColorRole;\n    constructor(init: DialogSurfaceSpecInit) {\n        this.maxWidth = init.maxWidth;\n        this.edgeGap = init.edgeGap;\n        this.widthPercent = init.widthPercent;\n        this.frameMode = init.frameMode;\n        this.usesKeyboardSafeArea = init.usesKeyboardSafeArea;\n        this.padding = init.padding;\n        this.borderRadius = init.borderRadius;\n        this.backgroundRole = init.backgroundRole;\n        this.hasShadow = init.hasShadow;\n        this.hasBorder = init.hasBorder;\n        this.headerFontSize = init.headerFontSize;\n        this.headerFontFamily = init.headerFontFamily;\n        this.headerTextAlign = init.headerTextAlign;\n        this.headerLineHeight = init.headerLineHeight;\n        this.headerGap = init.headerGap;\n        this.bodyActionsGap = init.bodyActionsGap;\n        this.bodyActionsOwnMargin = init.bodyActionsOwnMargin;\n        this.actionsLayout = init.actionsLayout;\n        this.actionHeight = init.actionHeight;\n        this.actionBorderRadius = init.actionBorderRadius;\n        this.actionUsesPressFeedback = init.actionUsesPressFeedback;\n        this.actionExtendsTouchRegion = init.actionExtendsTouchRegion;\n        this.actionPrimarySurfaceRole = init.actionPrimarySurfaceRole;\n        this.actionPrimaryLabelRole = init.actionPrimaryLabelRole;\n    }\n}\nconst DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {\n    'book-removal': new DialogSurfaceSpec({\n        maxWidth: 306, edgeGap: 20, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n    'json-import': new DialogSurfaceSpec({\n        maxWidth: 360, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n    'shelf-group': new DialogSurfaceSpec({\n        maxWidth: 360, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n    'local-import': new DialogSurfaceSpec({\n        maxWidth: 350, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,\n        padding: 17, borderRadius: 12,\n        backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,\n        headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,\n        headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,\n        actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,\n        actionExtendsTouchRegion: false,\n        actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',\n    }),\n};\nexport function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {\n    return DIALOG_SPECS[id];\n}\nexport type SheetSpecId = 'bookshelf-book-action';\nexport interface SheetSurfaceSpecInit {\n    height: number;\n    horizontalInset: number;\n    handleWidth: number;\n    handleHeight: number;\n    handleTop: number;\n    titleTop: number;\n    titleInset: number;\n    titleFontFamily: string;\n    titleFontSize: number;\n    titleLineHeight: number;\n    actionStart: number;\n    actionStep: number;\n    actionCount: number;\n    actionHeight: number;\n    actionPaddingLeft: number;\n    actionBorderRadius: number;\n    borderWidth: number;\n    borderRadius: number;\n    shadowRadius: number;\n    shadowOffsetY: number;\n    actionLabelFontFamily: string;\n    actionLabelFontSize: number;\n    actionLabelLineHeight: number;\n    backgroundRole: ReaderAppColorRole;\n    borderRole: ReaderAppColorRole;\n    handleRole: ReaderAppColorRole;\n    titleRole: ReaderAppColorRole;\n    actionTextRole: ReaderAppColorRole;\n    dangerTextRole: ReaderAppColorRole;\n    actionBackgroundRole: ReaderAppColorRole;\n    dangerBackgroundRole: ReaderAppColorRole;\n    shadowRole: ReaderAppColorRole;\n    hostBackgroundRole: ReaderAppColorRole;\n    hostMaskRole: ReaderAppColorRole;\n}\nexport class SheetSurfaceSpec {\n    readonly titleFontWeight: number = 700;\n    readonly actionLabelFontWeight: number = 700;\n    readonly height: number;\n    readonly horizontalInset: number;\n    readonly handleWidth: number;\n    readonly handleHeight: number;\n    readonly handleTop: number;\n    readonly titleTop: number;\n    readonly titleInset: number;\n    readonly titleFontFamily: string;\n    readonly titleFontSize: number;\n    readonly titleLineHeight: number;\n    readonly actionStart: number;\n    readonly actionStep: number;\n    readonly actionCount: number;\n    readonly actionHeight: number;\n    readonly actionPaddingLeft: number;\n    readonly actionBorderRadius: number;\n    readonly borderWidth: number;\n    readonly borderRadius: number;\n    readonly shadowRadius: number;\n    readonly shadowOffsetY: number;\n    readonly actionLabelFontFamily: string;\n    readonly actionLabelFontSize: number;\n    readonly actionLabelLineHeight: number;\n    readonly backgroundRole: ReaderAppColorRole;\n    readonly borderRole: ReaderAppColorRole;\n    readonly handleRole: ReaderAppColorRole;\n    readonly titleRole: ReaderAppColorRole;\n    readonly actionTextRole: ReaderAppColorRole;\n    readonly dangerTextRole: ReaderAppColorRole;\n    readonly actionBackgroundRole: ReaderAppColorRole;\n    readonly dangerBackgroundRole: ReaderAppColorRole;\n    readonly shadowRole: ReaderAppColorRole;\n    readonly hostBackgroundRole: ReaderAppColorRole;\n    readonly hostMaskRole: ReaderAppColorRole;\n    constructor(init: SheetSurfaceSpecInit) {\n        this.height = init.height;\n        this.horizontalInset = init.horizontalInset;\n        this.handleWidth = init.handleWidth;\n        this.handleHeight = init.handleHeight;\n        this.handleTop = init.handleTop;\n        this.titleTop = init.titleTop;\n        this.titleInset = init.titleInset;\n        this.titleFontFamily = init.titleFontFamily;\n        this.titleFontSize = init.titleFontSize;\n        this.titleLineHeight = init.titleLineHeight;\n        this.actionStart = init.actionStart;\n        this.actionStep = init.actionStep;\n        this.actionCount = init.actionCount;\n        this.actionHeight = init.actionHeight;\n        this.actionPaddingLeft = init.actionPaddingLeft;\n        this.actionBorderRadius = init.actionBorderRadius;\n        this.borderWidth = init.borderWidth;\n        this.borderRadius = init.borderRadius;\n        this.shadowRadius = init.shadowRadius;\n        this.shadowOffsetY = init.shadowOffsetY;\n        this.actionLabelFontFamily = init.actionLabelFontFamily;\n        this.actionLabelFontSize = init.actionLabelFontSize;\n        this.actionLabelLineHeight = init.actionLabelLineHeight;\n        this.backgroundRole = init.backgroundRole;\n        this.borderRole = init.borderRole;\n        this.handleRole = init.handleRole;\n        this.titleRole = init.titleRole;\n        this.actionTextRole = init.actionTextRole;\n        this.dangerTextRole = init.dangerTextRole;\n        this.actionBackgroundRole = init.actionBackgroundRole;\n        this.dangerBackgroundRole = init.dangerBackgroundRole;\n        this.shadowRole = init.shadowRole;\n        this.hostBackgroundRole = init.hostBackgroundRole;\n        this.hostMaskRole = init.hostMaskRole;\n    }\n    actionY(index: number): number {\n        return this.actionStart + (index * this.actionStep);\n    }\n}\nconst SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {\n    'bookshelf-book-action': new SheetSurfaceSpec({\n        height: 270, horizontalInset: 14,\n        handleWidth: 42, handleHeight: 4, handleTop: 9,\n        titleTop: 34, titleInset: 14,\n        titleFontFamily: 'ReaderNotoSansSC', titleFontSize: 17, titleLineHeight: 20.4,\n        actionStart: 70, actionStep: 46, actionCount: 4, actionHeight: 40,\n        actionPaddingLeft: 12, actionBorderRadius: 12,\n        borderWidth: 1, borderRadius: 24,\n        shadowRadius: 46, shadowOffsetY: 18,\n        actionLabelFontFamily: 'ReaderNotoSansSC', actionLabelFontSize: 13, actionLabelLineHeight: 15.6,\n        backgroundRole: 'TOK_CARD_BG_HI', borderRole: 'TOK_BORDER', handleRole: 'TOK_MUTED',\n        titleRole: 'TOK_INK', actionTextRole: 'TOK_GREEN',\n        dangerTextRole: 'app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E',\n        actionBackgroundRole: 'TOK_PRIMARY_SOFT',\n        dangerBackgroundRole: 'app.BookshelfBookActionSheet.actionSlot.backgroundColor.1AD6473D',\n        shadowRole: 'app.BookshelfBookActionSheet.build.color.29594632',\n        hostBackgroundRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8',\n        hostMaskRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.52000000',\n    }),\n};\nexport function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {\n    return SHEET_SPECS[id];\n}\nexport type ActionSheetSpecId = 'grouped' | 'quick';\nexport interface ActionSheetSurfaceSpecInit {\n    sectionHeadingHeight: number;\n    sectionHeadingFontSize: number;\n    sectionHeadingLineHeight: number;\n    quickActionHeight: number;\n    quickActionGap: number;\n    quickLabelFontSize: number;\n    quickLabelLineHeight: number;\n    quickSecondaryFontSize: number;\n    quickSecondaryLineHeight: number;\n    rowHeight: number;\n    rowSecondaryHeight: number;\n    rowGap: number;\n    rowInsetLeft: number;\n    rowInsetRight: number;\n    labelFontSize: number;\n    labelLineHeight: number;\n    secondaryFontSize: number;\n    secondaryLineHeight: number;\n    trailingFontSize: number;\n    trailingLineHeight: number;\n    iconSize: number;\n    chevronSize: number;\n    dividerHeight: number;\n    dividerInset: number;\n    quickSeparatorTop: number;\n    quickSeparatorBottom: number;\n    quickActionCount: number;\n}\nexport class ActionSheetSurfaceSpec {\n    readonly regularFontFamily: string = 'ReaderNotoSansSCUIRegular';\n    readonly emphasisFontFamily: string = 'ReaderNotoSansSCUIBold';\n    readonly regularFontWeight: number = 400;\n    readonly emphasisFontWeight: number = 700;\n    readonly inkRole: ReaderAppColorRole = 'TOK_INK';\n    readonly mutedRole: ReaderAppColorRole = 'TOK_MUTED';\n    readonly dangerRole: ReaderAppColorRole = 'TOK_DOWNLOAD_DANGER';\n    readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';\n    readonly groupRole: ReaderAppColorRole = 'TOK_DOWNLOAD_SOFT';\n    readonly groupRadius: number = 14;\n    readonly groupGap: number = 12;\n    readonly quickIconContainer: number = 40;\n    readonly sectionHeadingHeight: number;\n    readonly sectionHeadingFontSize: number;\n    readonly sectionHeadingLineHeight: number;\n    readonly quickActionHeight: number;\n    readonly quickActionGap: number;\n    readonly quickLabelFontSize: number;\n    readonly quickLabelLineHeight: number;\n    readonly quickSecondaryFontSize: number;\n    readonly quickSecondaryLineHeight: number;\n    readonly rowHeight: number;\n    readonly rowSecondaryHeight: number;\n    readonly rowGap: number;\n    readonly rowInsetLeft: number;\n    readonly rowInsetRight: number;\n    readonly labelFontSize: number;\n    readonly labelLineHeight: number;\n    readonly secondaryFontSize: number;\n    readonly secondaryLineHeight: number;\n    readonly trailingFontSize: number;\n    readonly trailingLineHeight: number;\n    readonly iconSize: number;\n    readonly chevronSize: number;\n    readonly dividerHeight: number;\n    readonly dividerInset: number;\n    readonly quickSeparatorTop: number;\n    readonly quickSeparatorBottom: number;\n    readonly quickActionCount: number;\n    constructor(init: ActionSheetSurfaceSpecInit) {\n        this.sectionHeadingHeight = init.sectionHeadingHeight;\n        this.sectionHeadingFontSize = init.sectionHeadingFontSize;\n        this.sectionHeadingLineHeight = init.sectionHeadingLineHeight;\n        this.quickActionHeight = init.quickActionHeight;\n        this.quickActionGap = init.quickActionGap;\n        this.quickLabelFontSize = init.quickLabelFontSize;\n        this.quickLabelLineHeight = init.quickLabelLineHeight;\n        this.quickSecondaryFontSize = init.quickSecondaryFontSize;\n        this.quickSecondaryLineHeight = init.quickSecondaryLineHeight;\n        this.rowHeight = init.rowHeight;\n        this.rowSecondaryHeight = init.rowSecondaryHeight;\n        this.rowGap = init.rowGap;\n        this.rowInsetLeft = init.rowInsetLeft;\n        this.rowInsetRight = init.rowInsetRight;\n        this.labelFontSize = init.labelFontSize;\n        this.labelLineHeight = init.labelLineHeight;\n        this.secondaryFontSize = init.secondaryFontSize;\n        this.secondaryLineHeight = init.secondaryLineHeight;\n        this.trailingFontSize = init.trailingFontSize;\n        this.trailingLineHeight = init.trailingLineHeight;\n        this.iconSize = init.iconSize;\n        this.chevronSize = init.chevronSize;\n        this.dividerHeight = init.dividerHeight;\n        this.dividerInset = init.dividerInset;\n        this.quickSeparatorTop = init.quickSeparatorTop;\n        this.quickSeparatorBottom = init.quickSeparatorBottom;\n        this.quickActionCount = init.quickActionCount;\n    }\n}\ninterface ActionSheetSpecs {\n    grouped: ActionSheetSurfaceSpec;\n    quick: ActionSheetSurfaceSpec;\n}\nconst ACTION_SHEET_SPECS: ActionSheetSpecs = {\n    grouped: new ActionSheetSurfaceSpec({\n        sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,\n        quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,\n        quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,\n        rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,\n        labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,\n        trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,\n        dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,\n    }),\n    quick: new ActionSheetSurfaceSpec({\n        sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,\n        quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,\n        quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,\n        rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,\n        labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,\n        trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,\n        dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,\n    }),\n};\nexport function resolveActionSheetSpec(id: ActionSheetSpecId): ActionSheetSurfaceSpec {\n    return id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;\n}\nexport type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet';\nexport interface PopupSurfaceSpecInit {\n    actionMutesContent?: boolean;\n    height: number;\n    width: number;\n    pointerWidth: number;\n    pointerHeight: number;\n    actionHeight: number;\n    actionCount: number;\n    trailingExtension: number;\n    anchorOverlap: number;\n    borderWidth: number;\n    borderRadius: number;\n    shadowRadius: number;\n    shadowOffsetY: number;\n    actionPaddingLeft: number;\n    actionPaddingRight: number;\n    actionIconSize: number;\n    dividerInset: number;\n    dividerHeight: number;\n    pointerPoints: Array<Array<number>>;\n    surfaceBackgroundRole: ReaderAppColorRole;\n    surfaceBorderRole: ReaderAppColorRole;\n    surfaceShadowRole: ReaderAppColorRole;\n    pointerFillRole: ReaderAppColorRole;\n    pointerStrokeRole: ReaderAppColorRole;\n    actionTextRole: ReaderAppColorRole;\n    dividerRole: ReaderAppColorRole;\n    actionFontFamily: string;\n    actionFontSize: number;\n    actionLineHeight: number;\n}\nexport class PopupSurfaceSpec {\n    readonly actionFontWeight: number = 500;\n    readonly actionMutesContent: boolean;\n    readonly height: number;\n    readonly width: number;\n    readonly pointerWidth: number;\n    readonly pointerHeight: number;\n    readonly actionHeight: number;\n    readonly actionCount: number;\n    readonly trailingExtension: number;\n    readonly anchorOverlap: number;\n    readonly borderWidth: number;\n    readonly borderRadius: number;\n    readonly shadowRadius: number;\n    readonly shadowOffsetY: number;\n    readonly actionPaddingLeft: number;\n    readonly actionPaddingRight: number;\n    readonly actionIconSize: number;\n    readonly dividerInset: number;\n    readonly dividerHeight: number;\n    readonly pointerPoints: Array<Array<number>>;\n    readonly surfaceBackgroundRole: ReaderAppColorRole;\n    readonly surfaceBorderRole: ReaderAppColorRole;\n    readonly surfaceShadowRole: ReaderAppColorRole;\n    readonly pointerFillRole: ReaderAppColorRole;\n    readonly pointerStrokeRole: ReaderAppColorRole;\n    readonly actionTextRole: ReaderAppColorRole;\n    readonly dividerRole: ReaderAppColorRole;\n    readonly actionFontFamily: string;\n    readonly actionFontSize: number;\n    readonly actionLineHeight: number;\n    constructor(init: PopupSurfaceSpecInit) {\n        this.actionMutesContent = init.actionMutesContent ?? false;\n        this.height = init.height;\n        this.width = init.width;\n        this.pointerWidth = init.pointerWidth;\n        this.pointerHeight = init.pointerHeight;\n        this.actionHeight = init.actionHeight;\n        this.actionCount = init.actionCount;\n        this.trailingExtension = init.trailingExtension;\n        this.anchorOverlap = init.anchorOverlap;\n        this.borderWidth = init.borderWidth;\n        this.borderRadius = init.borderRadius;\n        this.shadowRadius = init.shadowRadius;\n        this.shadowOffsetY = init.shadowOffsetY;\n        this.actionPaddingLeft = init.actionPaddingLeft;\n        this.actionPaddingRight = init.actionPaddingRight;\n        this.actionIconSize = init.actionIconSize;\n        this.dividerInset = init.dividerInset;\n        this.dividerHeight = init.dividerHeight;\n        this.pointerPoints = init.pointerPoints;\n        this.surfaceBackgroundRole = init.surfaceBackgroundRole;\n        this.surfaceBorderRole = init.surfaceBorderRole;\n        this.surfaceShadowRole = init.surfaceShadowRole;\n        this.pointerFillRole = init.pointerFillRole;\n        this.pointerStrokeRole = init.pointerStrokeRole;\n        this.actionTextRole = init.actionTextRole;\n        this.dividerRole = init.dividerRole;\n        this.actionFontFamily = init.actionFontFamily;\n        this.actionFontSize = init.actionFontSize;\n        this.actionLineHeight = init.actionLineHeight;\n    }\n    get actionsHeight(): number {\n        return this.actionHeight * this.actionCount;\n    }\n    get expandedHeight(): number {\n        return this.pointerHeight + this.actionsHeight;\n    }\n    get collapsedHeight(): number {\n        return this.pointerHeight + this.actionHeight;\n    }\n}\nconst POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {\n    'bookshelf-more-menu': new PopupSurfaceSpec({\n        actionMutesContent: true,\n        height: 0,\n        width: 176, pointerWidth: 24, pointerHeight: 12,\n        actionHeight: 50, actionCount: 4,\n        trailingExtension: 11, anchorOverlap: 5,\n        borderWidth: 1, borderRadius: 16,\n        shadowRadius: 28, shadowOffsetY: 10,\n        actionPaddingLeft: 18, actionPaddingRight: 16,\n        actionIconSize: 24, dividerInset: 16, dividerHeight: 1,\n        pointerPoints: [[0, 12], [12, 0], [24, 12]],\n        surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',\n        surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',\n        surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',\n        pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',\n        pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',\n        actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',\n        dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',\n        actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,\n    }),\n    'reader-more-menu': new PopupSurfaceSpec({\n        height: 0,\n        width: 176, pointerWidth: 24, pointerHeight: 12,\n        actionHeight: 50, actionCount: 3,\n        trailingExtension: 11, anchorOverlap: 5,\n        borderWidth: 1, borderRadius: 16,\n        shadowRadius: 28, shadowOffsetY: 10,\n        actionPaddingLeft: 18, actionPaddingRight: 18,\n        actionIconSize: 0, dividerInset: 16, dividerHeight: 1,\n        pointerPoints: [[0, 12], [12, 0], [24, 12]],\n        surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',\n        surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',\n        surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',\n        pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',\n        pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',\n        actionTextRole: 'TOK_INK',\n        dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',\n        actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,\n    }),\n    'source-switch-window': new PopupSurfaceSpec({\n        height: 385,\n        width: 300, pointerWidth: 0, pointerHeight: 0,\n        actionHeight: 0, actionCount: 0,\n        trailingExtension: 0, anchorOverlap: 0,\n        borderWidth: 1, borderRadius: 20,\n        shadowRadius: 0, shadowOffsetY: 0,\n        actionPaddingLeft: 0, actionPaddingRight: 0,\n        actionIconSize: 0, dividerInset: 0, dividerHeight: 0,\n        pointerPoints: [],\n        surfaceBackgroundRole: 'TOK_SS_WINDOW_BG',\n        surfaceBorderRole: 'TOK_SS_WINDOW_BORDER',\n        surfaceShadowRole: 'TOK_SS_WINDOW_BORDER',\n        pointerFillRole: 'TOK_SS_WINDOW_BG',\n        pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',\n        actionTextRole: 'TOK_SS_FOOTER_TEXT',\n        dividerRole: 'TOK_SS_WINDOW_BORDER',\n        actionFontFamily: 'ReaderInter', actionFontSize: 0, actionLineHeight: 0,\n    }),\n    'tts-config-manager': new PopupSurfaceSpec({\n        height: 0, width: 364, pointerWidth: 0, pointerHeight: 0,\n        actionHeight: 0, actionCount: 0,\n        trailingExtension: 0, anchorOverlap: 0,\n        borderWidth: 0.5, borderRadius: 22,\n        shadowRadius: 48, shadowOffsetY: 18,\n        actionPaddingLeft: 0, actionPaddingRight: 0,\n        actionIconSize: 0, dividerInset: 0, dividerHeight: 0,\n        pointerPoints: [],\n        surfaceBackgroundRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',\n        surfaceBorderRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',\n        surfaceShadowRole: 'app.ReaderTtsConfigOverlay.build.color.471F1B17',\n        pointerFillRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',\n        pointerStrokeRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',\n        actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',\n        actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,\n    }),\n    'settings-select-tablet': new PopupSurfaceSpec({\n        height: 0, width: 160, pointerWidth: 0, pointerHeight: 0,\n        actionHeight: 42, actionCount: 0,\n        trailingExtension: 0, anchorOverlap: 6,\n        borderWidth: 1, borderRadius: 10,\n        shadowRadius: 24, shadowOffsetY: 8,\n        actionPaddingLeft: 14, actionPaddingRight: 14,\n        actionIconSize: 14, dividerInset: 14, dividerHeight: 1,\n        pointerPoints: [],\n        surfaceBackgroundRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',\n        surfaceBorderRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',\n        surfaceShadowRole: 'app.SettingsSelectOverlay.tabletPanel.color.1F1B171F',\n        pointerFillRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',\n        pointerStrokeRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',\n        actionTextRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17',\n        dividerRole: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD',\n        actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 13, actionLineHeight: 16,\n    }),\n};\nexport function resolvePopupSpec(id: PopupSpecId): PopupSurfaceSpec {\n    return POPUP_SPECS[id];\n}\n"
+      }
+    }
+  ],
+  "sharedRenderers": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+      "component": "ReaderRecoveryAction",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderRecoveryAction",
+            "publicFields": [
+              {
+                "name": "variant",
+                "type": "'compact' | 'rssManagement' | 'notice' | 'text'",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "label",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "generation",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "isBusy",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onReconcile",
+                "type": "(generation: number) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "this.variant === 'notice' ? 4 : 12"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "this.variant === 'notice' || this.variant === 'text' ? Color.Transparent : readerAppColor('TOK_MESSAGE_SOFT', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: this.variant === 'notice' || this.variant === 'text' ? 2 : 16, right: this.variant === 'notice' || this.variant === 'text' ? 2 : 16 }"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.variant === 'notice' ? 28 : 44, minWidth: 30, maxWidth: '100%' }"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "opacity",
+            "args": [
+              "this.isBusy ? 0 : 1"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.variant === 'notice' ? 'TOK_MESSAGE_NOTICE_INK' : 'TOK_MESSAGE_SOFT_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "lineHeight",
+            "args": [
+              "MESSAGE_ACTION.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "MESSAGE_ACTION.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "MESSAGE_ACTION.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "MESSAGE_ACTION.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "18"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryAction",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "18"
+            ]
+          }
+        ],
+        "implementation": "import { MESSAGE_ACTION } from './ReaderMessageStyle';\nimport { readerAppColor } from './ReaderThemeRegistry';\n@Component\nexport struct ReaderRecoveryAction extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        variant?: 'compact' | 'rssManagement' | 'notice' | 'text';\n        label?: string;\n        generation?: number;\n        actionEnabled?: boolean;\n        isBusy?: boolean;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    variant: 'compact' | 'rssManagement' | 'notice' | 'text' = 'compact';\n    @Prop\n    label: string = '刷新列表';\n    @Prop\n    generation: number = 0;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    isBusy: boolean = false;\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        ForEach([this.generation], (expected: number): void => {\n                .constraintSize<\n    >({ minHeight: this.variant === 'notice' ? 28 : 44, minWidth: 30, maxWidth: '100%' })\n                .padding<\n    >({ left: this.variant === 'notice' || this.variant === 'text' ? 2 : 16, right: this.variant === 'notice' || this.variant === 'text' ? 2 : 16 })\n                .backgroundColor<\n    >(this.variant === 'notice' || this.variant === 'text' ? Color.Transparent : readerAppColor('TOK_MESSAGE_SOFT', this.appThemeScheme))\n                .borderRadius<\n    >(this.variant === 'notice' ? 4 : 12)\n                .enabled<\n    >(this.actionEnabled && !this.isBusy)\n                .focusable<\n    >(this.actionEnabled && !this.isBusy)\n                .accessibilityRole<\n    >(AccessibilityRoleType.BUTTON)\n                .accessibilityText<\n    >(this.isBusy ? `${this.label}，正在处理` : this.label)\n                .onClick<\n    >((): void => { if (expected === this.generation && this.actionEnabled && !this.isBusy)\n                this.onReconcile(expected); });\n        }, (expected: number): string => expected.toString());\n    }\n}\n"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+      "component": "ReaderRecoveryNotice",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderRecoveryNotice",
+            "publicFields": [
+              {
+                "name": "view",
+                "type": "ReaderRecoveryView",
+                "decorators": [
+                  "@Prop",
+                  "@Watch('remeasure')"
+                ]
+              },
+              {
+                "name": "tag",
+                "type": "string",
+                "decorators": [
+                  "@Prop",
+                  "@Watch('remeasure')"
+                ]
+              },
+              {
+                "name": "actionLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop",
+                  "@Watch('remeasure')"
+                ]
+              },
+              {
+                "name": "secondaryActionLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop",
+                  "@Watch('remeasure')"
+                ]
+              },
+              {
+                "name": "busy",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop",
+                  "@Watch('remeasure')"
+                ]
+              },
+              {
+                "name": "secondaryBusy",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop",
+                  "@Watch('remeasure')"
+                ]
+              },
+              {
+                "name": "onReconcile",
+                "type": "(generation: number) => void",
+                "decorators": []
+              },
+              {
+                "name": "onSecondaryAction",
+                "type": "(generation: number) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "shadow",
+            "args": [
+              "{ radius: 16, offsetY: 4, color: '#18000000' }"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "14"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: 12, right: 12, top: 10, bottom: 10 }"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_MESSAGE_NOTICE_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "lineHeight",
+            "args": [
+              "MESSAGE_NOTICE_TITLE.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "MESSAGE_NOTICE_TITLE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "MESSAGE_NOTICE_TITLE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "MESSAGE_NOTICE_TITLE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "MESSAGE_META.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "this.actionsHeight"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "Math.max(0, this.actionsHeight - this.titleLineHeight)"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "this.actionsWidth > 0 ? this.actionsWidth : undefined"
+            ]
+          },
+          {
+            "owner": "ReaderRecoveryNotice",
+            "method": "build",
+            "property": "constraintSize",
+            "args": [
+              "{ maxWidth: '100%' }"
+            ]
+          }
+        ],
+        "implementation": "import type { MeasureOptions } from '@ohos.measure';\nimport { MESSAGE_ACTION, MESSAGE_META, MESSAGE_NOTICE_TITLE } from './ReaderMessageStyle';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        tag?: string;\n        actionLabel?: string;\n        secondaryActionLabel?: string;\n        busy?: boolean;\n        secondaryBusy?: boolean;\n        private expanded?: boolean;\n        private clipped?: boolean;\n        private reservedSpace?: string;\n        private actionsWidth?: number;\n        private actionsHeight?: number;\n        private titleLineHeight?: number;\n        private measuredWidth?: number;\n        private measuredGeneration?: number;\n        onReconcile?: (generation: number) => void;\n        onSecondaryAction?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    @Watch('remeasure')\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    @Watch('remeasure')\n    tag: string = '待处理';\n    @Prop\n    @Watch('remeasure')\n    actionLabel: string = '刷新列表';\n    @Prop\n    @Watch('remeasure')\n    secondaryActionLabel: string = '';\n    @Prop\n    @Watch('remeasure')\n    busy: boolean = false;\n    @Prop\n    @Watch('remeasure')\n    secondaryBusy: boolean = false;\n    @State\n    private expanded: boolean = false;\n    @State\n    private clipped: boolean = false;\n    @State\n    private reservedSpace: string = '';\n    @State\n    private actionsWidth: number = 0;\n    @State\n    private actionsHeight: number = 28;\n    @State\n    private titleLineHeight: number = 22;\n    private measuredWidth: number = 0;\n    private measuredGeneration: number = -1;\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    onSecondaryAction: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n                .width<\n      >('100%').padding<\n      >({ left: 12, right: 12, top: 10, bottom: 10 })\n                .borderRadius<\n      >(14).backgroundColor<\n      >(readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))\n                .shadow<\n      >({ radius: 16, offsetY: 4, color: '#18000000' })\n                .hitTestBehavior<\n      >(HitTestMode.Transparent);\n        }\n    }\n    private remeasure(): void { this.measureFlow(this.measuredWidth); }\n    private measureFlow(width: number): void {\n        if (!Number.isFinite(width) || width <= 0)\n            return;\n        if (this.measuredGeneration !== this.view.generation) {\n            this.measuredGeneration = this.view.generation;\n            this.expanded = false;\n        }\n        this.measuredWidth = width;\n        try {\n            const context = this.getUIContext();\n            const utils = context.getMeasureUtils();\n            const labelWidth = (label: string): number => context.px2vp(utils.measureText({ textContent: label,\n                fontSize: `${MESSAGE_ACTION.fontSizeFp}fp`, fontFamily: MESSAGE_ACTION.fontFamily,\n                fontWeight: MESSAGE_ACTION.fontWeight })) + 12;\n            let actions = (this.view.canRetry || this.busy) && this.actionLabel.length > 0 ? labelWidth(this.actionLabel) : 0;\n            if (this.secondaryActionLabel.length > 0)\n                actions += labelWidth(this.secondaryActionLabel);\n            const space = context.px2vp(utils.measureText({ textContent: ' ', fontSize: '14fp',\n                fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400 }));\n            const options: MeasureOptions = { textContent: ` ${this.tag}   ${this.view.message}`,\n                fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontSize: '14fp', fontWeight: 400,\n                lineHeight: '22fp', constraintWidth: `${width}vp`, wordBreak: WordBreak.BREAK_WORD };\n            const reservation = actions > 0 && space > 0 ? ' '.repeat(Math.floor(Math.min(width, actions) / space)) : '';\n            options.textContent += reservation;\n            const full = Number(utils.measureTextSize(options).height);\n            options.maxLines = 3;\n            const folded = Number(utils.measureTextSize(options).height);\n            this.clipped = full > folded + .5;\n            if (this.clipped)\n                actions += labelWidth('展开');\n            this.actionsWidth = Math.min(width, actions);\n            this.reservedSpace = actions > 0 && space > 0 ? ' '.repeat(Math.floor(this.actionsWidth / space)) : '';\n            this.titleLineHeight = context.px2vp(Number(utils.measureTextSize({ textContent: '字', fontSize: '14fp',\n                fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400, lineHeight: '22fp' }).height));\n        }\n        catch (_) {\n            this.expanded = true;\n            this.clipped = true;\n            this.actionsWidth = width;\n            this.reservedSpace = '\\n\\u00a0';\n        }\n    }\n}\n"
+      }
+    }
+  ],
+  "completion": {
+    "file": "entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets",
+    "shape": {
+      "types": [],
+      "declarations": [
+        {
+          "name": "SourceSwitchCompletionOverlay",
+          "publicFields": [
+            {
+              "name": "mode",
+              "type": "'wash' | 'toast'",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "washOpacity",
+              "type": "number",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "toastText",
+              "type": "string",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "paperTheme",
+              "type": "ReaderAppearanceTheme",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "expanded",
+              "type": "boolean",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "safeLeft",
+              "type": "number",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "safeRight",
+              "type": "number",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "safeBottom",
+              "type": "number",
+              "decorators": [
+                "@Prop"
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": [
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "opacity",
+          "args": [
+            "this.washOpacity"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "height",
+          "args": [
+            "'100%'"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "width",
+          "args": [
+            "'100%'"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "padding",
+          "args": [
+            "{ left: this.safeLeft + SOURCE_SWITCH_VISUAL.toastSideInset,\n    right: this.safeRight + SOURCE_SWITCH_VISUAL.toastSideInset,\n    bottom: Math.max(SOURCE_SWITCH_VISUAL.toastBottom, this.safeBottom + SOURCE_SWITCH_VISUAL.toastSideInset) }"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "height",
+          "args": [
+            "'100%'"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "width",
+          "args": [
+            "'100%'"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "fontColor",
+          "args": [
+            "readerAppColor('TOK_MESSAGE_NOTICE_INK', this.appThemeScheme)"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "backgroundColor",
+          "args": [
+            "readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme)"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "borderRadius",
+          "args": [
+            "SOURCE_SWITCH_VISUAL.toastRadius"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "padding",
+          "args": [
+            "{ top: SOURCE_SWITCH_VISUAL.toastPaddingY, bottom: SOURCE_SWITCH_VISUAL.toastPaddingY,\n    left: SOURCE_SWITCH_VISUAL.toastPaddingX, right: SOURCE_SWITCH_VISUAL.toastPaddingX }"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "constraintSize",
+          "args": [
+            "{ maxWidth: '100%' }"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "lineHeight",
+          "args": [
+            "MESSAGE_META.lineHeightFp"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "fontSize",
+          "args": [
+            "MESSAGE_META.fontSizeFp"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "fontWeight",
+          "args": [
+            "MESSAGE_META.fontWeight"
+          ]
+        },
+        {
+          "owner": "SourceSwitchCompletionOverlay",
+          "method": "build",
+          "property": "fontFamily",
+          "args": [
+            "MESSAGE_META.fontFamily"
+          ]
+        }
+      ],
+      "implementation": "import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';\nimport { TYPE_SOURCE_SWITCH_NOVEL_TOAST } from '../common/ReaderTypography';\nimport { readerAppColor } from '../common/ReaderThemeRegistry';\nimport { MESSAGE_META } from '../common/ReaderMessageStyle';\nimport { ReaderPaperBackground } from '../reading/ReaderPaperBackground';\nimport type { ReaderAppearanceTheme } from '../reading/ReaderAppearanceState';\n@Component\nexport struct SourceSwitchCompletionOverlay extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        mode?: 'wash' | 'toast';\n        washOpacity?: number;\n        toastText?: string;\n        paperTheme?: ReaderAppearanceTheme;\n        expanded?: boolean;\n        safeLeft?: number;\n        safeRight?: number;\n        safeBottom?: number;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    mode: 'wash' | 'toast' = 'toast';\n    @Prop\n    washOpacity: number = 0;\n    @Prop\n    toastText: string = '';\n    @Prop\n    paperTheme: ReaderAppearanceTheme = 'day';\n    @Prop\n    expanded: boolean = false;\n    @Prop\n    safeLeft: number = 0;\n    @Prop\n    safeRight: number = 0;\n    @Prop\n    safeBottom: number = 0;\n    build() {\n        if (this.mode === 'wash') {\n            ReaderPaperBackground({ theme: this.paperTheme, expanded: this.expanded, synchronousImages: true })\n                .width('100%').height('100%').opacity(this.washOpacity)\n                .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');\n        }\n        else {\n            .width<\n      >('100%').height<\n      >('100%')\n                .padding<\n      >({ left: this.safeLeft + SOURCE_SWITCH_VISUAL.toastSideInset,\n                right: this.safeRight + SOURCE_SWITCH_VISUAL.toastSideInset,\n                bottom: Math.max(SOURCE_SWITCH_VISUAL.toastBottom, this.safeBottom + SOURCE_SWITCH_VISUAL.toastSideInset) })\n                .hitTestBehavior<\n      >(HitTestMode.None);\n        }\n    }\n}\n"
+    },
+    "backgrounds": [
+      {
+        "owner": "SourceSwitchCompletionOverlay",
+        "method": "build",
+        "property": "backgroundColor",
+        "args": [
+          "readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme)"
+        ]
+      }
+    ]
+  },
+  "newSharedOwners": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderPageState.ets",
+      "counts": {
+        "fontSize": 2
+      },
+      "kind": "finite-approved-message-page-state",
+      "contractId": "shared-ReaderPageState",
+      "proof": "tools/test-reader-message-style-sdk.mjs",
+      "reason": "One approved content-state renderer owns title/body, native 32vp loading and finite 44vp soft actions. Hosts provide canonical state text and existing callbacks; optional ink/muted colors only carry the retained reading context palette. No font, radius, progress or business-owner override is accepted."
+    }
+  ],
+  "newProducers": [
+    {
+      "id": "shared-ReaderPageState",
+      "file": "entry/src/main/ets/features/common/ReaderPageState.ets",
+      "component": "ReaderPageState",
+      "registrationKind": "shared-owner",
+      "architectureCounts": {
+        "fontSize": 2
+      },
+      "specPolicy": "One approved content-state renderer owns title/body, native 32vp loading and finite 44vp soft actions. Hosts provide canonical state text and existing callbacks; optional ink/muted colors only carry the retained reading context palette. No font, radius, progress or business-owner override is accepted.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderPageState",
+            "publicFields": [
+              {
+                "name": "title",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "message",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "loading",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "secondaryActionLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "inkColor",
+                "type": "ResourceColor | undefined",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "mutedColor",
+                "type": "ResourceColor | undefined",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onAction",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onSecondaryAction",
+                "type": "() => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: 20, right: 20, top: 24, bottom: 24 }"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "32"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "32"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "this.inkColor ?? readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "lineHeight",
+            "args": [
+              "MESSAGE_TITLE.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "MESSAGE_TITLE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "MESSAGE_TITLE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "MESSAGE_TITLE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "lineHeight",
+            "args": [
+              "MESSAGE_BODY.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "MESSAGE_BODY.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "MESSAGE_BODY.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "MESSAGE_BODY.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageState",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          }
+        ],
+        "implementation": "import { LengthMetrics } from '@kit.ArkUI';\nimport { MESSAGE_TITLE, MESSAGE_BODY } from './ReaderMessageStyle';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\n@Component\nexport struct ReaderPageState extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        title?: string;\n        message?: string;\n        loading?: boolean;\n        actionLabel?: string;\n        secondaryActionLabel?: string;\n        inkColor?: ResourceColor | undefined;\n        mutedColor?: ResourceColor | undefined;\n        onAction?: () => void;\n        onSecondaryAction?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    title: string = '';\n    @Prop\n    message: string = '';\n    @Prop\n    loading: boolean = false;\n    @Prop\n    actionLabel: string = '';\n    @Prop\n    secondaryActionLabel: string = '';\n    @Prop\n    inkColor: ResourceColor | undefined = undefined;\n    @Prop\n    mutedColor: ResourceColor | undefined = undefined;\n    onAction: () => void = (): void => { };\n    onSecondaryAction: () => void = (): void => { };\n    build() {\n        .width<\n    >('100%').padding<\n    >({ left: 20, right: 20, top: 24, bottom: 24 });\n    }\n}\n"
+      },
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#fontPreparationContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "loading",
+            "title",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#standardContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaEmptyState",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfEmptyCard.ets",
+          "method": "features/bookshelf/BookshelfEmptyCard.ets#BookshelfEmptyCard#build",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "actionLabel",
+            "onAction",
+            "secondaryActionLabel",
+            "onSecondaryAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#pageContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#groupsCard",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#recordsCard",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfPage.ets",
+          "method": "features/bookshelf/BookshelfPage.ets#BookshelfPage#bookshelfList",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfStatusContent.ets",
+          "method": "features/bookshelf/BookshelfStatusContent.ets#BookshelfStatusContent#build",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "loading",
+            "title",
+            "message",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#fontPreparationContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "loading",
+            "title",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#detailScroll",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#catalog",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "loading"
+          ]
+        },
+        {
+          "file": "features/discover/DiscoverPage.ets",
+          "method": "features/discover/DiscoverPage.ets#DiscoverPage#resultList",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#pageContent",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#bookPage",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "loading"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#bookPage",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#bookPage",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#chapterPage",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "loading"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#chapterPage",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#chapterLoadState",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "loading",
+            "inkColor",
+            "mutedColor",
+            "title",
+            "message",
+            "actionLabel",
+            "onAction",
+            "secondaryActionLabel",
+            "onSecondaryAction"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderBookmarkEmptyState.ets",
+          "method": "features/reading/ReaderBookmarkEmptyState.ets#ReaderBookmarkEmptyState#build",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderBookmarkErrorState.ets",
+          "method": "features/reading/ReaderBookmarkErrorState.ets#ReaderBookmarkErrorState#build",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#sourceList",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#statusCard",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "pages/ReaderStartupRecovery.ets",
+          "method": "pages/ReaderStartupRecovery.ets#ReaderStartupRecovery#build",
+          "component": "ReaderPageState",
+          "specId": null,
+          "keys": [
+            "title",
+            "message",
+            "loading",
+            "actionLabel",
+            "onAction",
+            "secondaryActionLabel",
+            "onSecondaryAction"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/test-reader-message-style-sdk.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-reader-message-style-sdk.mjs"
+      ],
+      "delegates": [
+        {
+          "component": "ReaderRecoveryAction",
+          "file": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "shape": {
+            "types": [],
+            "declarations": [
+              {
+                "name": "ReaderRecoveryAction",
+                "publicFields": [
+                  {
+                    "name": "variant",
+                    "type": "'compact' | 'rssManagement' | 'notice' | 'text'",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "label",
+                    "type": "string",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "generation",
+                    "type": "number",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "actionEnabled",
+                    "type": "boolean",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "isBusy",
+                    "type": "boolean",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "onReconcile",
+                    "type": "(generation: number) => void",
+                    "decorators": []
+                  }
+                ]
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "borderRadius",
+                "args": [
+                  "this.variant === 'notice' ? 4 : 12"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "backgroundColor",
+                "args": [
+                  "this.variant === 'notice' || this.variant === 'text' ? Color.Transparent : readerAppColor('TOK_MESSAGE_SOFT', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "padding",
+                "args": [
+                  "{ left: this.variant === 'notice' || this.variant === 'text' ? 2 : 16, right: this.variant === 'notice' || this.variant === 'text' ? 2 : 16 }"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "constraintSize",
+                "args": [
+                  "{ minHeight: this.variant === 'notice' ? 28 : 44, minWidth: 30, maxWidth: '100%' }"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "opacity",
+                "args": [
+                  "this.isBusy ? 0 : 1"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontColor",
+                "args": [
+                  "readerAppColor(this.variant === 'notice' ? 'TOK_MESSAGE_NOTICE_INK' : 'TOK_MESSAGE_SOFT_INK', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "lineHeight",
+                "args": [
+                  "MESSAGE_ACTION.lineHeightFp as number"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontSize",
+                "args": [
+                  "MESSAGE_ACTION.fontSizeFp"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontWeight",
+                "args": [
+                  "MESSAGE_ACTION.fontWeight"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontFamily",
+                "args": [
+                  "MESSAGE_ACTION.fontFamily"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "height",
+                "args": [
+                  "18"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "width",
+                "args": [
+                  "18"
+                ]
+              }
+            ],
+            "implementation": "import { MESSAGE_ACTION } from './ReaderMessageStyle';\nimport { readerAppColor } from './ReaderThemeRegistry';\n@Component\nexport struct ReaderRecoveryAction extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        variant?: 'compact' | 'rssManagement' | 'notice' | 'text';\n        label?: string;\n        generation?: number;\n        actionEnabled?: boolean;\n        isBusy?: boolean;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    variant: 'compact' | 'rssManagement' | 'notice' | 'text' = 'compact';\n    @Prop\n    label: string = '刷新列表';\n    @Prop\n    generation: number = 0;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    isBusy: boolean = false;\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        ForEach([this.generation], (expected: number): void => {\n                .constraintSize<\n    >({ minHeight: this.variant === 'notice' ? 28 : 44, minWidth: 30, maxWidth: '100%' })\n                .padding<\n    >({ left: this.variant === 'notice' || this.variant === 'text' ? 2 : 16, right: this.variant === 'notice' || this.variant === 'text' ? 2 : 16 })\n                .backgroundColor<\n    >(this.variant === 'notice' || this.variant === 'text' ? Color.Transparent : readerAppColor('TOK_MESSAGE_SOFT', this.appThemeScheme))\n                .borderRadius<\n    >(this.variant === 'notice' ? 4 : 12)\n                .enabled<\n    >(this.actionEnabled && !this.isBusy)\n                .focusable<\n    >(this.actionEnabled && !this.isBusy)\n                .accessibilityRole<\n    >(AccessibilityRoleType.BUTTON)\n                .accessibilityText<\n    >(this.isBusy ? `${this.label}，正在处理` : this.label)\n                .onClick<\n    >((): void => { if (expected === this.generation && this.actionEnabled && !this.isBusy)\n                this.onReconcile(expected); });\n        }, (expected: number): string => expected.toString());\n    }\n}\n"
+          },
+          "consumers": [
+            {
+              "file": "features/common/ReaderPageState.ets",
+              "method": "features/common/ReaderPageState.ets#ReaderPageState#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "onReconcile"
+              ]
+            },
+            {
+              "file": "features/common/ReaderPageState.ets",
+              "method": "features/common/ReaderPageState.ets#ReaderPageState#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "onReconcile"
+              ]
+            }
+          ]
+        }
+      ],
+      "consumerBindings": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#fontPreparationContent",
+          "input": "{ loading: !this.mangaFontsFailed,\n    title: this.mangaFontsFailed ? '目录暂时无法显示' : '正在准备目录…',\n    actionLabel: this.mangaFontsFailed ? '重试' : '',\n    onAction: (): void => this.prepareMangaPageFonts() }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#standardContent",
+          "input": "{ title: this.emptyMessage(), loading: this.catalogLoading(),\n    actionLabel: this.searchQuery.trim().length > 0 ? '清除搜索' : this.catalogRetryVisible() ? '重试加载目录' : '',\n    onAction: (): void => {\n        if (this.searchQuery.trim().length > 0) {\n            this.searchDraft = '';\n            this.applySearch();\n        }\n        else if (this.mounted)\n            this.onRetryCatalog();\n    } }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaEmptyState",
+          "input": "{ title: this.emptyMessage(), loading: this.catalogLoading(),\n    actionLabel: this.searchQuery.trim().length > 0 ? '清除搜索' : this.catalogRetryVisible() ? '重试加载目录' : '',\n    onAction: (): void => {\n        if (this.searchQuery.trim().length > 0) {\n            this.searchDraft = '';\n            this.applySearch();\n        }\n        else if (this.mounted)\n            this.onRetryCatalog();\n    } }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/BookshelfEmptyCard.ets",
+          "method": "features/bookshelf/BookshelfEmptyCard.ets#BookshelfEmptyCard#build",
+          "input": "{ title: '书架还是空的', message: '导入本地书籍或通过搜索加入书架。',\n    actionLabel: '导入本地书籍', onAction: this.onImportRequested,\n    secondaryActionLabel: '搜索书籍', onSecondaryAction: this.onSearchRequested }",
+          "modifiers": [
+            {
+              "property": "width",
+              "expression": "this.cardWidth",
+              "extra": []
+            }
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#pageContent",
+          "input": "{ title: this.snapshot.busy ? '正在读取书架数据…' : '书架数据读取失败',\n    message: this.snapshot.busy ? '' : this.snapshot.readFacts?.message ?? '请重试读取分组、书架与阅读记录。',\n    loading: this.snapshot.busy, actionLabel: !this.snapshot.busy && !this.originalPending() ? '重试' : '',\n    onAction: (): void => this.onReconcile(this.recovery().generation) }",
+          "modifiers": [
+            {
+              "property": "padding",
+              "expression": "{ top: 40, bottom: 40 }",
+              "extra": []
+            }
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#groupsCard",
+          "input": "{ title: '暂无分组' }",
+          "modifiers": [
+            {
+              "property": "padding",
+              "expression": "{ top: 24, bottom: 24 }",
+              "extra": []
+            }
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#recordsCard",
+          "input": "{ title: '暂无阅读记录' }",
+          "modifiers": [
+            {
+              "property": "padding",
+              "expression": "{ top: 24, bottom: 24 }",
+              "extra": []
+            }
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfPage.ets",
+          "method": "features/bookshelf/BookshelfPage.ets#BookshelfPage#bookshelfList",
+          "input": "{ title: '没有符合条件的书籍', actionLabel: '清除全部条件',\n    onAction: (): void => this.clearFilters() }",
+          "modifiers": [
+            {
+              "property": "padding",
+              "expression": "{ top: 40, bottom: 40 }",
+              "extra": []
+            }
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "input": "{ title: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '正在读取书架设置…' :\n        this.operation.readFacts?.fact === 'failed' || this.operation.readFacts?.fact === 'refreshFailed' ? '书架设置读取失败' :\n            this.operation.readFacts?.fact === 'cancelled' ? '书架设置读取已取消' :\n                this.operation.readFacts?.fact === 'blocked' ? '书架设置暂不可用' : '书架设置尚未读取',\n    message: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '' : this.operation.readFacts?.message ?? '',\n    loading: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing',\n    actionLabel: this.operation.readFacts?.canRetry === true ? '重试' : '',\n    onAction: (): void => this.onReconcile(this.operation.readFacts?.generation ?? 0, this.navigationGeneration) }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "input": "{ title: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.readFacts?.fact === 'loading' || this.viewModeSnapshot.readFacts?.fact === 'refreshing' ? '正在读取显示方式…' :\n        this.viewModeSnapshot.readFacts?.fact === 'failed' || this.viewModeSnapshot.readFacts?.fact === 'refreshFailed' || this.viewModeSnapshot.receipt?.facts.fact === 'refreshFailed' ? '显示方式读取失败' :\n            this.viewModeSnapshot.readFacts?.fact === 'cancelled' ? '显示方式读取已取消' :\n                this.viewModeSnapshot.readFacts?.fact === 'blocked' ? '显示方式暂不可用' : '显示方式尚未读取',\n    message: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.readFacts?.fact === 'loading' || this.viewModeSnapshot.readFacts?.fact === 'refreshing' ? '' :\n        this.viewModeSnapshot.readFacts?.message ?? (this.viewModeSnapshot.receipt !== undefined ? this.viewModeRecovery().message : ''),\n    loading: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.readFacts?.fact === 'loading' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',\n    actionLabel: this.viewModeRecovery().canRetry ? '重试' : '',\n    onAction: (): void => this.retryMode(this.viewModeRecovery().generation) }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/BookshelfStatusContent.ets",
+          "method": "features/bookshelf/BookshelfStatusContent.ets#BookshelfStatusContent#build",
+          "input": "{ loading: !this.failed,\n    title: this.failed ? '书架加载失败' : '正在加载书架…',\n    message: this.failed ? '无法读取书架内容，请重试。' : '',\n    actionLabel: this.failed ? '重试' : '', onAction: this.onRetry }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#fontPreparationContent",
+          "input": "{ loading: !this.mangaFontsFailed,\n    title: this.mangaFontsFailed ? '详情暂时无法显示' : '正在准备详情…',\n    actionLabel: this.mangaFontsFailed ? '重试' : '',\n    onAction: (): void => this.prepareMangaDetailFonts() }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#detailScroll",
+          "input": "{ title: '书籍已移出书架', message: this.shelfMessage || '请返回书架重新导入本地文件后继续阅读。' }",
+          "modifiers": []
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#catalog",
+          "input": "{ title: this.chapterEmptyMessage(), loading: this.catalogLoading() }",
+          "modifiers": [
+            {
+              "property": "padding",
+              "expression": "{ top: 24, bottom: 24 }",
+              "extra": []
+            }
+          ]
+        },
+        {
+          "file": "features/discover/DiscoverPage.ets",
+          "method": "features/discover/DiscoverPage.ets#DiscoverPage#resultList",
+          "input": "{ title: this.presentation.loading ? '正在读取发现内容' : this.recovery().canRetry ? '内容读取失败' : '暂无发现内容',\n    message: this.presentation.loading ? '请稍候' : this.presentation.statusMessage,\n    loading: this.presentation.loading, actionLabel: this.recovery().canRetry ? '重试' : '',\n    onAction: (): void => this.onRetryRead(this.recovery().generation) }",
+          "modifiers": []
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#pageContent",
+          "input": "{ title: this.fontsFailed ? '阅读字体暂不可用' : '正在准备下载管理…',\n    loading: !this.fontsFailed, actionLabel: this.fontsFailed ? '重试' : '',\n    onAction: (): void => this.prepareFonts() }",
+          "modifiers": []
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#bookPage",
+          "input": "{ title: '正在读取书架…', loading: true }",
+          "modifiers": []
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#bookPage",
+          "input": "{ title: '下载信息读取失败', message: this.error, actionLabel: '重试', onAction: (): void => this.onRefresh() }",
+          "modifiers": []
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#bookPage",
+          "input": "{ title: this.books.length === 0 ? '书架为空' : '没有匹配的书籍',\n    message: this.books.length === 0 ? '加入书架后，可在这里管理下载' : '调整搜索关键词或筛选条件' }",
+          "modifiers": []
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#chapterPage",
+          "input": "{ title: '正在读取章节下载情况…', loading: true }",
+          "modifiers": []
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#chapterPage",
+          "input": "{ title: '章节下载情况暂不可用', message: book().projectionError ?? '', actionLabel: '重试',\n    onAction: (): void => { if (this.presentationIsCurrent(ownerGeneration))\n        this.onOpenBook(book()); } }",
+          "modifiers": []
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#chapterLoadState",
+          "input": "{ loading: this.error.length === 0 || this.openingRetry,\n    inkColor: this.inkColor(), mutedColor: this.mutedColor(),\n    title: this.error.length === 0 || this.openingRetry ? '' :\n        (this.openFailureStage === 'source' ? '书源加载失败' : '章节加载失败'),\n    message: this.error.length === 0 || this.openingRetry ? '正在载入章节…' : this.displayError(this.error),\n    actionLabel: this.offline ? '' : '重试', onAction: (): void => { void this.retryOpen(); },\n    secondaryActionLabel: '切换书源', onSecondaryAction: (): void => { void this.openSourceSwitch(); } }",
+          "modifiers": []
+        },
+        {
+          "file": "features/reading/ReaderBookmarkEmptyState.ets",
+          "method": "features/reading/ReaderBookmarkEmptyState.ets#ReaderBookmarkEmptyState#build",
+          "input": "{ title: '暂无书签', message: '在阅读页面下拉，收藏当前位置。',\n    actionLabel: '返回目录', onAction: this.onReturnToDirectory }",
+          "modifiers": []
+        },
+        {
+          "file": "features/reading/ReaderBookmarkErrorState.ets",
+          "method": "features/reading/ReaderBookmarkErrorState.ets#ReaderBookmarkErrorState#build",
+          "input": "{ title: '书签载入失败',\n    message: this.message === '书签载入失败，请稍后重试' || this.message.trim().length === 0 ?\n        '请稍后重试。' : this.message,\n    actionLabel: '重试', onAction: this.onRetry }",
+          "modifiers": []
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#sourceList",
+          "input": "{ title: this.statusKind === 'loading' ? '正在读取书源' :\n        (this.operation.readFacts?.fact === 'failed' ? '书源读取失败' : '暂无书源'),\n    message: this.statusKind === 'loading' ? '请稍候' : this.operation.readFacts?.fact === 'failed' ?\n        '请稍后重试。' : '点击下方「＋ 新增书源」导入 Legado 书源 JSON',\n    loading: this.statusKind === 'loading',\n    actionLabel: this.operation.readFacts?.fact === 'failed' ? '重试' : '',\n    onAction: (): void => {\n        if (this.recovery().canRetry)\n            this.onReconcile(this.recovery().generation);\n        else\n            this.onRetryLoad();\n    } }",
+          "modifiers": []
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#statusCard",
+          "input": "{ title: this.snapshot.readFacts?.fact === 'failed' ? '书源读取失败' :\n        (this.snapshot.busy ? '正在读取书源' : '暂无书源'),\n    message: this.snapshot.readFacts?.fact === 'failed' ? '请稍后重试。' :\n        (this.snapshot.busy ? '请稍候' : '返回书源管理后，可导入书源 JSON。'),\n    loading: this.snapshot.busy,\n    actionLabel: this.snapshot.readFacts?.canRetry ? '重试' : '',\n    onAction: (): void => this.onReconcile(this.snapshot.readFacts?.generation ?? 0) }",
+          "modifiers": []
+        },
+        {
+          "file": "pages/ReaderStartupRecovery.ets",
+          "method": "pages/ReaderStartupRecovery.ets#ReaderStartupRecovery#build",
+          "input": "{ title: this.title(), message: this.message(),\n    loading: !this.state.canRetry, actionLabel: this.state.canRetry ? '重试' : '',\n    onAction: (): void => this.owner?.retry(), secondaryActionLabel: this.state.canRetry ? '退出应用' : '',\n    onSecondaryAction: (): void => { void this.owner?.exit(); } }",
+          "modifiers": []
+        }
+      ]
+    }
+  ],
+  "budgetUpdates": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+      "kind": "backgroundColor",
+      "previous": 0,
+      "current": 1
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "kind": "showAlertDialog",
+      "previous": 1,
+      "current": 2
+    }
+  ]
+}

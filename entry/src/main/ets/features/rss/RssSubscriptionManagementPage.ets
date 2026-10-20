@@ -1,43 +1,33 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity } from './RssMutationRecoveryContract';
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
+import type { RssSubscriptionManagementItem } from './RssPresentationContract';
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
+import type { RssSubscription } from './RssGateway';
+import type { RssManagementOperationProjection } from './RssOrchestrator';
 import {
   TOK_BORDER_W,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_TABLET,
-  TOK_DANGER,
   TOK_INK,
   TOK_MUTED,
-  TOK_PAPER,
   TOK_PRIMARY_BG,
-  TOK_PRIMARY_DARK,
   TOK_PRIMARY_SOFT,
   TOK_ROW_DIVIDER,
-  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_LG,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 
-/** Presentation-only row data. Business truth remains owned by Core. */
-export interface RssSubscriptionManagementItem {
-  subscriptionId: string;
-  title: string;
-  meta: string;
-  enabled: boolean;
-}
+export type { RssSubscriptionManagementItem } from './RssPresentationContract';
 
 /**
  * Figma-backed RSS subscription management child page.
@@ -50,11 +40,20 @@ export interface RssSubscriptionManagementItem {
 export struct RssSubscriptionManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop items: RssSubscriptionManagementItem[];
   @Prop isTablet: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
   @Prop focusedSubscriptionId: string = '';
+  @Prop resultMessage: string = '';
+  @Prop operation: RssManagementOperationProjection | undefined = undefined;
+  @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  @Prop presentationIdentity: string = '';
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onReconcile: (operation: RssManagementOperationProjection) => void =
+    (_operation: RssManagementOperationProjection): void => {};
+  onRetryRead: (facts: OperationFacts<RssSubscription[]>) => void =
+    (_facts: OperationFacts<RssSubscription[]>): void => {};
   onBack: () => void = (): void => {};
   onAdd: () => void = (): void => {};
   onImport: () => void = (): void => {};
@@ -79,30 +78,23 @@ export struct RssSubscriptionManagementPage {
   }
 
   build() {
-    Column() {
-      this.backBar();
-
-      Scroll(this.pageScroller) {
-        Column() {
-          this.stats();
-          this.subscriptionList();
-        }
-        .width('100%')
-        .constraintSize({ maxWidth: this.contentFrame().width })
-        .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG })
-        .alignItems(HorizontalAlign.Start);
-      }
-      .width('100%')
-      .layoutWeight(1)
-      .align(Alignment.Top)
-      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-      .scrollBar(BarState.Off);
-    }
-    .width('100%')
-    .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    ReaderStandardPage({
+      variant: 'rssManagement',
+      header: (): void => { this.backBar(); },
+      content: (): void => { this.pageContent(); },
+      scroller: this.pageScroller,
+    });
   }
+
+  @Builder
+  private pageContent() {
+    this.stats();
+    ReaderRecoveryNotice({ view: { message: this.resultMessage, visible: this.resultMessage.length > 0,
+      canRetry: false, generation: 0 } });
+    this.operationFeedback();
+    this.subscriptionList();
+  }
+
 
   @Builder
   private backBar() {
@@ -115,9 +107,9 @@ export struct RssSubscriptionManagementPage {
           .width(14)
           .height(14);
         Text('添加')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(11)
+          .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+          .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
@@ -133,14 +125,72 @@ export struct RssSubscriptionManagementPage {
   }
 
   @Builder
+  private operationFeedback() {
+    RssOriginalRecoverySurface({ original: this.operation?.original, presentationIdentity: this.presentationIdentity, scope: 'management',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+    if (this.operation?.original?.blocked !== true && this.feedbackMessage().length > 0) {
+      Row({ space: TOK_SPACE_XS }) {
+        Text(this.feedbackMessage())
+          .layoutWeight(1)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+          .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+          .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        if (this.canRetryFeedback()) {
+          ReaderRecoveryAction({
+            variant: 'rssManagement',
+            label: this.hasOperationFeedback() ? '刷新列表' : '重试',
+            generation: this.hasOperationFeedback() && this.operation !== undefined ?
+              this.operation.projection.facts.generation : this.readFacts.generation,
+            onReconcile: (_generation: number): void => this.retryFeedback(),
+          });
+        }
+      }
+      .width('100%')
+      .margin({ top: TOK_SPACE_XS });
+    }
+  }
+
+  private hasOperationFeedback(): boolean {
+    return this.operation !== undefined && this.operation.projection.receipt.fact !== 'confirmedCurrent';
+  }
+
+  private feedbackMessage(): string {
+    if (this.hasOperationFeedback() && this.operation !== undefined) {
+      const projection = this.operation.projection;
+      return projection.receipt.message + (projection.refreshError === undefined ? '' : `：${projection.refreshError}`);
+    }
+    if (this.readFacts.fact === 'loading') return '正在加载订阅源…';
+    if (this.readFacts.fact === 'refreshing') return '正在刷新订阅源…';
+    if (this.readFacts.fact === 'failed') return `订阅源加载失败：${this.readFacts.message ?? ''}`;
+    if (this.readFacts.fact === 'refreshFailed') return `刷新失败，保留上次读取结果：${this.readFacts.message ?? ''}`;
+    return '';
+  }
+
+  private canRetryFeedback(): boolean {
+    return this.hasOperationFeedback() && this.operation !== undefined ?
+      this.operation.projection.facts.canRetry : this.readFacts.canRetry;
+  }
+
+  private retryFeedback(): void {
+    if (this.hasOperationFeedback() && this.operation !== undefined) {
+      if (this.operation.projection.facts.canRetry) this.onReconcile(this.operation);
+    } else if (this.readFacts.canRetry) {
+      this.onRetryRead(this.readFacts);
+    }
+  }
+
+  @Builder
   private stats() {
     Column({ space: TOK_SPACE_XS }) {
       Text(`${this.items.length} 个订阅源 · ${this.enabledCount()} 个启用 · ${this.disabledCount()} 个停用`)
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(10)
-        .lineHeight(12.5)
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+        .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+        .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -156,17 +206,7 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private sourceDocumentAction(label: string, action: () => void) {
-    Text(label)
-      .layoutWeight(1)
-      .height(36)
-      .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(11)
-      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(8)
-      .onClick((): void => action());
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-document-action', label, layout: 'equal', onAction: action });
   }
 
   @Builder
@@ -210,19 +250,19 @@ export struct RssSubscriptionManagementPage {
         Column({ space: 3 }) {
           Text(item.title)
             .width('100%')
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(15.34)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(item.meta)
             .width('100%')
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(10)
-            .lineHeight(12.5)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -233,11 +273,19 @@ export struct RssSubscriptionManagementPage {
         .opacity(item.enabled ? 1 : 0.62);
 
         Stack({ alignContent: Alignment.Center }) {
+          ForEach([`${this.presentationIdentity}:${item.subscriptionId}`], (identity: string): void => {
           ReaderToggle({
-            value: item.enabled,
-            radius: 999,
-            onToggle: (): void => this.onToggle(item.subscriptionId, !item.enabled),
+            value: item.enabled, specId: 'standard-toggle', accessibilityLabel: '启用订阅',
+            inputIdentity: identity,
+            actionEnabled: this.operation?.original?.blocked !== true && this.operation?.projection.receipt.confirmation !== 'unknown',
+            isBusy: this.operation?.original?.busy === true || this.operation?.projection.facts.fact === 'refreshing',
+            onToggle: (next: boolean): void => {
+              if (identity === `${this.presentationIdentity}:${item.subscriptionId}` && this.operation?.original?.blocked !== true &&
+                this.operation?.projection.receipt.confirmation !== 'unknown' && this.operation?.original?.busy !== true &&
+                this.operation?.projection.facts.fact !== 'refreshing') this.onToggle(item.subscriptionId, next);
+            },
           });
+          }, (identity: string): string => identity);
         }
         .width(44)
         .height(44);
@@ -272,7 +320,7 @@ export struct RssSubscriptionManagementPage {
         (): void => this.onViewArticles(subscriptionId));
       this.actionTarget('编辑来源', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
         (): void => this.onEditSource(subscriptionId));
-      this.actionTarget('立即刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_refresh_theme_night') : $r('app.media.rss_manage_refresh')), false, true,
+      this.actionTarget('立即刷新', (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')), false, true,
         (): void => this.onRefresh(subscriptionId));
       this.actionTarget('删除', $r('app.media.rss_manage_delete'), true, true,
         (): void => this.onDelete(subscriptionId));
@@ -285,30 +333,8 @@ export struct RssSubscriptionManagementPage {
   }
 
   @Builder
-  private actionTarget(
-    label: string,
-    icon: Resource,
-    danger: boolean,
-    divider: boolean,
-    action: () => void,
-  ) {
-    Row({ space: 5 }) {
-      Image(icon)
-        .width(16)
-        .height(16);
-      Text(label)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
-        .fontColor(danger ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1);
-    }
-    .layoutWeight(1)
-    .height(44)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
-    .border({ width: { left: divider ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => action());
+  private actionTarget(label: string, icon: Resource, danger: boolean, divider: boolean, action: () => void) {
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-management', label, icon, isDanger: danger, showDivider: divider, onAction: action });
   }
 
   private toggleDisclosure(subscriptionId: string): void {
@@ -348,16 +374,5 @@ export struct RssSubscriptionManagementPage {
     return this.items.length - this.enabledCount();
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
+
 }

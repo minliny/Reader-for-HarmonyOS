@@ -1,116 +1,76 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {readFileSync} from 'node:fs';
+import {createRequire,stripTypeScriptTypes} from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function rowIdentity(){
+ const {resolveEtsLoaderRoot,virtualFilePath}=await import('./lib/tool-environment.mjs');
+ const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+ const {sourceSwitchRowSdk}=await import('./lib/source-switch-row-sdk-probe.mjs');
+ const window=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
+const require = createRequire(import.meta.url);
+const sdk = resolveEtsLoaderRoot();
+const ts = require(`${sdk}/node_modules/typescript`);
+const tree = ts.createSourceFile(virtualFilePath('SourceSwitchTransactionIdentity.ets'), window,
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
+assert.deepEqual(tree.parseDiagnostics, []);
+let nativeKeyFactory;
+const visitLazyIdentity = node => {
+  if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) &&
+    node.expression.getText(tree) === 'LazyForEach' && node.arguments[0]?.getText(tree) === 'this.candidateDataSource') {
+    assert.equal(nativeKeyFactory, undefined, 'one authoritative native candidate range');
+    nativeKeyFactory = node.arguments[2];
+  }
+  ts.forEachChild(node, visitLazyIdentity);
+};
+visitLazyIdentity(tree);
+assert.ok(nativeKeyFactory && ts.isArrowFunction(nativeKeyFactory), 'production LazyForEach supplies its actual key factory');
+const rowSdk = sourceSwitchRowSdk(createArkUIPropertyRuntimeProbe(), window);
+const lazyKey = new Function('sourceSwitchCandidateKey',
+  `return (${stripTypeScriptTypes(nativeKeyFactory.getText(tree))});`)(rowSdk.sourceSwitchCandidateKey);
+function verifyNativeCandidateIdentity(keyFactory) {
+  const data = new rowSdk.SourceSwitchCandidateDataSource();
+  const samples = [
+    { sourceId: 'same-source', bookUrl: '/book/a', latencyMs: 780 },
+    { sourceId: 'same-source', bookUrl: '/book/b', latencyMs: 5 },
+    { sourceId: 'other-source', bookUrl: '/book/a', latencyMs: 900 },
+  ];
+  data.publish(samples);
+  const retained = samples.map((_sample, position) => data.getData(position));
+  const expected = samples.map(sample => rowSdk.sourceSwitchCandidateKey(sample.sourceId, sample.bookUrl));
+  const initialKeys = retained.map(keyFactory);
+  assert.equal(new Set(initialKeys).size, samples.length, 'same-source alternate books and same-URL alternate sources are distinct');
+  const remeasured = { ...samples[0], latencyMs: 12 };
+  data.publish([samples[1], remeasured, samples[2]]);
+  assert.equal(data.getData(1), retained[0], 'remeasurement/reorder retains the exact observed row');
+  assert.equal(data.getData(1).candidate, remeasured);
+  assert.deepEqual([0, 1, 2].map(position => keyFactory(data.getData(position))), [initialKeys[1], initialKeys[0], initialKeys[2]],
+    'new latency and position cannot become selection identity');
+  const remeasuredAgain = { ...samples[0], latencyMs: 98 };
+  data.publish([samples[2], remeasuredAgain, samples[1]]);
+  assert.equal(data.getData(1), retained[0]);
+  assert.equal(data.getData(1).candidate, remeasuredAgain);
+  assert.deepEqual([0, 1, 2].map(position => keyFactory(data.getData(position))), [initialKeys[2], initialKeys[0], initialKeys[1]],
+    'a second measurement and reorder still retain the admitted keys');
+  assert.deepEqual(initialKeys, expected, 'native keys retain both source and book URL');
+}
+verifyNativeCandidateIdentity(lazyKey);
+assert.throws(() => verifyNativeCandidateIdentity(row => row.candidate.sourceId), assert.AssertionError,
+  'a sourceId-only key cannot collapse alternate URLs');
+assert.throws(() => verifyNativeCandidateIdentity(row => `${row.key}:${row.candidate.latencyMs}`), assert.AssertionError,
+  'measured latency cannot enter the native selection key');
 
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const index = readFileSync(resolve(repo, 'entry/src/main/ets/pages/Index.ets'), 'utf8');
-const reader = readFileSync(resolve(repo,
-  'entry/src/main/ets/features/reading/LocalReadingExperience.ets'), 'utf8');
-const shell = readFileSync(resolve(repo, 'entry/src/main/ets/features/shell/ReaderShell.ets'), 'utf8');
-const detail = readFileSync(resolve(repo,
-  'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets'), 'utf8');
-const window = readFileSync(resolve(repo,
-  'entry/src/main/ets/features/source/SourceSwitchWindow.ets'), 'utf8');
-const candidateRow = readFileSync(resolve(repo,
-  'entry/src/main/ets/features/source/CandidateRow.ets'), 'utf8');
-
-const commitSuccess = index.slice(
-  index.indexOf("if (outcome.status === 'success')"),
-  index.indexOf('private resolveSourceSwitchAnchor'),
-);
-assert.ok(commitSuccess.indexOf('new PendingSourceSwitchTransaction(') >= 0);
-assert.ok(commitSuccess.indexOf('new PendingSourceSwitchTransaction(') <
-  commitSuccess.indexOf('this.performSourceSwitchSeam(outcome.book, targetSession, outcome.matchedChapter.order)'),
-  'the Core transaction id must be retained before the old reader seam is destroyed');
-assert.match(commitSuccess, /outcome\.matchedChapter\.order/);
-assert.match(commitSuccess, /outcome\.transactionId/);
-assert.doesNotMatch(index, /rollbackToken|SourceSwitchRollbackToken/,
-  'ArkUI must not retain the Core before-image journal');
-
-const failureStart = index.indexOf('private onReadingFailure(');
-const failure = index.slice(failureStart,index.indexOf('private onRemoteSessionReady(',failureStart));
-assert.match(failure, /this\.detailLoadingMessage = message/);
-assert.doesNotMatch(failure, /rollbackPendingSourceSwitch|showReadingFailure|returnToReadingOrigin/,
-  'typed body errors retain the mounted reader and pending transaction for retry');
-assert.match(index, /performSourceSwitchSeam\(outcome\.book, targetSession, outcome\.matchedChapter\.order\)/,
-  'committed switching reuses the admitted target catalog and matched chapter directly');
-assert.match(index, /gateway\.rollbackSwitch\([\s\S]*pending\.transactionId/);
-assert.match(index, /pending\.targetBookId === commit\.bookId[\s\S]*this\.pendingSourceSwitch = undefined/,
-  'the first durable target identity progress commit releases rollback, including another chapter selected during recovery');
-assert.match(index, /clearBookIdentity\(pending\.fromSourceId, pending\.fromBookId\)/,
-  'old per-book body/image cache is cleared only after target admission succeeds');
-assert.match(index, /this\.sourceSwitchState\.kind === 'switching'[\s\S]*transactionId !== undefined[\s\S]*return;/,
-  'the switch overlay cannot close while Core commit might be publishing its journal');
-
-const failStart = reader.indexOf('private fail(');
-const failureOwner = reader.slice(failStart, reader.indexOf('\n  private ', failStart + 10));
-assert.match(failureOwner, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)/);
-assert.doesNotMatch(failureOwner, /beginExit\(/,
-  'reader error presentation must not begin an exit');
-assert.match(shell, /onReadingFailure: \(sourceId: string, bookId: string, message: string,\s*failureKind\?: RemoteReadingFailureKind\)/);
-assert.match(shell, /this\.onReadingFailure\(sourceId, bookId, message, failureKind\)/);
-assert.match(shell, /sourceSwitchTransactionId: this\.sourceSwitchTransactionId/);
-assert.match(reader, /ReadingSessionFlowGateway\.open\([\s\S]*sourceSwitchTransactionId: this\.sourceSwitchTransactionId/);
-
-assert.match(detail, /@Prop sourceSwitchEnabled: boolean = false/);
-assert.match(detail, /onSwitchSource: \(\) => void/);
-assert.match(detail, /\.enabled\(this\.sourceSwitchEnabled\)/,
-  'local detail keeps the source-switch pill visible but disables interaction');
-assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID/);
-assert.match(index, /onSwitchSource: \(\): void => this\.openDetailSourceSwitch\(\)/);
-
-const detailOverlayStart = index.indexOf("if ((this.route === 'detail' || this.route === 'bookshelf') &&");
-const detailOverlayEnd = index.indexOf("if (this.route === 'bookshelf'", detailOverlayStart);
-assert.ok(detailOverlayStart >= 0 && detailOverlayEnd > detailOverlayStart,
-  'Index must host the existing source-switch panel on remote detail');
-const detailOverlay = index.slice(detailOverlayStart, detailOverlayEnd);
-assert.match(detailOverlay, /!this\.readingSessionActive && this\.sourceSwitchVisible/);
-assert.match(detailOverlay, /SourceSwitchPanel\(\{/);
-assert.match(detailOverlay, /state: this\.sourceSwitchState/);
-assert.match(detailOverlay, /onSelectCandidate: \(candidate: SourceSwitchCandidate\): void => this\.onPickSource\(candidate\)/);
-
-const detailOpenStart = index.indexOf('private openDetailSourceSwitch(): void');
-const detailOpenEnd = index.indexOf('private retrySourceSwitch(): void', detailOpenStart);
-assert.ok(detailOpenStart >= 0 && detailOpenEnd > detailOpenStart);
-const detailOpen = index.slice(detailOpenStart, detailOpenEnd);
-assert.match(detailOpen, /this\.route !== this\.readingOriginRoute/);
-assert.match(detailOpen, /this\.startSourceDiscovery\(generation\)/);
-assert.doesNotMatch(detailOpen, /this\.route\s*=\s*'reading'/,
-  'detail source switch must remain a detail-only overlay');
-
-assert.match(window,
-  /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/,
-  'Repeat must key candidates by exact composite identity');
-assert.match(window, /isCurrent: repeatItem\.item\.isCurrent === true/);
-assert.match(window, /Repeat\(this\.candidates\(\)\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
-assert.match(candidateRow, /@Prop isCurrent: boolean = false/);
-assert.match(candidateRow, /if \(this\.isCurrent\)/);
-assert.doesNotMatch(candidateRow, /currentSourceId/,
-  'candidate current state must not collapse all rows from the active source');
-
-const pickStart = index.indexOf('private onPickSource(candidate: SourceSwitchCandidate): void');
-const pickEnd = index.indexOf('private resolveSourceSwitchAnchor', pickStart);
-const pickSource = index.slice(pickStart, pickEnd);
-assert.match(pickSource,
-  /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)[\s\S]*sourceSwitchCandidateKey\(book\.sourceId, book\.bookId\)/,
-  'click admission must reject only the exact current (sourceId, bookUrl) tuple');
-assert.match(pickSource, /new RemoteReadingFlowGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*loadProgress\(/,
-  'source switch must read the Core canonical progress instead of a detail UI field');
-assert.match(pickSource, /buildSourceSwitchCommitParams\([\s\S]*anchor\.chapterTitle,[\s\S]*anchor\.chapterIndex/);
-assert.match(index, /private async reconcilePendingSourceSwitches\(\): Promise<void>/);
-assert.match(index, /listPendingSwitches/);
-const recoveryStart = index.indexOf('private async reconcilePendingSourceSwitches()');
-const recovery = index.slice(recoveryStart, index.indexOf('\n  private ', recoveryStart + 10));
-assert.match(recovery, /listPendingSwitches/);
-assert.doesNotMatch(recovery, /rollbackSwitch|finalizeSwitch/,
-  'startup records Core pending facts and does not silently change the selected source');
-assert.match(index, /private async resolveReaderSourceSwitchTransaction/);
-assert.match(index, /record\.targetSourceId === sourceId && record\.targetBookId === bookId/);
-assert.match(index, /private async preparePendingSourceSwitchForNextChoice/);
-assert.match(index, /error instanceof ReaderCoreRequestError/,
-  'only the typed Core finalized reason can enter canonical reconciliation');
-assert.doesNotMatch(index, /AppStorage.*transactionId|StorageLink.*sourceSwitch/,
-  'source switch journal identity must not be copied into an ArkUI store');
-
-console.log('source-switch post-commit transaction contract: PASS');
+}
+async function refreshMeasurement(){
+ const {fixture,settle,deferred,rawCandidate}=await import('./lib/source-switch-owner-probe.mjs');
+ const f=fixture({open:false});f.setRows([{...rawCandidate,acquisition:{sourceVersion:'v1',searchTiming:{kind:'search',sourceVersion:'v1',durationMs:321,measuredAt:1700000000000}}}]);
+ assert.equal(f.host.open(f.context,f.lease),true);await settle();
+ const before=f.host.current().state.candidates;assert.ok(before?.length);assert.equal(before[0].latencyMs,321,'the fixture must contain a real version-bound previous measurement');
+ const saved=structuredClone(before),gate=deferred();let initial;
+ f.host.gateway.refreshCandidates=(_query,_current,excluded,_progress,retained)=>{assert.deepEqual(excluded,[]);initial=retained;return gate.promise;};
+ try{
+  f.host.refresh(f.host.current().scopeId);await settle();assert.equal(f.host.current().state.refreshing,true);assert.deepEqual(initial,before);assert.deepEqual(f.host.current().state.candidates,saved,'pending refresh keeps old truthful version-bound timing');assert.deepEqual(before,saved,'old observed DTO is not mutated');
+  gate.resolve({kind:'sources',candidates:[{...before[0],latencyMs:12,latencyKind:'search',latencyMeasuredAt:1700000000012}]});await settle();assert.equal(f.host.current().state.refreshing,false);assert.equal(f.host.current().state.candidates[0].latencyMs,12,'new completed search replaces the measurement');
+ }finally{gate.resolve({kind:'sources',candidates:before});f.host.retire();await settle();}
+}
+const cases={'row-identity':rowIdentity,'refresh-measurement':refreshMeasurement};
+for(const id of selectContractCases({'row-identity':'Actual LazyForEach key factory and observed row ownership with bad-key controls','refresh-measurement':'Actual Host keeps nonempty prior search timing until new result; no empty-fixture clearing claim'})){await cases[id]();recordContractCasePass(id);}
