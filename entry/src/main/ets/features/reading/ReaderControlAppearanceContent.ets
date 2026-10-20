@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../common/ReaderTypography';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -69,6 +70,8 @@ class ReaderFontMotionFrameCallback extends FrameCallback {
  */
 @Component
 export struct ReaderControlAppearanceContent {
+  private feedbackMounted: boolean = false;
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
@@ -154,10 +157,11 @@ export struct ReaderControlAppearanceContent {
   private extendedScrollInMotion: boolean = false;
   private extendedScrollEndpoint: number = 0;
 
-  aboutToAppear(): void {
+  aboutToAppear(): void { this.feedbackMounted = true;
     registerReaderFonts(this.getUIContext().getFont());
   }
   aboutToDisappear(): void {
+    this.feedbackMounted = false; this.transientFeedback.reset();
     this.previewLifecycle += 1;
     this.previewQueue.length = 0;
     this.requestedPreviewFamilies.clear();
@@ -496,7 +500,7 @@ export struct ReaderControlAppearanceContent {
     if (!this.fullInput()) return;
     const scheme = day ? 'day' : 'night';
     if (readerControlAppearanceThemeScheme(this.snapshot.activeTheme) !== scheme) {
-      this.getUIContext().getPromptAction().showToast({ message: day ? '请先选择日间阅读主题' : '请先选择夜间阅读主题' });
+      this.transientFeedback.show(() => this.getUIContext(), { message: day ? '请先选择日间阅读主题' : '请先选择夜间阅读主题' }, (): boolean => this.feedbackMounted && this.fullInput());
       return;
     }
     if (day) this.onSetDayTheme(this.snapshot.activeTheme);

@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
@@ -18,6 +19,7 @@ let bookshelfTemporaryGeneration: number = 0;
 // changes the content slot, preserving the title, navigation and menu anchor.
 @Component
 export struct BookshelfShell {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
@@ -32,6 +34,7 @@ export struct BookshelfShell {
   onContinueRemoval: (generation: number, navigation: number) => void = (_generation: number, _navigation: number): void => {};
   @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
   @Prop populated: boolean = false;
+  @Prop @Watch('onReadRecoveryChanged') feedbackEnabled: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop canCheckUpdates: boolean = false;
   @Prop updateRunning: boolean = false;
@@ -70,6 +73,7 @@ export struct BookshelfShell {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     const identity = this.temporaryBackIdentity;
     const generation = this.temporaryBackGeneration;
     this.mounted = false;
@@ -232,9 +236,9 @@ export struct BookshelfShell {
   private onReadRecoveryChanged(): void {
     const view = this.readRecovery;
     if (view?.visible !== true) { this.lastReadFeedback = ''; return; }
-    if (!this.mounted || !this.populated || view.message === this.lastReadFeedback) return;
+    if (!this.mounted || !this.feedbackEnabled || !this.populated || view.message === this.lastReadFeedback) return;
     this.lastReadFeedback = view.message;
-    try { this.getUIContext().getPromptAction().showToast({ message: view.message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted && this.feedbackEnabled && this.populated); } catch (_) {}
   }
 
   @Builder

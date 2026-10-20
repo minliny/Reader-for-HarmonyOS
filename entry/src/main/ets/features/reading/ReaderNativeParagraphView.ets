@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderNativeParagraphController, ReaderNativeParagraphRecipe, ReaderNativeParagraphResource, ReaderNativeParagraphPosition, readerNativeParagraphResource } from './ReaderNativeParagraph';
 import { ReaderDynamicHighlightRect, readerHighlightCanvasColor } from './ReaderDynamicHighlight';
 import { ReadingSurfaceLayoutMap } from './ReadingSurfaceLayoutMap';
@@ -8,6 +9,7 @@ import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 /** A shaped paragraph stays intact through pagination, selection and TTS. */
 @Component
 export struct ReaderNativeParagraphView {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @Prop @Watch('prepare') recipe: ReaderNativeParagraphRecipe;
   resourceProvider: (() => ReaderNativeParagraphResource | undefined) | undefined = undefined;
   @Prop @Watch('prepare') gapVp: number = 0;
@@ -45,6 +47,7 @@ export struct ReaderNativeParagraphView {
 
   aboutToAppear(): void { this.mounted = true; this.prepare(); }
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.mounted = false; this.epoch += 1; this.preparedKey = '';
     this.controller.close(); this.map = undefined; this.onHighlightGeometry([]);
     this.onPositionResolver(undefined); this.localRects = []; this.localCanvas = undefined;
@@ -90,7 +93,7 @@ export struct ReaderNativeParagraphView {
         this.controller.visibleStartUtf16(), this.controller.visibleEndUtf16());
       if (original === undefined || original.length === 0) return;
       try { copyReaderSelection(original); }
-      catch (_) { this.getUIContext().getPromptAction().showToast({ message: '复制失败，请重试' }); }
+      catch (_) { this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, (): boolean => this.mounted && this.selectionEnabled && epoch === this.epoch); }
     });
   }
 

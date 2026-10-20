@@ -1,4 +1,4 @@
-import { TYPE_APP_INHERITED_BODY, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../common/ReaderTypography';
+import { TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../common/ReaderTypography';
 import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -15,6 +15,8 @@ import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
 import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
 import { ReaderBookmarkErrorState } from './ReaderBookmarkErrorState';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryChapterRow } from './ReaderDirectoryChapterRow';
 import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
@@ -398,7 +400,8 @@ export struct ReaderControlDirectoryContent {
     Row({ space: 6 }) {
       Text(this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
         this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整')
-        .layoutWeight(1).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+        .layoutWeight(1).fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+        .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       if (this.snapshot.catalogState !== 'loading') {
         ReaderRecoveryAction({ label: this.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录',
@@ -411,12 +414,19 @@ export struct ReaderControlDirectoryContent {
   @Builder
   private flatCatalog() {
     Column() {
-      if (this.tab === 'directory' && this.catalogComplete === false) this.catalogStatus();
+      if (this.tab === 'directory' && this.catalogComplete === false && this.snapshot.rows.length > 0) this.catalogStatus();
       Stack() {
         if (this.snapshot.rows.length === 0) {
-          if (this.catalogComplete !== false) {
-            Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
-          }
+          ReaderPageState({ padded: false,
+            loading: this.catalogComplete === false && this.snapshot.catalogState === 'loading',
+            message: this.catalogComplete !== false ? '没有匹配的章节' :
+              this.snapshot.catalogState === 'failed' ? '目录加载失败' :
+              this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整',
+            actionLabel: this.catalogComplete === false && this.snapshot.catalogState !== 'loading' ?
+              (this.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录') : '',
+            actionEnabled: this.interactionEnabled,
+            mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+            onAction: (): void => { if (this.interactionEnabled) this.onRequireCompleteCatalog(); } });
         } else {
           this.flatList();
         }
@@ -430,7 +440,14 @@ export struct ReaderControlDirectoryContent {
       ReaderBookmarkErrorState({ message: this.bookmarkLoadMessage,
         onRetry: (): void => this.onRetryBookmarkLoad() });
     } else if (this.snapshot.loading && !(this.tab === 'directory' && this.catalogComplete === false)) {
-      ReaderBookmarkLoadingState();
+      if (this.tab === 'bookmarks') {
+        ReaderBookmarkLoadingState();
+      } else {
+        Column() {
+          ReaderPageState({ loading: true, message: '目录载入中…', padded: false,
+            mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
+        }.width('100%').height('100%').justifyContent(FlexAlign.Center);
+      }
     } else if (this.snapshot.rows.length === 0 && this.tab === 'bookmarks') {
       ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
     } else if (this.snapshot.rows.length === 0 && !this.navigationActive &&

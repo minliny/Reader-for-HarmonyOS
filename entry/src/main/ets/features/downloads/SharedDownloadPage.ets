@@ -1,5 +1,7 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderDialogSurface } from '../common/ReaderDialogSurface';
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_ACTION } from '../common/ReaderMessageStyle';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
@@ -72,6 +74,7 @@ class SharedDownloadIdleFrame extends FrameCallback {
 /** Native implementation of the user-approved shared-download-demo.html layout. */
 @Component
 export struct SharedDownloadPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBooksChanged') books: DownloadBookView[] = [];
@@ -182,6 +185,7 @@ export struct SharedDownloadPage {
     this.cleanupAfterDays = policy.expiryDays;
   }
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.fontPreparationGeneration += 1;
     this.publishViewState();
     const restoreChrome = this.overlayChromeClaimed && this.presentationIsCurrent();
@@ -263,7 +267,7 @@ export struct SharedDownloadPage {
     if (!this.error) { this.lastErrorFeedback = ''; return; }
     if (!this.mounted || !this.presentationIsCurrent() || this.books.length === 0 || !this.error || this.error === this.lastErrorFeedback) return;
     this.lastErrorFeedback = this.error;
-    try { this.getUIContext().getPromptAction().showToast({ message: this.error, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.error, duration: 2000 }, (): boolean => this.mounted && this.presentationIsCurrent()); } catch (_) {}
   }
   private onBooksChanged(): void {
     this.onErrorChanged();
@@ -275,7 +279,7 @@ export struct SharedDownloadPage {
     const identity = JSON.stringify([book.key, message]);
     if (identity === this.lastChapterFeedback) return;
     this.lastChapterFeedback = identity;
-    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2000 }, (): boolean => this.mounted && this.presentationIsCurrent()); } catch (_) {}
   }
 
   @Builder
@@ -1251,19 +1255,22 @@ export struct SharedDownloadPage {
     Stack({ alignContent: Alignment.Center }) {
       Rect().width('100%').height('100%').fill(downloadVisualColor('scrim', this.appThemeScheme));
       Column() {
-        Column({ space: 0 }) {
-          if (this.dialogChromeOverflow()) {
-            Scroll() { this.confirmationContent(true); }.width('100%')
-              .constraintSize({ maxHeight: this.dialogMaxHeight() }).scrollBar(BarState.Auto);
-          } else {
-            this.confirmationContent(false);
-          }
-        }.width('100%').constraintSize({ maxWidth: 306 }).borderRadius(12).clip(true)
-          .border({ width: 1, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) })
-          .backgroundColor(readerAppColor('TOK_MESSAGE_SURFACE', this.appThemeScheme));
+        ReaderDialogSurface({ specId: 'download-confirmation', body: (): void => { this.confirmationSurfaceBody(); } }).clip(true);
       }.width('100%').padding({ left: DOWNLOAD_VISUAL.dialogOuterSide, right: DOWNLOAD_VISUAL.dialogOuterSide,
         top: this.dialogOuterPaddingY(), bottom: this.dialogOuterPaddingY() });
     }.width('100%').height('100%');
+  }
+
+  @Builder
+  private confirmationSurfaceBody() {
+    if (this.dialogChromeOverflow()) {
+      // The shared frame owns the original 17vp inset. The viewport
+      // excludes that same inset while the whole body/actions scroll.
+      Scroll() { this.confirmationContent(true); }.width('100%')
+        .constraintSize({ maxHeight: Math.max(0, this.dialogMaxHeight() - 34) }).scrollBar(BarState.Auto);
+    } else {
+      this.confirmationContent(false);
+    }
   }
 
   @Builder
@@ -1291,7 +1298,7 @@ export struct SharedDownloadPage {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dialogActionsMeasuredHeight) > 0.5)
           this.dialogActionsMeasuredHeight = height;
       });
-    }.width('100%').padding(17);
+    }.width('100%');
   }
 
   @Builder

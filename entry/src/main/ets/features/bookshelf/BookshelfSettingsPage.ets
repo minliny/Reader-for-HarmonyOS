@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderStandardPage } from '../common/ReaderStandardPage';
@@ -25,6 +26,7 @@ import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 /** Persistent bookshelf preferences, shared by More and the settings route. */
 @Component
 export struct BookshelfSettingsPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerBookshelfViewMode') private mode: string = 'cover';
@@ -59,7 +61,8 @@ export struct BookshelfSettingsPage {
     if (canonical === undefined) this.loadMode();
     this.onOperationChanged();
   }
-  aboutToDisappear(): void { this.mounted = false; this.modeLoadBusy = false; this.modeReconcileBusy = false; this.revision += 1; this.presentationRevision += 1; }
+  aboutToDisappear(): void {
+    this.transientFeedback.reset(); this.mounted = false; this.modeLoadBusy = false; this.modeReconcileBusy = false; this.revision += 1; this.presentationRevision += 1; }
 
   private settingsRecoveryIdentity(kind: string, generation: number): string {
     return JSON.stringify([this.navigationGeneration, this.presentationRevision, kind, generation]);
@@ -121,17 +124,18 @@ export struct BookshelfSettingsPage {
     if (!view.visible || !view.canRetry) { this.lastSettingsFeedback = ''; return; }
     if (view.message === this.lastSettingsFeedback) return;
     this.lastSettingsFeedback = view.message;
-    try { this.getUIContext().getPromptAction().showToast({ message: view.message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
   }
   private lastModeFeedback: string = '';
   @State private modeLoadBusy: boolean = false;
   @State private modeReconcileBusy: boolean = false;
   private modeFeedback(): void {
+    if (!this.mounted) return;
     const view = this.viewModeRecovery();
     if (!view.visible || this.modePending()) { this.lastModeFeedback = ''; return; }
     if (this.viewModeSnapshot.canonical === undefined || view.message === this.lastModeFeedback) return;
     this.lastModeFeedback = view.message;
-    try { this.getUIContext().getPromptAction().showToast({ message: view.message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   build() {

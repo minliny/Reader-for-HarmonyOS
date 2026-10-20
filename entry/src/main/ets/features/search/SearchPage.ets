@@ -1,7 +1,9 @@
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderButton } from '../common/ReaderButton';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import type { SearchOperationFacts } from './SearchPresentation';
-import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
+import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
@@ -53,7 +55,6 @@ import {
   TOK_PRIMARY_SOFT,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_LG,
   TOK_SPACE_MD,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
@@ -466,8 +467,8 @@ export struct SearchPage {
       Column({ space: 18 }) {
         SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
           reduceMotion: this.reduceMotion, diameter: 36 });
-        Text('正在搜索本地与在线书籍…').fontFamily(TYPE_APP_BODY.fontFamily)
-          .fontWeight(TYPE_APP_BODY.fontWeight).fontSize(TYPE_APP_BODY.fontSizeFp).lineHeight(TYPE_APP_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        Text('正在搜索本地与在线书籍…').fontFamily(MESSAGE_BODY.fontFamily)
+          .fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .opacity(this.presentation.kind === 'loading' ? 1 : 0);
       }.width('100%').margin({ bottom: 48 })
@@ -761,17 +762,13 @@ export struct SearchPage {
       if (this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
         this.presentation.kind === 'sourceLoadError') {
         if (this.presentation.historyStatus === 'loading') {
-          Text('正在读取搜索历史')
-            .fontFamily(TYPE_SEARCH_HISTORY_STATUS.fontFamily as string).fontSize(TYPE_SEARCH_HISTORY_STATUS.fontSizeFp).lineHeight(TYPE_SEARCH_HISTORY_STATUS.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          ReaderPageState({ message: '正在读取搜索历史', loading: true, padded: false });
         } else if (this.presentation.historyStatus === 'loadFailed' || this.presentation.historyStatus === 'clearFailed') {
-          Column({ space: TOK_SPACE_XS }) {
-            Text(this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败')
-              .fontFamily(TYPE_SEARCH_HISTORY_STATUS.fontFamily as string).fontSize(TYPE_SEARCH_HISTORY_STATUS.fontSizeFp).lineHeight(TYPE_SEARCH_HISTORY_STATUS.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-            this.secondaryPill(this.presentation.historyStatus === 'clearFailed' ? '重试清空' : '重试读取',
-              (): void => this.onRetryHistory());
-          }.width('100%').padding({ bottom: TOK_SPACE_XS });
+          ReaderPageState({ message: this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败',
+            padded: false, customActions: true, actionContent: (): void => {
+              this.secondaryPill(this.presentation.historyStatus === 'clearFailed' ? '重试清空' : '重试读取',
+                (): void => this.onRetryHistory());
+            } }).padding({ bottom: TOK_SPACE_XS });
         }
       }
       if ((this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
@@ -1051,10 +1048,7 @@ export struct SearchPage {
 
 
         if (this.visibleGroups.length === 0) {
-          Text(this.filteredEmptyMessage())
-            .fontFamily('ReaderInter').fontSize(13).lineHeight(20)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center).padding(24).width('100%');
+          ReaderPageState({ message: this.filteredEmptyMessage() });
         }
         List({ scroller: this.resultScroller }) {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
@@ -1271,68 +1265,14 @@ export struct SearchPage {
   private emptyContent(keyword: string, searchedSourceCount: number) {
     Scroll() {
       Column({ space: 0 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
-          .width(128)
-          .height(120)
-          .alignSelf(ItemAlign.Center);
-
-        Text('没有找到相关书籍')
-          .margin({ top: 28 })
-          .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
-          .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
-          .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
-          .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .textAlign(TextAlign.Center);
-
-        Text(this.isStoppedEmpty()
+        ReaderPageState({ title: '没有找到相关书籍', padded: false,
+          message: this.isStoppedEmpty()
           ? (searchedSourceCount > 0
             ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`
             : `已停止搜索,未找到「${keyword}」的相关结果`)
-          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`)
-          .margin({ top: TOK_SPACE_CONTROL_INLINE })
-          .width('100%')
-          .fontFamily(TYPE_SEARCH_STATE_DESCRIPTION.fontFamily)
-          .fontWeight(TYPE_SEARCH_STATE_DESCRIPTION.fontWeight)
-          .fontSize(TYPE_SEARCH_STATE_DESCRIPTION.fontSizeFp)
-          .lineHeight(TYPE_SEARCH_STATE_DESCRIPTION.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .textAlign(TextAlign.Center)
-          .maxLines(3);
-
-        if (this.partialSearchFailure().length > 0) {
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status-spaced', label: this.partialSearchFailure(),
-            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-        }
-
-        Column({ space: 0 }) {
-          Text('搜索建议')
-            .width('100%')
-            .fontFamily(TYPE_SEARCH_SUGGESTION_HEADING.fontFamily)
-            .fontWeight(TYPE_SEARCH_SUGGESTION_HEADING.fontWeight)
-            .fontSize(TYPE_SEARCH_SUGGESTION_HEADING.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_SUGGESTION_HEADING.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1);
-          this.suggestion('检查书名拼写是否正确');
-          this.suggestion('尝试更短的关键词或作者名');
-          this.suggestion('前往书源管理添加或启用更多书源');
-        }
-        .width(this.isTablet ? 300 : 190)
-        .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
-        .margin({ top: 22 })
-        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(12)
-        .alignItems(HorizontalAlign.Start)
-        .alignSelf(ItemAlign.Center);
-
-        Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-          this.primaryPill('添加更多书源', (): void => this.onManageSources());
-          this.secondaryPill('重新搜索', (): void => this.retryOperation());
-        }
-        .margin({ top: 20 })
-        .alignSelf(ItemAlign.Center);
+          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`,
+          leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
+          actionContent: (): void => { this.emptyStateActions(); } });
       }
       .width('100%')
       .padding({ top: this.searchContentStartInset() + 50, bottom: this.searchBottomInset(40) });
@@ -1342,6 +1282,44 @@ export struct SearchPage {
     .scrollBar(BarState.Off);
   }
 
+  @Builder
+  private emptyStateActions() {
+    Column({ space: 0 }) {
+      if (this.partialSearchFailure().length > 0) {
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status-spaced', label: this.partialSearchFailure(),
+          actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      }
+
+      Column({ space: 0 }) {
+        Text('搜索建议')
+          .width('100%')
+          .fontFamily(TYPE_SEARCH_SUGGESTION_HEADING.fontFamily)
+          .fontWeight(TYPE_SEARCH_SUGGESTION_HEADING.fontWeight)
+          .fontSize(TYPE_SEARCH_SUGGESTION_HEADING.fontSizeFp)
+          .lineHeight(TYPE_SEARCH_SUGGESTION_HEADING.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .maxLines(1);
+        this.suggestion('检查书名拼写是否正确');
+        this.suggestion('尝试更短的关键词或作者名');
+        this.suggestion('前往书源管理添加或启用更多书源');
+      }
+      .width(this.isTablet ? 300 : 190)
+      .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
+      .margin({ top: 10 })
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(12)
+      .alignItems(HorizontalAlign.Start)
+      .alignSelf(ItemAlign.Center);
+
+      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+        this.primaryPill('添加更多书源', (): void => this.onManageSources());
+        this.secondaryPill('重新搜索', (): void => this.retryOperation());
+      }
+      .margin({ top: 20 })
+      .alignSelf(ItemAlign.Center);
+    }.width('100%');
+  }
   /**
    * P0 add-source flow extension state: no source can search online books.
    * The search bar still accepts local-book queries. Layout reuses the Empty
@@ -1350,77 +1328,43 @@ export struct SearchPage {
   @Builder
   private sourceRequiredContent(reason: string) {
     Column({ space: 0 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
-        .width(128)
-        .height(120)
-        .alignSelf(ItemAlign.Center);
-
-      Text(reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源')
-        .margin({ top: 28 })
-        .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
-        .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
-        .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Text(reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
-        '启用可搜索书籍的书源；本地导入的书仍可在上方搜索')
-        .margin({ top: TOK_SPACE_CONTROL_INLINE })
-        .width('100%')
-        .fontFamily(TYPE_SEARCH_STATE_DESCRIPTION.fontFamily)
-        .fontWeight(TYPE_SEARCH_STATE_DESCRIPTION.fontWeight)
-        .fontSize(TYPE_SEARCH_STATE_DESCRIPTION.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_STATE_DESCRIPTION.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(3);
-
-      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
-          (): void => this.onManageSources());
-        this.secondaryPill('返回书架', (): void => this.onBack());
-      }
-      .margin({ top: 20 })
-      .alignSelf(ItemAlign.Center);
+      ReaderPageState({ title: reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源',
+        message: reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
+          '启用可搜索书籍的书源；本地导入的书仍可在上方搜索', padded: false,
+        leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
+        actionContent: (): void => { this.sourceRequiredActions(reason); } });
     }
     .width('100%')
     .padding({ top: 50, bottom: 40 });
   }
 
   @Builder
+  private sourceRequiredActions(reason: string) {
+    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+      this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
+        (): void => this.onManageSources());
+      this.secondaryPill('返回书架', (): void => this.onBack());
+    }.margin({ top: 8 }).alignSelf(ItemAlign.Center);
+  }
+
+  @Builder
   private sourceLoadErrorContent() {
     Column({ space: 0 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
-
-      Text('书源列表加载失败')
-        .margin({ top: 20 })
-        .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
-        .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
-        .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Text('在线书源暂不可用；本地导入的书仍可在上方搜索')
-        .margin({ top: TOK_SPACE_XS })
-        .fontFamily(TYPE_APP_BODY.fontFamily)
-        .fontWeight(TYPE_APP_BODY.fontWeight)
-        .fontSize(TYPE_APP_BODY.fontSizeFp)
-        .lineHeight(TYPE_APP_BODY.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        this.primaryPill('重试加载', (): void => this.retryOperation());
-        this.secondaryPill('返回书架', (): void => this.onBack());
-      }
-      .margin({ top: TOK_SPACE_LG })
-      .alignSelf(ItemAlign.Center);
+      ReaderPageState({ title: '书源列表加载失败', message: '在线书源暂不可用；本地导入的书仍可在上方搜索',
+        padded: false, leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
+        actionContent: (): void => { this.sourceLoadErrorActions(); } });
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 96, bottom: 40 });
+  }
+
+  @Builder
+  private sourceLoadErrorActions() {
+    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+      this.primaryPill('重试加载', (): void => this.retryOperation());
+      this.secondaryPill('返回书架', (): void => this.onBack());
+    }.margin({ top: 8 }).alignSelf(ItemAlign.Center);
   }
 
   @Builder
@@ -1463,35 +1407,34 @@ export struct SearchPage {
     // secondary action is a P0 add-source flow addition.
     Scroll() {
     Column({ space: 0 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
-
-      Text(this.searchFailureTitle())
-        .margin({ top: 20 })
-        .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
-        .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
-        .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center);
-
-      Text(this.searchFailureMessage())
-        .margin({ top: TOK_SPACE_XS })
-        .fontFamily(TYPE_APP_BODY.fontFamily)
-        .fontWeight(TYPE_APP_BODY.fontWeight)
-        .fontSize(TYPE_APP_BODY.fontSizeFp)
-        .lineHeight(TYPE_APP_BODY.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(2);
-
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
-        actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-source', label: '检查书源', onAction: (): void => this.onManageSources() });
+      ReaderPageState({ title: this.searchFailureTitle(), message: this.searchFailureMessage(), padded: false,
+        leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
+        actionContent: (): void => { this.searchErrorActions(); } });
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
     .padding({ top: this.searchContentStartInset() + 96, bottom: this.searchBottomInset(40) });
     }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+  }
+
+  @Builder
+  private searchErrorActions() {
+    Column() {
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
+        actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-source', label: '检查书源', onAction: (): void => this.onManageSources() });
+    }.width('100%');
+  }
+
+  @Builder
+  private searchStateIllustration(failed: boolean) {
+    if (failed) {
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error')))
+        .width(80).height(80).margin({ bottom: 8 });
+    } else {
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
+        .width(128).height(120).margin({ bottom: 16 });
+    }
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
@@ -63,6 +64,7 @@ let settingsSelectionGeneration: number = 0;
 
 @Component
 export struct SettingsPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop activeSection: 'home' | 'general' = 'home';
@@ -143,6 +145,7 @@ export struct SettingsPage {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
     this.themeOwner = undefined;
@@ -349,7 +352,7 @@ export struct SettingsPage {
 
   private showFeedbackToast(message: string): void {
     if (!this.mounted || message.length === 0) return;
-    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   @Builder
@@ -536,9 +539,9 @@ export struct SettingsPage {
     void ReaderThemeHost.selectApp(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
       .catch((): void => {
         if (!current()) return;
-        try { this.getUIContext().getPromptAction().showToast({
+        try { this.transientFeedback.show(() => this.getUIContext(), {
           message: '主题保存尚未确认，当前选择已保留，请稍后重试',
-        }); } catch (_notice) { /* Native feedback cannot rewrite the accepted choice. */ }
+        }, (): boolean => current()); } catch (_notice) { /* Native feedback cannot rewrite the accepted choice. */ }
       });
   }
 

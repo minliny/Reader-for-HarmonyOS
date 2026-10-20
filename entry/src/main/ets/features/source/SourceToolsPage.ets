@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
@@ -169,6 +170,7 @@ class SourceDebugLogDataSource implements IDataSource {
 
 @Component
 export struct SourceToolsPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
@@ -208,7 +210,8 @@ export struct SourceToolsPage {
   private exportRevision: number = 0;
   private lastFeedbackIdentity: string = '';
 
-  aboutToDisappear(): void { this.mounted = false; this.exportRevision += 1; this.nativeAlertOwner.retire(); }
+  aboutToDisappear(): void {
+    this.transientFeedback.reset(); this.mounted = false; this.exportRevision += 1; this.nativeAlertOwner.retire(); }
 
   aboutToAppear(): void {
     this.mounted = true; this.exportRevision += 1;
@@ -796,7 +799,7 @@ export struct SourceToolsPage {
     if (read?.fact === 'failed' && !read.hasValue) return;
     const message = this.snapshot.statusMessage;
     if (message.length === 0) return;
-    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   private syncListDataSources(): void {

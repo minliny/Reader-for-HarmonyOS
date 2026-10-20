@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -57,6 +58,7 @@ import {
 
 @Component
 export struct DiscoverPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -81,7 +83,8 @@ export struct DiscoverPage {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void {
+    this.transientFeedback.reset(); this.mounted = false; }
 
   private readFeedbackIdentity(): string {
     return `${this.presentation.operation?.generation ?? 0}:${this.presentation.operation?.fact ?? ''}:${this.presentation.loading ? 1 : 0}`;
@@ -94,7 +97,7 @@ export struct DiscoverPage {
     const operation = this.presentation.operation;
     if (this.presentation.loading || this.presentation.books.length === 0 ||
       (operation?.fact !== 'refreshFailed' && operation?.fact !== 'partial')) return;
-    try { this.getUIContext().getPromptAction().showToast({ message: this.recovery().message, duration: 2200 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery().message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   build() {

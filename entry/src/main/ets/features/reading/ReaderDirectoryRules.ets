@@ -1,8 +1,8 @@
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
-import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
-import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_RULE_HEADING } from '../common/ReaderTypography';
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_RULE_HEADING } from '../common/ReaderTypography';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryRulesGateway } from './ReaderDirectoryRulesGateway';
@@ -15,6 +15,19 @@ class DirectoryRuleDraft {
   constructor(id: number, pattern: string = '', level: string = '0', boundary: string = 'title') {
     this.id = id; this.pattern = pattern; this.level = level; this.boundary = boundary;
   }
+}
+
+/** A view of this editor's retained original operation. The page owns placement;
+ * all actions still enter this mounted editor and its original gateway. */
+export interface ReaderDirectoryRulesRecoveryProjection {
+  bookId: string;
+  identity: string;
+  view: ReaderRecoveryView;
+  actionLabel: string;
+  secondaryActionLabel: string;
+  busy: boolean;
+  onReconcile: (generation: number) => void;
+  onSecondaryAction: (generation: number) => void;
 }
 
 /** Per-book navigation rules use Core's existing regex adapter and preview;
@@ -34,10 +47,14 @@ export struct ReaderDirectoryRules {
   private generation: number = 0;
   private mounted: boolean = false;
   private presentationGeneration: number = 0;
+  private refreshedOperationIdentity: string = '';
   private gateway: ReaderDirectoryRulesGateway | undefined = undefined;
+  private readonly feedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @State private operation: RulesMutationSnapshot = { generation: 0, busy: false, confirmation: 'undispatched',
     label: '', method: '', message: '', blocked: false, canRetryOriginal: false, writeStage: 'intent' };
   onApplied: () => void = (): void => {};
+  onRecoveryChanged: (projection: ReaderDirectoryRulesRecoveryProjection | undefined) => void =
+    (_projection: ReaderDirectoryRulesRecoveryProjection | undefined): void => {};
 
   aboutToAppear(): void {
     this.gateway = new ReaderDirectoryRulesGateway(ReaderRuntimeOwner.current());
@@ -45,6 +62,7 @@ export struct ReaderDirectoryRules {
   }
   private loadRules(): void {
     this.changed(); this.presentationGeneration += 1; this.loaded = false; this.directoryRefreshFailed = false;
+    this.feedback.reset(); this.onRecoveryChanged(undefined);
     const generation = this.generation, bookId = this.bookId;
     const gateway = this.gateway;
     if (!this.mounted || gateway === undefined) return;
@@ -54,6 +72,7 @@ export struct ReaderDirectoryRules {
     this.message = '正在读取本书目录层级规则';
     void gateway.inspect(current).then(async (): Promise<JsonObject> => {
       if (!current()) throw new Error('目录规则读取入口已退役');
+      this.operation = gateway.snapshot(); this.publishRecovery();
       return await gateway.read(bookId, current);
     }).then((data: JsonObject): void => {
         if (!current()) return;
@@ -76,7 +95,7 @@ export struct ReaderDirectoryRules {
           '已载入本书规则；当前 Core 尚不支持原操作回执，仅可预览';
       }).catch((_error: Error): void => {
         if (current()) { this.operation = gateway.snapshot(); this.message = '当前规则读取尚未完成，草稿已保留，请重新读取'; }
-      }).finally((): void => { if (current()) this.busy = false; });
+      }).finally((): void => { if (current()) { this.busy = false; this.publishRecovery(); } });
   }
   private edit(id: number, field: string, value: string): void {
     if (!this.canEdit() || !this.rules.some((rule: DirectoryRuleDraft): boolean => rule.id === id)) return;
@@ -85,7 +104,10 @@ export struct ReaderDirectoryRules {
         field === 'level' ? value : rule.level, field === 'boundary' ? value : rule.boundary));
     this.changed();
   }
-  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.presentationGeneration += 1; }
+  aboutToDisappear(): void {
+    this.mounted = false; this.generation += 1; this.presentationGeneration += 1;
+    this.feedback.reset(); this.onRecoveryChanged(undefined);
+  }
   private changed(): void { this.generation += 1; this.previewReady = false; this.busy = false; this.preview = []; }
   private async run(apply: boolean): Promise<void> {
     const gateway = this.gateway;
@@ -102,6 +124,7 @@ export struct ReaderDirectoryRules {
       ({ pattern: rule.pattern, level: Number(rule.level), boundary: rule.boundary }));
     this.busy = true;
     this.message = apply ? '正在应用本书目录层级规则' : '正在预览，本次修改尚未应用';
+    this.publishRecovery();
     try {
       const data: JsonObject = apply ? await gateway.apply(bookId, rules, current) : await gateway.preview(bookId, rules, current);
       if (!current()) return;
@@ -124,7 +147,7 @@ export struct ReaderDirectoryRules {
         '规则预览失败，草稿已保留';
       this.previewReady = false;
     } }
-    finally { if (current()) this.busy = false; }
+    finally { if (current()) { this.busy = false; this.publishRecovery(); } }
   }
   private canEdit(): boolean {
     const snapshot = this.gateway?.snapshot();
@@ -138,46 +161,79 @@ export struct ReaderDirectoryRules {
   private recoveryIdentity(): string { return `${this.actorIdentity()}\u0000${this.operation.operationId ?? ''}`; }
   private ownsRecovery(identity: string): boolean { return this.ownsActor(identity.slice(0, identity.lastIndexOf('\u0000'))) && identity === this.recoveryIdentity(); }
   private recoveryView(): ReaderRecoveryView {
-    return { visible: this.operation.blocked || this.operation.confirmation === 'unknown' || this.directoryRefreshFailed,
-      message: this.operation.blocked || this.operation.confirmation === 'unknown' ? this.operation.message : this.message,
-      canRetry: false, generation: this.operation.generation };
+    return { visible: this.operation.blocked || this.operation.confirmation === 'unknown',
+      message: this.operation.message || this.message,
+      canRetry: !this.busy, generation: this.operation.generation };
+  }
+  private publishRecovery(): void {
+    const view = this.recoveryView(), identity = this.recoveryIdentity(), generation = this.operation.generation;
+    if (!view.visible || !this.ownsRecovery(identity)) { this.onRecoveryChanged(undefined); return; }
+    this.onRecoveryChanged({ bookId: this.bookId, identity, view, actionLabel: '核对原操作回执',
+      secondaryActionLabel: this.canContinueOriginal() ? '继续原操作' : '', busy: this.busy,
+      onReconcile: (expected: number): void => {
+        if (expected === generation && generation === this.operation.generation && this.ownsRecovery(identity))
+          void this.recover(identity, false);
+      },
+      onSecondaryAction: (expected: number): void => {
+        if (expected === generation && generation === this.operation.generation && this.ownsRecovery(identity))
+          void this.recover(identity, true);
+      } });
   }
   private notifyApplied(): void {
-    try { this.onApplied(); this.directoryRefreshFailed = false; }
-    catch (_) { this.directoryRefreshFailed = true; this.message = '本书目录规则写入已确认，当前目录刷新尚未完成，请重试刷新'; }
+    const operationIdentity = this.operation.operationId === undefined ? '' : this.recoveryIdentity();
+    if (operationIdentity.length > 0 && operationIdentity === this.refreshedOperationIdentity) return;
+    try {
+      this.onApplied(); this.directoryRefreshFailed = false;
+      this.refreshedOperationIdentity = operationIdentity;
+    }
+    catch (_) {
+      this.directoryRefreshFailed = true;
+      const identity = this.actorIdentity();
+      this.feedback.show(() => this.getUIContext(), {
+        message: '目录规则已应用，当前目录刷新失败，可重新刷新', key: `${identity}:directory-refresh`,
+      }, (): boolean => this.ownsActor(identity));
+    }
   }
   private retryDirectoryRefresh(identity: string): void {
     if (this.busy || !this.directoryRefreshFailed || !this.ownsRecovery(identity)) return;
     this.notifyApplied();
     if (!this.directoryRefreshFailed) this.message = '当前目录刷新已请求，请重新预览当前草稿';
   }
-  private canContinueOriginal(): boolean {
+  private originalBelongsToBook(): boolean {
     const original = this.operation.original;
-    return this.operation.canRetryOriginal && original?.method === 'reading.directory.rules.apply.v2' &&
+    return original?.method === 'reading.directory.rules.apply.v2' &&
       original.params['sourceId'] === 'local' && original.params['bookId'] === this.bookId;
   }
+  private canContinueOriginal(): boolean { return this.operation.canRetryOriginal && this.originalBelongsToBook(); }
   private async recover(identity: string, continuing: boolean): Promise<void> {
     const gateway = this.gateway;
     if (gateway === undefined || this.busy || !this.ownsRecovery(identity) || (continuing && !this.canContinueOriginal())) return;
     const bookId = this.bookId, operationId = this.operation.operationId, generation = ++this.generation;
-    const current = (): boolean => this.ownsRecovery(identity) && generation === this.generation && gateway === this.gateway;
+    const actorIdentity = this.actorIdentity();
+    const current = (): boolean => this.ownsActor(actorIdentity) && generation === this.generation && gateway === this.gateway;
     this.busy = true;
+    this.publishRecovery();
     try {
       if (continuing && operationId !== undefined) await gateway.continueOriginal(bookId, operationId, current);
       else await gateway.inspect(current, operationId);
       if (!current()) return;
       this.operation = gateway.snapshot();
-      if (continuing && !this.operation.blocked) {
+      if (operationId !== undefined && this.originalBelongsToBook() && this.operation.operationId === operationId &&
+        this.operation.confirmation === 'confirmed') {
         // History only settles the original write. Fresh directory reads remain
         // authoritative for current navigation, never the old ACK's nodes.
+        // Inspection may confirm Core while Host cleanup remains blocked; ask
+        // for the fresh directory without clearing that retained operation.
         this.previewReady = false;
-        if (this.operation.confirmation === 'confirmed') {
+        if (!this.operation.blocked)
           this.message = '原目录规则操作已核对完成，请重新预览当前草稿';
-          this.notifyApplied();
-        } else this.message = `${this.operation.message || 'Core 已确认原操作未执行'}；原草稿已保留，请重新预览`;
+        this.notifyApplied();
+      } else if (continuing && !this.operation.blocked) {
+        this.previewReady = false;
+        this.message = `${this.operation.message || 'Core 已确认原操作未执行'}；原草稿已保留，请重新预览`;
       }
     } catch (_error) { if (current()) { this.operation = gateway.snapshot(); this.message = this.operation.message; } }
-    finally { if (current()) this.busy = false; }
+    finally { if (current()) { this.busy = false; this.publishRecovery(); } }
   }
   build() {
     Column({ space: 8 }) {
@@ -223,17 +279,11 @@ export struct ReaderDirectoryRules {
           .onClick((): void => { if (this.ownsActor(identity)) void this.run(true); });
       }
       }, (identity: string): string => identity);
-      Text(this.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
+      if (!this.recoveryView().visible) {
+        Text(this.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
+      }
       ForEach([this.recoveryIdentity()], (identity: string) => {
-        ReaderRecoveryNotice({ view: this.recoveryView() });
-        if (this.operation.blocked || this.operation.confirmation === 'unknown') {
-          ReaderRecoveryAction({ label: '核对原操作回执', generation: this.operation.generation,
-            actionEnabled: !this.busy && this.ownsRecovery(identity), onReconcile: (): void => { void this.recover(identity, false); } });
-          if (this.canContinueOriginal()) {
-            ReaderRecoveryAction({ label: '继续原操作', generation: this.operation.generation,
-              actionEnabled: !this.busy && this.ownsRecovery(identity), onReconcile: (): void => { void this.recover(identity, true); } });
-          }
-        } else if (!this.loaded && !this.busy) {
+        if (!this.recoveryView().visible && !this.loaded && !this.busy) {
           ReaderRecoveryAction({ label: '重新读取规则', generation: this.operation.generation,
             actionEnabled: this.ownsRecovery(identity), onReconcile: (): void => { if (this.ownsRecovery(identity)) this.loadRules(); } });
         }

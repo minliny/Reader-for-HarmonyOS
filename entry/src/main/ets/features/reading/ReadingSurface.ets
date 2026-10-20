@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
 import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
@@ -101,6 +102,7 @@ export class ReadingSurfacePageFragment {
 /** Shared scalar-aware text primitive for paged and continuous reading. */
 @Component
 export struct ReaderReadingTextFragment {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @Prop @Watch('scheduleHighlightGeometry') text: string = '';
   @Prop isParagraphStart: boolean = false;
   @Prop @Watch('scheduleHighlightGeometry') startScalar: number = 0;
@@ -126,6 +128,7 @@ export struct ReaderReadingTextFragment {
   private readonly textController: TextController = new TextController();
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.highlightMounted = false; this.highlightLifecycle += 1; this.highlightQueued = false;
     this.highlightHadGeometry = false;
     if (this.separateHighlight) this.onHighlightGeometry(this.startScalar, []);
@@ -234,7 +237,7 @@ export struct ReaderReadingTextFragment {
       copyReaderSelection(selected);
       this.textController.closeSelectionMenu();
     } catch (_) {
-      this.getUIContext().getPromptAction().showToast({ message: '复制失败，请重试' });
+      this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, (): boolean => this.highlightMounted && this.longPressSelectText);
     }
     return true;
   }

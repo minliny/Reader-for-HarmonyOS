@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../features/common/ReaderTransientFeedback';
 import curves from '@ohos.curves';
 import { readBookAuthorIdentity } from '../features/common/BookAuthorMetadata';
 import { SOURCE_SWITCH_VISUAL } from '../features/source/SourceSwitchVisual';
@@ -363,6 +364,7 @@ interface MangaBookIdentity {
 @Entry
 @Component
 struct Index {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
@@ -654,7 +656,7 @@ struct Index {
         if (message.length === 0) this.shelfFeedbackKey = '';
         if (message.length > 0 && key !== this.shelfFeedbackKey) {
           this.shelfFeedbackKey = key;
-          try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
+          try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner)); } catch (_) {}
         }
       }
 
@@ -783,6 +785,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.downloadHost?.retire();
     this.downloadHost = undefined;
     this.retainedDownloadSnapshot = undefined;
@@ -988,6 +991,7 @@ struct Index {
     mounting: number = this.detailShelfAdmissionMount) {
     if (this.isBookshelfVisualAdmitted) {
       BookshelfPage({
+        feedbackEnabled: !this.readingSessionActive && !this.shelfReadingPreparation,
         noticeTopInset: this.shelfPendingNoticeHeight > 0 ? this.shelfPendingNoticeHeight + 8 : 0,
         headerClearance: this.shelfHeaderHeight + 14,
         navigationGeneration: this.navigationGeneration,
@@ -1039,6 +1043,7 @@ struct Index {
   private bookshelfShellContent(owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
     navigation: number = this.navigationGeneration, mounting: number = this.detailShelfAdmissionMount) {
     BookshelfShell({
+      feedbackEnabled: !this.readingSessionActive && !this.shelfReadingPreparation,
       onHeaderHeightChange: (height: number): void => {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.shelfHeaderHeight) > .1)
           this.shelfHeaderHeight = height;
@@ -2318,13 +2323,13 @@ struct Index {
       if (result?.receipt?.receipt.confirmation === 'confirmed' && result.managementMutation?.blocked !== true) {
         this.invalidateBookshelfProjection(); this.refreshBookshelf();
         if (result.receipt.receipt.fact === 'confirmedRefreshFailed')
-          this.getUIContext().getPromptAction().showToast({ message: '分组已保存，列表刷新失败', duration: 2200 });
+          this.transientFeedback.show(() => this.getUIContext(), { message: '分组已保存，列表刷新失败', duration: 2200 }, (): boolean => this.searchAppForeground && (current()));
         this.closeShelfGroup(presentation);
       }
     } catch (error) {
       if (!current()) return;
       hilog.error(DOMAIN, 'Reader', 'Group selection failed: %{private}s', errorMessageOf(error));
-      this.getUIContext().getPromptAction().showToast({ message: '分组操作暂不可用，请重新打开核对' });
+      this.transientFeedback.show(() => this.getUIContext(), { message: '分组操作暂不可用，请重新打开核对' }, (): boolean => this.searchAppForeground && (current()));
     } finally {
       if (presentation === this.editingShelfGroupPresentation) this.editingShelfGroupBusy = false;
     }
@@ -2646,7 +2651,7 @@ struct Index {
       this.bookshelfSelectionReady = true;
     }).catch((error: Error): void => {
       if (!current()) return;
-      this.getUIContext().getPromptAction().showToast({ message: '书架读取失败，请重试' });
+      this.transientFeedback.show(() => this.getUIContext(), { message: '书架读取失败，请重试' }, (): boolean => this.searchAppForeground && (current()));
       this.returnToBookshelf();
     });
   }
@@ -3899,6 +3904,7 @@ struct Index {
   }
 
   private onSearchVisibilityChanged(): void {
+    this.transientFeedback.reset();
     const owner = this.mountedRuntimeOwner;
     if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
     ReadingEntryHost.forRuntime(owner).preparationVisibilityChanged(this.readingPreparationContext(owner),
@@ -4620,7 +4626,7 @@ struct Index {
 
   private showOfflineDownloadFeedback(message: string): void {
     try {
-      this.getUIContext().getPromptAction().showToast({ message });
+      this.transientFeedback.show(() => this.getUIContext(), { message }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner)));
     } catch (_) {
       // Presentation must not cancel the durable Core download operation.
     }
@@ -5123,9 +5129,9 @@ struct Index {
       // An unresolved historical mark must not start a reader that immediately
       // fails. Keep the directory and original record available to the user.
       try {
-        this.getUIContext().getPromptAction().showToast({
+        this.transientFeedback.show(() => this.getUIContext(), {
           message: '该书签的位置暂时无法恢复，原摘录和备注仍保留，请从目录打开章节。',
-        });
+        }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && this.detailBook === book));
       } catch (_) {}
       return;
     }
@@ -6177,8 +6183,8 @@ struct Index {
     if (confirmed) {
       // The strict ACK already settled the write. The ordinary bookshelf
       // entry reads its current progress; no stale proposal is replayed.
-      try { this.getUIContext().getPromptAction().showToast({
-        message: '换源已保存，书架信息读取失败，请从书架重新打开。', duration: 2200 }); } catch (_) {}
+      try { this.transientFeedback.show(() => this.getUIContext(), {
+        message: '换源已保存，书架信息读取失败，请从书架重新打开。', duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && current())); } catch (_) {}
       return;
     }
     const message = '换源结果尚未确认，当前版本无法核对原操作。可刷新书架查看当前书籍，或返回退出；请勿重复换源。';
@@ -6213,7 +6219,7 @@ struct Index {
     this.mangaChapterStartRequestGeneration = this.mangaChapterRequestGeneration;
     this.requestedMangaDirectoryTargetProof = undefined;
     this.requestedBookmarkAnchor = undefined;
-    try { this.getUIContext().getPromptAction().showToast({ message: '已从本章开头继续' }); }
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: '已从本章开头继续' }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && this.detailBook?.sourceId === session.identity.sourceId && this.detailBook?.bookId === session.identity.bookId)); }
     catch (_) { /* Feedback never owns a prepared trial switch. */ }
   }
 
@@ -6358,7 +6364,7 @@ struct Index {
     this.preparedReaderRoute = 'reading';
     this.route = 'reading';
     if (session.contentKind === 'manga') {
-      try { this.getUIContext().getPromptAction().showToast({ message: '已从本章开头继续' }); }
+      try { this.transientFeedback.show(() => this.getUIContext(), { message: '已从本章开头继续' }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && this.readingSessionActive)); }
       catch (_) { /* Feedback never owns an already committed source switch. */ }
     }
   }
@@ -6447,8 +6453,8 @@ struct Index {
       this.remoteCacheRefreshConsent = undefined;
       void work.catch((failure: Error): void => {
         if (current()) {
-          try { this.getUIContext().getPromptAction().showToast({
-            message: readingFailureHint(diagnosticCodeOf(errorMessageOf(failure))), duration: 2200 }); } catch (_) {}
+          try { this.transientFeedback.show(() => this.getUIContext(), {
+            message: readingFailureHint(diagnosticCodeOf(errorMessageOf(failure))), duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner) && current())); } catch (_) {}
           // The one-shot host retires its physical action before dispatch.
           // Keep this exact cache decision available after a failed attempt.
           void this.chooseCachedChapterRefresh(error, current);
@@ -6487,7 +6493,7 @@ struct Index {
       host.snapshot().scopeId === scope && host.snapshot().book?.sourceId === this.detailBook?.sourceId &&
       host.snapshot().book?.bookId === this.detailBook?.bookId;
     if (canRetryDetail) { this.detailLoadingMessage = detail; this.detailCatalogBusy = false; }
-    try { this.getUIContext().getPromptAction().showToast({ message: `${title}：${detail}`, duration: 2200 }); }
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: `${title}：${detail}`, duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(this.mountedRuntimeOwner))); }
     catch (_) {}
   }
 
@@ -6752,7 +6758,7 @@ struct Index {
       resolveReaderTransaction: async (book: SystemFileOpenReaderIdentity): Promise<void> => {
         await this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId);
       },
-      notice: (message: string): void => { this.getUIContext().getPromptAction().showToast({message}); },
+      notice: (message: string): void => { this.transientFeedback.show(() => this.getUIContext(), {message}, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.systemFileOpenNavigation === host && mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner))); },
       open: (book: ShelfBook): void => {
         this.retireSourceSwitchPresentation();
         this.closeImportDialog(); this.jsonImportVisible = false;
@@ -6827,6 +6833,7 @@ struct Index {
     if (!this.readingSessionActive || (!mangaBeforeCatalog && !mangaHistoricalResume && !this.isKnownDetailChapter(chapterIndex))) {
       return;
     }
+    if (chapterIndex !== this.directoryCurrentChapterIndex) this.transientFeedback.reset();
     this.directoryCurrentChapterIndex = chapterIndex;
     if (this.readingSessionActive) this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId, chapterIndex);
     this.directoryChapterTitle = chapterTitle;
@@ -7071,6 +7078,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.transientFeedback.reset();
     this.downloadHost?.retire();
     this.downloadHost = undefined;
     this.downloadPresentationIdentity = '';
@@ -7153,7 +7161,7 @@ struct Index {
       const key = `${facts.generation}:${message}`;
       if (key !== this.catalogFeedbackKey) {
         this.catalogFeedbackKey = key;
-        try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
+        try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.searchAppForeground && (!this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner && this.route === 'bookshelf')); } catch (_) {}
       }
     }
 

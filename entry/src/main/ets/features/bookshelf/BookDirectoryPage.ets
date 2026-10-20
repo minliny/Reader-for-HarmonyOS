@@ -8,7 +8,8 @@ import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectorySc
 import { ReaderDirectoryRecoverySurface } from '../reading/ReaderDirectoryRecoverySurface';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
 import { TYPE_FORM_STATE_BODY } from '../common/ReaderTypography';
-import { ReaderDirectoryRules } from '../reading/ReaderDirectoryRules';
+import { ReaderDirectoryRules, type ReaderDirectoryRulesRecoveryProjection } from '../reading/ReaderDirectoryRules';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { readerDirectoryScopeKey } from '../reading/ReaderDirectoryNavigation';
 import type { JsonObject } from '@reader/core-harmony';
@@ -85,6 +86,9 @@ export struct BookDirectoryPage {
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   @State private rulesExpanded: boolean = false;
+  @State private rulesOpened: boolean = false;
+  @State private rulesPresentationGeneration: number = 0;
+  @State private rulesRecovery: ReaderDirectoryRulesRecoveryProjection | undefined = undefined;
   @State private rulesRevision: number = 0;
   @State private searchDraft: string = '';
   @State private searchQuery: string = '';
@@ -124,6 +128,7 @@ export struct BookDirectoryPage {
   }
 
   aboutToDisappear(): void {
+    this.retireRulesPresentation();
     this.downloadMenuGeneration += 1;
     this.mangaFontGeneration += 1;
     this.downloadMenuVisible = false;
@@ -149,6 +154,59 @@ export struct BookDirectoryPage {
       ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
         onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
         onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+    }
+  }
+
+  private retireRulesPresentation(): void {
+    this.rulesPresentationGeneration += 1;
+    this.rulesRecovery = undefined;
+    this.rulesExpanded = false;
+    this.rulesOpened = false;
+  }
+
+  private rulesPresentationCurrent(identity: string, generation: number): boolean {
+    return this.mounted && this.rulesOpened && identity === this.identity() &&
+      generation === this.rulesPresentationGeneration && this.supportsDirectoryRules();
+  }
+
+  private admitRulesRecovery(identity: string, generation: number,
+    projection: ReaderDirectoryRulesRecoveryProjection | undefined): void {
+    if (!this.rulesPresentationCurrent(identity, generation) ||
+      (projection !== undefined && projection.bookId !== this.bookId)) return;
+    this.rulesRecovery = projection;
+  }
+
+  @Builder
+  private rulesEditor(generation: number) {
+    ForEach([this.identity()], (identity: string): void => {
+      ReaderDirectoryRules({ bookId: this.bookId,
+        onApplied: (): void => { if (this.rulesPresentationCurrent(identity, generation)) this.rulesRevision += 1; },
+        onRecoveryChanged: (projection: ReaderDirectoryRulesRecoveryProjection | undefined): void =>
+          this.admitRulesRecovery(identity, generation, projection) });
+    }, (identity: string): string => identity);
+  }
+
+  @Builder
+  private pageRecoveryOverlay() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible ||
+      this.rulesRecovery?.view.visible === true) {
+      Scroll() {
+        Column({ space: 8 }) {
+          this.recoveryContent();
+          if (this.rulesRecovery?.view.visible === true) {
+            ReaderRecoveryNotice({ view: this.rulesRecovery.view, tag: '目录规则',
+              actionLabel: this.rulesRecovery.actionLabel, secondaryActionLabel: this.rulesRecovery.secondaryActionLabel,
+              busy: this.rulesRecovery.busy, onReconcile: this.rulesRecovery.onReconcile,
+              onSecondaryAction: this.rulesRecovery.onSecondaryAction });
+          }
+        }.width('100%').hitTestBehavior(HitTestMode.Transparent);
+      }.width(this.contentFrame().width)
+        .constraintSize({ maxHeight: Math.max(0, ReaderWindowCoordinator.metrics().windowRect.height / 3) })
+        .margin({ left: this.contentFrame().left, right: this.contentFrame().right,
+          top: this.contentKind === 'manga' ? this.topInset() + mangaDirectoryHeaderHeight(this.mangaFontScale()) + 8 :
+            readerPageContentStartInset() + 59 })
+        .visibility(this.downloadMenuVisible ? Visibility.Hidden : Visibility.Visible)
+        .hitTestBehavior(HitTestMode.Transparent);
     }
   }
 
@@ -179,6 +237,7 @@ export struct BookDirectoryPage {
     ReaderPageScaffold({ variant: 'directory', headerKind: 'standard',
       content: (): void => { this.standardContent(); },
       header: (): void => { this.standardHeader(); },
+      overlayContent: (): void => { this.pageRecoveryOverlay(); },
       onHeaderHeightChange: (height: number): void => {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.standardHeaderHeight) > .1)
           this.standardHeaderHeight = height;
@@ -203,8 +262,18 @@ export struct BookDirectoryPage {
   private standardToolbar() {
     Column() {
       if (this.supportsDirectoryRules() && this.supportsCurrentDirectoryView()) {
-        Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
-        if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
+        Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => {
+          if (this.mounted) { this.rulesOpened = true; this.rulesExpanded = !this.rulesExpanded; }
+        });
+        // Collapsing the editor retires its layout only. An accepted original
+        // operation retains a mounted owner and can still be reconciled above.
+        if (this.rulesOpened) {
+          Column() {
+            ForEach([this.rulesPresentationGeneration], (generation: number): void => {
+              this.rulesEditor(generation);
+            }, (generation: number): string => generation.toString());
+          }.visibility(this.rulesExpanded ? Visibility.Visible : Visibility.None);
+        }
       }
       ReaderDirectoryToolbar({
         text: this.searchDraft,
@@ -217,7 +286,6 @@ export struct BookDirectoryPage {
         onBottom: (): void => this.scrollToEdge(Edge.Bottom),
         onToggleSort: (): void => this.toggleSort(),
       });
-      this.recoveryContent();
       Text('').width('100%').height(1)
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
@@ -236,6 +304,7 @@ export struct BookDirectoryPage {
           ReaderDirectoryNavigationSurface({
             sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: `${identity}:${this.rulesRevision}`,
+            showLoadStatus: this.projectedEntries.length > 0 || this.navigationActive,
             interacted: this.navigationInteracted,
             rowHeight: 40, listPaddingX: 10, listPaddingY: 0,
             contentStartInset: this.standardHeaderHeight + 5, contentEndInset: this.bottomInset() + 5,
@@ -296,6 +365,7 @@ export struct BookDirectoryPage {
       content: (): void => { this.mangaContent(); },
       header: (): void => { this.mangaHeader(); },
       footer: (): void => { this.mangaFixedFooter(); },
+      overlayContent: (): void => { this.pageRecoveryOverlay(); },
     })
       .onAreaChange((_old: Area, area: Area): void => {
         const width = readerPageAreaLength(area.width);
@@ -740,7 +810,7 @@ export struct BookDirectoryPage {
     return this.sourceId === 'local' && (kind === 'txt' || kind === 'local');
   }
 
-  private onRulesKindChanged(): void { this.rulesExpanded = false; }
+  private onRulesKindChanged(): void { this.retireRulesPresentation(); }
 
   private rowIsCurrent(entry: LocalReadingTocEntry, identity: string): boolean {
     if (!this.mounted || identity !== this.identity() || identity !== this.admittedIdentity ||
@@ -755,7 +825,7 @@ export struct BookDirectoryPage {
     this.downloadMenuGeneration += 1;
     this.downloadMenuVisible = false;
     this.downloadMenuIdentity = '';
-    this.rulesExpanded = false;
+    this.retireRulesPresentation();
     this.rulesRevision = 0;
     this.mangaCollapsedGroups = [];
     this.locateCurrentRevision = 0;

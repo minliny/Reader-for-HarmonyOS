@@ -1,6 +1,6 @@
 import { mangaDirectoryContextEntries } from '../manga/MangaDirectoryState';
 import { mangaDirectoryPresentation } from '../manga/MangaDirectoryPresentation';
-import { TYPE_APP_INHERITED_OPTION, TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_READER_DIRECTORY_TITLE_INTER } from '../common/ReaderTypography';
+import { TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_READER_DIRECTORY_TITLE_INTER } from '../common/ReaderTypography';
 import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -33,7 +33,7 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
-import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { projectReaderDirectoryEntries } from './ReaderDirectoryProjection';
 import {
   projectReaderBookmarkRows,
@@ -443,17 +443,11 @@ export struct FullDirectoryPanel {
         Stack({ alignContent: Alignment.Center }) {
           this.chapterList();
           if (this.projectedEntries.length === 0 && !this.navigationActive) {
-            Column({ space: 10 }) {
-              Text(this.catalogEmptyMessage())
-                .fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
-                .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-                .textAlign(TextAlign.Center)
-                .padding({ left: 20, right: 20 });
-              if (this.catalogRetryVisible()) {
-                ReaderRecoveryAction({ label: '重试加载目录', actionEnabled: true,
-                  onReconcile: (): void => this.onRetryCatalog() });
-              }
-            }.justifyContent(FlexAlign.Center);
+            ReaderPageState({ loading: this.catalogBusy && this.entries.length === 0,
+              message: this.catalogBusy && this.entries.length === 0 ? '正在加载目录' : this.catalogEmptyMessage(),
+              actionLabel: this.catalogRetryVisible() ? '重试加载目录' : '',
+              mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+              onAction: (): void => { if (this.catalogRetryVisible()) this.onRetryCatalog(); } });
           }
         }
         .width('100%')
@@ -661,6 +655,7 @@ export struct FullDirectoryPanel {
           ReaderDirectoryNavigationSurface({
             sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey,
+            showLoadStatus: this.projectedEntries.length > 0 || this.navigationActive,
             interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
             interactionEnabled: !this.motionActive,
             listPaddingX: this.directoryListPaddingX(), listPaddingY: this.embeddedInControl ? 0 : 5,

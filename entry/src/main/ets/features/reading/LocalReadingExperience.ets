@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { readingFailureHint } from './ReadingFailurePresentation';
 import { ReaderReadingRecordHost } from './ReaderReadingRecordHost';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
@@ -957,6 +958,7 @@ const READER_CONTENT_SEARCH_PAGE_SIZE = 50;
  */
 @Component
 export struct ReadingExperience {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private readerAppScheme: string = 'day';
   @StorageLink('readerAppearanceRevision') @Watch('onSharedAppearanceChanged') private sharedAppearanceRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onAppForegroundChanged') appForeground: boolean = true;
@@ -2019,6 +2021,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.retainedReadingRecencyReceipt = undefined;
     this.retainedReadingRecencyVisible = false;
     this.cancelSourceSwitchCompletion();
@@ -4359,7 +4362,7 @@ export struct ReadingExperience {
       if (isCurrent()) this.entryCatalogLoadFailed = true;
       if (isCurrent() && this.autoPageCoordinator.catalogLoadFailed()) {
         try {
-          this.getUIContext().getPromptAction().showToast({ message: '目录加载失败，自动翻页已停止，请重试' });
+          this.transientFeedback.show(() => this.getUIContext(), { message: '目录加载失败，自动翻页已停止，请重试' }, (): boolean => isCurrent() && this.appForeground && this.windowChromeActive);
         } catch (_) { /* The reading session may already be leaving. */ }
       }
       if (error instanceof Error) throw error;
@@ -4598,6 +4601,7 @@ export struct ReadingExperience {
    * screen or title-only PaperLayer.
    */
   private resetForChapterSelection(preserveRapidPageTarget: boolean = false, preserveTtsFollow: boolean = false): void {
+    this.transientFeedback.reset();
     this.showReaderRecovery('');
     this.ordinaryPageMeasurementSelection = -1;
     this.invalidatePageTurnRuntime(true, preserveRapidPageTarget, preserveTtsFollow);
@@ -4846,10 +4850,10 @@ export struct ReadingExperience {
           '本章正文已更新；无法恢复的阅读位置从章首继续，旧书签和划线记录仍保留。' : '本章正文已更新。';
     }
     try {
-      this.getUIContext().getPromptAction().showToast({ message });
+      this.transientFeedback.show(() => this.getUIContext(), { message }, (): boolean => this.isSelectionActive(lifecycleToken, selectionToken) && this.appForeground && this.windowChromeActive);
     } catch (_) {
       // Presentation failure cannot turn a preserved, readable chapter into a
-      // load failure. PromptAction.showToast is synchronous and returns void.
+      // load failure. The common short-feedback adapter owns native failures.
     }
   }
 
@@ -4965,9 +4969,9 @@ export struct ReadingExperience {
       .catch((_error: Error): void => {
         if (!isCurrent()) return;
         if (readerRapidPageTurnDirection(this.rapidPageTurnState) === direction || this.activePagePointerId >= 0) {
-          this.getUIContext().getPromptAction().showToast({
+          this.transientFeedback.show(() => this.getUIContext(), {
             message: direction === 'previous' ? '上一章加载失败，请重试' : '下一章加载失败，请重试',
-          });
+          }, (): boolean => isCurrent() && this.appForeground && this.windowChromeActive);
         }
         // Preserve the page and pending intent. Only a later explicit request
         // retries acquisition; failure does not recursively drain the queue.
@@ -8553,7 +8557,7 @@ export struct ReadingExperience {
         if (this.ttsConfigurationHost?.snapshot().selection.receipt.fact === 'pendingReconciliation') {
           // A missing config reply may have committed. Do not undo the
           // coordinator's rate while claiming the durable write failed.
-          try { this.getUIContext().getPromptAction().showToast({ message: error.message }); } catch (_) {}
+          try { this.transientFeedback.show(() => this.getUIContext(), { message: error.message }, (): boolean => current() && this.appForeground && this.windowChromeActive); } catch (_) {}
           return;
         }
         // Core/Host state may already have accepted the new rate while the
@@ -8746,7 +8750,7 @@ export struct ReadingExperience {
         this.ttsHttpEngines = snapshot.engines;
         // Configuration failures never rewrite the formal speech state.
         if (snapshot.notice !== undefined && snapshot.notice !== this.ttsConfigurationNotice) {
-          try { this.getUIContext().getPromptAction().showToast({ message: snapshot.notice }); } catch (_) {}
+          try { this.transientFeedback.show(() => this.getUIContext(), { message: snapshot.notice }, (): boolean => current() && this.ttsConfigurationHost === host && this.appForeground && this.windowChromeActive); } catch (_) {}
         }
         this.ttsConfigurationNotice = snapshot.notice;
       },
@@ -8913,7 +8917,7 @@ export struct ReadingExperience {
           if (!this.autoPageCoordinator.admitStart(generation)) return;
           this.logTtsFailure('stop before auto-page', error);
           this.cancelSessionLaunch('stopBarrierFailure');
-          this.getUIContext().getPromptAction().showToast({ message: '朗读未能停止，自动翻页尚未启动，请重试' });
+          this.transientFeedback.show(() => this.getUIContext(), { message: '朗读未能停止，自动翻页尚未启动，请重试' }, (): boolean => this.isSessionActive(lifecycleToken) && this.ttsCoordinator === coordinator && this.appForeground && this.windowChromeActive);
         });
       return;
     }
@@ -9059,6 +9063,7 @@ export struct ReadingExperience {
   }
 
   private onWindowChromeActiveChanged(): void {
+    if (!this.windowChromeActive) this.transientFeedback.reset();
     this.admitRetainedReadingRecency();
     this.onControlInputBoundaryChanged();
     this.applyWindowChrome();
@@ -9217,9 +9222,9 @@ export struct ReadingExperience {
     if (this.controlBookmarkFailureNoticeKey === noticeKey) return;
     this.controlBookmarkFailureNoticeKey = noticeKey;
     try {
-      this.getUIContext().getPromptAction().showToast({
+      this.transientFeedback.show(() => this.getUIContext(), {
         message: `${this.bookmarkLoadMessage}。请打开目录－书签重新载入。`,
-      });
+      }, (): boolean => this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive);
     } catch (error) {
       hilog.warn(0x5244, 'Reader', '%{private}s', `ReadingExperience bookmark notice unavailable: ${this.errorMessage(error)}`);
     }
@@ -9412,7 +9417,7 @@ export struct ReadingExperience {
         const message=fact.confirmation==='unknown' || fact.blocked ?
           '转换原操作尚未确认，已保留原内容；再次选择只会核对/继续原操作' :
           fact.confirmation==='confirmed' ? '转换已保存，当前内容刷新尚未完成，请重试阅读' : '转换未能执行，请稍后重试；原内容已保留';
-        try { this.getUIContext().getPromptAction().showToast({message}); } catch (_) {}
+        try { this.transientFeedback.show(() => this.getUIContext(), {message}, (): boolean => presentationCurrent() && generation === this.chineseConversionMutationGeneration && this.appForeground && this.windowChromeActive); } catch (_) {}
       });
   }
 
@@ -9554,7 +9559,7 @@ export struct ReadingExperience {
   private showReaderSettingsFailure(message: string, error: Error): void {
     try { hilog.warn(0x5244, 'Reader', '%{private}s', `Reader settings operation: ${this.errorMessage(error)}`); } catch (_) {}
     try {
-      this.getUIContext().getPromptAction().showToast({ message });
+      this.transientFeedback.show(() => this.getUIContext(), { message }, (): boolean => this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive);
     } catch (_) {
       // A retired notice/diagnostic cannot change accepted settings or policy.
     }
@@ -9692,7 +9697,7 @@ export struct ReadingExperience {
         this.changeReaderPageTurnStyle(style, true);
       }).catch((): void => {
         if (changeGeneration !== this.pageStyleChangeGeneration || !this.isSessionActive(lifecycle)) return;
-        this.getUIContext().getPromptAction().showToast({ message: '进度保存失败，请重试切换翻页效果' });
+        this.transientFeedback.show(() => this.getUIContext(), { message: '进度保存失败，请重试切换翻页效果' }, (): boolean => changeGeneration === this.pageStyleChangeGeneration && this.isSessionActive(lifecycle) && this.appForeground && this.windowChromeActive);
       });
       return;
     }
@@ -9874,7 +9879,7 @@ export struct ReadingExperience {
   private showAppearanceFailure(message: string, error: Error): void {
     hilog.warn(0x5244, 'Reader', '%{private}s', `ReadingExperience appearance failed: ${this.errorMessage(error)}`);
     try {
-      this.getUIContext().getPromptAction().showToast({ message: message });
+      this.transientFeedback.show(() => this.getUIContext(), { message: message }, (): boolean => this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive);
     } catch (_) {
       // A missing presentation context must not discard accepted settings.
     }
@@ -11460,9 +11465,9 @@ export struct ReadingExperience {
       }
     } catch (_) {
       try {
-        this.getUIContext().getPromptAction().showToast({
+        this.transientFeedback.show(() => this.getUIContext(), {
           message: '该位置的正文版本暂时无法确认，已保留原书签和阅读位置，请从目录打开章节',
-        });
+        }, (): boolean => this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive);
       } catch (_) {}
       return;
     }
@@ -13021,7 +13026,7 @@ export struct ReadingExperience {
     // short feedback. The arena invokes this only once per physical segment.
     if (!this.bookmarkFeedbackHintFits()) {
       this.bookmarkUnavailableMessage = '';
-      try { this.getUIContext().getPromptAction().showToast({ message }); } catch (_) {}
+      try { this.transientFeedback.show(() => this.getUIContext(), { message }, (): boolean => this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive && generation === this.bookmarkUnavailableGeneration && owner === this.bookmarkFeedbackOwnerKey()); } catch (_) {}
       return;
     }
     this.bookmarkUnavailableMessage = message;

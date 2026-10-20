@@ -67,9 +67,11 @@ export struct ReaderDialogSurface {
 
   build() {
     Column() {
-      this.header();
-      if (this.spec().headerGap > 0) {
-        Blank().height(this.spec().headerGap);
+      if (this.title.length > 0 || this.showCloseButton) {
+        this.header();
+        if (this.spec().headerGap > 0) {
+          Blank().height(this.spec().headerGap);
+        }
       }
       Column() {
         this.body();

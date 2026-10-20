@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -147,6 +148,7 @@ class BookshelfRowDataSource implements IDataSource {
  */
 @Component
 export struct BookshelfPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   viewState: BookshelfViewState = new BookshelfViewState();
   private readonly shelfScroller: Scroller = new Scroller();
   private viewportRestored: boolean = false;
@@ -170,6 +172,7 @@ export struct BookshelfPage {
   @Prop noticeTopInset: number = 0;
   @Prop headerClearance: number = readerPageInitialHeaderHeight('bookshelf') + 14;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
+  @Prop @Watch('modeFeedback') feedbackEnabled: boolean = true;
   @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: (navigation?: number) => void = (): void => {};
   onPreviousPageRequested: (navigation?: number) => void = (): void => {};
@@ -256,11 +259,12 @@ export struct BookshelfPage {
   private lastModeFeedback: string = '';
   @State private modeReconcileBusy: boolean = false;
   private modeFeedback(): void {
+    if (!this.mounted || !this.feedbackEnabled) return;
     const view = this.viewModeRecovery();
     if (!view.visible || this.viewModePending()) { this.lastModeFeedback = ''; return; }
     if (view.message === this.lastModeFeedback) return;
     this.lastModeFeedback = view.message;
-    try { this.getUIContext().getPromptAction().showToast({ message: view.message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted && this.feedbackEnabled); } catch (_) {}
   }
   private viewModeRecovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.viewModeSnapshot.receipt, this.viewModeSnapshot.readFacts);
@@ -312,6 +316,7 @@ export struct BookshelfPage {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.projectionGeneration += 1;
     this.projectionQueued = false;
     this.saveShelfViewport();

@@ -1,6 +1,5 @@
-import { TYPE_READER_BOOKMARK_LOADING } from '../common/ReaderTypography';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { TOK_READ_MUTED, TOK_READ_PRIMARY } from '../common/ReaderTokens';
 
 /**
  * Loading state for the bookmark tab: shown while the Core bookmark
@@ -11,15 +10,9 @@ export struct ReaderBookmarkLoadingState {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   build() {
-    Column({ space: 8 }) {
-      LoadingProgress()
-        .width(32)
-        .height(32)
-        .color(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
-      Text('书签载入中…')
-        .fontFamily(TYPE_READER_BOOKMARK_LOADING.fontFamily as string)
-        .fontSize(TYPE_READER_BOOKMARK_LOADING.fontSizeFp)
-        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+    Column() {
+      ReaderPageState({ loading: true, message: '书签载入中…', padded: false,
+        mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
     }
     .width('100%')
     .height('100%')

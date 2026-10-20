@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../common/ReaderMessageStyle';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
@@ -54,6 +55,7 @@ export type { LocalImportDialogState } from './LocalImportPresentationOwner';
  */
 @Component
 export struct LocalImportDialog {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -97,6 +99,7 @@ export struct LocalImportDialog {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.mounted = false; this.motionGeneration += 1;
   }
 
@@ -539,7 +542,7 @@ export struct LocalImportDialog {
     if (!this.recovery.visible || !this.recovery.canRetry || this.pendingImport()) { this.lastRecoveryFeedback = ''; return; }
     if (!this.mounted || this.recovery.message === this.lastRecoveryFeedback) return;
     this.lastRecoveryFeedback = this.recovery.message;
-    try { this.getUIContext().getPromptAction().showToast({ message: this.recovery.message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   private resultCountText(): string {

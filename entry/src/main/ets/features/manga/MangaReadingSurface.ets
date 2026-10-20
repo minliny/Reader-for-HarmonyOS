@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { readerActionIcon } from '../common/ReaderActionIconResources';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderPageState } from '../common/ReaderPageState';
@@ -99,6 +100,7 @@ class MangaStripDataSource implements IDataSource {
 /** Native virtual list; a tile is a temporary presentation of one logical page. */
 @Component
 export struct MangaReadingSurface {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
   @State private quickHeaderMeasured: number = 0;
   @State private quickToolsMeasured: number = 0;
@@ -293,6 +295,7 @@ export struct MangaReadingSurface {
     this.open(controller);
   }
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
     this.mounted = false;
     if (this.boundaryBusy || this.boundaryDragging || this.chapterTransitions?.pending === true)
@@ -536,7 +539,7 @@ export struct MangaReadingSurface {
     const key = `${this.controller?.chapter?.manifest.manifestVersion ?? ''}\u0000${failure}`;
     if (key === this.preparationFailureNoticeKey) return;
     this.preparationFailureNoticeKey = key;
-    try { this.getUIContext().getPromptAction().showToast({ message: this.displayError(failure), duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.displayError(failure), duration: 2000, key }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && this.opened); } catch (_) {}
   }
   private notifyPublishedRows(structure: boolean): void {
     // Image/auth facts are plain controller fields, not an observed UI property.
@@ -1200,10 +1203,10 @@ export struct MangaReadingSurface {
     const key = JSON.stringify([this.sourceId, this.bookId, this.controller?.chapter?.manifest.manifestVersion,
       this.presentationGeneration, this.error]);
     if (key === this.openedErrorNoticeKey) return;
-    try {
-      this.getUIContext().getPromptAction().showToast({ message: this.displayError(this.error) });
+    if (this.transientFeedback.show(() => this.getUIContext(), { message: this.displayError(this.error), key },
+      (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && this.opened)) {
       this.openedErrorNoticeKey = key;
-    } catch (_) {}
+    }
   }
   private refreshLoginRequiredForControls(): void {
     if (!this.mounted) return;
@@ -1453,7 +1456,7 @@ export struct MangaReadingSurface {
       }
       if (this.mounted && generation === this.boundaryGeneration && message !== 'MANGA_SESSION_CANCELLED') {
         this.boundaryFailure = '章节暂时打不开，请稍后再试。';
-        try { this.getUIContext().getPromptAction().showToast({ message: this.boundaryFailure, duration: 2000 }); }
+        try { this.transientFeedback.show(() => this.getUIContext(), { message: this.boundaryFailure, duration: 2000 }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && generation === this.boundaryGeneration); }
         catch (_error) { /* Feedback cannot interrupt rollback or resource cleanup. */ }
         hilog.warn(0x5244, 'Reader', 'Boundary chapter preparation failed: %{public}s', message);
       }
@@ -2742,7 +2745,7 @@ export struct MangaReadingSurface {
         .catch((error: Error): void => {
           if (!this.mounted) return;
           if (this.opened) {
-            try { this.getUIContext().getPromptAction().showToast({ message: '刷新未完成，已保留当前内容。' }); } catch (_) {}
+            try { this.transientFeedback.show(() => this.getUIContext(), { message: '刷新未完成，已保留当前内容。' }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && this.opened); } catch (_) {}
           } else this.error = error.message;
         })
         .finally((): void => { if (this.mounted) this.refreshing = false; });

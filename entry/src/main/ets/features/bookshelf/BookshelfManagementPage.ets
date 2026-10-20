@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
@@ -43,6 +44,8 @@ import {
 
 @Component
 export struct BookshelfManagementPage {
+  private feedbackMounted: boolean = false;
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onSnapshotChanged') snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
@@ -60,7 +63,9 @@ export struct BookshelfManagementPage {
   onAssignmentGroupChanged: (value: string) => void = (_value: string): void => {};
   onAssignBook: () => void = (): void => {};
 
-  aboutToAppear(): void {
+  aboutToDisappear(): void { this.feedbackMounted = false; this.transientFeedback.reset(); }
+
+  aboutToAppear(): void { this.feedbackMounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.onSnapshotChanged();
   }
@@ -122,12 +127,13 @@ export struct BookshelfManagementPage {
   }
   private lastFeedback: string = '';
   private onSnapshotChanged(): void {
+    if (!this.feedbackMounted) return;
     const view = this.recovery();
     if (this.originalPending() || !this.hasReadData() || this.snapshot.busy) { this.lastFeedback = ''; return; }
     const message = view.visible ? view.message : this.snapshot.statusMessage;
     if (!message || message === this.lastFeedback) return;
     this.lastFeedback = message;
-    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2000 }, (): boolean => this.feedbackMounted); } catch (_) {}
   }
   private recovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts);

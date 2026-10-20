@@ -54,7 +54,7 @@ export function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return 
  * consumer while a per-variant change stays scoped. Visual values are owned
  * here, not re-derived by callers.
  */
-export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import';
+export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import' | 'download-confirmation';
 
 export type DialogHeaderFontFamily = 'ReaderMangaSans600' | 'ReaderNotoSerifSCBold';
 
@@ -164,6 +164,16 @@ export class DialogSurfaceSpec {
 // User-approved confirmation/form/task family, 2026-10-19. Hosts continue
 // to own focus, masks, keyboard/safe-area bounds and operation admission.
 const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
+  'download-confirmation': new DialogSurfaceSpec({
+    maxWidth: 306, edgeGap: 24, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,
+    padding: 17, borderRadius: 12,
+    backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: false, hasBorder: true,
+    headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24, headerGap: 0, bodyActionsGap: 0, bodyActionsOwnMargin: 0,
+    actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,
+    actionExtendsTouchRegion: false,
+    actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',
+  }),
   'book-removal': new DialogSurfaceSpec({
     maxWidth: 306, edgeGap: 20, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,
     padding: 17, borderRadius: 12,

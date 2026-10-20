@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { readerPageContentStartInset, readerStandardPageContentFrame } from '../common/ReaderPageShell';
 import { ReaderButton } from '../common/ReaderButton';
@@ -92,6 +93,7 @@ class SourceListDataSource implements IDataSource {
 
 @Component
 export struct SourceManagementPage {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -151,6 +153,7 @@ export struct SourceManagementPage {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
     this.temporaryBackIdentity = '';
@@ -389,7 +392,7 @@ export struct SourceManagementPage {
     const message = this.statusMessage || (this.recovery().visible ? this.recovery().message : '');
     if (message.length === 0 || message.startsWith('正在') || message === this.lastToastMessage) return;
     this.lastToastMessage = message;
-    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
   }
 
   @Builder

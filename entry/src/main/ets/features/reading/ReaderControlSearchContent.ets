@@ -1,8 +1,9 @@
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
-import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { MESSAGE_BODY, MESSAGE_ACTION } from '../common/ReaderMessageStyle';
 import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../common/ReaderTypography';
-import { TYPE_READER_SEARCH_RETAINED_LOAD_MORE_ACTION_STATUS, TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, TYPE_READER_SEARCH_RETAINED_RESULTS_BODY_STATUS, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
+import { TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -469,9 +470,8 @@ export struct ReaderControlSearchContent {
         this.loadMoreAction();
       } else {
         Stack({ alignContent: Alignment.Center }) {
-          Text(this.statusText()).width('100%').padding({ left: 12, right: 12 })
-            .fontFamily(TYPE_READER_SEARCH_RETAINED_RESULTS_BODY_STATUS.fontFamily as string).fontSize(TYPE_READER_SEARCH_RETAINED_RESULTS_BODY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center).maxLines(3);
+          ReaderPageState({ message: this.statusText(), loading: this.state.kind === 'loading', padded: false,
+            mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
         }.width('100%').height('100%')
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
       }
@@ -506,7 +506,9 @@ export struct ReaderControlSearchContent {
       Stack({ alignContent: Alignment.Center }) {
         Text(this.state.loadingMore === true ? '正在加载…' :
           (this.state.loadMoreError === undefined ? '加载更多结果' : '加载失败，重试'))
-          .fontFamily(TYPE_READER_SEARCH_RETAINED_LOAD_MORE_ACTION_STATUS.fontFamily as string).fontSize(TYPE_READER_SEARCH_RETAINED_LOAD_MORE_ACTION_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+          .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight)
+          .fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1);
       }
       .width(112).height(26)

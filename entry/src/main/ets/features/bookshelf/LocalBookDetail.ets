@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -68,6 +69,7 @@ const DETAIL_ACTION_AREA_HEIGHT = 77;
 /** Shared detail presentation. Core facts decide the type and readable rows. */
 @Component
 export struct LocalBookDetail {
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBookChanged') book: ReadingBookDetail;
@@ -119,6 +121,7 @@ export struct LocalBookDetail {
   }
 
   aboutToDisappear(): void {
+    this.transientFeedback.reset();
     this.mounted = false;
     this.mangaFontGeneration += 1;
     this.mangaFontTask = undefined;
@@ -780,7 +783,7 @@ export struct LocalBookDetail {
     if (!this.shelfMessage) { this.lastShelfFeedback = ''; return; }
     if (!this.mounted || !this.detailBookAvailable() || !this.shelfMessage || this.shelfMessage === this.lastShelfFeedback) return;
     this.lastShelfFeedback = this.shelfMessage;
-    try { this.getUIContext().getPromptAction().showToast({ message: this.shelfMessage, duration: 2000 }); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.shelfMessage, duration: 2000 }, (): boolean => this.mounted && this.detailBookAvailable()); } catch (_) {}
   }
   private catalogLoading(): boolean { return this.catalogBusy; }
   private chapterEmptyMessage(): string {

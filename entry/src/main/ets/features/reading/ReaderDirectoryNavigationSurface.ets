@@ -1,5 +1,7 @@
-import { TYPE_APP_INHERITED_BODY } from '../common/ReaderTypography';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -13,6 +15,7 @@ import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDi
   type ReaderDirectoryNavigationPreparedPage } from './ReaderDirectoryNavigation';
 import { ReaderDirectoryNavigationList, cacheReaderDirectoryNavigationPage } from './ReaderDirectoryNavigationList';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from './ReaderDirectoryViewport';
+import { projectReaderDirectoryEntries } from './ReaderDirectoryProjection';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -82,6 +85,8 @@ export struct ReaderDirectoryNavigationSurface {
   private mangaFontGeneration: number = 0;
   private mangaFontTask: Promise<boolean> | undefined = undefined;
   private gateway: ReaderDirectoryNavigationGateway | undefined = undefined;
+  private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
+  private readonly feedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private mounted: boolean = false;
   private generation: number = 0;
   private openingGeneration: number = -1;
@@ -106,12 +111,15 @@ export struct ReaderDirectoryNavigationSurface {
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
     this.lastChapterIndex = this.currentChapterIndex;
-    this.gateway = new ReaderDirectoryNavigationGateway(ReaderRuntimeOwner.current());
+    this.runtimeOwner = ReaderRuntimeOwner.current();
+    this.gateway = new ReaderDirectoryNavigationGateway(this.runtimeOwner);
     this.openTree(true);
   }
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.feedback.reset();
+    this.runtimeOwner = undefined;
     this.mangaFontGeneration += 1;
     this.mangaFontTask = undefined;
     this.mangaFontsReady = false;
@@ -143,6 +151,7 @@ export struct ReaderDirectoryNavigationSurface {
 
   private onIdentityChanged(): void {
     if (!this.mounted) return;
+    this.feedback.reset();
     this.cancelQueryTimer();
     this.generation += 1;
     this.openingGeneration = -1;
@@ -381,6 +390,7 @@ export struct ReaderDirectoryNavigationSurface {
           // index or failed request remains a recoverable read for this view.
           this.settledFlat = unavailableReason === 'unsupported';
           this.loadFailed = !this.settledFlat;
+          if (this.loadFailed) this.notifyReadFailure(generation, sourceId, bookId);
           return;
         }
         if (this.settledFlat || (first && this.interacted)) {
@@ -431,7 +441,22 @@ export struct ReaderDirectoryNavigationSurface {
         this.openingGeneration = -1;
         this.loadPending = false;
         this.loadFailed = true;
+        this.notifyReadFailure(generation, sourceId, bookId);
       });
+  }
+
+  private hasRetainedContent(): boolean {
+    if (this.view !== undefined) return this.view.visibleTotal > 0;
+    if (this.query.length === 0) return this.chapterEntries.length > 0;
+    return projectReaderDirectoryEntries(this.chapterEntries, this.query, true, this.mangaDisplay).length > 0;
+  }
+
+  private notifyReadFailure(generation: number, sourceId: string, bookId: string): void {
+    this.feedback.show(() => this.getUIContext(), {
+      message: '目录刷新失败，已保留当前条目，可重试加载目录', key: `${sourceId}\u0000${bookId}\u0000directory-read-failed`,
+    }, (): boolean => this.mounted && this.interactionEnabled && this.showLoadStatus && this.loadFailed &&
+      generation === this.generation && sourceId === this.sourceId && bookId === this.bookId &&
+      this.runtimeOwner !== undefined && ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && this.hasRetainedContent());
   }
 
   private retryOpen(): void {
@@ -460,15 +485,22 @@ export struct ReaderDirectoryNavigationSurface {
     this.loadPending = false;
     this.loadFailed = true;
     this.settledFlat = false;
+    this.notifyReadFailure(this.generation, this.sourceId, this.bookId);
   }
 
   build() {
     Column() {
-      if (this.showLoadStatus && (this.loadPending || this.loadFailed)) {
+      if (this.showLoadStatus && (this.loadPending || this.loadFailed) &&
+        this.hasRetainedContent()) {
         Row({ space: 6 }) {
-          Text(this.loadFailed ? '目录加载失败，已保留当前条目' : '正在加载目录')
-            .layoutWeight(1).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
+          if (this.loadPending) {
+            Text('正在加载目录')
+              .layoutWeight(1).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+              .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+              .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number);
+          } else {
+            Blank().layoutWeight(1);
+          }
           if (this.loadFailed) {
             ReaderRecoveryAction({ label: '重试加载目录', actionEnabled: this.interactionEnabled,
               onReconcile: (): void => this.retryOpen() });
@@ -478,6 +510,14 @@ export struct ReaderDirectoryNavigationSurface {
       Stack() {
         if (this.mangaDisplay && !this.mangaFontsReady) {
           Blank().width('100%').height('100%');
+        } else if (this.showLoadStatus && !this.hasRetainedContent() &&
+          (this.loadPending || this.loadFailed)) {
+          Column() {
+            ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
+              actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.interactionEnabled,
+              mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+              onAction: (): void => this.retryOpen() });
+          }.width('100%').height('100%').justifyContent(FlexAlign.Center);
         } else if (this.view === undefined) {
           this.fallbackBuilder();
         } else {
@@ -516,9 +556,8 @@ export struct ReaderDirectoryNavigationSurface {
                 this.onCreateChapterStartBookmark(request),
             });
             if (this.view.visibleTotal === 0 && !this.mangaDisplay) {
-              Text('没有匹配的目录项')
-                .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-                .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+              ReaderPageState({ message: '没有匹配的目录项', padded: false,
+                mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) })
                 .hitTestBehavior(HitTestMode.None);
             }
           }.width('100%').height('100%');

@@ -1,3 +1,4 @@
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
@@ -9,6 +10,8 @@ import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
  * surfaces. Only the temporary action actors are keyed; the Reader tree stays. */
 @Component
 export struct ReaderDirectoryRecoverySurface {
+  private feedbackMounted: boolean = false;
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('notifyReadbackFailures') recovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   @State private dismissedResults: string[] = [];
@@ -18,7 +21,9 @@ export struct ReaderDirectoryRecoverySurface {
   onReconcileOffline: (generation: number, presentationId: string) => void = (): void => {};
   onContinueOffline: (generation: number, presentationId: string) => void = (): void => {};
 
-  aboutToAppear(): void { this.notifyReadbackFailures(); }
+  aboutToDisappear(): void { this.feedbackMounted = false; this.transientFeedback.reset(); }
+
+  aboutToAppear(): void { this.feedbackMounted = true; this.notifyReadbackFailures(); }
 
   private identities(): string[] {
     const identities: string[] = [];
@@ -46,14 +51,14 @@ export struct ReaderDirectoryRecoverySurface {
     return (this.isBookmarks(identity) ? this.recovery.bookmarksBusy : this.recovery.offlineBusy) === true;
   }
   private notifyReadbackFailures(): void {
+    if (!this.feedbackMounted) return;
     const active = this.identities().filter((identity: string): boolean => this.readbackFailed(identity));
     for (const identity of this.notifiedReadbacks) if (!active.includes(identity)) this.notifiedReadbacks.delete(identity);
     for (const identity of active) {
       if (this.notifiedReadbacks.has(identity)) continue;
-      try { this.getUIContext().getPromptAction().showToast({ message: this.isBookmarks(identity) ?
-        '书签更新已确认，列表读取失败。' : '缓存操作已确认，离线状态读取失败。' });
-        this.notifiedReadbacks.add(identity);
-      } catch (_) {}
+      if (this.transientFeedback.show(() => this.getUIContext(), { message: this.isBookmarks(identity) ?
+        '书签更新已确认，列表读取失败。' : '缓存操作已确认，离线状态读取失败。', key: identity },
+        (): boolean => this.feedbackMounted && this.isCurrent(identity))) this.notifiedReadbacks.add(identity);
     }
   }
   private isCurrent(identity: string): boolean {
