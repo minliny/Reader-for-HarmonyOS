@@ -37,6 +37,15 @@ export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderI
   throw new Error('Unknown ReaderIconButton specification');
 }
 
+// Both rows of the reviewed search panel share one action column. Reserve the
+// indicator even when idle; the input never resizes when stop becomes search.
+export function readerSearchActionWidth(expandedLayout: boolean, fontScale: number): number {
+  return 46 + (expandedLayout ? 28 : 26) * Math.max(1, fontScale);
+}
+export function readerSearchControlHeight(fontScale: number): number {
+  return 44 + 24 * Math.max(0, fontScale - 1);
+}
+
 export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-phone' | 'search-field-wide' | 'search-history-clear' | 'search-history-keyword' | 'search-scope' | 'search-retry-status-spaced' | 'search-retry-status' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonMargin { top?: number; right?: number; bottom?: number; left?: number; }
@@ -229,31 +238,36 @@ function bareReaderButton(text: ReaderTextStyle | ReaderInheritedTextStyle): Rea
   spec.outerRadius = false; spec.centerText = false; spec.disabledOpacity = 1; spec.secondaryText = 'TOK_MUTED'; return spec;
 }
 const SEARCH_FIELD_PHONE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_FIELD_ACTION);
-SEARCH_FIELD_PHONE.stacked = true; SEARCH_FIELD_PHONE.height = 36; SEARCH_FIELD_PHONE.radius = 999;
-SEARCH_FIELD_PHONE.horizontalPadding = TOK_SPACE_CARD_PADDING; SEARCH_FIELD_PHONE.secondarySurface = 'app.action.fill';
-SEARCH_FIELD_PHONE.secondaryText = 'TOK_ON_PRIMARY'; SEARCH_FIELD_PHONE.disabledOpacity = 0.4;
-SEARCH_FIELD_PHONE.hasSurface = true; SEARCH_FIELD_PHONE.leadingSlot = true;
+SEARCH_FIELD_PHONE.stacked = true; SEARCH_FIELD_PHONE.height = 44; SEARCH_FIELD_PHONE.radius = 8;
+SEARCH_FIELD_PHONE.horizontalPadding = 0; SEARCH_FIELD_PHONE.secondarySurface = 'app.action.fill';
+SEARCH_FIELD_PHONE.secondaryText = 'TOK_GREEN'; SEARCH_FIELD_PHONE.disabledOpacity = 0.4;
+SEARCH_FIELD_PHONE.hasSurface = false; SEARCH_FIELD_PHONE.leadingSlot = true;
 const SEARCH_FIELD_WIDE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_FIELD_ACTION_WIDE);
-SEARCH_FIELD_WIDE.stacked = true; SEARCH_FIELD_WIDE.height = 40; SEARCH_FIELD_WIDE.radius = 999;
-SEARCH_FIELD_WIDE.horizontalPadding = 18; SEARCH_FIELD_WIDE.secondarySurface = 'app.action.fill';
-SEARCH_FIELD_WIDE.secondaryText = 'TOK_ON_PRIMARY'; SEARCH_FIELD_WIDE.disabledOpacity = 0.4;
-SEARCH_FIELD_WIDE.hasSurface = true; SEARCH_FIELD_WIDE.leadingSlot = true;
+SEARCH_FIELD_WIDE.stacked = true; SEARCH_FIELD_WIDE.height = 44; SEARCH_FIELD_WIDE.radius = 8;
+SEARCH_FIELD_WIDE.horizontalPadding = 0; SEARCH_FIELD_WIDE.secondarySurface = 'app.action.fill';
+SEARCH_FIELD_WIDE.secondaryText = 'TOK_GREEN'; SEARCH_FIELD_WIDE.disabledOpacity = 0.4;
+SEARCH_FIELD_WIDE.hasSurface = false; SEARCH_FIELD_WIDE.leadingSlot = true;
 const SEARCH_HISTORY_CLEAR: ReaderButtonSpec = bareReaderButton(TYPE_APP_FILTER_OPTION);
 const SEARCH_HISTORY_KEYWORD: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_HISTORY_KEYWORD);
 SEARCH_HISTORY_KEYWORD.radius = 999; SEARCH_HISTORY_KEYWORD.horizontalPadding = 14.5; SEARCH_HISTORY_KEYWORD.verticalPadding = 7.5;
 SEARCH_HISTORY_KEYWORD.hasSurface = true; SEARCH_HISTORY_KEYWORD.hasBorder = true; SEARCH_HISTORY_KEYWORD.secondarySurface = 'TOK_CARD_BG';
 SEARCH_HISTORY_KEYWORD.secondaryBorder = 'TOK_BORDER'; SEARCH_HISTORY_KEYWORD.secondaryText = 'TOK_INK'; SEARCH_HISTORY_KEYWORD.maxLines = 1;
 SEARCH_HISTORY_KEYWORD.textEllipsis = true; SEARCH_HISTORY_KEYWORD.maxWidthKind = 'history'; SEARCH_HISTORY_KEYWORD.outerMargin = { right: TOK_SPACE_XS, bottom: TOK_SPACE_XS };
-const SEARCH_SCOPE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_SCOPE_LABEL);
+const SEARCH_SCOPE: ReaderButtonSpec = bareReaderButton(new ReaderTextStyle(
+  TYPE_SEARCH_SCOPE_LABEL.fontFamily, TYPE_SEARCH_SCOPE_LABEL.fontWeight,
+  TYPE_SEARCH_SCOPE_LABEL.fontSizeFp, 17, TYPE_SEARCH_SCOPE_LABEL.letterSpacingFp,
+  TYPE_SEARCH_SCOPE_LABEL.scalePolicy, 'appBaseline'));
 SEARCH_SCOPE.selectedWeight = TYPE_SEARCH_SCOPE_SELECTED.fontWeight; SEARCH_SCOPE.radius = 999;
-SEARCH_SCOPE.horizontalPadding = 10; SEARCH_SCOPE.verticalPadding = 5.5; SEARCH_SCOPE.hasSurface = true; SEARCH_SCOPE.hasBorder = true;
+SEARCH_SCOPE.horizontalPadding = 10; SEARCH_SCOPE.verticalPadding = 5; SEARCH_SCOPE.hasSurface = true; SEARCH_SCOPE.hasBorder = true;
 SEARCH_SCOPE.primarySurface = 'app.action.fill'; SEARCH_SCOPE.secondarySurface = 'TOK_PAPER'; SEARCH_SCOPE.primaryBorder = 'TOK_GREEN';
-SEARCH_SCOPE.secondaryBorder = 'TOK_BORDER'; SEARCH_SCOPE.secondaryText = 'TOK_INK'; SEARCH_SCOPE.maxLines = 1; SEARCH_SCOPE.textEllipsis = true; SEARCH_SCOPE.maxWidthKind = 'scope';
+SEARCH_SCOPE.secondaryBorder = 'TOK_BORDER'; SEARCH_SCOPE.secondaryText = 'TOK_INK'; SEARCH_SCOPE.maxLines = 1;
 const SEARCH_RETRY_STATUS: ReaderButtonSpec = bareReaderButton(TYPE_APP_INHERITED_BODY);
 const SEARCH_RETRY_STATUS_SPACED: ReaderButtonSpec = bareReaderButton(TYPE_APP_INHERITED_BODY);
 SEARCH_RETRY_STATUS_SPACED.outerMargin = { top: TOK_SPACE_CONTROL_INLINE };
 const SEARCH_RETRY_PROGRESS: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_PROGRESS_META);
-SEARCH_RETRY_PROGRESS.maxLines = 1; SEARCH_RETRY_PROGRESS.textEllipsis = true;
+SEARCH_RETRY_PROGRESS.text = new ReaderTextStyle(TYPE_SEARCH_PROGRESS_META.fontFamily, 500, 12, 18, undefined, 'system', 'appBaseline');
+SEARCH_RETRY_PROGRESS.secondaryText = 'TOK_GREEN'; SEARCH_RETRY_PROGRESS.maxLines = 1;
+SEARCH_RETRY_PROGRESS.disabledOpacity = 0.4;
 const SEARCH_ERROR_RETRY: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_RETRY_ACTION);
 SEARCH_ERROR_RETRY.stacked = true; SEARCH_ERROR_RETRY.height = 40; SEARCH_ERROR_RETRY.radius = 999; SEARCH_ERROR_RETRY.horizontalPadding = 28;
 SEARCH_ERROR_RETRY.hasSurface = true; SEARCH_ERROR_RETRY.secondarySurface = 'app.action.fill'; SEARCH_ERROR_RETRY.secondaryText = 'TOK_ON_PRIMARY';

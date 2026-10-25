@@ -61,7 +61,7 @@ export struct ReaderAutoPagePanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop morphActorId: string = 'reader-session-morph-quickAutoPage';
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop status: ReaderAutoPageStatus = 'stopped';
   @Prop speedSeconds: number = 8;
   @Prop canPreviousChapter: boolean = false;
@@ -77,14 +77,14 @@ export struct ReaderAutoPagePanel {
     (_left: number, _top: number, _width: number, _height: number): void => {};
 
   build() {
-    Column({ space: this.isTablet ? QUICK_AUTO_PAGE_GAP_TABLET : QUICK_AUTO_PAGE_GAP_PHONE }) {
+    Column({ space: this.expandedLayout ? QUICK_AUTO_PAGE_GAP_TABLET : QUICK_AUTO_PAGE_GAP_PHONE }) {
       this.header();
       this.playbackControls();
       this.speedControl();
     }
     .width('100%')
     .constraintSize({ maxWidth: this.panelWidth() })
-    .height(this.isTablet ? QUICK_AUTO_PAGE_PANEL_HEIGHT_TABLET : QUICK_AUTO_PAGE_PANEL_HEIGHT_PHONE)
+    .height(this.expandedLayout ? QUICK_AUTO_PAGE_PANEL_HEIGHT_TABLET : QUICK_AUTO_PAGE_PANEL_HEIGHT_PHONE)
     .padding({
       left: QUICK_AUTO_PAGE_PANEL_PADDING_X,
       right: QUICK_AUTO_PAGE_PANEL_PADDING_X,
@@ -141,7 +141,7 @@ export struct ReaderAutoPagePanel {
       this.stopTrack();
     }
     .width('100%')
-    .height(this.isTablet ? QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET :
+    .height(this.expandedLayout ? QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET :
       QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_PHONE)
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
@@ -162,7 +162,7 @@ export struct ReaderAutoPagePanel {
     .alignItems(VerticalAlign.Top)
     .position({
       x: 0,
-      y: this.isTablet ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
+      y: this.expandedLayout ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
     });
   }
 
@@ -174,8 +174,8 @@ export struct ReaderAutoPagePanel {
     .width(24)
     .height(42)
     .position({
-      x: this.isTablet ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE,
-      y: this.isTablet ? QUICK_AUTO_PAGE_STOP_Y_TABLET : QUICK_AUTO_PAGE_STOP_Y_PHONE,
+      x: this.expandedLayout ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE,
+      y: this.expandedLayout ? QUICK_AUTO_PAGE_STOP_Y_TABLET : QUICK_AUTO_PAGE_STOP_Y_PHONE,
     });
   }
 
@@ -212,9 +212,9 @@ export struct ReaderAutoPagePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .layoutWeight(this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE)
+    .layoutWeight(this.expandedLayout ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE)
     .constraintSize({
-      maxWidth: this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE,
+      maxWidth: this.expandedLayout ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE,
     })
     .height(52)
     .alignItems(HorizontalAlign.Center)
@@ -256,9 +256,9 @@ export struct ReaderAutoPagePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .layoutWeight(this.isTablet ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE)
+    .layoutWeight(this.expandedLayout ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE)
     .constraintSize({
-      maxWidth: this.isTablet ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE,
+      maxWidth: this.expandedLayout ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE,
     })
     .height(52)
     .alignItems(HorizontalAlign.Center)
@@ -328,10 +328,10 @@ export struct ReaderAutoPagePanel {
       this.speedButton('+', '加快自动翻页', false);
     }
     .width('100%')
-    .height(this.isTablet ? QUICK_AUTO_PAGE_SPEED_HEIGHT_TABLET : QUICK_AUTO_PAGE_SPEED_HEIGHT_PHONE)
+    .height(this.expandedLayout ? QUICK_AUTO_PAGE_SPEED_HEIGHT_TABLET : QUICK_AUTO_PAGE_SPEED_HEIGHT_PHONE)
     .padding({
-      left: this.isTablet ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
-      right: this.isTablet ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
+      left: this.expandedLayout ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
+      right: this.expandedLayout ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
     })
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
@@ -366,21 +366,21 @@ export struct ReaderAutoPagePanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? QUICK_AUTO_PAGE_PANEL_WIDTH_TABLET : QUICK_AUTO_PAGE_PANEL_WIDTH_PHONE;
+    return this.expandedLayout ? QUICK_AUTO_PAGE_PANEL_WIDTH_TABLET : QUICK_AUTO_PAGE_PANEL_WIDTH_PHONE;
   }
 
   private chapterRightGap(): number {
     const designPanelWidth = this.panelWidth();
-    const chapterWidth = this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET :
+    const chapterWidth = this.expandedLayout ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET :
       QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE;
-    const nextX = this.isTablet ? QUICK_AUTO_PAGE_NEXT_X_TABLET : QUICK_AUTO_PAGE_NEXT_X_PHONE;
+    const nextX = this.expandedLayout ? QUICK_AUTO_PAGE_NEXT_X_TABLET : QUICK_AUTO_PAGE_NEXT_X_PHONE;
     return designPanelWidth - QUICK_AUTO_PAGE_PANEL_PADDING_X * 2 - nextX - chapterWidth;
   }
 
   private primaryActorGap(): number {
-    const chapterWidth = this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET :
+    const chapterWidth = this.expandedLayout ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET :
       QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE;
-    const runningX = this.isTablet ? QUICK_AUTO_PAGE_RUNNING_X_TABLET : QUICK_AUTO_PAGE_RUNNING_X_PHONE;
+    const runningX = this.expandedLayout ? QUICK_AUTO_PAGE_RUNNING_X_TABLET : QUICK_AUTO_PAGE_RUNNING_X_PHONE;
     return runningX - QUICK_AUTO_PAGE_PREVIOUS_X - chapterWidth;
   }
 

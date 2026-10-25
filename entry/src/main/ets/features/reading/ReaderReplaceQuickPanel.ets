@@ -51,7 +51,7 @@ const REPLACE_PANEL_HEIGHT = REPLACE_PANEL_PADDING_Y * 2 + REPLACE_HEADER_HEIGHT
 export struct ReaderReplaceQuickPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop state: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
   onClose: () => void = (): void => {};
   onToggleRule: (ruleId: number, isEnabled: boolean) => void =
@@ -257,7 +257,7 @@ export struct ReaderReplaceQuickPanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? REPLACE_PANEL_WIDTH_TABLET : REPLACE_PANEL_WIDTH_PHONE;
+    return this.expandedLayout ? REPLACE_PANEL_WIDTH_TABLET : REPLACE_PANEL_WIDTH_PHONE;
   }
 
   private contentWidth(): number {
@@ -269,7 +269,7 @@ export struct ReaderReplaceQuickPanel {
   }
 
   private previewButtonWidth(): number {
-    return this.isTablet ? REPLACE_PREVIEW_WIDTH_TABLET : REPLACE_PREVIEW_WIDTH_PHONE;
+    return this.expandedLayout ? REPLACE_PREVIEW_WIDTH_TABLET : REPLACE_PREVIEW_WIDTH_PHONE;
   }
 
   private managementButtonWidth(): number {

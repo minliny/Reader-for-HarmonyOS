@@ -68,7 +68,7 @@ export type ReaderQuickSearchState =
 export struct ReaderQuickSearchPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop query: string = '';
   @Prop state: ReaderQuickSearchState = { kind: 'idle' };
   onBack: () => void = (): void => {};
@@ -255,11 +255,11 @@ export struct ReaderQuickSearchPanel {
   }
 
   private headerBodyGap(): number {
-    return this.isTablet ? QUICK_SEARCH_HEADER_BODY_GAP_TABLET : QUICK_SEARCH_HEADER_BODY_GAP_PHONE;
+    return this.expandedLayout ? QUICK_SEARCH_HEADER_BODY_GAP_TABLET : QUICK_SEARCH_HEADER_BODY_GAP_PHONE;
   }
 
   private resultsHeight(): number {
-    return this.isTablet ? QUICK_SEARCH_RESULTS_HEIGHT_TABLET : QUICK_SEARCH_RESULTS_HEIGHT_PHONE;
+    return this.expandedLayout ? QUICK_SEARCH_RESULTS_HEIGHT_TABLET : QUICK_SEARCH_RESULTS_HEIGHT_PHONE;
   }
 
   private panelHeight(): number {

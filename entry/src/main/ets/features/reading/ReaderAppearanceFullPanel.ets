@@ -75,7 +75,7 @@ const READER_FONT_REORDER_ROW_STRIDE = 38;
 export struct ReaderAppearanceFullPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop reduceMotion: boolean = false;
@@ -199,7 +199,7 @@ export struct ReaderAppearanceFullPanel {
       .position({ x: 13, y: 57 })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
         TransitionEffect.asymmetric(
-          panelActorTransition('reader.panel.appearance.surface.in', 0, 128),
+          panelActorTransition('reader.panel.appearance.surface.in'),
           TransitionEffect.IDENTITY,
         ));
   }
@@ -223,7 +223,7 @@ export struct ReaderAppearanceFullPanel {
     .position({ x: 13, y: 57 })
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
-        panelActorTransition('reader.panel.appearance.content.in', 0, 146),
+        panelActorTransition('reader.panel.appearance.content.in'),
         TransitionEffect.IDENTITY,
       ));
   }
@@ -384,7 +384,7 @@ export struct ReaderAppearanceFullPanel {
     .blur(this.motionFrameOrUndefined()?.header.blurVp ?? 0)
     .transition(this.reduceMotion || this.motionEnabled ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
-        panelActorTransition('reader.panel.appearance.header.in', -12, 146),
+        panelActorTransition('reader.panel.appearance.header.in'),
         TransitionEffect.IDENTITY,
       ));
   }
@@ -432,7 +432,7 @@ export struct ReaderAppearanceFullPanel {
     .opacity(this.motionFrameOrUndefined()?.themeLibrary.opacity ?? 1)
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
-        panelActorTransition('reader.panel.appearance.theme.in', 0, 146),
+        panelActorTransition('reader.panel.appearance.theme.in'),
         TransitionEffect.IDENTITY,
       ));
   }
@@ -537,7 +537,7 @@ export struct ReaderAppearanceFullPanel {
     .opacity(this.motionFrameOrUndefined()?.fontLibrary.opacity ?? 1)
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
-        panelActorTransition('reader.panel.appearance.font.in', 0, 175),
+        panelActorTransition('reader.panel.appearance.font.in'),
         TransitionEffect.IDENTITY,
       ));
   }
@@ -675,7 +675,7 @@ export struct ReaderAppearanceFullPanel {
     // N 帧 Typography 卡: opacity 0->1 @ 164ms (delay 256)。
     .transition(this.reduceMotion || this.motionEnabled ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
-        panelActorTransition('reader.panel.appearance.typography.in', 0, 256),
+        panelActorTransition('reader.panel.appearance.typography.in'),
         TransitionEffect.IDENTITY,
       ));
   }
@@ -908,13 +908,13 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private sheetWidth(): number {
-    const designWidth = this.isTablet ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
+    const designWidth = this.expandedLayout ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
       READER_FULL_PANEL_MAX_WIDTH_PHONE;
     return this.availableWidth > 0 ? Math.min(designWidth, this.availableWidth) : designWidth;
   }
 
   private sheetHeight(): number {
-    const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET :
+    const designHeight = this.expandedLayout ? READER_FULL_PANEL_HEIGHT_TABLET :
       READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE;
     return designHeight;
   }
@@ -988,11 +988,11 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private contentHeight(): number {
-    return this.isTablet ? 832 : 989;
+    return this.expandedLayout ? 832 : 989;
   }
 
   private handleX(): number {
-    const designX = this.isTablet ? 489 : 134;
+    const designX = this.expandedLayout ? 489 : 134;
     return Math.min(designX, Math.max(0, this.sheetWidth() - 42));
   }
 
@@ -1013,14 +1013,14 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private fullFontCardWidth(): number {
-    if (!this.isTablet) {
+    if (!this.expandedLayout) {
       return 73;
     }
     return this.fullCardWidth();
   }
 
   private fullFontCardStride(): number {
-    if (!this.isTablet) {
+    if (!this.expandedLayout) {
       return 81;
     }
     return this.fullFontCardWidth() + 6;

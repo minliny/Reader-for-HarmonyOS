@@ -6,6 +6,7 @@ import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from
 import {
   ReaderTextStyle,
   TYPE_SEARCH_BOOK_INPUT,
+  TYPE_SEARCH_BOOK_PANEL_INPUT,
   TYPE_SEARCH_DIRECTORY_INPUT,
   TYPE_SEARCH_MANGA_DIRECTORY_INPUT,
   TYPE_SEARCH_READER_QUICK_INPUT,
@@ -23,9 +24,11 @@ import {
   TOK_READ_PRIMARY,
   TOK_SURFACE_PANEL_SOFT,
 } from './ReaderTokens';
+import { readerSearchControlHeight } from './ReaderControlSpecs';
 
 export type ReaderSearchFieldVariant =
   | 'bookPage'
+  | 'bookPanel'
   | 'sourceManagement'
   | 'readerDirectory'
   | 'mangaDirectory'
@@ -56,22 +59,26 @@ export struct ReaderSearchField {
 
   @Prop variant: ReaderSearchFieldVariant = 'bookPage';
   @Prop mode: ReaderSearchFieldMode = 'submit';
-  @Prop text: string = '';
+  @Prop @Watch('revealBookInputCaret') text: string = '';
   @Prop placeholder: string = '';
   @Prop accessibilityLabel: string = '';
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop clearable: boolean = false;
   @Prop submitEnabled: boolean = true;
   @Prop focusOnAppear: boolean = false;
   private mounted: boolean = false;
   private focusGeneration: number = 0;
+  private readonly bookInputController: TextInputController = new TextInputController();
+  private bookInputFocused: boolean = false;
+  private bookInputScrollPending: boolean = false;
+  private bookInputScrollGeneration: number = 0;
   onTextChange: (value: string) => void = (_value: string): void => {};
   onSubmit: () => void = (): void => {};
 
   aboutToAppear(): void {
     this.mounted = true;
     const generation = ++this.focusGeneration;
-    if (!this.focusOnAppear || this.variant !== 'bookPage' || this.mode === 'passive') return;
+    if (!this.focusOnAppear || !this.isBookField() || this.mode === 'passive') return;
     this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
       if (!this.mounted || generation !== this.focusGeneration) return;
       // FocusController and TextInput own native keyboard/selection behavior.
@@ -79,7 +86,51 @@ export struct ReaderSearchField {
     }));
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.focusGeneration += 1; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.focusGeneration += 1;
+    this.bookInputFocused = false;
+    this.bookInputScrollPending = false;
+    this.bookInputScrollGeneration += 1;
+  }
+
+  private onBookInputFocus(focused: boolean): void {
+    this.bookInputFocused = focused;
+    if (focused) {
+      this.revealBookInputCaret();
+    } else {
+      this.bookInputScrollGeneration += 1;
+      this.bookInputScrollPending = false;
+    }
+  }
+
+  private revealBookInputCaret(): void {
+    if (!this.mounted || !this.bookInputFocused || !this.isBookField() ||
+      this.mode === 'passive' || this.bookInputScrollPending) return;
+    this.bookInputScrollPending = true;
+    const generation = ++this.bookInputScrollGeneration;
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (generation !== this.bookInputScrollGeneration) return;
+      this.bookInputScrollPending = false;
+      if (!this.mounted || !this.bookInputFocused || !this.isBookField() || this.mode === 'passive') return;
+      try {
+        // Read after native editing/layout has settled. The controller index
+        // includes the current IME preview; do not clamp it to committed text
+        // or move the caret/selection to the end of the parent's draft.
+        const caret = this.bookInputController.getCaretOffset();
+        if (caret === undefined || caret === null || !Number.isInteger(caret.index) || caret.index < 0) return;
+        this.bookInputController.scrollToVisible({ start: caret.index, end: caret.index });
+      } catch (_) {
+        // Native bindings may already be detached during a route teardown.
+        // A visual follow request never owns editing or retries.
+      }
+    }));
+  }
+
+  private clearBookInput(): void {
+    this.onTextChange('');
+    this.revealBookInputCaret();
+  }
 
   @Styles
   private nativeInputBackground() {
@@ -94,7 +145,7 @@ export struct ReaderSearchField {
   build() {
     if (this.mode === 'passive' || this.variant === 'rssPassive') {
       this.passiveField();
-    } else if (this.variant === 'bookPage') {
+    } else if (this.isBookField()) {
       this.fixedLineHeightField();
     } else if (this.variant === 'mangaDirectory') {
       this.mangaLineHeightField();
@@ -155,10 +206,12 @@ export struct ReaderSearchField {
   @Builder
   private fixedLineHeightField() {
     Row({ space: this.iconGap() }) {
-      Image(this.searchIcon())
-        .width(this.iconSize())
-        .height(this.iconSize());
-      TextInput({ placeholder: this.placeholder, text: this.text })
+      if (this.variant !== 'bookPanel') {
+        Image(this.searchIcon())
+          .width(this.iconSize())
+          .height(this.iconSize());
+      }
+      TextInput({ placeholder: this.placeholder, text: this.text, controller: this.bookInputController })
         .id('reader-book-search-input')
         .enableKeyboardOnFocus(true)
         .layoutWeight(1)
@@ -168,37 +221,53 @@ export struct ReaderSearchField {
         // its caret to its own default radius even with a clear background;
         // zero padding otherwise clips the empty/start caret into a crescent.
         .borderRadius(0)
-        .fontFamily(TYPE_SEARCH_BOOK_INPUT.fontFamily)
-        .fontWeight(TYPE_SEARCH_BOOK_INPUT.fontWeight)
-        .fontSize(TYPE_SEARCH_BOOK_INPUT.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number)
+        .fontFamily(this.bookTextStyle().fontFamily)
+        .fontWeight(this.bookTextStyle().fontWeight)
+        .fontSize(this.bookTextStyle().fontSizeFp)
+        .lineHeight(this.bookTextStyle().lineHeightFp as number)
+        .halfLeading(this.variant === 'bookPanel')
         .minFontScale(Math.min(1, this.bookFontScale()))
         .maxFontScale(Math.max(1, this.bookFontScale()))
         .maxLines(1)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .nativeInputBackground()
         .caretColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .placeholderColor(readerAppColor('app.ReaderSearchField.fixedLineHeightField.placeholderColor.801F1B17', this.appThemeScheme))
+        .placeholderColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .placeholderFont({
-          size: TYPE_SEARCH_BOOK_INPUT.fontSizeFp,
-          family: TYPE_SEARCH_BOOK_INPUT.fontFamily,
+          size: this.bookTextStyle().fontSizeFp,
+          family: this.bookTextStyle().fontFamily,
         })
         .accessibilityText(this.resolvedAccessibilityLabel())
-        .onChange((value: string): void => this.onTextChange(value))
+        .onChange((value: string): void => {
+          this.onTextChange(value);
+          this.revealBookInputCaret();
+        })
+        .onTextSelectionChange((_start: number, _end: number): void => this.revealBookInputCaret())
+        .onFocus((): void => this.onBookInputFocus(true))
+        .onBlur((): void => this.onBookInputFocus(false))
+        .onAreaChange((_old: Area, _next: Area): void => this.revealBookInputCaret())
         .enterKeyType(EnterKeyType.Search)
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
       if (this.clearable && this.text.length > 0) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear')))
-          .width(14)
-          .height(14)
-          .accessibilityText('清空搜索内容')
-          .onClick((): void => this.onTextChange(''));
+        if (this.variant === 'bookPanel') {
+          Stack({ alignContent: Alignment.Center }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+              .width(14).height(14).accessibilityLevel('no');
+          }.width(44).height(this.fieldHeight())
+            .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空搜索内容').focusable(true)
+            .onClick((): void => this.clearBookInput());
+        } else {
+          Image((this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear')))
+            .width(14).height(14).accessibilityText('清空搜索内容')
+            .onClick((): void => this.clearBookInput());
+        }
       }
     }
     .width('100%')
     .height(this.fieldHeight())
     .padding({ left: this.horizontalPadding(), right: this.horizontalPadding() })
     .nativeFieldBackground()
+    .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
     .borderRadius(this.cornerRadius())
     .alignItems(VerticalAlign.Center);
   }
@@ -299,10 +368,15 @@ export struct ReaderSearchField {
     return (this.appThemeScheme === 'night' ? $r('app.media.search_mag_theme_night') : $r('app.media.search_mag'));
   }
 
+  private isBookField(): boolean {
+    return this.variant === 'bookPage' || this.variant === 'bookPanel';
+  }
+
   private fieldHeight(): number {
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchHeight + this.mangaTextHeightGrowth();
-    if (this.variant === 'bookPage') {
-      return (this.isTablet ? 40 : 36) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) * Math.max(0, this.bookFontScale() - 1);
+    if (this.variant === 'bookPanel') return readerSearchControlHeight(this.bookFontScale());
+    if (this.isBookField()) {
+      return 44 + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) * Math.max(0, this.bookFontScale() - 1);
     }
     if (this.variant === 'sourceManagement') {
       return 44;
@@ -318,6 +392,9 @@ export struct ReaderSearchField {
 
   private inputHeight(): number {
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.inputHeight + this.mangaTextHeightGrowth();
+    if (this.isBookField()) {
+      return this.fieldHeight() - this.fieldBorderWidth() * 2;
+    }
     if (this.variant === 'sourceManagement') {
       return 42;
     }
@@ -348,6 +425,7 @@ export struct ReaderSearchField {
   }
 
   private iconGap(): number {
+    if (this.variant === 'bookPanel') return 0;
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchGap;
     if (this.variant === 'readerDirectory') {
       return 5;
@@ -362,6 +440,7 @@ export struct ReaderSearchField {
   }
 
   private horizontalPadding(): number {
+    if (this.variant === 'bookPanel') return 0;
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchPaddingX;
     if (this.variant === 'readerDirectory') {
       return 9;
@@ -376,9 +455,10 @@ export struct ReaderSearchField {
   }
 
   private fieldBackgroundColor(): string {
+    if (this.variant === 'bookPanel') return '#00000000';
     if (this.variant === 'mangaDirectory') return mangaDirectoryColor('surface', this.appThemeScheme);
     if (this.variant === 'bookPage') {
-      return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.121F1B17', this.appThemeScheme);
+      return readerAppColor('TOK_CARD_BG', this.appThemeScheme);
     }
     if (this.variant === 'sourceManagement') {
       return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.D1FFFCF8', this.appThemeScheme);
@@ -391,7 +471,7 @@ export struct ReaderSearchField {
 
   private fieldBorderWidth(): number {
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.borderWidth;
-    return this.variant === 'sourceManagement' || this.variant === 'rssPassive' ? TOK_BORDER_W : 0;
+    return this.variant === 'bookPage' || this.variant === 'sourceManagement' || this.variant === 'rssPassive' ? TOK_BORDER_W : 0;
   }
 
   private fieldBorderColor(): string {
@@ -400,8 +480,9 @@ export struct ReaderSearchField {
   }
 
   private cornerRadius(): number {
+    if (this.variant === 'bookPanel') return 0;
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchRadius;
-    return this.variant === 'bookPage' || this.variant === 'rssPassive' ? 999 : this.variant === 'sourceManagement' ? 12 : 8;
+    return this.variant === 'rssPassive' ? 999 : this.variant === 'sourceManagement' ? 12 : 8;
   }
 
   private inputColor(): string {
@@ -441,6 +522,10 @@ export struct ReaderSearchField {
   private bookFontScale(): number {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  private bookTextStyle(): ReaderTextStyle {
+    return this.variant === 'bookPanel' ? TYPE_SEARCH_BOOK_PANEL_INPUT : TYPE_SEARCH_BOOK_INPUT;
   }
 
   private mangaFontScale(): number {

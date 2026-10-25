@@ -78,7 +78,7 @@ export struct ReaderControlAppearanceContent {
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
   @Prop fullContentHeight: number = 666;
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;
   @Prop importLayout: ReaderControlAppearanceImportLayout = 'ordered-slot-approved';

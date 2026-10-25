@@ -92,7 +92,7 @@ import {
  * component exposes the thirteen sheet-local actors; the owner supplies one
  * expansion endpoint so the source tracks remain individually addressable.
  *
- * Figma contains no Tablet Full Auto Page master. When `isTablet` is true the
+ * Figma contains no Tablet Full Auto Page master. When `expandedLayout` is true the
  * component deliberately emits no layout instead of scaling the Phone sheet.
  */
 @Component
@@ -100,7 +100,7 @@ export struct ReaderAutoPageFullPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop morphActorId: string = 'reader-session-morph-fullAutoPagePlayback';
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop status: ReaderAutoPageStatus = 'stopped';
@@ -133,7 +133,7 @@ export struct ReaderAutoPageFullPanel {
   }
 
   build() {
-    if (!this.isTablet) {
+    if (!this.expandedLayout) {
       this.phonePanel();
     }
   }

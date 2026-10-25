@@ -7,6 +7,7 @@ import { readerAppColor } from './ReaderThemeRegistry';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
 import { ReaderPressFeedback } from './ReaderPressFeedback';
 import { DialogSpecId, DialogSurfaceSpec, resolveDialogSpec } from './ReaderSurfaceSpecs';
+import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 
 /** One action rendered in the standard actions area. The owning dialog routes
  * onAction by id; admission (enabled) reflects the owner's live gating. */
@@ -118,7 +119,7 @@ export struct ReaderDialogSurface {
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(this.spec().headerTextAlign);
         Text('关闭')
-          .width(52).height(36)
+          .width(52).height(readerScaledControlHeight(36, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale()))
           .fontFamily(TYPE_SELECT_OPTION.fontFamily).fontWeight(TYPE_SELECT_OPTION.fontWeight).fontSize(TYPE_SELECT_OPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
@@ -164,7 +165,7 @@ export struct ReaderDialogSurface {
     }
     .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)
     .layoutWeight(this.spec().actionsLayout === 'stack' ? undefined : 1)
-    .height(this.spec().actionHeight).padding(0)
+    .height(this.actionHeight()).padding(0)
     .opacity(action.enabled ? 1 : 0.62)
     .enabled(action.enabled)
     .attributeModifier(this.actionModifier(action))
@@ -181,10 +182,11 @@ export struct ReaderDialogSurface {
   // region; others fall back to the component's own bounds (44vp min height).
   private actionTouchRegion(): Rectangle {
     const spec = this.spec();
+    const height = this.actionHeight();
     if (spec.actionExtendsTouchRegion) {
-      return { x: 0, y: -3, width: '100%', height: spec.actionHeight + 6 };
+      return { x: 0, y: -3, width: '100%', height: height + 6 };
     }
-    return { x: 0, y: 0, width: '100%', height: spec.actionHeight };
+    return { x: 0, y: 0, width: '100%', height };
   }
 
   // A spec may keep its body→actions spacing on the body content itself
@@ -201,6 +203,16 @@ export struct ReaderDialogSurface {
 
   private spec(): DialogSurfaceSpec {
     return resolveDialogSpec(this.specId);
+  }
+
+  private actionHeight(): number {
+    return readerScaledControlHeight(this.spec().actionHeight,
+      MESSAGE_ACTION.lineHeightFp as number, this.fontScale());
+  }
+
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
   private frameWidth(): string | number {

@@ -1,5 +1,6 @@
 import { ReaderSelect, type ReaderSelectVariant } from './ReaderSelect';
 import { ReaderSelectPanel } from './ReaderSelectPanel';
+import type { ReaderSelectMenuKind } from './ReaderSelectGeometry';
 
 /**
  * Bounded select host for secondary pages. Native Select used to bypass the
@@ -16,12 +17,14 @@ export struct ReaderInlineSelect {
   @Prop options: string[] = [];
   @Prop selectedIndex: number = 0;
   @Prop controlWidth: number = 0;
+  @Prop menuKind: ReaderSelectMenuKind = 'standard';
   @Prop variant: ReaderSelectVariant = 'default';
   @Prop reduceMotion: boolean = false;
   @Prop actionEnabled: boolean = true;
   onSelect: (index: number, value: string) => void = (_index: number, _value: string): void => {};
   @State private open: boolean = false;
   @State private selectionId: string = '';
+  @State private triggerHeight: number = 36;
   private mounted: boolean = false;
   private generation: number = 0;
 
@@ -55,13 +58,23 @@ export struct ReaderInlineSelect {
 
   @Builder
   private menu(identity: string) {
+    if (this.variant === 'default' || this.variant === 'sourceGroup' || this.variant === 'appearanceLibrary') {
+      this.selectPanel(identity);
+    } else {
     Scroll() {
+      this.selectPanel(identity);
+    }.constraintSize({ maxHeight: 288 }).scrollBar(BarState.Auto);
+    }
+  }
+
+  @Builder
+  private selectPanel(identity: string) {
       ReaderSelectPanel({ value: this.value, options: this.options,
         variant: this.variant, controlWidth: this.controlWidth, reduceMotion: this.reduceMotion,
+        menuKind: this.menuKind,
         selectionId: identity, x: 0, y: 0,
         onCommit: (value: string, actorIdentity: string): void => this.commit(value, actorIdentity),
         onDismiss: (actorIdentity: string): void => this.dismiss(actorIdentity) });
-    }.constraintSize({ maxHeight: 288 }).scrollBar(BarState.Auto);
   }
 
   build() {
@@ -75,10 +88,13 @@ export struct ReaderInlineSelect {
         reduceMotion: this.reduceMotion,
         // Disabled triggers remain visible and preserve the shared geometry.
         onToggle: (): void => this.toggle(),
+      }).onAreaChange((_old: Area, next: Area): void => {
+        const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height as string);
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.triggerHeight) > .1) this.triggerHeight = height;
       });
     }
-    .width(this.controlWidth > 0 ? this.controlWidth : 'auto')
-    .height(36)
+    .width(this.variant === 'default' ? 'auto' : this.controlWidth > 0 ? this.controlWidth : 'auto')
+    .height(this.triggerHeight)
     .opacity(this.actionEnabled ? 1 : 0.4)
     .bindPopup(this.open, this.popupOptions(this.selectionId));
   }

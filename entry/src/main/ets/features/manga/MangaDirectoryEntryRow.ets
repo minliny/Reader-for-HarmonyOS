@@ -1,5 +1,6 @@
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
+import { motionAnimateParam } from '../common/MotionSpec';
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type { MangaDirectoryRowPresentation } from './MangaDirectoryPresentation';
@@ -181,7 +182,7 @@ export struct MangaDirectoryEntryRow {
       Stack() {
         Image(this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_down_theme_night') :
           $r('app.media.manga_sheet_chevron_down')).width(16).height(16)
-          .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation({ duration: MANGA_DIRECTORY_VISUAL.foldDuration, curve: 'ease' });
+          .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation(motionAnimateParam('manga.directory.fold'));
       }.width(this.facts(entry)?.group === true ? 16 : 32).height(this.facts(entry)?.group === true ? 16 : 32)
         .margin({ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 })
         .responseRegion({ x: this.facts(entry)?.group === true ? -10 : 0,

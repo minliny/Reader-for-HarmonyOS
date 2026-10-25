@@ -18,20 +18,16 @@ import {
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
 import { MainTabShell } from '../shell/MainTabShell';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { StatusBadge } from '../common/StatusBadge';
-import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
+import { SurfaceHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
@@ -61,7 +57,6 @@ export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPres
 // Authored Day colors and opacity are retained in the shared App registry.
 // Figma 暂停源整行降透明度 62%
 const STATUS_PAUSED_OPACITY = 0.62;
-const RSS_WIDE_BREAKPOINT = 600;
 const RSS_TABLET_RAIL_WIDTH = 100;
 const RSS_FLOATING_HEADER_HEIGHT = readerPageContentStartInset() + 44 + 30 + TOK_SPACE_XS * 2;
 
@@ -81,7 +76,7 @@ export struct RssPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop presentation: RssPresentation;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop activeMode: RssMode = 'sources';
   @Prop original: RssOriginalMutationProjection | undefined = undefined;
   @Prop presentationIdentity: string = '';
@@ -100,7 +95,6 @@ export struct RssPage {
   @State private filterValue: string = '全部';
   @State private filterOpen: boolean = false;
   @State private viewportWidth: number = 0;
-  @State private fixedHeaderHeight: number = RSS_FLOATING_HEADER_HEIGHT;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -114,10 +108,6 @@ export struct RssPage {
       onMainTab: (key: string): void => this.onMainTab(key),
       header: (): void => { this.rssHeader(); },
       content: (): void => { this.rssContent(); },
-      onHeaderHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
-          this.fixedHeaderHeight = height;
-      },
     });
   }
 
@@ -306,7 +296,7 @@ export struct RssPage {
         this.recentUnreadSection(subscriptions, recentUnread);
       }
       .width(this.contentFrame().width)
-      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.pageGeometry().content.startInset, bottom: this.pageGeometry().content.endInset });
     }
     .width('100%')
     .height('100%')
@@ -617,7 +607,7 @@ export struct RssPage {
         this.emptyUnreadSection();
       }
       .width(this.contentFrame().width)
-      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.pageGeometry().content.startInset, bottom: this.pageGeometry().content.endInset });
     }
     .width('100%')
     .height('100%')
@@ -655,8 +645,8 @@ export struct RssPage {
       }
       .width('100%')
       .padding({
-        top: this.fixedHeaderHeight + TOK_SPACE_XS,
-        bottom: this.bottomContentInset(),
+        top: this.pageGeometry().content.startInset,
+        bottom: this.pageGeometry().content.endInset,
         left: this.contentFrame().left,
         right: this.contentFrame().right,
       });
@@ -793,20 +783,24 @@ export struct RssPage {
     return `· ${hh}:${mm} 更新`;
   }
 
+  private pageGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.effectiveViewportWidth();
+    input.headerHeight = RSS_FLOATING_HEADER_HEIGHT;
+    input.contentGap = TOK_SPACE_XS;
+    input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
+    input.contentLeadingRail = this.isWideViewport() ? RSS_TABLET_RAIL_WIDTH : 0;
+    input.contentEndInset = this.bottomContentInset();
+    return resolveReaderPageGeometry(input);
+  }
+
   private contentFrame(): SurfaceHorizontalFrame {
     if (this.readerWindowMetricsRevision < 0) {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
-    const metrics = ReaderWindowCoordinator.metrics();
-    const railWidth = this.isWideViewport() ? RSS_TABLET_RAIL_WIDTH : 0;
-    const containerWidth = Math.max(0, this.effectiveViewportWidth() - railWidth);
-    const safeLeft = Math.max(0, readerVisualSafeLeft(metrics) - railWidth);
-    return resolveHorizontalFrame(
-      containerWidth,
-      safeLeft,
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
+    return this.pageGeometry().content.frame;
   }
 
   private refreshMarqueeWidth(): number {
@@ -821,7 +815,7 @@ export struct RssPage {
   }
 
   private isWideViewport(): boolean {
-    return this.effectiveViewportWidth() >= RSS_WIDE_BREAKPOINT;
+    return readerIsExpandedWidth(this.effectiveViewportWidth());
   }
 
   private effectiveViewportWidth(): number {

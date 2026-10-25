@@ -1,6 +1,10 @@
+import type { MeasureOptions } from '@ohos.measure';
 import { TYPE_SELECT_LIBRARY_VALUE } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { registerReaderFonts } from './ReaderFonts';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from './ReaderWindowMetrics';
+import { readerSelectAvailableWidth, readerSelectTriggerWidth } from './ReaderSelectGeometry';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -11,7 +15,7 @@ import {
   TOK_SURFACE_FIELD,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
-import { motionAnimateParam } from './MotionSpec';
+import { readerMotionAnimateParam } from './ReaderMotionPolicy';
 import {
   TYPE_SELECT_APPEARANCE_VALUE,
   TYPE_SELECT_DEFAULT_VALUE,
@@ -21,12 +25,11 @@ import {
 
 // 统一下拉触发条 — 对齐最终下拉模板 (1506:8807/9291): panel-soft 高亮底 +
 // 边框 + r6 + 容器 padding 10 + 文字-chevron gap 8, 值左对齐 Noto Sans SC Bold 12。
-// 展开面板已拆至 ReaderSelectPanel: 本组件只渲染固定 36 高的触发条。展开面板由宿主
+// 展开面板已拆至 ReaderSelectPanel: 默认触发条最小 36 高，随真实字高增长。展开面板由宿主
 // 页在全高 overlay Stack 内按触发条全局坐标定位渲染 (ReaderSelectPanel)。
 // 原因: ArkUI 把溢出父容器边界的子组件命中测试裁到父边界 — 固定高行(58/50/36)内的
 // 下拉面板下层选项渲染可见但不可点, 所以面板必须挂在全高容器, 不能留在行内。
-// 宽度 = 最长文本实际测量宽(measureText) + chrome(padding 20 + gap 8 + chevron 12),
-// 替代原 maxLen*12+44 启发式(对混合 CJK/拉丁严重偏大)。
+// 默认紧凑按钮只测当前值；菜单独立测量全部选项，不借最长选项撑大闭合按钮。
 const TRIGGER_H = 36;
 const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
@@ -45,6 +48,7 @@ export type ReaderSelectVariant =
 @Component
 export struct ReaderSelect {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop value: string = '';
   @Prop options: string[] = [];
@@ -53,8 +57,7 @@ export struct ReaderSelect {
   // independent booleans, which could describe contradictory combinations.
   @Prop variant: ReaderSelectVariant = 'default';
   @Prop reduceMotion: boolean = false;
-  // 仅用于设计明确要求占满剩余行宽的真实单选字段（如书源分组）。
-  // 0 保持按最长选项测量；正值固定触发条宽度并对长文本截断。
+  // default: 当前按钮可用宽度上限；其他明确的字段变体保留其固定宽合同。
   @Prop controlWidth: number = 0;
   onToggle: () => void = (): void => {};
 
@@ -63,7 +66,7 @@ export struct ReaderSelect {
   }
 
   build() {
-    // 触发条固定 36 高, 收起/展开态同构 (展开时面板由宿主 overlay 覆盖, 顶行即已选项)。
+    // 收起/展开态同构；面板由宿主 overlay 覆盖，不参与字段行的测量。
     Stack({ alignContent: Alignment.TopStart }) {
       this.trigger();
     }
@@ -153,7 +156,7 @@ export struct ReaderSelect {
           .height(12);
       }
     }
-    .height(34)
+    .height(this.triggerHeight())
     .padding({ left: 10, right: 8 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('app.ReaderSelect.settingsTrigger.backgroundColor.0F2D4A3E', this.appThemeScheme))
@@ -167,7 +170,9 @@ export struct ReaderSelect {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.value)
         .width(Math.max(0, this.resolvedWidth() - 42))
-        .height(15)
+        .height(this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp,
+          TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily, TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight,
+          TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp))
         .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
         .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
@@ -181,10 +186,10 @@ export struct ReaderSelect {
         .height(12)
         .rotate({ angle: this.isOpen ? 180 : 0 })
         .animation(this.dropdownAnimation())
-        .position({ x: this.resolvedWidth() - 21, y: 12 });
+        .position({ x: this.resolvedWidth() - 21, y: (this.triggerHeight() - 12) / 2 });
     }
     .width('100%')
-    .height(TRIGGER_H)
+    .height(this.triggerHeight())
     .backgroundColor(readerAppColor('app.ReaderSelect.sourceGroupTrigger.backgroundColor.FFFFFCF8', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderSelect.sourceGroupTrigger.color.85B4A697', this.appThemeScheme) })
     .borderRadius(8)
@@ -208,17 +213,28 @@ export struct ReaderSelect {
         .animation(this.dropdownAnimation());
     }
     .width('100%')
-    .height(TRIGGER_H)
+    .height(this.triggerHeight())
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.select.triggerSurface', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(6)
     .alignItems(VerticalAlign.Center)
     .onClick((): void => this.onToggle());
   }
 
-  // 最长文本(值 ∪ 选项)实测宽 + chrome, px→vp。
+  // Native fp measurement already includes system text scaling. Do not
+  // multiply it by systemFontScale a second time.
   private resolvedWidth(): number {
+    if (this.variant === 'default') {
+      const context = this.getUIContext();
+      const style = TYPE_SELECT_DEFAULT_VALUE;
+      const width = context.px2vp(context.getMeasureUtils().measureText({ textContent: this.value,
+        fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
+      const metrics = ReaderWindowCoordinator.metrics();
+      return readerSelectTriggerWidth(width, readerSelectAvailableWidth(
+        this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width,
+        readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)), this.controlWidth);
+    }
     if (this.controlWidth > 0) {
       return this.controlWidth;
     }
@@ -229,12 +245,13 @@ export struct ReaderSelect {
         fontSize: 11, fontFamily: 'ReaderNotoSansSCUIRegular' }))) + 38;
     }
     let maxPx = 0;
-    const texts: string[] = [this.value, ...this.options];
+    const texts: string[] = [this.value];
     for (let i = 0; i < texts.length; i++) {
       const w = utils.measureText({
         textContent: texts[i],
         fontSize: this.measureTextStyle().fontSizeFp,
         fontFamily: this.measureTextStyle().fontFamily,
+        fontWeight: this.measureTextStyle().fontWeight,
       });
       if (w > maxPx) {
         maxPx = w;
@@ -244,15 +261,35 @@ export struct ReaderSelect {
   }
 
   private triggerHeight(): number {
+    if (this.variant === 'default') {
+      const style = TYPE_SELECT_DEFAULT_VALUE;
+      return Math.max(TRIGGER_H, this.measuredValueHeight(style.fontSizeFp, style.fontFamily, style.fontWeight, style.lineHeightFp) + 16);
+    }
     if (this.variant === 'appearanceLibrary') return 30;
-    return this.isSettingsVariant() ? 34 : TRIGGER_H;
+    if (this.variant === 'sourceGroup') return Math.max(TRIGGER_H,
+      this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp, TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily,
+        TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight, TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp) + 20);
+    if (this.isSettingsVariant()) return Math.max(34,
+      this.measuredValueHeight(TYPE_SELECT_SETTINGS_VALUE.fontSizeFp, TYPE_SELECT_SETTINGS_VALUE.fontFamily,
+        TYPE_SELECT_SETTINGS_VALUE.fontWeight, TYPE_SELECT_SETTINGS_VALUE.lineHeightFp) + 18);
+    return TRIGGER_H;
+  }
+
+  private measuredValueHeight(fontSize: number, fontFamily: string, fontWeight: number, lineHeight: number | undefined): number {
+    const options: MeasureOptions = { textContent: this.value || '字', fontSize, fontFamily, fontWeight };
+    if (lineHeight !== undefined) options.lineHeight = `${lineHeight}fp`;
+    const context = this.getUIContext();
+    const height = context.px2vp(Number(context.getMeasureUtils().measureTextSize(options).height));
+    return Number.isFinite(height) ? Math.ceil(height) : 15;
   }
 
   private resolvedChrome(): number {
     if (this.isSettingsVariant()) {
-      return 10 + 8 + 6 + (this.variant === 'settingsTablet' ? 10 : 7);
+      return 10 + 8 + 6 + (this.variant === 'settingsTablet' ? 10 : 7) + TOK_BORDER_W * 2;
     }
-    return SELECT_CHROME;
+    if (this.variant === 'appearanceCompact') return 28;
+    if (this.variant === 'sourceGroup') return 42;
+    return SELECT_CHROME + TOK_BORDER_W * 2;
   }
 
   private isSettingsVariant(): boolean {
@@ -273,9 +310,7 @@ export struct ReaderSelect {
   }
 
   private dropdownAnimation(): AnimateParam {
-    if (this.reduceMotion) {
-      return { duration: 0, curve: Curve.Linear };
-    }
-    return motionAnimateParam(this.isOpen ? 'dropdown.menu.expand' : 'dropdown.menu.collapse');
+    return readerMotionAnimateParam(this.isOpen ? 'dropdown.menu.expand' : 'dropdown.menu.collapse',
+      this.reduceMotion);
   }
 }

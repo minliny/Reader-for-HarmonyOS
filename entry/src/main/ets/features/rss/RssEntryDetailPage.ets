@@ -48,7 +48,7 @@ export struct RssEntryDetailPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop subscription: RssSubscription;
   @Prop item: RssItem;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop operation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
   @Prop presentationIdentity: string = '';

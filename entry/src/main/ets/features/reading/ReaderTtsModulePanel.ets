@@ -47,7 +47,7 @@ export struct ReaderTtsModulePanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop morphActorId: string = 'reader-session-morph-quickTts';
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop state: ReaderTtsState;
   @Prop timerMinutes: number = 15;
   onToggle: () => void = (): void => {};
@@ -67,7 +67,7 @@ export struct ReaderTtsModulePanel {
     }
     .width('100%')
     .constraintSize({ maxWidth: this.panelWidth() })
-    .height(this.isTablet ? TTS_MODULE_PANEL_HEIGHT_TABLET : TTS_MODULE_PANEL_HEIGHT_PHONE)
+    .height(this.expandedLayout ? TTS_MODULE_PANEL_HEIGHT_TABLET : TTS_MODULE_PANEL_HEIGHT_PHONE)
     .padding({
       left: TTS_MODULE_PANEL_PADDING_X,
       right: TTS_MODULE_PANEL_PADDING_X,
@@ -365,11 +365,11 @@ export struct ReaderTtsModulePanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? TTS_MODULE_PANEL_WIDTH_TABLET : TTS_MODULE_PANEL_WIDTH_PHONE;
+    return this.expandedLayout ? TTS_MODULE_PANEL_WIDTH_TABLET : TTS_MODULE_PANEL_WIDTH_PHONE;
   }
 
   private rateValueWidth(): number {
-    return this.isTablet ? TTS_MODULE_RATE_VALUE_WIDTH_TABLET : TTS_MODULE_RATE_VALUE_WIDTH_PHONE;
+    return this.expandedLayout ? TTS_MODULE_RATE_VALUE_WIDTH_TABLET : TTS_MODULE_RATE_VALUE_WIDTH_PHONE;
   }
 
   private isActivelySpeaking(): boolean {

@@ -1,13 +1,35 @@
 import { motionSegment } from '../common/MotionTimeline.ts';
 import type { ReaderSessionMorphSourceKind, ReaderSessionMorphSourceMeasurement } from './ReaderSessionMorphState';
 import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
-
-/** Figma C/D/E/F, captured 2026-09-13 in capsule-figma-live.json. */
-export const READER_SESSION_LAUNCH_DURATION_MS = 3500;
-export const READER_SESSION_LAUNCH_SETTLED_MS = 2300;
-export const READER_SESSION_LAUNCH_SOURCE_RELEASE_MS = 1400;
-export const READER_SESSION_LAUNCH_CONTROL_RELEASE_MS = 700;
-export const READER_SESSION_LAUNCH_BLUR_VP = 3.5;
+import {
+  READER_SESSION_LAUNCH_BLUR_IN_MS,
+  READER_SESSION_LAUNCH_BLUR_IN_START_MS,
+  READER_SESSION_LAUNCH_BLUR_OUT_MS,
+  READER_SESSION_LAUNCH_BLUR_OUT_START_MS,
+  READER_SESSION_LAUNCH_BLUR_VP,
+  READER_SESSION_LAUNCH_CONTROL_RELEASE_MS,
+  READER_SESSION_LAUNCH_DOT_SIZE_VP,
+  READER_SESSION_LAUNCH_DURATION_MS,
+  READER_SESSION_LAUNCH_EXPAND_MS,
+  READER_SESSION_LAUNCH_EXPAND_START_MS,
+  READER_SESSION_LAUNCH_FLIGHT_MS,
+  READER_SESSION_LAUNCH_FLIGHT_START_MS,
+  READER_SESSION_LAUNCH_FOOTER_FIRST_MS,
+  READER_SESSION_LAUNCH_FOOTER_FIRST_START_MS,
+  READER_SESSION_LAUNCH_FOOTER_SECOND_MS,
+  READER_SESSION_LAUNCH_FOOTER_SECOND_START_MS,
+  READER_SESSION_LAUNCH_HANDOFF_MS,
+  READER_SESSION_LAUNCH_HANDOFF_START_MS,
+  READER_SESSION_LAUNCH_INFO_MS,
+  READER_SESSION_LAUNCH_INFO_START_MS,
+  READER_SESSION_LAUNCH_OUTGOING_MS,
+  READER_SESSION_LAUNCH_OUTGOING_START_MS,
+  READER_SESSION_LAUNCH_PAUSE_GAP_VP,
+  READER_SESSION_LAUNCH_SETTLED_MS,
+  READER_SESSION_LAUNCH_SHARP_MS,
+  READER_SESSION_LAUNCH_SHARP_START_MS,
+  READER_SESSION_LAUNCH_SOURCE_RELEASE_MS,
+} from './ReaderSessionLaunchTimeline.ts';
 
 export interface ReaderSessionLaunchCurves {
   flight: (p: number) => number;
@@ -130,13 +152,15 @@ export function buildReaderSessionLaunchGeometry(
     sourceClipRightInset: Math.max(0, source.width - (source.visibleRight ?? source.width)),
     sourceClipBottomInset: Math.max(0, source.height - (source.visibleBottom ?? source.height)),
     targetLeft: input.targetLeft, targetTop: input.targetTop, capsuleWidth: width,
-    dotLeft: input.targetLeft + width - 24,
+    dotLeft: input.targetLeft + width - READER_SESSION_LAUNCH_DOT_SIZE_VP,
     topBarExitDistance: input.topBarExitDistance, dockExitDistance: input.dockExitDistance,
     // Retain the original quantized Figma scale at its authored size. For a
     // responsive source, scale uniformly; never independently squeeze x/y.
     contentFinalScale: design.contentScale * design.width / source.width,
-    contentFinalTranslateX: design.contentTranslateX * (source.width - 24) / (design.width - 24),
-    contentFinalTranslateY: design.contentTranslateY * (source.height - 24) / (design.height - 24),
+    contentFinalTranslateX: design.contentTranslateX *
+      (source.width - READER_SESSION_LAUNCH_DOT_SIZE_VP) / (design.width - READER_SESSION_LAUNCH_DOT_SIZE_VP),
+    contentFinalTranslateY: design.contentTranslateY *
+      (source.height - READER_SESSION_LAUNCH_DOT_SIZE_VP) / (design.height - READER_SESSION_LAUNCH_DOT_SIZE_VP),
     contentBaseOffset: design.contentBaseOffset, sourceRadius: source.cornerRadius ?? design.sourceRadius,
     footerStart: design.footerStart + width - design.capsuleWidth,
     footerDot: design.footerDot + width - design.capsuleWidth, footerEnd: design.footerEnd,
@@ -195,18 +219,19 @@ export function sampleReaderSessionLaunch(
 ): ReaderSessionLaunchSample {
   const time = reducedMotion ? READER_SESSION_LAUNCH_DURATION_MS :
     Math.max(0, Math.min(READER_SESSION_LAUNCH_DURATION_MS, Number.isFinite(elapsedMs) ? elapsedMs : 0));
-  const flight = motionSegment(time, 200, 1200, curves.flight);
-  const expansion = motionSegment(time, 1700, 600, curves.expand);
-  const handoff = motionSegment(time, 1100, 300, curves.easeOut);
-  const sharp = 1 - motionSegment(time, 700, 400, curves.easeIn);
-  const blur = time < 900 ? .6 * motionSegment(time, 600, 300, curves.easeInOut) :
-    .6 * (1 - motionSegment(time, 900, 300, curves.easeOut));
-  const info = motionSegment(time, 100, 400, curves.easeOut);
-  const outgoing = motionSegment(time, 100, 600, curves.easeIn);
-  const expandedWidth = geometry.capsuleWidth - 24;
+  const flight = motionSegment(time, READER_SESSION_LAUNCH_FLIGHT_START_MS, READER_SESSION_LAUNCH_FLIGHT_MS, curves.flight);
+  const expansion = motionSegment(time, READER_SESSION_LAUNCH_EXPAND_START_MS, READER_SESSION_LAUNCH_EXPAND_MS, curves.expand);
+  const handoff = motionSegment(time, READER_SESSION_LAUNCH_HANDOFF_START_MS, READER_SESSION_LAUNCH_HANDOFF_MS, curves.easeOut);
+  const sharp = 1 - motionSegment(time, READER_SESSION_LAUNCH_SHARP_START_MS, READER_SESSION_LAUNCH_SHARP_MS, curves.easeIn);
+  const blur = time < READER_SESSION_LAUNCH_BLUR_OUT_START_MS ?
+    .6 * motionSegment(time, READER_SESSION_LAUNCH_BLUR_IN_START_MS, READER_SESSION_LAUNCH_BLUR_IN_MS, curves.easeInOut) :
+    .6 * (1 - motionSegment(time, READER_SESSION_LAUNCH_BLUR_OUT_START_MS, READER_SESSION_LAUNCH_BLUR_OUT_MS, curves.easeOut));
+  const info = motionSegment(time, READER_SESSION_LAUNCH_INFO_START_MS, READER_SESSION_LAUNCH_INFO_MS, curves.easeOut);
+  const outgoing = motionSegment(time, READER_SESSION_LAUNCH_OUTGOING_START_MS, READER_SESSION_LAUNCH_OUTGOING_MS, curves.easeIn);
+  const expandedWidth = geometry.capsuleWidth - READER_SESSION_LAUNCH_DOT_SIZE_VP;
   const footerDot = geometry.footerDot;
-  const footerFirst = motionSegment(time, 100, 1300, curves.easeInOut);
-  const footerSecond = motionSegment(time, 1700, 600, curves.easeInOut);
+  const footerFirst = motionSegment(time, READER_SESSION_LAUNCH_FOOTER_FIRST_START_MS, READER_SESSION_LAUNCH_FOOTER_FIRST_MS, curves.easeInOut);
+  const footerSecond = motionSegment(time, READER_SESSION_LAUNCH_FOOTER_SECOND_START_MS, READER_SESSION_LAUNCH_FOOTER_SECOND_MS, curves.easeInOut);
   const proxyLeft = geometry.sourceLeft + (geometry.dotLeft - geometry.sourceLeft) * flight - expandedWidth * expansion;
   const authoredFooter = geometry.footerStart + (footerDot - geometry.footerStart) * footerFirst +
     (geometry.footerEnd - footerDot) * footerSecond;
@@ -214,16 +239,22 @@ export function sampleReaderSessionLaunch(
   // Preserve all 3500ms tracks; once both actors share the footer lane, project
   // the footer onto the non-intersecting side of the moving shell. The final
   // localized text layout already reserves the canonical five-vp gap.
-  const footerOffset = time >= 1400 ? Math.min(authoredFooter, proxyLeft - geometry.targetLeft) : authoredFooter;
+  const footerOffset = time >= READER_SESSION_LAUNCH_SOURCE_RELEASE_MS ?
+    Math.min(authoredFooter, proxyLeft - geometry.targetLeft) : authoredFooter;
   return {
-    timeMs: time, phase: time < 200 ? 'initial' : time < 1400 ? 'flight' :
-      time < 1700 ? 'dotHold' : time < 2300 ? 'expand' : 'settled',
-    type: geometry.type, finished: time >= 3500, settled: time >= 2300,
-    sourceNeeded: time < 1400, controlsPresented: time < 700,
+    timeMs: time, phase: time < READER_SESSION_LAUNCH_FLIGHT_START_MS ? 'initial' :
+      time < READER_SESSION_LAUNCH_SOURCE_RELEASE_MS ? 'flight' :
+        time < READER_SESSION_LAUNCH_EXPAND_START_MS ? 'dotHold' :
+          time < READER_SESSION_LAUNCH_SETTLED_MS ? 'expand' : 'settled',
+    type: geometry.type, finished: time >= READER_SESSION_LAUNCH_DURATION_MS,
+    settled: time >= READER_SESSION_LAUNCH_SETTLED_MS,
+    sourceNeeded: time < READER_SESSION_LAUNCH_SOURCE_RELEASE_MS,
+    controlsPresented: time < READER_SESSION_LAUNCH_CONTROL_RELEASE_MS,
     flight, expansion,
     proxyLeft,
     proxyTop: geometry.sourceTop + (geometry.targetTop - geometry.sourceTop) * flight,
-    proxyWidth: geometry.sourceWidth + (24 - geometry.sourceWidth) * flight + expandedWidth * expansion,
+    proxyWidth: geometry.sourceWidth +
+      (READER_SESSION_LAUNCH_DOT_SIZE_VP - geometry.sourceWidth) * flight + expandedWidth * expansion,
     proxyHeight: geometry.sourceHeight + (24 - geometry.sourceHeight) * flight,
     sourceWidth: geometry.sourceWidth, sourceHeight: geometry.sourceHeight, sourceRadius: geometry.sourceRadius,
     // Actual Scroll viewport clipping is retained on the first frame and
@@ -240,8 +271,8 @@ export function sampleReaderSessionLaunch(
     sourceContentTranslateY: geometry.contentFinalTranslateY * flight,
     leadingOffsetX: -expandedWidth * (1 - expansion),
     // Figma HOLD/step-end: visible on the boundary, not after a later fade.
-    leadingOpacity: time >= 1700 ? 1 : 0,
-    pauseX: 4 + expandedWidth * expansion, pauseOpacity: handoff,
+    leadingOpacity: time >= READER_SESSION_LAUNCH_EXPAND_START_MS ? 1 : 0,
+    pauseX: READER_SESSION_LAUNCH_PAUSE_GAP_VP + expandedWidth * expansion, pauseOpacity: handoff,
     capsuleWidth: geometry.capsuleWidth,
     footerTranslateX: footerOffset,
     footerOpacity: info, immersiveOpacity: info,

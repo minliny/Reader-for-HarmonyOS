@@ -1,3 +1,6 @@
+import { READER_PAGE_SETTLE_MAX_MS, READER_PAGE_SETTLE_MIN_MS,
+  READER_PAGE_SETTLE_RAPID_MS, READER_PAGE_SETTLE_WIDTH_FACTOR } from '../common/ProductMotionTiming.ts';
+
 /** Presentation-only clock. The last published position remains available
  * for a new pointer; no implicit animation target is mistaken for a frame. */
 export class ReaderPageSettlementTimeline {
@@ -12,8 +15,9 @@ export class ReaderPageSettlementTimeline {
     // Completed taps already have a net destination. A backlog needs only a
     // short visual cue; the physical release keeps its 80..320 ms velocity
     // continuation. Persistence and presentation gates are unchanged.
-    this.durationMs = distance < .01 ? 0 : rapid ? 30 :
-      Math.max(80, Math.min(320, distance / Math.max(Math.max(1, width) * 2.5, directionalSpeed) * 1000));
+    this.durationMs = distance < .01 ? 0 : rapid ? READER_PAGE_SETTLE_RAPID_MS :
+      Math.max(READER_PAGE_SETTLE_MIN_MS, Math.min(READER_PAGE_SETTLE_MAX_MS,
+        distance / Math.max(Math.max(1, width) * READER_PAGE_SETTLE_WIDTH_FACTOR, directionalSpeed) * 1000));
   }
   finished(nowMs: number): boolean { return nowMs - this.startedAtMs >= this.durationMs; }
   position(nowMs: number): number {

@@ -6,6 +6,8 @@ import {
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../common/ReaderTypography';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
+import { readerReadableFontScale, readerScaledControlHeight } from '../common/ReaderSurfaceResolvers';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 
 export type SettingsSelectField = 'language' | 'startup' | 'animation';
 
@@ -31,8 +33,9 @@ const PHONE_RADIUS = 12;
 @Component
 export struct SettingsSelectOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop @Watch('onFieldChanged') field: SettingsSelectField = 'language';
   @Prop @Watch('onFieldChanged') selectionId: string = '';
   @Prop value: string = '';
@@ -74,12 +77,12 @@ export struct SettingsSelectOverlay {
         Row()
           .width('100%')
           .height('100%')
-          .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
+          .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
           .hitTestBehavior(HitTestMode.Default)
           .onClick((): void => this.dismiss(identity));
       }, (identity: string): string => identity);
 
-      if (this.isTablet) {
+      if (this.expandedLayout) {
         this.tabletPanel();
       } else {
         Stack({ alignContent: Alignment.Bottom }) {
@@ -120,7 +123,7 @@ export struct SettingsSelectOverlay {
           .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF1F1B17', this.appThemeScheme));
       }
       .width('100%')
-      .height(26)
+      .height(readerScaledControlHeight(26, TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number, this.fontScale()))
       .padding({ left: 6, bottom: 12 })
       .alignItems(VerticalAlign.Top);
 
@@ -147,7 +150,7 @@ export struct SettingsSelectOverlay {
             .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
         }
         .width('100%')
-        .height(PHONE_OPTION_HEIGHT)
+        .height(readerScaledControlHeight(PHONE_OPTION_HEIGHT, TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number, this.fontScale()))
         .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
         .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
         .borderRadius(PHONE_RADIUS)
@@ -211,6 +214,11 @@ export struct SettingsSelectOverlay {
 
   private tabletSpec(): PopupSurfaceSpec {
     return resolvePopupSpec('settings-select-tablet');
+  }
+
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
   private isSelected(option: string): boolean {

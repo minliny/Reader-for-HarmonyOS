@@ -38,7 +38,7 @@ export struct RssSourceFeedPage {
 
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop operation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
   @Prop presentationIdentity: string = '';

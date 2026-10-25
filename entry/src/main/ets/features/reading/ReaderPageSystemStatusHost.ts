@@ -30,7 +30,7 @@ export class ReaderPageSystemStatusSnapshot {
  * closed to the last/empty Wi-Fi state; they never block the reading page.
  */
 export async function readReaderPageSystemStatus(
-  isTablet: boolean,
+  expandedLayout: boolean,
   epochMillis: number = Date.now(),
 ): Promise<ReaderPageSystemStatusSnapshot> {
   const batteryPercent = Number.isFinite(batteryInfo.batterySOC) ? batteryInfo.batterySOC : 0;
@@ -44,7 +44,7 @@ export async function readReaderPageSystemStatus(
   }
   return new ReaderPageSystemStatusSnapshot(
     formatReaderPageClock(epochMillis),
-    !isTablet,
+    !expandedLayout,
     showWifi,
     true,
     batteryPercent,

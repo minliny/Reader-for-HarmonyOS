@@ -45,7 +45,7 @@ type ReaderSettingsFullSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
 export struct ReaderSettingsFullPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
@@ -350,13 +350,13 @@ export struct ReaderSettingsFullPanel {
   }
 
   private sheetWidth(): number {
-    const designWidth = this.isTablet ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
+    const designWidth = this.expandedLayout ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
       READER_FULL_PANEL_MAX_WIDTH_PHONE;
     return this.availableWidth > 0 ? Math.min(designWidth, this.availableWidth) : designWidth;
   }
 
   private sheetHeight(): number {
-    const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
+    const designHeight = this.expandedLayout ? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
     return this.availableHeight > 0 ? Math.min(designHeight, this.availableHeight) : designHeight;
   }
 
@@ -377,7 +377,7 @@ export struct ReaderSettingsFullPanel {
   }
 
   private handleX(): number {
-    const designX = this.isTablet ? 490 : 135;
+    const designX = this.expandedLayout ? 490 : 135;
     return Math.min(designX, Math.max(0, this.sheetWidth() - 42));
   }
 

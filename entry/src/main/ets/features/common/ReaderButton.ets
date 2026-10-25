@@ -1,7 +1,8 @@
-import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec } from './ReaderControlSpecs';
+import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec, readerSearchActionWidth, readerSearchControlHeight } from './ReaderControlSpecs';
 import { ReaderPressFeedback } from './ReaderPressFeedback';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_XS } from './ReaderTokens';
+import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 
 /** Shared action presentation. Admission and business work stay at the owner;
@@ -61,11 +62,14 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
   }
   applyNormalAttribute(instance: CommonAttribute): void {
     const spec = resolveReaderButtonSpec(this.id);
+    const lineHeight = spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5;
     if (this.layout === 'equal') instance.layoutWeight(1);
     if (this.layout === 'full') instance.width('100%');
-    const growth = this.id.startsWith('search-') ?
-      (spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5) * Math.max(0, this.fontScale - 1) : 0;
-    if (spec.height !== undefined) instance.height(spec.height + growth);
+    if (spec.height !== undefined) instance.height(readerScaledControlHeight(spec.height, lineHeight, this.fontScale));
+    if (spec.leadingSlot) {
+      instance.width(readerSearchActionWidth(this.id === 'search-field-wide', this.fontScale));
+      instance.height(readerSearchControlHeight(this.fontScale));
+    }
     if (spec.fixedWidth > 0) instance.width(spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);
     if (spec.maxWidthKind === 'scope') instance.constraintSize({ maxWidth: 160 });
     else if (spec.maxWidthKind === 'history') instance.constraintSize({ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' });
@@ -78,7 +82,8 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     const disabledOpacity = this.primary ? (spec.primaryDisabledOpacity ?? spec.disabledOpacity) : spec.disabledOpacity;
     if (disabledOpacity < 1) instance.opacity(this.enabled ? 1 : disabledOpacity);
     if (spec.busyOpacity < 1) instance.opacity(this.busy ? spec.busyOpacity : 1);
-    if (spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: spec.responseHeight + growth });
+    if (spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset,
+      width: '100%', height: readerScaledControlHeight(spec.responseHeight, lineHeight, this.fontScale) });
     if (spec.hasSurface) this.feedback().applyNormalAttribute(instance);
     else if (spec.outerRadius) instance.borderRadius(spec.radius);
   }
@@ -143,29 +148,42 @@ export struct ReaderButton {
   @Builder
   private emptyLeading() {}
   build() {
-    if (resolveReaderButtonSpec(this.specId).stacked) {
+    if (this.specId === 'search-scope') {
+      // The capsule keeps its compact visual size inside a separate native
+      // target. Its 44vp slot belongs to layout instead of an outer response
+      // region, so adjacent filter targets never overlap.
       Stack({ alignContent: Alignment.Center }) {
-        if (resolveReaderButtonSpec(this.specId).leadingSlot && this.isBusy) {
-          Row({ space: 6 }) { this.leading(); Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.searchFontScale())); }
-            .alignItems(VerticalAlign.Center);
+        Text(this.label)
+          .attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled,
+            'intrinsic', this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
+          .hitTestBehavior(HitTestMode.None);
+      }.constraintSize({ minWidth: 44, minHeight: 44 })
+        .enabled(this.actionEnabled).focusable(this.actionEnabled)
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label)
+        .onClick((): void => this.commit());
+    } else if (resolveReaderButtonSpec(this.specId).stacked) {
+      Stack({ alignContent: resolveReaderButtonSpec(this.specId).leadingSlot ? Alignment.End : Alignment.Center }) {
+        if (resolveReaderButtonSpec(this.specId).leadingSlot) {
+          Row({ space: 5 }) { this.leading(); Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale())); }
+            .width('100%').justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center);
         } else {
-          Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.searchFontScale()));
+          Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
         }
-      }.attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.searchFontScale()))
+      }.attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     } else {
-      Text(this.label).attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.searchFontScale()))
+      Text(this.label).attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     }
   }
-  private searchFontScale(): number {
-    if (!this.specId.startsWith('search-') || this.readerWindowMetricsRevision < 0) return 1;
-    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
-    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

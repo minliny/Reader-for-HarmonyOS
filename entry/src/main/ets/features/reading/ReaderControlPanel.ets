@@ -12,7 +12,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
 import { FrameCallback } from '@kit.ArkUI';
-import { sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
+import { readerControlMotionMs, sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../common/ProductMotionTiming';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -49,6 +49,7 @@ import {
 } from './ReaderSettingsState';
 import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
 import { ReaderControlTtsContent } from './ReaderControlTtsContent';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
 import {
   ReaderSessionMorphSourceMeasurement,
@@ -108,6 +109,7 @@ import {
   READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,
   READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,
   READER_CONTROL_HOME_SECTION_GAP,
+  READER_CONTROL_TOP_BAR_HEIGHT,
   READER_CONTROL_PROGRESS_MAX,
   READER_CONTROL_PROGRESS_MIN,
   READER_CONTROL_PROGRESS_STEP,
@@ -294,6 +296,9 @@ export struct ReaderControlPanel {
   @Prop ttsFailurePolicy: 'skip' | 'stop' = 'stop';
   @Prop ttsEngine: string = 'system';
   @Prop ttsHttpEngines: ReaderTtsEngineOption[] = [];
+  @Prop ttsConfigurationRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop ttsConfigurationLoading: boolean = false;
+  @Prop ttsConfigurationLoadFailed: boolean = false;
   @Prop ttsVoiceOptions: ReaderTtsVoiceOption[] = [];
   @Prop ttsLanguage: string = 'zh-CN';
   @Prop ttsPerson: number = 0;
@@ -431,7 +436,7 @@ export struct ReaderControlPanel {
       return;
     }
     if (this.launchOwnsControls) return;
-    this.onSessionLaunchShellMeasured(this.layout.topBarTop + 54,
+    this.onSessionLaunchShellMeasured(this.layout.topBarTop + READER_CONTROL_TOP_BAR_HEIGHT,
       this.layout.viewportHeight - this.dockTop() - this.frame().shell.y);
     const frame = this.frame();
     const localLeft = left - this.rootScreenX;
@@ -516,9 +521,9 @@ export struct ReaderControlPanel {
     return { axis: readerControlMotionAxis(readerControlMotionBounds(this.layout.fullPanelWidth,
       this.controlPanelHeight(), this.layout.dockBottomGap, this.controlQuickHeight()),
       this.rootScreenY + this.dockTop()), tapMaxDurationMs: 500, directionSlopVp: 8,
-      settleDurationMs: this.reduceMotion ? 0 : READER_CONTROL_EXPAND_MS,
-      showDurationMs: this.reduceMotion ? 0 : READER_CONTROL_OPEN_MS,
-      dismissDurationMs: this.reduceMotion ? 0 : READER_CONTROL_DISMISS_MS, coordinatedMotion: true };
+      settleDurationMs: readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion),
+      showDurationMs: readerControlMotionMs(READER_CONTROL_OPEN_MS, this.reduceMotion),
+      dismissDurationMs: readerControlMotionMs(READER_CONTROL_DISMISS_MS, this.reduceMotion), coordinatedMotion: true };
   }
 
   private acceptRuntime(update: ReaderControlRuntimeUpdate): void {
@@ -648,7 +653,7 @@ export struct ReaderControlPanel {
         .width(1).height(1).accessibilityRole(AccessibilityRoleType.BUTTON)
         .enabled(this.contentInputEnabled() && !this.temporaryLayerActive)
         .onClick((): void => this.applySemanticSession(toggleReaderControlSession(this.visualSession,
-          this.reduceMotion ? 0 : READER_CONTROL_EXPAND_MS)));
+          readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion))));
     }
   }
 
@@ -800,7 +805,8 @@ export struct ReaderControlPanel {
     // flight. Retarget from the exact local visual sample, not the sparse host
     // snapshot, so the shape/visibility path never jumps back to its command
     // origin before the runtime applies the module-specific settle timing.
-    this.applySemanticSession(collapseReaderControlSession(this.visualSession, this.reduceMotion ? 0 : READER_CONTROL_EXPAND_MS));
+    this.applySemanticSession(collapseReaderControlSession(this.visualSession,
+      readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
   }
 
   private activateModule(module: string): void {
@@ -854,7 +860,7 @@ export struct ReaderControlPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.controlActorsRetained || this.frame().visibility > 0 || this.launchSample !== undefined) {
       Stack({ alignContent: Alignment.Top }) { this.topBar(); }
-        .width(this.layout.topBarWidth).height(54)
+        .width(this.layout.topBarWidth).height(READER_CONTROL_TOP_BAR_HEIGHT)
         .position({ x: (this.layout.viewportWidth - this.layout.topBarWidth) / 2,
           y: this.layout.topBarTop })
         .translate({ y: this.frame().topBar.translateY }).opacity(this.frame().topBar.opacity)
@@ -903,6 +909,7 @@ export struct ReaderControlPanel {
         }
           .width(this.frame().content.width).height(this.frame().content.height)
           .position({ x: this.frame().content.x, y: this.frame().content.y })
+          .borderRadius(8 + 4 * this.frame().progress)
           .clip(true).opacity(this.frame().content.opacity)
           .enabled(this.contentInputEnabled())
           .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Default : HitTestMode.None);
@@ -1276,7 +1283,7 @@ export struct ReaderControlPanel {
   @Builder
   private appearanceContent() {
     ReaderControlAppearanceContent({
-      isTablet: this.isExpanded(),
+      expandedLayout: this.isExpanded(),
       availableWidth: this.contentMotionWidth,
       availableHeight: this.contentMotionHeight,
       fullContentHeight: this.contentEndpointHeight(true),
@@ -1374,7 +1381,7 @@ export struct ReaderControlPanel {
       fullViewportHeight: this.contentEndpointHeight(true),
       motionProgress: this.contentMotionProgress,
       form: this.contentLocation().form,
-      isTablet: this.isExpanded(),
+      expandedLayout: this.isExpanded(),
       availableWidth: this.contentMotionWidth,
       availableHeight: this.contentMotionHeight,
       interactionEnabled: this.secondaryModuleInputEnabled('tts'),
@@ -1390,6 +1397,9 @@ export struct ReaderControlPanel {
       failurePolicy: this.ttsFailurePolicy,
       engine: this.ttsEngine,
       httpEngines: this.ttsHttpEngines,
+      configurationRecovery: this.ttsConfigurationRecovery,
+      configurationLoading: this.ttsConfigurationLoading,
+      configurationLoadFailed: this.ttsConfigurationLoadFailed,
       voiceOptions: this.ttsVoiceOptions,
       language: this.ttsLanguage,
       person: this.ttsPerson,
@@ -1426,7 +1436,7 @@ export struct ReaderControlPanel {
           sourceDetached: this.launchSample !== undefined && this.launchOwnsControls && this.launchSample.type === 'autoPage',
           onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
           fullViewportHeight: this.contentEndpointHeight(true),
-          isTablet: this.isExpanded(), motionProgress: this.contentMotionProgress,
+          expandedLayout: this.isExpanded(), motionProgress: this.contentMotionProgress,
           form: this.contentLocation().form,
           availableWidth: this.contentMotionWidth,
           availableHeight: this.contentMotionHeight,
@@ -1462,7 +1472,7 @@ export struct ReaderControlPanel {
           onExpand: (): void => {
             this.onInputActivity();
             this.applySemanticSession(expandReaderControlSession(this.controlSession,
-              this.reduceMotion ? 0 : READER_CONTROL_EXPAND_MS));
+              readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
           },
           onReload: (operationId?: string): Promise<void> => this.onReloadControlReplace(operationId),
           onSave: (draft: ReaderControlReplaceDraft): Promise<void> => this.onSaveControlReplace(draft),
@@ -1583,7 +1593,7 @@ export struct ReaderControlPanel {
       .accessibilityText('更多');
     }
     .width(this.layout.topBarWidth)
-    .height(54)
+    .height(READER_CONTROL_TOP_BAR_HEIGHT)
     .padding({ left: 13, right: 13 })
     .alignItems(VerticalAlign.Center)
     // The enclosing MotionStage gates the top-bar hit region from its local

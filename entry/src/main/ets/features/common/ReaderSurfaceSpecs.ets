@@ -247,7 +247,7 @@ export class SheetSurfaceSpec {
   readonly borderRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
   readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
   readonly titleRole: ReaderAppColorRole = 'TOK_INK';
-  readonly hostBackgroundRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
+  readonly hostBackgroundRole: ReaderAppColorRole = 'app.bookshelf.sheetSurface';
   readonly hostMaskRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';
 }
 
@@ -412,6 +412,21 @@ export class PopupSurfaceSpec {
 
   get collapsedHeight(): number {
     return this.pointerHeight + this.actionHeight;
+  }
+
+  /** Authored row height plus the enlarged line box, so labels keep their
+   * original padding instead of being clipped by the fixed popup frame. */
+  actionHeightFor(fontScale: number): number {
+    const scale = Number.isFinite(fontScale) && fontScale > 0 ? Math.max(1, fontScale) : 1;
+    return Math.ceil(this.actionHeight + this.actionLineHeight * Math.max(0, scale - 1));
+  }
+
+  expandedHeightFor(fontScale: number): number {
+    return this.pointerHeight + this.actionHeightFor(fontScale) * this.actionCount;
+  }
+
+  collapsedHeightFor(fontScale: number): number {
+    return this.pointerHeight + this.actionHeightFor(fontScale);
   }
 }
 

@@ -41,7 +41,7 @@ export struct RssSubscriptionManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop items: RssSubscriptionManagementItem[];
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
   @Prop focusedSubscriptionId: string = '';
   @Prop resultMessage: string = '';

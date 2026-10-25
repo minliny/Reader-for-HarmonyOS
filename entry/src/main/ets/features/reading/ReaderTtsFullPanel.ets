@@ -70,7 +70,7 @@ export struct ReaderTtsFullPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop morphActorId: string = 'reader-session-morph-fullTtsPlayback';
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop state: ReaderTtsState;
@@ -320,7 +320,7 @@ export struct ReaderTtsFullPanel {
       }
       .width('100%');
 
-      if (this.isTablet) {
+      if (this.expandedLayout) {
         Row() {
           this.timerSummaryBlock();
           this.timerWheels();
@@ -376,7 +376,7 @@ export struct ReaderTtsFullPanel {
       }
       .alignItems(HorizontalAlign.Start);
     }
-    .width(this.isTablet ? 190 : 170)
+    .width(this.expandedLayout ? 190 : 170)
     .height(52)
     .alignItems(VerticalAlign.Center);
   }
@@ -589,7 +589,7 @@ export struct ReaderTtsFullPanel {
       Column({ space: 2 }) {
         Text(http ? '在线 TTS' : '系统 TTS')
           .width('100%')
-          .height(16)
+          .constraintSize({ minHeight: 16 })
           .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontWeight)
           .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp)
@@ -598,7 +598,7 @@ export struct ReaderTtsFullPanel {
           .maxLines(1);
         Text(http ? '第三方或自定义服务' : '使用设备内置语音')
           .width('100%')
-          .height(13)
+          .constraintSize({ minHeight: 13 })
           .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontFamily)
           .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontWeight)
           .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp)
@@ -607,7 +607,7 @@ export struct ReaderTtsFullPanel {
           .maxLines(1);
       }
       .layoutWeight(1)
-      .height(31)
+      .constraintSize({ minHeight: 31 })
       .alignItems(HorizontalAlign.Start);
     }
     .width('100%')
@@ -815,13 +815,13 @@ export struct ReaderTtsFullPanel {
   }
 
   private panelWidth(): number {
-    const designWidth = this.isTablet ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
+    const designWidth = this.expandedLayout ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
       READER_FULL_PANEL_MAX_WIDTH_PHONE;
     return this.availableWidth > 0 ? Math.min(designWidth, this.availableWidth) : designWidth;
   }
 
   private panelHeight(): number {
-    const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
+    const designHeight = this.expandedLayout ? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
     return this.availableHeight > 0 ? Math.min(designHeight, this.availableHeight) : designHeight;
   }
 
@@ -838,13 +838,13 @@ export struct ReaderTtsFullPanel {
   }
 
   private scrollHeight(): number {
-    const bottomInset = this.isTablet ? TTS_FULL_SCROLL_BOTTOM_INSET_TABLET :
+    const bottomInset = this.expandedLayout ? TTS_FULL_SCROLL_BOTTOM_INSET_TABLET :
       TTS_FULL_SCROLL_BOTTOM_INSET_PHONE;
     return this.panelHeight() - TTS_FULL_SCROLL_TOP - bottomInset;
   }
 
   private scrollPaddingX(): number {
-    return this.isTablet ? TTS_FULL_SCROLL_PADDING_X_TABLET : TTS_FULL_SCROLL_PADDING_X_PHONE;
+    return this.expandedLayout ? TTS_FULL_SCROLL_PADDING_X_TABLET : TTS_FULL_SCROLL_PADDING_X_PHONE;
   }
 
   private timerSectionContentWidth(): number {

@@ -48,7 +48,7 @@ export struct SyncPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   onBack: () => void = (): void => {};
   onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _backupPass: string, _path: string): void => {};

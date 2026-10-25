@@ -93,7 +93,7 @@ export struct FullDirectoryPanel {
   @Prop allowUnanchoredBrowse: boolean = false;
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop mangaSearch: boolean = false;
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   // The owner supplies the measured viewport-constrained width. Zero keeps
   // the source-exact standalone Figma endpoint.
   @Prop panelWidthOverride: number = 0;
@@ -1429,7 +1429,7 @@ export struct FullDirectoryPanel {
     if (this.panelWidthOverride > 0) {
       return this.panelWidthOverride;
     }
-    return this.embeddedInControl ? this.controlValue(286, 338) : (this.isTablet ? 720 : 364);
+    return this.embeddedInControl ? this.controlValue(286, 338) : (this.expandedLayout ? 720 : 364);
   }
 
   private innerWidth(): number {
@@ -1438,10 +1438,10 @@ export struct FullDirectoryPanel {
   }
 
   private panelHeight(): number {
-    if ((this.embeddedInControl || !this.isTablet) && this.panelHeightOverride > 0) {
+    if ((this.embeddedInControl || !this.expandedLayout) && this.panelHeightOverride > 0) {
       return this.panelHeightOverride;
     }
-    return this.embeddedInControl ? this.controlValue(190, 666) : (this.isTablet ? 852 : 736);
+    return this.embeddedInControl ? this.controlValue(190, 666) : (this.expandedLayout ? 852 : 736);
   }
 
   private contentHeight(): number {
@@ -1473,7 +1473,7 @@ export struct FullDirectoryPanel {
   }
 
   private gripLeft(): number {
-    const figmaLeft = this.isTablet ? 489 : 134;
+    const figmaLeft = this.expandedLayout ? 489 : 134;
     return Math.min(figmaLeft, Math.max(0, this.panelWidth() - 42));
   }
 
@@ -1553,12 +1553,12 @@ export struct FullDirectoryPanel {
     let full = this.controlFullContentHeight;
     if (!(full > 0)) {
       const currentHeight = this.panelHeightOverride > 0 ? this.panelHeightOverride :
-        (this.isTablet ? 782 : 666);
+        (this.expandedLayout ? 782 : 666);
       // The content track is linear. Infer the Full endpoint from any
       // non-zero sample; use the design fallback only at the exact Quick
       // endpoint where division would be undefined.
       full = currentProgress > 0.0001 ?
-        quick + (currentHeight - quick) / currentProgress : (this.isTablet ? 782 : 666);
+        quick + (currentHeight - quick) / currentProgress : (this.expandedLayout ? 782 : 666);
     }
     return Math.max(0, quick + (full - quick) * p);
   }
@@ -1642,7 +1642,7 @@ export struct FullDirectoryPanel {
   }
 
   private activeTabLineWidth(): number {
-    const figmaWidth = this.isTablet ? 176 : 83;
+    const figmaWidth = this.expandedLayout ? 176 : 83;
     return Math.min(figmaWidth, Math.max(0, (this.innerWidth() - TOK_SPACE_XS * 2) / 2));
   }
 
