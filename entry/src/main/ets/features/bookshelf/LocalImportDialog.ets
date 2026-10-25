@@ -1,4 +1,4 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../common/ReaderMessageStyle';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
@@ -8,7 +8,9 @@ import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import curves from '@ohos.curves';
+import { motionAnimateParam, motionAnimateParamDelayed } from '../common/MotionSpec';
+import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
+import { readerMotionCurve, readerMotionDurationMs } from '../common/ReaderMotionPolicy';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { localImportResultLayout, LocalImportResultLayout } from './LocalImportLayout';
 import type { LocalImportDialogState } from './LocalImportPresentationOwner';
@@ -20,6 +22,7 @@ import {
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
 import { DialogSurfaceSpec, resolveDialogSpec } from '../common/ReaderSurfaceSpecs';
+import { readerSurfaceMaxHeight } from '../common/ReaderSurfaceResolvers';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -451,7 +454,8 @@ export struct LocalImportDialog {
   private availableHeight(): number {
     const metrics = ReaderWindowCoordinator.metrics();
     const height = this.viewportHeight > 0 ? this.viewportHeight : metrics.windowRect.height;
-    return Math.max(0, height - readerInteractiveSafeTop(metrics) - readerInteractiveSafeBottom(metrics) - 40);
+    return readerSurfaceMaxHeight(height,
+      readerInteractiveSafeTop(metrics) + readerInteractiveSafeBottom(metrics) + 40);
   }
 
   private allSucceeded(): boolean {
@@ -501,7 +505,8 @@ export struct LocalImportDialog {
     if (!this.pendingHandoff) {
       const remaining = Math.max(0, this.handoffEndsAt - readerMotionNowMs());
       if (remaining > 0 && !this.reduceMotion) {
-        this.getUIContext().animateTo({ duration: remaining, curve: curves.cubicBezierCurve(.2, 0, 0, 1) },
+        this.getUIContext().animateTo(
+          { duration: remaining, curve: readerMotionCurve('bookshelf.import.handoff.resize') },
           (): void => { this.shellHeight = height; });
       } else this.shellHeight = height;
       return;
@@ -511,14 +516,16 @@ export struct LocalImportDialog {
     if (this.reduceMotion || !this.foreground || !this.wasImporting) {
       this.shellHeight = height; this.importingOpacity = 0; this.resultOpacity = 1; return;
     }
-    this.handoffEndsAt = readerMotionNowMs() + 220;
-    const curve = curves.cubicBezierCurve(.2, 0, 0, 1);
-    this.getUIContext().animateTo({ duration: 120, curve }, (): void => { this.importingOpacity = 0; });
-    this.getUIContext().animateTo({ duration: 220, curve }, (): void => { this.shellHeight = height; });
-    this.getUIContext().animateTo({ delay: 80, duration: 140, curve, onFinish: (): void => {
-      if (!this.mounted || generation !== this.motionGeneration) return;
-      this.wasImporting = false;
-    } }, (): void => { this.resultOpacity = 1; });
+    this.handoffEndsAt = readerMotionNowMs() + readerMotionDurationMs('bookshelf.import.handoff.resize', false);
+    this.getUIContext().animateTo(motionAnimateParam('bookshelf.import.handoff.fade'),
+      (): void => { this.importingOpacity = 0; });
+    this.getUIContext().animateTo(motionAnimateParam('bookshelf.import.handoff.resize'),
+      (): void => { this.shellHeight = height; });
+    this.getUIContext().animateTo(motionAnimateParamDelayed('bookshelf.import.handoff.reveal',
+      READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS, (): void => {
+        if (!this.mounted || generation !== this.motionGeneration) return;
+        this.wasImporting = false;
+      }), (): void => { this.resultOpacity = 1; });
   }
 
   private numericAreaLength(value: Length): number {
@@ -542,7 +549,7 @@ export struct LocalImportDialog {
     if (!this.recovery.visible || !this.recovery.canRetry || this.pendingImport()) { this.lastRecoveryFeedback = ''; return; }
     if (!this.mounted || this.recovery.message === this.lastRecoveryFeedback) return;
     this.lastRecoveryFeedback = this.recovery.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery.message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted); } catch (_) {}
   }
 
   private resultCountText(): string {

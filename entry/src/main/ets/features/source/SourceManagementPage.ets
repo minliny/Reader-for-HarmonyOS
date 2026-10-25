@@ -1,6 +1,8 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../common/ReaderTransientFeedback';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
-import { readerPageContentStartInset, readerStandardPageContentFrame } from '../common/ReaderPageShell';
+import { readerPageContentStartInset, readerStandardPageSpec } from '../common/ReaderPageShell';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
@@ -13,6 +15,8 @@ import { ReaderPageState } from '../common/ReaderPageState';
 import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
+import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
 // Source Management — rebuilt 2026-08-05 against live Figma nodes
 // 943:4281 (Phone 390×844) / 943:4745 (Tablet 760×960).
 // Structural notes: search field h38 r8 + status filter (5 chips h32 r16)
@@ -101,7 +105,7 @@ export struct SourceManagementPage {
   // 额外分组可由调用方补充；常规选项直接来自 Core 返回的原始
   // bookSource.bookSourceGroup，不按启用状态等 UI 属性伪造。
   @Prop groups: string[] = [];
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onMessageChanged') operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
@@ -139,8 +143,8 @@ export struct SourceManagementPage {
   @State private originX: number = 0;
   @State private originY: number = 0;
   @State private viewportWidth: number = 0;
-  @State private pageHeaderHeight: number = 0;
-  @State private pageFooterHeight: number = 0;
+  @State private measurementRevision: number = 0;
+  private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -200,23 +204,30 @@ export struct SourceManagementPage {
     if (this.ownsGroupSelection(identity)) this.retireGroupSelection();
   }
 
+  private frameStyle(): ReaderFrameStyle {
+    const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
+    return readerFrameStyle({ backgroundColor: pageBackground,
+      headerBackground: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme),
+      footerBackground: pageBackground });
+  }
+
   build() {
     ReaderPageScaffold({
-      variant: 'standard',
-      headerKind: 'standard',
+      frameStyle: this.frameStyle(),
+      geometry: this.pageGeometry(),
+      headerMeasurementKey: this.measurementGeneration(),
+      footerMeasurementKey: this.measurementGeneration(),
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
-      overlayContent: (): void => { this.pendingOverlay(); this.groupOverlay(); },
-      onHeaderHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeaderHeight) > 0.1) {
-          this.pageHeaderHeight = height;
-        }
+      overlayContent: (): void => { this.pendingOverlay(this.pageGeometry().content.startInset); this.groupOverlay(); },
+      onHeaderHeightChange: (height: number, presentedKey: number): void => {
+        if (height > 0 && this.measurements.record('source:header', height, presentedKey))
+          this.measurementRevision += 1;
       },
       onFooterHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageFooterHeight) > 0.1) {
-          this.pageFooterHeight = height;
-        }
+        if (height > 0 && this.measurements.record('source:footer', height, this.measurementGeneration()))
+          this.measurementRevision += 1;
       },
     });
   }
@@ -240,7 +251,7 @@ export struct SourceManagementPage {
   @Builder
   private pageFooter() {
     Column() { this.bottomActionBar(); }
-      .width('100%').height(44 + TOK_SPACE_SM + this.actionBottomInset())
+      .width('100%').height(this.pageGeometry().footer.height)
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
       .hitTestBehavior(HitTestMode.Transparent);
   }
@@ -360,7 +371,7 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private pendingOverlay() {
+  private pendingOverlay(contentStartInset: number) {
     Column() {
       if (this.operation.original?.blocked === true) { this.originalRecovery(); }
       else if (this.operation.receipt?.receipt.confirmation === 'unknown') {
@@ -369,7 +380,7 @@ export struct SourceManagementPage {
       }
     }.width('100%')
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right,
-        top: this.pageHeaderHeight > 0 ? this.pageHeaderHeight : readerPageContentStartInset() })
+        top: contentStartInset })
       .hitTestBehavior(HitTestMode.Transparent);
   }
 
@@ -392,7 +403,7 @@ export struct SourceManagementPage {
     const message = this.statusMessage || (this.recovery().visible ? this.recovery().message : '');
     if (message.length === 0 || message.startsWith('正在') || message === this.lastToastMessage) return;
     this.lastToastMessage = message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS }, (): boolean => this.mounted); } catch (_) {}
   }
 
   @Builder
@@ -439,13 +450,13 @@ export struct SourceManagementPage {
 
   @Builder
   private filterArea() {
-    if (this.isTablet) {
+    if (this.expandedLayout) {
       Row({ space: 20 }) {
         this.statusFilter();
         this.groupFilter();
       }
       .width(this.contentFrame().width)
-      .height(36)
+      .constraintSize({ minHeight: 36 })
       .alignItems(VerticalAlign.Top)
       .margin({ top: TOK_SPACE_XS });
     } else {
@@ -528,7 +539,7 @@ export struct SourceManagementPage {
       });
     }
     .width(this.filterControlWidth())
-    .height(36)
+    .constraintSize({ minHeight: 36 })
     .alignItems(VerticalAlign.Center);
   }
 
@@ -584,8 +595,8 @@ export struct SourceManagementPage {
     .width('100%')
     .height('100%')
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .contentStartOffset(this.pageHeaderHeight > 0 ? this.pageHeaderHeight : readerPageContentStartInset())
-    .contentEndOffset(this.pageFooterHeight > 0 ? this.pageFooterHeight : 44 + TOK_SPACE_SM + this.actionBottomInset())
+    .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
+    .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .scrollBar(BarState.Off);
   }
 
@@ -812,17 +823,40 @@ export struct SourceManagementPage {
     return options;
   }
 
+  private measurementGeneration(): number {
+    return Math.max(0, this.readerWindowMetricsRevision);
+  }
+
+  private footerFallbackHeight(): number {
+    return 48 + TOK_SPACE_SM + this.actionBottomInset();
+  }
+
+  private scrollLayout(): ReaderScrollLayout {
+    return readerScrollLayout(this.pageGeometry(), { mode: 'contentOffset' });
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.viewportWidth;
+    input.measurementRevision = this.measurementRevision;
+    input.headerHeight = this.measurements.read('source:header', readerPageContentStartInset());
+    input.footerHeight = this.measurements.read('source:footer', this.footerFallbackHeight());
+    input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
+    input.contentHorizontalPadding = 19;
+    input.contentEndInset = input.footerHeight;
+    return resolveReaderPageGeometry(input);
+  }
+
   private contentFrame(): SurfaceHorizontalFrame {
     if (this.readerWindowMetricsRevision < 0) {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
-    const metrics = ReaderWindowCoordinator.metrics();
-    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
-    return readerStandardPageContentFrame('sourceManagement', metrics, containerWidth);
+    return this.pageGeometry().content.frame;
   }
 
   private filterControlWidth(): number {
-    if (!this.isTablet) {
+    if (!this.expandedLayout) {
       return this.contentFrame().width;
     }
     return Math.max(0, (this.contentFrame().width - 20) / 2);

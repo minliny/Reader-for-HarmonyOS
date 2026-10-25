@@ -1,6 +1,8 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 
+export const READER_DIRECTORY_TOOLBAR_HEIGHT = 50;
+
 /** Shared directory tools. The owner retains query, scrolling and motion state. */
 @Component
 export struct ReaderDirectoryToolbar {
@@ -70,6 +72,6 @@ export struct ReaderDirectoryToolbar {
         this.tool('bottom', '到底部', (): void => this.onBottom());
         this.tool('sort', '切换排序', (): void => this.onToggleSort());
       }
-    }.width('100%').height(50).padding({ left: 10, right: 10, top: 9 });
+    }.width('100%').height(READER_DIRECTORY_TOOLBAR_HEIGHT).padding({ left: 10, right: 10, top: 9 });
   }
 }

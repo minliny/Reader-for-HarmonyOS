@@ -12,8 +12,10 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_PAGE_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_650 } from './ReaderFontFamilies.ts';
+import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from './ReaderHeaderMetrics';
+import { readerScaledBarHeight } from './ReaderSurfaceResolvers';
 
-// 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题,58 高、20vp 内边距。
+// 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题;高度读取 App 顶栏共享常量。
 // 曾被 Settings/SourceManagement/Sync/Rss/LocalBookDetail 各自复制实现。
 @Component
 export struct PageBackBar {
@@ -77,7 +79,7 @@ export struct PageBackBar {
       }
     }
     .width('100%')
-    .height(this.variant === 'mangaDirectory' ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.floating ? 52 : 58)
+    .constraintSize({ minHeight: this.barHeight() })
     .padding({ left: this.leftInset(), right: this.rightInset() })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.variant === 'mangaDirectory' ? mangaDirectoryColor('surface', this.appThemeScheme) : this.floating || this.surface === 'solid' ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
@@ -96,22 +98,35 @@ export struct PageBackBar {
     return mangaDirectoryScale(revision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  private barHeight(): number {
+    if (this.variant === 'mangaDirectory') return mangaDirectoryHeaderHeight(this.mangaFontScale());
+    return this.floating
+      ? readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, this.fontScale(), 0)
+      : readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0);
+  }
+
   private leftInset(): number {
     if (this.variant === 'mangaDirectory') return visual.headerPadding;
     // The floating frame's parent owns cutouts; keep internal slots symmetric.
-    if (this.floating) return 4;
+    if (this.floating) return 9;
     if (this.readerWindowMetricsRevision < 0) {
-      return this.floating ? 4 : 20;
+      return 20;
     }
-    return Math.max(this.floating ? 4 : 20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
+    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
   }
 
   private rightInset(): number {
     if (this.variant === 'mangaDirectory') return visual.headerPadding;
-    if (this.floating) return 4;
+    if (this.floating) return 9;
     if (this.readerWindowMetricsRevision < 0) {
-      return this.floating ? 4 : 20;
+      return 20;
     }
-    return Math.max(this.floating ? 4 : 20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
+    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
   }
 }

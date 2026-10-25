@@ -4,8 +4,13 @@ import { TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER, TYPE_R
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { DirectoryHeaderSpec, directoryHeaderSpec } from '../common/ReaderHeaderSpecs';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -32,6 +37,7 @@ import {
 import { FullDirectoryPanel } from './FullDirectoryPanel';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { motionAnimateParam } from '../common/MotionSpec';
+import { readerMotionAnimateParam } from '../common/ReaderMotionPolicy';
 
 /**
  * The non-body layers of the two Final Reader Full Directory variants.
@@ -47,6 +53,8 @@ import { motionAnimateParam } from '../common/MotionSpec';
 @Component
 export struct ReaderFullDirectory {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
+    readerAppColor('app.window.background', 'day');
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop bookTitle: string = '';
@@ -103,8 +111,9 @@ export struct ReaderFullDirectory {
   @State private panelProgress: number = 1;
   @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
-  @State private catalogHeaderHeight: number = 0;
-  @State private catalogHeaderTop: number = -1;
+  private readonly headerSpec: DirectoryHeaderSpec = directoryHeaderSpec();
+  @State private headerMeasurementRevision: number = 0;
+  private readonly headerMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private offlineMenuVisible: boolean = false;
   private animationGeneration: number = 0;
   private collapseStarted: boolean = false;
@@ -146,7 +155,8 @@ export struct ReaderFullDirectory {
   private onReduceMotionChanged(): void {
     if (!this.mounted || !this.reduceMotion) return;
     const generation = ++this.animationGeneration;
-    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+    this.getUIContext().animateTo(readerMotionAnimateParam(
+      this.collapseStarted ? 'reader.panel.collapse' : 'reader.panel.expand', true), (): void => {
       this.panelProgress = this.collapseStarted ? 0 : 1;
     });
     if (this.collapseStarted) this.finishCollapse(generation);
@@ -180,16 +190,15 @@ export struct ReaderFullDirectory {
 
   build() {
     ReaderPageScaffold({
-      variant: this.catalogContext === 'detail' ? 'directory' : 'readerDirectory', headerKind: 'floating',
-      headerMeasurementKey: this.topBarTop(),
+      frameStyle: this.frameStyle(),
+      geometry: this.pageGeometry(), headerMeasurementKey: this.topBarTop(),
       header: (): void => { this.topBar(); },
       content: (): void => { this.directoryContent(); },
       overlayContent: (): void => { this.directoryOverlay(); },
       onHeaderHeightChange: (height: number, presentedTop: number): void => {
-        if (this.mounted && presentedTop === this.topBarTop() && Number.isFinite(height) && height > 0) {
-          this.catalogHeaderTop = presentedTop;
-          if (Math.abs(height - this.catalogHeaderHeight) > .1) this.catalogHeaderHeight = height;
-        }
+        if (!this.mounted || presentedTop !== this.topBarTop() || height <= 0) return;
+        if (this.headerMeasurements.record(this.headerMeasurementKey(), height,
+          Math.max(0, this.readerWindowMetricsRevision), 0.1)) this.headerMeasurementRevision += 1;
       },
     }).onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = readerPageAreaLength(newValue.width);
@@ -216,7 +225,7 @@ export struct ReaderFullDirectory {
           allowUnanchoredBrowse: this.catalogContext === 'detail',
           chapterDownloadEnabled: this.sourceId !== 'local',
           mangaSearch: this.mangaSearch,
-          isTablet: this.usesExpandedLayout(),
+          expandedLayout: this.usesExpandedLayout(),
           panelWidthOverride: this.panelWidth(),
           panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
@@ -255,7 +264,7 @@ export struct ReaderFullDirectory {
             .height(24);
         }
         .width(44)
-        .height(42)
+        .height(this.headerSpec.controlHeight)
         .margin({ left: 13 })
         .accessibilityText('收起目录')
         .onClick((): void => this.requestCollapse());
@@ -302,7 +311,7 @@ export struct ReaderFullDirectory {
             .alignSelf(ItemAlign.Center);
         }
         .width(62)
-        .height(42)
+        .height(this.headerSpec.controlHeight)
         .margin({ left: 8 })
         .opacity(this.isLocalBook() ? 0.4 : 1)
         .enabled(!this.isLocalBook())
@@ -319,7 +328,7 @@ export struct ReaderFullDirectory {
             .height(20);
         }
         .width(34)
-        .height(42)
+        .height(this.headerSpec.controlHeight)
         .margin({ left: 8 })
         .opacity(this.isLocalBook() || this.offlineBookOperationActive ? 0.4 : 1)
         .enabled(!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true)
@@ -331,16 +340,15 @@ export struct ReaderFullDirectory {
         });
       }
       .width('100%')
-      .height(54)
+      .height(this.headerSpec.barHeight)
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
-      .borderRadius(24);
+      .borderRadius(this.headerSpec.radius);
     }
     .width('100%')
-    .height(54)
-    .padding({ left: this.topBarLeft(), right: this.topBarRight() })
-    .margin({ top: this.topBarTop() });
+    .height(this.headerSpec.barHeight)
+    .padding({ left: this.topBarLeft(), right: this.topBarRight() });
   }
 
   @Builder
@@ -349,7 +357,7 @@ export struct ReaderFullDirectory {
       Column() {
         Text('下载整书')
           .width('100%')
-          .height(42)
+          .height(this.headerSpec.menuRowHeight)
           .padding({ left: 16 })
           .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
@@ -366,7 +374,7 @@ export struct ReaderFullDirectory {
           .strokeWidth(TOK_BORDER_W);
         Text('清除本书离线')
           .width('100%')
-          .height(42)
+          .height(this.headerSpec.menuRowHeight)
           .padding({ left: 16 })
           .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
@@ -384,7 +392,7 @@ export struct ReaderFullDirectory {
       .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(12)
-      .position({ x: this.offlineMenuLeft(), y: this.topBarTop() + 56 })
+      .position({ x: this.offlineMenuLeft(), y: this.headerSpec.menuTop(this.topBarTop()) })
       .zIndex(8);
     }
   }
@@ -400,9 +408,9 @@ export struct ReaderFullDirectory {
   }
 
   private topBarTop(): number {
-    if (this.readerWindowMetricsRevision < 0) return 18;
-    if (this.catalogContext === 'detail') return 18;
-    return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));
+    if (this.readerWindowMetricsRevision < 0) return this.headerSpec.topGap;
+    if (this.catalogContext === 'detail') return this.headerSpec.topGap;
+    return Math.max(this.headerSpec.topGap, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));
   }
 
   private shouldAnimatePanel(): boolean {
@@ -474,6 +482,13 @@ export struct ReaderFullDirectory {
     return this.fullPanelTop() + (this.panelHeightDelta() * (1 - this.panelProgress));
   }
 
+  private frameStyle(): ReaderFrameStyle {
+    const pageBackground = this.catalogContext === 'detail' ?
+      readerAppColor('app.window.background', this.appThemeScheme) : this.chromeUnderlayColor;
+    return readerFrameStyle({ backgroundColor: pageBackground, headerBackground: pageBackground,
+      headerTransparent: true, footerBackground: pageBackground });
+  }
+
   private fullPanelHeight(): number {
     const designHeight = this.usesExpandedLayout() ? 852 : 736;
     const safeBottom = Math.max(20, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
@@ -481,12 +496,24 @@ export struct ReaderFullDirectory {
     return Math.min(designHeight, available);
   }
 
+  private headerMeasurementKey(): string {
+    return `fullDirectory:header:${this.topBarTop()}`;
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.liveContainerWidth();
+    input.viewportHeight = this.liveContainerHeight();
+    input.measurementRevision = this.headerMeasurementRevision;
+    input.headerTop = this.topBarTop();
+    input.headerHeight = this.headerMeasurements.read(this.headerMeasurementKey(), this.headerSpec.barHeight);
+    input.contentGap = this.headerSpec.panelGap;
+    return resolveReaderPageGeometry(input);
+  }
+
   private fullPanelTop(): number {
-    // Figma keeps 16vp between the 54vp top bar and the full directory sheet:
-    // 18 + 54 + 16 = 88. Preserve that relationship when safeTop moves.
-    const top = this.topBarTop();
-    return this.catalogHeaderHeight > 0 && Math.abs(this.catalogHeaderTop - top) < .1 ?
-      this.catalogHeaderHeight + 16 : top + 70;
+    return this.pageGeometry().content.startInset;
   }
 
   private panelHeightDelta(): number {
@@ -520,7 +547,7 @@ export struct ReaderFullDirectory {
   }
 
   private usesExpandedLayout(): boolean {
-    return this.liveContainerWidth() >= 600;
+    return readerIsExpandedWidth(this.liveContainerWidth());
   }
 
   private isLocalBook(): boolean {

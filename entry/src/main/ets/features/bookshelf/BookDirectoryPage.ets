@@ -17,14 +17,17 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts, prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
+import { ReaderScrollLayout, readerScrollLayout } from '../common/ReaderScrollLayout';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../common/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
-import { TOK_CONTENT_MAX_W_TABLET } from '../common/ReaderTokens';
+import { TOK_BORDER_W, TOK_CONTENT_MAX_W_TABLET } from '../common/ReaderTokens';
+import { APP_HEADER_BAR_HEIGHT } from '../common/ReaderHeaderMetrics';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../reading/ReaderDirectoryMarkerState';
 import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../reading/ReaderDirectoryDataSnapshot';
 import { projectReaderDirectoryEntries } from '../reading/ReaderDirectoryProjection';
-import { ReaderDirectoryToolbar } from '../reading/ReaderDirectoryToolbar';
+import { ReaderDirectoryToolbar, READER_DIRECTORY_TOOLBAR_HEIGHT } from '../reading/ReaderDirectoryToolbar';
 import { ReaderDirectoryChapterRow } from '../reading/ReaderDirectoryChapterRow';
 import { ReaderDirectoryList } from '../reading/ReaderDirectoryList';
 import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavigationSurface';
@@ -39,8 +42,24 @@ import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from '../manga/
 import { MangaDirectoryEntryRow } from '../manga/MangaDirectoryEntryRow';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SERIF_SC_BOLD } from '../common/ReaderFontFamilies';
-import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { ReaderPageGeometry, ReaderPageGeometryInput, readerEmptyPageGeometry,
+  resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
+
+class BookDirectoryPageHeaderSpec {
+  readonly barHeight: number = APP_HEADER_BAR_HEIGHT;
+  readonly toolbarHeight: number = READER_DIRECTORY_TOOLBAR_HEIGHT;
+  readonly dividerHeight: number = TOK_BORDER_W;
+  readonly contentGap: number = 5;
+
+  initialHeight(): number {
+    return this.barHeight + this.toolbarHeight + this.dividerHeight;
+  }
+}
+
+const BOOK_DIRECTORY_PAGE_HEADER_SPEC = new BookDirectoryPageHeaderSpec();
 
 /** Detail-owned catalog. Reuses the control's toolbar/rows, never its sheet or reading session. */
 @Component
@@ -96,7 +115,9 @@ export struct BookDirectoryPage {
   @State private projectedEntries: LocalReadingTocEntry[] = [];
   @State private viewportWidth: number = 0;
   @State private mangaViewportHeight: number = 0;
-  @State private standardHeaderHeight: number = readerPageContentStartInset() + 51;
+  @State private standardMeasurementRevision: number = 0;
+  private readonly standardMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();
+  private readonly standardHeaderSpec: BookDirectoryPageHeaderSpec = BOOK_DIRECTORY_PAGE_HEADER_SPEC;
   @State private mangaToolsHeight: number = 175;
   @State private mangaFooterMeasured: number = 0;
   @State private mangaScrollOffset: number = 0;
@@ -204,7 +225,7 @@ export struct BookDirectoryPage {
         .constraintSize({ maxHeight: Math.max(0, ReaderWindowCoordinator.metrics().windowRect.height / 3) })
         .margin({ left: this.contentFrame().left, right: this.contentFrame().right,
           top: this.contentKind === 'manga' ? this.topInset() + mangaDirectoryHeaderHeight(this.mangaFontScale()) + 8 :
-            readerPageContentStartInset() + 59 })
+            this.standardGeometry().content.startInset })
         .visibility(this.downloadMenuVisible ? Visibility.Hidden : Visibility.Visible)
         .hitTestBehavior(HitTestMode.Transparent);
     }
@@ -214,8 +235,8 @@ export struct BookDirectoryPage {
     if (this.contentKind === 'manga') {
       if (this.mangaFontsReady) { this.mangaPage(); }
       else {
-        ReaderPageScaffold({ variant: 'mangaDirectory', headerKind: 'mangaDirectory',
-          content: (): void => { this.fontPreparationContent(); } });
+        ReaderPageScaffold({ frameStyle: this.mangaFrameStyle(),
+          geometry: readerEmptyPageGeometry(), content: (): void => { this.fontPreparationContent(); } });
       }
     } else {
       this.standardPage();
@@ -234,13 +255,15 @@ export struct BookDirectoryPage {
 
   @Builder
   private standardPage() {
-    ReaderPageScaffold({ variant: 'directory', headerKind: 'standard',
+    ReaderPageScaffold({ frameStyle: this.standardFrameStyle(),
+      geometry: this.standardGeometry(),
+      headerMeasurementKey: this.standardMeasurementGeneration(),
       content: (): void => { this.standardContent(); },
       header: (): void => { this.standardHeader(); },
       overlayContent: (): void => { this.pageRecoveryOverlay(); },
-      onHeaderHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.standardHeaderHeight) > .1)
-          this.standardHeaderHeight = height;
+      onHeaderHeightChange: (height: number, presentedKey: number): void => {
+        if (height > 0 && this.standardMeasurements.record('bookDirectory:header', height, presentedKey, 0.1))
+          this.standardMeasurementRevision += 1;
       },
     }).onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = readerPageAreaLength(newValue.width);
@@ -286,7 +309,7 @@ export struct BookDirectoryPage {
         onBottom: (): void => this.scrollToEdge(Edge.Bottom),
         onToggleSort: (): void => this.toggleSort(),
       });
-      Text('').width('100%').height(1)
+      Text('').width('100%').height(this.standardHeaderSpec.dividerHeight)
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
     .width(this.contentFrame().width)
@@ -307,7 +330,7 @@ export struct BookDirectoryPage {
             showLoadStatus: this.projectedEntries.length > 0 || this.navigationActive,
             interacted: this.navigationInteracted,
             rowHeight: 40, listPaddingX: 10, listPaddingY: 0,
-            contentStartInset: this.standardHeaderHeight + 5, contentEndInset: this.bottomInset() + 5,
+            scrollLayout: this.standardDirectoryScrollLayout(),
             edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
             chapterEntries: this.admittedEntries,
             chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
@@ -347,7 +370,8 @@ export struct BookDirectoryPage {
         }
           .width('100%').height('100%')
           .justifyContent(FlexAlign.Center)
-          .padding({ left: 20, right: 20, top: this.standardHeaderHeight, bottom: this.bottomInset() + 20 });
+          .padding({ left: 20, right: 20, top: this.standardGeometry().header.bottom,
+            bottom: this.standardGeometry().content.endInset + 15 });
       }
     }.height('100%').width(this.contentFrame().width)
       .margin({ left: this.contentFrame().left, right: this.contentFrame().right });
@@ -355,13 +379,8 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaPage() {
-    ReaderPageScaffold({ variant: 'mangaDirectory', headerKind: 'mangaDirectory',
-      headerTop: this.topInset() + visual.headerSafeGap,
-      headerInsetLeft: this.headerFrame().left, headerInsetRight: this.headerFrame().right,
-      footerInsetLeft: this.contentFrame().left, footerInsetRight: this.contentFrame().right,
-      footerBottom: this.mangaBottomInset() + this.mangaFooterBottomOffset(),
-      footerSurface: this.mangaFlowFooter() ? 'transparent' : 'solid',
-      contentEndInset: this.mangaFlowFooter() ? 0 : this.mangaBottomClearance(),
+    ReaderPageScaffold({ frameStyle: this.mangaFrameStyle(),
+      geometry: this.mangaPageGeometry(),
       content: (): void => { this.mangaContent(); },
       header: (): void => { this.mangaHeader(); },
       footer: (): void => { this.mangaFixedFooter(); },
@@ -396,7 +415,7 @@ export struct BookDirectoryPage {
           listPaddingRight: this.contentFrame().right,
           listPaddingY: visual.gridGap, listPaddingTop: this.mangaContentTopInset(),
           listPaddingBottom: this.mangaListBottomClearance(),
-          contentEndInset: Math.max(0, this.mangaListBottomClearance() - 18),
+          scrollLayout: this.mangaDirectoryScrollLayout(),
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
           chapterDownloadEnabled: this.mangaDownloadEnabled,
@@ -473,7 +492,8 @@ export struct BookDirectoryPage {
           .accessibilityText('定位当前条目').onClick((): void => this.locateCurrent());
       }.width('100%').margin({ top: visual.toolsTop, bottom: visual.toolsBottom });
       if (this.mangaFlowFooter()) {
-        Row() { this.mangaCurrentFooter(); }.width('100%').margin({ top: this.mangaFooterBottomOffset() });
+        Row() { this.mangaCurrentFooter(); }.width('100%').justifyContent(FlexAlign.Center)
+          .margin({ top: this.mangaFooterBottomOffset() });
       }
     }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)
       .position({ x: this.contentFrame().left, y: this.topInset() + mangaDirectoryContentTop(this.mangaFontScale()) - this.mangaScrollOffset })
@@ -486,9 +506,9 @@ export struct BookDirectoryPage {
   @Builder
   private mangaCurrentFooter() {
     MangaDirectoryCurrentFooter({ title: this.mangaCurrentTitle(), pagePosition: this.mangaCurrentPosition(), scheme: this.appThemeScheme,
-      availableWidth: this.contentFrame().width,
+      availableWidth: this.mangaFooterFrame().width,
       onHeightChanged: (height: number): void => { if (Math.abs(height - this.mangaFooterMeasured) > .1) this.mangaFooterMeasured = height; },
-    }).width('100%');
+    }).width(this.mangaFooterFrame().width);
   }
 
   private mangaSortIcon(): Resource {
@@ -532,19 +552,31 @@ export struct BookDirectoryPage {
   }
 
   private mangaToolHeight(): number { return mangaDirectoryLineBox(visual.toolHeight, visual.toolLineHeight, visual.toolPaddingY * 2, this.mangaFontScale()); }
-  private mangaFooterHeight(): number { return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured : mangaDirectoryFooterHeight(this.mangaFontScale(), this.contentFrame().width, this.mangaCurrentPosition()); }
+  private mangaFooterHeight(): number { return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured : mangaDirectoryFooterHeight(this.mangaFontScale(), this.mangaFooterFrame().width, this.mangaCurrentPosition()); }
   private mangaBottomInset(): number { return Math.max(0, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics())); }
   /** The footer follows the safe area closely; the released 4vp is usable list space. */
   private mangaFooterBottomOffset(): number { return Math.max(0, visual.footerBottom - 4); }
   private mangaBottomClearance(): number { return this.mangaBottomInset() + (this.mangaFlowFooter() ? 0 : this.mangaFooterHeight()) + this.mangaFooterBottomOffset() * 2; }
-  /** The fixed dock is already outside the clipped viewport. Catalog Grid owns
-   * an 18vp tail; flowing chrome still needs its existing bottom safe clearance. */
-  private mangaListBottomClearance(): number { return this.mangaFlowFooter() ? this.mangaBottomClearance() : 18; }
+  /** Keep the native viewport full height. The dock and its safe gap are paid
+   * once inside scroll content, alongside the catalog's existing 18vp tail. */
+  private mangaListBottomClearance(): number {
+    return this.mangaBottomClearance() + (this.mangaFlowFooter() ? 0 : 18);
+  }
+
+  private mangaFooterFrame(): SurfaceHorizontalFrame {
+    const frame = this.contentFrame();
+    // The approved catalog uses 18vp content and a 30vp light dock.
+    const inset = Math.min(visual.detailDockInset - 18, frame.width / 2);
+    return new SurfaceHorizontalFrame(frame.left + inset, frame.right + inset, Math.max(0, frame.width - inset * 2));
+  }
 
   private headerFrame(): SurfaceHorizontalFrame {
     const frame = this.contentFrame();
-    const expansion = visual.contentPaddingX - visual.headerInsetX;
-    return new SurfaceHorizontalFrame(Math.max(0, frame.left - expansion), Math.max(0, frame.right - expansion), frame.width + expansion * 2);
+    const metrics = ReaderWindowCoordinator.metrics();
+    const expansion = 18 - 8;
+    const left = Math.max(readerInteractiveSafeLeft(metrics), frame.left - expansion);
+    const right = Math.max(readerInteractiveSafeRight(metrics), frame.right - expansion);
+    return new SurfaceHorizontalFrame(left, right, frame.width + frame.left - left + frame.right - right);
   }
 
   private onMangaMetricsChanged(): void {
@@ -768,8 +800,7 @@ export struct BookDirectoryPage {
       rowHeight: 40,
       listPaddingX: 10,
       listPaddingY: 0,
-      contentStartInset: this.standardHeaderHeight + 5,
-      contentEndInset: this.bottomInset() + 5,
+      scrollLayout: this.standardDirectoryScrollLayout(),
       edgeEffectMode: EdgeEffect.Spring,
       scroller: this.listScroller,
       onFirstLayout: (): void => this.onListFirstLayout(identity),
@@ -963,7 +994,63 @@ export struct BookDirectoryPage {
     const width = this.viewportWidth > 0 ? this.viewportWidth :
       (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);
     return resolveHorizontalFrame(width, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics),
-      new SurfaceWidthSpec(this.contentKind === 'manga' ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET, 20, 20, 'center'));
+      new SurfaceWidthSpec(this.contentKind === 'manga' ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET,
+        this.contentKind === 'manga' ? 18 : 20,
+        this.contentKind === 'manga' ? 18 : 20, 'center'));
+  }
+
+  private standardMeasurementGeneration(): number {
+    return Math.max(0, this.readerWindowMetricsRevision);
+  }
+
+  private standardDirectoryScrollLayout(): ReaderScrollLayout {
+    return readerScrollLayout(this.standardGeometry(), { mode: 'contentOffset' });
+  }
+
+  private mangaDirectoryScrollLayout(): ReaderScrollLayout {
+    return new ReaderScrollLayout(0, Math.max(0, this.mangaListBottomClearance() - 18), 'contentOffset');
+  }
+
+  private standardFrameStyle(): ReaderFrameStyle {
+    const pageBackground = readerAppColor('app.window.background', this.appThemeScheme);
+    return readerFrameStyle({ backgroundColor: pageBackground,
+      headerBackground: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme),
+      footerBackground: pageBackground });
+  }
+
+  private mangaFrameStyle(): ReaderFrameStyle {
+    const pageBackground = mangaDirectoryColor('paper', this.appThemeScheme);
+    return readerFrameStyle({ backgroundColor: pageBackground, alignment: 'top',
+      headerBackground: pageBackground, headerTransparent: true, footerBackground: pageBackground });
+  }
+
+  private mangaPageGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.viewportWidth > 0 ? this.viewportWidth :
+      (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);
+    input.headerTop = this.topInset() + visual.headerSafeGap;
+    input.headerInsetLeft = this.headerFrame().left;
+    input.headerInsetRight = this.headerFrame().right;
+    input.footerInsetLeft = this.mangaFooterFrame().left;
+    input.footerInsetRight = this.mangaFooterFrame().right;
+    input.footerBottom = this.mangaBottomInset() + this.mangaFooterBottomOffset();
+    input.footerSurface = 'transparent';
+    return resolveReaderPageGeometry(input);
+  }
+
+  private standardGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.viewportWidth > 0 ? this.viewportWidth :
+      (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);
+    input.measurementRevision = this.standardMeasurementRevision;
+    input.headerHeight = this.standardMeasurements.read('bookDirectory:header', this.standardHeaderSpec.initialHeight());
+    input.contentGap = this.standardHeaderSpec.contentGap;
+    input.contentMaxWidth = TOK_CONTENT_MAX_W_TABLET;
+    input.contentHorizontalPadding = 20;
+    input.contentEndInset = this.bottomInset() + 5;
+    return resolveReaderPageGeometry(input);
   }
 
   private bottomInset(): number {

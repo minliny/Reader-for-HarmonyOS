@@ -1,5 +1,7 @@
 import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
+import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
 import { readerActionIcon } from '../common/ReaderActionIconResources';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
@@ -10,8 +12,10 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import { NoCoverCover } from './NoCoverCover';
 import { readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 
-const WIDE_BREAKPOINT = 600;
 const PHONE_GRID_WIDTH = 351;
 const PHONE_CARD_WIDTH = 97;
 const PHONE_COVER_HEIGHT = 145.44;
@@ -46,8 +50,8 @@ export struct BookshelfMultiSelectPage {
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
-  @State private removeBarHeight: number = 0;
-  @State private selectionHeaderHeight: number = readerPageContentStartInset();
+  @State private measurementRevision: number = 0;
+  private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -56,14 +60,27 @@ export struct BookshelfMultiSelectPage {
     }
   }
 
+  private frameStyle(): ReaderFrameStyle {
+    const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
+    return readerFrameStyle({ backgroundColor: pageBackground, headerBackground: pageBackground,
+      footerBackground: pageBackground });
+  }
+
   build() {
     ReaderPageScaffold({
-      variant: 'selection', headerKind: 'selection',
+      frameStyle: this.frameStyle(),
+      geometry: this.pageGeometry(),
+      headerMeasurementKey: this.measurementGeneration(),
+      footerMeasurementKey: this.measurementGeneration(),
       content: (): void => { this.selectionList(); },
       header: (): void => { this.selectionTopBar(); },
-      onHeaderHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.selectionHeaderHeight) > .1)
-          this.selectionHeaderHeight = height;
+      onHeaderHeightChange: (height: number, presentedKey: number): void => {
+        if (height > 0 && this.measurements.record('selection:header', height, presentedKey))
+          this.measurementRevision += 1;
+      },
+      onFooterHeightChange: (height: number): void => {
+        if (height > 0 && this.measurements.record('selection:footer', height, this.measurementGeneration()))
+          this.measurementRevision += 1;
       },
       footer: (): void => { this.removeBar(); },
     }).onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -99,8 +116,8 @@ export struct BookshelfMultiSelectPage {
     }
     .height('100%')
     .width('100%')
-    .contentStartOffset(this.selectionHeaderHeight + 12)
-    .contentEndOffset(this.removeBarClearance() + 20)
+    .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
+    .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .alignListItem(ListItemAlign.Center)
     .scrollBar(BarState.Off);
   }
@@ -244,15 +261,29 @@ export struct BookshelfMultiSelectPage {
     .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.backgroundColor.EBFFFCF8', this.appThemeScheme))
     .border({ width: { top: 1 }, color: readerAppColor('app.BookshelfMultiSelectPage.removeBar.color.FFC1C7CD', this.appThemeScheme) })
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .hitTestBehavior(HitTestMode.Transparent)
-    .onAreaChange((_old: Area, next: Area): void => {
-      const height = this.numericAreaLength(next.height);
-      if (height > 0 && Math.abs(height - this.removeBarHeight) > .1) { this.removeBarHeight = height; }
-    });
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private measurementGeneration(): number {
+    return Math.max(0, this.readerWindowMetricsRevision);
+  }
+
+  private scrollLayout(): ReaderScrollLayout {
+    return readerScrollLayout(this.pageGeometry(), { mode: 'contentOffset' });
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    const input = new ReaderPageGeometryInput(ReaderWindowCoordinator.metrics());
+    input.viewportWidth = this.liveWidth();
+    input.measurementRevision = this.measurementRevision;
+    input.headerHeight = this.measurements.read('selection:header', readerPageContentStartInset());
+    input.contentGap = 12;
+    input.contentEndInset = this.removeBarClearance() + 20;
+    return resolveReaderPageGeometry(input);
   }
 
   private removeBarClearance(): number {
-    return this.removeBarHeight > 0 ? this.removeBarHeight : 12 + 22 + 6 + 13.31 + this.bottomInset();
+    return this.measurements.read('selection:footer', 12 + 22 + 6 + 13.31 + this.bottomInset());
   }
 
   private reconcileSelection(): void {
@@ -373,7 +404,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private isWide(): boolean {
-    return this.liveWidth() >= WIDE_BREAKPOINT;
+    return readerIsExpandedWidth(this.liveWidth());
   }
 
   private liveWidth(): number {

@@ -3,6 +3,9 @@ import { mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } f
 import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../common/ReaderTypography';
 import type { JsonObject } from '@reader/core-harmony';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { motionAnimateParam } from '../common/MotionSpec';
+import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600 } from '../common/ReaderFontFamilies';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -259,8 +262,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop listPaddingX: number = 10;
   @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 5;
-  @Prop contentStartInset: number = 0;
-  @Prop contentEndInset: number = 0;
+  @Prop scrollLayout: ReaderScrollLayout = new ReaderScrollLayout(0, 0, 'contentOffset');
   @Prop listPaddingTop: number = -1;
   @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
@@ -804,11 +806,12 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private mangaContentStartOffset(): number {
-    return Math.max(0, this.contentStartInset) + Math.max(0, this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY);
+    return Math.max(0, this.scrollLayout.startInset) +
+      Math.max(0, this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY);
   }
 
   private mangaContentEndOffset(): number {
-    return Math.max(0, this.contentEndInset) + (this.mangaCatalogDisplay ? 18 :
+    return Math.max(0, this.scrollLayout.endInset) + (this.mangaCatalogDisplay ? 18 :
       Math.max(0, this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) +
       (this.mangaQuickDisplay ? MANGA_DIRECTORY_VISUAL.quickScrollBottom : 0));
   }
@@ -955,22 +958,29 @@ export struct ReaderDirectoryNavigationList {
   }
 
   @Builder
-  private mangaEmptyState() {
-    Column({ space: MANGA_DIRECTORY_VISUAL.quietEmptyGap }) {
-      Text(this.mangaSearchActive ? '没有匹配的章节' : '暂无章节信息').width('100%')
-        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
+  private mangaEmptyActions(viewId: string) {
+    if (this.mangaSearchActive) {
+      Text('清除搜索').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
         .fontSize(MANGA_DIRECTORY_VISUAL.quietEmptyFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.quietEmptyLineHeight)
         .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
-        .fontColor(this.mangaColor('muted')).textAlign(TextAlign.Center);
-      if (this.mangaSearchActive) {
-        Text('清除搜索').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
-          .fontSize(MANGA_DIRECTORY_VISUAL.quietEmptyFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.quietEmptyLineHeight)
-          .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
-          .constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyClearHeight })
-          .fontColor(this.mangaColor('accent')).textAlign(TextAlign.Center).enabled(this.interactionEnabled)
-          .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
-          .onClick((): void => { if (this.interactionEnabled && this.mangaSearchActive) this.onClearSearch(); });
-      }
+        .constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyClearHeight })
+        .fontColor(this.mangaColor('accent')).textAlign(TextAlign.Center).enabled(this.interactionEnabled)
+        .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
+        .onClick((): void => {
+          if (this.mounted && this.interactionEnabled && this.mangaSearchActive &&
+            viewId === this.view.viewId && this.dataSource.currentView()?.viewId === viewId) this.onClearSearch();
+        });
+    }
+  }
+
+  @Builder
+  private mangaEmptyState() {
+    Column({ space: MANGA_DIRECTORY_VISUAL.quietEmptyGap }) {
+      ForEach([this.view.viewId], (viewId: string): void => {
+        ReaderPageState({ message: this.mangaSearchActive ? '没有匹配的章节' : '暂无章节信息',
+          padded: false, mutedColor: this.mangaColor('muted'), customActions: true,
+          actionContent: (): void => this.mangaEmptyActions(viewId) });
+      }, (viewId: string): string => viewId);
     }.width('100%').constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyMinHeight })
       .padding({ top: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingY, bottom: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingY,
         left: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingX, right: MANGA_DIRECTORY_VISUAL.quietEmptyPaddingX })
@@ -1078,7 +1088,7 @@ export struct ReaderDirectoryNavigationList {
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(MANGA_DIRECTORY_VISUAL.groupIconSize).height(MANGA_DIRECTORY_VISUAL.groupIconSize)
             .rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
-            .animation({ duration: MANGA_DIRECTORY_VISUAL.foldDuration, curve: 'ease' });
+            .animation(motionAnimateParam('manga.directory.fold'));
         }.width(32).height(32).margin({ left: 8, right: 8 })
           .enabled(this.interactionEnabled && !this.mangaSearchActive)
           .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && !this.mangaSearchActive, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
@@ -1162,7 +1172,7 @@ export struct ReaderDirectoryNavigationList {
           Image((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ?
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(16).height(16).rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
-            .animation({ duration: MANGA_DIRECTORY_VISUAL.foldDuration, curve: 'ease' })
+            .animation(motionAnimateParam('manga.directory.fold'))
             .accessibilityText(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`)
             .onClick((): void => this.toggleMangaRow(item));
         } else if (item.node.kind === 'target' && this.isCurrentMangaNode(item)) {
@@ -1290,7 +1300,7 @@ export struct ReaderDirectoryNavigationList {
         .padding({ left: this.listPaddingX, right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
           top: 0, bottom: 0 })
         .contentStartOffset(this.mangaContentStartOffset()).contentEndOffset(this.mangaContentEndOffset())
-        .scrollBar(BarState.Auto).scrollBarWidth(MANGA_DIRECTORY_VISUAL.scrollbarWidth).scrollBarColor('#47000000').edgeEffect(this.edgeEffectMode)
+        .scrollBar(BarState.Auto).scrollBarWidth(MANGA_DIRECTORY_VISUAL.scrollbarWidth).scrollBarColor(this.mangaColor('scrollbar')).edgeEffect(this.edgeEffectMode)
         .enableScrollInteraction(this.interactionEnabled).cachedCount(4)
         .onWillStartDragging((): void => {
           this.mangaDragging = true;
@@ -1326,12 +1336,15 @@ export struct ReaderDirectoryNavigationList {
     .padding({ left: this.listPaddingX, right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
       top: this.mangaDisplay ? 0 : this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY,
       bottom: this.mangaDisplay ? 0 : this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY })
-    .contentStartOffset(this.mangaDisplay ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : this.contentStartInset)
+    .contentStartOffset(this.mangaDisplay ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) :
+      readerScrollStartOffset(this.scrollLayout))
     .contentEndOffset(this.mangaDisplay ? this.mangaCatalogDisplay ? 18 :
-      (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) + (this.mangaQuickDisplay ? MANGA_DIRECTORY_VISUAL.quickScrollBottom : 0) : this.contentEndInset)
+      (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) +
+      (this.mangaQuickDisplay ? MANGA_DIRECTORY_VISUAL.quickScrollBottom : 0) :
+      readerScrollEndOffset(this.scrollLayout))
     .scrollBar(this.mangaDisplay ? BarState.Auto : BarState.Off)
     .scrollBarWidth(this.mangaDisplay ? MANGA_DIRECTORY_VISUAL.scrollbarWidth : undefined)
-    .scrollBarColor(this.mangaDisplay ? '#47000000' : undefined).edgeEffect(this.edgeEffectMode)
+    .scrollBarColor(this.mangaDisplay ? this.mangaColor('scrollbar') : undefined).edgeEffect(this.edgeEffectMode)
     .enableScrollInteraction(this.interactionEnabled)
     .cachedCount(4)
     .onWillStartDragging((): void => {

@@ -1,4 +1,4 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
@@ -7,16 +7,21 @@ import { ReaderFixedHeaderHost } from '../common/ReaderFixedHeaderHost';
 import { AppTopBar } from '../common/AppTopBar';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import { BookshelfMoreMenu } from './BookshelfMoreMenu';
+import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { BookshelfMoreActionSheet } from './BookshelfMoreActionSheet';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { readerScrimmedOpaqueColor } from '../common/ReaderScrimColor';
+import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
+import { SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
+import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
-import { readerPageInitialHeaderHeight, readerPageAreaLength } from '../common/ReaderPageShell';
+import { bookshelfHeaderSpec } from '../common/ReaderHeaderSpecs';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 
-export const BOOKSHELF_WIDE_BREAKPOINT = 600;
 let bookshelfTemporaryGeneration: number = 0;
 
 // Index mounts this shell once for the bookshelf route. Core readiness only
-// changes the content slot, preserving the title, navigation and menu anchor.
+// changes the content slot, preserving the title, navigation and sheet owner.
 @Component
 export struct BookshelfShell {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
@@ -25,7 +30,7 @@ export struct BookshelfShell {
   @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @Prop recoveryBusy: boolean = false;
   @Prop @Watch('onReadRecoveryChanged') readRecovery: ReaderRecoveryView | undefined = undefined;
-  onNoticeHeightChange: (height: number) => void = (_height: number): void => {};
+  onNoticeHeightChange: (height: number, generation?: number) => void = (_height: number, _generation?: number): void => {};
   private noticeHeight: number = 0;
   onRetryRead: (generation: number, navigation?: number) => void = (_generation: number): void => {};
   onReconcile: (generation: number, navigation?: number) => void = (_generation: number): void => {};
@@ -43,26 +48,27 @@ export struct BookshelfShell {
   @Prop updateProgressTotal: number = 0;
   onSearchRequested: (generation?: number) => void = (_generation?: number): void => {};
   onImportRequested: () => void = (): void => {};
-  onBatchManageRequested: () => void = (): void => {};
-  onBookshelfSettingsRequested: () => void = (): void => {};
-  onDownloadsRequested: () => void = (): void => {};
-  onCheckUpdatesRequested: () => void = (): void => {};
+  onBatchManageRequested: (generation?: number) => void = (_generation?: number): void => {};
+  onBookshelfSettingsRequested: (generation?: number) => void = (_generation?: number): void => {};
+  onDownloadsRequested: (generation?: number) => void = (_generation?: number): void => {};
+  onCheckUpdatesRequested: (generation?: number) => void = (_generation?: number): void => {};
   onMainTab: (key: string, presentedNavigation?: number) => void = (_key: string): void => {};
   @BuilderParam content: () => void;
-  onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
-  @State private headerHeight: number = readerPageInitialHeaderHeight('bookshelf');
+  /** Presented header bottom (top + measured height), owned by the route. */
+  @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;
+  onHeaderHeightChange: (height: number, generation?: number) => void = (_height: number, _generation?: number): void => {};
   @State private viewportWidth: number = 0;
   @State private moreMenuVisible: boolean = false;
   private moreSelectionId: string = '';
+  private moreSheetCurrentId: string = '';
+  private moreSheetNavigation: number = 0;
+  private moreSheetAppearedId: string = '';
+  private moreSheetChromeId: string = '';
   private mounted: boolean = false;
   private temporaryBackIdentity: string = '';
   private temporaryBackGeneration: number = 0;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number) => void =
     (_handler: (() => boolean) | undefined, _identity: string, _generation?: number): void => {};
-  @State private moreAnchorRight: number = 0;
-  @State private moreAnchorBottom: number = 0;
-  @State private overlayOriginX: number = 0;
-  @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -76,8 +82,9 @@ export struct BookshelfShell {
     this.transientFeedback.reset();
     const identity = this.temporaryBackIdentity;
     const generation = this.temporaryBackGeneration;
+    this.releaseMoreSheetChrome(this.moreSheetCurrentId);
     this.mounted = false;
-    this.onNoticeHeightChange(0);
+    this.onNoticeHeightChange(0, this.navigationGeneration);
     this.temporaryBackIdentity = '';
     this.dismissMoreMenu();
     this.onTemporaryBackBridge(undefined, identity, generation);
@@ -108,52 +115,123 @@ export struct BookshelfShell {
   }
 
   private dismissMoreMenu(): void {
+    this.releaseMoreSheetChrome(this.moreSheetCurrentId);
     this.moreMenuVisible = false;
     this.moreSelectionId = '';
   }
 
   private moreOpenAction(identity: string): () => void {
     return (): void => {
-      if (!this.mounted || identity !== this.temporaryBackIdentity || this.moreMenuVisible) return;
+      if (!this.mounted || identity !== this.temporaryBackIdentity || this.moreMenuVisible || this.moreSheetCurrentId.length > 0) return;
       this.moreSelectionId = `bookshelf-more:${++bookshelfTemporaryGeneration}`;
+      this.moreSheetCurrentId = this.moreSelectionId;
+      this.moreSheetNavigation = this.navigationGeneration;
+      this.moreSheetAppearedId = '';
       this.moreMenuVisible = true;
     };
   }
 
-  private moreIntentAction(identity: string, action: () => void): () => void {
+  private isCurrentMoreSheet(presentationId: string): boolean {
+    return this.mounted && presentationId.length > 0 && presentationId === this.moreSheetCurrentId &&
+      this.moreSheetNavigation === this.navigationGeneration;
+  }
+
+  private releaseMoreSheetChrome(presentationId: string): void {
+    if (!this.mounted || presentationId.length === 0 || presentationId !== this.moreSheetChromeId) return;
+    this.moreSheetChromeId = '';
+    ReaderWindowCoordinator.requestAppChrome();
+  }
+
+  private claimMoreSheetChrome(presentationId: string): void {
+    if (!this.isCurrentMoreSheet(presentationId)) return;
+    const spec = this.moreSheetSpec();
+    const mask = readerAppColor(spec.hostMaskRole, this.appThemeScheme);
+    const paper = readerScrimmedOpaqueColor(readerAppColor('app.window.background', this.appThemeScheme), mask);
+    const ink = readerScrimmedOpaqueColor(readerAppColor('app.window.foreground', this.appThemeScheme), mask);
+    const style = new ReaderWindowChromeStyle(paper, this.appThemeScheme === 'night' ? 'light' : 'dark', ink);
+    style.navigationUnderlayColor = readerAppColor(spec.hostBackgroundRole, this.appThemeScheme);
+    style.navigationContentColor = readerAppColor('app.window.foreground', this.appThemeScheme);
+    this.moreSheetChromeId = presentationId;
+    ReaderWindowCoordinator.requestOverlayChrome(style);
+  }
+
+  private moreSheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
+
+  private moreSheetWidth(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(this.moreSheetSpec().maxWidth)).width;
+  }
+
+  private moreSheetOptions(presentationId: string = this.moreSheetCurrentId): SheetOptions {
+    const spec = this.moreSheetSpec();
+    return {
+      height: SheetSize.FIT_CONTENT,
+      width: this.moreSheetWidth(),
+      preferType: SheetType.BOTTOM,
+      dragBar: false,
+      showClose: false,
+      backgroundColor: readerAppColor(spec.hostBackgroundRole, this.appThemeScheme),
+      radius: { topLeft: spec.borderRadius, topRight: spec.borderRadius, bottomLeft: 0, bottomRight: 0 },
+      maskColor: readerAppColor(spec.hostMaskRole, this.appThemeScheme),
+      shadow: { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 },
+      enableOutsideInteractive: false,
+      onWillAppear: (): void => this.claimMoreSheetChrome(presentationId),
+      onAppear: (): void => { if (this.isCurrentMoreSheet(presentationId)) this.moreSheetAppearedId = presentationId; },
+      onWillDismiss: (dismissal: DismissSheetAction): void => {
+        if (!this.isCurrentMoreSheet(presentationId)) return;
+        if (dismissal.reason !== DismissReason.PRESS_BACK && this.moreSheetAppearedId !== presentationId) return;
+        this.releaseMoreSheetChrome(presentationId);
+        this.dismissMoreMenu();
+        dismissal.dismiss();
+      },
+      onDisappear: (): void => this.finishMoreSheet(presentationId),
+    };
+  }
+
+  private finishMoreSheet(presentationId: string): void {
+    if (presentationId.length === 0 || presentationId !== this.moreSheetCurrentId) return;
+    this.releaseMoreSheetChrome(presentationId);
+    this.moreSheetCurrentId = '';
+    this.moreSheetNavigation = 0;
+    this.moreSheetAppearedId = '';
+  }
+
+  private moreIntentAction(identity: string, action: (generation: number) => void): () => void {
+    const generation = this.navigationGeneration;
     return (): void => {
-      if (!this.mounted || !this.moreMenuVisible || identity.length === 0 || identity !== this.moreSelectionId) return;
-      action();
+      if (!this.mounted || generation !== this.navigationGeneration || !this.moreMenuVisible ||
+        identity.length === 0 || identity !== this.moreSelectionId) return;
+      action(generation);
     };
   }
 
   build() {
-    MainTabShell({
-      activeTab: 'bookshelf', headerKind: 'floating', navigationGeneration: this.navigationGeneration,
-      showBottomNav: this.showBottomNav(), showTabletRail: !this.showBottomNav(), railVariant: 'bookshelf',
-      headerTop: 8,
-      headerInsetLeft: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
-      headerInsetRight: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())),
-      onMainTab: (key: string, generation?: number): void => this.requestMainTab(key, generation ?? this.navigationGeneration),
-      content: (): void => { this.content(); },
-      header: (): void => { this.shellHeader(); },
-      overlayContent: (): void => { this.shellOverlay(); },
-      onHeaderHeightChange: (height: number): void => {
-        const totalHeight = height;
-        if (Number.isFinite(totalHeight) && totalHeight > 0) {
-          if (Math.abs(totalHeight - this.headerHeight) > .1) this.headerHeight = totalHeight;
-          this.onHeaderHeightChange(totalHeight);
-        }
-      },
-    })
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        const width = this.numericAreaLength(newValue.width);
-        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-          this.viewportWidth = width;
-        }
-        this.overlayOriginX = readerPageAreaLength(newValue.globalPosition.x);
-        this.overlayOriginY = readerPageAreaLength(newValue.globalPosition.y);
-      });
+    Stack({ alignContent: Alignment.TopStart }) {
+      MainTabShell({
+        activeTab: 'bookshelf', headerKind: 'floating', navigationGeneration: this.navigationGeneration,
+        showBottomNav: this.showBottomNav(), showTabletRail: !this.showBottomNav(), railVariant: 'bookshelf',
+        headerTop: bookshelfHeaderSpec().topInset, headerMeasurementKey: this.navigationGeneration,
+        headerInsetLeft: Math.max(8, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
+        headerInsetRight: Math.max(8, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())),
+        onMainTab: (key: string, generation?: number): void => this.requestMainTab(key, generation ?? this.navigationGeneration),
+        content: (): void => { this.content(); },
+        header: (): void => { this.shellHeader(); },
+        overlayContent: (): void => { this.shellOverlay(); },
+        onHeaderHeightChange: (height: number, presentedKey?: number): void => {
+          if (!this.mounted || presentedKey !== this.navigationGeneration) return;
+          if (Number.isFinite(height) && height > 0) this.onHeaderHeightChange(height, presentedKey);
+        },
+      })
+        .onAreaChange((_oldValue: Area, newValue: Area): void => {
+          const width = this.numericAreaLength(newValue.width);
+          if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+            this.viewportWidth = width;
+          }
+        });
+    }
+    .width('100%').height('100%')
+    .bindSheet(this.moreMenuVisible, this.moreSheetContent, this.moreSheetOptions());
   }
 
   @Builder
@@ -168,46 +246,57 @@ export struct BookshelfShell {
     if (this.recovery.visible) {
       Column() {
         Column() { this.recoveryNoticeContent(this.recovery, false); }.width('100%')
-          .onAreaChange((_old: Area, area: Area): void => {
-            const height = this.numericAreaLength(area.height);
-            if (this.mounted && this.recovery.visible && Math.abs(height - this.noticeHeight) > .1) {
-              this.noticeHeight = height; this.onNoticeHeightChange(height);
-            }
-          });
+          .onAreaChange(this.noticeHeightHandler());
       }.width('100%')
-        .padding({ left: 17, right: 17, top: this.headerHeight + 14 })
+        .padding({ left: 17, right: 17, top: this.headerBottom + bookshelfHeaderSpec().contentGap })
         .hitTestBehavior(HitTestMode.Transparent);
     }
-    if (this.moreMenuVisible) {
-      BookshelfMoreMenu({
-        anchorRight: this.moreAnchorRight - this.overlayOriginX,
-        anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
-        reduceMotion: this.reduceMotion,
+  }
+
+  @Builder
+  private moreSheetContent() {
+    ForEach([this.moreSheetCurrentId], (presentationId: string): void => {
+      BookshelfMoreActionSheet({
+        presentationId,
         canCheckUpdates: this.canCheckUpdates,
         updateRunning: this.updateRunning,
         backgroundUpdateRunning: this.backgroundUpdateRunning,
-        updateProgressDone: this.updateProgressDone,
-        updateProgressTotal: this.updateProgressTotal,
-        onCheckUpdates: this.moreIntentAction(this.moreSelectionId, (): void => this.requestCheckUpdates()),
-        onBatchManage: this.moreIntentAction(this.moreSelectionId, (): void => {
+        isCurrent: (candidate: string): boolean => this.isCurrentMoreSheet(candidate),
+        onCheckUpdates: this.moreIntentAction(presentationId, (generation: number): void => {
+          this.requestCheckUpdates(generation);
           this.dismissMoreMenu();
-          this.onBatchManageRequested();
         }),
-        onLocalImport: this.moreIntentAction(this.moreSelectionId, (): void => {
+        onBatchManage: this.moreIntentAction(presentationId, (generation: number): void => {
+          this.dismissMoreMenu();
+          this.onBatchManageRequested(generation);
+        }),
+        onLocalImport: this.moreIntentAction(presentationId, (): void => {
           this.dismissMoreMenu();
           this.onImportRequested();
         }),
-        onBookshelfSettings: this.moreIntentAction(this.moreSelectionId, (): void => {
+        onBookshelfSettings: this.moreIntentAction(presentationId, (generation: number): void => {
           this.dismissMoreMenu();
-          this.onBookshelfSettingsRequested();
+          this.onBookshelfSettingsRequested(generation);
         }),
-        onDownloadsRequested: this.moreIntentAction(this.moreSelectionId, (): void => {
+        onDownloadsRequested: this.moreIntentAction(presentationId, (generation: number): void => {
           this.dismissMoreMenu();
-          this.onDownloadsRequested();
+          this.onDownloadsRequested(generation);
         }),
-        onDismiss: this.moreIntentAction(this.moreSelectionId, (): void => this.dismissMoreMenu()),
       });
-    }
+    }, (presentationId: string): string => `bookshelf-more-sheet:${presentationId}`);
+  }
+
+  private noticeHeightHandler(): (_old: Area, area: Area) => void {
+    const navigation = this.navigationGeneration;
+    const recoveryGeneration = this.recovery.generation;
+    return (_old: Area, area: Area): void => {
+      if (!this.mounted || navigation !== this.navigationGeneration || !this.recovery.visible ||
+        recoveryGeneration !== this.recovery.generation) return;
+      const height = this.numericAreaLength(area.height);
+      if (Math.abs(height - this.noticeHeight) > .1) {
+        this.noticeHeight = height; this.onNoticeHeightChange(height, navigation);
+      }
+    };
   }
 
   @Builder
@@ -230,7 +319,7 @@ export struct BookshelfShell {
   }
 
   private onRecoveryChanged(): void {
-    if (!this.recovery.visible) { this.noticeHeight = 0; this.onNoticeHeightChange(0); }
+    if (!this.recovery.visible) { this.noticeHeight = 0; this.onNoticeHeightChange(0, this.navigationGeneration); }
   }
   private lastReadFeedback: string = '';
   private onReadRecoveryChanged(): void {
@@ -238,7 +327,7 @@ export struct BookshelfShell {
     if (view?.visible !== true) { this.lastReadFeedback = ''; return; }
     if (!this.mounted || !this.feedbackEnabled || !this.populated || view.message === this.lastReadFeedback) return;
     this.lastReadFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted && this.feedbackEnabled && this.populated); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.feedbackEnabled && this.populated); } catch (_) {}
   }
 
   @Builder
@@ -254,10 +343,6 @@ export struct BookshelfShell {
           accessibilityLabel: '更多',
           onTap: this.moreOpenAction(this.temporaryBackIdentity),
         })
-          .onAreaChange((_oldValue: Area, newValue: Area): void => {
-            this.moreAnchorRight = readerPageAreaLength(newValue.globalPosition.x) + readerPageAreaLength(newValue.width);
-            this.moreAnchorBottom = readerPageAreaLength(newValue.globalPosition.y) + readerPageAreaLength(newValue.height);
-          });
       }
     }, (generation: number): string => generation.toString());
   }
@@ -267,10 +352,10 @@ export struct BookshelfShell {
     this.onMainTab(key, generation);
   }
 
-  private requestCheckUpdates(): void {
-    if (!this.canCheckUpdates || this.updateRunning || this.backgroundUpdateRunning) return;
-    this.dismissMoreMenu();
-    this.onCheckUpdatesRequested();
+  private requestCheckUpdates(generation: number = this.navigationGeneration): void {
+    if (!this.mounted || generation !== this.navigationGeneration || !this.canCheckUpdates ||
+      this.updateRunning || this.backgroundUpdateRunning) return;
+    this.onCheckUpdatesRequested(generation);
   }
 
   private numericAreaLength(value: Length): number {
@@ -288,6 +373,6 @@ export struct BookshelfShell {
     const width = this.viewportWidth > 0 ? this.viewportWidth : ReaderWindowCoordinator.metrics().windowRect.width;
     // Only the populated shelf has an approved tablet rail. Other states
     // retain the existing phone navigation assembly at larger widths.
-    return width < BOOKSHELF_WIDE_BREAKPOINT;
+    return !readerIsExpandedWidth(width);
   }
 }

@@ -11,6 +11,8 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_APP_HOME_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from './ReaderFontFamilies.ts';
+import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from './ReaderHeaderMetrics';
+import { readerScaledBarHeight } from './ReaderSurfaceResolvers';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
 // 内边距、29px 思源宋体粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
@@ -36,6 +38,13 @@ export struct AppTopBar {
   onLeadingTap: () => void = (): void => {};
   /** 可选尾部槽 (图标钮簇);未传时不渲染。 */
   @BuilderParam trailing?: () => void;
+
+  private barHeight(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return this.floating
+      ? readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, scale, 0)
+      : readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_APP_HOME_TITLE.lineHeightFp as number, scale, 6);
+  }
 
   build() {
     Row() {
@@ -90,8 +99,8 @@ export struct AppTopBar {
       }
     }
     .width('100%')
-    .height(this.floating ? 52 : 58)
-    .padding({ left: this.floating ? 4 : this.leftInset(), right: this.floating ? 4 : this.rightInset(), top: this.floating ? 0 : 6 })
+    .constraintSize({ minHeight: this.barHeight() })
+    .padding({ left: this.floating ? 9 : this.leftInset(), right: this.floating ? 9 : this.rightInset(), top: this.floating ? 0 : 6 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.floating ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : this.surface === 'solid' ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
     .border({ width: this.floating ? 1 : { bottom: this.divider ? 1 : 0 },

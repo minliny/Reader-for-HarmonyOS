@@ -1,4 +1,5 @@
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from './ReaderDirectoryDataSnapshot';
 
 class DirectoryListDataSource implements IDataSource {
@@ -40,8 +41,7 @@ export struct ReaderDirectoryList {
   @Prop listPaddingX: number = 0;
   @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 0;
-  @Prop contentStartInset: number = 0;
-  @Prop contentEndInset: number = 0;
+  @Prop scrollLayout: ReaderScrollLayout = new ReaderScrollLayout(0, 0, 'contentOffset');
   @Prop listPaddingTop: number = -1;
   @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
@@ -179,8 +179,10 @@ export struct ReaderDirectoryList {
     })
     // Publish one pair: text keeps the parent's overlay clearance, while
     // natural manga rows carry their own padding inside the scroll content.
-    .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : this.contentStartInset)
-    .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : this.contentEndInset)
+    .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) :
+      readerScrollStartOffset(this.scrollLayout))
+    .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) :
+      readerScrollEndOffset(this.scrollLayout))
     .scrollBar(this.naturalRowHeight ? BarState.Auto : BarState.Off)
     .scrollBarWidth(this.naturalRowHeight ? 4 : undefined)
     .scrollBarColor(this.naturalRowHeight ? '#47000000' : undefined)
