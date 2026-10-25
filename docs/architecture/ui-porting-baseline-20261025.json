@@ -1,0 +1,839 @@
+{
+  "schemaVersion": 1,
+  "kind": "reader-ui-porting-baseline",
+  "status": "provisional-dirty",
+  "asOf": "2026-10-25T16:07:45Z",
+  "scope": "Page geometry, measurement, dynamic surface/control sizing, window-capability layout, motion registration (including non-ArkUI clocks), message windows, and reduceMotion ownership for the structural porting baseline. The Harmony-native animation worktree is excluded. This is not a whole-app or whole-repository baseline.",
+  "baseline": {
+    "repository": "Reader-for-HarmonyOS",
+    "branch": "main",
+    "commit": "6b1bd7534b61a8ebfac10150fd308eae8430606e",
+    "commitDate": "2026-10-20 23:22:37 +0800",
+    "commitSubject": "docs: consolidate committed cross-platform UI reference",
+    "dirty": true,
+    "dirtyStateObserved": {
+      "modified": 217,
+      "deleted": 828,
+      "untracked": 135,
+      "totalEntries": 1179
+    },
+    "stable": false,
+    "reason": "The structural/UI consolidation is uncommitted and the tree is being changed by parallel work. File SHA-256 fingerprints below define this provisional snapshot; the commit alone does not."
+  },
+  "routes": {
+    "portingBaseline": {
+      "path": "Reader-for-HarmonyOS",
+      "branch": "main",
+      "role": "Structural/UI optimization route and the source of truth for other platforms.",
+      "allowedWork": "Structure, geometry ownership, and non-Harmony-specific UI adaptation."
+    },
+    "harmonyMotionWorktree": {
+      "path": ".worktrees/library-search-morph",
+      "branch": "codex/library-search-morph",
+      "role": "Unfinished Harmony-native animation route.",
+      "notAPortingSource": true,
+      "headCommit": "6b1bd7534b61a8ebfac10150fd308eae8430606e",
+      "dirtyEntriesObserved": 1142,
+      "completedEffectAvailableForPorting": false,
+      "allowedWork": "Effect-only development. Do not merge its BookshelfShell, SearchPage, Index, or scaffold copies wholesale.",
+      "integrationRule": "Rebase completed effects onto the baseline and consume baseline geometry; effects must not own header height, history viewport, results top, insets, or clearance.",
+      "integrationStatus": "BLOCKED",
+      "integrationReason": "The route is unfinished and has no commit beyond the baseline commit; its search parity audit states that the current search implementation is not a qualified solution. No effect has been presented as completed and accepted for porting.",
+      "integrationEvidence": {
+        "path": ".worktrees/library-search-morph/docs/issues/search-demo-parity-audit-20261025.md",
+        "workspaceRelative": true
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/common/ReaderHeaderMetrics.ts",
+      "sha256": "7521e3c1d0d63cd35a95dd9c43dab595d03241beff651c7173a43993f4dcaaa1",
+      "role": "Single owner of app bar heights and the floating-header top gap."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderHeaderSpecs.ets",
+      "sha256": "504b1a7e5fdf65c37de6b179b5d5dd7fb60e2f60788d7b1b00355e6e1e58df0a",
+      "role": "Single owner of bookshelf, detail, directory, and search header geometry plus the pure fallbacks."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/AppTopBar.ets",
+      "sha256": "50ace356ec8d6f7a83bfcc651e958671d3f3775fdd2221dfcf85f3ca40d6bf88",
+      "role": "App bar consumer of APP_* heights through readerScaledBarHeight; no local bar-height literal."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "sha256": "d8c6c0ea16cd761d8c17b92c1d6d4c0783568b1a31d8c61a1c4c91f265c91fbe",
+      "role": "Secondary-page back bar; consumes APP_* heights through readerScaledBarHeight for font-scaled bars."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "sha256": "6bba5c4a2f8299a3c356523ec106d2d42875f529979d1a5597f33d89f65870ef",
+      "role": "Local content-start fallback, the shared standard-page 8vp content gap, and the headerTop-inclusive receipt helper."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderStandardPage.ets",
+      "sha256": "8a72c01722779dd170ac1c0c8c1841c7f23718e88072815738786ce5d4318584",
+      "role": "Standard-page host: measurement store feeds ReaderPageGeometry, and the resolved content.startInset is forwarded to overlays."
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets",
+      "sha256": "70e784a8c95f60f907c07df2d8b8c8e6f006c883ba293bef15c0c0944f0620af",
+      "role": "Preview host consumes the shared standard-page geometry instead of local 58/8 literals."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderTokens.ets",
+      "sha256": "040889752658f2060da49079b7fce61e0b3277a8cc5357d82da10b02c4b8b1ad",
+      "role": "Shared TOK_BORDER_W token used by the search panel border."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/MotionSpec.ets",
+      "sha256": "e721a60918e2a17a5fd82fdded46f038c0a5389b38d78bd25fd8b7304a645fc8",
+      "role": "Single registry for reader, dropdown, bookshelf, source-switch, manga, search, and message motion durations/curves plus panel actor fromY/delay."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderMotionPolicy.ets",
+      "sha256": "737617618c6059ad76e7d1a80b53df1a49f245e3b0a6c013af605a5f2d99b8bd",
+      "role": "Single reduceMotion entry: storage key, registered duration, AnimateParam, and curve reads."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPanelMotionContract.ts",
+      "sha256": "649f39f60d54df73b377bd25e9d302a18304b4c7769472077dc66b0aa725caf8",
+      "role": "Panel-specific actor fromY/delay contract; MotionSpec keeps only duration/curve/reduceMotion."
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalImportMotion.ts",
+      "sha256": "2f482f54c0dc3158907ac40e513a856a9b6ee5ee27c9f80394a49f05d0c405ad",
+      "role": "Local import handoff delay owner; duration/curve remain in MotionSpec."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderTransientFeedback.ts",
+      "sha256": "ed2600df476922ac32269a60cdb4b134440d79279039a83d6b064dd01d508f3f",
+      "role": "Message-framework owner of the brief/extended display windows and dedupe window; category, host, and lifecycle unchanged."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSessionLaunchTimeline.ts",
+      "sha256": "4a4c488fd97580da9e4628d4aae0c6419b169f54095950ba16f41b5fc5d32b68",
+      "role": "Registered owner of the non-ArkUI 3500ms launch beat sheet, phase boundaries, dot size, and pause gap."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsWaveformModel.ts",
+      "sha256": "218fb1d1d76ced0389e9432180a6c5e0df319b21481ccf7c2f208a21abd4bf45",
+      "role": "Registered owner of the decorative TTS waveform clock (height/color/tail/cycle/stagger)."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderLayoutCapability.ts",
+      "sha256": "1b5e7b05680e475e3dd47d825c679bbb07440f2c64ff26cf620aca29b827feea",
+      "role": "Layout capability from window facts; device type never decides layout."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderFrameStyle.ts",
+      "sha256": "b6e0c159270f6698f0b2a0a855edf99e92b77d304749c69773ebaf453ca18c59",
+      "role": "Feature-resolved frame visual policy; Scaffold consumes background/clip/alignment/safeArea/header/footer without route enums."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderScrollLayout.ts",
+      "sha256": "176469f1e93a6b10a5c4fdb7ce95aed945d79f4990d1b9ea5ebe24a9558ba4f5",
+      "role": "Unified scroll start/end inset contract with padding and contentOffset modes."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageScrollHost.ets",
+      "sha256": "ea349f80162577f18a70bcf4f133890fa5ce11c7c9b4f8692719edc15648f44b",
+      "role": "Thin standard-page Scroll host; applies vertical layout insets only."
+    },
+    {
+      "path": "docs/architecture/fixed-size-policy-20261025.json",
+      "sha256": "5a3660526f6b50db5df2ff3835158afd7bb2ab9edecbc72de5ff947b1e4396f7",
+      "role": "Classification audit for all 212 numeric heights across nine feature files (TTS, ControlTTS, reading control/appearance, search, RSS, manga, full directory, directory navigation); content text is dynamic and every other height is categorized."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts",
+      "sha256": "2c15d00a7c3afe42fe54416c1eedd6d1f25dd63dafe9d5f45250d04d7de4b0ce",
+      "role": "Control spatial sampling plus named MR1 composition coefficients and endpoints."
+    },
+    {
+      "path": "scripts/check-ui-parameter-matrix.mjs",
+      "sha256": "5ed70fae2e4079b316a56e96c7875dc53791dba4a2c51d9ecd48134627d67ee5",
+      "role": "Explicit pure-function scenario matrix over production TS modules."
+    },
+    {
+      "path": "scripts/reader-ts-module-loader.mjs",
+      "sha256": "7f88422b4aac4f9ba135e5fcbb96b43814ddda883013dd8b28990a9d5caf99c8",
+      "role": "Node-only extensionless TS resolver for the explicit matrix; never used by the DevEco build."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ProductMotionTiming.ts",
+      "sha256": "5c33327205737b6ec694fa5fa44f009d34f38dbbdb43025eee1ecee02d94a9a8",
+      "role": "Product control timings and physical page-settlement bounds; no second tween clock."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageGeometry.ts",
+      "sha256": "c2da7610b0ffe7c0a7f2cf5fefa35c17857c19778091605fcee32920edd5b96a",
+      "role": "Single page geometry input/resolver for header, footer, content insets, frame, and width class."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderMeasurements.ts",
+      "sha256": "071102bc50c3645dd5b8582e27c5bad44660bfa5c5834f9bafeaacd2b10c20a7",
+      "role": "Generation- and epsilon-guarded measured-height receipts keyed by route:surface."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderWidthClass.ts",
+      "sha256": "475234d3f3240b2013b2663afb2288e7fc143a729beadc69f4b9f7aabb18049e",
+      "role": "Single 600vp width breakpoint and compact/expanded classification."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts",
+      "sha256": "0f2f4bd0195eca90c1ba3e73c07629c8e90f7961ce2ca8185e3de43564be34da",
+      "role": "Shared font-scale and control/bar height resolvers for every dynamic surface."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts",
+      "sha256": "c256bc1d859c96d5385b4f8a49bb980a2a527f23f80247230830ac89c8596a47",
+      "role": "Distance/velocity page-settlement clock; consumes ProductMotionTiming bounds."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+      "sha256": "d4fa63b7947a61d2756263603eac01ef6bdc349ab8267c730346a92ee35de4da",
+      "role": "Search control height and action width inputs shared with ReaderButton and ReaderSearchField."
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "sha256": "0501708fc34247c3e1d8c0725c534a8462ac37a4aa82102b021066d211891450",
+      "role": "Search builder and fallback consumer; measurement store feeds ReaderPageGeometry and the filter motion uses ReaderMotionPolicy."
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "4a272d7085412b75bd19d3e84a28e7d85b482e1207a316d0c957c28b0e8bf253",
+      "role": "Sole measured bookshelf header owner (shelfHeaderHeight), headerBottom producer, and reduceMotion storage writer."
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfShell.ets",
+      "sha256": "4e43bf19395ac20ce405d4faaee31bf6a13db5f739296c6e22c7015ef959dcf2",
+      "role": "Bookshelf frame consumer of headerBottom + contentGap; forwards measurement and stores no second height."
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "sha256": "ef03816f64cda900e80102fce95637e1f4a78439cd4565a0dc1fbdfe87795579",
+      "role": "Bookshelf content consumer: headerBottom enters ReaderPageGeometry, and view-switch sampling consumes the shared curve contract instead of redeclaring curves."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets",
+      "sha256": "173559b2e02e9b2a5cfa92de007213bb4b22fd7cf2e0c761f76937b6c724f549",
+      "role": "Shared native measurement host; discards stale receipts by measurement key."
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/MainTabShell.ets",
+      "sha256": "1e59fe57b24667d7c40db37ee86c8f04510ad74eb64ab6bb4da1a69c230b4f86",
+      "role": "Resolves mainTab page geometry for the scaffold and converts the header-content receipt into scaffold-top clearance through readerPresentedHeaderBottom."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+      "sha256": "e32e32e84de958de818ff4b9ccb014e7abe620660403e98a20bda29cf9637a65",
+      "role": "Directory host: measurement store, DirectoryHeaderSpec fallbacks, resolved page geometry, and the single 600vp width class."
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "sha256": "34c0b55d3ab754f4c9d926a0bccf9d6f5633cefda47d9fd6523bad6249b486a0",
+      "role": "Download page whose relocatable topBar retains the sole header measurement in ReaderMeasurementStore; contentTop adds headerTop through readerPresentedHeaderBottom while the scaffold receipt stays intentionally unused."
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "sha256": "b682c8ddade2bc14fe1fb887890744ba03d7f49d456039727ac23e17709e0668",
+      "role": "Detail host: standard and manga variants both resolve ReaderPageGeometry; DetailHeaderSpec and the detail:header measurement store replace local composition."
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+      "sha256": "8c7f033d9eb8bb326e118ba97ed5f5852b2b3b2c61ef6b7d183ed88de0e14872",
+      "role": "Text and manga directory host: both variants resolve ReaderPageGeometry; the standard list reads the geometry content inset. Message/recovery placement remains on the existing framework host."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets",
+      "sha256": "a086a6cfeefe325b32f94802c171be9589dfc6cb0b964fdcad872276caeef3aa",
+      "role": "Single owner of the 50vp directory toolbar height consumed by BookDirectoryPageHeaderSpec."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "sha256": "8a7c4678965b8d391a7a1867ba3f046548d8d0e192e0fc4df0681f442941e741",
+      "role": "Geometry-only common frame: reads header/footer/content/frame values from ReaderPageGeometry, mounts the measured header host, and reports the measured height unchanged."
+    },
+    {
+      "path": "scripts/check-header-geometry.mjs",
+      "sha256": "d94f282cb4a7d06585849bdebdd3d699c6ccfaf815fb97bc3c67430bdc2f55d0",
+      "role": "Explicit source-level enforcement of this manifest (28 checks). Not wired into builds, CI, contract tiers, or scopes; it does not assert message host placement."
+    }
+  ],
+  "ownership": {
+    "appBar": {
+      "spec": "ReaderHeaderMetrics.ts",
+      "measuredOwner": null,
+      "consumers": [
+        "AppTopBar.ets",
+        "ReaderPageShell.ts#readerPageContentStartInset"
+      ]
+    },
+    "scaffoldHeaderReceipt": {
+      "spec": "ReaderPageShell.ts#readerPresentedHeaderBottom",
+      "contract": "ReaderFixedHeaderHost reports the header content's own measured height. headerTop is a caller-owned margin outside that receipt; readers that clear from the scaffold top add it through this helper. The scaffold itself consumes only ReaderPageGeometry and no scalar top/inset/bottom API.",
+      "consumers": [
+        "MainTabShell.ets#onHeaderHeightChange",
+        "SharedDownloadPage.ets#contentTop"
+      ]
+    },
+    "bookshelfHeader": {
+      "spec": "ReaderHeaderSpecs.ets#BOOKSHELF_HEADER_SPEC",
+      "measuredOwner": "Index.ets#shelfHeaderHeight",
+      "measurementHost": "ReaderPageScaffold.ets -> ReaderFixedHeaderHost.ets -> MainTabShell.ets#readerPresentedHeaderBottom",
+      "fallback": "readerPageInitialHeaderHeight('bookshelf') = frameHeight",
+      "consumers": [
+        "Index.ets#headerBottom",
+        "BookshelfShell.ets#headerBottom + bookshelfHeaderSpec().contentGap",
+        "BookshelfPage.ets#contentGeometry(input.headerHeight = headerBottom)",
+        "BookshelfShell.ets#headerTop"
+      ]
+    },
+    "searchHeader": {
+      "spec": "ReaderHeaderSpecs.ets#SEARCH_HEADER_SPEC",
+      "measuredOwner": "SearchPage.ets#fixedHeaderHeight",
+      "measurementHost": "ReaderPageScaffold.ets -> ReaderFixedHeaderHost.ets with searchHeaderMeasurementKey",
+      "fallback": "ReaderHeaderSpecs.ets#readerSearchHeaderHeight",
+      "consumers": [
+        "SearchPage.ets#searchHeader builder",
+        "SearchPage.ets#searchContentStartInset",
+        "SearchPage.ets#searchFilterMaxHeight",
+        "ReaderControlSpecs.ets#readerSearchControlHeight",
+        "ReaderControlSpecs.ets#readerSearchActionWidth"
+      ]
+    },
+    "standardPageHeader": {
+      "spec": "ReaderPageShell.ts#READER_STANDARD_PAGE_CONTENT_GAP",
+      "measuredOwner": "ReaderStandardPage.ets#measurements('standard:header')",
+      "measurementHost": "ReaderPageScaffold.ets -> ReaderFixedHeaderHost.ets -> ReaderPageGeometry",
+      "fallback": "readerPageInitialHeaderHeight('standard') + readerPageContentStartInset(headerHeight, 0, gap)",
+      "consumers": [
+        "ReaderStandardPage.ets#pageGeometry().content.startInset",
+        "ReaderStandardPage.ets#overlayContent contentStartInset"
+      ]
+    },
+    "detailHeader": {
+      "spec": "ReaderHeaderSpecs.ets#DETAIL_HEADER_SPEC",
+      "measuredOwner": "LocalBookDetail.ets#headerMeasurements('detail:header')",
+      "measurementHost": "ReaderPageScaffold.ets -> ReaderFixedHeaderHost.ets -> LocalBookDetail.pageGeometry()",
+      "fallback": "detailHeaderSpec().barHeight = APP_FLOATING_HEADER_BAR_HEIGHT",
+      "consumers": [
+        "LocalBookDetail.ets#pageGeometry headerTop/inset/footer",
+        "LocalBookDetail.ets#detailScroll standard content start",
+        "LocalBookDetail.ets#pageGeometry mangaDetail variant"
+      ]
+    },
+    "standardDirectoryPageHeader": {
+      "spec": "BookDirectoryPage.ets#BookDirectoryPageHeaderSpec",
+      "measuredOwner": "BookDirectoryPage.ets#standardMeasurements('bookDirectory:header')",
+      "measurementHost": "ReaderPageScaffold.ets -> ReaderFixedHeaderHost.ets -> BookDirectoryPage.standardGeometry()",
+      "fallback": "initialHeight = APP_HEADER_BAR_HEIGHT + READER_DIRECTORY_TOOLBAR_HEIGHT + TOK_BORDER_W",
+      "messageHost": "ReaderDirectoryRecoverySurface -> ReaderRecoveryNotice; owned by the existing message framework, not by this header spec",
+      "consumers": [
+        "BookDirectoryPage.standardGeometry().content.startInset",
+        "BookDirectoryPage.standardGeometry().header.bottom",
+        "ReaderDirectoryNavigationSurface#contentStartInset",
+        "ReaderDirectoryList#contentStartInset"
+      ]
+    },
+    "directoryHeader": {
+      "spec": "ReaderHeaderSpecs.ets#DIRECTORY_HEADER_SPEC",
+      "measuredOwner": "ReaderFullDirectory.ets#headerMeasurements(headerMeasurementKey())",
+      "measurementHost": "ReaderPageScaffold.ets -> ReaderFixedHeaderHost.ets with topBarTop measurement key",
+      "fallback": "ReaderFullDirectory.pageGeometry(): content.startInset = max(0, topBarTop) + measuredHeader + panelGap",
+      "consumers": [
+        "ReaderFullDirectory.ets#topBar builder",
+        "ReaderFullDirectory.ets#fullPanelTop (geometry.content.startInset)",
+        "ReaderFullDirectory.ets#offlineBookMenu"
+      ]
+    },
+    "downloadHeader": {
+      "spec": "SharedDownloadVisualSpec.ts#DOWNLOAD_VISUAL",
+      "measuredOwner": "SharedDownloadPage.ets#measurements('download:header')",
+      "measurementHost": "SharedDownloadPage.ets#topBar.onAreaChange across fixed and inline placements",
+      "fallback": "DOWNLOAD_VISUAL.headerHeight before measurement (resolvedHeaderHeight)",
+      "scaffoldReceipt": "intentionally unused; feeding it back into mainChromeOverflow would oscillate",
+      "consumers": [
+        "SharedDownloadPage.ets#compactHeader",
+        "SharedDownloadPage.ets#contentTop",
+        "SharedDownloadPage.ets#mainChromeOverflow"
+      ]
+    }
+  },
+  "logicalGeometry": {
+    "appBar": {
+      "floatingBarHeight": 52,
+      "standardBarHeight": 58,
+      "floatingTopGap": 8,
+      "scaffoldReceiptFormula": "content height only; readerPresentedHeaderBottom(headerTop, headerHeight) = max(0, headerTop) + max(0, headerHeight)"
+    },
+    "bookshelf": {
+      "barHeight": 52,
+      "topInset": 8,
+      "contentGap": 14,
+      "frameHeight": 60,
+      "contentClearance": 74,
+      "initialHeaderHeight": 60,
+      "postMeasurementHeaderHeight": 60,
+      "contentStartFormula": "ReaderPageGeometry.content.startInset = max(0, headerBottom) + contentGap",
+      "noFirstFrameJump": true
+    },
+    "search": {
+      "outerInsetPhone": 16,
+      "outerInsetTablet": 20,
+      "panelRadius": 13,
+      "borderWidth": 1,
+      "panelBottomGap": 6,
+      "barPadding": {
+        "left": 6,
+        "right": 12,
+        "top": 4,
+        "bottom": 4,
+        "vertical": 8
+      },
+      "controlHeightFormula": "readerSearchControlHeight(scale) = 44 + 24 * max(0, scale - 1)",
+      "barHeightFormula": "readerSearchControlHeight(scale) + 8",
+      "actionWidthFormula": "readerSearchActionWidth(isTablet, scale) = 46 + (isTablet ? 28 : 26) * max(1, scale)",
+      "filterMinHeight": 44,
+      "filterLabelLineHeight": 17,
+      "filterVerticalReserve": 12,
+      "filterGroupBottomPadding": 8,
+      "filterMinExpandedHeight": 88,
+      "filterViewportReserve": 180,
+      "unmeasuredViewportHeight": 300,
+      "summaryMinHeight": 34,
+      "summaryLineHeight": 21,
+      "summaryStackedLineHeight": 39,
+      "summaryPadding": {
+        "top": 4,
+        "bottom": 4,
+        "vertical": 8
+      },
+      "summaryStackedWidth": 158,
+      "statsFallbackHeight": 36,
+      "statsPadding": {
+        "top": 4,
+        "bottom": 4,
+        "vertical": 8
+      },
+      "fallbackFormulas": {
+        "panel": "barHeight + panelBottomGap + 2 * borderWidth",
+        "noSession": "panel",
+        "session": "panel + statsHeight + filters + borderWidth",
+        "filters": "filtersExpanded ? min(2 * filterHeight + filterGroupBottomPadding, filterMaxHeight) : 0",
+        "filterHeight": "max(filterMinHeight, filterLabelLineHeight * fontScale + filterVerticalReserve)",
+        "filterMaxHeight": "max(filterMinExpandedHeight, available - base - filterViewportReserve)",
+        "unmeasuredFilterMaxHeight": "unmeasuredViewportHeight"
+      }
+    },
+    "standardPage": {
+      "contentGap": 8,
+      "initialHeaderHeight": 58,
+      "contentStartFormula": "ReaderPageGeometry.content.startInset = header.clearance = max(0, headerHeight) + 8",
+      "fallbackHeader": "readerPageInitialHeaderHeight('standard')",
+      "measurementKey": "standard:header"
+    },
+    "detailHeader": {
+      "topGap": 8,
+      "barHeight": 52,
+      "contentGap": 16,
+      "initialContentStart": 76,
+      "headerTopFormula": "max(0, topInset) + topGap",
+      "contentStartFormula": "ReaderPageGeometry.content.startInset = max(0, headerTop) + max(0, measuredHeader) + contentGap",
+      "measurementKey": "detail:header"
+    },
+    "standardDirectoryPageHeader": {
+      "barHeight": 58,
+      "toolbarHeight": 50,
+      "dividerHeight": 1,
+      "contentGap": 5,
+      "initialHeight": 109,
+      "initialContentStart": 114,
+      "postMeasurementRule": "list contentStart reads ReaderPageGeometry.content.startInset fed by standardMeasurements('bookDirectory:header'); the optional rules control and any expansion enter through measurement only. Message/recovery host placement is out of scope and unchanged."
+    },
+    "directory": {
+      "barHeight": 54,
+      "radius": 24,
+      "topGap": 18,
+      "panelGap": 16,
+      "controlHeight": 42,
+      "menuGap": 2,
+      "menuRowHeight": 42,
+      "panelTopFormula": "fallback: topBarTop + barHeight + panelGap; measured: headerMeasurements(headerMeasurementKey()) + panelGap",
+      "menuTopFormula": "topBarTop + barHeight + menuGap"
+    },
+    "download": {
+      "initialHeaderHeight": "DOWNLOAD_VISUAL.headerHeight",
+      "contentTopFormula": "readerPresentedHeaderBottom(headerTop, max(DOWNLOAD_VISUAL.headerHeight, resolvedHeaderHeight())) + headerContentGap()",
+      "overflowRule": "contentTop + contentBottom >= availableHeight moves topBar inline; its onAreaChange remains the single measurement owner",
+      "scaffoldReceipt": "not consumed"
+    },
+    "widthClass": {
+      "breakpointVp": 600,
+      "owner": "ReaderWidthClass.ts",
+      "api": "readerWidthClass(viewportWidth) / readerIsExpandedWidth(viewportWidth)",
+      "rule": "No page may redeclare a local 600 width comparison."
+    },
+    "dynamicControlHeight": {
+      "api": "ReaderSurfaceResolvers.readerScaledControlHeight(baseHeight, lineHeight, fontScale)",
+      "formula": "ceil(max(0, baseHeight) + max(0, lineHeight) * max(0, readableScale(fontScale) - 1))",
+      "consumers": [
+        "ReaderButton.ets",
+        "ReaderFormField.ets",
+        "ReaderChoiceRow.ets",
+        "ReaderDialogSurface.ets",
+        "ReaderActionMenuSurface.ets",
+        "ReaderBoundedSurfaceActions.ets",
+        "ReaderSurfaceSpecs.ets#PopupSurfaceSpec.actionHeightFor"
+      ]
+    }
+  },
+  "motion": {
+    "registry": {
+      "owner": "MotionSpec.ets",
+      "policy": "ReaderMotionPolicy.ets",
+      "reduceMotionKey": "readerReduceMotion",
+      "rule": "All durations/curves are registered; numeric animateTo/animation durations are forbidden. Reduce motion keeps the registered curve and sets duration to 0."
+    },
+    "searchFilterToggle": {
+      "id": "search.filters.toggle",
+      "durationMs": 180,
+      "curve": "Curve.EaseInOut",
+      "reducedMotion": "duration: 0, same curve",
+      "consumer": "SearchPage.ets#toggleSearchFilters via readerMotionAnimateParam"
+    },
+    "sourceSwitch": [
+      {
+        "id": "source.switch.open",
+        "source": "SOURCE_SWITCH_VISUAL.openDurationMs"
+      },
+      {
+        "id": "source.switch.close",
+        "source": "SOURCE_SWITCH_VISUAL.closeDurationMs"
+      },
+      {
+        "id": "source.switch.row.enter",
+        "source": "SOURCE_SWITCH_VISUAL.rowEnterDurationMs"
+      },
+      {
+        "id": "source.switch.list.update",
+        "durationMs": 220,
+        "curve": "Curve.EaseInOut"
+      }
+    ],
+    "manga": [
+      {
+        "id": "manga.directory.fold",
+        "source": "MANGA_DIRECTORY_VISUAL.foldDuration",
+        "curve": "Curve.Ease"
+      },
+      {
+        "id": "manga.panel.scrim",
+        "durationMs": 160,
+        "curve": "Curve.EaseInOut"
+      },
+      {
+        "id": "manga.pullRefresh.reset",
+        "durationMs": 180,
+        "curve": "Curve.EaseOut"
+      }
+    ],
+    "localImportHandoff": [
+      {
+        "id": "bookshelf.import.handoff.fade",
+        "durationMs": 120
+      },
+      {
+        "id": "bookshelf.import.handoff.resize",
+        "durationMs": 220
+      },
+      {
+        "id": "bookshelf.import.handoff.reveal",
+        "durationMs": 140,
+        "delayOwner": "LocalImportMotion.ts#READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS"
+      }
+    ],
+    "messageFeedback": {
+      "id": "message.feedback.enter",
+      "durationMs": 220,
+      "curve": "Curve.EaseOut",
+      "consumer": "ReaderTransientToast.ets"
+    },
+    "messageDisplay": {
+      "owner": "ReaderTransientFeedback.ts",
+      "briefMs": 2000,
+      "extendedMs": 2200,
+      "dedupeMs": 2000,
+      "constants": [
+        "READER_FEEDBACK_BRIEF_MS",
+        "READER_FEEDBACK_EXTENDED_MS",
+        "READER_FEEDBACK_DEDUPE_MS"
+      ],
+      "rule": "Call sites must use the constants. Message category, host, and lifecycle are unchanged."
+    },
+    "appearanceActors": {
+      "transition": "panelActorTransition(id)",
+      "endpointOwner": "ReaderPanelMotionContract.ts fromY/delayMs",
+      "controlEndpoints": "ReaderControlMotionGeometry.ts owns TopBar -8 / Dock +18 spatial samples"
+    },
+    "launchTimeline": {
+      "owner": "ReaderSessionLaunchTimeline.ts",
+      "durationMs": 3500,
+      "settledMs": 2300,
+      "beatOwner": "All start times, actor durations, phase boundaries, 24vp dot size, and 4vp pause gap are named constants.",
+      "consumer": "ReaderSessionLaunchPresentation.ts#sampleReaderSessionLaunch",
+      "exception": "Pure TS sampler cannot import MotionSpec.ets across the ArkTS boundary."
+    },
+    "ttsWaveform": {
+      "owner": "ReaderTtsWaveformModel.ts",
+      "heightMs": 300,
+      "colorMs": 350,
+      "activeTailMs": 350,
+      "cycleBaseMs": 650,
+      "cycleStepMs": 110,
+      "staggerMs": 30,
+      "rule": "Decorative waveform clock; no inline timing numbers in the sampler."
+    },
+    "controlMotionGeometry": {
+      "owner": "ReaderControlMotionGeometry.ts",
+      "namedCoefficients": [
+        "READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE",
+        "READER_CONTROL_MOTION_FULL_CONTENT_VERTICAL_RESERVE",
+        "READER_CONTROL_MOTION_CONTENT_INSET_MAX",
+        "READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE",
+        "READER_CONTROL_MOTION_CONTENT_SURFACE_TOP",
+        "READER_CONTROL_MOTION_NAVIGATION_BOTTOM",
+        "READER_CONTROL_MOTION_NAVIGATION_TRANSLATE_Y"
+      ]
+    },
+    "pageSettlement": {
+      "owner": "ReaderPageSettlementTimeline.ts",
+      "boundsOwner": "ProductMotionTiming.ts",
+      "rule": "Distance/velocity clock only; no second implicit tween."
+    }
+  },
+  "forbiddenDuplicates": [
+    {
+      "id": "app-bar-constants",
+      "rule": "APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT, and APP_FLOATING_HEADER_TOP_GAP may only be declared in ReaderHeaderMetrics.ts.",
+      "enforcedBy": "check-header-geometry.mjs#single-app-bar-constant-owner"
+    },
+    {
+      "id": "app-bar-literals",
+      "rule": "AppTopBar, PageBackBar, and ReaderPageShell must not reintroduce 52/58 as bar-height literals.",
+      "enforcedBy": "check-header-geometry.mjs#single-app-bar-constant-owner and #page-back-bar-consumes-app-bar-metrics"
+    },
+    {
+      "id": "bookshelf-derived-values",
+      "rule": "Bookshelf frameHeight and contentClearance must remain derived from barHeight + topInset + contentGap; do not hardcode 60 or 74 in header consumers.",
+      "enforcedBy": "check-header-geometry.mjs#bookshelf-header-single-measured-owner"
+    },
+    {
+      "id": "bookshelf-single-measured-owner",
+      "rule": "Index.shelfHeaderHeight is the only stored bookshelf header measurement. BookshelfShell and BookshelfPage receive headerBottom and derive content start through headerBottom + contentGap / ReaderPageGeometry.",
+      "enforcedBy": "check-header-geometry.mjs#bookshelf-header-single-measured-owner"
+    },
+    {
+      "id": "search-single-fallback",
+      "rule": "Search natural height must go through readerSearchHeaderHeight; keep the no-session, collapsed, and expanded branches lazy.",
+      "enforcedBy": "check-header-geometry.mjs#search-pure-fallback-formula"
+    },
+    {
+      "id": "search-builder-literals",
+      "rule": "SearchPage must not reintroduce 44 filter min-height, 17 label line-height, or 4+4 summary/stats padding; consume SearchHeaderSpec.",
+      "enforcedBy": "check-header-geometry.mjs#search-builder-consumes-spec"
+    },
+    {
+      "id": "search-motion",
+      "rule": "Filter toggle timing may only come from MotionSpec entry search.filters.toggle; reduced motion zeroes duration but keeps the registered curve.",
+      "enforcedBy": "check-header-geometry.mjs#search-filter-motion-registered-and-consumed"
+    },
+    {
+      "id": "standard-page-content-gap",
+      "rule": "Standard-page content start must use readerStandardPageContentStart; ReaderStandardPage and ReaderMessagePreviewPage must not reintroduce 58 or 8 as local header/gap literals.",
+      "enforcedBy": "check-header-geometry.mjs#standard-page-content-start-single-owner"
+    },
+    {
+      "id": "directory-header-literals",
+      "rule": "ReaderFullDirectory must consume DirectoryHeaderSpec for bar height, radius, control/menu row heights, top gap, panel gap, and menu gap; do not hardcode 54/42/24 or the 70/56 offsets.",
+      "enforcedBy": "check-header-geometry.mjs#directory-header-spec-consumed"
+    },
+    {
+      "id": "detail-header-literals",
+      "rule": "LocalBookDetail must consume DetailHeaderSpec and headerMeasurements('detail:header') through pageGeometry(); do not reintroduce topInset + 76 or re-compose 8 + 52 + 16 locally.",
+      "enforcedBy": "check-header-geometry.mjs#detail-header-spec-consumed"
+    },
+    {
+      "id": "standard-directory-page-header-literals",
+      "rule": "BookDirectoryPage list content start must read standardGeometry().content.startInset fed by standardMeasurements('bookDirectory:header'); do not reintroduce 58+51 or standardHeaderHeight + 5, and the toolbar height must come from READER_DIRECTORY_TOOLBAR_HEIGHT. The header spec must not absorb message/recovery anchor fields.",
+      "enforcedBy": "check-header-geometry.mjs#book-directory-page-header-spec-consumed"
+    },
+    {
+      "id": "scaffold-header-receipt",
+      "rule": "ReaderPageScaffold must report the measured header height unchanged. Consumers clearing from the scaffold top add headerTop only through readerPresentedHeaderBottom.",
+      "enforcedBy": "check-header-geometry.mjs#scaffold-header-receipt-excludes-header-top"
+    },
+    {
+      "id": "download-single-measurement",
+      "rule": "SharedDownloadPage.measurements('download:header') stays the only header measurement; do not also wire the scaffold onHeaderHeightChange because the top bar relocates when chrome overflows.",
+      "enforcedBy": "check-header-geometry.mjs#download-header-single-measurement-owner"
+    },
+    {
+      "id": "scaffold-scalar-api",
+      "rule": "ReaderPageScaffold must not regain headerTop/headerInset/footerInset/footerBottom/contentEndInset/frameInset scalar props. Hosts resolve ReaderPageGeometry and frameStyle; both are required, and the four host-owned preparation/reader exceptions use readerEmptyPageGeometry explicitly.",
+      "enforcedBy": "check-header-geometry.mjs#scaffold-geometry-only and #scaffold-call-site-geometry"
+    },
+    {
+      "id": "literal-motion-durations",
+      "rule": "No numeric duration may appear in animateTo({...}) or animation({...}); register it in MotionSpec. duration: 0 immediate commits are allowed.",
+      "enforcedBy": "check-header-geometry.mjs#no-literal-motion-durations"
+    },
+    {
+      "id": "motion-reduce-policy",
+      "rule": "reduceMotion must be read through ReaderMotionPolicy (or a reactive @StorageLink/@Prop). The persisted key has one declaration and one duration/param collapse path.",
+      "enforcedBy": "check-header-geometry.mjs#motion-registry-single-policy"
+    },
+    {
+      "id": "motion-actors",
+      "rule": "MotionSpec stores only duration/curve/reduceMotion/contract id. Appearance panel actor fromY/delay values live in ReaderPanelMotionContract.ts; callers use panelActorTransition(id). Bookshelf view curves come from the shared contract.",
+      "enforcedBy": "check-header-geometry.mjs#motion-actors-registry-owned"
+    },
+    {
+      "id": "width-breakpoint",
+      "rule": "READER_EXPANDED_MIN_WIDTH = 600 is the only width breakpoint declaration; pages use readerIsExpandedWidth.",
+      "enforcedBy": "check-header-geometry.mjs#single-width-breakpoint"
+    },
+    {
+      "id": "page-settlement-bounds",
+      "rule": "ReaderPageSettlementTimeline consumes READER_PAGE_SETTLE_* bounds from ProductMotionTiming; do not inline 30/80/320/2.5 or add a second tween.",
+      "enforcedBy": "check-header-geometry.mjs#page-settlement-timing-single-owner"
+    },
+    {
+      "id": "dynamic-control-height",
+      "rule": "Buttons, form fields, choice rows, dialog actions, menu rows, and bounded-surface actions must grow through readerScaledControlHeight; do not re-implement the line-height growth formula.",
+      "enforcedBy": "check-header-geometry.mjs#dynamic-control-heights"
+    },
+    {
+      "id": "message-display-duration",
+      "rule": "Message display/dedupe windows may only be declared as READER_FEEDBACK_BRIEF_MS, READER_FEEDBACK_EXTENDED_MS, and READER_FEEDBACK_DEDUPE_MS in ReaderTransientFeedback.ts; call sites must not pass 2000/2200 literals.",
+      "enforcedBy": "check-header-geometry.mjs#message-display-durations"
+    },
+    {
+      "id": "device-type-layout",
+      "rule": "No page may read deviceInfo.deviceType or accept a device-type boolean for layout. Layout capability comes from ReaderLayoutCapability.readerExpandedLayout(window metrics); manga persistent directory uses width/height only.",
+      "enforcedBy": "check-header-geometry.mjs#single-width-breakpoint and source scan for deviceInfo/isTablet"
+    },
+    {
+      "id": "non-arkui-motion-clocks",
+      "rule": "Pure TS launch and waveform samplers must consume named beat constants from ReaderSessionLaunchTimeline.ts / ReaderTtsWaveformModel.ts; no inline timing numbers.",
+      "enforcedBy": "check-header-geometry.mjs#non-arkui-motion-clocks"
+    },
+    {
+      "id": "control-motion-coefficients",
+      "rule": "Control composition coefficients (140/70/13/52/57/93/20 and adjacent actors) are owned by READER_CONTROL_MOTION_* in ReaderControlMotionGeometry.ts.",
+      "enforcedBy": "check-header-geometry.mjs#control-motion-coefficients-named"
+    },
+    {
+      "id": "scaffold-call-site-registry",
+      "rule": "All ReaderPageScaffold call sites must name geometry; the four host-owned preparation/reader exceptions must explicitly call readerEmptyPageGeometry(). Full directory is no longer an exception.",
+      "enforcedBy": "check-header-geometry.mjs#scaffold-call-site-geometry"
+    },
+    {
+      "id": "dynamic-surface-resolvers",
+      "rule": "readerAvailableWindowHeight, readerSurfaceMaxHeight, and readerDynamicSurfaceWidth must have production consumers; do not reimplement their arithmetic in download/import surfaces.",
+      "enforcedBy": "check-header-geometry.mjs#dynamic-surface-resolvers-used"
+    },
+    {
+      "id": "frame-style-route-enums",
+      "rule": "ReaderPageScaffold and ReaderPageShell must not regain route/header kinds, readingContentKind, or business color mappings. Features resolve ReaderFrameStyle.",
+      "enforcedBy": "check-header-geometry.mjs#frame-style-split"
+    },
+    {
+      "id": "geometry-input-variant",
+      "rule": "ReaderPageGeometryInput.variant must stay deleted; it never participated in geometry resolution.",
+      "enforcedBy": "check-header-geometry.mjs#frame-style-split and #scaffold-geometry-only"
+    },
+    {
+      "id": "scroll-layout-bypass",
+      "rule": "Standard pages use ReaderPageScrollHost; Search/Bookshelf/Download/SourceManagement/MultiSelect/SourceSwitchWindow consume ReaderScrollLayout offsets. ReaderDirectoryList/ReaderDirectoryNavigationList/ReaderDirectoryNavigationSurface consume the same layout while retaining native List/Grid and anchor ownership. ReaderControlSearchContent's normalized native end offset is a registered feature scroll exception; reading page-turn hosts remain native exceptions.",
+      "enforcedBy": "check-header-geometry.mjs#scroll-layout-contract"
+    },
+    {
+      "id": "reading-directory-measurement-chain",
+      "rule": "ReaderFullDirectory must resolve ReaderPageGeometry from headerMeasurements and use geometry.content.startInset for the panel top; no empty-geometry exception.",
+      "enforcedBy": "check-header-geometry.mjs#reading-directory-measurement-chain"
+    },
+    {
+      "id": "fixed-size-content-text",
+      "rule": "Every numeric .height() in TTS/RSS/Manga/ControlTTS must be classified in fixed-size-policy-20261025.json. Content text must use constraintSize or a dynamic resolver; the remaining heights are design-token/icon/touch/feature-panel only.",
+      "enforcedBy": "check-header-geometry.mjs#fixed-size-classification"
+    },
+    {
+      "id": "no-gate-wiring",
+      "rule": "This manifest and its checker are not part of builds, CI, contract tiers, scopes, or default gates. Run them only with an explicit item-specific rationale.",
+      "enforcedBy": "scripts/check-header-geometry.mjs requires --rationale and is not referenced by build or contract tooling"
+    }
+  ],
+  "verification": {
+    "sourceContract": {
+      "command": "node scripts/check-header-geometry.mjs --rationale '<item-specific reason>'",
+      "status": "PASS",
+      "checks": 32,
+      "proves": "Source-level ownership, geometry-only scaffold with 14 named call sites, derived fallbacks, measurement-store consumers, single width breakpoint and window capability, the motion registry/reduceMotion policy, non-ArkUI launch/waveform clocks, page-settlement bounds, message display windows, dynamic surface/control resolvers, and named control coefficients.",
+      "doesNotProve": "Native layout, first-frame paint, text measurement, device rendering, HAP packaging, or message/notification host placement and behavior."
+    },
+    "pureFunctionMatrix": {
+      "command": "node scripts/check-ui-parameter-matrix.mjs",
+      "status": "PASS",
+      "checks": 12,
+      "proves": "Width 600 boundary, window capability, font-scale control/bar heights, keyboard/safe-area available height, surface max width/height, page-settlement clock, launch p=0/1 endpoints, control expand/collapse endpoints, TTS reduceMotion/tail, and message windows against production TS modules.",
+      "doesNotProve": "Native layout, first-frame paint, font measurement, device rendering, HAP packaging, or interaction."
+    },
+    "arkTsCompile": {
+      "task": "default@CompileArkTS",
+      "command": "node scripts/deveco-build.mjs --mode module -p module=entry@default -p product=default default@CompileArkTS",
+      "status": "PASS",
+      "verifiedAt": "2026-10-25T16:07:45Z",
+      "result": "BUILD SUCCESSFUL in 3 s 639 ms",
+      "proves": "The edited ArkTS sources compile in the project module after the geometry/motion consolidation.",
+      "doesNotProve": "Packaging, signing, installation, device layout, or visual behavior.",
+      "warnings": "Pre-existing warnings remain, including ReaderPageShell.ts ambient type names and the SearchPage @ObjectLink group property. No new compile errors were reported."
+    },
+    "negativeControls": {
+      "status": "NOT_RUN",
+      "reason": "The checker and matrix were rewritten through S6/S7. The prior 13-check negative-control fixture no longer matches the 28-check + 10-matrix source set; no isolated negative-control run was performed for the new checks."
+    },
+    "deviceVisual": {
+      "status": "NOT_RUN",
+      "reason": "No device, emulator, screenshot, or mid-frame evidence was collected."
+    },
+    "hapArtifact": {
+      "status": "NOT_RUN",
+      "reason": "No HAP assemble, signing, or installation was performed."
+    }
+  },
+  "notStable": [
+    "The whole repository is not a stable baseline: the working tree was already dirty and is being changed by parallel work.",
+    "The contract is keyed by file content fingerprints; commit 6b1bd753 alone does not describe the working tree.",
+    "Only the listed structural files are in scope. Other dirty files and other agents' work are not represented.",
+    "The Harmony animation worktree is unfinished and excluded; completed effects must be rebased onto this baseline.",
+    "The standard directory page's 109vp initial height excludes the optional rules control; measurement corrects it, and no device evidence yet proves the first-frame transition.",
+    "The S6/S7 checker rewrite has no new isolated negative-control run; the 28 checks prove source form and the 10 matrix groups prove pure-function endpoints, not that every assertion would fail on every possible regression.",
+    "Device type no longer participates in layout, but the expanded-layout threshold still changes at 600vp; host visual results at that boundary remain unverified on device.",
+    "No Android, iOS, macOS, or Windows port has consumed this manifest yet.",
+    "Cross-platform values are logical; each platform still needs its own native adapter and visual verification.",
+    "No HAP build, signing, install, device interaction, screenshot, or mid-frame evidence exists for this consolidation.",
+    "The prior 209,234-file/44,974,823-line audit claim is not endorsed by this manifest; evidence here is limited to the listed files and the explicit checker."
+  ],
+  "portingInstructions": [
+    "Read this manifest before porting structural UI or header geometry.",
+    "Use the baseline route for structure; do not copy the Harmony animation worktree's page copies.",
+    "Preserve one spec per surface, one measured owner, and consumer-only reads of resolved geometry.",
+    "Keep fallbacks as pure functions of the same spec values.",
+    "Port logical values through the target platform's native tokens and adapters; do not import Harmony-specific types.",
+    "When a completed Harmony effect needs different geometry, register a baseline contract request instead of letting the effect own geometry.",
+    "After editing any listed file, rerun the explicit checker with a rationale and update this manifest's fingerprints if the change is accepted."
+  ]
+}
