@@ -156,7 +156,7 @@ for (const inventory of ['', 'Connect server failed', 'ID: 100:',
 }
 const installedMetadata = parseBundleMetadata('io.reader.minliny:\n' + JSON.stringify({
   name: 'io.reader.minliny', appId: 'io.reader.minliny_', appIdentifier: '',
-  versionCode: 1000000, versionName: '1.0.0',
+  versionCode: 1000000, versionName: '0.2.0',
   applicationInfo: { bundleName: 'io.reader.minliny', appSignType: 'none', appProvisionType: 'debug' },
 }));
 assert.equal(installedMetadata.bundlePresent, true);
