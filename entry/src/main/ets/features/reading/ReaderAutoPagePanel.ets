@@ -286,7 +286,7 @@ export struct ReaderAutoPagePanel {
         .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.fontWeight)
         .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.fontSizeFp)
         .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.lineHeightFp as number)
-        .fontColor(readerAppColor('app.ReaderAutoPagePanel.stopControl.fontColor.FF8C3D36', this.appThemeScheme))
+        .fontColor(readerAppColor('app.action.stop', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }

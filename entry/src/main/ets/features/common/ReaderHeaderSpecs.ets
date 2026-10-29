@@ -5,15 +5,28 @@ import {
   APP_HEADER_BAR_HEIGHT,
 } from './ReaderHeaderMetrics';
 
+// One threshold for raised shelf/detail chrome; consumers only publish a
+// material change when content crosses this logical distance.
+const RAISED_HEADER_SCROLL_THRESHOLD_VP: number = 4;
+
 /**
  * Bookshelf floating header contract. The bar, its top inset and the gap below
  * the header are one surface: shell, content and route layers read the derived
  * frame/clearance instead of repeating 52/8/14 independently.
  */
 export class BookshelfHeaderSpec {
+  readonly titleFontSize: number = 19;
+  readonly titleLineHeight: number = 28;
+  readonly innerInset: number = 9;
+  readonly actionExtent: number = 44;
+  readonly iconExtent: number = 24;
+  readonly panelRadius: number = 18;
+  readonly minWindowInset: number = 8;
   readonly barHeight: number;
   readonly topInset: number;
   readonly contentGap: number;
+  readonly contentUnderlap: number = 8;
+  readonly scrollThreshold: number = RAISED_HEADER_SCROLL_THRESHOLD_VP;
   readonly frameHeight: number;
   readonly contentClearance: number;
 
@@ -40,6 +53,8 @@ export class DetailHeaderSpec {
   readonly topGap: number = APP_FLOATING_HEADER_TOP_GAP;
   readonly barHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
   readonly contentGap: number = 16;
+  readonly contentUnderlap: number = 8;
+  readonly scrollThreshold: number = RAISED_HEADER_SCROLL_THRESHOLD_VP;
 
   headerTop(topInset: number): number {
     return Math.max(0, topInset) + this.topGap;
@@ -99,15 +114,16 @@ export function directoryHeaderSpec(): DirectoryHeaderSpec {
  * read the same values, so the first frame matches the natural-height panel.
  */
 export class SearchHeaderSpec {
+  readonly panelInnerInset: number = 12;
   readonly outerInsetPhone: number = 16;
   readonly outerInsetTablet: number = 20;
-  readonly panelRadius: number = 13;
+  readonly panelRadius: number = 18;
   readonly borderWidth: number = TOK_BORDER_W;
   readonly panelBottomGap: number = 6;
-  readonly barPaddingLeft: number = 6;
-  readonly barPaddingRight: number = 12;
-  readonly barPaddingTop: number = 4;
-  readonly barPaddingBottom: number = 4;
+  readonly barPaddingLeft: number = 5;
+  readonly barPaddingRight: number = 6;
+  readonly barPaddingTop: number = 8;
+  readonly barPaddingBottom: number = 8;
   readonly barHeightExtra: number;
   readonly filterMinHeight: number = 44;
   readonly filterLabelLineHeight: number = 17;
@@ -145,6 +161,7 @@ export class SearchHeaderSpec {
   filterHeight(fontScale: number): number {
     return Math.max(this.filterMinHeight, this.filterLabelLineHeight * fontScale + this.filterVerticalReserve);
   }
+  filterLabelWidth(fontScale: number): number { return 51 * Math.max(1, fontScale); }
 
   summaryStacked(resultWidth: number, fontScale: number): boolean {
     const width = resultWidth - 24;

@@ -135,7 +135,7 @@ export struct ReaderQuickSearchPanel {
           .fontFamily(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL.fontFamily)
           .fontWeight(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL.fontWeight)
           .fontSize(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderQuickSearchPanel.searchHeader.fontColor.FFFFFAF4', this.appThemeScheme));
+          .fontColor(readerAppColor('app.control.onPrimary', this.appThemeScheme));
       }
       .width(36)
       .height(QUICK_SEARCH_HEADER_HEIGHT)

@@ -1,3 +1,4 @@
+import { createDefaultSettingsSnapshot, type SettingsSnapshot, type GeneralSettingsKey } from './SettingsGateway';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../common/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
@@ -55,13 +56,7 @@ interface SettingsSelectAnchor {
   bottom: number;
 }
 
-export interface SettingsSnapshot {
-  autoCheckUpdate: boolean;
-  tapBottomScrollTop: boolean;
-  reduceMotion: boolean;
-  crashLog: boolean;
-  developerMode: boolean;
-}
+export type { SettingsSnapshot } from './SettingsGateway';
 
 let settingsSelectionGeneration: number = 0;
 
@@ -73,13 +68,7 @@ export struct SettingsPage {
   @Prop @Watch('onActiveSectionChanged') activeSection: 'home' | 'general' = 'home';
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
 
-  @Prop @Watch('onSnapshotChanged') snapshot: SettingsSnapshot = {
-    autoCheckUpdate: true,
-    tapBottomScrollTop: true,
-    reduceMotion: false,
-    crashLog: true,
-    developerMode: false,
-  };
+  @Prop @Watch('onSnapshotChanged') snapshot: SettingsSnapshot = createDefaultSettingsSnapshot();
   @Prop expandedLayout: boolean;
   @Prop @Watch('onOperationChanged') operation: SettingsOperationProjection = { action: 'load' };
   @Prop @Watch('onCacheCleanupChanged') cacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
@@ -96,6 +85,7 @@ export struct SettingsPage {
   @State private reduceMotionValue: boolean = false;
   @State private crashLogValue: boolean = true;
   @State private developerModeValue: boolean = false;
+  @State private wideNavigationRailValue: boolean = false;
   @State private cacheActionLabel: string = '清理文字缓存';
   @State private cacheCleanupInFlight: boolean = false;
   @State private resetInFlight: boolean = false;
@@ -133,7 +123,7 @@ export struct SettingsPage {
   onDiscoverRequested: () => void = (): void => {};
   onClearCache: () => Promise<SettingsCacheCleanupSnapshot | undefined> = async (): Promise<SettingsCacheCleanupSnapshot | undefined> => undefined;
   onRestoreDefaults: () => Promise<boolean> = async (): Promise<boolean> => false;
-  onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode', value: boolean) => void =
+  onToggle: (key: GeneralSettingsKey, value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
   aboutToAppear(): void {
@@ -485,6 +475,7 @@ export struct SettingsPage {
     CategorySection({ title: '行为与反馈' }) {
       this.switchRow('自动检查更新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), 'autoCheckUpdate');
       this.switchRow('减少动态效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'reduceMotion');
+      this.switchRow('宽屏使用侧边导航', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_navigation_theme_night') : $r('app.media.settings_gen_navigation')), 'wideNavigationRail');
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.switchRow('点击当前底栏回顶部', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
         this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
@@ -501,9 +492,9 @@ export struct SettingsPage {
   @Builder
   private permissionCard() {
     CategorySection({ title: '系统权限' }) {
-      this.permissionRow('文件访问', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212B895C', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF28704E', this.appThemeScheme));
-      this.permissionRow('通知权限', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.24B0661D', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF8C521D', this.appThemeScheme));
-      this.permissionRow('电池优化', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212379A4', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
+      this.permissionRow('文件访问', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.status.goodSoft', this.appThemeScheme), readerAppColor('app.status.good', this.appThemeScheme));
+      this.permissionRow('通知权限', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.status.warningSoft', this.appThemeScheme), readerAppColor('app.status.warning', this.appThemeScheme));
+      this.permissionRow('电池优化', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.status.infoSoft', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
   }
 
@@ -517,7 +508,7 @@ export struct SettingsPage {
 
   // 开关行: CategoryRow + 尾部 ReaderToggle。
   @Builder
-  private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
+  private switchRow(label: string, icon: () => Resource, key: GeneralSettingsKey,
   ) {
     ForEach([this.temporaryBackIdentity], (identity: string): void => {
       CategoryRow({ icon: icon(), label,
@@ -541,6 +532,7 @@ export struct SettingsPage {
     this.reduceMotionValue = this.snapshot.reduceMotion;
     this.crashLogValue = this.snapshot.crashLog;
     this.developerModeValue = this.snapshot.developerMode;
+    this.wideNavigationRailValue = this.snapshot.wideNavigationRail;
   }
 
   private settingToggleBusy(): boolean {
@@ -553,7 +545,7 @@ export struct SettingsPage {
   }
 
   private toggleSetting(
-    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
+    key: GeneralSettingsKey,
     value: boolean,
     identity: string = this.temporaryBackIdentity,
   ): void {
@@ -563,7 +555,7 @@ export struct SettingsPage {
     this.onToggle(key, value);
   }
 
-  private settingValue(key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode'): boolean {
+  private settingValue(key: GeneralSettingsKey): boolean {
     if (key === 'autoCheckUpdate') {
       return this.autoCheckUpdateValue;
     }
@@ -575,6 +567,9 @@ export struct SettingsPage {
     }
     if (key === 'developerMode') {
       return this.developerModeValue;
+    }
+    if (key === 'wideNavigationRail') {
+      return this.wideNavigationRailValue;
     }
     return this.crashLogValue;
   }
@@ -947,7 +942,7 @@ export struct SettingsPage {
     .constraintSize({ minHeight: 58 })
     .padding({ left: 13, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('app.SettingsPage.dangerRow.backgroundColor.E0FFFFFF', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.surface.dangerCard', this.appThemeScheme))
     .borderRadius(8)
     .onClick((): void => this.requestRestoreDefaults());
   }

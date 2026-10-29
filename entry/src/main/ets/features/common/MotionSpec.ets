@@ -166,13 +166,19 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'bookshelf.filter.collapse', durationMs: 180, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
   { id: 'bookshelf.filter.content.in', durationMs: 160, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   { id: 'bookshelf.filter.content.out', durationMs: 100, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
-  { id: 'bookshelf.open.flight', durationMs: 360, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'bookshelf.open.reveal', durationMs: 140, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'bookshelf.close.flight', durationMs: 280, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
-  { id: 'bookshelf.close.reveal', durationMs: 60, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.open.carry', durationMs: 320, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.open.turn', durationMs: 300, curve: curves.cubicBezierCurve(0.3, 0, 0.2, 1) },
+  { id: 'bookshelf.open.handoff', durationMs: 160, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
+  { id: 'bookshelf.open.fade', durationMs: 180, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
+  { id: 'search.surface.open', durationMs: 650, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
+  { id: 'search.surface.submit', durationMs: 700, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
+  { id: 'search.surface.back', durationMs: 390, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
   // Search filter disclosure: the header panel and its result clearance change
   // in one native layout pass, so both directions share this timing.
-  { id: 'search.filters.toggle', durationMs: 180, curve: Curve.EaseInOut },
+  { id: 'search.filters.toggle', durationMs: 180, curve: curves.cubicBezierCurve(0.42, 0, 0.58, 1) },
+  // Keyboard/window insets change the measured history viewport. The panel
+  // follows the new limit instead of collapsing and re-measuring from zero.
+  { id: 'search.history.resize', durationMs: 180, curve: curves.cubicBezierCurve(0.2, 0, 0.2, 1) },
   // Generated SourceSwitchVisual drawer: the scrim, drawer and row entrance
   // share one authored curve, so the registry is the only rebuild site.
   { id: 'source.switch.open', durationMs: SOURCE_SWITCH_VISUAL.openDurationMs,

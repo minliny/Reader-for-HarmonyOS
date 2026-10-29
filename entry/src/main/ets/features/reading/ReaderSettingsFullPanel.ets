@@ -336,7 +336,7 @@ export struct ReaderSettingsFullPanel {
       Row()
         .width(44)
         .height(24)
-        .backgroundColor(value ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderSettingsFullPanel.toggleTrack.backgroundColor.FFAAA39A', this.appThemeScheme))
+        .backgroundColor(value ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.toggle.inactiveTrack', this.appThemeScheme))
         .borderRadius(999);
       Row()
         .width(20)

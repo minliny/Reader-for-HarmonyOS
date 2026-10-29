@@ -1,13 +1,13 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { readerMainRailLeading, readerMainRailBottomInset } from './MainNavigationSpec';
+import { publishReaderMainViewport, readerMainViewport } from './MainNavigationSpec';
 import { MainTabBar } from './MainTabBar';
+import { MainNavigationOverlay } from './MainNavigationOverlay';
+import { readerMainNavigationMode, type MainNavigationMode } from './MainNavigationSpec';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import {
-  readerInteractiveSafeBottom,
-  readerInteractiveSafeLeft,
-  readerVisualSafeTop,
-} from '../common/ReaderWindowMetrics';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
-import { readerPresentedHeaderBottom } from '../common/ReaderPageShell';
+import { readerPresentedHeaderBottom, type ReaderStandardPageVariant } from '../common/ReaderPageShell';
 import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 
@@ -21,16 +21,20 @@ export type MainTabHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirecto
 // 与安全区仍由 Index 根 Stack 统一处理，避免双 padding。
 @Component
 export struct MainTabShell {
+  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @Prop activeTab: string = 'bookshelf';
-  @Prop showBottomNav: boolean = true;
-  @Prop showTabletRail: boolean = false;
-  @Prop railVariant: 'standard' | 'bookshelf' = 'standard';
+  @Prop standardScroll: boolean = false;
+  @Prop standardPageVariant: ReaderStandardPageVariant = 'settingsHome';
+  scroller: Scroller = new Scroller();
   @Prop navigationGeneration: number = 0;
   private mounted: boolean = false;
   onMainTab: (key: string, presentedGeneration?: number) => void = (_key: string): void => {};
+  onCurrentTabTap: (key: string, presentedGeneration?: number) => void = (_key: string): void => {};
   @Prop headerKind: MainTabHeaderKind = 'home';
+  @Prop headerVisible: boolean = true;
   @Prop headerTop: number = 0;
   @Prop headerMeasurementKey: number = 0;
   @Prop headerInsetLeft: number = 0;
@@ -39,6 +43,8 @@ export struct MainTabShell {
   @BuilderParam content: () => void;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam overlayContent: () => void = this.emptySlot;
+  @BuilderParam scrollOverlayContent: (contentStartInset: number) => void = this.emptyScrollOverlay;
+  @Builder private emptyScrollOverlay(_contentStartInset: number) {}
   @Builder private emptySlot() {}
 
   aboutToAppear(): void { this.mounted = true; }
@@ -49,11 +55,20 @@ export struct MainTabShell {
     this.onMainTab(key, presentedGeneration);
   }
 
+  private requestCurrentTab(key: string, presentedGeneration: number): void {
+    if (!this.mounted || presentedGeneration !== this.navigationGeneration) return;
+    this.onCurrentTabTap(key, presentedGeneration);
+  }
+
+  private navigationMode(): MainNavigationMode {
+    return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision, this.readerWindowMetricsRevision);
+  }
+
   private pageGeometry(): ReaderPageGeometry {
     const metrics = ReaderWindowCoordinator.metrics();
     const input = new ReaderPageGeometryInput(metrics);
-    input.viewportWidth = metrics.windowRect.width;
-    input.viewportHeight = metrics.windowRect.height;
+    input.viewportWidth = readerMainViewport(this.mainViewportRevision).width;
+    input.viewportHeight = readerMainViewport(this.mainViewportRevision).height;
     input.headerTop = this.headerTop;
     input.headerInsetLeft = this.headerInsetLeft;
     input.headerInsetRight = this.headerInsetRight;
@@ -72,7 +87,21 @@ export struct MainTabShell {
   }
 
   build() {
-    ReaderPageScaffold({ frameStyle: this.frameStyle(),
+    if (this.standardScroll) {
+      ReaderStandardPage({
+        variant: this.standardPageVariant, scroller: this.scroller,
+        onViewportChange: (width: number, height: number): void => {
+          if (this.mounted) publishReaderMainViewport(width, height);
+        },
+        contentLeadingRail: this.navigationMode() === 'rail' ? readerMainRailLeading() : 0,
+        contentEndInset: this.navigationMode() === 'rail' ? readerMainRailBottomInset() : -1,
+        content: (): void => { this.content(); },
+        header: (): void => { this.header(); },
+        footer: (): void => { this.bottomNavigation(); },
+        overlayContent: (startInset: number): void => { this.mainOverlays(startInset); },
+      });
+    } else {
+    ReaderPageScaffold({ frameStyle: this.frameStyle(), headerVisible: this.headerVisible,
       geometry: this.pageGeometry(), headerMeasurementKey: this.headerMeasurementKey,
       content: (): void => { this.content(); },
       header: (): void => { this.header(); },
@@ -80,47 +109,34 @@ export struct MainTabShell {
       overlayContent: (): void => { this.mainOverlays(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void =>
         this.onHeaderHeightChange(readerPresentedHeaderBottom(this.headerTop, height), presentedKey),
+    }).onAreaChange((_old: Area, area: Area): void => {
+      if (this.mounted) publishReaderMainViewport(Number.parseFloat(`${area.width}`), Number.parseFloat(`${area.height}`));
     });
+    }
   }
 
   @Builder
   private bottomNavigation() {
-    if (this.showBottomNav && !this.showTabletRail) {
+    if (this.navigationMode() === 'bottom') {
       ForEach([this.navigationGeneration], (generation: number) => {
-        MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation) });
+        MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
+          onCurrentTap: (key: string): void => this.requestCurrentTab(key, generation) });
       }, (generation: number): string => generation.toString());
     }
   }
 
   @Builder
-  private mainOverlays() {
-    if (this.showTabletRail) {
-      ForEach([this.navigationGeneration], (generation: number) => {
-        MainTabBar({ current: this.activeTab, vertical: true, railVariant: this.railVariant, onSelect: (key: string): void => this.requestMainTab(key, generation) })
-          .position({ x: this.railLeft(), y: this.railTop() });
-      }, (generation: number): string => generation.toString());
-    }
-    this.overlayContent();
-  }
-
-  private railLeft(): number {
-    if (this.readerWindowMetricsRevision < 0) {
-      return 17;
-    }
-    return Math.max(17, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
-  }
-
-  private railTop(): number {
-    const metrics = ReaderWindowCoordinator.metrics();
-    const windowHeight = metrics.windowRect.height;
-    if (!Number.isFinite(windowHeight) || windowHeight <= 0) {
-      return 0;
-    }
-    const safeTop = readerVisualSafeTop(metrics);
-    const safeBottom = readerInteractiveSafeBottom(metrics);
-    const availableHeight = Math.max(0, windowHeight - safeTop - safeBottom);
-    // Index 已把主页面宿主放到 visual safeTop 以下；这里使用宿主局部坐标，
-    // 只按可用高度居中，不能再次叠加 safeTop。
-    return Math.max(0, (availableHeight - 332) / 2);
+  private mainOverlays(contentStartInset: number = 0) {
+    MainNavigationOverlay({
+      railActive: this.navigationMode() === 'rail',
+      activeTab: this.activeTab,
+      navigationGeneration: this.navigationGeneration,
+      onSelect: (key: string, generation: number): void => this.requestMainTab(key, generation),
+      onCurrentTap: (key: string, generation: number): void => this.requestCurrentTab(key, generation),
+      overlayContent: (): void => {
+        this.overlayContent();
+        this.scrollOverlayContent(contentStartInset);
+      },
+    });
   }
 }

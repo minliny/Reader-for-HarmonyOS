@@ -3,9 +3,6 @@ import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { MainTabShell } from '../shell/MainTabShell';
-import { ReaderFixedHeaderHost } from '../common/ReaderFixedHeaderHost';
-import { AppTopBar } from '../common/AppTopBar';
-import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { BookshelfMoreActionSheet } from './BookshelfMoreActionSheet';
@@ -14,9 +11,7 @@ import { readerScrimmedOpaqueColor } from '../common/ReaderScrimColor';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
 import { SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
 import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
 import { bookshelfHeaderSpec } from '../common/ReaderHeaderSpecs';
-import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 
 let bookshelfTemporaryGeneration: number = 0;
 
@@ -46,18 +41,16 @@ export struct BookshelfShell {
   @Prop backgroundUpdateRunning: boolean = false;
   @Prop updateProgressDone: number = 0;
   @Prop updateProgressTotal: number = 0;
-  onSearchRequested: (generation?: number) => void = (_generation?: number): void => {};
   onImportRequested: () => void = (): void => {};
   onBatchManageRequested: (generation?: number) => void = (_generation?: number): void => {};
   onBookshelfSettingsRequested: (generation?: number) => void = (_generation?: number): void => {};
   onDownloadsRequested: (generation?: number) => void = (_generation?: number): void => {};
   onCheckUpdatesRequested: (generation?: number) => void = (_generation?: number): void => {};
   onMainTab: (key: string, presentedNavigation?: number) => void = (_key: string): void => {};
+  onCurrentTabTap: (presentedNavigation?: number) => void = (_presentedNavigation?: number): void => {};
   @BuilderParam content: () => void;
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;
-  onHeaderHeightChange: (height: number, generation?: number) => void = (_height: number, _generation?: number): void => {};
-  @State private viewportWidth: number = 0;
   @State private moreMenuVisible: boolean = false;
   private moreSelectionId: string = '';
   private moreSheetCurrentId: string = '';
@@ -69,6 +62,10 @@ export struct BookshelfShell {
   private temporaryBackGeneration: number = 0;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number) => void =
     (_handler: (() => boolean) | undefined, _identity: string, _generation?: number): void => {};
+  // The shared search surface may render the More actor, while the sheet and
+  // its presentation identity remain owned here. A retired handler is inert.
+  onMoreBridge: (handler: (() => void) | undefined, identity: string, generation?: number) => void =
+    (_handler: (() => void) | undefined, _identity: string, _generation?: number): void => {};
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -88,6 +85,7 @@ export struct BookshelfShell {
     this.temporaryBackIdentity = '';
     this.dismissMoreMenu();
     this.onTemporaryBackBridge(undefined, identity, generation);
+    this.onMoreBridge(undefined, identity, generation);
   }
 
   private onNavigationGenerationChanged(): void {
@@ -104,8 +102,12 @@ export struct BookshelfShell {
     const generation = this.navigationGeneration;
     this.temporaryBackIdentity = identity;
     this.temporaryBackGeneration = generation;
-    if (previousIdentity.length > 0) this.onTemporaryBackBridge(undefined, previousIdentity, previousGeneration);
+    if (previousIdentity.length > 0) {
+      this.onTemporaryBackBridge(undefined, previousIdentity, previousGeneration);
+      this.onMoreBridge(undefined, previousIdentity, previousGeneration);
+    }
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity, generation);
+    this.onMoreBridge(this.moreOpenAction(identity), identity, generation);
   }
 
   private consumeTemporaryBack(identity: string): boolean {
@@ -209,36 +211,19 @@ export struct BookshelfShell {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       MainTabShell({
-        activeTab: 'bookshelf', headerKind: 'floating', navigationGeneration: this.navigationGeneration,
-        showBottomNav: this.showBottomNav(), showTabletRail: !this.showBottomNav(), railVariant: 'bookshelf',
-        headerTop: bookshelfHeaderSpec().topInset, headerMeasurementKey: this.navigationGeneration,
-        headerInsetLeft: Math.max(8, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
-        headerInsetRight: Math.max(8, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())),
+        activeTab: 'bookshelf', headerKind: 'floating', headerVisible: false,
+        navigationGeneration: this.navigationGeneration,
         onMainTab: (key: string, generation?: number): void => this.requestMainTab(key, generation ?? this.navigationGeneration),
-        content: (): void => { this.content(); },
-        header: (): void => { this.shellHeader(); },
-        overlayContent: (): void => { this.shellOverlay(); },
-        onHeaderHeightChange: (height: number, presentedKey?: number): void => {
-          if (!this.mounted || presentedKey !== this.navigationGeneration) return;
-          if (Number.isFinite(height) && height > 0) this.onHeaderHeightChange(height, presentedKey);
+        onCurrentTabTap: (_key: string, generation?: number): void => {
+          if (!this.mounted || (generation ?? this.navigationGeneration) !== this.navigationGeneration) return;
+          this.onCurrentTabTap(generation);
         },
-      })
-        .onAreaChange((_oldValue: Area, newValue: Area): void => {
-          const width = this.numericAreaLength(newValue.width);
-          if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-            this.viewportWidth = width;
-          }
-        });
+        content: (): void => { this.content(); },
+        overlayContent: (): void => { this.shellOverlay(); },
+      });
     }
     .width('100%').height('100%')
     .bindSheet(this.moreMenuVisible, this.moreSheetContent, this.moreSheetOptions());
-  }
-
-  @Builder
-  private shellHeader() {
-    Column() {
-      this.topBar();
-    }.width('100%');
   }
 
   @Builder
@@ -330,23 +315,6 @@ export struct BookshelfShell {
     try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.feedbackEnabled && this.populated); } catch (_) {}
   }
 
-  @Builder
-  private topBar() {
-    ForEach([this.navigationGeneration], (presentedGeneration: number) => {
-      AppTopBar({ title: '书架', floating: true, centered: true, showLeadingSearch: true,
-        onLeadingTap: (): void => {
-          if (this.mounted && this.navigationGeneration === presentedGeneration) this.onSearchRequested(presentedGeneration);
-        } }) {
-        ReaderIconButton({
-          icon: this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots'),
-          specId: 'floating-more',
-          accessibilityLabel: '更多',
-          onTap: this.moreOpenAction(this.temporaryBackIdentity),
-        })
-      }
-    }, (generation: number): string => generation.toString());
-  }
-
   private requestMainTab(key: string, generation: number): void {
     if (!this.mounted || generation !== this.navigationGeneration) return;
     this.onMainTab(key, generation);
@@ -365,14 +333,5 @@ export struct BookshelfShell {
       return Number.isFinite(parsed) ? parsed : 0;
     }
     return 0;
-  }
-
-  private showBottomNav(): boolean {
-    if (!this.populated) return true;
-    if (this.readerWindowMetricsRevision < 0) return true;
-    const width = this.viewportWidth > 0 ? this.viewportWidth : ReaderWindowCoordinator.metrics().windowRect.width;
-    // Only the populated shelf has an approved tablet rail. Other states
-    // retain the existing phone navigation assembly at larger widths.
-    return !readerIsExpandedWidth(width);
   }
 }

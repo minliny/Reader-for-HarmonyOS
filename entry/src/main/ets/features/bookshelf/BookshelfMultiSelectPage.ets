@@ -131,7 +131,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
         .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
         .lineHeight(TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number)
-        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
         .onClick((): void => {
           if (!this.busy && this.ready) {
             this.onCancel();
@@ -144,7 +144,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(TYPE_SHELF_SELECTION_HEADING.fontWeight)
         .fontSize(TYPE_SHELF_SELECTION_HEADING.fontSizeFp)
         .lineHeight(TYPE_SHELF_SELECTION_HEADING.lineHeightFp as number)
-        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF1F1B17', this.appThemeScheme))
+        .fontColor(readerAppColor('app.text.heading', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
 
@@ -154,7 +154,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
         .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
         .lineHeight(TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number)
-        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .onClick((): void => {
           if (!this.busy && this.ready) {
@@ -179,7 +179,7 @@ export struct BookshelfMultiSelectPage {
             .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
             .borderRadius(8)
-            .shadow({ radius: 26, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.1A594632', this.appThemeScheme), offsetX: 0, offsetY: 8 });
+            .shadow({ radius: 26, color: readerAppColor('app.shadow.cover', this.appThemeScheme), offsetX: 0, offsetY: 8 });
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight() });
         }
@@ -193,10 +193,10 @@ export struct BookshelfMultiSelectPage {
         .width(22)
         .height(22)
         .margin({ right: 4, bottom: 4 })
-        .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionCard.backgroundColor.FFFFFCF8', this.appThemeScheme))
-        .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.FFC1C7CD', this.appThemeScheme) })
+        .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+        .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.border.control', this.appThemeScheme) })
         .borderRadius(11)
-        .shadow({ radius: 4, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.26000000', this.appThemeScheme), offsetX: 0, offsetY: 2 });
+        .shadow({ radius: 4, color: readerAppColor('app.shadow.control', this.appThemeScheme), offsetX: 0, offsetY: 2 });
       }
       .width(this.cardWidth())
       .height(this.coverHeight());
@@ -207,7 +207,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(TYPE_SHELF_SELECTION_TITLE.fontWeight)
         .fontSize(this.isWide() ? TYPE_SHELF_SELECTION_TITLE_WIDE.fontSizeFp : TYPE_SHELF_SELECTION_TITLE.fontSizeFp)
         .lineHeight(this.isWide() ? TYPE_SHELF_SELECTION_TITLE_WIDE.lineHeightFp as number : TYPE_SHELF_SELECTION_TITLE.lineHeightFp as number)
-        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FF1F1B17', this.appThemeScheme))
+        .fontColor(readerAppColor('app.text.heading', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -217,7 +217,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(TYPE_SHELF_SELECTION_AUTHOR.fontWeight)
         .fontSize(this.isWide() ? TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontSizeFp : TYPE_SHELF_SELECTION_AUTHOR.fontSizeFp)
         .lineHeight(this.isWide() ? TYPE_SHELF_SELECTION_AUTHOR_WIDE.lineHeightFp as number : TYPE_SHELF_SELECTION_AUTHOR.lineHeightFp as number)
-        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FF756F69', this.appThemeScheme))
+        .fontColor(readerAppColor('app.text.secondary', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -258,8 +258,8 @@ export struct BookshelfMultiSelectPage {
     .width('100%')
     .padding({ top: 12, bottom: this.bottomInset() })
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.backgroundColor.EBFFFCF8', this.appThemeScheme))
-    .border({ width: { top: 1 }, color: readerAppColor('app.BookshelfMultiSelectPage.removeBar.color.FFC1C7CD', this.appThemeScheme) })
+    .backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme))
+    .border({ width: { top: 1 }, color: readerAppColor('app.border.control', this.appThemeScheme) })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .hitTestBehavior(HitTestMode.Transparent);
   }
@@ -388,9 +388,9 @@ export struct BookshelfMultiSelectPage {
       }
     }
     .width(22).height(22).margin({ right: 2, bottom: 2 })
-    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.backgroundColor.FFFFFCF8', this.appThemeScheme))
-    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.color.FFC1C7CD', this.appThemeScheme) })
-    .borderRadius(11).shadow({ radius: 4, color: readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.color.26000000', this.appThemeScheme), offsetX: 0, offsetY: 2 });
+    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.border.control', this.appThemeScheme) })
+    .borderRadius(11).shadow({ radius: 4, color: readerAppColor('app.shadow.control', this.appThemeScheme), offsetX: 0, offsetY: 2 });
   }
 
   private isListMode(): boolean {

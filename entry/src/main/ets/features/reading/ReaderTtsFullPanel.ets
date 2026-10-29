@@ -227,7 +227,7 @@ export struct ReaderTtsFullPanel {
           .width('100%')
           .fontFamily(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS_SECONDARY.fontFamily as string)
           .fontSize(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS_SECONDARY.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderTtsFullPanel.playbackSection.fontColor.FFB93D35', this.appThemeScheme))
+          .fontColor(readerAppColor('app.tts.error', this.appThemeScheme))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -287,7 +287,7 @@ export struct ReaderTtsFullPanel {
     }
     .width(kind === 'toggle' ? 52 : (kind === 'stop' ? 32 : 44))
     .height(kind === 'toggle' ? 52 : (kind === 'stop' ? 32 : 44))
-    .backgroundColor(kind === 'toggle' ? readerAppColor('app.ReaderTtsFullPanel.roundControl.backgroundColor.FF254A3D', this.appThemeScheme) : (kind === 'stop' ? readerAppColor('app.ReaderTtsFullPanel.roundControl.backgroundColor.FFD7473E', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme)))
+    .backgroundColor(kind === 'toggle' ? readerAppColor('app.tts.playback', this.appThemeScheme) : (kind === 'stop' ? readerAppColor('app.action.destructive', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme)))
     .border({ width: kind === 'previous' || kind === 'next' ? TOK_BORDER_W : 0, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(kind === 'toggle' ? 26 : (kind === 'stop' ? 16 : 22))
     .enabled(kind === 'toggle' ? this.state.status !== 'unavailable' && this.state.status !== 'stopping' :
@@ -562,7 +562,7 @@ export struct ReaderTtsFullPanel {
     .width('100%')
     .height(116)
     .padding(3)
-    .backgroundColor(readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTabs.backgroundColor.B8FFFCF8', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.surface.ttsTabs', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(6);
   }
@@ -583,7 +583,7 @@ export struct ReaderTtsFullPanel {
       }
       .width(44)
       .height(44)
-      .backgroundColor(this.isTtsServiceTabSelected(http) ? readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.backgroundColor.B8FFFCF8', this.appThemeScheme) : Color.Transparent)
+      .backgroundColor(this.isTtsServiceTabSelected(http) ? readerAppColor('app.surface.ttsTabs', this.appThemeScheme) : Color.Transparent)
       .borderRadius(6);
 
       Column({ space: 2 }) {
@@ -594,7 +594,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontWeight)
           .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp)
           .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.lineHeightFp as number)
-          .fontColor(this.isTtsServiceTabSelected(http) ? readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.fontColor.FF1F3528', this.appThemeScheme) : readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.fontColor.FF756F69', this.appThemeScheme))
+          .fontColor(this.isTtsServiceTabSelected(http) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.text.secondary', this.appThemeScheme))
           .maxLines(1);
         Text(http ? '第三方或自定义服务' : '使用设备内置语音')
           .width('100%')
@@ -603,7 +603,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontWeight)
           .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp)
           .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.lineHeightFp as number)
-          .fontColor(readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.fontColor.FF756F69', this.appThemeScheme))
+          .fontColor(readerAppColor('app.text.secondary', this.appThemeScheme))
           .maxLines(1);
       }
       .layoutWeight(1)
@@ -617,7 +617,7 @@ export struct ReaderTtsFullPanel {
     .backgroundColor(this.isTtsServiceTabSelected(http) ? readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme) : Color.Transparent)
     .border({
       width: TOK_BORDER_W,
-      color: this.isTtsServiceTabSelected(http) ? readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.color.FF2D4A3E', this.appThemeScheme) : Color.Transparent,
+      color: this.isTtsServiceTabSelected(http) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : Color.Transparent,
     })
     .borderRadius(6)
     .accessibilityText(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音')
@@ -644,7 +644,7 @@ export struct ReaderTtsFullPanel {
     .width('100%')
     .height(182)
     .padding(1)
-    .backgroundColor(readerAppColor('app.ReaderTtsFullPanel.ttsClosedConfigPanel.backgroundColor.B8FFFCF8', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.surface.ttsTabs', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(6)
     .clip(true);
@@ -659,7 +659,7 @@ export struct ReaderTtsFullPanel {
         .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.fontWeight)
         .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.fontSizeFp)
         .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.lineHeightFp as number)
-        .fontColor(readerAppColor('app.ReaderTtsFullPanel.ttsClosedConfigRow.fontColor.FF41484C', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
         .maxLines(1);
       this.ttsSelectValueField(value, fieldWidth, `${label}：${value}，暂不可展开`);
     }
@@ -697,7 +697,7 @@ export struct ReaderTtsFullPanel {
         .fontFamily(TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL.fontWeight)
         .fontSize(TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL.fontSizeFp)
-        .fontColor(readerAppColor('app.ReaderTtsFullPanel.selectorRow.fontColor.FF41484C', this.appThemeScheme));
+        .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
       this.ttsSelectValueField(value, 70, `${label}：${value}`);
     }
     .width('100%')
@@ -719,7 +719,7 @@ export struct ReaderTtsFullPanel {
         .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.fontWeight)
         .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.fontSizeFp)
         .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.lineHeightFp as number)
-        .fontColor(readerAppColor('app.ReaderTtsFullPanel.ttsSelectValueField.fontColor.FF1F3528', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
@@ -755,7 +755,7 @@ export struct ReaderTtsFullPanel {
       }
       .width(44)
       .height(24)
-      .backgroundColor(value ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderTtsFullPanel.toggleRow.backgroundColor.FFB3ACA4', this.appThemeScheme))
+      .backgroundColor(value ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.tts.offTrack', this.appThemeScheme))
       .borderRadius(999)
       .enabled(enabled)
       .opacity(enabled ? 1 : 0.72)

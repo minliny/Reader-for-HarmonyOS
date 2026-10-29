@@ -62,7 +62,7 @@ export struct ReaderBookmarkRow {
       }.width(this.frame().title.width).height(this.frame().title.height)
         .position({ x: this.frame().title.x, y: this.frame().title.y });
       Text('').width(this.frame().accent.width).height(this.frame().accent.height)
-        .backgroundColor(readerAppColor('app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT', this.appThemeScheme)).borderRadius(1)
+        .backgroundColor(readerAppColor('app.bookmark.excerptAccent', this.appThemeScheme)).borderRadius(1)
         .position({ x: this.frame().accent.x, y: this.frame().accent.y });
       Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
         .fontFamily(TYPE_READER_BOOKMARK_EXCERPT.fontFamily).fontWeight(TYPE_READER_BOOKMARK_EXCERPT.fontWeight)
@@ -124,7 +124,7 @@ export struct ReaderBookmarkRow {
         Text('')
           .width(1)
           .height(26)
-          .backgroundColor(readerAppColor('app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT', this.appThemeScheme))
+          .backgroundColor(readerAppColor('app.bookmark.excerptAccent', this.appThemeScheme))
           .borderRadius(1);
         Text(this.row.excerpt)
           .layoutWeight(1)

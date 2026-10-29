@@ -108,7 +108,7 @@ export struct AppTopBar {
     .borderRadius(this.floating ? 18 : 0)
     .clip(this.floating)
     .shadow(this.floating ? { radius: 18,
-      color: readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
+      color: readerAppColor('app.shadow.cover', this.appThemeScheme),
       offsetX: 0, offsetY: 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
     .hitTestBehavior(HitTestMode.Transparent);
   }

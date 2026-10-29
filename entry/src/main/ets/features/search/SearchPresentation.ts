@@ -9,6 +9,12 @@ export type SearchSourceSkip = {
 
 export type SearchHistoryStatus = 'loading' | 'ready' | 'loadFailed' | 'clearFailed';
 
+/** Entry history is independent of the current query/result presentation. */
+export interface SearchHistoryProjection {
+  history?: string[];
+  historyStatus?: SearchHistoryStatus;
+}
+
 /** Small summary facts; result rows remain in SearchPresentation. */
 export interface SearchOperationValue {
   resultCount: number;
@@ -25,19 +31,19 @@ export type SearchOperationFacts = OperationFacts<SearchOperationValue>;
  * Figma Input text; results are real Core
  * `search-book` entries decoded by SearchGateway.
  */
-export interface SearchInitialPresentation {
+export interface SearchInitialPresentation extends SearchHistoryProjection {
   kind: 'initial';
   history: string[];
   historyStatus?: SearchHistoryStatus;
 }
 
-export interface SearchLoadingPresentation {
+export interface SearchLoadingPresentation extends SearchHistoryProjection {
   kind: 'loading';
   keyword: string;
   operation?: SearchOperationFacts;
 }
 
-export interface SearchResultsPresentation {
+export interface SearchResultsPresentation extends SearchHistoryProjection {
   kind: 'results';
   delta?: SearchResultDelta;
   localSearchFailed?: boolean;
@@ -67,7 +73,7 @@ export interface SearchResultsPresentation {
   operation?: SearchOperationFacts;
 }
 
-export interface SearchEmptyPresentation {
+export interface SearchEmptyPresentation extends SearchHistoryProjection {
   kind: 'empty';
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
@@ -87,7 +93,7 @@ export interface SearchEmptyPresentation {
   operation?: SearchOperationFacts;
 }
 
-export interface SearchErrorPresentation {
+export interface SearchErrorPresentation extends SearchHistoryProjection {
   kind: 'error';
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
@@ -110,7 +116,7 @@ export interface SearchErrorPresentation {
  * not a search failure. Product-approved extension state (no Figma final
  * frame); it reuses the Empty layout.
  */
-export interface SearchSourceRequiredPresentation {
+export interface SearchSourceRequiredPresentation extends SearchHistoryProjection {
   kind: 'sourceRequired';
   reason: 'noSources' | 'allDisabled';
   history: string[];
@@ -118,7 +124,7 @@ export interface SearchSourceRequiredPresentation {
 }
 
 /** `source.list` itself failed; the search chain never started. */
-export interface SearchSourceLoadErrorPresentation {
+export interface SearchSourceLoadErrorPresentation extends SearchHistoryProjection {
   kind: 'sourceLoadError';
   history: string[];
   historyStatus?: SearchHistoryStatus;

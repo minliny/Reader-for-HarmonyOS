@@ -73,6 +73,9 @@ export class ReaderPageGeometryInput {
   footerInsetRight: number = 0;
   footerSurface: ReaderFooterSurface = 'transparent';
   contentGap: number = 0;
+  /** Scroll paint may start beneath overlay chrome; header.clearance remains
+   * the text/notice/interaction safety line. Zero preserves normal avoidance. */
+  contentUnderlap: number = 0;
   contentEndInset: number = 0;
   contentNativeEndInset: number = 0;
   contentMaxWidth: number = Number.MAX_SAFE_INTEGER;
@@ -138,12 +141,18 @@ export function resolveReaderPageGeometry(input: ReaderPageGeometryInput): Reade
     new SurfaceWidthSpec(finiteNonNegative(input.contentMaxWidth), leftGap, rightGap, input.contentAlignment),
   );
 
+  // Return a frame in the full host's coordinate space. The resolver above
+  // works inside the remaining lane; only this owner adds the rail once.
+  geometry.content.frame.left += rail;
+
   if (input.chromeMode === 'inline') {
     geometry.content.startInset = 0;
     geometry.content.endInset = 0;
     geometry.content.nativeEndInset = 0;
   } else {
-    geometry.content.startInset = geometry.header.clearance;
+    const underlap = finiteNonNegative(input.contentUnderlap);
+    geometry.content.startInset = underlap > 0
+      ? Math.max(0, geometry.header.bottom - underlap) : geometry.header.clearance;
     geometry.content.endInset = finiteNonNegative(input.contentEndInset);
     geometry.content.nativeEndInset = finiteNonNegative(input.contentNativeEndInset);
     if (input.footerSurface === 'solid') {

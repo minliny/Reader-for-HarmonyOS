@@ -102,15 +102,15 @@ export struct ReaderBoundedSurfaceActions {
       if (id === 'cancel') {
         Text('取消').layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.lineHeightFp)).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FF5B5046', this.appThemeScheme)).textAlign(TextAlign.Center)
-          .backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.backgroundColor.29B4A697', this.appThemeScheme)).borderRadius(12)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center)
+          .backgroundColor(readerAppColor('app.reader.secondaryAction', this.appThemeScheme)).borderRadius(12)
           .enabled(this.cancelEnabled).onClick((): void => this.dispatch(id));
       } else {
         Text(this.primaryLabel).layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp)).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FFFFFAF4', this.appThemeScheme)).textAlign(TextAlign.Center)
-          .linearGradient({ angle: 155, colors: [[readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF2F6373', this.appThemeScheme), 0], [readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF244F5C', this.appThemeScheme), 1]] }).borderRadius(12)
-          .shadow({ radius: 12, color: readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.color.4D2F6373', this.appThemeScheme), offsetY: 4 })
+          .fontColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).textAlign(TextAlign.Center)
+          .linearGradient({ angle: 155, colors: [[readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme), 0], [readerAppColor('TOK_TTS_PLAY_END', this.appThemeScheme), 1]] }).borderRadius(12)
+          .shadow({ radius: 12, color: readerAppColor('app.control.paint.4D2F6373', this.appThemeScheme), offsetY: 4 })
           .enabled(this.primaryEnabled).opacity(this.primaryEnabled ? 1 : 0.42).onClick((): void => this.dispatch(id));
       }
     } else {
@@ -124,7 +124,7 @@ export struct ReaderBoundedSurfaceActions {
       } else {
         Text(this.primaryLabel).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string)
           .fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme))
+          .fontColor(readerAppColor('app.replace.onToolbarAction', this.appThemeScheme))
           .layoutWeight(1).height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp)).textAlign(TextAlign.Center).borderRadius(6)
           .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .enabled(this.primaryEnabled).onClick((): void => this.dispatch(id));

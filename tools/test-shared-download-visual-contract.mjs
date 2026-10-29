@@ -23,7 +23,11 @@ registerHooks({ resolve(specifier, context, next) {
 const visual = await import('../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts');
 const projection = await import('../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts');
 const metricsExports = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { findReaderTheme } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const surfaceResolvers = await import('../entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts');
+const horizontalGeometry = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const { ReaderMeasurementStore } = await import('../entry/src/main/ets/features/common/ReaderMeasurements.ts');
+const { ReaderTransientFeedback } = await import('../entry/src/main/ets/features/common/ReaderTransientFeedback.ts');
+const { findReaderTheme, readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 
 
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
@@ -34,7 +38,6 @@ if(selectedCase==='definition'){
 }
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
 const palette=Object.fromEntries(['day','night'].map(scheme=>[scheme,Object.fromEntries(Object.entries(manifest.palettes).filter(([,v])=>v[scheme]).map(([role,v])=>[role,'#'+[Math.round(v[scheme].a*255),v[scheme].r,v[scheme].g,v[scheme].b].map(n=>n.toString(16).padStart(2,'0')).join('').toUpperCase()]))]));
-const overlayPalette=Object.fromEntries(['day','night'].map(scheme=>[scheme,visual.downloadOverlayChromeStyle(scheme,false)])),doubleOverlayPalette=Object.fromEntries(['day','night'].map(scheme=>[scheme,visual.downloadOverlayChromeStyle(scheme,false,2)]));
 const argb=color=>{assert.equal(typeof color,'string');return color.length===7?'#FF'+color.slice(1).toUpperCase():color.toUpperCase();};
 const source = readFileSync(new URL('../entry/src/main/ets/features/downloads/SharedDownloadPage.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
@@ -46,6 +49,11 @@ assert.ok(page, 'the actual production component is the probe input');
 const methods = [...page.members.filter(node => ts.isMethodDeclaration(node)).map(node => node.name.getText(tree)),
   'readerWindowMetricsRevision', 'books', 'storageSummary', 'loading', 'appThemeScheme', 'sheet', 'confirmation', 'presentationIdentity', 'detailKey',
   'query', 'bookType', 'stateFilter', 'sourceFilter', 'sortField', 'sortDirection'];
+// These production initializers own native measurement and sheet-exit
+// admission. Retain them rather than replacing them with fixture defaults.
+methods.push('measurements', 'measurementRevision', 'reduceMotion', 'sheetWasVisible',
+  'sheetMaskReady', 'sheetExitPending', 'sheetAnimationGeneration', 'transientFeedback',
+  'storageDockSurfaceWidth', 'storageDockSurfaceHeight', 'selectionDockSurfaceWidth', 'selectionDockSurfaceHeight');
 const frameSource = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadIdleFrame');
 assert.ok(frameSource, 'the production idle-frame adapter is retained');
 const frameBody = ts.transpileModule(frameSource.getText(tree), {
@@ -74,6 +82,47 @@ let windowMetrics = Object.assign(metricsExports.createDefaultReaderWindowMetric
 let platformFontScale = 1;
 const fontReceipts = [], scheduledFrames = [];
 const chromeRequests = [];
+const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const surfaces = readerSurfaceSpecsForProbe(new Proxy({}, { get: (_target, name) => windowMetrics[name] }));
+// Controlled native ColorMetrics receipts bind actual role inputs and blend
+// order. These RGB identifiers are not a second alpha-compositing engine and
+// do not claim platform pixel values. The production helper formats receipts.
+const nativeBlendReceipts = new Map(), nativeBlendCalls = [];
+function nativeBlendReceipt(base, scrim) {
+  const key = `${argb(base)}|${argb(scrim)}`;
+  if (!nativeBlendReceipts.has(key)) {
+    const id = nativeBlendReceipts.size + 1;
+    const channels = { red: id, green: id + 64, blue: id + 128 };
+    const output = '#FF' + [channels.red, channels.green, channels.blue].map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase();
+    nativeBlendReceipts.set(key, { ...channels, output });
+  }
+  return nativeBlendReceipts.get(key).output;
+}
+const currentChromePalette = Object.fromEntries(['day', 'night'].map(scheme => {
+  const pagePaper = readerAppColor('TOK_PAPER', scheme), pageInk = visual.downloadVisualColor('ink', scheme);
+  const scrim = readerAppColor('app.scrim.warmModal', scheme);
+  const action = surfaces.resolveDrawerSpec('reader-action-sheet');
+  const actionScrim = readerAppColor(action.scrimRole, scheme);
+  const sheetPaper = readerAppColor('app.surface.menuSolid', scheme);
+  const paper = nativeBlendReceipt(pagePaper, scrim), ink = nativeBlendReceipt(pageInk, scrim);
+  return [scheme, { pagePaper, pageInk, scrim, paper, ink,
+    actionScrim, actionPaper: nativeBlendReceipt(pagePaper, actionScrim), actionInk: nativeBlendReceipt(pageInk, actionScrim),
+    actionSurface: readerAppColor(action.surfaceRole, scheme), actionSurfaceInk: readerAppColor(action.inkRole, scheme),
+    sheetPaper, sheetInk: pageInk,
+    doublePaper: nativeBlendReceipt(paper, scrim), doubleInk: nativeBlendReceipt(ink, scrim),
+    confirmationOnSheet: nativeBlendReceipt(sheetPaper, scrim), confirmationOnSheetInk: nativeBlendReceipt(pageInk, scrim),
+  }];
+}));
+const nativeColorMetrics = { resourceColor: value => ({ value: argb(value), blendColor(overlay) {
+  const key = `${this.value}|${overlay.value}`;
+  assert.ok(nativeBlendReceipts.has(key), `finite ColorMetrics input pair: ${key}`);
+  nativeBlendCalls.push([this.value, overlay.value]);
+  return nativeBlendReceipts.get(key);
+} }) };
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerScrimmedOpaqueColor } = pureModuleProbe(
+  readFileSync(new URL('../entry/src/main/ets/features/common/ReaderScrimColor.ets', import.meta.url), 'utf8'),
+  'ReaderScrimColor.ets', { ColorMetrics: nativeColorMetrics }, ['readerScrimmedOpaqueColor']);
 // These are platform modifier/measurement receipts. The port records the
 // production API calls; it does not estimate widths from character counts.
 class NativeModifierPort {
@@ -85,15 +134,21 @@ for (const method of ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'hal
   };
 class TextModifierPort extends NativeModifierPort {}
 class SymbolGlyphModifierPort extends NativeModifierPort {}
-const measurements = [], convertedWidths = [];
+const measurements = [], sizeMeasurements = [], convertedWidths = [];
 let measuredWidths = new Map();
 const measureText = options => {
   measurements.push({ ...options });
   return measuredWidths.get(options.textContent) ?? 150;
 };
+const measureTextSize = options => {
+  sizeMeasurements.push({ ...options });
+  // Explicit native receipt for static material probes, independent of text.
+  return { width: 150, height: 63 };
+};
 const propertyRuntime = createArkUIPropertyRuntimeProbe();
 const probeDependencies = {
-  ...visual, ...projection, ...metricsExports,
+  ...visual, ...projection, ...metricsExports, ...surfaceResolvers, ...surfaces, ReaderMeasurementStore, ReaderTransientFeedback,
+  readerAppColor, readerScrimmedOpaqueColor,
   ...propertyRuntime.sdk,
   SharedDownloadIdleFrame, ReaderWindowChromeStyle, TextModifier: TextModifierPort, SymbolGlyphModifier: SymbolGlyphModifierPort,
   ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
@@ -104,11 +159,41 @@ const probeDependencies = {
   ButtonType: enumValue('ButtonType'), ImageFit: enumValue('ImageFit'), InputType: enumValue('InputType'),
   WordBreak: enumValue('WordBreak'), ScrollAlign: enumValue('ScrollAlign'), ControlSize: enumValue('ControlSize'),
   TouchType: enumValue('TouchType'),
+  // This case observes static material attributes with reduceMotion enabled;
+  // it passes the native identity recipe through without simulating frames.
+  TransitionEffect: { IDENTITY: 'TransitionEffect.IDENTITY' },
   uiContext: {getFont:()=>({}),animateTo(_options,action){action();},getHostContext: () => ({ config: { fontSizeScale: platformFontScale } }),
-    postFrameCallback: frame => scheduledFrames.push(frame), getMeasureUtils: () => ({ measureText }),
+    postFrameCallback: frame => scheduledFrames.push(frame), getMeasureUtils: () => ({ measureText, measureTextSize }),
     px2vp: value => { convertedWidths.push(value); return value / 3; } },
 };
-const {inlineSelectSdk}=await import('./lib/reader-inline-select-sdk-probe.mjs');const inline=inlineSelectSdk({properties:propertyRuntime,uiContext:probeDependencies.uiContext});Object.assign(probeDependencies,inline.dependencies);const probeHooks={...propertyRuntime.hooks,...inline.hooks};
+const {inlineSelectSdk}=await import('./lib/reader-inline-select-sdk-probe.mjs');const inline=inlineSelectSdk({properties:propertyRuntime,uiContext:probeDependencies.uiContext,
+  dependencies:{...surfaces,ReaderWindowCoordinator:probeDependencies.ReaderWindowCoordinator}});Object.assign(probeDependencies,inline.dependencies);const probeHooks={...propertyRuntime.hooks,...inline.hooks};
+// Register the shipping dialog and its real DTO with the same property
+// runtime before lowering its parent. The selected cases do not click dialog
+// actions or claim native confirmation layout/press dispatch.
+const dialogSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderDialogSurface.ets', import.meta.url), 'utf8');
+require(sdk + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderDialogSurface',
+  new Set([...dialogSource.matchAll(/@BuilderParam\s+(\w+)\s*:/g)].map(match => match[1])));
+const { DialogActionView } = pureModuleProbe(dialogSource.slice(0, dialogSource.indexOf('@Component')),
+  'ReaderDialogActionView.ets', {}, ['DialogActionView']);
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { ReaderActionAccessibility } = pureModuleProbe(
+  readFileSync(new URL('../entry/src/main/ets/features/common/ReaderActionAccessibility.ets', import.meta.url), 'utf8'),
+  'ReaderActionAccessibility.ets', { AccessibilityRoleType: enumValue('AccessibilityRoleType') }, ['ReaderActionAccessibility']);
+probeHooks.childSources = { ...probeHooks.childSources, ReaderDialogSurface: dialogSource };
+// Register the shipping Prop contract while observing its parent inputs only.
+// Canvas layout/rasterization is verified by the isolated native P0, not this
+// SDK-attribute fixture.
+const raisedSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRaisedSurface.ets',import.meta.url),'utf8');
+class RaisedSurfaceInputs {
+  constructor(owner,params,_storage,id) { Object.assign(this,{owner,params,id});this.nodes=new Map();this.children=new Map(); }
+  updateStateVars(params) { Object.assign(this.params,params); }
+}
+probeHooks.childSources.ReaderRaisedSurface=raisedSource;
+probeDependencies.ReaderRaisedSurface=RaisedSurfaceInputs;
+probeDependencies.DialogActionView = DialogActionView;
+probeDependencies.ReaderDialogSurface = createReaderBuilderProbe(dialogSource, boundedMembers(dialogSource),
+  { ...probeDependencies, ...horizontalGeometry, ...readerTypographyRoles, ReaderActionAccessibility }, probeHooks).Component;
 const probe = createReaderBuilderProbe(source, methods, probeDependencies, probeHooks);
 const book = {
   ...projection.createDownloadBookView({ sourceId: 'source-one', bookId: 'book-one', title: '晚唐浮生',
@@ -172,9 +257,41 @@ const countActor = result => find(result, node => node.type === 'Text' && node.l
 
 if(selectedCase==='native-bindings'){
 for(const scheme of ['day','night']){
- const header=owner(scheme);header.topBar();const heading=text(header,'下载管理');assert.ok(heading.fontSize>0&&heading.lineHeight>0);const headerBox=find(header,n=>n.constraintSize?.minHeight===visual.DOWNLOAD_VISUAL.headerHeight&&n.onAreaChange,'actual header');const before=header.contentTop();headerBox.onAreaChange({}, {height:visual.DOWNLOAD_VISUAL.headerHeight+18});assert.equal(header.contentTop(),before+18);colorIs(header,'backgroundColor','surface');
+ const header=owner(scheme);header.topBar();const heading=text(header,'下载管理');assert.ok(heading.fontSize>0&&heading.lineHeight>0);const headerBox=find(header,n=>n.constraintSize?.minHeight===visual.DOWNLOAD_VISUAL.headerHeight&&n.onAreaChange,'actual header');const before=header.contentTop();headerBox.onAreaChange({}, {height:visual.DOWNLOAD_VISUAL.headerHeight+18});assert.equal(header.contentTop(),before+18);
+ assert.equal(argb(headerBox.backgroundColor),argb(readerAppColor('TOK_SURFACE_SOLID',scheme)));
+ assert.equal(argb(headerBox.border.color),argb(readerAppColor('app.border.control',scheme)));
+ assert.deepEqual(headerBox.shadow,surfaces.readerSurfaceElevation('fixed',scheme),'reserved header is fixed without lift');
+ const field=owner(scheme);field.searchField();const fieldBox=find(field,n=>n.type==='Row'&&n.borderRadius===visual.DOWNLOAD_VISUAL.searchRadius,'actual input surface');
+ assert.equal(argb(fieldBox.backgroundColor),argb(readerAppColor('TOK_FIELD_SURFACE',scheme)));
+ assert.equal(argb(fieldBox.border.color),argb(readerAppColor('app.border.searchField',scheme)));
+ for(const method of ['storageDock','selectionDock']){
+  const dock=owner(scheme,{managing:method==='selectionDock'});dock[method]();
+  const box=find(dock,n=>n.borderRadius===visual.DOWNLOAD_VISUAL.dockRadius&&n.onAreaChange,'actual floating dock');
+  assert.equal(argb(box.backgroundColor),argb(readerAppColor('app.surface.dock',scheme)));
+  assert.equal(argb(box.border.color),argb(readerAppColor('app.navigation.floatingBorder',scheme)));
+  assert.equal(box.clip,false,'floating dock does not clip its own shadow');
+  assert.equal(box.shadow,undefined,'dock material does not duplicate the shared raised painter');
+  const wrapper=find(dock,n=>n.type==='Stack'&&n.width==='100%'&&n.clip===false,'unclipped shadow host');
+  assert.equal(wrapper.padding,undefined);assert.equal(wrapper.height,undefined,'the painted dock still determines natural wrapper height');
+  const raised=[...dock.children.values()].filter(child=>child instanceof RaisedSurfaceInputs);
+  assert.equal(raised.length,1,'each dock owns one shared raised painter');
+  assert.equal(raised[0].params.cornerRadius,visual.DOWNLOAD_VISUAL.dockRadius);
+  assert.equal(raised[0].params.scheme,scheme);
+  box.onAreaChange({}, {width:'326vp',height:'91vp'});propertyRuntime.flush();
+  assert.deepEqual({...raised[0].params},{surfaceWidth:326,surfaceHeight:91,
+    cornerRadius:visual.DOWNLOAD_VISUAL.dockRadius,scheme},'actual vp surface receipts reach the retained painter unchanged');
+  assert.equal(dock.measurements.read('download:dock'),91,'the same dock receipt still owns existing content avoidance');
+ }
+ const panel=owner(scheme,{sheet:'filter',reduceMotion:true});panel.sheetOverlay();
+ const panelBox=find(panel,n=>n.type==='Column'&&n.borderRadius?.topLeft===visual.DOWNLOAD_VISUAL.sheetRadius,'actual modal sheet');
+ assert.equal(argb(panelBox.backgroundColor),argb(readerAppColor('app.surface.menuSolid',scheme)));
+ assert.equal(argb(panelBox.border.color),argb(readerAppColor('app.border.modalHighlight',scheme)));
+ assert.deepEqual(panelBox.shadow,surfaces.readerSurfaceElevation('sheet',scheme));
+ const mask=find(panel,n=>n.type==='Rect'&&n.fill,'actual modal mask');
+ assert.equal(argb(mask.fill),argb(readerAppColor('app.scrim.warmModal',scheme)));
  const row=owner(scheme);row.bookRow(()=>book,false);const title=text(row,book.title),meta=text(row,row.authorSource(book));assert.ok(title.maxLines===undefined||title.maxLines>1);assert.ok(meta.maxLines===undefined||meta.maxLines>1);const image=find(row,n=>n.type==='Image'&&n.create===book.coverUrl,'actual cover'),copy=find(row,n=>n.type==='Column'&&n.layoutWeight===1&&n.onAreaChange,'measured book copy');assert.equal(copy.height,undefined);const old=image.height;copy.onAreaChange({}, {height:old+57});row.replay();assert.equal(image.height,old+57);
- const status=owner(scheme);status.statusButton(()=>book);assert.equal(argb(text(status,'下载中').fontColor),argb(visual.downloadVisualColor('green',scheme)));const failed=owner(scheme);failed.statusButton(()=>({...book,stateLabel:'下载失败'}));assert.equal(argb(text(failed,'下载失败').fontColor),argb(visual.downloadVisualColor('danger',scheme)));
+ const status=owner(scheme);status.statusButton(()=>book);assert.equal(argb(text(status,'下载中').fontColor),argb(visual.downloadVisualColor('green',scheme)));const failed=owner(scheme);failed.statusButton(()=>({...book,stateLabel:'下载失败'}));assert.equal(argb(text(failed,'重试').fontColor),argb(visual.downloadVisualColor('danger',scheme)));
+ assert.match(find(failed,n=>n.type==='Button'&&typeof n.accessibilityText==='string','failure action keeps its state semantics').accessibilityText,/下载失败.*重试/);
  for(const result of [header,row,status,failed])for(const button of records(result).filter(n=>n.type==='Button')){const creation=result.attributeCalls.find(a=>a.id===button.id&&a.property==='createWithChild');assert.equal(creation?.args[0]?.type,'ButtonType.Normal');}
 }
 }
@@ -605,32 +722,64 @@ if(selectedCase==='overlay-chrome'){
 // lifecycle and generation code coalesces overlay transitions before writing.
 await microtasks();
 const chrome = owner('day'); chrome.aboutToAppear(); await microtasks();
+let nativeStart = nativeBlendCalls.length;
+chrome.sheet = 'filter'; await microtasks();
+assert.equal(chromeRequests.at(-1).owner, 'overlay');
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
+assert.deepEqual(nativeBlendCalls.slice(nativeStart), [
+  [argb(currentChromePalette.day.pagePaper), argb(currentChromePalette.day.scrim)],
+  [argb(currentChromePalette.day.pageInk), argb(currentChromePalette.day.scrim)],
+], 'ordinary sheet chrome consumes one actual modal mask over page paper and ink');
 const chromeStart = chromeRequests.length;
+nativeStart = nativeBlendCalls.length;
 chrome.sheet = 'book-actions'; await microtasks();
 assert.equal(chromeRequests.length, chromeStart + 1);
 assert.equal(chromeRequests.at(-1).owner, 'overlay');
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), overlayPalette.day.underlayColor);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), palette.day.surface);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.actionPaper);
+assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.day.actionInk);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.actionSurface));
+assert.equal(argb(chromeRequests.at(-1).style.navigationContentColor), argb(currentChromePalette.day.actionSurfaceInk));
+assert.deepEqual(nativeBlendCalls.slice(nativeStart), [
+  [argb(currentChromePalette.day.pagePaper), argb(currentChromePalette.day.actionScrim)],
+  [argb(currentChromePalette.day.pageInk), argb(currentChromePalette.day.actionScrim)],
+], 'operations sheet chrome consumes its actual public drawer mask');
 const confirmationStart = chromeRequests.length;
 chrome.sheet = ''; chrome.confirmation = 'deleteLocal'; await microtasks();
 assert.equal(chromeRequests.length, confirmationStart + 1, 'sheet-to-dialog produces one final system-bar write');
 assert.equal(chromeRequests.at(-1).owner, 'overlay', 'no intermediate App chrome flashes during the overlay transition');
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), overlayPalette.day.underlayColor);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.day.paper);
 chrome.appThemeScheme = 'night'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), overlayPalette.night.underlayColor);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), overlayPalette.night.contentColor);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.night.paper);
+assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.night.ink);
+nativeStart = nativeBlendCalls.length;
 chrome.sheet = 'settings'; chrome.confirmation = 'cleanup'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), doubleOverlayPalette.night.underlayColor);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), doubleOverlayPalette.night.contentColor);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), doubleOverlayPalette.night.underlayColor);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.night.doublePaper);
+assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.night.doubleInk);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.night.confirmationOnSheet);
+assert.equal(argb(chromeRequests.at(-1).style.navigationContentColor), currentChromePalette.night.confirmationOnSheetInk);
+assert.notEqual(currentChromePalette.night.confirmationOnSheet, currentChromePalette.night.doublePaper,
+  'navigation is the opaque sheet plus confirmation, not the doubly-masked page');
+assert.deepEqual(nativeBlendCalls.slice(nativeStart), [
+  [argb(currentChromePalette.night.pagePaper), argb(currentChromePalette.night.scrim)],
+  [argb(currentChromePalette.night.pageInk), argb(currentChromePalette.night.scrim)],
+  [currentChromePalette.night.paper, argb(currentChromePalette.night.scrim)],
+  [currentChromePalette.night.ink, argb(currentChromePalette.night.scrim)],
+  [argb(currentChromePalette.night.sheetPaper), argb(currentChromePalette.night.scrim)],
+  [argb(currentChromePalette.night.sheetInk), argb(currentChromePalette.night.scrim)],
+], 'nested confirmation keeps the independent status-band and sheet-band owners');
 chrome.appThemeScheme = 'day'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), doubleOverlayPalette.day.underlayColor);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), doubleOverlayPalette.day.contentColor);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.doublePaper);
+assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.day.doubleInk);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.day.confirmationOnSheet);
 chrome.confirmation = ''; await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'overlay', 'cancel retains the same storage sheet with its single scrim');
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), overlayPalette.day.underlayColor);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), palette.day.surface);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
+const exitingGeneration = chrome.sheetAnimationGeneration, beforeExit = chromeRequests.length;
 chrome.sheet = ''; await microtasks();
+assert.equal(chromeRequests.length, beforeExit, 'an animated sheet retains its band until the native exit receipt');
+chrome.onSheetExitFinished(exitingGeneration); await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'app', 'closing the final overlay restores normal App chrome');
 chrome.sheet = 'filter'; await microtasks();
 const retiredChromeStart = chromeRequests.length;

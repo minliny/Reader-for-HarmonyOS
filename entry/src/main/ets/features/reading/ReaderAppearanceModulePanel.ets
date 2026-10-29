@@ -133,7 +133,7 @@ export struct ReaderAppearanceModulePanel {
         .constraintSize({ maxWidth: 46 })
         .height(18)
         .backgroundColor(this.themeColor(theme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderAppearanceModulePanel.compactThemeCell.color.1F5B5046', this.appThemeScheme) })
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.shadow.themeSwatch', this.appThemeScheme) })
         .borderRadius(6);
     }
     .layoutWeight(1)

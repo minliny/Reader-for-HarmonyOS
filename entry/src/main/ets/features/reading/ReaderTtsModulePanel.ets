@@ -188,7 +188,7 @@ export struct ReaderTtsModulePanel {
     }
     .width(22)
     .height(22)
-    .backgroundColor(readerAppColor('app.ReaderTtsModulePanel.stopButton.backgroundColor.FFD7473E', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.action.destructive', this.appThemeScheme))
     .borderRadius(11)
     .position({ x: 69, y: 5 })
     .enabled(this.hasActiveQueue())
@@ -237,7 +237,7 @@ export struct ReaderTtsModulePanel {
           .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontWeight)
           .fontSize(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderTtsModulePanel.timerRow.fontColor.FF41484C', this.appThemeScheme));
+          .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
         Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
           .width(12)
           .height(12);

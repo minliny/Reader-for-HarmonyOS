@@ -172,14 +172,14 @@ export struct ReaderReplaceQuickPanel {
         Row()
           .width(12)
           .height(12)
-          .backgroundColor(readerAppColor('app.ReaderReplaceQuickPanel.ruleRow.backgroundColor.FFFFFFFF', this.appThemeScheme))
+          .backgroundColor(readerAppColor('app.toggle.thumb', this.appThemeScheme))
           .borderRadius(6)
           .position({ x: rule.isEnabled ? 13 : 2, y: 2 });
       }
       .width(27)
       .height(16)
       .margin({ left: 5 })
-      .backgroundColor(rule.isEnabled ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderReplaceQuickPanel.ruleRow.backgroundColor.FFC9C5BE', this.appThemeScheme))
+      .backgroundColor(rule.isEnabled ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.replace.inactiveRule', this.appThemeScheme))
       .borderRadius(999)
       .clip(true);
 
@@ -225,7 +225,7 @@ export struct ReaderReplaceQuickPanel {
         .fontFamily(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontFamily)
         .fontWeight(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontWeight)
         .fontSize(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontSizeFp)
-        .fontColor(kind === 'preview' ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('app.ReaderReplaceQuickPanel.footerButton.fontColor.FFFFFFFF', this.appThemeScheme))
+        .fontColor(kind === 'preview' ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('app.text.onAccent', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }

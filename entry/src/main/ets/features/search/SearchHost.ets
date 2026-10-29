@@ -48,6 +48,8 @@ export class SearchHost {
   retry(): void { this.getOrchestrator().retry(); }
   retryHistory(): void { this.getOrchestrator().retryHistory(); }
   clearHistory(): void { this.getOrchestrator().clearHistory(); }
+  refreshHistory(): void { this.getOrchestrator().refreshHistory(); }
+  deleteHistory(keyword: string): Promise<void> { return this.getOrchestrator().deleteHistory(keyword); }
   resume(): void { this.getOrchestrator().resume(); }
   refreshSources(): void { this.getOrchestrator().refreshSources(); }
   searchedSourceIds(): string[] { return this.orchestrator?.searchedSourceIds() ?? []; }

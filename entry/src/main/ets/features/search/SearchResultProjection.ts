@@ -38,6 +38,7 @@ export class SearchResultProjection {
   private shelfIdentities: Set<string> = new Set();
   private shelfTitles: Set<string> = new Set();
   private revision: number = -1;
+  private queryRevision: number = -1;
 
   private identity(book: SearchBook): string { return `${book.sourceId}\u0000${book.bookId}`; }
   private titleKey(title: string, author: string, proof?: BookAuthorIdentityProof, sourceVersion?: string): string {
@@ -53,9 +54,10 @@ export class SearchResultProjection {
   }
 
   update(results: SearchBook[], shelf: ShelfBook[], keyword: string, navigation: SearchViewState,
-    delta?: SearchResultDelta): SearchProjectionUpdate {
+    delta?: SearchResultDelta, allowReorder: boolean = false): SearchProjectionUpdate {
     const affected = new Set<string>();
-    const reset = this.input === undefined || keyword !== this.keyword || (delta?.reset === true && delta.revision !== this.revision);
+    const reset = this.input === undefined || keyword !== this.keyword || navigation.revision !== this.queryRevision ||
+      (delta?.reset === true && delta.revision !== this.revision);
     if (reset) {
       for (const key of this.rows.keys()) affected.add(key);
       this.books.clear(); this.facts.clear(); this.members.clear(); this.byTitle.clear();
@@ -111,6 +113,7 @@ export class SearchResultProjection {
         }
       }
       this.input = results; this.keyword = keyword; this.revision = delta?.revision ?? -1;
+      this.queryRevision = navigation.revision;
     }
     if (this.shelfInput !== shelf || reset) {
       const identities = new Set<string>(); const titles = new Set<string>();
@@ -130,32 +133,31 @@ export class SearchResultProjection {
       }
       this.shelfIdentities = identities; this.shelfTitles = titles; this.shelfInput = shelf;
     }
-    let orderChanged = reset;
+    let membershipChanged = reset;
     const changedKeys = new Set<string>();
     for (const key of affected) {
       if ((this.members.get(key)?.size ?? 0) > 0) navigation.redirects.delete(key);
-      const allVariants = Array.from(this.members.get(key)?.values() ?? []);
-      // A current, confirmed catalog/detail failure should not inflate the
-      // visible source count when another source has usable evidence. Keep a
-      // failed-only group visible so the user can still retry the sole source.
-      const usableVariants = allVariants.filter((variant: SearchBook): boolean =>
-        searchCandidateRank(variant) < 3);
-      const variants = usableVariants.length > 0 ? usableVariants : allVariants;
+      // Discovery and availability are separate facts. A confirmed detail or
+      // catalog failure remains a discovered source with its original state;
+      // hide neither its count nor the candidate needed for explicit retry.
+      const variants = Array.from(this.members.get(key)?.values() ?? []);
       const previous = this.rows.get(key);
       if (variants.length === 0) {
-        if (this.rows.delete(key)) { changedKeys.add(key); orderChanged = true; }
+        if (this.rows.delete(key)) { changedKeys.add(key); membershipChanged = true; }
         this.members.delete(key); continue;
       }
       // Arrival sequence is query-owned, independent of source completion/filter order.
       variants.sort((a: SearchBook, b: SearchBook): number => (a.admittedOrder ?? 0) - (b.admittedOrder ?? 0));
-      let book = variants[0]; let score = (this.facts.get(this.identity(book)) as SearchProjectionFact).score;
+      const usableVariants = variants.filter((variant: SearchBook): boolean => searchCandidateRank(variant) < 3);
+      let book = usableVariants[0] ?? variants[0]; let score = (this.facts.get(this.identity(book)) as SearchProjectionFact).score;
       const sourceIds = new Set<string>(); let inBookshelf = false;
       for (const variant of variants) {
         const identity = this.identity(variant); const fact = this.facts.get(identity) as SearchProjectionFact;
         sourceIds.add(variant.sourceId);
         inBookshelf = inBookshelf || this.shelfIdentities.has(identity) ||
           (variant.sourceId !== 'local' && this.shelfTitles.has(fact.titleKey));
-        if (fact.score < score || (fact.score === score && searchCandidateRank(variant) < searchCandidateRank(book))) {
+        if ((usableVariants.length === 0 || searchCandidateRank(variant) < 3) &&
+          (fact.score < score || (fact.score === score && searchCandidateRank(variant) < searchCandidateRank(book)))) {
           book = variant; score = fact.score;
         }
       }
@@ -165,12 +167,50 @@ export class SearchResultProjection {
         previous.variants.length === variants.length && previous.variants.every((v: SearchBook, i: number): boolean => v === variants[i])) continue;
       this.rows.set(key, { key, book, variants, sourceIds: Array.from(sourceIds), inBookshelf, score, order });
       changedKeys.add(key);
-      if (previous === undefined || previous.score !== score || previous.order !== order) orderChanged = true;
+      if (previous === undefined) membershipChanged = true;
     }
-    if (orderChanged) this.ordered = Array.from(this.rows.keys()).sort((a: string, b: string): number => {
-      const left = this.rows.get(a) as SearchGroupProjection; const right = this.rows.get(b) as SearchGroupProjection;
-      return left.score - right.score || left.order - right.order;
-    });
+    let orderChanged = false;
+    if (allowReorder) {
+      // Only the idle top boundary permits global relevance publication. The
+      // caller freezes order while the user is reading or pressing a row.
+      const next = Array.from(this.rows.keys()).sort((a: string, b: string): number => {
+        const left = this.rows.get(a) as SearchGroupProjection;
+        const right = this.rows.get(b) as SearchGroupProjection;
+        return left.score - right.score || left.order - right.order;
+      });
+      orderChanged = next.length !== this.ordered.length ||
+        next.some((key: string, index: number): boolean => key !== this.ordered[index]);
+      if (orderChanged) this.ordered = next;
+      navigation.rememberDisplayedOrder(keyword, this.ordered);
+    } else if (membershipChanged) {
+      const displayed = navigation.displayedOrderFor(keyword);
+      const displayedSet = new Set<string>(displayed);
+      const next: string[] = [];
+      const retained = new Set<string>();
+      for (const key of displayed) {
+        // A canonical replacement can keep the disappeared row's slot. A
+        // merge into an already displayed target keeps that target's slot.
+        const current = this.rows.has(key) ? key : navigation.resolveKey(key);
+        if (this.rows.has(current) && !retained.has(current) &&
+          (current === key || !displayedSet.has(current))) {
+          next.push(current); retained.add(current);
+        }
+      }
+      const additions = Array.from(this.rows.keys()).filter((key: string): boolean => !retained.has(key));
+      // Rank only the newly visible batch. Later enrichment must not move a
+      // book the user has already seen or is reaching for.
+      additions.sort((a: string, b: string): number => {
+        const left = this.rows.get(a) as SearchGroupProjection; const right = this.rows.get(b) as SearchGroupProjection;
+        return left.score - right.score || left.order - right.order;
+      });
+      next.push(...additions);
+      orderChanged = next.length !== this.ordered.length ||
+        next.some((key: string, index: number): boolean => key !== this.ordered[index]);
+      if (orderChanged) this.ordered = next;
+      // Store only live keys; disappeared/redirected keys never accumulate in
+      // the retained display sequence. Anchor redirects keep their own role.
+      navigation.rememberDisplayedOrder(keyword, this.ordered);
+    }
     return { rows: this.rows, orderedKeys: this.ordered, changedKeys, orderChanged };
   }
 }

@@ -93,7 +93,7 @@ export struct ReaderSelect {
   private appearanceLibraryTrigger() {
     Row({ space: 6 }) {
       Text(this.value).layoutWeight(1).fontFamily(TYPE_SELECT_LIBRARY_VALUE.fontFamily).fontSize(TYPE_SELECT_LIBRARY_VALUE.fontSizeFp).lineHeight(TYPE_SELECT_LIBRARY_VALUE.lineHeightFp as number)
-        .fontWeight(TYPE_SELECT_LIBRARY_VALUE.fontWeight).fontColor(readerAppColor('app.ReaderSelect.appearanceLibraryTrigger.fontColor.FF332C25', this.appThemeScheme)).maxLines(1)
+        .fontWeight(TYPE_SELECT_LIBRARY_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12)
         .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
@@ -127,7 +127,7 @@ export struct ReaderSelect {
     .width('100%')
     .height(TRIGGER_H)
     .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderSelect.appearanceTrigger.color.FFC1C7CD', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.control', this.appThemeScheme) })
     .borderRadius(6)
     .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
     .onClick((): void => this.onToggle());
@@ -159,7 +159,7 @@ export struct ReaderSelect {
     .height(this.triggerHeight())
     .padding({ left: 10, right: 8 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('app.ReaderSelect.settingsTrigger.backgroundColor.0F2D4A3E', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.selection.subtle', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
     .borderRadius(7)
     .onClick((): void => this.onToggle());
@@ -190,8 +190,8 @@ export struct ReaderSelect {
     }
     .width('100%')
     .height(this.triggerHeight())
-    .backgroundColor(readerAppColor('app.ReaderSelect.sourceGroupTrigger.backgroundColor.FFFFFCF8', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderSelect.sourceGroupTrigger.color.85B4A697', this.appThemeScheme) })
+    .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.sourceGroup', this.appThemeScheme) })
     .borderRadius(8)
     .onClick((): void => this.onToggle());
   }

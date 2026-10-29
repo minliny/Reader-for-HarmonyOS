@@ -334,7 +334,7 @@ export struct SourceToolsPage {
           .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
           .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
           .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
-          .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.SourceToolsPage.batchCheckCard.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
+          .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.status.checkError', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
       .width('100%');
       Row() {
@@ -360,8 +360,8 @@ export struct SourceToolsPage {
       }
       Row({ space: TOK_SPACE_XS }) {
         this.batchCounter(`所选项通过 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
-        this.batchCounter(`所选项未通过 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FFA8584D', this.appThemeScheme));
-        this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FF9A6A1F', this.appThemeScheme));
+        this.batchCounter(`所选项未通过 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.status.checkError', this.appThemeScheme));
+        this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.status.checkWarning', this.appThemeScheme));
         this.batchCounter(`剩余 ${Math.max(0,
           this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
@@ -443,7 +443,7 @@ export struct SourceToolsPage {
         .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
         .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
         .fontColor(result.state === 'passed' ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) :
-          (result.state === 'failed' ? readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FF9A6A1F', this.appThemeScheme)));
+          (result.state === 'failed' ? readerAppColor('app.status.checkError', this.appThemeScheme) : readerAppColor('app.status.checkWarning', this.appThemeScheme)));
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })

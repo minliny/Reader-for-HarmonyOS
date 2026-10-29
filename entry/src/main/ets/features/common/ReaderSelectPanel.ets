@@ -161,7 +161,7 @@ export struct ReaderSelectPanel {
     .border({ width: TOK_BORDER_W, color: this.panelBorderColor() })
     .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6))
     .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
-      color: this.variant === 'appearanceLibrary' ? readerAppColor('app.ReaderSelectPanel.build.color.474B3A26', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
+      color: this.variant === 'appearanceLibrary' ? readerAppColor('app.shadow.select', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
     .clip(true).onAppear((): void => this.expandPanel());
   }
 
@@ -262,10 +262,10 @@ export struct ReaderSelectPanel {
   private panelBackgroundColor(): ResourceColor {
     if (this.variant === 'appearanceLibrary') return readerAppColor('app.appearance.selectSurface', this.appThemeScheme);
     if (this.variant === 'appearanceCompact') {
-      return readerAppColor('app.ReaderSelectPanel.panelBackgroundColor.paint.D1FFF8EF', this.appThemeScheme);
+      return readerAppColor('app.select.panelField', this.appThemeScheme);
     }
     if (this.variant === 'sourceGroup') {
-      return readerAppColor('app.ReaderSelectPanel.panelBackgroundColor.paint.FFFFFCF8', this.appThemeScheme);
+      return readerAppColor('app.select.panelSolid', this.appThemeScheme);
     }
     return readerAppColor(this.variant === 'default' ? 'app.select.menuSurface' : 'TOK_FIELD_SURFACE', this.appThemeScheme);
   }
@@ -273,10 +273,10 @@ export struct ReaderSelectPanel {
   private panelBorderColor(): ResourceColor {
     if (this.variant === 'appearanceLibrary') return readerAppColor('app.appearance.selectBorder', this.appThemeScheme);
     if (this.variant === 'appearanceCompact') {
-      return readerAppColor('app.ReaderSelectPanel.panelBorderColor.paint.FFC1C7CD', this.appThemeScheme);
+      return readerAppColor('app.border.control', this.appThemeScheme);
     }
     if (this.variant === 'sourceGroup') {
-      return readerAppColor('app.ReaderSelectPanel.panelBorderColor.paint.85B4A697', this.appThemeScheme);
+      return readerAppColor('app.border.sourceGroup', this.appThemeScheme);
     }
     return readerAppColor('TOK_BORDER', this.appThemeScheme);
   }

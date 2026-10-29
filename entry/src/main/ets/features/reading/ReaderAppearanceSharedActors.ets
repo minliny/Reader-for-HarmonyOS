@@ -157,7 +157,7 @@ export struct ReaderAppearanceSharedActors {
         .backgroundColor(this.themeColor(theme))
         .border({
           width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
-          color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderAppearanceSharedActors.sharedThemeCard.color.1F5B5046', this.appThemeScheme),
+          color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.shadow.themeSwatch', this.appThemeScheme),
         })
         .borderRadius(6)
         .position({ x: 8.25, y: 2 });
@@ -229,7 +229,7 @@ export struct ReaderAppearanceSharedActors {
         .fontWeight(TYPE_READER_APPEARANCE_SHARED_COMPAT_SHARED_FONT_CELL_PREVIEW.fontWeight as number)
         .fontSize(TYPE_READER_APPEARANCE_SHARED_COMPAT_SHARED_FONT_CELL_PREVIEW.fontSizeFp)
         .lineHeight(TYPE_READER_APPEARANCE_SHARED_COMPAT_SHARED_FONT_CELL_PREVIEW.lineHeightFp as number)
-        .fontColor(this.isActiveFont(fontId) ? readerAppColor('app.ReaderAppearanceSharedActors.sharedFontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
+        .fontColor(this.isActiveFont(fontId) ? readerAppColor('app.control.onPrimary', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -247,7 +247,7 @@ export struct ReaderAppearanceSharedActors {
         y: this.draggedFontId === fontId ? 1.035 : 1,
       })
       .shadow(this.draggedFontId === fontId ?
-        { radius: 12, color: readerAppColor('app.ReaderAppearanceSharedActors.sharedFontCell.color.2B332C25', this.appThemeScheme), offsetX: 0, offsetY: 5 } :
+        { radius: 12, color: readerAppColor('app.shadow.fontSwatch', this.appThemeScheme), offsetX: 0, offsetY: 5 } :
         { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
       .opacity((this.draggedFontId === fontId ? 0.96 : 1) * this.fontActorFrame(fontId).opacity)
       .blur(this.fontActorFrame(fontId).blurVp)

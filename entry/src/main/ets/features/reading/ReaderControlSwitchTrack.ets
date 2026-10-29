@@ -27,7 +27,7 @@ export struct ReaderControlSwitchTrack {
           y: (this.trackHeight - this.thumbSize) / 2 });
     }
     .width(this.trackWidth).height(this.trackHeight)
-    .backgroundColor(this.value ? (this.activeColor === '' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : this.activeColor) : (this.inactiveColor === '' ? readerAppColor('app.ReaderControlSwitchTrack.inactiveColor.default.FFAAA39A', this.appThemeScheme) : this.inactiveColor))
+    .backgroundColor(this.value ? (this.activeColor === '' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : this.activeColor) : (this.inactiveColor === '' ? readerAppColor('app.toggle.inactiveTrack', this.appThemeScheme) : this.inactiveColor))
     .borderRadius(999)
     .hitTestBehavior(HitTestMode.Transparent);
   }

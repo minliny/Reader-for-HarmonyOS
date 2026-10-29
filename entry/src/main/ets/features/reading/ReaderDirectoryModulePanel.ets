@@ -133,7 +133,7 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_EDGE_FADE_HEIGHT)
               .linearGradient({
                 direction: GradientDirection.Bottom,
-                colors: [[readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', this.appThemeScheme), 0], [readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', this.appThemeScheme), 1]],
+                colors: [[readerAppColor('app.directory.edgeFade', this.appThemeScheme), 0], [readerAppColor('app.directory.edgeFadeTransparent', this.appThemeScheme), 1]],
               });
             Blank()
               .layoutWeight(1);
@@ -142,7 +142,7 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_EDGE_FADE_HEIGHT)
               .linearGradient({
                 direction: GradientDirection.Top,
-                colors: [[readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', this.appThemeScheme), 0], [readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', this.appThemeScheme), 1]],
+                colors: [[readerAppColor('app.directory.edgeFade', this.appThemeScheme), 0], [readerAppColor('app.directory.edgeFadeTransparent', this.appThemeScheme), 1]],
               });
           }
           .width('100%')
@@ -302,7 +302,7 @@ export struct ReaderDirectoryModulePanel {
       }
       .width(DIRECTORY_MARKER_HIT_SIZE)
       .height(DIRECTORY_MARKER_HIT_SIZE)
-      .backgroundColor(readerAppColor('app.ReaderDirectoryModulePanel.statusMarkerHitTarget.backgroundColor.1A2F6373', this.appThemeScheme))
+      .backgroundColor(readerAppColor('app.control.paint.1A2F6373', this.appThemeScheme))
       .borderRadius(TOK_RADIUS_PILL)
       .accessibilityText('已读');
     } else if (this.chapterDownloadEnabled) {

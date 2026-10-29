@@ -19,7 +19,7 @@ export struct StatusBadge {
         .width(7)
         .height(7)
         .borderRadius(3.5)
-        .backgroundColor((this.dot === '' ? readerAppColor('app.StatusBadge.dot.default.FF2F6B52', this.appThemeScheme) : this.dot));
+        .backgroundColor((this.dot === '' ? readerAppColor('app.status.availableDot', this.appThemeScheme) : this.dot));
     }
     .width(24)
     .height(18)

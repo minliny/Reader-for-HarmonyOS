@@ -120,21 +120,21 @@ export struct ArkWebExecutionHost {
             Text('取消')
               .fontSize(14)
               .fontWeight(FontWeight.Bold)
-              .fontColor(readerAppColor('app.ArkWebExecutionHost.build.fontColor.FF604C3B', this.appThemeScheme))
+              .fontColor(readerAppColor('app.web.status', this.appThemeScheme))
               .onClick((): void => ArkWebExecutor.instance.cancelInteractive(surface));
             Column({ space: 2 }) {
               Text(this.title)
                 .width('100%')
                 .fontSize(15)
                 .fontWeight(FontWeight.Bold)
-                .fontColor(readerAppColor('app.ArkWebExecutionHost.build.fontColor.FF2C2520', this.appThemeScheme))
+                .fontColor(readerAppColor('app.web.ink', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
               if (this.currentUrl.length > 0) {
                 Text(this.currentUrl)
                   .width('100%')
                   .fontSize(11)
-                  .fontColor(readerAppColor('app.ArkWebExecutionHost.build.fontColor.FF8A7B6B', this.appThemeScheme))
+                  .fontColor(readerAppColor('app.web.muted', this.appThemeScheme))
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis });
               }
@@ -144,21 +144,21 @@ export struct ArkWebExecutionHost {
             Text('完成')
               .fontSize(14)
               .fontWeight(FontWeight.Bold)
-              .fontColor(readerAppColor('app.ArkWebExecutionHost.build.fontColor.FF2B6F62', this.appThemeScheme))
+              .fontColor(readerAppColor('app.web.action', this.appThemeScheme))
               .onClick((): void => ArkWebExecutor.instance.finishInteractive(surface));
           }
           .width('100%')
           .height(56)
           .padding({ left: 18, right: 18 })
           .alignItems(VerticalAlign.Center)
-          .backgroundColor(readerAppColor('app.ArkWebExecutionHost.build.backgroundColor.FFFFFDF9', this.appThemeScheme))
-          .shadow({ radius: 8, color: readerAppColor('app.ArkWebExecutionHost.build.color.26000000', this.appThemeScheme), offsetY: 2 });
+          .backgroundColor(readerAppColor('app.web.surface', this.appThemeScheme))
+          .shadow({ radius: 8, color: readerAppColor('app.shadow.control', this.appThemeScheme), offsetY: 2 });
         }
       }, (surface: ArkWebSurface): string => `${surface.id}`)
     }
     .width(this.interactive ? '100%' : 1)
     .height(this.interactive ? '100%' : 1)
-    .backgroundColor(this.interactive ? readerAppColor('app.ArkWebExecutionHost.build.backgroundColor.FFFFFDF9', this.appThemeScheme) : readerAppColor('app.ArkWebExecutionHost.build.backgroundColor.00000000', this.appThemeScheme))
+    .backgroundColor(this.interactive ? readerAppColor('app.web.surface', this.appThemeScheme) : readerAppColor('app.surface.transparent', this.appThemeScheme))
     .zIndex(this.interactive ? 10000 : -1)
   }
 }

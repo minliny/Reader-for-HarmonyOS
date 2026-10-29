@@ -414,7 +414,7 @@ export struct SourceManagementPage {
         .fontFamily(TYPE_SOURCE_MANAGEMENT_STATUS.fontFamily as string)
         .fontSize(TYPE_SOURCE_MANAGEMENT_STATUS.fontSizeFp)
         .lineHeight(TYPE_SOURCE_MANAGEMENT_STATUS.lineHeightFp as number)
-        .fontColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_DOT', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+        .fontColor(this.statusKind === 'error' ? readerAppColor('app.status.checkError', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (this.recovery().canRetry || this.statusKind === 'error') {
@@ -434,7 +434,7 @@ export struct SourceManagementPage {
     .width(this.contentFrame().width)
     .padding(TOK_SPACE_XS)
     .margin({ top: TOK_SPACE_XS })
-    .backgroundColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_BG', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .backgroundColor(this.statusKind === 'error' ? readerAppColor('app.status.checkErrorSoft', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .borderRadius(7);
   }
 
@@ -743,22 +743,22 @@ export struct SourceManagementPage {
 
   private statusBadgeBackground(source: BookSource): string {
     if (source.checkState === 'passed') {
-      return readerAppColor('app.SourceManagementPage.STATUS_GOOD_BG', this.appThemeScheme);
+      return readerAppColor('app.status.goodSoft', this.appThemeScheme);
     }
     if (source.checkState === 'failed') {
-      return readerAppColor('app.SourceManagementPage.STATUS_ERROR_BG', this.appThemeScheme);
+      return readerAppColor('app.status.checkErrorSoft', this.appThemeScheme);
     }
-    return readerAppColor('app.SourceManagementPage.STATUS_MUTED_BG', this.appThemeScheme);
+    return readerAppColor('app.status.mutedSoft', this.appThemeScheme);
   }
 
   private statusBadgeDot(source: BookSource): string {
     if (source.checkState === 'passed') {
-      return readerAppColor('app.SourceManagementPage.STATUS_GOOD_DOT', this.appThemeScheme);
+      return readerAppColor('app.status.good', this.appThemeScheme);
     }
     if (source.checkState === 'failed') {
-      return readerAppColor('app.SourceManagementPage.STATUS_ERROR_DOT', this.appThemeScheme);
+      return readerAppColor('app.status.checkError', this.appThemeScheme);
     }
-    return readerAppColor('app.SourceManagementPage.STATUS_MUTED_DOT', this.appThemeScheme);
+    return readerAppColor('app.status.mutedDot', this.appThemeScheme);
   }
 
   private enabledCount(): number {

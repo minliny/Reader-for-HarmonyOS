@@ -442,7 +442,7 @@ export struct ReaderAutoPageFullPanel {
         .fontWeight(TYPE_READER_AUTO_PAGE_FULL_COMPAT_STOP_BUTTON_LABEL.fontWeight)
         .fontSize(TYPE_READER_AUTO_PAGE_FULL_COMPAT_STOP_BUTTON_LABEL.fontSizeFp)
         .lineHeight(TYPE_READER_AUTO_PAGE_FULL_COMPAT_STOP_BUTTON_LABEL.lineHeightFp as number)
-        .fontColor(readerAppColor('app.ReaderAutoPageFullPanel.stopButton.fontColor.FF8C3D36', this.appThemeScheme))
+        .fontColor(readerAppColor('app.action.stop', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .translate({

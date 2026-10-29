@@ -1,3 +1,4 @@
+import type { GeneralSettingsKey } from './SettingsGateway';
 import {
   SettingsGateway,
   createDefaultSettingsSnapshot,
@@ -21,8 +22,7 @@ export interface SettingsOperationProjection {
   canRetryAccepted?: boolean;
 }
 
-export type SettingsKey =
-  'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode';
+export type SettingsKey = GeneralSettingsKey;
 
 /** Same Runtime, one original settings business lane. Presentations attach
  * with finite identities; disposing an Index retires only its projection.
@@ -279,6 +279,7 @@ export class SettingsOrchestrator {
       reduceMotion: key === 'reduceMotion' ? value : current.reduceMotion,
       crashLog: key === 'crashLog' ? value : current.crashLog,
       developerMode: key === 'developerMode' ? value : current.developerMode,
+      wideNavigationRail: key === 'wideNavigationRail' ? value : current.wideNavigationRail,
     };
   }
 }

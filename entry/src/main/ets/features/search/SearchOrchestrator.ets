@@ -138,6 +138,7 @@ export class SearchOrchestrator {
   private historyStatus: SearchHistoryStatus = 'loading';
   private historyRevision: number = 0;
   private historyClearing: boolean = false;
+  /** One durable history write tail, retained across close/reopen. */
   private historyClearTask: Promise<void> | undefined = undefined;
   private sources: SearchSource[] = [];
   private unsubscribeBooks: (() => void) | undefined = undefined;
@@ -246,6 +247,22 @@ export class SearchOrchestrator {
     this.loadEntryHistory(this.historyStatus === 'clearFailed');
   }
 
+  refreshHistory(): void {
+    if (!this.sessionOpen || this.historyStatus === 'loading') return;
+    this.loadEntryHistory(false);
+  }
+
+  private enqueueHistoryWrite(action: () => Promise<void>): Promise<void> {
+    const previous = this.historyClearTask;
+    // A failed earlier mutation must not prevent a later explicit operation.
+    const task = previous === undefined ? action() : previous.catch((): void => {}).then(action);
+    this.historyClearTask = task;
+    void task.finally((): void => {
+      if (this.historyClearTask === task) this.historyClearTask = undefined;
+    }).catch((): void => {});
+    return task;
+  }
+
   private loadEntryHistory(clear: boolean): void {
     const session = this.session;
     const revision = ++this.historyRevision;
@@ -255,15 +272,19 @@ export class SearchOrchestrator {
     let cleared = false;
     const current = (): boolean => this.isCurrentSession(session) && revision === this.historyRevision;
     const load = async (): Promise<SearchHistory | undefined> => {
-      // A reopened entry must read after an already admitted clear settles.
-      const clearing = this.historyClearTask ?? (clear ? this.gateway.clearHistory() : undefined);
+      // Reads and newly admitted mutations share one durable write order.
+      const clearing = clear ? this.enqueueHistoryWrite(async (): Promise<void> => {
+        await this.gateway.clearHistory();
+        this.entryHistory = [];
+      }) : this.historyClearTask;
       if (clearing !== undefined) {
-        this.historyClearTask = clearing;
-        try { await clearing; }
-        finally { if (this.historyClearTask === clearing) this.historyClearTask = undefined; }
+        if (clear) await clearing;
+        else await clearing.catch((): void => {});
         if (!current()) return undefined;
-        cleared = true;
-        this.presentEntryHistory([]);
+        if (clear) {
+          cleared = true;
+          this.presentEntryHistory([]);
+        }
       }
       return this.gateway.loadHistory();
     };
@@ -612,18 +633,36 @@ export class SearchOrchestrator {
       });
   }
 
-  /** Clear recent history without changing the current source-list verdict. */
+  /** Clear history only; the query, sweep, draft and result identities survive. */
   clearHistory(): void {
     if (!this.sessionOpen || this.historyClearing) return;
-    this.cancelRunTimer();
-    this.run = undefined;
-    this.resultIndex.clear(); this.rawIdentityKeys.clear(); this.rawResultsInput = undefined;
-    this.resultGeneration += 1;
-    this.gateway.resetBookProjection();
-    this.work += 1;
-    this.wakeDispatchers();
-    this.sweepAlive = false;
     this.loadEntryHistory(true);
+  }
+
+  /** Persistence API only; the delete gesture/entry remains a UI decision. */
+  async deleteHistory(keyword: string): Promise<void> {
+    if (!this.sessionOpen) return;
+    const word = keyword.trim();
+    if (word.length === 0) throw new Error('History deletion requires a non-blank keyword');
+    const session = this.session;
+    const revision = ++this.historyRevision;
+    const current = (): boolean => this.isCurrentSession(session) && revision === this.historyRevision;
+    this.historyClearing = false;
+    this.historyStatus = 'loading';
+    this.presentEntryHistory(this.entryHistory);
+    try {
+      await this.enqueueHistoryWrite(async (): Promise<void> => {
+        await this.gateway.deleteHistory(word);
+        this.entryHistory = this.entryHistory.filter((value: string): boolean => value !== word);
+      });
+      if (current()) this.loadEntryHistory(false);
+    } catch (error) {
+      // Read back facts without replaying the mutation. The future delete UI
+      // still receives the original rejection; a read is not a write ACK.
+      if (current()) this.loadEntryHistory(false);
+      const failure: Error = error instanceof Error ? error : new Error(errorMessageOf(error));
+      throw failure;
+    }
   }
 
   private cancelRunTimer(): void {
@@ -721,7 +760,12 @@ export class SearchOrchestrator {
     searchLocal: boolean, searchOnline: boolean, forceSourceRetry: boolean = false): Promise<void> {
     if (!run.historyWritten) {
       run.historyWritten = true;
-      void this.gateway.addHistory(run.keyword).catch((error: Error): void => {
+      const historyRevision = this.historyRevision;
+      void this.enqueueHistoryWrite((): Promise<void> => this.gateway.addHistory(run.keyword)).then((): void => {
+        // A new query records history without resetting its live presentation.
+        // A later explicit clear/delete retains publication ownership.
+        if (this.isCurrentSession(session) && historyRevision === this.historyRevision) this.loadEntryHistory(false);
+      }).catch((error: Error): void => {
         hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{private}s', error.message);
       });
     }
@@ -988,16 +1032,54 @@ export class SearchOrchestrator {
 
   private presentEntryHistory(history: string[]): void {
     this.entryHistory = history;
+    // History-only publication must not rerun result projection or invalidate
+    // its delta, operation, row references or ongoing network sweep.
     const current = this.presentation;
-    if (current.kind === 'initial') this.present({ kind: 'initial', history });
-    else if (current.kind === 'sourceRequired') this.present({ kind: 'sourceRequired', reason: current.reason, history });
-    else if (current.kind === 'sourceLoadError') this.present({ kind: 'sourceLoadError', history });
+    if (current.kind === 'initial') {
+      this.presentation = { kind: 'initial', history, historyStatus: this.historyStatus };
+    } else if (current.kind === 'sourceRequired') {
+      this.presentation = { kind: 'sourceRequired', reason: current.reason, history, historyStatus: this.historyStatus };
+    } else if (current.kind === 'sourceLoadError') {
+      this.presentation = { kind: 'sourceLoadError', history, historyStatus: this.historyStatus };
+    } else if (current.kind === 'loading') {
+      this.presentation = { kind: 'loading', keyword: current.keyword, operation: current.operation,
+        history, historyStatus: this.historyStatus };
+    } else if (current.kind === 'results') {
+      this.presentation = {
+        kind: 'results', keyword: current.keyword, results: current.results, delta: current.delta,
+        searching: current.searching, totalSourceCount: current.totalSourceCount,
+        completedSourceCount: current.completedSourceCount, failedSourceCount: current.failedSourceCount,
+        skippedSourceCount: current.skippedSourceCount, skippedSources: current.skippedSources,
+        stopped: current.stopped, operation: current.operation,
+        localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,
+        localFailureMessage: current.localFailureMessage, sourceListFailureMessage: current.sourceListFailureMessage,
+        history, historyStatus: this.historyStatus,
+      };
+    } else if (current.kind === 'empty') {
+      this.presentation = {
+        kind: 'empty', keyword: current.keyword, searchedSourceCount: current.searchedSourceCount,
+        failedSourceCount: current.failedSourceCount, skippedSourceCount: current.skippedSourceCount,
+        skippedSources: current.skippedSources, stopped: current.stopped, operation: current.operation,
+        localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,
+        localFailureMessage: current.localFailureMessage, sourceListFailureMessage: current.sourceListFailureMessage,
+        history, historyStatus: this.historyStatus,
+      };
+    } else {
+      this.presentation = {
+        kind: 'error', keyword: current.keyword, searchedSourceCount: current.searchedSourceCount,
+        failedSourceCount: current.failedSourceCount, skippedSourceCount: current.skippedSourceCount,
+        skippedSources: current.skippedSources, operation: current.operation,
+        localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,
+        localFailureMessage: current.localFailureMessage, sourceListFailureMessage: current.sourceListFailureMessage,
+        history, historyStatus: this.historyStatus,
+      };
+    }
+    this.emitPresentation(this.presentation);
   }
 
   private present(presentation: SearchPresentation, retainShared: boolean = true): void {
-    if (presentation.kind === 'initial' || presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError') {
-      presentation.historyStatus = this.historyStatus;
-    }
+    presentation.history = this.entryHistory;
+    presentation.historyStatus = this.historyStatus;
     const previous = this.presentation;
     if (presentation.kind === 'results' && presentation.delta !== undefined &&
       (presentation.delta.baseRevision !== this.resultRevision || presentation.delta.revision <= this.resultRevision)) {

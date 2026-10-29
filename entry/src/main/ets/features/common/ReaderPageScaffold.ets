@@ -9,6 +9,10 @@ import { ReaderFrameStyle } from './ReaderFrameStyle';
 export struct ReaderPageScaffold {
   // Hidden reading sessions still receive real layout and retain their actors.
   @Prop pageVisible: boolean = true;
+  /** A surrounding surface may own the sole fixed header for this content. */
+  @Prop headerVisible: boolean = true;
+  /** Transparent content hosts let a lower overlay receive taps outside children. */
+  @Prop transparentContent: boolean = false;
   @Prop frameStyle: ReaderFrameStyle;
   @Prop headerMeasurementKey: number = 0;
   @Prop footerMeasurementKey: number = 0;
@@ -38,13 +42,16 @@ export struct ReaderPageScaffold {
       Stack({ alignContent: Alignment.TopStart }) { this.content(); }
         .width('100%').height(this.geometry.content.nativeEndInset > 0 ?
           `calc(100% - ${this.geometry.content.nativeEndInset}vp)` : '100%')
-        .clip(this.geometry.content.nativeEndInset > 0).zIndex(0);
-      Column() {
-        ReaderFixedHeaderHost({ style: this.frameStyle.header, measurementKey: this.headerMeasurementKey,
-          content: (): void => { this.header(); },
-          onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
-      }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
-        .margin({ top: this.geometry.header.top }).zIndex(10).hitTestBehavior(HitTestMode.Transparent);
+        .clip(this.geometry.content.nativeEndInset > 0).zIndex(0)
+        .hitTestBehavior(this.transparentContent ? HitTestMode.Transparent : HitTestMode.Default);
+      if (this.headerVisible) {
+        Column() {
+          ReaderFixedHeaderHost({ style: this.frameStyle.header, measurementKey: this.headerMeasurementKey,
+            content: (): void => { this.header(); },
+            onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
+        }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
+          .margin({ top: this.geometry.header.top }).zIndex(10).hitTestBehavior(HitTestMode.Transparent);
+      }
       Stack({ alignContent: Alignment.Bottom }) {
         Column() {
           Column() { this.footer(); }
@@ -73,6 +80,6 @@ export struct ReaderPageScaffold {
         this.frameStyle.safeArea === 'systemCutoutAll' ? [LayoutSafeAreaType.SYSTEM] : [],
         this.frameStyle.safeArea === 'systemCutoutAll' ? [LayoutSafeAreaEdge.ALL] : [])
       .opacity(this.pageVisible ? 1 : 0)
-      .hitTestBehavior(this.pageVisible ? HitTestMode.Default : HitTestMode.Transparent);
+      .hitTestBehavior(this.pageVisible && !this.transparentContent ? HitTestMode.Default : HitTestMode.Transparent);
   }
 }

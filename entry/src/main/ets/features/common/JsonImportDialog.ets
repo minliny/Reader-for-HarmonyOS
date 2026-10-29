@@ -69,7 +69,7 @@ export struct JsonImportDialog {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(readerAppColor('app.JsonImportDialog.build.backgroundColor.66000000', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.scrim.import', this.appThemeScheme))
     .zIndex(200);
   }
 

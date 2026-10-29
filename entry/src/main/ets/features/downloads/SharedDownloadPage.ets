@@ -7,6 +7,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { ReaderRaisedSurface } from '../common/ReaderRaisedSurface';
 import { readerPageAreaLength, readerPresentedHeaderBottom } from '../common/ReaderPageShell';
 import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
@@ -34,7 +35,7 @@ import { ReaderActionSheetAction, ReaderActionSheetContent } from '../common/Rea
 import { readerActionIcon } from '../common/ReaderActionIconResources';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
-import { resolveDrawerSpec, resolveActionSheetSpec } from '../common/ReaderSurfaceSpecs';
+import { resolveDrawerSpec, resolveActionSheetSpec, readerSurfaceElevation } from '../common/ReaderSurfaceSpecs';
 import { readerAvailableWindowHeight, readerDynamicSurfaceWidth, readerSurfaceMaxHeight } from '../common/ReaderSurfaceResolvers';
 import { motionAnimateParam } from '../common/MotionSpec';
 
@@ -129,6 +130,10 @@ export struct SharedDownloadPage {
   // measurement survives both placements. Wiring the scaffold callback would
   // feed back into mainChromeOverflow and oscillate.
   @State private measurementRevision: number = 0;
+  @State private storageDockSurfaceWidth: number = 0;
+  @State private storageDockSurfaceHeight: number = 0;
+  @State private selectionDockSurfaceWidth: number = 0;
+  @State private selectionDockSurfaceHeight: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private sheetTitleMeasuredHeight: number = DOWNLOAD_VISUAL.sheetTitleHeight;
   @State private operationsHeaderMeasuredHeight: number = 0;
@@ -318,9 +323,9 @@ export struct SharedDownloadPage {
       }.width(DOWNLOAD_VISUAL.headerSlotWidth);
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.headerHeight })
       .padding({ top: DOWNLOAD_VISUAL.headerPadding, bottom: DOWNLOAD_VISUAL.headerPadding, left: 9, right: 9 })
-      .backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.headerRadius).clip(true)
-      .shadow({ radius: DOWNLOAD_VISUAL.headerShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.headerShadowX, offsetY: DOWNLOAD_VISUAL.headerShadowY })
+      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.border.control', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.headerRadius).clip(true)
+      .shadow(readerSurfaceElevation('fixed', this.appThemeScheme))
       .onAreaChange((_old: Area, area: Area): void => this.recordHeaderHeight(readerPageAreaLength(area.height)));
   }
 
@@ -436,8 +441,8 @@ export struct SharedDownloadPage {
           .onClick((): void => { this.query = ''; this.selectedBookKeys = []; });
       }
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.searchHeight }).padding({ left: DOWNLOAD_VISUAL.searchPaddingX, right: DOWNLOAD_VISUAL.searchPaddingX }).borderRadius(DOWNLOAD_VISUAL.searchRadius)
-      .backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) });
+      .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
+      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.border.searchField', this.appThemeScheme) });
   }
 
   @Builder
@@ -777,6 +782,9 @@ export struct SharedDownloadPage {
 
   @Builder
   private storageDock() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ReaderRaisedSurface({ surfaceWidth: this.storageDockSurfaceWidth, surfaceHeight: this.storageDockSurfaceHeight,
+        cornerRadius: DOWNLOAD_VISUAL.dockRadius, scheme: this.appThemeScheme });
     Row({ space: DOWNLOAD_VISUAL.dockGap }) {
       Column({ space: 0 }) {
         Text(this.totalBytesLabel()).fontFamily(TYPE_DOWNLOAD_STORAGE_META.fontFamily).fontWeight(TYPE_DOWNLOAD_STORAGE_META.fontWeight)
@@ -798,14 +806,17 @@ export struct SharedDownloadPage {
     }.width('100%').padding({ left: DOWNLOAD_VISUAL.dockPaddingX, right: DOWNLOAD_VISUAL.dockPaddingX,
       top: DOWNLOAD_VISUAL.dockPaddingY, bottom: DOWNLOAD_VISUAL.dockPaddingY })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.dockRadius).clip(true)
-      .shadow({ radius: DOWNLOAD_VISUAL.headerShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.headerShadowX, offsetY: DOWNLOAD_VISUAL.headerShadowY })
-      .onAreaChange((_old: Area, area: Area): void => this.recordDockHeight(readerPageAreaLength(area.height)));
+      .backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme))
+      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.dockRadius).clip(false)
+      .onAreaChange((_old: Area, area: Area): void => this.recordRaisedDockSurface(false, area));
+    }.width('100%').clip(false);
   }
 
   @Builder
   private selectionDock() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ReaderRaisedSurface({ surfaceWidth: this.selectionDockSurfaceWidth, surfaceHeight: this.selectionDockSurfaceHeight,
+        cornerRadius: DOWNLOAD_VISUAL.dockRadius, scheme: this.appThemeScheme });
     Column({ space: DOWNLOAD_VISUAL.selectionSummaryBottom }) {
       Row({ space: DOWNLOAD_VISUAL.selectionSummaryGap }) {
         Text(this.selectionLabel()).fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
@@ -843,10 +854,26 @@ export struct SharedDownloadPage {
           });
         }
       }.width('100%');
-    }.width('100%').padding(DOWNLOAD_VISUAL.selectionPadding).backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.dockRadius).clip(true)
-      .shadow({ radius: DOWNLOAD_VISUAL.headerShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.headerShadowX, offsetY: DOWNLOAD_VISUAL.headerShadowY })
-      .onAreaChange((_old: Area, area: Area): void => this.recordDockHeight(readerPageAreaLength(area.height)));
+    }.width('100%').padding(DOWNLOAD_VISUAL.selectionPadding).backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme))
+      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.dockRadius).clip(false)
+      .onAreaChange((_old: Area, area: Area): void => this.recordRaisedDockSurface(true, area));
+    }.width('100%').clip(false);
+  }
+
+  private recordRaisedDockSurface(selection: boolean, area: Area): void {
+    const width = readerPageAreaLength(area.width);
+    const height = readerPageAreaLength(area.height);
+    if (Number.isFinite(width) && width > 0) {
+      if (selection) {
+        if (Math.abs(width - this.selectionDockSurfaceWidth) > .1) this.selectionDockSurfaceWidth = width;
+      } else if (Math.abs(width - this.storageDockSurfaceWidth) > .1) this.storageDockSurfaceWidth = width;
+    }
+    if (Number.isFinite(height) && height > 0) {
+      if (selection) {
+        if (Math.abs(height - this.selectionDockSurfaceHeight) > .1) this.selectionDockSurfaceHeight = height;
+      } else if (Math.abs(height - this.storageDockSurfaceHeight) > .1) this.storageDockSurfaceHeight = height;
+    }
+    this.recordDockHeight(height);
   }
 
   @Builder
@@ -865,8 +892,7 @@ export struct SharedDownloadPage {
   @Builder
   private sheetOverlay(entranceGeneration: number = this.sheetAnimationGeneration) {
     Stack({ alignContent: Alignment.Bottom }) {
-      Rect().width('100%').height('100%').fill(this.isOperationsSheet() ?
-        readerAppColor(resolveDrawerSpec('reader-action-sheet').scrimRole, this.appThemeScheme) : downloadVisualColor('scrim', this.appThemeScheme))
+      Rect().width('100%').height('100%').fill(this.sheetScrimColor())
         .onClick((): void => {
           if (this.presentationIsCurrent() && entranceGeneration === this.sheetAnimationGeneration && this.sheetMaskReady)
             this.sheet = '';
@@ -889,9 +915,10 @@ export struct SharedDownloadPage {
             this.sheetContent(false);
           }
         }.width('100%').constraintSize({ maxHeight: this.sheetMaxHeight() })
-          .backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
+          .backgroundColor(this.sheetSurfaceColor())
           .borderRadius({ topLeft: DOWNLOAD_VISUAL.sheetRadius, topRight: DOWNLOAD_VISUAL.sheetRadius }).clip(true)
-          .shadow({ radius: DOWNLOAD_VISUAL.sheetShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.sheetShadowX, offsetY: DOWNLOAD_VISUAL.sheetShadowY })
+          .border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: readerAppColor('app.border.modalHighlight', this.appThemeScheme) })
+          .shadow(readerSurfaceElevation('sheet', this.appThemeScheme))
           .hitTestBehavior(HitTestMode.Block)
           .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
             TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.open')),
@@ -901,6 +928,16 @@ export struct SharedDownloadPage {
   }
 
   private isOperationsSheet(): boolean { return this.sheet === 'book-actions' || this.sheet === 'chapter-actions'; }
+
+  private sheetScrimColor(): string {
+    return readerAppColor(this.isOperationsSheet() ? resolveDrawerSpec('reader-action-sheet').scrimRole :
+      'app.scrim.warmModal', this.appThemeScheme);
+  }
+
+  private sheetSurfaceColor(): string {
+    return readerAppColor(this.isOperationsSheet() ? resolveDrawerSpec('reader-action-sheet').surfaceRole :
+      'app.surface.menuSolid', this.appThemeScheme);
+  }
 
   private operationsSurfaceWidth(): number {
     const metrics = this.currentMetrics();
@@ -1928,7 +1965,7 @@ export struct SharedDownloadPage {
     });
   }
   private frameStyle(): ReaderFrameStyle {
-    const pageBackground = readerAppColor('TOK_DOWNLOAD_PAPER', this.appThemeScheme);
+    const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
     return readerFrameStyle({ backgroundColor: pageBackground, headerBackground: pageBackground,
       headerTransparent: true, footerBackground: pageBackground });
   }

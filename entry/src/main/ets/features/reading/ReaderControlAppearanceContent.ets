@@ -603,7 +603,7 @@ export struct ReaderControlAppearanceContent {
       // A PathShape on the painted node overrides its rounded background in RS,
       // making the borderless selected font appear as a square-cornered block.
       Row().width(this.fontActor(font).width).height(this.fontActor(font).height)
-        .backgroundColor(this.activeFont(font) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderControlAppearanceContent.fontCell.backgroundColor.FFFFFCF8', this.appThemeScheme))
+        .backgroundColor(this.activeFont(font) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
         .border({ width: this.activeFont(font) ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme),
           style: font === 'import' ? BorderStyle.Dashed : BorderStyle.Solid })
         .borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
@@ -611,7 +611,7 @@ export struct ReaderControlAppearanceContent {
         .width(this.fontActor(font).width).height(this.fontActor(font).height)
         .fontFamily(this.visiblePreviewFamily(font)).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontWeight as number, { enableVariableFontWeight: true })
-        .fontColor(this.activeFont(font) ? readerAppColor('app.ReaderControlAppearanceContent.fontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
+        .fontColor(this.activeFont(font) ? readerAppColor('app.control.onPrimary', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .opacity(this.presentation().contentOpacity * (this.fontPreviewReady(font) ? 1 : 0.65))
         .blur(this.presentation().contentBlur);
@@ -726,7 +726,7 @@ export struct ReaderControlAppearanceContent {
       this.stepButton(metric, -1, Math.max(0, this.frame().sectionWidth - 121));
       Text(this.metricValue(metric)).width(44).height(25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center)
-        .border({ width: { left: 1, right: 1 }, color: readerAppColor('app.ReaderControlAppearanceContent.stepperRow.color.339B8466', this.appThemeScheme) })
+        .border({ width: { left: 1, right: 1 }, color: readerAppColor('app.border.stepper', this.appThemeScheme) })
         .position({ x: Math.max(0, this.frame().sectionWidth - 86), y: 8 }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, 1, Math.max(0, this.frame().sectionWidth - 51));
     }.width(Math.max(0, this.frame().sectionWidth - 6)).height(42)

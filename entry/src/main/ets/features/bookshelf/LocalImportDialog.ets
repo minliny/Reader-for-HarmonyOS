@@ -111,7 +111,7 @@ export struct LocalImportDialog {
       Text('')
         .width('100%')
         .height('100%')
-        .backgroundColor(readerAppColor('app.LocalImportDialog.build.backgroundColor.661F1B17', this.appThemeScheme));
+        .backgroundColor(readerAppColor('app.scrim.warmModal', this.appThemeScheme));
 
       Stack({ alignContent: Alignment.Center }) {
         if (this.state === 'fileSelection' || this.state === 'pickerOpening') {
@@ -196,7 +196,7 @@ export struct LocalImportDialog {
           }
           .width(44)
           .height(44)
-          .backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFD8E8E2', this.appThemeScheme))
+          .backgroundColor(readerAppColor('app.import.selectedSurface', this.appThemeScheme))
           .borderRadius(22);
 
           Column({ space: 0 }) {
@@ -220,9 +220,9 @@ export struct LocalImportDialog {
 
           Row({ space: 6 }) {
             this.formatBadge('TXT', readerAppColor('TOK_GREEN', this.appThemeScheme));
-            this.formatBadge('EPUB', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF5A4A2A', this.appThemeScheme));
-            this.formatBadge('MOBI', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF7A5A38', this.appThemeScheme));
-            this.formatBadge('AZW3', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF6A4F7A', this.appThemeScheme));
+            this.formatBadge('EPUB', readerAppColor('app.import.formatText', this.appThemeScheme));
+            this.formatBadge('MOBI', readerAppColor('app.import.formatEpub', this.appThemeScheme));
+            this.formatBadge('AZW3', readerAppColor('app.import.formatArchive', this.appThemeScheme));
           }
         }
         .width('100%')

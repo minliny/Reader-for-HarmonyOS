@@ -222,8 +222,8 @@ export struct RssPage {
     .height(34)
     .padding({ left: 11, right: 9 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('app.RssPage.PILL_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.PILL_BORDER', this.appThemeScheme) })
+    .backgroundColor(readerAppColor('app.feed.pillSurface', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.feed.pillBorder', this.appThemeScheme) })
     .borderRadius(999)
     .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
     .onClick((): void => this.onRefresh());
@@ -311,7 +311,7 @@ export struct RssPage {
       Text('')
         .width(14)
         .height(14)
-        .border({ width: 2, color: readerAppColor('app.RssPage.refreshingRow.color.2E2D4A3E', this.appThemeScheme) })
+        .border({ width: 2, color: readerAppColor('app.feed.refreshBorder', this.appThemeScheme) })
         .borderRadius(7);
       Text('正在刷新启用订阅源')
         .fontFamily(TYPE_RSS_REFRESH_STATUS.fontFamily)
@@ -343,7 +343,7 @@ export struct RssPage {
       .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.CARD_BORDER', this.appThemeScheme) })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
       .borderRadius(8);
 
       Row({ space: 7 }) {
@@ -354,7 +354,7 @@ export struct RssPage {
           .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
           .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
           .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('app.RssPage.FILTER_TEXT', this.appThemeScheme))
+          .fontColor(readerAppColor('app.text.filter', this.appThemeScheme))
           .maxLines(1);
         Blank();
         Row({ space: 7 }) {
@@ -376,7 +376,7 @@ export struct RssPage {
       .padding({ left: 11, right: 11 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.FILTER_BORDER', this.appThemeScheme) })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.filter', this.appThemeScheme) })
       .borderRadius(8)
       .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
       .onClick((): void => {
@@ -402,7 +402,7 @@ export struct RssPage {
       .height(Math.min(420, Math.max(62, this.filteredSubscriptions(subscriptions).length * 62)))
       .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.CARD_BORDER', this.appThemeScheme) })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
       .borderRadius(8);
     }
     .width(this.contentFrame().width);
@@ -420,7 +420,7 @@ export struct RssPage {
     .width('100%')
     .padding({ left: 11, right: 11, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -506,7 +506,7 @@ export struct RssPage {
       .height(Math.min(420, Math.max(72, recentUnread.length * 72)))
       .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.CARD_BORDER', this.appThemeScheme) })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
       .borderRadius(8);
     }
     .width(this.contentFrame().width);
@@ -568,7 +568,7 @@ export struct RssPage {
             .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
             .fontSize(TYPE_RSS_ENTRY_DESCRIPTION.fontSizeFp)
             .lineHeight(TYPE_RSS_ENTRY_DESCRIPTION.lineHeightFp as number)
-            .fontColor(readerAppColor('app.RssPage.MUTED_DEEP', this.appThemeScheme))
+            .fontColor(readerAppColor('app.text.feedMeta', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -719,7 +719,7 @@ export struct RssPage {
         .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
         .fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
         .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp)
-        .fontColor(readerAppColor('app.RssPage.errorSourceRow.fontColor.FF7D2F2B', this.appThemeScheme))
+        .fontColor(readerAppColor('app.feed.errorText', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (source.reason !== undefined && source.reason !== '') {
@@ -737,7 +737,7 @@ export struct RssPage {
     .width('100%')
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(readerAppColor('app.RssPage.ERROR_CARD_BG', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.feed.errorSurface', this.appThemeScheme))
     .borderRadius(6);
   }
 
@@ -847,16 +847,16 @@ export struct RssPage {
 
   private sourceBadgeBg(sub: RssSubscription): string {
     if (!sub.enabled) {
-      return readerAppColor('app.RssPage.STATUS_DISABLED_BG', this.appThemeScheme);
+      return readerAppColor('app.feed.disabledSurface', this.appThemeScheme);
     }
-    return readerAppColor('app.RssPage.STATUS_ENABLED_BG', this.appThemeScheme);
+    return readerAppColor('app.feed.enabledSurface', this.appThemeScheme);
   }
 
   private sourceBadgeDot(sub: RssSubscription): string {
     if (!sub.enabled) {
       return readerAppColor('TOK_MUTED', this.appThemeScheme);
     }
-    return readerAppColor('app.RssPage.sourceBadgeDot.paint.FF2F6B52', this.appThemeScheme);
+    return readerAppColor('app.status.availableDot', this.appThemeScheme);
   }
 
   /** Figma 暂停源整行降透明度 62%. */

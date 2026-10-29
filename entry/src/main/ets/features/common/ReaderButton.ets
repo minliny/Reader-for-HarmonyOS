@@ -1,4 +1,5 @@
-import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec, readerSearchActionWidth, readerSearchControlHeight } from './ReaderControlSpecs';
+import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec, readerSearchActionWidth,
+  readerSearchControlHeight, readerSearchHistoryControlHeight } from './ReaderControlSpecs';
 import { ReaderPressFeedback } from './ReaderPressFeedback';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_XS } from './ReaderTokens';
@@ -66,10 +67,11 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     if (this.layout === 'equal') instance.layoutWeight(1);
     if (this.layout === 'full') instance.width('100%');
     if (spec.height !== undefined) instance.height(readerScaledControlHeight(spec.height, lineHeight, this.fontScale));
-    if (spec.leadingSlot) {
+    if (this.id === 'search-field-phone' || this.id === 'search-field-wide') {
       instance.width(readerSearchActionWidth(this.id === 'search-field-wide', this.fontScale));
       instance.height(readerSearchControlHeight(this.fontScale));
     }
+    if (this.id === 'search-history-keyword') instance.height(readerSearchHistoryControlHeight(this.fontScale));
     if (spec.fixedWidth > 0) instance.width(spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);
     if (spec.maxWidthKind === 'scope') instance.constraintSize({ maxWidth: 160 });
     else if (spec.maxWidthKind === 'history') instance.constraintSize({ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' });
@@ -148,7 +150,7 @@ export struct ReaderButton {
   @Builder
   private emptyLeading() {}
   build() {
-    if (this.specId === 'search-scope') {
+    if (this.specId === 'search-scope' || this.specId === 'search-filter-option') {
       // The capsule keeps its compact visual size inside a separate native
       // target. Its 44vp slot belongs to layout instead of an outer response
       // region, so adjacent filter targets never overlap.

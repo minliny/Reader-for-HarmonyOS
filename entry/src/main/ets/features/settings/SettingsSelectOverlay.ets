@@ -77,7 +77,7 @@ export struct SettingsSelectOverlay {
         Row()
           .width('100%')
           .height('100%')
-          .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
+          .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.scrim.select', this.appThemeScheme))
           .hitTestBehavior(HitTestMode.Default)
           .onClick((): void => this.dismiss(identity));
       }, (identity: string): string => identity);
@@ -106,7 +106,7 @@ export struct SettingsSelectOverlay {
           .width(36)
           .height(4)
           .borderRadius(2)
-          .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.381F1B17', this.appThemeScheme));
+          .backgroundColor(readerAppColor('app.select.sheetHandle', this.appThemeScheme));
       }
       .width('100%')
       .height(24)
@@ -120,7 +120,7 @@ export struct SettingsSelectOverlay {
           .fontSize(TYPE_SETTINGS_SELECT_TITLE.fontSizeFp)
           .lineHeight(TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number)
           .letterSpacing(TYPE_SETTINGS_SELECT_TITLE.letterSpacingFp as number)
-          .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF1F1B17', this.appThemeScheme));
+          .fontColor(readerAppColor('app.text.heading', this.appThemeScheme));
       }
       .width('100%')
       .height(readerScaledControlHeight(26, TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number, this.fontScale()))
@@ -133,8 +133,8 @@ export struct SettingsSelectOverlay {
         }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
       }
       .width('100%')
-      .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
+      .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
       .borderRadius(PHONE_RADIUS)
       .clip(true);
 
@@ -147,12 +147,12 @@ export struct SettingsSelectOverlay {
             .fontWeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontWeight)
             .fontSize(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontSizeFp)
             .lineHeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number)
-            .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
         }
         .width('100%')
         .height(readerScaledControlHeight(PHONE_OPTION_HEIGHT, TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number, this.fontScale()))
-        .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
-        .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
+        .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+        .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
         .borderRadius(PHONE_RADIUS)
         .onClick((): void => this.dismiss(identity));
       }, (identity: string): string => identity);
@@ -165,10 +165,10 @@ export struct SettingsSelectOverlay {
     })
     .linearGradient({
       angle: 180,
-      colors: [[readerAppColor('app.SettingsSelectOverlay.phoneSheet.linearGradient.FFFAF7F2', this.appThemeScheme), 0], [readerAppColor('app.SettingsSelectOverlay.phoneSheet.linearGradient.FFF5F0E8', this.appThemeScheme), 1]],
+      colors: [[readerAppColor('app.surface.selectWarm', this.appThemeScheme), 0], [readerAppColor('app.surface.selectGradientEnd', this.appThemeScheme), 1]],
     })
     .borderRadius({ topLeft: 18, topRight: 18 })
-    .shadow({ radius: 40, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.1F1B171F', this.appThemeScheme), offsetX: 0, offsetY: -8 });
+    .shadow({ radius: 40, color: readerAppColor('app.shadow.selectPanel', this.appThemeScheme), offsetX: 0, offsetY: -8 });
   }
 
   @Builder

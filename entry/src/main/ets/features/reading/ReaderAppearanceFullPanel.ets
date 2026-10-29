@@ -444,7 +444,7 @@ export struct ReaderAppearanceFullPanel {
         .width(this.fullCardWidth() - 10)
         .height(24)
         .backgroundColor(this.themeColor(theme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderAppearanceFullPanel.fullThemeCard.color.1F5B5046', this.appThemeScheme) })
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.shadow.themeSwatch', this.appThemeScheme) })
         .borderRadius(6)
         .position({ x: 5, y: 10 });
       Text(this.themeLabel(theme))
@@ -590,7 +590,7 @@ export struct ReaderAppearanceFullPanel {
         y: this.draggedFontId === fontId ? 1.035 : 1,
       })
       .shadow(this.draggedFontId === fontId ?
-        { radius: 12, color: readerAppColor('app.ReaderAppearanceFullPanel.fullFontCell.color.2B332C25', this.appThemeScheme), offsetX: 0, offsetY: 5 } :
+        { radius: 12, color: readerAppColor('app.shadow.fontSwatch', this.appThemeScheme), offsetX: 0, offsetY: 5 } :
         { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
       .opacity(this.draggedFontId === fontId ? 0.96 : 1)
       .zIndex(this.draggedFontId === fontId ? 3 : 1)
@@ -792,7 +792,7 @@ export struct ReaderAppearanceFullPanel {
         .padding({ left: 8, right: 6 })
         .alignItems(VerticalAlign.Center)
         .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderAppearanceFullPanel.selectField.color.FFC1C7CD', this.appThemeScheme) })
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.control', this.appThemeScheme) })
         .borderRadius(6)
         .opacity(0.38)
         .position({ x: this.selectRowWidth() - this.selectControlWidth(kind) - 8, y: 3 })

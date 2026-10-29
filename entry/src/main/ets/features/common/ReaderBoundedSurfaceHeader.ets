@@ -120,7 +120,7 @@ export struct ReaderBoundedSurfaceHeader {
           .padding({ left: 20, right: 20, top: 20, bottom: 17 });
       }
       Blank().width('100%').height(1).backgroundColor(readerAppColor(this.specId === 'local-import-selection' ?
-        'app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9' : 'app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));
+        'app.import.separator' : 'app.import.separator', this.appThemeScheme));
     }.width('100%').onAreaChange((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));
   }
 

@@ -1,3 +1,4 @@
+import { TOK_SCREEN_INSET } from './ReaderLayoutTokens';
 import { APP_HEADER_BAR_HEIGHT } from './ReaderHeaderMetrics';
 import { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from './ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
@@ -59,7 +60,7 @@ export function readerPageAreaLength(value: Length): number {
 
 export function readerStandardPageContentFrame(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, width: number): SurfaceHorizontalFrame {
   return resolveHorizontalFrame(width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-    new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, 19, 19));
+    new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, TOK_SCREEN_INSET, TOK_SCREEN_INSET));
 }
 
 export function readerStandardPageFooterBottom(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot): number {

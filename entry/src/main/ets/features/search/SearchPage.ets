@@ -1,16 +1,19 @@
-import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderPageState } from '../common/ReaderPageState';
-import type { SearchHistoryStatus, SearchOperationFacts } from './SearchPresentation';
-import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
+import { MESSAGE_META } from '../common/ReaderMessageStyle';
+import type { SearchOperationFacts } from './SearchPresentation';
+import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
+import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
+import { ReaderSearchFilterPanel } from './ReaderSearchFilterPanel';
+import { ReaderSearchTaskPanel } from './ReaderSearchTaskPanel';
 import { searchBookSnapshot } from './SearchBookSnapshot';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
-import { SearchSpinner } from './SearchSpinner';
+import { ReaderLibrarySearchModel } from './ReaderLibrarySearchModel';
 import { SearchViewState, type SearchContentType } from './SearchViewState';
 import { SearchPublication } from './SearchPublication';
 import type { SearchPresentation } from './SearchPresentation';
@@ -32,8 +35,7 @@ import {
   TYPE_SEARCH_RESULT_TAG,
   TYPE_SEARCH_RESULT_TITLE,
 } from '../common/ReaderTypography';
-import { ReaderSearchField } from '../common/ReaderSearchField';
-import { readerSearchActionWidth, readerSearchControlHeight } from '../common/ReaderControlSpecs';
+import { readerSearchControlHeight } from '../common/ReaderControlSpecs';
 import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
@@ -42,8 +44,6 @@ import {
 import {
   readerVisualSafeLeft,
   readerVisualSafeRight,
-  readerVisualSafeTop,
-  readerVisualSafeBottom,
 } from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
@@ -58,19 +58,16 @@ import {
   TOK_PRIMARY_DARK,
   TOK_PRIMARY_GRADIENT_START,
   TOK_PRIMARY_SOFT,
-  TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
-import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
-import { readerMotionAnimateParam } from '../common/ReaderMotionPolicy';
-import { SearchHeaderSpec, readerSearchHeaderHeight, searchHeaderSpec } from '../common/ReaderHeaderSpecs';
+import { SearchHeaderSpec, searchHeaderSpec } from '../common/ReaderHeaderSpecs';
 
 export type {
   SearchInitialPresentation,
@@ -87,6 +84,7 @@ export type {
 
 const SEARCH_LOCAL_SCOPE = '本地';
 const SEARCH_ONLINE_SCOPE = '在线';
+let nextSearchSurfaceOwner: number = 0;
 
 interface SearchScopeEntry {
   name: string;
@@ -102,6 +100,8 @@ interface SearchResultSelection {
 
 interface SearchNoticeFacts {
   queryRevision: number;
+  progressText: string;
+  searching: boolean;
   operationGeneration: number | undefined;
   partial: boolean;
   partialText: string;
@@ -357,11 +357,19 @@ export struct SearchPage {
   private viewStateRevision: number = -1;
   @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
+  @Prop @Watch('externalHeaderChanged') externalHeaderHeight: number = 0;
+  /** Optional persistent surface; the query page remains the business owner. */
+  surfaceModel: ReaderLibrarySearchModel | undefined = undefined;
+  private surfaceOwner: number = 0;
+  /** Host checks the captured route, generation, mount, runtime and search host. */
+  isPresentationCurrent: () => boolean = (): boolean => true;
   private readonly headerSpec: SearchHeaderSpec = searchHeaderSpec();
-  @State private historyWidth: number = 0;
   @State private measurementRevision: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private filtersExpanded: boolean = false;
+  private filterGeneration: number = 0;
+  @State private taskStatusExpanded: boolean = false;
+  private taskStatusGeneration: number = 0;
   private queryAtMount: number = -1;
   private startPositionedQuery: number = -1;
   private headerAnchorPending: boolean = false;
@@ -417,8 +425,6 @@ export struct SearchPage {
   private resultFlushEpoch: number = 0;
   @State private displayIdleRevision: number = 0;
   @State private resultNoticeFacts: SearchNoticeFacts | undefined = undefined;
-  private progressHeightLayoutKey: string = '';
-  private progressHeight: number = 0;
 
   private acceptPublication(): void {
     if (!this.ownsPageQuery()) return;
@@ -426,6 +432,7 @@ export struct SearchPage {
     this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
     this.searchSources = this.publication.sourcesAt(this.publicationRevision);
     this.refreshVisibleResults();
+    this.publishSurface();
   }
 
   aboutToAppear(): void {
@@ -441,15 +448,21 @@ export struct SearchPage {
     this.scrollRestored = false;
     this.selectedGroupName = this.viewState.category;
     this.selectedContentType = this.viewState.contentType;
-    this.filtersExpanded = this.viewState.filtersExpanded;
+    this.filtersExpanded = false;
+    this.taskStatusExpanded = false;
+    this.viewState.filtersExpanded = false;
     this.focusInputOnAppear = this.viewState.consumeInputFocusRequest();
     this.keyword = this.viewState.keywordDraft;
     this.acceptPublication();
+    this.bindSurface();
   }
 
   aboutToDisappear(): void {
     const current = this.ownsPageQuery();
+    this.surfaceModel?.release(this.surfaceOwner);
     if (current) this.rememberAnchorNeighbors();
+    this.taskStatusExpanded = false;
+    this.taskStatusGeneration += 1;
     this.pageMounted = false;
     this.listMounted = false;
     this.scrollRestored = false;
@@ -465,8 +478,78 @@ export struct SearchPage {
   }
 
   private ownsPageQuery(): boolean {
-    return this.pageMounted && this.pageEpoch === this.viewState.pageRevision &&
+    return this.pageMounted && this.isPresentationCurrent() && this.pageEpoch === this.viewState.pageRevision &&
       this.queryAtMount === this.viewState.revision;
+  }
+
+  private ownsSurface(): boolean {
+    return this.ownsPageQuery() && this.surfaceModel?.owns(this.surfaceOwner) === true &&
+      this.surfaceModel?.interactive === true;
+  }
+
+  private submitFromSurface(): void {
+    if (!this.ownsSurface()) return;
+    if (this.keyword.trim().length > 0 && this.canSubmit() && this.presentation.kind !== 'loading') {
+      this.surfaceModel?.suspend();
+    }
+    this.submitSearch();
+  }
+
+  private bindSurface(): void {
+    const model = this.surfaceModel;
+    if (model === undefined) return;
+    this.surfaceOwner = ++nextSearchSurfaceOwner;
+    model.claim(this.surfaceOwner);
+    model.onBack = (): void => {
+      if (!this.ownsSurface()) return;
+      if (this.taskStatusExpanded) this.dismissTaskStatus(this.taskStatusIdentity());
+      else if (this.filtersExpanded) this.dismissSearchFilters(this.filterPresentationIdentity()); else this.onBack();
+    };
+    model.onText = (value: string): void => {
+      if (!this.ownsSurface()) return;
+      this.keyword = value; this.viewState.keywordDraft = value; this.publishSurface();
+    };
+    model.onSubmit = (): void => {
+      if (!this.ownsSurface()) return;
+      if (this.isSweeping()) this.onStop(); else this.submitFromSurface();
+    };
+    model.onAction = (): void => {
+      if (!this.ownsSurface()) return;
+      if (this.isSweeping()) this.onStop(); else this.submitFromSurface();
+    };
+    model.onClearHistory = (): void => { if (this.ownsSurface()) this.onClearHistory(); };
+    model.onRetryHistory = (): void => { if (this.ownsSurface()) this.onRetryHistory(); };
+    model.onHistory = (keyword: string): void => {
+      if (!this.ownsSurface()) return;
+      this.keyword = keyword; this.submitFromSurface();
+    };
+    model.onToggleFilters = (): void => { if (this.ownsSurface()) this.toggleSearchFilters(); };
+    model.onGroup = (value: string): void => { if (this.ownsSurface()) { this.selectGroup(value); this.publishSurface(); } };
+    model.onContentType = (value: SearchContentType): void => { if (this.ownsSurface()) { this.selectContentType(value); this.publishSurface(); } };
+    model.activate(this.surfaceOwner);
+    this.publishSurface();
+  }
+
+  private publishSurface(): void {
+    const model = this.surfaceModel;
+    if (model === undefined || this.surfaceOwner === 0 || !this.ownsSurface()) return;
+    const presentation = this.presentation;
+    model.keyword = this.keyword;
+    // History owns an independent revision and remains publishable while a query is retained.
+    model.history = presentation.history ?? [];
+    model.historyStatus = presentation.historyStatus;
+    model.hasSession = this.hasSearchSession();
+    model.sourceRecoveryVisible = presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError';
+    model.sweeping = this.isSweeping();
+    model.canSubmit = this.canSubmit();
+    model.fieldSubmitEnabled = presentation.kind !== 'loading';
+    model.focusOnAppear = this.focusInputOnAppear;
+    model.spinnerRunKey = this.spinnerRunKey;
+    model.progressText = this.searchProgressText();
+    model.filtersExpanded = this.filtersExpanded;
+    model.selectedGroup = this.selectedGroupName;
+    model.selectedContentType = this.selectedContentType;
+    model.groupNames = this.groupNames();
   }
 
   private ownsList(): boolean { return this.ownsPageQuery() && this.listMounted; }
@@ -488,8 +571,13 @@ export struct SearchPage {
 
   private frameStyle(): ReaderFrameStyle {
     const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
-    return readerFrameStyle({ backgroundColor: pageBackground, headerBackground: pageBackground,
+    return readerFrameStyle({ backgroundColor: '#00000000',
+      headerBackground: pageBackground,
       headerTransparent: true, footerBackground: pageBackground });
+  }
+
+  private sourceRecoveryVisible(): boolean {
+    return this.presentation.kind === 'sourceRequired' || this.presentation.kind === 'sourceLoadError';
   }
 
   build() {
@@ -497,97 +585,66 @@ export struct SearchPage {
       // Only the rounded card paints the header. A solid search host also
       // paints its side/bottom gutters beyond that card's visible border.
       frameStyle: this.frameStyle(),
+      headerVisible: false,
+      transparentContent: true,
       geometry: this.pageGeometry(),
-      headerMeasurementKey: this.searchHeaderMeasurementKey(),
       content: (): void => { this.stateContent(); },
-      header: (): void => { this.searchHeader(); },
-      onHeaderHeightChange: (height: number, presentedKey: number): void => this.acceptSearchHeaderHeight(height, presentedKey),
     });
   }
 
-  @Builder
-  private searchHeader() {
-    Column() {
-      Column() {
-        this.searchBar();
-        if (this.hasSearchSession()) {
-          Column() {
-            Column() {
-              this.filterProgressRow();
-              if (this.filtersExpanded) {
-                Scroll() {
-                  Column() {
-                    this.groupScopeRow();
-                    this.contentTypeRow();
-                  }.width('100%').padding({ bottom: this.headerSpec.filterGroupBottomPadding });
-                }.width('100%').constraintSize({ maxHeight: this.searchFilterMaxHeight() })
-                  .align(Alignment.TopStart).scrollBar(BarState.Auto);
-              }
-            }.width('100%')
-              .border({ width: { top: this.headerSpec.borderWidth },
-                color: readerAppColor('app.search.listRule', this.appThemeScheme) });
-          }.width('100%').padding({ left: 12, right: 12 });
-        }
-      }.width('100%').borderRadius(this.headerSpec.panelRadius)
-        .backgroundColor(readerAppColor('app.search.panelSurface', this.appThemeScheme))
-        .border({ width: this.headerSpec.borderWidth,
-          color: readerAppColor('app.search.panelBorder', this.appThemeScheme) })
-        .clip(true);
-    }.width('100%').padding({ left: this.searchOuterInset(), right: this.searchOuterInset(),
-      bottom: this.headerSpec.panelBottomGap })
-      .hitTestBehavior(HitTestMode.Transparent);
+  private filterPresentationIdentity(): string {
+    return `${this.pageEpoch}:${this.viewState.revision}:${this.filterGeneration}`;
   }
 
-  @Builder
-  private filterProgressRow() {
-    Row({ space: 8 }) {
-      Text(this.searchProgressText()).layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular).fontSize(12).lineHeight(18).halfLeading(true)
-        .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .padding({ top: this.headerSpec.statsPaddingTop, bottom: this.headerSpec.statsPaddingBottom });
-      Stack({ alignContent: Alignment.End }) {
-        Row({ space: 5 }) {
-          Text('筛选').fontFamily('ReaderNotoSansSC').fontSize(13).lineHeight(20).halfLeading(true)
-            .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-          Image(this.appThemeScheme === 'night' ? $r('app.media.rss_filter_chevron_theme_night') : $r('app.media.rss_filter_chevron'))
-            .width(16).height(16).rotate({ angle: this.filtersExpanded ? 270 : 90 });
-        }.width('100%').justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center);
-        if (this.hasActiveSearchFilters()) {
-          Circle().width(4).height(4).fill(readerAppColor('TOK_GREEN', this.appThemeScheme))
-            .position({ x: this.searchActionWidth() - 26, y: this.searchControlHeight() / 2 - 11 }).hitTestBehavior(HitTestMode.None);
-        }
-      }.width(this.searchActionWidth()).constraintSize({ minHeight: this.searchControlHeight() })
-        .accessibilityRole(AccessibilityRoleType.BUTTON).focusable(true)
-        .accessibilityText(`${this.filtersExpanded ? '收起筛选' : '展开筛选'}${this.hasActiveSearchFilters() ? '，筛选条件已生效' : ''}`)
-        .onClick((): void => this.toggleSearchFilters());
-    }.width('100%').constraintSize({ minHeight: this.searchStatsHeight() }).alignItems(VerticalAlign.Center);
+  private acceptsFilter(identity: string): boolean {
+    return this.ownsPageQuery() && this.filtersExpanded && identity === this.filterPresentationIdentity();
+  }
+
+  private dismissSearchFilters(identity: string): void {
+    if (!this.acceptsFilter(identity)) return;
+    this.filtersExpanded = false;
+    this.viewState.filtersExpanded = false;
+    this.publishSurface();
   }
 
   private toggleSearchFilters(): void {
     if (!this.ownsPageQuery()) return;
-    if (this.ownsList() && this.scrollRestored) {
-      this.saveScrollAnchor();
-      this.restoreKey = this.viewState.anchorKey;
-      this.restoreOffset = this.viewState.anchorOffset;
-      this.restoreItemY = this.viewState.anchorItemY;
-      this.headerAnchorInset = this.searchContentStartInset();
-      this.headerAnchorPending = true;
-      this.restoreCancelled = false;
-      this.scrollRestored = false;
+    // Native popup is an overlay, not header content. It never changes the list inset.
+    if (!this.filtersExpanded) { this.filterGeneration += 1; this.taskStatusExpanded = false; }
+    this.filtersExpanded = !this.filtersExpanded;
+    this.viewState.filtersExpanded = this.filtersExpanded;
+    this.publishSurface();
+  }
+
+  private resetSearchFilters(identity: string): void {
+    if (!this.acceptsFilter(identity)) return;
+    if (this.selectedGroupName === '全部' && this.selectedContentType === '全部类型') return;
+    this.selectedGroupName = '全部'; this.selectedContentType = '全部类型';
+    this.viewState.category = '全部'; this.viewState.contentType = '全部类型';
+    this.resetFilteredResults(); this.publishSurface();
+  }
+
+  private taskStatusIdentity(): string {
+    return `${this.pageEpoch}:${this.viewState.revision}:${this.taskStatusGeneration}`;
+  }
+  private acceptsTaskStatus(identity: string): boolean {
+    return this.ownsPageQuery() && this.taskStatusExpanded && identity === this.taskStatusIdentity();
+  }
+  private dismissTaskStatus(identity: string): void {
+    if (this.acceptsTaskStatus(identity)) this.taskStatusExpanded = false;
+  }
+  private toggleTaskStatus(): void {
+    if (!this.ownsPageQuery()) return;
+    if (!this.taskStatusExpanded) {
+      this.taskStatusGeneration += 1;
+      this.filtersExpanded = false; this.viewState.filtersExpanded = false; this.publishSurface();
     }
-    const params = readerMotionAnimateParam('search.filters.toggle', this.reduceMotion);
-    this.getUIContext().animateTo(params, (): void => {
-      if (!this.ownsPageQuery()) return;
-      this.filtersExpanded = !this.filtersExpanded;
-      this.viewState.filtersExpanded = this.filtersExpanded;
-    });
+    this.taskStatusExpanded = !this.taskStatusExpanded;
   }
 
   private acceptSearchHeaderHeight(height: number, presentedKey: number): void {
     if (!this.ownsPageQuery() || presentedKey !== this.searchHeaderMeasurementKey() || !Number.isFinite(height) || height <= 0) return;
-    const previous = this.resolvedHeaderHeight();
+    const previous = this.measurements.readForGeneration('search:header', presentedKey, this.externalHeaderHeight);
     if (this.measurements.record('search:header', height, presentedKey)) this.measurementRevision += 1;
     if (this.headerAnchorPending) {
       const delta = height - this.headerAnchorInset;
@@ -604,23 +661,6 @@ export struct SearchPage {
     }
   }
 
-  private searchHeaderHeight(): number {
-    // Fallback until the natural-height panel is measured. Result facts never
-    // add another fixed row; the two option groups exist only while expanded.
-    // Keep the branches so initial/history frames do not measure text or read
-    // keyboard insets for rows that are not mounted.
-    const barHeight = this.searchBarHeight();
-    if (!this.hasSearchSession()) {
-      return readerSearchHeaderHeight(this.headerSpec, false, false, barHeight, 0, 0, 0);
-    }
-    const statsHeight = this.searchStatsHeight();
-    if (!this.filtersExpanded) {
-      return readerSearchHeaderHeight(this.headerSpec, true, false, barHeight, statsHeight, 0, 0);
-    }
-    return readerSearchHeaderHeight(this.headerSpec, true, true, barHeight, statsHeight,
-      this.searchFilterHeight(), this.searchFilterMaxHeight());
-  }
-
   private hasSearchSession(): boolean {
     return this.presentation.kind === 'loading' || this.presentation.kind === 'results' ||
       this.presentation.kind === 'empty' || this.presentation.kind === 'error';
@@ -633,55 +673,24 @@ export struct SearchPage {
   private searchSummaryStacked(): boolean {
     // Window/font changes may reflow the summary; progress/count updates may
     // not. At large accessibility sizes give both original labels a full row.
-    return this.headerSpec.summaryStacked(this.searchResultWidth(), this.searchFontScale());
+    return this.headerSpec.summaryStacked(this.searchResultWidth() - SEARCH_RESULT_GEOMETRY.filterActionSize, this.searchFontScale());
   }
 
   private searchHeaderMeasurementKey(): number {
     // Keep delayed loading/old-window receipts out of the current header.
     // The window owner advances its revision for width and font changes.
-    const structure = this.hasSearchSession() ? (this.filtersExpanded ? 2 : 1) : 0;
+    const structure = this.hasSearchSession() ? 1 : 0;
     return Math.max(0, this.readerWindowMetricsRevision) * 8 + (this.expandedLayout ? 4 : 0) + structure;
   }
 
-  private searchStatsHeight(): number {
-    const scale = this.searchFontScale();
-    const width = Math.max(24, this.searchResultWidth() - 2 * TOK_BORDER_W - 24 - 8 - this.searchActionWidth());
-    const key = `${this.readerWindowMetricsRevision}:${width}:${scale}`;
-    if (this.progressHeightLayoutKey === key && this.progressHeight > 0) return this.progressHeight;
-    // A source sweep does not need a MAX_SAFE_INTEGER-sized text reservation.
-    // Keep the ordinary counter/waiting line stable; longer actual text may
-    // still grow naturally instead of being clipped or locally scrolled.
-    const texts: string[] = [
-      '正在搜索本地与在线书籍…',
-      '正在搜索 999999/999999 个书源',
-      '已搜索 999999/999999 个书源',
-      '本次搜索未完成',
-    ];
-    let height = 18 * scale;
-    try {
-      const context = this.getUIContext();
-      for (const text of texts) {
-        const measured = context.px2vp(Number(context.getMeasureUtils().measureTextSize({
-          textContent: text, constraintWidth: `${width}vp`, fontSize: '12fp', lineHeight: '18fp',
-          fontFamily: 'ReaderNotoSansSC', fontWeight: FontWeight.Regular,
-        }).height));
-        if (!Number.isFinite(measured) || measured <= 0) throw new Error('Search progress measurement unavailable');
-        height = Math.max(height, measured);
-      }
-    } catch (_error) {
-      // Keep a two-line minimum while native text measurement is unavailable;
-      // the row still grows naturally for longer real text.
-      height = Math.max(height, this.headerSpec.statsFallbackHeight * scale);
-    }
-    this.progressHeightLayoutKey = key;
-    this.progressHeight = Math.max(this.searchControlHeight(),
-      this.headerSpec.statsVerticalPadding + Math.ceil(height));
-    return this.progressHeight;
+  private resolvedHeaderHeight(): number {
+    return Number.isFinite(this.externalHeaderHeight) && this.externalHeaderHeight > 0 ? this.externalHeaderHeight : 0;
   }
 
-  private resolvedHeaderHeight(): number {
-    return this.measurements.readForGeneration('search:header', this.searchHeaderMeasurementKey(),
-      this.searchHeaderHeight());
+  private externalHeaderChanged(): void {
+    if (this.ownsPageQuery() && Number.isFinite(this.externalHeaderHeight) && this.externalHeaderHeight > 0) {
+      this.acceptSearchHeaderHeight(this.externalHeaderHeight, this.searchHeaderMeasurementKey());
+    }
   }
 
   private pageGeometry(): ReaderPageGeometry {
@@ -712,44 +721,11 @@ export struct SearchPage {
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
-  private searchFilterHeight(): number {
-    return this.headerSpec.filterHeight(this.searchFontScale());
-  }
-
-  private searchFilterMaxHeight(): number {
-    const metrics = ReaderWindowCoordinator.metrics();
-    if (!Number.isFinite(metrics.windowRect.height) || metrics.windowRect.height <= 0) {
-      return this.headerSpec.unmeasuredViewportHeight;
-    }
-    const available = metrics.windowRect.height - readerVisualSafeTop(metrics) -
-      Math.max(readerVisualSafeBottom(metrics), metrics.keyboardInsets.bottom);
-    const base = readerSearchHeaderHeight(this.headerSpec, true, false,
-      this.searchBarHeight(), this.searchStatsHeight(), 0, 0);
-    // Only long filter options scroll. The input/progress rows stay intact,
-    // and ordinary windows retain room for the result header and first book.
-    return Math.max(this.headerSpec.filterMinExpandedHeight,
-      available - base - this.headerSpec.filterViewportReserve);
-  }
-
-  private searchFilterLabelWidth(): number {
-    return 51 * Math.max(1, this.searchFontScale());
-  }
-
-  private searchBarHeight(): number {
-    return this.headerSpec.barHeight(this.searchControlHeight());
-  }
-
-  private searchOuterInset(): number { return this.headerSpec.outerInset(this.expandedLayout); }
+  private searchOuterInset(): number { return SEARCH_RESULT_GEOMETRY.outerInset; }
 
   private searchResultWidth(): number { return Math.max(0, this.contentFrame().width - 2 * this.searchOuterInset()); }
 
-  private searchActionWidth(): number { return readerSearchActionWidth(this.expandedLayout, this.searchFontScale()); }
-
   private searchControlHeight(): number { return readerSearchControlHeight(this.searchFontScale()); }
-
-  private hasActiveSearchFilters(): boolean {
-    return this.selectedGroupName !== '全部' || this.selectedContentType !== '全部类型';
-  }
 
   private searchBottomInset(minimum: number = 20): number {
     if (this.readerWindowMetricsRevision < 0) { return minimum; }
@@ -782,8 +758,7 @@ export struct SearchPage {
     if (this.isSweeping()) {
       return true;
     }
-    const scope = this.scopeSourceIds();
-    return scope === undefined || scope.length > 0;
+    return this.keyword.trim().length > 0;
   }
 
   /** Reads the presentation directly so minimal-update re-render tracks it. */
@@ -800,16 +775,14 @@ export struct SearchPage {
     if (keyword.length === 0) {
       return;
     }
-    const scope = this.scopeSourceIds();
-    if (scope !== undefined && scope.length === 0) {
-      // A custom scope with zero usable sources cannot be searched; the pill
-      // renders dimmed so the dead submit reads as disabled, not broken.
-      return;
-    }
+    // Result filters do not silently restrict the next network query.
     this.viewState.reset(keyword);
     this.selectedGroupName = '全部';
     this.selectedContentType = '全部类型';
-    this.onSearch(keyword, scope);
+    this.filtersExpanded = false;
+    this.taskStatusExpanded = false;
+    this.taskStatusGeneration += 1;
+    this.onSearch(keyword);
   }
 
   /** undefined = all enabled sources; otherwise the selected group's usable subset. */
@@ -917,226 +890,30 @@ export struct SearchPage {
   }
 
   @Builder
-  private searchBar() {
-    Row({ space: 4 }) {
-      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')),
-        specId: 'toolbar-compact', accessibilityLabel: '返回', onTap: (): void => this.onBack() })
-        .constraintSize({ minWidth: 44, minHeight: this.searchControlHeight() });
-
-      Row() {
-        ReaderSearchField({
-          variant: 'bookPanel',
-          mode: 'submit',
-          focusOnAppear: this.focusInputOnAppear,
-          text: this.keyword,
-          placeholder: '搜索书名、作者...',
-          accessibilityLabel: '搜索书名或作者',
-          expandedLayout: this.expandedLayout,
-          clearable: true,
-          submitEnabled: this.presentation.kind !== 'loading',
-          onTextChange: (value: string): void => {
-            if (!this.ownsPageQuery()) return;
-            this.keyword = value;
-            this.viewState.keywordDraft = value;
-          },
-          onSubmit: (): void => this.submitSearch(),
-        });
-      }
-      .layoutWeight(1)
-      .alignItems(VerticalAlign.Center);
-
-      // The original action remains one stop/submit intent inside the panel.
-      ReaderButton({ scheme: this.appThemeScheme, specId: this.expandedLayout ? 'search-field-wide' : 'search-field-phone',
-        label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),
-        leading: (): void => this.searchActionLeading(),
-        onAction: (): void => { if (!this.ownsPageQuery()) return; if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });
-    }
-    .width('100%')
-    .height(this.searchBarHeight())
-    .padding({ left: this.headerSpec.barPaddingLeft, right: this.headerSpec.barPaddingRight,
-      top: this.headerSpec.barPaddingTop, bottom: this.headerSpec.barPaddingBottom })
-    .alignItems(VerticalAlign.Center)
-    .hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  @Builder
-  private searchActionLeading() {
-    SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
-      reduceMotion: this.reduceMotion, diameter: 14 });
-  }
-
-  @Builder
   private stateContent() {
     if (this.hasSearchSession()) {
       this.resultsContent();
     } else if (this.presentation.kind === 'initial') {
-      Scroll() {
-        Column() { this.initialContent(); }.width('100%').padding({ top: this.searchContentStartInset() });
-      }.width('100%').height('100%')
-        .align(Alignment.TopStart).scrollBar(BarState.Off);
+      Blank().width('100%').height(0);
     } else if (this.presentation.kind === 'sourceRequired') {
       Scroll() {
         Column() {
           this.sourceRequiredContent(this.sourceRequiredReason());
-          this.initialContent();
-        }.width('100%').padding({ top: this.searchContentStartInset() });
-      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+        }.width('100%').padding({ top: this.searchContentStartInset() }).alignItems(HorizontalAlign.Center);
+      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off)
+        .hitTestBehavior(HitTestMode.Transparent);
     } else if (this.presentation.kind === 'sourceLoadError') {
       Scroll() {
         Column() {
           this.sourceLoadErrorContent();
-          this.initialContent();
-        }.width('100%').padding({ top: this.searchContentStartInset() });
-      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+        }.width('100%').padding({ top: this.searchContentStartInset() }).alignItems(HorizontalAlign.Center);
+      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off)
+        .hitTestBehavior(HitTestMode.Transparent);
     }
   }
 
   private sourceRequiredReason(): string {
     return this.presentation.kind === 'sourceRequired' ? this.presentation.reason : 'noSources';
-  }
-
-  private historyStatus(): SearchHistoryStatus | undefined {
-    const presentation = this.presentation;
-    if (presentation.kind === 'initial' || presentation.kind === 'sourceRequired' ||
-      presentation.kind === 'sourceLoadError') return presentation.historyStatus;
-    return undefined;
-  }
-
-  // Reads presentation.history directly (never a @Builder value parameter):
-  // loadHistory can resolve after any entry state and must update the same
-  // history chips without relying on an untracked Builder parameter.
-  @Builder
-  private initialContent() {
-    Column({ space: 0 }) {
-      if (this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
-        this.presentation.kind === 'sourceLoadError') {
-        if (this.presentation.historyStatus === 'loading') {
-          ReaderPageState({ message: '正在读取搜索历史', loading: true, padded: false });
-        } else if (this.presentation.historyStatus === 'loadFailed' || this.presentation.historyStatus === 'clearFailed') {
-          ReaderPageState({ message: this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败',
-            padded: false, customActions: true, actionContent: (): void => {
-              this.secondaryPill(this.historyStatus() === 'clearFailed' ? '重试清空' : '重试读取',
-                (): void => this.onRetryHistory());
-            } }).padding({ bottom: TOK_SPACE_XS });
-        }
-      }
-      if ((this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
-        this.presentation.kind === 'sourceLoadError') && this.presentation.history.length > 0) {
-        Row() {
-          Text('最近搜索')
-            .fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
-            .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
-            .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .layoutWeight(1);
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-clear', label: '清空记录',
-            actionEnabled: this.presentation.historyStatus !== 'loading', onAction: (): void => this.onClearHistory() });
-        }
-        .width('100%')
-        .constraintSize({ minHeight: 26 })
-        .alignItems(VerticalAlign.Center);
-
-        // All retained history is visible inside the existing page Scroll.
-        Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-          ForEach(this.presentation.history, (keyword: string) => {
-            ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: keyword, availableWidth: this.historyWidth,
-              onAction: (): void => { this.keyword = keyword; this.submitSearch(); } });
-          }, (keyword: string): string => `search-history-${keyword}`);
-        }
-        .width('100%')
-        .padding({ top: TOK_SPACE_CARD_PADDING });
-
-      }
-    }
-    .width('100%')
-    .padding({
-      left: this.expandedLayout ? 20 : 18,
-      right: this.expandedLayout ? 20 : 18,
-      top: TOK_SPACE_XS,
-      bottom: this.searchBottomInset(),
-    })
-    // Only constrain long chip width; history admission never depends on measurement.
-    .onAreaChange((_old: Area, next: Area): void => {
-      const outerWidth = readerPageAreaLength(next.width);
-      if (!Number.isFinite(outerWidth)) return;
-      const width = Math.max(0, outerWidth - (this.expandedLayout ? 40 : 36));
-      if (Math.abs(width - this.historyWidth) > .1) {
-        this.historyWidth = width;
-      }
-    });
-  }
-
-  private searchFiltersStacked(): boolean { return this.searchFontScale() >= 1.5; }
-
-  // Reuse the existing options and actions; wrapping replaces hidden
-  // horizontal option scroll at narrow widths and large text sizes.
-  @Builder
-  private groupScopeRow() {
-    if (this.groupNames().length > 0) {
-      Flex({ direction: this.searchFiltersStacked() ? FlexDirection.Column : FlexDirection.Row,
-        alignItems: ItemAlign.Start }) {
-        Text('来源')
-          .width(this.searchFiltersStacked() ? '100%' : this.searchFilterLabelWidth())
-          .constraintSize({ minHeight: this.searchFiltersStacked() ? 0 : this.headerSpec.filterMinHeight })
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
-          .lineHeight(this.headerSpec.filterLabelLineHeight)
-          .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-            space: { main: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-            this.groupScopeChip('全部');
-            ForEach(this.groupNames(), (name: string) => {
-              this.groupScopeChip(name);
-            }, (name: string): string => `search-group-${name}`);
-          }.layoutWeight(this.searchFiltersStacked() ? 0 : 1)
-            .width(this.searchFiltersStacked() ? '100%' : undefined)
-            .constraintSize({ minHeight: this.headerSpec.filterMinHeight });
-      }
-      .width('100%')
-      .constraintSize({ minHeight: this.searchFilterHeight() });
-    }
-  }
-
-  @Builder
-  private groupScopeChip(label: string) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-scope', label, primary: this.selectedGroupName === label,
-      actionAccessibilityLabel: this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`,
-      onAction: (): void => this.selectGroup(label) });
-  }
-
-  @Builder
-  private contentTypeRow() {
-    Flex({ direction: this.searchFiltersStacked() ? FlexDirection.Column : FlexDirection.Row,
-      alignItems: ItemAlign.Start }) {
-      Text('内容类型')
-        .width(this.searchFiltersStacked() ? '100%' : this.searchFilterLabelWidth())
-        .constraintSize({ minHeight: this.searchFiltersStacked() ? 0 : this.headerSpec.filterMinHeight })
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(11)
-        .lineHeight(this.headerSpec.filterLabelLineHeight)
-        .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-          space: { main: LengthMetrics.vp(TOK_SPACE_XS) } }) {
-          this.contentTypeChip('全部类型');
-          this.contentTypeChip('小说');
-          this.contentTypeChip('漫画');
-        }.layoutWeight(this.searchFiltersStacked() ? 0 : 1)
-          .width(this.searchFiltersStacked() ? '100%' : undefined)
-          .constraintSize({ minHeight: this.headerSpec.filterMinHeight });
-    }
-    .width('100%')
-    .constraintSize({ minHeight: this.searchFilterHeight() });
-  }
-
-  @Builder
-  private contentTypeChip(label: SearchContentType) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-scope', label,
-      primary: this.selectedContentType === label,
-      actionAccessibilityLabel: this.selectedContentType === label ? `当前内容类型:${label}` : `筛选内容类型:${label}`,
-      onAction: (): void => this.selectContentType(label) }).id(`search-content-type-${label}`);
   }
 
   @Builder
@@ -1234,6 +1011,8 @@ export struct SearchPage {
   private onListScrollStop(): void {
     if (!this.ownsList()) return;
     this.userScrolling = false;
+    this.saveScrollAnchor();
+    if (this.viewState.anchorAtStart) this.resultsDeferred = true;
     this.scheduleDeferredResults();
     if (!this.userInteracting) this.displayIdleRevision += 1;
   }
@@ -1244,6 +1023,7 @@ export struct SearchPage {
       source === ScrollSource.OTHER_USER_INPUT || source === ScrollSource.SCROLL_BAR ||
       source === ScrollSource.SCROLL_BAR_FLING;
     if (!userInput || !Number.isFinite(offset) || Math.abs(offset) < .01) return;
+    if (this.filtersExpanded) this.dismissSearchFilters(this.filterPresentationIdentity());
     this.userScrolling = true;
     this.resultFlushEpoch += 1;
     this.cancelScrollRestoreForUser();
@@ -1263,22 +1043,48 @@ export struct SearchPage {
 
   @Builder
   private resultSummary() {
-    Flex({ direction: this.searchSummaryStacked() ? FlexDirection.Column : FlexDirection.Row,
-      alignItems: this.searchSummaryStacked() ? ItemAlign.Start : ItemAlign.Center,
-      justifyContent: FlexAlign.Center }) {
-      Text() {
-        Span('找到 ');
-        Span(`${this.presentation.kind === 'results' ? this.visibleGroups.length : 0}`).fontWeight(FontWeight.Medium);
-        Span(' 本');
-      }.fontFamily('ReaderNotoSansSC').fontSize(14).lineHeight(21)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
-        .layoutWeight(this.searchSummaryStacked() ? 0 : 1);
-      Text(this.searchStatusLabel()).fontFamily('ReaderNotoSansSC').fontSize(12).lineHeight(18)
-        .fontColor(this.searchStatusColor())
-        .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()));
-    }.width('100%').constraintSize({ minHeight: this.searchSummaryHeight() })
-      .padding({ top: this.headerSpec.summaryPaddingTop, bottom: this.headerSpec.summaryPaddingBottom });
+    Row({ space: 8 }) {
+      Flex({ direction: this.searchSummaryStacked() ? FlexDirection.Column : FlexDirection.Row,
+        alignItems: this.searchSummaryStacked() ? ItemAlign.Start : ItemAlign.Center }) {
+        Text() {
+          Span('搜索结果 · ');
+          Span(`${this.presentation.kind === 'results' ? this.visibleGroups.length : 0}`).fontWeight(FontWeight.Medium);
+        }.fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily).fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
+          .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
+          .layoutWeight(this.searchSummaryStacked() ? 0 : 1);
+      }.layoutWeight(1);
+      ReaderSearchFilterPanel({ expanded: this.filtersExpanded,
+        presentationIdentity: this.filterPresentationIdentity(),
+        selectedGroup: this.selectedGroupName, selectedType: this.selectedContentType,
+        onToggle: (): void => this.toggleSearchFilters(),
+        onReset: (identity: string): void => this.resetSearchFilters(identity),
+        onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
+        onGroup: (value: string, identity: string): void => {
+          if (!this.acceptsFilter(identity)) return;
+          this.selectGroup(value); this.publishSurface();
+        },
+        onType: (value: SearchContentType, identity: string): void => {
+          if (!this.acceptsFilter(identity)) return;
+          this.selectContentType(value); this.publishSurface();
+        } });
+    }.width('100%').constraintSize({ minHeight: this.searchSummaryHeight() });
+  }
+
+  private searchProgressFraction(): number {
+    if (this.presentation.kind !== 'results') return this.isSweeping() ? 0 : 1;
+    const total = this.presentation.totalSourceCount;
+    return total > 0 ? Math.min(1, Math.max(0, this.presentation.completedSourceCount / total)) : 0;
+  }
+
+  @Builder
+  private resultProgress() {
+    Row() {
+      Blank().width(`${this.searchProgressFraction() * 100}%`).height(2)
+        .backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+    }.width('100%').height(2).backgroundColor(readerAppColor('TOK_BORDER', this.appThemeScheme))
+      .borderRadius(1);
   }
 
   private searchStatusColor(): string {
@@ -1295,7 +1101,7 @@ export struct SearchPage {
 
   private searchStatusLabel(): string {
     if (this.searchStopped()) return '已停止';
-    if (this.isSweeping()) return '搜索中';
+    if (this.isSweeping()) return '';
     if (this.presentation.kind === 'error') return '搜索失败';
     if (this.hasSearchNotice('partial') || this.hasSearchNotice('failed')) return '部分失败';
     return '搜索完成';
@@ -1308,11 +1114,10 @@ export struct SearchPage {
       if (presentation.totalSourceCount <= 0) return this.isSweeping() ?
         '正在搜索本地与在线书籍…' : this.searchStopped() ? '已停止搜索' : '本次搜索已结束';
       const progress = `${presentation.completedSourceCount}/${presentation.totalSourceCount} 个书源`;
-      if (this.isSweeping()) return `正在搜索 ${progress}`;
-      return `已搜索 ${progress}`;
+      return `已处理 ${progress}`;
     }
     if (presentation.kind === 'empty' || presentation.kind === 'error') {
-      if (presentation.searchedSourceCount > 0) return `已搜索 ${presentation.searchedSourceCount} 个书源`;
+      if (presentation.searchedSourceCount > 0) return `已处理 ${presentation.searchedSourceCount} 个书源`;
       return this.searchStopped() ? '已停止搜索' : presentation.kind === 'error' ? '本次搜索未完成' : '本次搜索已结束';
     }
     return '';
@@ -1335,6 +1140,7 @@ export struct SearchPage {
   private captureSearchNoticeFacts(): SearchNoticeFacts {
     const presentation = this.presentation;
     const facts: SearchNoticeFacts = { queryRevision: this.viewState.revision,
+      progressText: this.searchProgressText(), searching: this.isSweeping(),
       operationGeneration: this.operation()?.generation, partial: false,
       partialText: '', failed: 0, skipped: 0, canRetry: false };
     if (presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') {
@@ -1342,7 +1148,7 @@ export struct SearchPage {
       facts.partialText = facts.partial ? this.partialSearchFailure() : '';
       facts.failed = presentation.failedSourceCount ?? 0;
       facts.skipped = presentation.skippedSourceCount ?? 0;
-      facts.canRetry = this.operation()?.canRetry !== false;
+      facts.canRetry = this.operation()?.canRetry === true;
     }
     return facts;
   }
@@ -1361,7 +1167,8 @@ export struct SearchPage {
     const next = this.captureSearchNoticeFacts();
     const previous = this.resultNoticeFacts;
     const sameQuery = previous?.queryRevision === next.queryRevision;
-    const sameText = sameQuery && previous?.partial === next.partial && previous?.partialText === next.partialText &&
+    const sameText = sameQuery && previous?.progressText === next.progressText && previous?.searching === next.searching &&
+      previous?.partial === next.partial && previous?.partialText === next.partialText &&
       previous?.failed === next.failed && previous?.skipped === next.skipped;
     if (sameText && previous?.canRetry === next.canRetry && previous?.operationGeneration === next.operationGeneration) return;
     // This executes only after the list's existing interaction freeze admits
@@ -1377,25 +1184,34 @@ export struct SearchPage {
   private searchNoticeText(kind: string): string {
     const facts = this.displayedSearchNoticeFacts();
     if (kind === 'partial') return facts.partialText;
-    if (kind === 'failed') return `${facts.failed} 个书源搜索失败。`;
-    return `已跳过 ${facts.skipped} 个近期不可用书源。`;
+    if (kind === 'failed') return `${facts.failed} 个书源本次搜索失败。`;
+    return `已跳过 ${facts.skipped} 个暂不可用的书源。`;
   }
 
   private searchNoticeActionEnabled(kind: string): boolean {
     const displayed = this.displayedSearchNoticeFacts();
     const current = this.captureSearchNoticeFacts();
     if (displayed.queryRevision !== current.queryRevision || displayed.operationGeneration !== current.operationGeneration) return false;
-    const available = kind === 'partial' ? current.partial : kind === 'failed' && current.failed > 0;
+    const available = kind === 'partial' ? current.partial :
+      kind === 'failed' ? current.failed > 0 : kind === 'skipped' && current.skipped > 0;
     return available && !this.isSweeping() && current.canRetry;
   }
 
+  private searchNoticeRetryKind(): string {
+    const facts = this.displayedSearchNoticeFacts();
+    if (facts.partial) return 'partial';
+    if (facts.failed > 0) return 'failed';
+    return facts.skipped > 0 ? 'skipped' : '';
+  }
+
   private searchNoticeOffersRetry(kind: string): boolean {
-    return kind === 'partial' ? this.hasDisplayedSearchNotice('partial') :
-      kind === 'failed' && !this.hasDisplayedSearchNotice('partial') && this.hasDisplayedSearchNotice('failed');
+    const facts = this.displayedSearchNoticeFacts();
+    return kind.length > 0 && kind === this.searchNoticeRetryKind() && !facts.searching &&
+      facts.canRetry && this.searchNoticeActionEnabled(kind);
   }
 
   private hasSearchNoticeRetry(): boolean {
-    return this.hasDisplayedSearchNotice('partial') || this.hasDisplayedSearchNotice('failed');
+    return this.searchNoticeOffersRetry(this.searchNoticeRetryKind());
   }
 
   private searchProgressRetryHandler(kind: string): () => void {
@@ -1417,40 +1233,24 @@ export struct SearchPage {
 
   @Builder
   private searchProgressDetails() {
-    if (this.hasDisplayedSearchNotice('partial')) { this.searchProgressNotice('partial'); }
-    if (this.hasDisplayedSearchNotice('failed')) { this.searchProgressNotice('failed'); }
-    if (this.hasDisplayedSearchNotice('skipped')) { this.searchProgressNotice('skipped'); }
+    ReaderSearchTaskPanel({ expanded: this.taskStatusExpanded, presentationIdentity: this.taskStatusIdentity(),
+      triggerWidth: Math.max(0, this.searchResultWidth() - SEARCH_RESULT_GEOMETRY.filterActionSize - 8),
+      progressText: this.displayedSearchNoticeFacts().progressText, statusLabel: this.searchStatusLabel(),
+      searching: this.displayedSearchNoticeFacts().searching,
+      partialText: this.displayedSearchNoticeFacts().partialText,
+      failed: this.displayedSearchNoticeFacts().failed, skipped: this.displayedSearchNoticeFacts().skipped,
+      failedText: this.searchNoticeText('failed'), skippedText: this.searchNoticeText('skipped'),
+      canRetry: this.hasSearchNoticeRetry(), retryIdentity: this.searchNoticeActionKey(this.searchNoticeRetryKind()),
+      onToggle: (): void => this.toggleTaskStatus(),
+      onDismiss: (identity: string): void => this.dismissTaskStatus(identity),
+      onRetry: this.searchProgressRetryHandler(this.searchNoticeRetryKind()) });
   }
 
   @Builder
   private mainSearchNotices() {
-    Column() { this.resultSummary(); this.searchProgressDetails(); }
-      .width('100%')
-      .padding({ left: 12, right: 12,
-        top: 0, bottom: this.hasAnySearchNotice() ? 4 : 0 })
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .border({ width: { bottom: TOK_BORDER_W },
-        color: { bottom: readerAppColor('app.search.listRule', this.appThemeScheme) } });
-  }
-
-  @Builder
-  private searchProgressNotice(kind: string) {
-    Row({ space: 8 }) {
-      Text(this.searchNoticeText(kind)).layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular).fontSize(12).lineHeight(18)
-        .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      // ReaderButton keeps its regular action callback for the instance.
-      // Replace only the action when its displayed task identity changes.
-      if (this.searchNoticeOffersRetry(kind)) {
-        ForEach([this.searchNoticeActionKey(kind)], (_key: string) => {
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-progress', label: '重试',
-            actionEnabled: this.searchNoticeActionEnabled(kind),
-            onAction: this.searchProgressRetryHandler(kind) })
-            .constraintSize({ minWidth: 44, minHeight: this.searchControlHeight() });
-        }, (key: string) => key);
-      }
-    }.width('100%').alignItems(VerticalAlign.Center);
+    Column() { this.resultSummary(); this.searchProgressDetails(); this.resultProgress(); }
+      .width('100%').padding({ bottom: 8 })
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   // ArkUI does not track mutable @Builder value parameters. Read state at
@@ -1489,6 +1289,7 @@ export struct SearchPage {
         .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
         .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
         .scrollBar(BarState.Off)
+        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .maintainVisibleContentPosition(true)
         .onTouch((event: TouchEvent): void => this.onListTouch(event.type))
         .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): void => this.onListWillScroll(offset, source))
@@ -1511,7 +1312,8 @@ export struct SearchPage {
     if (this.resultProjection === undefined) this.resultProjection = new SearchResultProjection();
     if (this.projectedGroups === undefined) this.projectedGroups = new Map();
     const delta = this.presentation.kind === 'results' ? this.presentation.delta : undefined;
-    const update = this.resultProjection.update(results, this.shelfBooks, keyword, this.viewState, delta);
+    const update = this.resultProjection.update(results, this.shelfBooks, keyword, this.viewState, delta,
+      this.viewState.anchorAtStart && !this.userInteracting && !this.userScrolling);
     this.changedGroupKeys = update.changedKeys;
     for (const key of update.changedKeys) {
       const row = update.rows.get(key);
@@ -1705,7 +1507,7 @@ export struct SearchPage {
     const failed = (this.presentation.failedSourceCount ?? 0) > 0 ?
       `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
     const skipped = (this.presentation.skippedSourceCount ?? 0) > 0 ?
-      `${this.presentation.skippedSourceCount} 个近期不可用书源已跳过，可点击重试` : '';
+      `${this.presentation.skippedSourceCount} 个暂不可用的书源已跳过` : '';
     return [failed, skipped].filter((message: string): boolean => message.length > 0).join('；');
   }
 
@@ -1781,8 +1583,9 @@ export struct SearchPage {
         leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
         actionContent: (): void => { this.sourceRequiredActions(reason); } });
     }
-    .width('100%')
-    .padding({ top: 50, bottom: 40 });
+    .width(this.searchResultWidth() > 0 ? this.searchResultWidth() : '100%')
+    .padding({ top: 50, bottom: 40 })
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -1801,9 +1604,10 @@ export struct SearchPage {
         padded: false, leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
         actionContent: (): void => { this.sourceLoadErrorActions(); } });
     }
-    .width('100%')
+    .width(this.searchResultWidth() > 0 ? this.searchResultWidth() : '100%')
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: 96, bottom: 40 });
+    .padding({ top: 96, bottom: 40 })
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -2039,6 +1843,9 @@ struct SearchResultCard {
   private displayIntro(): string {
     return bookIntroText(this.displayBook().intro);
   }
+  private showResultIntro(): boolean {
+    return this.displayBook().category !== 'comic' && this.displayIntro().length > 0;
+  }
 
   private searchFontScale(): number {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
@@ -2048,12 +1855,20 @@ struct SearchResultCard {
   private resultTagWidth(): number { return 30 * this.searchFontScale(); }
   private resultTagHeight(): number { return 16 + 14 * (this.searchFontScale() - 1); }
 
+  private resultAuthorLine(): string {
+    const book = this.displayBook();
+    const author = bookAuthorLabel(book.author, book.authorIdentity, book.sourceRuleVersion);
+    const type = book.category === 'comic' ? '漫画' :
+      book.category === 'novel' || (book.sourceId === 'local' && book.category === undefined) ? '小说' : '';
+    return [author, type].filter((value: string): boolean => value.length > 0).join(' · ');
+  }
+
   private coverWidth(): number {
-    return this.expandedLayout ? 96 : 88;
+    return SEARCH_RESULT_GEOMETRY.coverWidth(this.cardWidth, this.expandedLayout);
   }
 
   private coverHeight(): number {
-    return this.coverWidth() * (this.expandedLayout ? 92 / 68 : 82 / 60);
+    return this.coverWidth() * SEARCH_RESULT_GEOMETRY.coverAspect;
   }
 
   private coverErrorHandler(url: string): () => void {
@@ -2065,7 +1880,7 @@ struct SearchResultCard {
   }
 
   build() {
-    Row({ space: TOK_SPACE_SM }) {
+    Row({ space: SEARCH_RESULT_GEOMETRY.columnGap }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (this.group.coverUrl.length > 0) {
           Image(this.group.coverUrl)
@@ -2086,7 +1901,7 @@ struct SearchResultCard {
               .fontWeight(TYPE_SEARCH_RESULT_COVER_TITLE.fontWeight)
               .fontSize(TYPE_SEARCH_RESULT_COVER_TITLE.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_COVER_TITLE.lineHeightFp as number)
-              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.99FFFAF4', this.appThemeScheme))
+              .fontColor(readerAppColor('app.search.onCoverMeta', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -2105,26 +1920,8 @@ struct SearchResultCard {
       .height(this.coverHeight())
       .borderRadius(6);
 
-      Column() {
-        if (this.displayBook().category === 'comic') {
-          Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-            space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
-            Text('漫画').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
-              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
-            if (this.displayBook().sourceId === 'local') {
-              Text('本地').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
-                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
-            } else {
-              Text('在线').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
-                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
-            }
-          }.width('100%');
-        }
-
-        Column({ space: 4 }) {
+      Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
+        Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
           Text(this.displayBook().title)
             .width('100%')
             .fontFamily(TYPE_SEARCH_RESULT_TITLE.fontFamily)
@@ -2132,10 +1929,10 @@ struct SearchResultCard {
             .fontSize(TYPE_SEARCH_RESULT_TITLE.fontSizeFp)
             .lineHeight(TYPE_SEARCH_RESULT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1)
+            .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-          Text(bookAuthorLabel(this.displayBook().author, this.displayBook().authorIdentity, this.displayBook().sourceRuleVersion))
+          Text(this.resultAuthorLine())
             .width('100%')
             .fontFamily(TYPE_SEARCH_RESULT_AUTHOR.fontFamily)
             .fontWeight(TYPE_SEARCH_RESULT_AUTHOR.fontWeight)
@@ -2145,7 +1942,7 @@ struct SearchResultCard {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-          if ((this.displayBook().latestChapterTitle?.trim().length ?? 0) > 0) {
+          if (!this.showResultIntro() && (this.displayBook().latestChapterTitle?.trim().length ?? 0) > 0) {
             Text(this.displayBook().category === 'comic' ? `最新 · ${this.displayBook().latestChapterTitle}` : this.displayBook().latestChapterTitle)
               .width('100%')
               .opacity(0.8)
@@ -2158,18 +1955,16 @@ struct SearchResultCard {
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
 
-          if (this.displayIntro().length > 0) {
-            if (this.displayBook().category !== 'comic') {
+          if (this.showResultIntro()) {
             Text(this.displayIntro())
               .width('100%')
               .fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
               .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight)
               .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
-              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
+              .fontColor(readerAppColor('app.search.resultHint', this.appThemeScheme))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
-            }
           }
         }
         .width('100%')
@@ -2177,63 +1972,43 @@ struct SearchResultCard {
 
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
-          if (this.displayBook().category !== 'comic') {
-            Text('小说')
-              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
+          if (this.displayBook().sourceId === 'local') {
+            Text('本地书籍').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1);
+          } else {
+            if (this.displayBook().sourceName.length > 0) {
+              Text(this.displayBook().sourceName)
+                .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+                .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              Text('·').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            }
+            Text(`发现 ${this.displaySourceCount()} 个来源`)
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+              .fontColor(readerAppColor('app.search.discoveredSource', this.appThemeScheme))
+              .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           }
-          Text(this.displayBook().sourceName.length > 0 ? this.displayBook().sourceName : this.displayBook().sourceId)
-            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          Text(this.displayBook().sourceId === 'local' ? '本地书籍' : `已发现 ${this.displaySourceCount()} 个书源`)
-            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.displayInBookshelf()) {
-            Text('已在书架')
-              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            Text('已在书架').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
-        }
-        .width('100%')
-        .margin({ top: 5 });
+        }.width('100%').margin({ top: SEARCH_RESULT_GEOMETRY.footerGap });
       }
       .layoutWeight(1)
-      // Only the gap above the tags grows for short metadata. Long metadata
-      // grows the row naturally, while the original cover ratio stays intact.
+      // Short metadata shares the cover's minimum height and leaves free
+      // space above its footer; longer content grows naturally without clipping.
       .constraintSize({ minHeight: this.coverHeight() })
-      .justifyContent(FlexAlign.Start)
+      .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.cardWidth)
-    .padding({ left: 12, right: 12, top: 14, bottom: 14 })
+    .padding({ top: SEARCH_RESULT_GEOMETRY.rowPadding, bottom: SEARCH_RESULT_GEOMETRY.rowPadding })
     .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('app.search.listRule', this.appThemeScheme) } })
       .onVisibleAreaChange([0], this.displayVisibilityHandler())

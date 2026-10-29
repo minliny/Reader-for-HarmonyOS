@@ -98,7 +98,7 @@ export struct ReaderDialogSurface {
       radius: 46,
       offsetX: 0,
       offsetY: 18,
-      color: readerAppColor('app.BookshelfBookActionSheet.build.color.29594632', this.appThemeScheme),
+      color: readerAppColor('app.shadow.sheet', this.appThemeScheme),
     } : {
       radius: 0,
       offsetX: 0,

@@ -1,5 +1,7 @@
 import { TOK_SPACE_XS, TOK_BORDER_W, TOK_SPACE_MD, TOK_SPACE_CARD_PADDING, TOK_SPACE_SM, TOK_SPACE_LG, TOK_SPACE_CONTROL_INLINE } from './ReaderTokens';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
+import { SEARCH_HISTORY_HORIZONTAL_PADDING, SEARCH_HISTORY_VERTICAL_PADDING } from './ReaderSearchControlGeometry';
+import { MESSAGE_ACTION } from './ReaderMessageStyle';
 import {
   TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_DISCOVER_CATEGORY, TYPE_SYNC_BACKUP_ACTION,
   ReaderTextStyle, ReaderInheritedTextStyle, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
@@ -39,14 +41,9 @@ export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderI
 
 // Both rows of the reviewed search panel share one action column. Reserve the
 // indicator even when idle; the input never resizes when stop becomes search.
-export function readerSearchActionWidth(expandedLayout: boolean, fontScale: number): number {
-  return 46 + (expandedLayout ? 28 : 26) * Math.max(1, fontScale);
-}
-export function readerSearchControlHeight(fontScale: number): number {
-  return 44 + 24 * Math.max(0, fontScale - 1);
-}
+export { readerSearchActionWidth, readerSearchControlHeight, readerSearchHistoryControlHeight } from './ReaderSearchControlGeometry';
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-phone' | 'search-field-wide' | 'search-history-clear' | 'search-history-keyword' | 'search-scope' | 'search-retry-status-spaced' | 'search-retry-status' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
+export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-phone' | 'search-field-wide' | 'search-history-clear' | 'search-history-keyword' | 'search-scope' | 'search-filter-option' | 'search-retry-status-spaced' | 'search-retry-status' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonMargin { top?: number; right?: number; bottom?: number; left?: number; }
 export interface ReaderButtonSpec {
@@ -111,8 +108,8 @@ RULES_COMPACT.height = 30; RULES_COMPACT.radius = 7; RULES_COMPACT.horizontalPad
 const SYNC_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
 SYNC_ACTION.text = TYPE_APP_COMPACT_PRIMARY_ACTION;
 SYNC_ACTION.height = 40; SYNC_ACTION.radius = 10; SYNC_ACTION.stacked = true;
-SYNC_ACTION.primarySurface = 'app.SyncPage.SOLID_BG'; SYNC_ACTION.secondarySurface = 'app.SyncPage.GHOST_BG';
-SYNC_ACTION.primaryBorder = 'app.SyncPage.SOLID_BG'; SYNC_ACTION.secondaryBorder = 'app.SyncPage.GHOST_BORDER';
+SYNC_ACTION.primarySurface = 'app.sync.actionSurface'; SYNC_ACTION.secondarySurface = 'app.sync.ghostSurface';
+SYNC_ACTION.primaryBorder = 'app.sync.actionSurface'; SYNC_ACTION.secondaryBorder = 'app.sync.ghostBorder';
 SYNC_ACTION.disabledOpacity = 1; SYNC_ACTION.centerText = false;
 const FORM_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
 FORM_ACTION.text = TYPE_FORM_LABEL_ACTION; FORM_ACTION.height = 44;
@@ -137,14 +134,14 @@ const DISCOVER_PAGE: ReaderButtonSpec = copyReaderButtonSpec();
 DISCOVER_PAGE.centerText = false; DISCOVER_PAGE.text = TYPE_APP_SMALL_LABEL; DISCOVER_PAGE.height = undefined;
 DISCOVER_PAGE.radius = 999; DISCOVER_PAGE.horizontalPadding = 12; DISCOVER_PAGE.verticalPadding = 8;
 DISCOVER_PAGE.hasBorder = false; DISCOVER_PAGE.disabledOpacity = 1; DISCOVER_PAGE.busyOpacity = 0.6;
-DISCOVER_PAGE.primarySurface = 'app.action.fill'; DISCOVER_PAGE.secondarySurface = 'app.DiscoverPage.CHIP_BG';
+DISCOVER_PAGE.primarySurface = 'app.action.fill'; DISCOVER_PAGE.secondarySurface = 'app.discover.categorySurface';
 DISCOVER_PAGE.secondaryText = 'TOK_MUTED';
 const RSS_MODE: ReaderButtonSpec = copyReaderButtonSpec();
 RSS_MODE.text = TYPE_APP_COMPACT_PRIMARY_ACTION; RSS_MODE.height = 30; RSS_MODE.radius = 999;
 RSS_MODE.horizontalPadding = 10; RSS_MODE.stacked = true; RSS_MODE.maxLines = 1;
 RSS_MODE.hasBorder = false; RSS_MODE.disabledOpacity = 1; RSS_MODE.responseOffset = -7;
-RSS_MODE.primarySurface = 'app.action.fill'; RSS_MODE.secondarySurface = 'app.RssPage.SOFT_PILL_BG';
-RSS_MODE.secondaryText = 'app.RssPage.statusTab.fontColor.FF564D44';
+RSS_MODE.primarySurface = 'app.action.fill'; RSS_MODE.secondarySurface = 'app.feed.actionSoft';
+RSS_MODE.secondaryText = 'app.text.feedTab';
 const RSS_STATE: ReaderButtonSpec = copyReaderButtonSpec();
 RSS_STATE.centerText = false; RSS_STATE.text = TYPE_RSS_STATE_ACTION; RSS_STATE.height = 36; RSS_STATE.radius = 999;
 RSS_STATE.stacked = true; RSS_STATE.maxLines = 1; RSS_STATE.fixedWidth = 88;
@@ -172,21 +169,21 @@ SHELF_ROW_SELECT.hasBorder = false; SHELF_ROW_SELECT.disabledOpacity = 1;
 const RSS_DETAIL_BOTTOM: ReaderButtonSpec = copyReaderButtonSpec();
 RSS_DETAIL_BOTTOM.text = TYPE_RSS_BOTTOM_ACTION; RSS_DETAIL_BOTTOM.height = 46; RSS_DETAIL_BOTTOM.radius = 999;
 RSS_DETAIL_BOTTOM.disabledOpacity = 0.38; RSS_DETAIL_BOTTOM.primaryDisabledOpacity = 1; RSS_DETAIL_BOTTOM.primaryHasBorder = false;
-RSS_DETAIL_BOTTOM.secondarySurface = 'TOK_CARD_BG_HI'; RSS_DETAIL_BOTTOM.secondaryBorder = 'app.RssEntryDetailPage.CARD_BORDER';
+RSS_DETAIL_BOTTOM.secondarySurface = 'TOK_CARD_BG_HI'; RSS_DETAIL_BOTTOM.secondaryBorder = 'app.border.contentCard';
 const RSS_FILTER: ReaderButtonSpec = copyReaderButtonSpec();
 RSS_FILTER.text = TYPE_APP_COMPACT_PRIMARY_ACTION; RSS_FILTER.height = 30; RSS_FILTER.radius = 999;
 RSS_FILTER.horizontalPadding = 10; RSS_FILTER.stacked = true; RSS_FILTER.maxLines = 1;
 RSS_FILTER.hasBorder = false; RSS_FILTER.disabledOpacity = 1;
-RSS_FILTER.primarySurface = 'app.action.fill'; RSS_FILTER.secondarySurface = 'app.RssPage.SOFT_PILL_BG';
-RSS_FILTER.secondaryText = 'app.RssPage.filterPill.fontColor.FF564D44'; RSS_FILTER.outerMargin = { right: 6, bottom: 6 };
+RSS_FILTER.primarySurface = 'app.action.fill'; RSS_FILTER.secondarySurface = 'app.feed.actionSoft';
+RSS_FILTER.secondaryText = 'app.text.feedTab'; RSS_FILTER.outerMargin = { right: 6, bottom: 6 };
 const SYNC_CONFIG_TEST: ReaderButtonSpec = copyReaderButtonSpec();
 SYNC_CONFIG_TEST.text = TYPE_APP_COMPACT_PRIMARY_ACTION; SYNC_CONFIG_TEST.height = 42; SYNC_CONFIG_TEST.stacked = true;
 SYNC_CONFIG_TEST.radius = 8; SYNC_CONFIG_TEST.disabledOpacity = 1; SYNC_CONFIG_TEST.centerText = false;
-SYNC_CONFIG_TEST.secondarySurface = 'app.SyncPage.GHOST_BG'; SYNC_CONFIG_TEST.secondaryBorder = 'app.SyncPage.GHOST_BORDER';
+SYNC_CONFIG_TEST.secondarySurface = 'app.sync.ghostSurface'; SYNC_CONFIG_TEST.secondaryBorder = 'app.sync.ghostBorder';
 const SYNC_CONFIG_SAVE: ReaderButtonSpec = copyReaderButtonSpec();
 SYNC_CONFIG_SAVE.text = TYPE_APP_COMPACT_PRIMARY_ACTION; SYNC_CONFIG_SAVE.height = 42; SYNC_CONFIG_SAVE.stacked = true;
 SYNC_CONFIG_SAVE.radius = 12; SYNC_CONFIG_SAVE.disabledOpacity = 1; SYNC_CONFIG_SAVE.centerText = false;
-SYNC_CONFIG_SAVE.primarySurface = 'app.SyncPage.SOLID_BG'; SYNC_CONFIG_SAVE.primaryBorder = 'app.SyncPage.SOLID_BG';
+SYNC_CONFIG_SAVE.primarySurface = 'app.sync.actionSurface'; SYNC_CONFIG_SAVE.primaryBorder = 'app.sync.actionSurface';
 
 
 const SOURCE_MANAGEMENT_RETRY: ReaderButtonSpec = copyReaderButtonSpec();
@@ -205,7 +202,7 @@ SOURCE_MANAGEMENT_STATUS.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_STAT
 SOURCE_MANAGEMENT_STATUS.radius = 16; SOURCE_MANAGEMENT_STATUS.maxLines = 1;
 SOURCE_MANAGEMENT_STATUS.disabledOpacity = 0.45; SOURCE_MANAGEMENT_STATUS.secondarySurface = 'TOK_CARD_BG';
 SOURCE_MANAGEMENT_STATUS.fixedWidth = 58; SOURCE_MANAGEMENT_STATUS.responsiveStatusWidth = true;
-SOURCE_MANAGEMENT_STATUS.secondaryBorder = 'app.SourceManagementPage.CHIP_BORDER'; SOURCE_MANAGEMENT_STATUS.secondaryText = 'TOK_INK';
+SOURCE_MANAGEMENT_STATUS.secondaryBorder = 'app.border.sourceGroup'; SOURCE_MANAGEMENT_STATUS.secondaryText = 'TOK_INK';
 const SOURCE_MANAGEMENT_STATUS_WIDE: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_MANAGEMENT_STATUS_WIDE.text = SOURCE_MANAGEMENT_STATUS.text; SOURCE_MANAGEMENT_STATUS_WIDE.height = SOURCE_MANAGEMENT_STATUS.height;
 SOURCE_MANAGEMENT_STATUS_WIDE.radius = SOURCE_MANAGEMENT_STATUS.radius; SOURCE_MANAGEMENT_STATUS_WIDE.maxLines = SOURCE_MANAGEMENT_STATUS.maxLines;
@@ -217,18 +214,18 @@ SOURCE_MANAGEMENT_DETECT.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_DETE
 SOURCE_MANAGEMENT_DETECT.radius = 7; SOURCE_MANAGEMENT_DETECT.fixedWidth = 44; SOURCE_MANAGEMENT_DETECT.stacked = true;
 SOURCE_MANAGEMENT_DETECT.centerText = false; SOURCE_MANAGEMENT_DETECT.maxLines = 1;
 SOURCE_MANAGEMENT_DETECT.disabledOpacity = 1; SOURCE_MANAGEMENT_DETECT.busyOpacity = 0.62;
-SOURCE_MANAGEMENT_DETECT.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_DETECT.secondaryBorder = 'app.SourceManagementPage.CHIP_BORDER';
+SOURCE_MANAGEMENT_DETECT.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_DETECT.secondaryBorder = 'app.border.sourceGroup';
 SOURCE_MANAGEMENT_DETECT.secondaryText = 'TOK_INK';
 const SOURCE_MANAGEMENT_LOGIN: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_MANAGEMENT_LOGIN.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_LOGIN.height = 28;
 SOURCE_MANAGEMENT_LOGIN.radius = 7; SOURCE_MANAGEMENT_LOGIN.fixedWidth = 44; SOURCE_MANAGEMENT_LOGIN.stacked = true;
 SOURCE_MANAGEMENT_LOGIN.centerText = false; SOURCE_MANAGEMENT_LOGIN.maxLines = 1; SOURCE_MANAGEMENT_LOGIN.disabledOpacity = 1;
-SOURCE_MANAGEMENT_LOGIN.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_LOGIN.secondaryBorder = 'app.SourceManagementPage.CHIP_BORDER';
+SOURCE_MANAGEMENT_LOGIN.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_LOGIN.secondaryBorder = 'app.border.sourceGroup';
 const SOURCE_MANAGEMENT_MANAGE: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_MANAGEMENT_MANAGE.text = TYPE_FORM_LABEL_ACTION; SOURCE_MANAGEMENT_MANAGE.height = 44;
 SOURCE_MANAGEMENT_MANAGE.radius = 8; SOURCE_MANAGEMENT_MANAGE.stacked = true; SOURCE_MANAGEMENT_MANAGE.centerText = false;
 SOURCE_MANAGEMENT_MANAGE.maxLines = 1; SOURCE_MANAGEMENT_MANAGE.disabledOpacity = 1;
-SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_SURFACE_SOLID'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'app.SourceManagementPage.SEARCH_FIELD_BORDER';
+SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_SURFACE_SOLID'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'app.border.searchField';
 SOURCE_MANAGEMENT_MANAGE.secondaryText = 'TOK_INK';
 
 // Remaining actual Search/Discover/Sync actions retain their authored tuples.
@@ -238,21 +235,23 @@ function bareReaderButton(text: ReaderTextStyle | ReaderInheritedTextStyle): Rea
   spec.outerRadius = false; spec.centerText = false; spec.disabledOpacity = 1; spec.secondaryText = 'TOK_MUTED'; return spec;
 }
 const SEARCH_FIELD_PHONE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_FIELD_ACTION);
-SEARCH_FIELD_PHONE.stacked = true; SEARCH_FIELD_PHONE.height = 44; SEARCH_FIELD_PHONE.radius = 8;
+SEARCH_FIELD_PHONE.stacked = true; SEARCH_FIELD_PHONE.height = 36; SEARCH_FIELD_PHONE.radius = 18;
 SEARCH_FIELD_PHONE.horizontalPadding = 0; SEARCH_FIELD_PHONE.secondarySurface = 'app.action.fill';
-SEARCH_FIELD_PHONE.secondaryText = 'TOK_GREEN'; SEARCH_FIELD_PHONE.disabledOpacity = 0.4;
-SEARCH_FIELD_PHONE.hasSurface = false; SEARCH_FIELD_PHONE.leadingSlot = true;
+SEARCH_FIELD_PHONE.secondaryText = 'TOK_ON_PRIMARY'; SEARCH_FIELD_PHONE.disabledOpacity = 0.38;
+SEARCH_FIELD_PHONE.hasSurface = true; SEARCH_FIELD_PHONE.hasBorder = false; SEARCH_FIELD_PHONE.leadingSlot = false;
 const SEARCH_FIELD_WIDE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_FIELD_ACTION_WIDE);
-SEARCH_FIELD_WIDE.stacked = true; SEARCH_FIELD_WIDE.height = 44; SEARCH_FIELD_WIDE.radius = 8;
+SEARCH_FIELD_WIDE.stacked = true; SEARCH_FIELD_WIDE.height = 36; SEARCH_FIELD_WIDE.radius = 18;
 SEARCH_FIELD_WIDE.horizontalPadding = 0; SEARCH_FIELD_WIDE.secondarySurface = 'app.action.fill';
-SEARCH_FIELD_WIDE.secondaryText = 'TOK_GREEN'; SEARCH_FIELD_WIDE.disabledOpacity = 0.4;
-SEARCH_FIELD_WIDE.hasSurface = false; SEARCH_FIELD_WIDE.leadingSlot = true;
+SEARCH_FIELD_WIDE.secondaryText = 'TOK_ON_PRIMARY'; SEARCH_FIELD_WIDE.disabledOpacity = 0.38;
+SEARCH_FIELD_WIDE.hasSurface = true; SEARCH_FIELD_WIDE.hasBorder = false; SEARCH_FIELD_WIDE.leadingSlot = false;
 const SEARCH_HISTORY_CLEAR: ReaderButtonSpec = bareReaderButton(TYPE_APP_FILTER_OPTION);
+SEARCH_HISTORY_CLEAR.leadingSlot = true;
 const SEARCH_HISTORY_KEYWORD: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_HISTORY_KEYWORD);
-SEARCH_HISTORY_KEYWORD.radius = 999; SEARCH_HISTORY_KEYWORD.horizontalPadding = 14.5; SEARCH_HISTORY_KEYWORD.verticalPadding = 7.5;
+SEARCH_HISTORY_KEYWORD.radius = 10; SEARCH_HISTORY_KEYWORD.horizontalPadding = SEARCH_HISTORY_HORIZONTAL_PADDING;
+SEARCH_HISTORY_KEYWORD.verticalPadding = SEARCH_HISTORY_VERTICAL_PADDING;
 SEARCH_HISTORY_KEYWORD.hasSurface = true; SEARCH_HISTORY_KEYWORD.hasBorder = true; SEARCH_HISTORY_KEYWORD.secondarySurface = 'TOK_CARD_BG';
 SEARCH_HISTORY_KEYWORD.secondaryBorder = 'TOK_BORDER'; SEARCH_HISTORY_KEYWORD.secondaryText = 'TOK_INK'; SEARCH_HISTORY_KEYWORD.maxLines = 1;
-SEARCH_HISTORY_KEYWORD.textEllipsis = true; SEARCH_HISTORY_KEYWORD.maxWidthKind = 'history'; SEARCH_HISTORY_KEYWORD.outerMargin = { right: TOK_SPACE_XS, bottom: TOK_SPACE_XS };
+SEARCH_HISTORY_KEYWORD.textEllipsis = true; SEARCH_HISTORY_KEYWORD.maxWidthKind = 'none';
 const SEARCH_SCOPE: ReaderButtonSpec = bareReaderButton(new ReaderTextStyle(
   TYPE_SEARCH_SCOPE_LABEL.fontFamily, TYPE_SEARCH_SCOPE_LABEL.fontWeight,
   TYPE_SEARCH_SCOPE_LABEL.fontSizeFp, 17, TYPE_SEARCH_SCOPE_LABEL.letterSpacingFp,
@@ -261,11 +260,18 @@ SEARCH_SCOPE.selectedWeight = TYPE_SEARCH_SCOPE_SELECTED.fontWeight; SEARCH_SCOP
 SEARCH_SCOPE.horizontalPadding = 10; SEARCH_SCOPE.verticalPadding = 5; SEARCH_SCOPE.hasSurface = true; SEARCH_SCOPE.hasBorder = true;
 SEARCH_SCOPE.primarySurface = 'app.action.fill'; SEARCH_SCOPE.secondarySurface = 'TOK_PAPER'; SEARCH_SCOPE.primaryBorder = 'TOK_GREEN';
 SEARCH_SCOPE.secondaryBorder = 'TOK_BORDER'; SEARCH_SCOPE.secondaryText = 'TOK_INK'; SEARCH_SCOPE.maxLines = 1;
+// Search filter choices use a quiet selected state inside the shared menu surface.
+const SEARCH_FILTER_OPTION: ReaderButtonSpec = bareReaderButton(SEARCH_SCOPE.text);
+SEARCH_FILTER_OPTION.selectedWeight = SEARCH_SCOPE.selectedWeight; SEARCH_FILTER_OPTION.radius = 8;
+SEARCH_FILTER_OPTION.horizontalPadding = 10; SEARCH_FILTER_OPTION.verticalPadding = 5;
+SEARCH_FILTER_OPTION.hasSurface = true; SEARCH_FILTER_OPTION.hasBorder = true;
+SEARCH_FILTER_OPTION.primarySurface = 'TOK_PRIMARY_SOFT'; SEARCH_FILTER_OPTION.secondarySurface = 'app.surface.transparent';
+SEARCH_FILTER_OPTION.primaryBorder = 'TOK_GREEN'; SEARCH_FILTER_OPTION.secondaryBorder = 'app.border.filter';
+SEARCH_FILTER_OPTION.primaryText = 'TOK_GREEN'; SEARCH_FILTER_OPTION.secondaryText = 'TOK_INK'; SEARCH_FILTER_OPTION.maxLines = 1;
 const SEARCH_RETRY_STATUS: ReaderButtonSpec = bareReaderButton(TYPE_APP_INHERITED_BODY);
 const SEARCH_RETRY_STATUS_SPACED: ReaderButtonSpec = bareReaderButton(TYPE_APP_INHERITED_BODY);
 SEARCH_RETRY_STATUS_SPACED.outerMargin = { top: TOK_SPACE_CONTROL_INLINE };
-const SEARCH_RETRY_PROGRESS: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_PROGRESS_META);
-SEARCH_RETRY_PROGRESS.text = new ReaderTextStyle(TYPE_SEARCH_PROGRESS_META.fontFamily, 500, 12, 18, undefined, 'system', 'appBaseline');
+const SEARCH_RETRY_PROGRESS: ReaderButtonSpec = bareReaderButton(MESSAGE_ACTION);
 SEARCH_RETRY_PROGRESS.secondaryText = 'TOK_GREEN'; SEARCH_RETRY_PROGRESS.maxLines = 1;
 SEARCH_RETRY_PROGRESS.disabledOpacity = 0.4;
 const SEARCH_ERROR_RETRY: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_RETRY_ACTION);
@@ -279,14 +285,14 @@ SEARCH_ERROR_SOURCE.secondaryBorder = 'TOK_BORDER'; SEARCH_ERROR_SOURCE.outerMar
 const DISCOVER_CATEGORY: ReaderButtonSpec = bareReaderButton(TYPE_DISCOVER_CATEGORY);
 DISCOVER_CATEGORY.stacked = true; DISCOVER_CATEGORY.height = 32; DISCOVER_CATEGORY.radius = 999; DISCOVER_CATEGORY.horizontalPadding = TOK_SPACE_SM;
 DISCOVER_CATEGORY.hasSurface = true; DISCOVER_CATEGORY.maxLines = 1; DISCOVER_CATEGORY.primarySurface = 'app.action.fill';
-DISCOVER_CATEGORY.secondarySurface = 'app.DiscoverPage.CHIP_BG'; DISCOVER_CATEGORY.secondaryText = 'app.DiscoverPage.categoryChips.fontColor.FF3F372F';
+DISCOVER_CATEGORY.secondarySurface = 'app.discover.categorySurface'; DISCOVER_CATEGORY.secondaryText = 'app.text.filter';
 const SYNC_EMPTY_BACKUP: ReaderButtonSpec = bareReaderButton(TYPE_SYNC_BACKUP_ACTION);
 SYNC_EMPTY_BACKUP.centerText = true; SYNC_EMPTY_BACKUP.radius = 999; SYNC_EMPTY_BACKUP.verticalPadding = 9; SYNC_EMPTY_BACKUP.verticalOnlyPadding = true;
 SYNC_EMPTY_BACKUP.hasSurface = true; SYNC_EMPTY_BACKUP.secondarySurface = 'app.action.fill'; SYNC_EMPTY_BACKUP.secondaryText = 'TOK_ON_PRIMARY';
 SYNC_EMPTY_BACKUP.outerMargin = { bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD };
 
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
-  'search-field-phone': SEARCH_FIELD_PHONE, 'search-field-wide': SEARCH_FIELD_WIDE, 'search-history-clear': SEARCH_HISTORY_CLEAR, 'search-history-keyword': SEARCH_HISTORY_KEYWORD, 'search-scope': SEARCH_SCOPE, 'search-retry-status': SEARCH_RETRY_STATUS, 'search-retry-status-spaced': SEARCH_RETRY_STATUS_SPACED, 'search-retry-progress': SEARCH_RETRY_PROGRESS, 'search-error-retry': SEARCH_ERROR_RETRY, 'search-error-source': SEARCH_ERROR_SOURCE, 'discover-category': DISCOVER_CATEGORY, 'sync-empty-backup': SYNC_EMPTY_BACKUP,
+  'search-field-phone': SEARCH_FIELD_PHONE, 'search-field-wide': SEARCH_FIELD_WIDE, 'search-history-clear': SEARCH_HISTORY_CLEAR, 'search-history-keyword': SEARCH_HISTORY_KEYWORD, 'search-scope': SEARCH_SCOPE, 'search-filter-option': SEARCH_FILTER_OPTION, 'search-retry-status': SEARCH_RETRY_STATUS, 'search-retry-status-spaced': SEARCH_RETRY_STATUS_SPACED, 'search-retry-progress': SEARCH_RETRY_PROGRESS, 'search-error-retry': SEARCH_ERROR_RETRY, 'search-error-source': SEARCH_ERROR_SOURCE, 'discover-category': DISCOVER_CATEGORY, 'sync-empty-backup': SYNC_EMPTY_BACKUP,
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
   'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,
   'form-action': FORM_ACTION, 'form-busy-action': FORM_BUSY_ACTION, 'form-document-action': FORM_DOCUMENT_ACTION,
@@ -337,11 +343,11 @@ const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
   'directory-rule-level': { width: 64, nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: undefined, height: 40, radius: undefined, horizontalPadding: undefined,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, hasBorder: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W },
   'tts-manager-name': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, height: 42, radius: 10, horizontalPadding: 12,
-    textRole: 'app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', surfaceRole: 'app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF',
-    placeholderRole: 'app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', hasBorder: true, borderRole: 'app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', borderWidth: 0.5 },
+    textRole: 'TOK_READ_INK', surfaceRole: 'app.surface.readerInput',
+    placeholderRole: 'app.reader.placeholder', hasBorder: true, borderRole: 'app.border.readerConfig', borderWidth: 0.5 },
   'tts-manager-value': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, height: 42, radius: 10, horizontalPadding: 12,
-    textRole: 'app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', surfaceRole: 'app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF',
-    placeholderRole: 'app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', hasBorder: true, borderRole: 'app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', borderWidth: 0.5 },
+    textRole: 'TOK_READ_INK', surfaceRole: 'app.surface.readerInput',
+    placeholderRole: 'app.reader.placeholder', hasBorder: true, borderRole: 'app.border.readerConfig', borderWidth: 0.5 },
   'reader-content-search': { width: undefined, nativeLayoutWeight: 1, nativeInsets: CONTENT_SEARCH_INSETS, transparentSurface: true,
     text: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, placeholderStyle: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER,
     height: 14, radius: 0, horizontalPadding: undefined, allPadding: undefined, textRole: 'TOK_READ_INK', surfaceRole: undefined,
@@ -363,6 +369,6 @@ const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
   'rules-input': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
   'sync-credential': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_SYNC_INPUT, height: 36, radius: 6, horizontalPadding: 11,
-    textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
+    textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.text.syncHint', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
 };
 export function resolveReaderFormFieldSpec(id: ReaderFormFieldSpecId): ReaderFormFieldSpec { return FIELDS[id]; }

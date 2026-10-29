@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility, readerActionTouchRegion } from './ReaderActionAccessibility';
 import { MangaDirectoryPressFeedback } from '../manga/MangaDirectoryPressFeedback';
 import { FrameCallback, LengthMetrics, ColorMetrics } from '@kit.ArkUI';
 import { readerAppColor } from './ReaderThemeRegistry';
@@ -74,6 +75,7 @@ export struct ReaderSearchField {
   private bookInputScrollGeneration: number = 0;
   onTextChange: (value: string) => void = (_value: string): void => {};
   onSubmit: () => void = (): void => {};
+  onFocusChanged: (focused: boolean) => void = (_focused: boolean): void => {};
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -95,7 +97,9 @@ export struct ReaderSearchField {
   }
 
   private onBookInputFocus(focused: boolean): void {
+    if (!this.mounted) return;
     this.bookInputFocused = focused;
+    this.onFocusChanged(focused);
     if (focused) {
       this.revealBookInputCaret();
     } else {
@@ -128,8 +132,24 @@ export struct ReaderSearchField {
   }
 
   private clearBookInput(): void {
-    this.onTextChange('');
+    if (!this.mounted) return;
+    this.changeText('');
+    this.focusBookInput();
     this.revealBookInputCaret();
+  }
+
+  private changeText(value: string): void {
+    if (this.mounted && this.mode !== 'passive') this.onTextChange(value);
+  }
+
+  private focusBookInput(): void {
+    if (!this.mounted || !this.isBookField() || this.mode === 'passive') return;
+    const generation = this.focusGeneration;
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (this.mounted && generation === this.focusGeneration) {
+        this.getUIContext().getFocusController().requestFocus('reader-book-search-input');
+      }
+    }));
   }
 
   @Styles
@@ -182,7 +202,7 @@ export struct ReaderSearchField {
         .placeholderColor(this.placeholderColor())
         .placeholderFont({ size: TYPE_SEARCH_MANGA_DIRECTORY_INPUT.fontSizeFp, family: TYPE_SEARCH_MANGA_DIRECTORY_INPUT.fontFamily })
         .accessibilityText(this.resolvedAccessibilityLabel())
-        .onChange((value: string): void => this.onTextChange(value))
+        .onChange((value: string): void => this.changeText(value))
         .enterKeyType(EnterKeyType.Search)
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
       if (this.clearable && this.text.length > 0) {
@@ -190,8 +210,9 @@ export struct ReaderSearchField {
           Image(this.appThemeScheme === 'night' ? $r('app.media.manga_directory_clear_theme_night') : $r('app.media.manga_directory_clear'))
             .width(MANGA_DIRECTORY_VISUAL.clearIconSize).height(MANGA_DIRECTORY_VISUAL.clearIconSize);
         }.width(MANGA_DIRECTORY_VISUAL.clearWidth).height(MANGA_DIRECTORY_VISUAL.clearHeight).accessibilityText('清除目录搜索')
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.appThemeScheme))
-          .onClick((): void => this.onTextChange(''));
+          .attributeModifier(new ReaderActionAccessibility('清除目录搜索', true, false, true, new MangaDirectoryPressFeedback(true, true, this.appThemeScheme)))
+      .responseRegion( readerActionTouchRegion(MANGA_DIRECTORY_VISUAL.clearWidth, MANGA_DIRECTORY_VISUAL.clearHeight))
+          .onClick((): void => this.changeText(''));
       }
     }
     .width('100%')
@@ -205,7 +226,9 @@ export struct ReaderSearchField {
 
   @Builder
   private fixedLineHeightField() {
-    Row({ space: this.iconGap() }) {
+    // The shared library bar already owns the leading search/back action.
+    // Its bookPanel input starts at the field inset, without an icon slot.
+    Row({ space: this.variant === 'bookPanel' ? 0 : this.iconGap() }) {
       if (this.variant !== 'bookPanel') {
         Image(this.searchIcon())
           .width(this.iconSize())
@@ -239,7 +262,7 @@ export struct ReaderSearchField {
         })
         .accessibilityText(this.resolvedAccessibilityLabel())
         .onChange((value: string): void => {
-          this.onTextChange(value);
+          this.changeText(value);
           this.revealBookInputCaret();
         })
         .onTextSelectionChange((_start: number, _end: number): void => this.revealBookInputCaret())
@@ -253,12 +276,15 @@ export struct ReaderSearchField {
           Stack({ alignContent: Alignment.Center }) {
             Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
               .width(14).height(14).accessibilityLevel('no');
-          }.width(44).height(this.fieldHeight())
+          }.width(32).height(this.fieldHeight())
             .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空搜索内容').focusable(true)
             .onClick((): void => this.clearBookInput());
         } else {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear')))
-            .width(14).height(14).accessibilityText('清空搜索内容')
+          Stack({ alignContent: Alignment.Center }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+              .width(14).height(14).accessibilityLevel('no');
+          }.width(44).height(44)
+            .attributeModifier(new ReaderActionAccessibility('清空搜索内容'))
             .onClick((): void => this.clearBookInput());
         }
       }
@@ -269,7 +295,8 @@ export struct ReaderSearchField {
     .nativeFieldBackground()
     .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
     .borderRadius(this.cornerRadius())
-    .alignItems(VerticalAlign.Center);
+    .alignItems(VerticalAlign.Center)
+    .onClick((): void => { if (!this.bookInputFocused) this.focusBookInput(); });
   }
 
   @Builder
@@ -296,7 +323,7 @@ export struct ReaderSearchField {
           family: this.textStyle().fontFamily,
         })
         .accessibilityText(this.resolvedAccessibilityLabel())
-        .onChange((value: string): void => this.onTextChange(value))
+        .onChange((value: string): void => this.changeText(value))
         .enterKeyType(EnterKeyType.Search)
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
     }
@@ -320,7 +347,7 @@ export struct ReaderSearchField {
         .fontFamily(TYPE_SEARCH_RSS_HINT.fontFamily)
         .fontWeight(TYPE_SEARCH_RSS_HINT.fontWeight)
         .fontSize(TYPE_SEARCH_RSS_HINT.fontSizeFp)
-        .fontColor(readerAppColor('app.ReaderSearchField.passiveField.fontColor.FF817A72', this.appThemeScheme))
+        .fontColor(readerAppColor('app.search.passiveText', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -335,7 +362,7 @@ export struct ReaderSearchField {
   }
 
   private submit(): void {
-    if (this.mode === 'passive' || !this.submitEnabled) {
+    if (!this.mounted || this.mode === 'passive' || !this.submitEnabled) {
       return;
     }
     this.onSubmit();
@@ -409,6 +436,7 @@ export struct ReaderSearchField {
 
   private iconSize(): number {
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchIconSize;
+    if (this.variant === 'bookPanel') return 22;
     if (this.variant === 'bookPage') {
       return 14;
     }
@@ -425,7 +453,7 @@ export struct ReaderSearchField {
   }
 
   private iconGap(): number {
-    if (this.variant === 'bookPanel') return 0;
+    if (this.variant === 'bookPanel') return 7;
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchGap;
     if (this.variant === 'readerDirectory') {
       return 5;
@@ -440,7 +468,7 @@ export struct ReaderSearchField {
   }
 
   private horizontalPadding(): number {
-    if (this.variant === 'bookPanel') return 0;
+    if (this.variant === 'bookPanel') return 9;
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchPaddingX;
     if (this.variant === 'readerDirectory') {
       return 9;
@@ -455,16 +483,16 @@ export struct ReaderSearchField {
   }
 
   private fieldBackgroundColor(): string {
-    if (this.variant === 'bookPanel') return '#00000000';
+    if (this.variant === 'bookPanel') return readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme);
     if (this.variant === 'mangaDirectory') return mangaDirectoryColor('surface', this.appThemeScheme);
     if (this.variant === 'bookPage') {
       return readerAppColor('TOK_CARD_BG', this.appThemeScheme);
     }
     if (this.variant === 'sourceManagement') {
-      return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.D1FFFCF8', this.appThemeScheme);
+      return readerAppColor('app.search.fieldSolid', this.appThemeScheme);
     }
     if (this.variant === 'rssPassive') {
-      return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.94FFFFFF', this.appThemeScheme);
+      return readerAppColor('app.search.fieldElevated', this.appThemeScheme);
     }
     return readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme);
   }
@@ -476,11 +504,11 @@ export struct ReaderSearchField {
 
   private fieldBorderColor(): string {
     if (this.variant === 'mangaDirectory') return mangaDirectoryColor('line', this.appThemeScheme);
-    return this.variant === 'sourceManagement' ? readerAppColor('app.ReaderSearchField.fieldBorderColor.paint.75B4A697', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme);
+    return this.variant === 'sourceManagement' ? readerAppColor('app.border.searchField', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme);
   }
 
   private cornerRadius(): number {
-    if (this.variant === 'bookPanel') return 0;
+    if (this.variant === 'bookPanel') return 18;
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchRadius;
     return this.variant === 'rssPassive' ? 999 : this.variant === 'sourceManagement' ? 12 : 8;
   }
@@ -504,7 +532,7 @@ export struct ReaderSearchField {
       return readerAppColor('TOK_MUTED', this.appThemeScheme);
     }
     if (this.variant === 'readerDirectory') {
-      return readerAppColor('app.ReaderSearchField.placeholderColor.paint.FF757575', this.appThemeScheme);
+      return readerAppColor('app.search.placeholder', this.appThemeScheme);
     }
     return readerAppColor('TOK_READ_MUTED', this.appThemeScheme);
   }
