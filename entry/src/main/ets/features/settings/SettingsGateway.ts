@@ -12,8 +12,10 @@ export type SettingsSnapshot = {
   crashLog: boolean;
   /** Development-only layout guide. Kept in app preferences so it survives page recreation. */
   developerMode: boolean;
+  /** Wide windows keep the left main-navigation rail instead of the bottom bar. */
+  wideNavigationRail: boolean;
 };
-export type GeneralSettingsKey = 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode';
+export type GeneralSettingsKey = 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode' | 'wideNavigationRail';
 export interface GeneralSettingsWriteFacts {
   acceptedRevision: number;
   savedRevision: number;
@@ -25,9 +27,10 @@ export interface GeneralSettingsWriteFacts {
 }
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true, developerMode: false,
+  wideNavigationRail: false,
 };
 export function createDefaultSettingsSnapshot(): SettingsSnapshot {
-  return { autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true, developerMode: false };
+  return { ...DEFAULT_SNAPSHOT };
 }
 
 /** One real Preferences file, one IO lane across Ability/Runtime contexts.
@@ -118,6 +121,7 @@ export class SettingsGateway {
         reduceMotion: changedKey === 'reduceMotion' ? requested.reduceMotion : previous.reduceMotion,
         crashLog: changedKey === 'crashLog' ? requested.crashLog : previous.crashLog,
         developerMode: changedKey === 'developerMode' ? requested.developerMode : previous.developerMode,
+        wideNavigationRail: changedKey === 'wideNavigationRail' ? requested.wideNavigationRail : previous.wideNavigationRail,
       };
       // Actual first platform put is the dispatch boundary. Once dispatched,
       // retirement suppresses publication, not the already accepted flush.
@@ -159,6 +163,7 @@ export class SettingsGateway {
     await store.put('reduceMotion', snapshot.reduceMotion);
     await store.put('crashLog', snapshot.crashLog);
     await store.put('developerMode', snapshot.developerMode);
+    await store.put('wideNavigationRail', snapshot.wideNavigationRail);
   }
   private async readSnapshot(store: preferences.Preferences): Promise<SettingsSnapshot> {
     const snapshot: SettingsSnapshot = {
@@ -167,15 +172,18 @@ export class SettingsGateway {
       reduceMotion: (await store.get('reduceMotion', DEFAULT_SNAPSHOT.reduceMotion)) as boolean,
       crashLog: (await store.get('crashLog', DEFAULT_SNAPSHOT.crashLog)) as boolean,
       developerMode: (await store.get('developerMode', DEFAULT_SNAPSHOT.developerMode)) as boolean,
+      wideNavigationRail: (await store.get('wideNavigationRail', DEFAULT_SNAPSHOT.wideNavigationRail)) as boolean,
     };
     if (typeof snapshot.autoCheckUpdate !== 'boolean' || typeof snapshot.tapBottomScrollTop !== 'boolean' ||
       typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean' ||
-      typeof snapshot.developerMode !== 'boolean') throw new Error('设置持久化数据格式异常');
+      typeof snapshot.developerMode !== 'boolean' || typeof snapshot.wideNavigationRail !== 'boolean')
+      throw new Error('设置持久化数据格式异常');
     return snapshot;
   }
   private copySnapshot(snapshot: SettingsSnapshot): SettingsSnapshot {
     return { autoCheckUpdate: snapshot.autoCheckUpdate, tapBottomScrollTop: snapshot.tapBottomScrollTop,
-      reduceMotion: snapshot.reduceMotion, crashLog: snapshot.crashLog, developerMode: snapshot.developerMode };
+      reduceMotion: snapshot.reduceMotion, crashLog: snapshot.crashLog, developerMode: snapshot.developerMode,
+      wideNavigationRail: snapshot.wideNavigationRail };
   }
   private async ensureStore(): Promise<preferences.Preferences> {
     if (this.store === undefined) this.store = await preferences.getPreferences(this.context, SETTINGS_PREFERENCES_NAME);

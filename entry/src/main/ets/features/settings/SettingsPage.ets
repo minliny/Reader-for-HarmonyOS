@@ -1,4 +1,5 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { createDefaultSettingsSnapshot, type SettingsSnapshot, type GeneralSettingsKey } from './SettingsGateway';
+import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../common/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
@@ -9,13 +10,16 @@ import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYP
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
 // 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
 // 行收敛到 CategoryRow(icon盒+label+trailing)。仅 selectRow 与 dangerRow 保留为
 // 页私有 —— 下拉展开会撑高行(见下), 通用 CategoryRow 无法表达; 危险行是独立卡片。
 import { SettingsShell } from '../shell/SettingsShell';
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { PageBackBar } from '../common/PageBackBar';
+import { ReaderMessagePreviewPage } from './ReaderMessagePreviewPage';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
@@ -52,13 +56,7 @@ interface SettingsSelectAnchor {
   bottom: number;
 }
 
-export interface SettingsSnapshot {
-  autoCheckUpdate: boolean;
-  tapBottomScrollTop: boolean;
-  reduceMotion: boolean;
-  crashLog: boolean;
-  developerMode: boolean;
-}
+export type { SettingsSnapshot } from './SettingsGateway';
 
 let settingsSelectionGeneration: number = 0;
 
@@ -67,17 +65,11 @@ export struct SettingsPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop activeSection: 'home' | 'general' = 'home';
+  @Prop @Watch('onActiveSectionChanged') activeSection: 'home' | 'general' = 'home';
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
 
-  @Prop @Watch('onSnapshotChanged') snapshot: SettingsSnapshot = {
-    autoCheckUpdate: true,
-    tapBottomScrollTop: true,
-    reduceMotion: false,
-    crashLog: true,
-    developerMode: false,
-  };
-  @Prop isTablet: boolean;
+  @Prop @Watch('onSnapshotChanged') snapshot: SettingsSnapshot = createDefaultSettingsSnapshot();
+  @Prop expandedLayout: boolean;
   @Prop @Watch('onOperationChanged') operation: SettingsOperationProjection = { action: 'load' };
   @Prop @Watch('onCacheCleanupChanged') cacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
@@ -93,6 +85,7 @@ export struct SettingsPage {
   @State private reduceMotionValue: boolean = false;
   @State private crashLogValue: boolean = true;
   @State private developerModeValue: boolean = false;
+  @State private wideNavigationRailValue: boolean = false;
   @State private cacheActionLabel: string = '清理文字缓存';
   @State private cacheCleanupInFlight: boolean = false;
   @State private resetInFlight: boolean = false;
@@ -101,6 +94,9 @@ export struct SettingsPage {
   private mounted: boolean = false;
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
   @State private temporaryBackIdentity: string = '';
+  @State private developerPageId: string = '';
+  @State private messagePreviewId: string = '';
+  private messagePreviewBackHandler: (() => boolean) | undefined = undefined;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
   private resetRevision: number = 0;
@@ -127,7 +123,7 @@ export struct SettingsPage {
   onDiscoverRequested: () => void = (): void => {};
   onClearCache: () => Promise<SettingsCacheCleanupSnapshot | undefined> = async (): Promise<SettingsCacheCleanupSnapshot | undefined> => undefined;
   onRestoreDefaults: () => Promise<boolean> = async (): Promise<boolean> => false;
-  onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode', value: boolean) => void =
+  onToggle: (key: GeneralSettingsKey, value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
   aboutToAppear(): void {
@@ -146,6 +142,7 @@ export struct SettingsPage {
 
   aboutToDisappear(): void {
     this.transientFeedback.reset();
+    this.retireDeveloperPages();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
     this.themeOwner = undefined;
@@ -157,12 +154,36 @@ export struct SettingsPage {
   }
 
   private consumeTemporaryBack(identity: string): boolean {
-    if (!this.mounted || identity !== this.temporaryBackIdentity || !this.ownsSelection(this.selectionId)) return false;
+    if (!this.mounted || identity !== this.temporaryBackIdentity) return false;
+    if (this.messagePreviewCurrent(this.messagePreviewId)) {
+      if (this.messagePreviewBackHandler?.() !== true) this.closeMessagePreview(this.messagePreviewId);
+      return true;
+    }
+    if (this.developerPageCurrent(this.developerPageId)) {
+      this.retireDeveloperPages();
+      return true;
+    }
+    if (!this.ownsSelection(this.selectionId)) return false;
     this.retireSelection();
     return true;
   }
 
   build() {
+    if (this.messagePreviewCurrent(this.messagePreviewId)) {
+      ForEach([this.messagePreviewId], (identity: string): void => {
+        ReaderMessagePreviewPage({
+          previewEnabled: this.messagePreviewCurrent(identity),
+          onBack: (): void => this.closeMessagePreview(identity),
+          onBackHandlerChange: (handler: (() => boolean) | undefined): void => {
+            if (this.messagePreviewCurrent(identity)) this.messagePreviewBackHandler = handler;
+          },
+        });
+      }, (identity: string): string => identity);
+    } else if (this.developerPageCurrent(this.developerPageId)) {
+      ForEach([this.developerPageId], (identity: string): void => {
+        this.developerPage(identity);
+      }, (identity: string): string => identity);
+    } else {
     SettingsShell({
       activeSection: this.activeSection,
       tapBottomScrollTop: this.tapBottomScrollTopValue,
@@ -185,8 +206,89 @@ export struct SettingsPage {
       // BookshelfPage 尾随闭包 pattern), 内层 this.buildHome() 才正确绑定。
       homeContent: (): void => { this.buildHome(); },
       generalContent: (): void => { this.buildGeneral(); },
-      overlayContent: (): void => { this.buildOverlay(); },
+      overlayContent: (contentStartInset: number): void => { this.buildOverlay(contentStartInset); },
     }).enabled(!this.resetInFlight);
+    }
+  }
+
+  private settingsNavigationCurrent(): boolean {
+    return this.mounted && this.activeSection === 'general' && !this.resetInFlight &&
+      ReaderRuntimeOwner.isCurrent(this.themeOwner);
+  }
+
+  private developerPageCurrent(identity: string): boolean {
+    return identity.length > 0 && identity === this.developerPageId && this.settingsNavigationCurrent();
+  }
+
+  private messagePreviewCurrent(identity: string): boolean {
+    return identity.length > 0 && identity === this.messagePreviewId && this.developerPageCurrent(this.developerPageId);
+  }
+
+  private openDeveloperPage(identity: string): void {
+    if (identity !== this.temporaryBackIdentity || !this.settingsNavigationCurrent() || this.developerPageId !== '') return;
+    this.retireSelection();
+    this.developerPageId = `developer:${++settingsSelectionGeneration}`;
+  }
+
+  private openMessagePreview(identity: string): void {
+    if (!this.developerPageCurrent(identity) || this.messagePreviewId !== '') return;
+    this.messagePreviewBackHandler = undefined;
+    this.messagePreviewId = `message-preview:${++settingsSelectionGeneration}`;
+  }
+
+  private closeMessagePreview(identity: string): void {
+    if (identity.length === 0 || identity !== this.messagePreviewId) return;
+    this.messagePreviewId = '';
+    this.messagePreviewBackHandler = undefined;
+  }
+
+  private retireDeveloperPages(): void {
+    this.closeMessagePreview(this.messagePreviewId);
+    this.developerPageId = '';
+  }
+
+  private onActiveSectionChanged(): void {
+    if (this.activeSection !== 'general') this.retireDeveloperPages();
+  }
+
+  private toggleDeveloperBoundary(value: boolean, identity: string): void {
+    if (!this.developerPageCurrent(identity) || this.messagePreviewId !== '') return;
+    this.toggleSetting('developerMode', value);
+  }
+
+  @Builder
+  private developerPage(identity: string) {
+    ReaderStandardPage({ variant: 'settingsGeneral',
+      header: (): void => { this.developerPageHeader(identity); },
+      content: (): void => { this.developerPageContent(identity); },
+      overlayContent: (contentStartInset: number): void => { this.pendingFeedback(contentStartInset); },
+    });
+  }
+
+  @Builder
+  private developerPageHeader(identity: string) {
+    PageBackBar({ title: '开发者模式', onBack: (): void => {
+      if (this.developerPageCurrent(identity)) this.retireDeveloperPages();
+    } });
+  }
+
+  @Builder
+  private developerPageContent(identity: string) {
+    CategorySection({ title: '开发工具' }) {
+      this.navRow('消息预览', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')),
+        (): void => this.openMessagePreview(identity));
+      CategoryRow({
+        icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')),
+        label: '显示组件边界',
+        onRowClick: (): void => this.toggleDeveloperBoundary(!this.developerModeValue, identity),
+      }) {
+        ReaderToggle({ value: this.developerModeValue, specId: 'standard-toggle',
+          inputIdentity: `${identity}:component-bounds`, accessibilityLabel: '显示组件边界',
+          actionEnabled: this.settingCanToggle(this.temporaryBackIdentity), isBusy: this.settingToggleBusy(),
+          onToggle: (next: boolean): void => this.toggleDeveloperBoundary(next, identity) });
+      }
+    }
+    this.operationFeedback();
   }
 
   @Builder
@@ -297,7 +399,7 @@ export struct SettingsPage {
   }
 
   @Builder
-  private pendingFeedback() {
+  private pendingFeedback(contentStartInset: number) {
     Column({ space: 10 }) {
       if (this.hasPendingSettings()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('read'), this.recoveryIdentityFor('accepted'),
@@ -322,7 +424,7 @@ export struct SettingsPage {
             onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
         }, (key: string): string => key);
       }
-    }.width('100%').padding({ left: 20, right: 20, top: readerPageContentStartInset() })
+    }.width('100%').padding({ left: 20, right: 20, top: contentStartInset })
       .hitTestBehavior(HitTestMode.Transparent);
   }
 
@@ -352,7 +454,7 @@ export struct SettingsPage {
 
   private showFeedbackToast(message: string): void {
     if (!this.mounted || message.length === 0) return;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS }, (): boolean => this.mounted); } catch (_) {}
   }
 
   @Builder
@@ -373,12 +475,16 @@ export struct SettingsPage {
     CategorySection({ title: '行为与反馈' }) {
       this.switchRow('自动检查更新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), 'autoCheckUpdate');
       this.switchRow('减少动态效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'reduceMotion');
+      this.switchRow('宽屏使用侧边导航', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_navigation_theme_night') : $r('app.media.settings_gen_navigation')), 'wideNavigationRail');
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.switchRow('点击当前底栏回顶部', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
         this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
         this.selectRow('动画效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
       }
-      this.switchRow('开发者模式（显示组件边界）', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'developerMode');
+      ForEach([this.temporaryBackIdentity], (identity: string): void => {
+        this.navRow('开发者模式', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')),
+          (): void => this.openDeveloperPage(identity));
+      }, (identity: string): string => identity);
       this.cacheActionRow();
     }
   }
@@ -386,9 +492,9 @@ export struct SettingsPage {
   @Builder
   private permissionCard() {
     CategorySection({ title: '系统权限' }) {
-      this.permissionRow('文件访问', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212B895C', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF28704E', this.appThemeScheme));
-      this.permissionRow('通知权限', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.24B0661D', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF8C521D', this.appThemeScheme));
-      this.permissionRow('电池优化', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212379A4', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
+      this.permissionRow('文件访问', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.status.goodSoft', this.appThemeScheme), readerAppColor('app.status.good', this.appThemeScheme));
+      this.permissionRow('通知权限', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.status.warningSoft', this.appThemeScheme), readerAppColor('app.status.warning', this.appThemeScheme));
+      this.permissionRow('电池优化', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.status.infoSoft', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
   }
 
@@ -402,7 +508,7 @@ export struct SettingsPage {
 
   // 开关行: CategoryRow + 尾部 ReaderToggle。
   @Builder
-  private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
+  private switchRow(label: string, icon: () => Resource, key: GeneralSettingsKey,
   ) {
     ForEach([this.temporaryBackIdentity], (identity: string): void => {
       CategoryRow({ icon: icon(), label,
@@ -426,6 +532,7 @@ export struct SettingsPage {
     this.reduceMotionValue = this.snapshot.reduceMotion;
     this.crashLogValue = this.snapshot.crashLog;
     this.developerModeValue = this.snapshot.developerMode;
+    this.wideNavigationRailValue = this.snapshot.wideNavigationRail;
   }
 
   private settingToggleBusy(): boolean {
@@ -438,7 +545,7 @@ export struct SettingsPage {
   }
 
   private toggleSetting(
-    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
+    key: GeneralSettingsKey,
     value: boolean,
     identity: string = this.temporaryBackIdentity,
   ): void {
@@ -448,7 +555,7 @@ export struct SettingsPage {
     this.onToggle(key, value);
   }
 
-  private settingValue(key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode'): boolean {
+  private settingValue(key: GeneralSettingsKey): boolean {
     if (key === 'autoCheckUpdate') {
       return this.autoCheckUpdateValue;
     }
@@ -460,6 +567,9 @@ export struct SettingsPage {
     }
     if (key === 'developerMode') {
       return this.developerModeValue;
+    }
+    if (key === 'wideNavigationRail') {
+      return this.wideNavigationRailValue;
     }
     return this.crashLogValue;
   }
@@ -477,7 +587,7 @@ export struct SettingsPage {
         value: this.currentValue(key),
         options: options,
         isOpen: this.openSelect === key,
-        variant: this.isTablet ? 'settingsTablet' : 'settingsPhone',
+        variant: this.expandedLayout ? 'settingsTablet' : 'settingsPhone',
         reduceMotion: this.reduceMotionValue,
         onToggle: (): void => {
           this.toggleSelection(key);
@@ -737,11 +847,11 @@ export struct SettingsPage {
   }
 
   @Builder
-  private buildOverlay() {
-    this.pendingFeedback();
+  private buildOverlay(contentStartInset: number) {
+    this.pendingFeedback(contentStartInset);
     if (this.openSelect !== '') {
       SettingsSelectOverlay({
-        isTablet: this.isTablet,
+        expandedLayout: this.expandedLayout,
         field: this.openSelect,
         value: this.currentValue(this.openSelect),
         options: this.selectOptions(this.openSelect),
@@ -832,7 +942,7 @@ export struct SettingsPage {
     .constraintSize({ minHeight: 58 })
     .padding({ left: 13, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('app.SettingsPage.dangerRow.backgroundColor.E0FFFFFF', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.surface.dangerCard', this.appThemeScheme))
     .borderRadius(8)
     .onClick((): void => this.requestRestoreDefaults());
   }

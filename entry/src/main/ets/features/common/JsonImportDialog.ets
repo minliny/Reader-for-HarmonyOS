@@ -36,7 +36,7 @@ export struct JsonImportDialog {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   title: string = '导入 JSON';
   description: string = '支持选择本地 JSON 文件，或从在线链接下载后导入。';
-  isTablet: boolean = false;
+  expandedLayout: boolean = false;
   onDismiss: () => void = (): void => {};
   onSelectLocal: () => void = (): void => {};
   onImportOnline: (url: string) => void = (_url: string): void => {};
@@ -69,7 +69,7 @@ export struct JsonImportDialog {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(readerAppColor('app.JsonImportDialog.build.backgroundColor.66000000', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.scrim.import', this.appThemeScheme))
     .zIndex(200);
   }
 

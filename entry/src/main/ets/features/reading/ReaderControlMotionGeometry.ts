@@ -1,6 +1,11 @@
 import type { ReaderControlVisualFrame } from './ReaderControlSessionState.ts';
 import type { ReaderControlMeasuredAxis } from './ReaderControlGestureDriver.ts';
 import { readerControlUnit as unit, readerControlActor as actor } from './ReaderControlActorGeometry.ts';
+import {
+  READER_CONTROL_BRIGHTNESS_RAIL_WIDTH,
+  READER_CONTROL_CONTENT_PADDING_RIGHT,
+  READER_CONTROL_HOME_TOP_ROW_HEIGHT,
+} from './ReaderControlGeometry.ts';
 
 /** Restored Directory 1689:1616 + MR1 1247:28/1247:489 + M-01/M-02/L-01.
  * Spatial samples deliberately contain no easing, timers or route decisions.
@@ -8,6 +13,27 @@ import { readerControlUnit as unit, readerControlActor as actor } from './Reader
  */
 export const READER_CONTROL_MR1_DOCK_TRANSLATE_Y = 18;
 export const READER_CONTROL_MR1_TOP_BAR_TRANSLATE_Y = -8;
+
+/** MR1 composition leaves. These numbers coordinate more than one actor, so
+ * the motion geometry owns them instead of each builder. Values are authored
+ * Figma leaves; only measured bounds and progress enter at call time. */
+export const READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE = 140;
+export const READER_CONTROL_MOTION_FULL_CONTENT_VERTICAL_RESERVE = 70;
+export const READER_CONTROL_MOTION_CONTENT_INSET_MAX = 13;
+export const READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE = 52;
+export const READER_CONTROL_MOTION_HEADER_TOP = 19;
+export const READER_CONTROL_MOTION_HEADER_HEIGHT = 30;
+export const READER_CONTROL_MOTION_CONTENT_SURFACE_TOP = 57;
+export const READER_CONTROL_MOTION_CONTENT_TOP_QUICK = 29;
+export const READER_CONTROL_MOTION_CONTENT_TOP_FULL_DELTA = 28;
+export const READER_CONTROL_MOTION_NAVIGATION_LEFT = 12;
+export const READER_CONTROL_MOTION_NAVIGATION_BOTTOM = 93;
+export const READER_CONTROL_MOTION_NAVIGATION_TRANSLATE_Y = 20;
+export const READER_CONTROL_MOTION_NAVIGATION_HORIZONTAL_INSET = 24;
+export const READER_CONTROL_MOTION_NAVIGATION_HEIGHT = 80;
+export const READER_CONTROL_MOTION_GRABBER_WIDTH = 42;
+export const READER_CONTROL_MOTION_GRABBER_TOP = 9;
+export const READER_CONTROL_MOTION_GRABBER_HEIGHT = 4;
 
 export interface ReaderControlMotionBounds {
   width: number;
@@ -109,34 +135,43 @@ export function sampleReaderControlMotionComposition(frame: ReaderControlVisualF
   // L-01 freezes expansion during dismissal. MR1's displacement/opacity lives
   // on the parent dock actor, not on these individually composited children.
   const shellY = bounds.fullHeight - height;
-  const quickContentHeight = Math.min(190, Math.max(0, bounds.quickHeight - 140));
-  const fullContentHeight = Math.max(0, bounds.fullHeight - 70);
-  const inset = Math.min(13, bounds.width / 4);
+  const quickContentHeight = Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT,
+    Math.max(0, bounds.quickHeight - READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE));
+  const fullContentHeight = Math.max(0, bounds.fullHeight - READER_CONTROL_MOTION_FULL_CONTENT_VERTICAL_RESERVE);
+  const inset = Math.min(READER_CONTROL_MOTION_CONTENT_INSET_MAX, bounds.width / 4);
   const fullContentWidth = Math.max(0, bounds.width - inset * 2);
-  const quickContentWidth = Math.max(0, fullContentWidth - 52);
-  const brightnessWidth = 38;
-  const brightnessRight = 13.56;
+  const quickContentWidth = Math.max(0, fullContentWidth - READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE);
+  const brightnessWidth = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH;
+  const brightnessRight = READER_CONTROL_CONTENT_PADDING_RIGHT;
   return {
     progress: p, visibility: visibility,
     topBar: whole.topBar, dock: whole.dock,
     shell: actor(0, shellY, bounds.width, height, 1),
-    grabber: actor((bounds.width - 42) / 2, shellY + 9, 42, 4, 1),
-    header: actor(inset, shellY + 19, fullContentWidth, 30, p),
+    grabber: actor((bounds.width - READER_CONTROL_MOTION_GRABBER_WIDTH) / 2,
+      shellY + READER_CONTROL_MOTION_GRABBER_TOP, READER_CONTROL_MOTION_GRABBER_WIDTH,
+      READER_CONTROL_MOTION_GRABBER_HEIGHT, 1),
+    header: actor(inset, shellY + READER_CONTROL_MOTION_HEADER_TOP, fullContentWidth,
+      READER_CONTROL_MOTION_HEADER_HEIGHT, p),
     // AddedActor/FullContentSurface is a sibling, not a viewport decoration.
     // Only its opacity changes; parent root movement supplies its translation.
-    contentSurface: actor(inset, shellY + 57, fullContentWidth, fullContentHeight, p),
-    content: actor(inset, shellY + 29 + 28 * p,
+    contentSurface: actor(inset, shellY + READER_CONTROL_MOTION_CONTENT_SURFACE_TOP,
+      fullContentWidth, fullContentHeight, p),
+    content: actor(inset, shellY + READER_CONTROL_MOTION_CONTENT_TOP_QUICK +
+      READER_CONTROL_MOTION_CONTENT_TOP_FULL_DELTA * p,
       quickContentWidth + (fullContentWidth - quickContentWidth) * p,
       quickContentHeight + (fullContentHeight - quickContentHeight) * p, 1),
     // M-02 override: same 190vp height, follows the top, translates completely
     // past the stage's right edge. This distance is derived from the rail bounds,
     // NOT falsely recorded as the baseline's original vertical-fade track.
     brightness: actor(bounds.width - brightnessRight - brightnessWidth +
-      (brightnessWidth + brightnessRight) * p, shellY + 29, brightnessWidth, 190,
-      1 - p),
+      (brightnessWidth + brightnessRight) * p, shellY + READER_CONTROL_MOTION_CONTENT_TOP_QUICK,
+      brightnessWidth, READER_CONTROL_HOME_TOP_ROW_HEIGHT, 1 - p),
     // Original navigation displacement 0 -> 20, on the common spatial axis.
-    navigation: actor(12, shellY + height - 93 + 20 * p,
-      Math.max(0, bounds.width - 24), 80, 1 - p),
+    navigation: actor(READER_CONTROL_MOTION_NAVIGATION_LEFT,
+      shellY + height - READER_CONTROL_MOTION_NAVIGATION_BOTTOM +
+        READER_CONTROL_MOTION_NAVIGATION_TRANSLATE_Y * p,
+      Math.max(0, bounds.width - READER_CONTROL_MOTION_NAVIGATION_HORIZONTAL_INSET),
+      READER_CONTROL_MOTION_NAVIGATION_HEIGHT, 1 - p),
   };
 }
 

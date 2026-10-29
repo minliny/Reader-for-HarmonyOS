@@ -1,16 +1,22 @@
 import { ColorMetrics, FrameCallback } from '@kit.ArkUI';
-import curves from '@ohos.curves';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
 import { SourceSwitchSpinner } from './SourceSwitchSpinner';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { motionAnimateParam } from '../common/MotionSpec';
+import { readerMotionAnimateParam } from '../common/ReaderMotionPolicy';
+import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_SOURCE_SWITCH_NOVEL_NAME, TYPE_SOURCE_SWITCH_NOVEL_CHAPTER, TYPE_SOURCE_SWITCH_NOVEL_LATENCY,
   TYPE_SOURCE_SWITCH_NOVEL_HEADING, TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE, TYPE_SOURCE_SWITCH_NOVEL_METADATA,
   TYPE_SOURCE_SWITCH_NOVEL_CAPTION, TYPE_SOURCE_SWITCH_NOVEL_ACTION, TYPE_SOURCE_SWITCH_NOVEL_COLUMN,
   TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT, TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS, TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW,
   TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE, TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT,
   TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE, TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT,
-  TYPE_SOURCE_SWITCH_NOVEL_FOOTER, TYPE_SOURCE_SWITCH_NOVEL_EMPTY } from '../common/ReaderTypography';
+  TYPE_SOURCE_SWITCH_NOVEL_FOOTER } from '../common/ReaderTypography';
 import { registerReaderFonts, prepareSourceSwitchNovelFonts, sourceSwitchNovelFontsReady } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight,
@@ -180,7 +186,8 @@ struct SourceSwitchNovelRow {
       right: SOURCE_SWITCH_VISUAL.scrollbarWidth + 5 })
       .backgroundColor(this.selected || this.pressed ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
       .border({ width: { bottom: SOURCE_SWITCH_VISUAL.rowDividerWidth }, color: this.dividerColor() })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.rowEnterDurationMs, curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }))
+      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+        TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.row.enter')))
       .enabled(this.rowEnabled && this.candidate.isCurrent !== true).accessibilityGroup(true)
       .accessibilityText(`${this.candidate.sourceName || this.candidate.sourceId}，${sourceSwitchNovelChapter(this.candidate)}，搜索用时 ${sourceSwitchNovelLatency(this.candidate)}`)
       .onTouch((event: TouchEvent): void => this.rowTouch(event))
@@ -225,6 +232,9 @@ export struct SourceSwitchWindow {
   @State private containerWidth: number = 0;
   @State private novelFontsReady: boolean = sourceSwitchNovelFontsReady();
   @State private discoveryActionPressed: boolean = false;
+  @State private messageGeneration: number = 0;
+  private lastFeedbackIdentity: string = '';
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private discoveryActionPressRunning: boolean = false;
   private latestCandidates: SourceSwitchCandidate[] = [];
   private pendingSearchKeys: Set<string> = new Set();
@@ -254,10 +264,10 @@ export struct SourceSwitchWindow {
       });
     }
   }
-  aboutToDisappear(): void { this.mounted = false; this.cancelPresentation(); }
+  aboutToDisappear(): void { this.mounted = false; this.retireMessages(); this.cancelPresentation(); }
   private coverChanged(): void { this.coverFailed = false; }
   private foregroundChanged(): void {
-    if (!this.foreground) this.cancelPresentation();
+    if (!this.foreground) { this.retireMessages(); this.cancelPresentation(); }
     else if (this.mounted) this.acceptState();
   }
   private cancelPresentation(): void {
@@ -298,6 +308,7 @@ export struct SourceSwitchWindow {
     this.candidateDataSource.publish(candidates);
   }
   private acceptState(): void {
+    this.messageGeneration += 1;
     if (this.state.kind !== 'switching') this.selectionPending = false;
     if (this.discoveryActionPressed && (this.busy() || this.rollbackRequired() ||
       this.discoveryActionPressRunning !== this.isSweeping())) this.discoveryActionPressed = false;
@@ -312,6 +323,7 @@ export struct SourceSwitchWindow {
         this.selectedKey = '';
       }
       if (this.state.kind === 'switching' || this.state.kind === 'success') this.cancelPresentation();
+      this.notifyOrdinaryFailure();
       return;
     }
     this.selectedKey = '';
@@ -342,6 +354,7 @@ export struct SourceSwitchWindow {
     }
     for (const candidate of incoming.values()) retained.push(candidate);
     this.publishCandidates(retained);
+    this.notifyOrdinaryFailure();
     this.queueReorder();
   }
   private queueReorder(): void {
@@ -382,7 +395,8 @@ export struct SourceSwitchWindow {
       this.publishCandidates(next);
       this.restoreAnchor(anchorKey, Math.max(1 - this.rowHeight(), Math.min(0, Number.isFinite(itemY) ? itemY : 0)));
     } else {
-      this.getUIContext().animateTo({ duration: this.reduceMotion ? 0 : 220, curve: Curve.EaseInOut }, (): void => { this.publishCandidates(next); });
+      this.getUIContext().animateTo(readerMotionAnimateParam('source.switch.list.update', this.reduceMotion),
+        (): void => { this.publishCandidates(next); });
     }
   }
   private restoreAnchor(key: string, itemY: number, attempt: number = 0): void {
@@ -473,6 +487,47 @@ export struct SourceSwitchWindow {
     if (this.state.kind === 'discoveryError' || this.state.kind === 'failure') return this.state.message;
     return this.state.kind === 'candidates' ? this.state.refreshError ?? '' : '';
   }
+  private hasPendingRecovery(): boolean { return this.requiresReconciliation() || this.rollbackRequired(); }
+  // The parent keys this window by sourceSwitchScopeId. This local generation
+  // additionally retires actions when that same window receives a new state;
+  // transaction identity and retry/rollback authority remain with the Host.
+  private retireMessages(): void {
+    this.messageGeneration += 1;
+    this.lastFeedbackIdentity = '';
+    this.transientFeedback.reset();
+  }
+  private messageActionCurrent(generation: number): boolean {
+    return this.mounted && this.foreground && generation === this.messageGeneration && !this.busy();
+  }
+  private notifyOrdinaryFailure(): void {
+    const message = this.errorText().trim();
+    if (message.length === 0 || this.hasPendingRecovery() || this.displayedCandidates.length === 0) {
+      if (this.lastFeedbackIdentity.length > 0) { this.lastFeedbackIdentity = ''; this.transientFeedback.reset(); }
+      return;
+    }
+    const identity = JSON.stringify([this.currentSourceId, this.state.kind, message]);
+    if (identity === this.lastFeedbackIdentity) return;
+    const generation = this.messageGeneration;
+    if (this.transientFeedback.show(() => this.getUIContext(), {
+      title: this.state.kind === 'failure' ? '切换书源未完成' : '查找书源失败', message,
+      key: identity, tone: 'error',
+    }, (): boolean => this.messageActionCurrent(generation) && !this.hasPendingRecovery())) {
+      this.lastFeedbackIdentity = identity;
+    }
+  }
+  private recoveryView(): ReaderRecoveryView {
+    return { message: this.errorText() || (this.requiresReconciliation() ? '换源结果尚未确认，请核对原操作' : '切换尚未完成，可撤销本次切换'),
+      visible: this.hasPendingRecovery(), canRetry: !this.busy(), generation: this.messageGeneration };
+  }
+  private recoverOriginal(generation: number): void {
+    if (!this.messageActionCurrent(generation) || !this.hasPendingRecovery()) return;
+    if (this.rollbackRequired()) this.onRollback();
+    else this.requestRefresh();
+  }
+  private retryEmptyContent(generation: number): void {
+    if (!this.messageActionCurrent(generation) || this.hasPendingRecovery() || this.displayedCandidates.length > 0) return;
+    this.requestRefresh();
+  }
   private safeTop(): number {
     return !this.consumeTopInset || this.readerWindowMetricsRevision < 0 ? 0 : readerVisualSafeTop(ReaderWindowCoordinator.metrics());
   }
@@ -511,36 +566,39 @@ export struct SourceSwitchWindow {
               onSelect: (): void => this.selectCandidate(row.key) });
           }.width('100%').height(this.rowHeight());
         }, (row: SourceSwitchCandidateRow): string => row.key);
-        if (this.scrollBook() && this.displayedCandidates.length === 0) {
-          ListItem() { this.novelEmptyMessage(); }.height(this.emptyHeight());
+        if (this.displayedCandidates.length === 0 && !this.hasPendingRecovery()) {
+          ListItem() { this.novelEmptyMessage(); }.constraintSize({ minHeight: this.emptyHeight() });
         }
         if (this.flowChrome()) {
           ListItem() { this.novelFooter(); }.height(this.footerHeight());
         }
       }.width('100%').height('100%').scrollBar(BarState.Auto)
         .scrollBarWidth(SOURCE_SWITCH_VISUAL.scrollbarWidth).scrollBarColor(readerAppColor('TOK_SS_SCROLLBAR', this.appThemeScheme))
-        .contentStartOffset(this.listStartInset()).contentEndOffset(0)
+        .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
+        .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
         .onTouch((event: TouchEvent): void => this.listTouch(event))
         .onScrollStart((): void => { if (!this.restoringAnchor) this.scrolling = true; })
         .onScrollStop((): void => { if (!this.restoringAnchor) { this.scrolling = false; this.queueReorder(); } })
         .onScrollIndex((start: number): void => { this.firstVisibleListIndex = start; this.firstVisibleIndex = Math.max(0, start - this.listHeaderCount()); })
         .onAppear((): void => { this.listMounted = true; })
         .onDisAppear((): void => { this.listMounted = false; this.anchorEpoch += 1; });
-      if (this.displayedCandidates.length === 0 && !this.scrollBook()) {
-        this.novelEmptyMessage();
-      }
     }.layoutWeight(1).width('100%');
   }
   @Builder
   private novelEmptyMessage() {
     Column() {
-      Text(this.isSweeping() ? '正在查找其他书源…' : '未找到其他书源')
-        .fontFamily(TYPE_SOURCE_SWITCH_NOVEL_EMPTY.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_EMPTY.fontWeight)
-        .fontSize(TYPE_SOURCE_SWITCH_NOVEL_EMPTY.fontSizeFp).lineHeight(TYPE_SOURCE_SWITCH_NOVEL_EMPTY.lineHeightFp).halfLeading(true)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
-    }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+      ForEach([this.messageGeneration], (generation: number) => {
+        ReaderPageState({ loading: this.isSweeping(), padded: false,
+          title: this.isSweeping() ? '' : this.errorText().length > 0 ?
+            (this.state.kind === 'failure' ? '切换书源失败' : '查找书源失败') : '未找到其他书源',
+          message: this.isSweeping() ? '正在查找其他书源…' : this.errorText(),
+          actionLabel: !this.isSweeping() && this.errorText().length > 0 ? '重试' : '',
+          actionEnabled: this.messageActionCurrent(generation),
+          onAction: (): void => this.retryEmptyContent(generation) });
+      }, (generation: number): string => generation.toString());
+    }.width('100%').constraintSize({ minHeight: this.emptyHeight() }).justifyContent(FlexAlign.Center)
       .padding({ left: SOURCE_SWITCH_VISUAL.emptyPaddingX, right: SOURCE_SWITCH_VISUAL.emptyPaddingX,
-        top: SOURCE_SWITCH_VISUAL.emptyPaddingY, bottom: SOURCE_SWITCH_VISUAL.emptyPaddingY }).hitTestBehavior(HitTestMode.None);
+        top: SOURCE_SWITCH_VISUAL.emptyPaddingY, bottom: SOURCE_SWITCH_VISUAL.emptyPaddingY });
   }
   private emptyHeight(): number {
     const grip = this.compactWindow() || this.flowChrome() ? 0 :
@@ -550,20 +608,14 @@ export struct SourceSwitchWindow {
   }
   @Builder
   private recoveryNotice() {
-    if (this.errorText().length > 0 || this.rollbackRequired()) {
-      Column({ space: 8 }) {
-        Text(this.errorText()).fontFamily('ReaderNotoSansSC').fontSize(12)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%')
-          .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Button(this.rollbackRequired() ? '撤销切换' : this.requiresReconciliation() ? '重试核对' : '重试', { type: ButtonType.Normal })
-          .height(40).fontSize(13).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-          .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(8)
-          .onClick((): void => { if (this.rollbackRequired()) this.onRollback(); else this.requestRefresh(); });
-      }.width('100%').padding({ left: 18, right: 18, top: 10, bottom: 12 })
-        .border({ width: { top: 0.5 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
-    }
+    ReaderRecoveryNotice({ view: this.recoveryView(), tag: this.rollbackRequired() ? '待撤销' : '待核对',
+      actionLabel: this.rollbackRequired() ? '撤销切换' : '重试核对',
+      onReconcile: (generation: number): void => this.recoverOriginal(generation) });
   }
   private listStartInset(): number { return 0; }
+  private scrollLayout(): ReaderScrollLayout {
+    return new ReaderScrollLayout(this.listStartInset(), 0, 'contentOffset');
+  }
   private listHeaderCount(): number { return this.flowChrome() ? 4 : this.scrollBook() ? 1 : 0; }
   private listHeaderHeight(): number {
     return this.flowChrome() ? this.headingHeight() + this.bookHeight() + this.discoveryHeight() + this.columnsHeight() : this.scrollBook() ? this.bookHeight() : 0;
@@ -753,6 +805,7 @@ export struct SourceSwitchWindow {
   }
   @Builder
   private novelDrawerBody() {
+    Stack({ alignContent: Alignment.Top }) {
     Column() {
       if (!this.compactWindow() && !this.flowChrome()) {
         Row().width(SOURCE_SWITCH_VISUAL.gripWidth).height(SOURCE_SWITCH_VISUAL.gripHeight).borderRadius(SOURCE_SWITCH_VISUAL.gripRadius)
@@ -767,9 +820,16 @@ export struct SourceSwitchWindow {
           this.novelColumns();
         }
         this.candidateList();
-        this.recoveryNotice();
         if (!this.flowChrome()) { this.novelFooter(); }
       }.width('100%').layoutWeight(1).padding({ left: this.novelSafeLeft() + this.sideInset(), right: this.novelSafeRight() + this.sideInset(), bottom: this.safeBottom() });
+    }.width('100%').height('100%');
+    if (this.hasPendingRecovery()) {
+      Column() { this.recoveryNotice(); }
+        .width('100%').padding({ left: this.novelSafeLeft() + this.sideInset(), right: this.novelSafeRight() + this.sideInset(),
+          top: this.headingHeight() + (!this.compactWindow() && !this.flowChrome() ?
+            SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom : 0) })
+        .hitTestBehavior(HitTestMode.Transparent);
+    }
     }.width('100%').height('100%');
   }
   @Builder
@@ -777,16 +837,16 @@ export struct SourceSwitchWindow {
     ReaderBoundedSurface({ specId: 'source-switch-drawer', surfaceWidth: '100%', surfaceHeight: this.drawerHeight(),
       body: (): void => this.novelDrawerBody() })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs, curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs, curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) })));
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.open')),
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.close'))));
   }
   @Builder
   private novelSwitching() {
     SourceSwitchProgress({ sourceName: this.switchingSourceName(), chapterTitle: this.currentChapterTitle,
       reduceMotion: this.reduceMotion, topInset: this.safeTop(), bottomInset: this.safeBottom(),
       allowCancel: this.allowCancelWhileSwitching, onCancel: (): void => this.onClose() })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs,
-        curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }));
+      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+        TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.close')));
   }
   build() {
     Stack({ alignContent: Alignment.Bottom }) {

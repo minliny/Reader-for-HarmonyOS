@@ -29,8 +29,8 @@ export interface ReaderLabeledIconActionSpec {
   responseOffset: number | undefined;
 }
 const FEED: ReaderLabeledIconActionSpec = {
-  labelMarginLeft: undefined, leftPaddingOnly: false, gradientStart: undefined, gradientEnd: undefined, text: TYPE_APP_SMALL_ACTION, textRole: 'app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F',
-  dangerRole: undefined, surfaceRole: 'app.RssSourceFeedPage.ACTION_BG', borderRole: undefined,
+  labelMarginLeft: undefined, leftPaddingOnly: false, gradientStart: undefined, gradientEnd: undefined, text: TYPE_APP_SMALL_ACTION, textRole: 'app.text.filter',
+  dangerRole: undefined, surfaceRole: 'app.feed.actionSoft', borderRole: undefined,
   divided: false, iconSize: 18, rowHeight: 32, gap: 5, surfaceOnHit: false, rowWidth: undefined, horizontalPadding: 9,
   radius: 999, centerRow: false, outerHit: true, equalLayout: false, responseOffset: undefined,
 };
@@ -42,8 +42,8 @@ function copyReaderLabeledIconActionSpec(): ReaderLabeledIconActionSpec {
     outerHit: FEED.outerHit, equalLayout: FEED.equalLayout, responseOffset: FEED.responseOffset };
 }
 const ENTRY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
-ENTRY.textRole = 'app.RssEntryDetailPage.actionTarget.fontColor.FF3F372F';
-ENTRY.surfaceRole = 'app.RssEntryDetailPage.ACTION_BG'; ENTRY.rowHeight = 34;
+ENTRY.textRole = 'app.text.filter';
+ENTRY.surfaceRole = 'app.feed.actionSoft'; ENTRY.rowHeight = 34;
 ENTRY.rowWidth = '100%'; ENTRY.horizontalPadding = undefined; ENTRY.centerRow = true; ENTRY.equalLayout = true;
 const MANAGEMENT: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 MANAGEMENT.text = TYPE_FORM_COMPACT_ACTION; MANAGEMENT.textRole = 'TOK_INK'; MANAGEMENT.dangerRole = 'TOK_DANGER';
@@ -52,7 +52,7 @@ MANAGEMENT.iconSize = 16; MANAGEMENT.rowHeight = 44; MANAGEMENT.horizontalPaddin
 MANAGEMENT.radius = undefined; MANAGEMENT.centerRow = true; MANAGEMENT.outerHit = false; MANAGEMENT.equalLayout = true;
 const MANAGE: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 MANAGE.text = TYPE_APP_COMPACT_PRIMARY_ACTION; MANAGE.textRole = 'TOK_PRIMARY_TEXT';
-MANAGE.surfaceRole = 'app.RssPage.PILL_BG'; MANAGE.borderRole = 'app.RssPage.PILL_BORDER';
+MANAGE.surfaceRole = 'app.feed.pillSurface'; MANAGE.borderRole = 'app.feed.pillBorder';
 MANAGE.iconSize = 16; MANAGE.rowHeight = 34; MANAGE.rowWidth = 64; MANAGE.horizontalPadding = undefined;
 MANAGE.radius = 12; MANAGE.centerRow = true; MANAGE.outerHit = false; MANAGE.responseOffset = -5;
 const SOURCE_OPERATIONS: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
@@ -62,7 +62,7 @@ SOURCE_OPERATIONS.rowHeight = 30; SOURCE_OPERATIONS.horizontalPadding = 8;
 SOURCE_OPERATIONS.outerHit = false; SOURCE_OPERATIONS.responseOffset = -7;
 const VIEW_ALL: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 VIEW_ALL.text = TYPE_RSS_LINK_ACTION; VIEW_ALL.textRole = 'TOK_PRIMARY_TEXT';
-VIEW_ALL.surfaceRole = 'app.RssPage.VIEW_ALL_BG'; VIEW_ALL.iconSize = 20;
+VIEW_ALL.surfaceRole = 'TOK_PRIMARY_SOFT'; VIEW_ALL.iconSize = 20;
 VIEW_ALL.rowHeight = 28; VIEW_ALL.horizontalPadding = 8;
 VIEW_ALL.outerHit = false; VIEW_ALL.responseOffset = -8;
 const SOURCE_ADD: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
@@ -75,9 +75,9 @@ DISCOVER_APPLY.text = TYPE_DISCOVER_FILTER_LABEL; DISCOVER_APPLY.textRole = 'TOK
 DISCOVER_APPLY.iconSize = 20; DISCOVER_APPLY.rowHeight = 34; DISCOVER_APPLY.rowWidth = 69.097;
 DISCOVER_APPLY.gap = 0; DISCOVER_APPLY.labelMarginLeft = TOK_SPACE_ROW_BLOCK; DISCOVER_APPLY.horizontalPadding = TOK_SPACE_CONTROL_INLINE; DISCOVER_APPLY.leftPaddingOnly = true;
 DISCOVER_APPLY.radius = 8; DISCOVER_APPLY.outerHit = false; DISCOVER_APPLY.surfaceRole = undefined;
-DISCOVER_APPLY.borderRole = 'app.DiscoverPage.APPLY_BORDER';
-DISCOVER_APPLY.gradientStart = 'app.DiscoverPage.filterRow.linearGradient.FF436F88';
-DISCOVER_APPLY.gradientEnd = 'app.DiscoverPage.filterRow.linearGradient.FF315F78';
+DISCOVER_APPLY.borderRole = 'app.action.applyBorder';
+DISCOVER_APPLY.gradientStart = 'app.action.applyGradientStart';
+DISCOVER_APPLY.gradientEnd = 'app.action.applyGradientEnd';
 const SPECS: Record<ReaderLabeledIconActionSpecId, ReaderLabeledIconActionSpec> = {
   'discover-apply': DISCOVER_APPLY, 'rss-feed': FEED, 'rss-entry': ENTRY, 'rss-management': MANAGEMENT,
   'rss-manage': MANAGE, 'rss-source-operations': SOURCE_OPERATIONS, 'rss-view-all': VIEW_ALL, 'source-management-add': SOURCE_ADD,

@@ -42,7 +42,7 @@ export interface ReaderChoiceSpec {
 }
 
 const COMMON_ROW: ReaderChoiceSpec = {
-  height: 36, padding: 10, gap: 0, radius: 0,
+  height: 44, padding: 10, gap: 0, radius: 0,
   text: TYPE_SELECT_OPTION, selectedText: TYPE_SELECT_OPTION,
   selectedWeight: TYPE_SELECT_OPTION.fontWeight, variableWeight: false,
   textRole: 'TOK_CONTROL_INK', selectedTextRole: 'TOK_CONTROL_INK',
@@ -99,7 +99,7 @@ CHOICE_DEFAULT_SELECTED.selectedText = TYPE_SELECT_DEFAULT_VALUE;
 CHOICE_DEFAULT_SELECTED.selectedWeight = TYPE_SELECT_DEFAULT_VALUE.fontWeight;
 CHOICE_DEFAULT_SELECTED.textRole = 'TOK_PRIMARY_TEXT';
 CHOICE_DEFAULT_SELECTED.selectedTextRole = 'TOK_PRIMARY_TEXT';
-CHOICE_DEFAULT_SELECTED.selectedBackground = 'TOK_SURFACE_PANEL_SOFT';
+CHOICE_DEFAULT_SELECTED.selectedBackground = 'app.select.selectedSurface';
 CHOICE_DEFAULT_SELECTED.iconDay = 'app.media.reader_chevron_down';
 CHOICE_DEFAULT_SELECTED.iconNight = 'app.media.reader_chevron_down_theme_night';
 CHOICE_DEFAULT_SELECTED.iconWidth = 12;
@@ -112,7 +112,7 @@ CHOICE_SOURCE_GROUP_SELECTED.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;
 CHOICE_SOURCE_GROUP_SELECTED.selectedWeight = TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight;
 CHOICE_SOURCE_GROUP_SELECTED.textRole = 'TOK_INK';
 CHOICE_SOURCE_GROUP_SELECTED.selectedTextRole = 'TOK_INK';
-CHOICE_SOURCE_GROUP_SELECTED.selectedBackground = 'app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8';
+CHOICE_SOURCE_GROUP_SELECTED.selectedBackground = 'app.select.sourceGroupSelected';
 CHOICE_SOURCE_GROUP_SELECTED.iconDay = 'app.media.source_group_chevron';
 CHOICE_SOURCE_GROUP_SELECTED.iconNight = 'app.media.source_group_chevron_theme_night';
 CHOICE_SOURCE_GROUP_SELECTED.iconWidth = 12;
@@ -147,7 +147,7 @@ CHOICE_APPEARANCE_COMPACT_SELECTED.textWidthInset = 28;
 CHOICE_APPEARANCE_COMPACT_SELECTED.iconRight = 14;
 CHOICE_APPEARANCE_COMPACT_SELECTED.iconTop = 16;
 const CHOICE_APPEARANCE_LIBRARY: ReaderChoiceSpec = copyReaderChoiceSpec();
-CHOICE_APPEARANCE_LIBRARY.height = 25;
+CHOICE_APPEARANCE_LIBRARY.height = 44;
 CHOICE_APPEARANCE_LIBRARY.padding = 9;
 CHOICE_APPEARANCE_LIBRARY.gap = 10;
 CHOICE_APPEARANCE_LIBRARY.radius = 6;
@@ -156,8 +156,8 @@ CHOICE_APPEARANCE_LIBRARY.selectedText = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_S
 CHOICE_APPEARANCE_LIBRARY.selectedWeight = 700;
 CHOICE_APPEARANCE_LIBRARY.variableWeight = true;
 CHOICE_APPEARANCE_LIBRARY.textAlignStart = false;
-CHOICE_APPEARANCE_LIBRARY.textRole = 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF41484C';
-CHOICE_APPEARANCE_LIBRARY.selectedTextRole = 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF2F6373';
+CHOICE_APPEARANCE_LIBRARY.textRole = 'TOK_CONTROL_INK';
+CHOICE_APPEARANCE_LIBRARY.selectedTextRole = 'TOK_READ_PRIMARY';
 CHOICE_APPEARANCE_LIBRARY.selectedBackground = 'app.appearance.selectSelected';
 CHOICE_APPEARANCE_LIBRARY.iconDay = 'app.media.reader_appearance_make_check';
 CHOICE_APPEARANCE_LIBRARY.iconNight = 'app.media.reader_appearance_make_check_theme_night';
@@ -172,10 +172,10 @@ CHOICE_SETTINGS_PHONE.selectedText = TYPE_SETTINGS_SELECT_PHONE_OPTION;
 CHOICE_SETTINGS_PHONE.selectedWeight = 700;
 CHOICE_SETTINGS_PHONE.ellipsis = false;
 CHOICE_SETTINGS_PHONE.textAlignStart = false;
-CHOICE_SETTINGS_PHONE.textRole = 'app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17';
-CHOICE_SETTINGS_PHONE.selectedTextRole = 'app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E';
-CHOICE_SETTINGS_PHONE.selectedBackground = 'app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E';
-CHOICE_SETTINGS_PHONE.dividerRole = 'app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD';
+CHOICE_SETTINGS_PHONE.textRole = 'app.text.heading';
+CHOICE_SETTINGS_PHONE.selectedTextRole = 'TOK_GREEN';
+CHOICE_SETTINGS_PHONE.selectedBackground = 'app.selection.optionSoft';
+CHOICE_SETTINGS_PHONE.dividerRole = 'app.border.control';
 CHOICE_SETTINGS_PHONE.dividerHeight = 1;
 CHOICE_SETTINGS_PHONE.iconDay = 'app.media.settings_select_check';
 CHOICE_SETTINGS_PHONE.iconNight = 'app.media.settings_select_check_theme_night';
@@ -183,17 +183,17 @@ CHOICE_SETTINGS_PHONE.iconWidth = 16;
 CHOICE_SETTINGS_PHONE.iconHeight = 16;
 CHOICE_SETTINGS_PHONE.showIcon = 'selected';
 const CHOICE_SETTINGS_TABLET: ReaderChoiceSpec = copyReaderChoiceSpec();
-CHOICE_SETTINGS_TABLET.height = 42;
+CHOICE_SETTINGS_TABLET.height = 44;
 CHOICE_SETTINGS_TABLET.padding = 14;
 CHOICE_SETTINGS_TABLET.text = TYPE_SETTINGS_SELECT_TABLET_OPTION;
 CHOICE_SETTINGS_TABLET.selectedText = TYPE_SETTINGS_SELECT_TABLET_OPTION;
 CHOICE_SETTINGS_TABLET.selectedWeight = 700;
 CHOICE_SETTINGS_TABLET.ellipsis = false;
 CHOICE_SETTINGS_TABLET.textAlignStart = false;
-CHOICE_SETTINGS_TABLET.textRole = 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17';
-CHOICE_SETTINGS_TABLET.selectedTextRole = 'app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E';
-CHOICE_SETTINGS_TABLET.selectedBackground = 'app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E';
-CHOICE_SETTINGS_TABLET.dividerRole = 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD';
+CHOICE_SETTINGS_TABLET.textRole = 'app.text.heading';
+CHOICE_SETTINGS_TABLET.selectedTextRole = 'TOK_GREEN';
+CHOICE_SETTINGS_TABLET.selectedBackground = 'app.selection.subtle';
+CHOICE_SETTINGS_TABLET.dividerRole = 'app.border.control';
 CHOICE_SETTINGS_TABLET.dividerHeight = 1;
 CHOICE_SETTINGS_TABLET.iconDay = 'app.media.settings_select_check';
 CHOICE_SETTINGS_TABLET.iconNight = 'app.media.settings_select_check_theme_night';

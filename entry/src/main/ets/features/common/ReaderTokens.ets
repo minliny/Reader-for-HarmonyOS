@@ -40,13 +40,13 @@ export const TOK_CONTROL_INK = readerAppColor('TOK_CONTROL_INK', 'day');
 // ----------------------------------------------------------------------------
 // Surface — 表面层级 (页面 / 卡片 / 面板 / 浮起 / 字段 / 透明白)
 // ----------------------------------------------------------------------------
-// Figma: color/runtime/paper/solid  页面背景
+// 2026-10-28 approved warm-white hierarchy: App page paper (reader body is independent).
 export const TOK_PAPER = readerAppColor('TOK_PAPER', 'day');
-// Figma: color/runtime/paper/solid  同 TOK_PAPER (旧别名, 保持兼容)
+// App page alias of TOK_PAPER; preserved for existing scaffold consumers.
 export const TOK_SURFACE = readerAppColor('TOK_SURFACE', 'day');
-// Figma: color/runtime/surface      rgba(255,252,248,0.90)
+// 2026-10-28: opaque embedded paper #F8F4EC; no elevation belongs to this fill.
 export const TOK_CARD_BG = readerAppColor('TOK_CARD_BG', 'day');
-// Figma: color/runtime/surface/solid rgba(255,252,248,0.92)
+// Embedded content alias; the former high-alpha fill does not imply a floating layer.
 export const TOK_CARD_BG_HI = readerAppColor('TOK_CARD_BG_HI', 'day');
 // Figma: color/runtime/surface/panel rgba(255,252,248,0.62)
 export const TOK_SURFACE_PANEL = readerAppColor('TOK_SURFACE_PANEL', 'day');
@@ -54,16 +54,16 @@ export const TOK_SURFACE_PANEL = readerAppColor('TOK_SURFACE_PANEL', 'day');
 export const TOK_SURFACE_PANEL_SOFT = readerAppColor('TOK_SURFACE_PANEL_SOFT', 'day');
 // Figma: color/runtime/surface/elevated rgba(255,255,255,0.78)
 export const TOK_SURFACE_ELEVATED = readerAppColor('TOK_SURFACE_ELEVATED', 'day');
-// Figma: color/runtime/surface/field rgba(255,248,239,0.78)
+// 2026-10-28: opaque warm-white input role, separate from selected/reader input surfaces.
 export const TOK_SURFACE_FIELD = readerAppColor('TOK_SURFACE_FIELD', 'day');
 // Figma: color/runtime/surface/solid/near-opaque
 export const TOK_SURFACE_SOLID_OPAQUE = readerAppColor('TOK_SURFACE_SOLID_OPAQUE', 'day');
-// Figma: color/runtime/surface rgba(255,252,248,1.0) 固实表面 (Sync 卡/导入对话框/源字段)。
-// 与 TOK_SURFACE_SOLID_OPAQUE(0.98) 区分: 本值为 100% 不透明。
+// Opaque fixed-toolbar/modal base. Embedded cards use TOK_CARD_BG; their
+// elevation/edge recipes are selected by the finite surface owner.
 export const TOK_SURFACE_SOLID = readerAppColor('TOK_SURFACE_SOLID', 'day');
 // Figma: color/runtime/surface/translucent rgba(255,252,248,0.42)
 export const TOK_SURFACE_TRANSLUCENT = readerAppColor('TOK_SURFACE_TRANSLUCENT', 'day');
-// Figma: color/control/field/surface rgba(255,248,239,0.82)
+// 2026-10-28: shared App input #E7E1D5; reader controls retain their own role.
 export const TOK_FIELD_SURFACE = readerAppColor('TOK_FIELD_SURFACE', 'day');
 // Figma: color/runtime/primary/bg rgba(45,74,62,0.12)
 export const TOK_PRIMARY_BG = readerAppColor('TOK_PRIMARY_BG', 'day');
@@ -73,7 +73,7 @@ export const TOK_PRIMARY_STRONG = readerAppColor('TOK_PRIMARY_STRONG', 'day');
 // ----------------------------------------------------------------------------
 // Border — 描边 / 分割线
 // ----------------------------------------------------------------------------
-// Figma: color/border/default  卡片描边
+// Legacy shared control/reading border. Embedded cards use app.border.contentCard.
 export const TOK_BORDER = readerAppColor('TOK_BORDER', 'day');
 // Figma: color/settings/row-divider rgba(180,166,151,0.22)
 export const TOK_ROW_DIVIDER = readerAppColor('TOK_ROW_DIVIDER', 'day');
@@ -150,7 +150,7 @@ export const TOK_RADIUS_PILL = 999;
 // ----------------------------------------------------------------------------
 // HarmonyOS calibration: 屏边距 19 (Figma 变量 screen/padding=16, 但节点实测用 19。
 // 该值为节点实测/校准值, 非正式 Figma Variable 来源, 与 TOK_ON_* 等 Variable 绑定区分)。
-export const TOK_SCREEN_INSET = 19;
+export { TOK_SCREEN_INSET } from './ReaderLayoutTokens';
 // Figma: 内容列宽 (Phone 390−2×19)
 export const TOK_CONTENT_MAX_W_PHONE = 352;
 // Figma: 内容列宽 — 子页档 (无左 rail, 19px 边距; 实测 SourceMgmt 722 / Sync·BookDetail·WebDAV 720)。

@@ -240,7 +240,7 @@ export struct ReaderAppearanceMotionStage {
   @Builder
   private appearancePanel() {
     ReaderAppearanceFullPanel({
-      isTablet: false,
+      expandedLayout: false,
       availableWidth: this.availableWidth,
       availableHeight: this.availableHeight,
       reduceMotion: this.reduceMotion,

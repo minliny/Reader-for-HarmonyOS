@@ -1,6 +1,14 @@
 /** Make V17 PhoneScreen EqualiserBar / @keyframes wb; decorative, not audio level. */
 export const READER_TTS_WAVEFORM_HEIGHTS: number[] = [7, 13, 9, 18, 12, 22, 15, 10, 20, 14, 8, 17,
   11, 21, 13, 9, 16, 12, 19, 10, 14, 8, 15, 11];
+export const READER_TTS_WAVEFORM_BAR_COUNT = 24;
+/** Decorative waveform clock; owned here because the sampler is not an ArkUI animation. */
+export const READER_TTS_WAVEFORM_HEIGHT_MS = 300;
+export const READER_TTS_WAVEFORM_COLOR_MS = 350;
+export const READER_TTS_WAVEFORM_ACTIVE_TAIL_MS = 350;
+export const READER_TTS_WAVEFORM_CYCLE_BASE_MS = 650;
+export const READER_TTS_WAVEFORM_CYCLE_STEP_MS = 110;
+export const READER_TTS_WAVEFORM_STAGGER_MS = 30;
 export interface ReaderTtsWaveformSample {
   heights: number[];
   scales: number[];
@@ -12,13 +20,15 @@ export interface ReaderTtsWaveformCurves {
   easeInOut: (progress: number) => number;
 }
 export function createReaderTtsWaveformSample(): ReaderTtsWaveformSample {
-  return { heights: Array(24).fill(4), scales: Array(24).fill(1), opacities: Array(24).fill(1), colorProgress: 0 };
+  return { heights: Array(READER_TTS_WAVEFORM_BAR_COUNT).fill(4),
+    scales: Array(READER_TTS_WAVEFORM_BAR_COUNT).fill(1),
+    opacities: Array(READER_TTS_WAVEFORM_BAR_COUNT).fill(1), colorProgress: 0 };
 }
 
 /** Thin track sampler. Cubic easing is supplied by the platform, not reimplemented. */
 export class ReaderTtsWaveformMotion {
   private playing: boolean = false;
-  private changedAt: number = -350;
+  private changedAt: number = -READER_TTS_WAVEFORM_ACTIVE_TAIL_MS;
   private lastTime: number = 0;
   private from: ReaderTtsWaveformSample = createReaderTtsWaveformSample();
   private value: ReaderTtsWaveformSample = createReaderTtsWaveformSample();
@@ -32,20 +42,25 @@ export class ReaderTtsWaveformMotion {
     this.playing = playing;
     this.changedAt = this.lastTime;
   }
-  active(timeMs: number): boolean { return this.playing || timeMs - this.changedAt < 350; }
+  active(timeMs: number): boolean {
+    return this.playing || timeMs - this.changedAt < READER_TTS_WAVEFORM_ACTIVE_TAIL_MS;
+  }
   sample(timeMs: number, reduceMotion: boolean = false): ReaderTtsWaveformSample {
     if (Number.isFinite(timeMs)) this.lastTime = Math.max(this.lastTime, timeMs);
     const elapsed = Math.max(0, this.lastTime - this.changedAt);
-    const heightProgress = reduceMotion ? 1 : this.curves.ease(Math.min(1, elapsed / 300));
-    const colorProgress = reduceMotion ? 1 : this.curves.ease(Math.min(1, elapsed / 350));
+    const heightProgress = reduceMotion ? 1 :
+      this.curves.ease(Math.min(1, elapsed / READER_TTS_WAVEFORM_HEIGHT_MS));
+    const colorProgress = reduceMotion ? 1 :
+      this.curves.ease(Math.min(1, elapsed / READER_TTS_WAVEFORM_COLOR_MS));
     const heights: number[] = [], scales: number[] = [], opacities: number[] = [];
     for (let index = 0; index < READER_TTS_WAVEFORM_HEIGHTS.length; index += 1) {
       const target = this.playing ? READER_TTS_WAVEFORM_HEIGHTS[index] : 4;
       heights.push(this.from.heights[index] + (target - this.from.heights[index]) * heightProgress);
       let scale = 1;
-      const localTime = elapsed - index * 30;
+      const localTime = elapsed - index * READER_TTS_WAVEFORM_STAGGER_MS;
       if (this.playing && !reduceMotion && localTime >= 0) {
-        const duration = 650 + (index % 5) * 110;
+        const duration = READER_TTS_WAVEFORM_CYCLE_BASE_MS +
+          (index % 5) * READER_TTS_WAVEFORM_CYCLE_STEP_MS;
         const cycle = Math.floor(localTime / duration);
         const progress = (localTime % duration) / duration;
         const alternate = cycle % 2 === 0 ? progress : 1 - progress;

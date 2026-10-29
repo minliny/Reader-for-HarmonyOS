@@ -1,13 +1,10 @@
-import { readerAppColor } from './ReaderThemeRegistry';
-import { mangaDirectoryColor } from '../manga/MangaDirectoryVisual';
+import { TOK_SCREEN_INSET } from './ReaderLayoutTokens';
+import { APP_HEADER_BAR_HEIGHT } from './ReaderHeaderMetrics';
 import { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from './ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
 import { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';
+import { ReaderFooterFrameStyle, ReaderFrameStyle, ReaderHeaderFrameStyle } from './ReaderFrameStyle';
 
-/** Finite production categories; state and native scroll owners stay with pages. */
-export type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'readerDirectory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';
-export type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';
-export type ReaderHeaderSurface = 'solid' | 'transparent';
 export type ReaderFooterSurface = 'solid' | 'transparent';
 export type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';
 
@@ -38,8 +35,21 @@ export function readerStandardPageSpec(variant: ReaderStandardPageVariant): Read
 }
 
 /** Local scroll-content clearance: Index already consumes system/cutout top. */
-export function readerPageContentStartInset(headerHeight: number = 58, toolsHeight: number = 0, gap: number = 0): number {
+export function readerPageContentStartInset(headerHeight: number = APP_HEADER_BAR_HEIGHT, toolsHeight: number = 0, gap: number = 0): number {
   return Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap);
+}
+
+/** Vertical gap between the measured standard-page header and its content. */
+export const READER_STANDARD_PAGE_CONTENT_GAP = 8;
+
+export function readerStandardPageContentStart(headerHeight: number): number {
+  return readerPageContentStartInset(headerHeight, 0, READER_STANDARD_PAGE_CONTENT_GAP);
+}
+
+/** Scaffold receipts report the header's own measured height; headerTop stays
+ * a caller-owned margin. Use this when clearing from the scaffold's top edge. */
+export function readerPresentedHeaderBottom(headerTop: number, headerHeight: number): number {
+  return Math.max(0, headerTop) + Math.max(0, headerHeight);
 }
 
 /** ArkUI Area reports numeric vp or a vp Length string. Keep the platform
@@ -48,19 +58,9 @@ export function readerPageAreaLength(value: Length): number {
   return typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;
 }
 
-/** First-layout fallback only; subsequent clearance uses native measurement. */
-export function readerPageInitialHeaderHeight(kind: 'standard' | 'home' | 'bookshelf'): number {
-  switch (kind) {
-    case 'bookshelf': return 60;
-    case 'standard':
-    case 'home': return 58;
-    default: throw new Error('Unknown Reader initial header kind');
-  }
-}
-
 export function readerStandardPageContentFrame(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, width: number): SurfaceHorizontalFrame {
   return resolveHorizontalFrame(width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-    new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, 19, 19));
+    new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, TOK_SCREEN_INSET, TOK_SCREEN_INSET));
 }
 
 export function readerStandardPageFooterBottom(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot): number {
@@ -74,61 +74,28 @@ export function readerStandardPageContentEndInset(variant: ReaderStandardPageVar
 }
 
 export class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {
-  private readonly scheme: string;
-  private readonly kind: ReaderPageShellKind;
-  private readonly readingUnderlayColor: string;
-  constructor(scheme: string, kind: ReaderPageShellKind = 'standard', readingUnderlayColor: string = '') {
-    this.scheme = scheme; this.kind = kind; this.readingUnderlayColor = readingUnderlayColor;
-  }
+  private readonly style: ReaderFrameStyle;
+  constructor(style: ReaderFrameStyle) { this.style = style; }
   applyNormalAttribute(instance: CommonAttribute): void {
-    if (this.kind === 'reader' || this.kind === 'readerDirectory') {
-      instance.clip(this.kind === 'readerDirectory').backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0); return;
-    }
-    instance.clip(true).zIndex(0);
-    if (this.kind === 'mangaDirectory' || this.kind === 'mangaDetail') {
-      instance.backgroundColor(mangaDirectoryColor('paper', this.scheme));
-    } else {
-      instance.backgroundColor(readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme));
-    }
+    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(0);
   }
 }
 
-/** Floating cards retain their bounded surface/shadow; ordinary fixed headers
- * receive the opaque surface here, including compound search/RSS/selection. */
+/** The feature owns the resolved header surface; the frame only applies it. */
 export class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttribute> {
-  private readonly kind: ReaderHeaderKind;
-  private readonly surface: ReaderHeaderSurface;
-  private readonly scheme: string;
-  constructor(kind: ReaderHeaderKind, surface: ReaderHeaderSurface, scheme: string) {
-    this.kind = kind; this.surface = surface; this.scheme = scheme;
-  }
+  private readonly style: ReaderHeaderFrameStyle;
+  constructor(style: ReaderHeaderFrameStyle) { this.style = style; }
   applyNormalAttribute(instance: CommonAttribute): void {
-    if (this.kind === 'floating' || this.kind === 'mangaDirectory' || this.kind === 'reader') {
-      instance.clip(false).backgroundColor(Color.Transparent).zIndex(10); return;
-    }
-    instance.clip(true).zIndex(10);
-    if (this.surface === 'solid') instance.backgroundColor(readerAppColor(
-      this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme));
-    else instance.backgroundColor(Color.Transparent);
+    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(10);
   }
 }
 
 /** A fixed dock masks the complete footer lane, including horizontal gutters
  * and bottom safe area. Floating/flowing footers keep their bounded card paint. */
 export class ReaderFooterFrameModifier implements AttributeModifier<CommonAttribute> {
-  private readonly kind: ReaderPageShellKind;
-  private readonly surface: ReaderFooterSurface;
-  private readonly scheme: string;
-  private readonly readingUnderlayColor: string;
-  constructor(kind: ReaderPageShellKind, surface: ReaderFooterSurface, scheme: string, readingUnderlayColor: string = '') {
-    this.kind = kind; this.surface = surface; this.scheme = scheme; this.readingUnderlayColor = readingUnderlayColor;
-  }
+  private readonly style: ReaderFooterFrameStyle;
+  constructor(style: ReaderFooterFrameStyle) { this.style = style; }
   applyNormalAttribute(instance: CommonAttribute): void {
-    if (this.surface === 'solid') {
-      new ReaderPageFrameModifier(this.scheme, this.kind, this.readingUnderlayColor).applyNormalAttribute(instance);
-      instance.clip(true);
-    } else {
-      instance.clip(false).backgroundColor(Color.Transparent).zIndex(0);
-    }
+    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(0);
   }
 }

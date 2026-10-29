@@ -1,5 +1,93 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+
+export type ReaderSurfaceElevationKind = 'embedded' | 'fixed' | 'floating' | 'popover' | 'sheet';
+class ReaderSurfaceElevationSpec {
+  readonly radiusVp: number;
+  readonly offsetYVp: number;
+  readonly shadowRole: ReaderAppColorRole;
+  constructor(radiusVp: number, offsetYVp: number, shadowRole: ReaderAppColorRole) {
+    this.radiusVp = radiusVp; this.offsetYVp = offsetYVp; this.shadowRole = shadowRole;
+  }
+}
+
+// The material relationship owns the lift. Fixed position does not imply
+// elevation; cover and reader-body lighting remain separate contracts.
+const FLAT_ELEVATION = new ReaderSurfaceElevationSpec(0, 0, 'app.surface.transparent');
+const FLOATING_ELEVATION = new ReaderSurfaceElevationSpec(20, 8, 'app.navigation.floatingShadow');
+const POPOVER_ELEVATION = new ReaderSurfaceElevationSpec(20, 5, 'app.shadow.menu');
+const SHEET_ELEVATION = new ReaderSurfaceElevationSpec(24, -4, 'app.shadow.sheet');
+
+function resolveSurfaceElevationSpec(kind: ReaderSurfaceElevationKind): ReaderSurfaceElevationSpec {
+  if (kind === 'embedded' || kind === 'fixed') return FLAT_ELEVATION;
+  if (kind === 'floating') return FLOATING_ELEVATION;
+  if (kind === 'popover') return POPOVER_ELEVATION;
+  if (kind === 'sheet') return SHEET_ELEVATION;
+  throw new Error('Unknown Reader surface elevation');
+}
+
+/** ArkUI ShadowOptions radius/offset are physical px (SDK common.d.ts:7484).
+ * Specs are logical vp, resolved once through the live window density. */
+export function readerSurfaceElevation(kind: ReaderSurfaceElevationKind, scheme: string): ShadowOptions {
+  const spec = resolveSurfaceElevationSpec(kind);
+  const observedDensity = ReaderWindowCoordinator.metrics().densityPixels;
+  const density = Number.isFinite(observedDensity) && observedDensity > 0 ? observedDensity : 1;
+  return { radius: spec.radiusVp * density, offsetX: 0, offsetY: spec.offsetYVp * density,
+    color: readerAppColor(spec.shadowRole, scheme) };
+}
+
+/** Raised chrome keeps its multi-layer geometry in the same surface authority.
+ * Canvas blur is px; path/spread/offset coordinates remain logical vp. */
+export class ReaderShadowLayerSpec {
+  readonly radiusVp: number;
+  readonly offsetXVp: number;
+  readonly offsetYVp: number;
+  readonly spreadVp: number;
+  readonly shadowRole: ReaderAppColorRole;
+  constructor(radiusVp: number, offsetYVp: number, spreadVp: number, shadowRole: ReaderAppColorRole) {
+    this.radiusVp = radiusVp;
+    this.offsetXVp = 0;
+    this.offsetYVp = offsetYVp;
+    this.spreadVp = spreadVp;
+    this.shadowRole = shadowRole;
+  }
+}
+
+export class ReaderRaisedSurfaceSpec {
+  readonly canvasOutsetVp: number = 48;
+  readonly casterShiftVp: number = 1024;
+  // Paint far-to-near; CSS lists the frontmost contact shadow first.
+  readonly layers: ReaderShadowLayerSpec[] = [
+    new ReaderShadowLayerSpec(28, 12, 3, 'app.chrome.raisedShadowAmbient'),
+    new ReaderShadowLayerSpec(8, 3, 0, 'app.chrome.raisedShadowNear'),
+    // A zero-blur offset casts a second hard outline beside the owner's border.
+    // Keep contact depth, with a short falloff at every display density.
+    new ReaderShadowLayerSpec(1, 1, 0, 'app.chrome.raisedShadowContact'),
+  ];
+}
+const RAISED_SURFACE_SPEC = new ReaderRaisedSurfaceSpec();
+export function readerRaisedSurfaceSpec(): ReaderRaisedSurfaceSpec { return RAISED_SURFACE_SPEC; }
+
+export class ReaderHeaderVeilSpec {
+  readonly idleBlurRadius: number = 10;
+  readonly scrolledBlurRadius: number = 14;
+  readonly surfaceRole: ReaderAppColorRole = 'app.header.veilSurface';
+  readonly scrolledSurfaceRole: ReaderAppColorRole = 'app.header.veilSurfaceScrolled';
+  readonly borderRole: ReaderAppColorRole = 'app.header.veilBorder';
+}
+const HEADER_VEIL_SPEC = new ReaderHeaderVeilSpec();
+
+/** Clearing veil requires backgroundEffect(undefined) AND a solid background;
+ * native radius=0 does not paint the opaque effect color (P0 native evidence). */
+export function readerHeaderVeilMaterial(scrolled: boolean, scheme: string): BackgroundEffectOptions {
+  return { radius: scrolled ? HEADER_VEIL_SPEC.scrolledBlurRadius : HEADER_VEIL_SPEC.idleBlurRadius,
+    color: readerAppColor(scrolled ? HEADER_VEIL_SPEC.scrolledSurfaceRole : HEADER_VEIL_SPEC.surfaceRole, scheme) };
+}
+export function readerHeaderVeilBorder(scheme: string): string {
+  return readerAppColor(HEADER_VEIL_SPEC.borderRole, scheme);
+}
 
 /** Actual drawer frames, including the selected source drawer. Owners supply
  * measured geometry and safe insets; the existing bounded surface paints it. */
@@ -8,7 +96,10 @@ export class DrawerSurfaceSpec {
   readonly maxWidth: number = SOURCE_SWITCH_VISUAL.drawerMaxWidth;
   readonly cornerRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
   readonly surfaceRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
-  readonly lineRole: ReaderAppColorRole = 'TOK_ROW_DIVIDER';
+  readonly lineRole: ReaderAppColorRole = 'app.border.menu';
+  readonly edgeHighlightRole: ReaderAppColorRole = 'app.border.modalHighlight';
+  readonly edgeWidth: number = 1;
+  readonly elevation: ReaderSurfaceElevationKind = 'sheet';
   readonly scrimRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';
   readonly inkRole: ReaderAppColorRole = 'TOK_INK';
   readonly minimumContentHeight: number = 0;
@@ -225,7 +316,7 @@ export function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {
  * and width; the sheet content reads one shared contract for its measured
  * frame, handle, title and action rows.
  */
-export type SheetSpecId = 'bookshelf-book-action';
+export type SheetSpecId = 'bookshelf-book-action' | 'search-result-filter' | 'search-task-status';
 
 /** The native book Sheet owns its one opaque frame and safe area. Content
  * flows naturally into FIT_CONTENT; no fixed legacy row offsets or height. */
@@ -247,12 +338,32 @@ export class SheetSurfaceSpec {
   readonly borderRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
   readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
   readonly titleRole: ReaderAppColorRole = 'TOK_INK';
-  readonly hostBackgroundRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
+  readonly hostBackgroundRole: ReaderAppColorRole = 'app.bookshelf.sheetSurface';
   readonly hostMaskRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';
+  readonly hostElevation: ReaderSurfaceElevationKind = 'sheet';
+  readonly hostBorderWidth: number = 1;
+  readonly hostBorderRole: ReaderAppColorRole = 'app.border.modalHighlight';
+  readonly compactHeader: boolean = false;
+  readonly closeSize: number = 44;
+  readonly closeIcon: number = 18;
+  readonly titleGap: number = 8;
+
+  constructor(compactHeader: boolean = false) {
+    this.compactHeader = compactHeader;
+    if (compactHeader) {
+      this.handleWidth = 34; this.handleHeight = 4;
+      this.handleTop = 10; this.handleBottom = 7;
+      this.titleHeight = 44; this.titleBottom = 12;
+      this.titleFontFamily = 'ReaderNotoSansSCUIMedium';
+      this.titleFontWeight = 500; this.titleFontSize = 16; this.titleLineHeight = 24;
+    }
+  }
 }
 
 const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
   'bookshelf-book-action': new SheetSurfaceSpec(),
+  'search-result-filter': new SheetSurfaceSpec(true),
+  'search-task-status': new SheetSurfaceSpec(true),
 };
 
 export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
@@ -304,7 +415,7 @@ export function resolveActionSheetSpec(_id: ActionSheetSpecId): ActionSheetSurfa
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.
  */
-export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet';
+export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'tts-config-picker' | 'settings-select-tablet';
 
 export interface PopupSurfaceSpecInit {
   actionMutesContent?: boolean;
@@ -413,6 +524,21 @@ export class PopupSurfaceSpec {
   get collapsedHeight(): number {
     return this.pointerHeight + this.actionHeight;
   }
+
+  /** Authored row height plus the enlarged line box, so labels keep their
+   * original padding instead of being clipped by the fixed popup frame. */
+  actionHeightFor(fontScale: number): number {
+    const scale = Number.isFinite(fontScale) && fontScale > 0 ? Math.max(1, fontScale) : 1;
+    return Math.ceil(this.actionHeight + this.actionLineHeight * Math.max(0, scale - 1));
+  }
+
+  expandedHeightFor(fontScale: number): number {
+    return this.pointerHeight + this.actionHeightFor(fontScale) * this.actionCount;
+  }
+
+  collapsedHeightFor(fontScale: number): number {
+    return this.pointerHeight + this.actionHeightFor(fontScale);
+  }
 }
 
 const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
@@ -430,13 +556,13 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionPaddingLeft: 18, actionPaddingRight: 16,
     actionIconSize: 24, dividerInset: 16, dividerHeight: 1,
     pointerPoints: [[0, 12], [12, 0], [24, 12]],
-    surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
-    surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
-    surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
-    pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
-    pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
-    actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',
-    dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+    surfaceBackgroundRole: 'app.surface.menuSolid',
+    surfaceBorderRole: 'app.border.menu',
+    surfaceShadowRole: 'app.shadow.menu',
+    pointerFillRole: 'app.surface.menuSolid',
+    pointerStrokeRole: 'app.border.menu',
+    actionTextRole: 'app.text.heading',
+    dividerRole: 'app.border.menuDivider',
     actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
   }),
   // Reader control More menu. It shares the bookshelf More surface family,
@@ -452,13 +578,13 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionPaddingLeft: 18, actionPaddingRight: 18,
     actionIconSize: 0, dividerInset: 16, dividerHeight: 1,
     pointerPoints: [[0, 12], [12, 0], [24, 12]],
-    surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
-    surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
-    surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
-    pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
-    pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
+    surfaceBackgroundRole: 'app.surface.menuSolid',
+    surfaceBorderRole: 'app.border.menu',
+    surfaceShadowRole: 'app.shadow.menu',
+    pointerFillRole: 'app.surface.menuSolid',
+    pointerStrokeRole: 'app.border.menu',
     actionTextRole: 'TOK_INK',
-    dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+    dividerRole: 'app.border.menuDivider',
     actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
   }),
   // Source-switch window: the content state machine remains in the consumer;
@@ -494,12 +620,31 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionPaddingLeft: 0, actionPaddingRight: 0,
     actionIconSize: 0, dividerInset: 0, dividerHeight: 0,
     pointerPoints: [],
-    surfaceBackgroundRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',
-    surfaceBorderRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
-    surfaceShadowRole: 'app.ReaderTtsConfigOverlay.build.color.471F1B17',
-    pointerFillRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',
-    pointerStrokeRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
-    actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    surfaceBackgroundRole: 'app.surface.readerConfig',
+    surfaceBorderRole: 'app.border.readerConfig',
+    surfaceShadowRole: 'app.shadow.readerConfig',
+    pointerFillRole: 'app.surface.readerConfig',
+    pointerStrokeRole: 'app.border.readerConfig',
+    actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.border.readerConfig',
+    actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
+  }),
+  // Reader picker keeps its dedicated material and legacy physical shadow;
+  // the bounded renderer does not maintain a second private geometry tuple.
+  'tts-config-picker': new PopupSurfaceSpec({
+    height: 0, width: 364, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 0, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 0,
+    borderWidth: 0.5, borderRadius: 14,
+    shadowRadius: 36, shadowOffsetY: 14,
+    actionPaddingLeft: 0, actionPaddingRight: 0,
+    actionIconSize: 0, dividerInset: 0, dividerHeight: 0,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'app.surface.readerConfig',
+    surfaceBorderRole: 'app.border.readerConfig',
+    surfaceShadowRole: 'app.shadow.readerConfigSecondary',
+    pointerFillRole: 'app.surface.readerConfig',
+    pointerStrokeRole: 'app.border.readerConfig',
+    actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.border.readerConfig',
     actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
   }),
   // Tablet settings selector popover.  The options and selection callbacks
@@ -514,13 +659,13 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionPaddingLeft: 14, actionPaddingRight: 14,
     actionIconSize: 14, dividerInset: 14, dividerHeight: 1,
     pointerPoints: [],
-    surfaceBackgroundRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',
-    surfaceBorderRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',
-    surfaceShadowRole: 'app.SettingsSelectOverlay.tabletPanel.color.1F1B171F',
-    pointerFillRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',
-    pointerStrokeRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',
-    actionTextRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17',
-    dividerRole: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD',
+    surfaceBackgroundRole: 'app.surface.menuSolid',
+    surfaceBorderRole: 'app.border.menu',
+    surfaceShadowRole: 'app.shadow.selectPanel',
+    pointerFillRole: 'app.surface.menuSolid',
+    pointerStrokeRole: 'app.border.menu',
+    actionTextRole: 'app.text.heading',
+    dividerRole: 'app.border.control',
     actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 13, actionLineHeight: 16,
   }),
 };

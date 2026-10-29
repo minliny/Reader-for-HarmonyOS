@@ -191,6 +191,18 @@ export class SearchGateway {
     await this.runtimeOwner.request('search.history.clear', {});
   }
 
+  /** The existing Core keyword command owns the same durable history table. */
+  async deleteHistory(keyword: string): Promise<void> {
+    if (typeof keyword !== 'string' || keyword.trim().length === 0) {
+      throw new Error('search-keyword.delete requires a non-blank keyword');
+    }
+    const word = keyword.trim();
+    const result = await this.runtimeOwner.request('search-keyword.delete', { word });
+    if (result.data['word'] !== word || typeof result.data['deleted'] !== 'boolean') {
+      throw new Error('search-keyword.delete returned invalid data');
+    }
+  }
+
   /**
    * `book.search` is a real Core call that routes live source requests through
    * the Host. The Harmony Host deliberately rejects transport semantics it

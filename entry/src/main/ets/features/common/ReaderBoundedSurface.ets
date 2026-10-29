@@ -50,7 +50,7 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       instance.width(this.width).height(this.height);
       if (this.id !== 'local-import-result-content') instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))
         .borderRadius(spec.borderRadius).shadow({ radius: 50,
-          color: readerAppColor(this.id === 'local-import-selection' ? 'app.LocalImportDialog.fileSelectionPanel.color.40000000' : 'app.LocalImportDialog.build.color.40000000', this.scheme), offsetX: 0, offsetY: 25 });
+          color: readerAppColor(this.id === 'local-import-selection' ? 'app.shadow.dialog' : 'app.shadow.dialog', this.scheme), offsetX: 0, offsetY: 25 });
       return;
     }
     if (this.id === 'reader-replace-editor') {
@@ -76,7 +76,7 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',
     }).shadow({
         radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,
-        color: readerAppColor(this.id === 'tts-config-picker' ? 'app.ReaderTtsConfigOverlay.build.color.381F1B17' : spec.surfaceShadowRole, this.scheme),
+        color: readerAppColor(this.id === 'tts-config-picker' ? 'app.shadow.readerConfigSecondary' : spec.surfaceShadowRole, this.scheme),
         offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,
       }).clip(true);
   }

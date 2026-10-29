@@ -1,7 +1,9 @@
 import curves from '@ohos.curves';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
   READER_CONTROL_DISMISS_MS } from './ProductMotionTiming';
-
+import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+import { MANGA_DIRECTORY_VISUAL } from '../manga/MangaDirectoryVisual';
+import { readerPanelActorPose } from '../reading/ReaderPanelMotionContract';
 // ----------------------------------------------------------------------------
 // MotionSpec — 动效注册表
 // 当前产品时序来自 ProductMotionTiming 与各动效族条目；空间轨迹仍由 Figma 派生几何负责。
@@ -9,8 +11,9 @@ import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAP
 // 生产入口、历史注册项和旧组件测试必须区分，不以旧参数推断当前画面。
 // ----------------------------------------------------------------------------
 // 注意: reader.control.show 一个 contract id 对应两个位移 target (TopBar y-8,
-// ControlDock y+18), 故注册表条目只存 duration/curve 权威参数, fromY 由
-// fadeSlideTransition/panelActorTransition 的调用方按元素传入 (值同样来自 Figma MR1)。
+// ControlDock y+18)。这两个端点由 ReaderControlMotionGeometry 的空间采样拥有，
+// 不在注册表重复；注册表条目只保存时长/曲线，panel actor 的 fromY 与 delay 则
+// 随条目登记，避免调用点再次抄写 Figma 数值。
 
 export interface MotionSpecEntry {
   id: string;
@@ -40,11 +43,10 @@ export interface BookshelfViewMotionContract {
   coverMoveDurationMs: number;
   coverScaleDurationMs: number;
   coverStaggerMs: number;
-  holdCurve: Curve | curves.ICurve;
-  contentCurve: Curve | curves.ICurve;
-  coverMoveCurve: Curve | curves.ICurve;
-  coverScaleCurve: Curve | curves.ICurve;
-  coverFadeCurve: Curve | curves.ICurve;
+  contentCurve: curves.ICurve;
+  coverMoveCurve: curves.ICurve;
+  coverScaleCurve: curves.ICurve;
+  coverFadeCurve: curves.ICurve;
 }
 
 const BOOKSHELF_VIEW_MOTION: BookshelfViewMotionContract = {
@@ -62,11 +64,10 @@ const BOOKSHELF_VIEW_MOTION: BookshelfViewMotionContract = {
   coverMoveDurationMs: 420, // 42%
   coverScaleDurationMs: 250, // 25%
   coverStaggerMs: 30, // 3%
-  holdCurve: Curve.Linear,
   contentCurve: curves.cubicBezierCurve(0.4, 0, 0.2, 1),
   coverMoveCurve: curves.cubicBezierCurve(0.2, 0, 0, 1),
   coverScaleCurve: curves.cubicBezierCurve(0.25, 0.1, 0, 1),
-  coverFadeCurve: Curve.EaseOut,
+  coverFadeCurve: curves.cubicBezierCurve(0, 0, 0.58, 1),
 };
 
 const ENTRIES: MotionSpecEntry[] = [
@@ -159,6 +160,50 @@ const ENTRIES: MotionSpecEntry[] = [
   // coordinated timeline. Shared-element reflow keeps covers as entities and
   // fades only the authored local layers, never the whole page.
   { id: 'bookshelf.view.switch', durationMs: 1000, curve: Curve.EaseOut },
+  // Reviewed bookshelf demo: the filter keeps its mounted host through both
+  // directions, while navigation covers are visual actors over the live route.
+  { id: 'bookshelf.filter.expand', durationMs: 240, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.filter.collapse', durationMs: 180, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
+  { id: 'bookshelf.filter.content.in', durationMs: 160, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.filter.content.out', durationMs: 100, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
+  { id: 'bookshelf.open.carry', durationMs: 320, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.open.turn', durationMs: 300, curve: curves.cubicBezierCurve(0.3, 0, 0.2, 1) },
+  { id: 'bookshelf.open.handoff', durationMs: 160, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
+  { id: 'bookshelf.open.fade', durationMs: 180, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
+  { id: 'search.surface.open', durationMs: 650, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
+  { id: 'search.surface.submit', durationMs: 700, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
+  { id: 'search.surface.back', durationMs: 390, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
+  // Search filter disclosure: the header panel and its result clearance change
+  // in one native layout pass, so both directions share this timing.
+  { id: 'search.filters.toggle', durationMs: 180, curve: curves.cubicBezierCurve(0.42, 0, 0.58, 1) },
+  // Keyboard/window insets change the measured history viewport. The panel
+  // follows the new limit instead of collapsing and re-measuring from zero.
+  { id: 'search.history.resize', durationMs: 180, curve: curves.cubicBezierCurve(0.2, 0, 0.2, 1) },
+  // Generated SourceSwitchVisual drawer: the scrim, drawer and row entrance
+  // share one authored curve, so the registry is the only rebuild site.
+  { id: 'source.switch.open', durationMs: SOURCE_SWITCH_VISUAL.openDurationMs,
+    curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
+      SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) },
+  { id: 'source.switch.close', durationMs: SOURCE_SWITCH_VISUAL.closeDurationMs,
+    curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
+      SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) },
+  { id: 'source.switch.row.enter', durationMs: SOURCE_SWITCH_VISUAL.rowEnterDurationMs,
+    curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
+      SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) },
+  // Candidate list publish when no scroll anchor survived the update.
+  { id: 'source.switch.list.update', durationMs: 220, curve: Curve.EaseInOut },
+  // Generated MangaDirectoryVisual fold cadence (chevron + nested rows).
+  { id: 'manga.directory.fold', durationMs: MANGA_DIRECTORY_VISUAL.foldDuration, curve: Curve.Ease },
+  // Manga sheet scrim is opacity-only; the sheet body keeps its spring clock.
+  { id: 'manga.panel.scrim', durationMs: 160, curve: Curve.EaseInOut },
+  // Vendor pull-to-refresh reset settle.
+  { id: 'manga.pullRefresh.reset', durationMs: 180, curve: Curve.EaseOut },
+  // Local import sheet handoff: spinner fade, shell resize, result reveal.
+  { id: 'bookshelf.import.handoff.fade', durationMs: 120, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.import.handoff.resize', durationMs: 220, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'bookshelf.import.handoff.reveal', durationMs: 140, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  // Transient feedback enter/exit pair.
+  { id: 'message.feedback.enter', durationMs: 220, curve: Curve.EaseOut },
 ];
 
 /** Product layer beats, relative to the single capsule flight clock. */
@@ -176,40 +221,20 @@ function requireEntry(id: string): MotionSpecEntry {
 }
 
 /**
- * Figma MR1 authors the control show/hide actors as opacity + translate dual
- * components (TopBar/Dock fade while sliding). .animation() on the combined
- * effect drives both components with the registered duration/curve.
- * MR1/C (1247:627) confirms quick.promote is the same dual-component pair:
- * SearchQuick incoming = opacity 0->1 + y 12->0.
+ * One J~Q shell-morph actor: authored slide plus a 0->1/1->0 fade. The
+ * endpoint and entry delay are part of the registry entry, so callers do not
+ * re-state Figma geometry. The exit plays fromY reversed (0 -> +fromY),
+ * matching the Figma outgoing keyframes.
  */
-export function fadeSlideTransition(id: string, fromY: number): TransitionEffect {
+export function panelActorTransition(id: string): TransitionEffect {
   const entry = requireEntry(id);
-  return TransitionEffect.OPACITY
-    .combine(TransitionEffect.translate({ y: fromY }))
-    .animation({ duration: entry.durationMs, curve: entry.curve });
-}
-
-/** 非对称 show/hide 过渡: 进入用 show 项, 退出用 hide 项, 同一位移偏移。 */
-export function showHideTransition(showId: string, hideId: string, fromY: number): TransitionEffect {
-  return TransitionEffect.asymmetric(
-    fadeSlideTransition(showId, fromY),
-    fadeSlideTransition(hideId, fromY),
-  );
-}
-
-/**
- * One J~Q shell-morph actor: 18px slide plus a 0->1/1->0 fade, with the
- * optional authored entry delay (full.incoming 140ms / full.outgoing 10ms /
- * dock.incoming 150ms). fromY is the entering offset; the exit plays it
- * reversed (0 -> +fromY), matching the Figma outgoing 0px->18px keyframes.
- */
-export function panelActorTransition(id: string, fromY: number, delayMs: number = 0): TransitionEffect {
-  const entry = requireEntry(id);
+  const pose = readerPanelActorPose(id);
+  const delayMs = pose?.delayMs ?? 0;
   const anim: AnimateParam = delayMs > 0 ?
     { duration: entry.durationMs, curve: entry.curve, delay: delayMs } :
     { duration: entry.durationMs, curve: entry.curve };
   return TransitionEffect.OPACITY
-    .combine(TransitionEffect.translate({ y: fromY }))
+    .combine(TransitionEffect.translate({ y: pose?.fromY ?? 0 }))
     .animation(anim);
 }
 
@@ -220,6 +245,18 @@ export function motionAnimateParam(id: string, onFinish?: () => void): AnimatePa
     return { duration: entry.durationMs, curve: entry.curve };
   }
   return { duration: entry.durationMs, curve: entry.curve, onFinish };
+}
+
+/** Sequenced feature motion: the caller owns the delay, the registry owns the
+ * duration and curve. */
+export function motionAnimateParamDelayed(id: string, delayMs: number,
+  onFinish?: () => void): AnimateParam {
+  const entry = requireEntry(id);
+  const delay = Math.max(0, Number.isFinite(delayMs) ? delayMs : 0);
+  if (onFinish === undefined) {
+    return { duration: entry.durationMs, curve: entry.curve, delay };
+  }
+  return { duration: entry.durationMs, curve: entry.curve, delay, onFinish };
 }
 
 export function bookshelfViewMotionContract(): BookshelfViewMotionContract {
@@ -235,42 +272,4 @@ export function bookshelfViewCoverDelayMs(index: number): number {
   const column = safeIndex % 3;
   const rowBand = Math.min(1, Math.floor(safeIndex / 3));
   return ((rowBand * 3) + column) * BOOKSHELF_VIEW_MOTION.coverStaggerMs;
-}
-
-export function bookshelfViewCoverMoveAnimation(index: number, reduceMotion: boolean = false): AnimateParam | undefined {
-  if (reduceMotion) return undefined;
-  return {
-    duration: BOOKSHELF_VIEW_MOTION.coverMoveDurationMs,
-    delay: bookshelfViewCoverDelayMs(index),
-    curve: BOOKSHELF_VIEW_MOTION.coverMoveCurve,
-  };
-}
-
-export function bookshelfViewCoverScaleAnimation(index: number, reduceMotion: boolean = false): AnimateParam | undefined {
-  if (reduceMotion) return undefined;
-  return {
-    duration: BOOKSHELF_VIEW_MOTION.coverScaleDurationMs,
-    delay: bookshelfViewCoverDelayMs(index),
-    curve: BOOKSHELF_VIEW_MOTION.coverScaleCurve,
-  };
-}
-
-/**
- * Page drags consume part of a motion before release. Scale the registered
- * full-width duration by only the distance still left to travel, while keeping
- * a one-third floor so a nearly complete gesture retains a visible settle.
- */
-export function motionRemainingDistanceAnimateParam(
-  id: string,
-  remainingDistanceRatio: number,
-  onFinish?: () => void,
-): AnimateParam {
-  const entry = requireEntry(id);
-  const finiteRatio = Number.isFinite(remainingDistanceRatio) ? remainingDistanceRatio : 1;
-  const durationScale = Math.max(1 / 3, Math.min(1, finiteRatio));
-  const duration = Math.round(entry.durationMs * durationScale);
-  if (onFinish === undefined) {
-    return { duration, curve: entry.curve };
-  }
-  return { duration, curve: entry.curve, onFinish };
 }

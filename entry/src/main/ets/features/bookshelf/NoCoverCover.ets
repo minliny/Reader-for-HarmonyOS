@@ -22,7 +22,7 @@ export struct NoCoverCover {
       Text('')
         .width(this.ruleWidth())
         .height(1)
-        .backgroundColor(readerAppColor('app.NoCoverCover.build.backgroundColor.2E41484C', this.appThemeScheme))
+        .backgroundColor(readerAppColor('app.cover.fallbackMask', this.appThemeScheme))
         .borderRadius(0.5)
         .position({ x: (this.coverWidth - this.ruleWidth()) / 2, y: 52 / 145.44 * this.coverHeight });
 
@@ -40,7 +40,7 @@ export struct NoCoverCover {
       Text('')
         .width(this.ruleWidth())
         .height(1)
-        .backgroundColor(readerAppColor('app.NoCoverCover.build.backgroundColor.2E41484C', this.appThemeScheme))
+        .backgroundColor(readerAppColor('app.cover.fallbackMask', this.appThemeScheme))
         .borderRadius(0.5)
         .position({ x: (this.coverWidth - this.ruleWidth()) / 2, y: 92.44 / 145.44 * this.coverHeight });
     }

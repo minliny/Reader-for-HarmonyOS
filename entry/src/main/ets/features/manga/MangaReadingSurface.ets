@@ -1,12 +1,12 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { readerActionIcon } from '../common/ReaderActionIconResources';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderPageState } from '../common/ReaderPageState';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
-import deviceInfo from '@ohos.deviceInfo';
 import hilog from '@ohos.hilog';
 import curves from '@ohos.curves';
 import inputMethod from '@ohos.inputMethod';
@@ -42,11 +42,12 @@ import { TOK_BORDER_W } from '../common/ReaderTokens';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,
   READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';
 import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
-import { ReaderPageFrameModifier } from '../common/ReaderPageShell';
 import { ReaderActionSheetContent, ReaderActionSheetAction, type ReaderActionSheetVariant } from '../common/ReaderActionSheetContent';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { resolveDrawerSpec } from '../common/ReaderSurfaceSpecs';
+import { motionAnimateParam } from '../common/MotionSpec';
+import { readerMotionDurationMs } from '../common/ReaderMotionPolicy';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
@@ -539,7 +540,7 @@ export struct MangaReadingSurface {
     const key = `${this.controller?.chapter?.manifest.manifestVersion ?? ''}\u0000${failure}`;
     if (key === this.preparationFailureNoticeKey) return;
     this.preparationFailureNoticeKey = key;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.displayError(failure), duration: 2000, key }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && this.opened); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.displayError(failure), duration: READER_FEEDBACK_BRIEF_MS, key }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && this.opened); } catch (_) {}
   }
   private notifyPublishedRows(structure: boolean): void {
     // Image/auth facts are plain controller fields, not an observed UI property.
@@ -1456,7 +1457,7 @@ export struct MangaReadingSurface {
       }
       if (this.mounted && generation === this.boundaryGeneration && message !== 'MANGA_SESSION_CANCELLED') {
         this.boundaryFailure = '章节暂时打不开，请稍后再试。';
-        try { this.transientFeedback.show(() => this.getUIContext(), { message: this.boundaryFailure, duration: 2000 }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && generation === this.boundaryGeneration); }
+        try { this.transientFeedback.show(() => this.getUIContext(), { message: this.boundaryFailure, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && !this.exiting && this.windowChromeActive && this.isReaderIdentityCurrent() && generation === this.boundaryGeneration); }
         catch (_error) { /* Feedback cannot interrupt rollback or resource cleanup. */ }
         hilog.warn(0x5244, 'Reader', 'Boundary chapter preparation failed: %{public}s', message);
       }
@@ -1640,7 +1641,8 @@ export struct MangaReadingSurface {
     // endpoint before either animation changes the observed values.
     this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
       if (!this.mounted || generation !== this.panelGeneration || this.panelPhase !== 'opening') return;
-      this.getUIContext().animateTo({ duration: 160, curve: Curve.EaseInOut }, (): void => { this.panelScrimOpacity = 1; });
+      this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
+        (): void => { this.panelScrimOpacity = 1; });
       this.settlePanel(generation);
     }));
   }
@@ -1703,7 +1705,8 @@ export struct MangaReadingSurface {
     }
     this.panelCloseTask = new Promise<boolean>((resolve): void => {
       this.panelCloseResolve = resolve;
-      this.getUIContext().animateTo({ duration: 160, curve: Curve.EaseInOut }, (): void => { this.panelScrimOpacity = 0; });
+      this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
+        (): void => { this.panelScrimOpacity = 0; });
       this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 1.05, 250, 30), onFinish: (): void => {
         if (!this.mounted || generation !== this.panelGeneration) { resolve(false); return; }
         this.panel = ''; this.panelOffset = 0; this.panelPhase = 'closed';
@@ -1769,10 +1772,10 @@ export struct MangaReadingSurface {
     return selected ? $r('app.media.manga_sheet_moon_active') : night ? $r('app.media.manga_sheet_moon_theme_night') : $r('app.media.manga_sheet_moon');
   }
   private persistentDirectory(): boolean {
-    return mangaUsesPersistentDirectory(this.stageWidth, this.stageHeight, deviceInfo.deviceType === 'tablet');
+    return mangaUsesPersistentDirectory(this.stageWidth, this.stageHeight);
   }
   private directoryColumnWidth(): number { return mangaDirectoryColumnWidth(this.stageWidth); }
-  private widePanel(): boolean { return this.persistentDirectory() || this.viewportWidth >= 600 || this.viewportWidth > this.viewportHeight; }
+  private widePanel(): boolean { return this.persistentDirectory() || readerIsExpandedWidth(this.viewportWidth) || this.viewportWidth > this.viewportHeight; }
   private panelWidth(): number | string {
     if (!this.widePanel()) return this.isActionPanel() ? Math.min(resolveDrawerSpec('reader-action-sheet').maxWidth, this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) : '100%';
     return this.stageWidth <= 700 ? Math.min(320, this.stageWidth * 0.85) :
@@ -2020,7 +2023,7 @@ export struct MangaReadingSurface {
       customLoad: (): void => { this.boundaryHint('next'); },
       pullEnabled: this.boundaryEnabled(), hasPrevious: false,
       hasNext: this.adjacentChapter(1) !== undefined, resetToken: this.boundaryReset,
-      animationDuration: this.reduceMotion ? 0 : 180,
+      animationDuration: readerMotionDurationMs('manga.pullRefresh.reset', this.reduceMotion),
       onPull: (direction: PullDirection, distance: number, armed: boolean): void => this.onBoundaryPull(direction, distance, armed),
       onActivity: (active: boolean): void => this.onBoundaryActivity(active),
       onRefresh: (): Promise<string> => this.turnBoundaryChapter(-1),
@@ -2041,7 +2044,8 @@ export struct MangaReadingSurface {
         Image(pixel.uri).width(pixel.width).height(pixel.height).objectFit(ImageFit.Fill)
           .position({ x: pixel.x, y: pixel.y }).draggable(false);
       }, (pixel: MangaRetainedPixel): string => pixel.key);
-    }.width('100%').height('100%').attributeModifier(new ReaderPageFrameModifier(this.backgroundPreference === 'ink' ? 'night' : 'day', 'reader', this.paperColor())).clip(true).hitTestBehavior(HitTestMode.None);
+    }.width('100%').height('100%').backgroundColor(this.paperColor()).clip(true).zIndex(0)
+      .hitTestBehavior(HitTestMode.None);
   }
   @Builder
   private tileImage(row: MangaStripRow, uri: string, renderKey: string,
@@ -2154,8 +2158,8 @@ export struct MangaReadingSurface {
         }.width(88).justifyContent(FlexAlign.End);
       }.height(52).width('100%').backgroundColor(this.surfaceColor())
         .border({ width: TOK_BORDER_W, color: this.lineColor() }).borderRadius(18).clip(true)
-        .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 18,
-          color: this.appThemeScheme === 'night' ? '#22000000' : '#1A594632', offsetX: 0, offsetY: 5 });
+        .shadow({ radius: this.backgroundPreference === 'ink' ? 0 : 8,
+          color: this.backgroundPreference === 'ink' ? '#22000000' : '#1A594632', offsetX: 0, offsetY: 3 });
       if (this.recovering) {
         ReaderRecoveryNotice({ tag: '内容更新',
           view: { visible: true, generation: this.presentationGeneration, canRetry: true,
@@ -2165,7 +2169,7 @@ export struct MangaReadingSurface {
       }
       if (this.loginRequiredForControls) { Button(this.loggingIn ? '登录处理中' : '登录书源后重试').height(44).enabled(!this.loggingIn).onClick((): void => { void this.loginAndRetry(); }); }
       if (this.offlineProbeStatus.length > 0) { Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status'); }
-    }.width('100%').padding({ left: 16, right: 16, top: 10 });
+    }.width('100%').padding({ left: 8, right: 8, top: 10 });
   }
   @Builder
   private iconAction(icon: Resource, label: string, action: () => void) {
@@ -2203,13 +2207,13 @@ export struct MangaReadingSurface {
         this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
         this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
       }.width('100%').height(55).border({ width: { top: 1 }, color: this.lineColor() });
-    }.width(Math.max(1, this.viewportWidth - 32 - this.interactiveInsets(this.windowMetricsRevision).left -
+    }.width(Math.max(1, this.viewportWidth - 60 - this.interactiveInsets(this.windowMetricsRevision).left -
       this.interactiveInsets(this.windowMetricsRevision).right)).padding({ left: 14, right: 14, top: 13, bottom: 11 })
       .backgroundColor(this.surfaceColor()).borderRadius(24)
       .border({ width: TOK_BORDER_W, color: this.lineColor() }).clip(true)
-      .margin({ left: 16, right: 16, bottom: 12 })
-      .shadow({ radius: this.appThemeScheme === 'night' ? 8 : 18,
-        color: this.appThemeScheme === 'night' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: -4 })
+      .margin({ left: 30, right: 30, bottom: 12 })
+      .shadow({ radius: 8,
+        color: this.backgroundPreference === 'ink' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: -3 })
       .constraintSize({ maxWidth: 560 });
   }
   @Builder
@@ -2791,8 +2795,8 @@ export struct MangaReadingSurface {
           }
         }.width('100%').padding(20).backgroundColor(this.surfaceColor()).borderRadius(20)
           .border({ width: TOK_BORDER_W, color: this.lineColor() })
-          .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 16,
-            color: this.appThemeScheme === 'night' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: 4 });
+          .shadow({ radius: this.backgroundPreference === 'ink' ? 0 : 16,
+            color: this.backgroundPreference === 'ink' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: 4 });
       }.width('100%').height('100%').padding({
         left: 12 + this.interactiveInsets(this.windowMetricsRevision).left,
         right: 12 + this.interactiveInsets(this.windowMetricsRevision).right,

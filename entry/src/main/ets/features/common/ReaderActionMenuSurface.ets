@@ -1,5 +1,7 @@
 import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActionSheetSpec, type ActionSheetSpecId } from './ReaderSurfaceSpecs';
+import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 import { readerAppColor } from './ReaderThemeRegistry';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
@@ -19,16 +21,17 @@ export class ReaderMenuActionView {
   readonly trailing: string;
   readonly tone: ReaderActionTone;
   readonly showChevron: boolean;
+  readonly busy: boolean;
   constructor(
     id: string, label: string, enabled: boolean = true,
     icon: Resource | undefined = undefined, accessibilityLabel: string = label,
     section: string = '', secondary: string = '', trailing: string = '',
-    tone: ReaderActionTone = 'default', showChevron: boolean = false,
+    tone: ReaderActionTone = 'default', showChevron: boolean = false, busy: boolean = false,
   ) {
     this.id = id; this.label = label; this.enabled = enabled;
     this.icon = icon; this.accessibilityLabel = accessibilityLabel;
     this.section = section; this.secondary = secondary; this.trailing = trailing;
-    this.tone = tone; this.showChevron = showChevron;
+    this.tone = tone; this.showChevron = showChevron; this.busy = busy;
   }
 }
 
@@ -38,12 +41,15 @@ export class ReaderMenuActionView {
 @Component
 export struct ReaderActionMenuSurface {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerAppForeground') private foreground: boolean = true;
   @Prop variant: ReaderActionMenuVariant = 'menu';
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
   @Prop availableWidth: string | number = '100%';
   @Prop viewportHeight: number = 0;
+  @Prop reduceMotion: boolean = false;
   onAction: (id: string) => void = (): void => {};
 
   private mounted: boolean = false;
@@ -66,9 +72,9 @@ export struct ReaderActionMenuSurface {
         ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
           this.actionRow(action.id, index < this.actions.length - 1);
         }, (action: ReaderMenuActionView): string => action.id);
-      }.width('100%').height(this.spec().actionHeight * this.actions.length);
+      }.width('100%').height(this.menuActionHeight() * this.actions.length);
     }.width(this.availableWidth)
-      .height(Math.max(0, Math.min(this.spec().actionHeight * this.actions.length, this.viewportHeight)))
+      .height(Math.max(0, Math.min(this.menuActionHeight() * this.actions.length, this.viewportHeight)))
       .clip(true).scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
 
@@ -77,28 +83,34 @@ export struct ReaderActionMenuSurface {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: this.spec().actionIconSize > 0 ? 16 : 0 }) {
         if (this.action(id).icon !== undefined) {
-          Image(this.action(id).icon)
-            .width(this.spec().actionIconSize).height(this.spec().actionIconSize)
-            .objectFit(ImageFit.Contain).accessibilityLevel('no')
-            .opacity(this.action(id).enabled || !this.spec().actionMutesContent ? 1 : 0.45);
+          if (this.action(id).busy) {
+            LoadingProgress().width(this.spec().actionIconSize).height(this.spec().actionIconSize)
+              .color(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
+              .enableLoading(this.foreground && !this.reduceMotion).accessibilityLevel('no');
+          } else {
+            Image(this.action(id).icon)
+              .width(this.spec().actionIconSize).height(this.spec().actionIconSize)
+              .objectFit(ImageFit.Contain).accessibilityLevel('no')
+              .opacity(this.action(id).enabled || !this.spec().actionMutesContent ? 1 : 0.45);
+          }
         }
         Text(this.action(id).label)
           .fontFamily(this.spec().actionFontFamily).fontWeight(this.spec().actionFontWeight)
           .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight)
-          .fontColor(readerAppColor(!this.action(id).enabled && this.spec().actionMutesContent ?
+          .fontColor(readerAppColor(!this.action(id).enabled && !this.action(id).busy && this.spec().actionMutesContent ?
             'TOK_MUTED' : this.spec().actionTextRole, this.effectiveScheme()))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(this.spec().actionIconSize > 0 ? 1 : undefined);
-      }.width('100%').height(this.spec().actionHeight)
+      }.width('100%').height(this.menuActionHeight())
         .padding({ left: this.spec().actionPaddingLeft, right: this.spec().actionPaddingRight });
       if (showDivider) {
         Row().width(this.dividerWidth()).height(this.spec().dividerHeight)
           .backgroundColor(readerAppColor(this.spec().dividerRole, this.effectiveScheme()))
-          .position({ x: this.spec().dividerInset, y: this.spec().actionHeight - this.spec().dividerHeight });
+          .position({ x: this.spec().dividerInset, y: this.menuActionHeight() - this.spec().dividerHeight });
       }
-    }.width('100%').height(this.spec().actionHeight)
+    }.width('100%').height(this.menuActionHeight())
       .backgroundColor(Color.Transparent)
-      .opacity(this.action(id).enabled || this.spec().actionMutesContent ? 1 : 0.45)
+      .opacity(this.action(id).enabled || this.action(id).busy || this.spec().actionMutesContent ? 1 : 0.45)
       .enabled(this.action(id).enabled)
       .accessibilityText(this.action(id).accessibilityLabel)
       .onClick((): void => this.commitAction(id));
@@ -149,7 +161,8 @@ export struct ReaderActionMenuSurface {
           Image(this.effectiveScheme() === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
             .width(this.actionSheetSpec().chevronSize).height(this.actionSheetSpec().chevronSize);
         }
-      }.width('100%').constraintSize({ minHeight: this.actionSheetSpec().rowHeight })
+      }.width('100%').constraintSize({ minHeight: readerScaledControlHeight(this.actionSheetSpec().rowHeight,
+        this.actionSheetSpec().labelLineHeight, this.fontScale()) })
         .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,
           top: this.actionSheetSpec().rowPaddingY, bottom: this.actionSheetSpec().rowPaddingY })
         .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
@@ -167,6 +180,16 @@ export struct ReaderActionMenuSurface {
   }
 
   private spec(): PopupSurfaceSpec { return resolvePopupSpec(this.specId); }
+
+  private menuActionHeight(): number {
+    const spec = this.spec();
+    return readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, this.fontScale());
+  }
+
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
 
   private action(id: string): ReaderMenuActionView {
     return this.actions.find((action: ReaderMenuActionView): boolean => action.id === id) ??

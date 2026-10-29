@@ -51,7 +51,7 @@ const REPLACE_PANEL_HEIGHT = REPLACE_PANEL_PADDING_Y * 2 + REPLACE_HEADER_HEIGHT
 export struct ReaderReplaceQuickPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop state: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
   onClose: () => void = (): void => {};
   onToggleRule: (ruleId: number, isEnabled: boolean) => void =
@@ -172,14 +172,14 @@ export struct ReaderReplaceQuickPanel {
         Row()
           .width(12)
           .height(12)
-          .backgroundColor(readerAppColor('app.ReaderReplaceQuickPanel.ruleRow.backgroundColor.FFFFFFFF', this.appThemeScheme))
+          .backgroundColor(readerAppColor('app.toggle.thumb', this.appThemeScheme))
           .borderRadius(6)
           .position({ x: rule.isEnabled ? 13 : 2, y: 2 });
       }
       .width(27)
       .height(16)
       .margin({ left: 5 })
-      .backgroundColor(rule.isEnabled ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderReplaceQuickPanel.ruleRow.backgroundColor.FFC9C5BE', this.appThemeScheme))
+      .backgroundColor(rule.isEnabled ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.replace.inactiveRule', this.appThemeScheme))
       .borderRadius(999)
       .clip(true);
 
@@ -225,7 +225,7 @@ export struct ReaderReplaceQuickPanel {
         .fontFamily(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontFamily)
         .fontWeight(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontWeight)
         .fontSize(TYPE_READER_REPLACE_QUICK_COMPAT_FOOTER_BUTTON_VALUE.fontSizeFp)
-        .fontColor(kind === 'preview' ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('app.ReaderReplaceQuickPanel.footerButton.fontColor.FFFFFFFF', this.appThemeScheme))
+        .fontColor(kind === 'preview' ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('app.text.onAccent', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
@@ -257,7 +257,7 @@ export struct ReaderReplaceQuickPanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? REPLACE_PANEL_WIDTH_TABLET : REPLACE_PANEL_WIDTH_PHONE;
+    return this.expandedLayout ? REPLACE_PANEL_WIDTH_TABLET : REPLACE_PANEL_WIDTH_PHONE;
   }
 
   private contentWidth(): number {
@@ -269,7 +269,7 @@ export struct ReaderReplaceQuickPanel {
   }
 
   private previewButtonWidth(): number {
-    return this.isTablet ? REPLACE_PREVIEW_WIDTH_TABLET : REPLACE_PREVIEW_WIDTH_PHONE;
+    return this.expandedLayout ? REPLACE_PREVIEW_WIDTH_TABLET : REPLACE_PREVIEW_WIDTH_PHONE;
   }
 
   private managementButtonWidth(): number {

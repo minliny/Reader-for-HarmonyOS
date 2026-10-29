@@ -25,7 +25,7 @@ export struct LatencyBar {
           .width(this.fillWidth)
           .height(3)
           .borderRadius(1.5)
-          .backgroundColor((this.fillColor === '' ? readerAppColor('app.LatencyBar.fillColor.default.FFC08020', this.appThemeScheme) : this.fillColor));
+          .backgroundColor((this.fillColor === '' ? readerAppColor('app.sourceSwitch.slow', this.appThemeScheme) : this.fillColor));
       }
     }
     .width(36)

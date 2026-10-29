@@ -37,7 +37,7 @@ type ReaderSettingsSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
 export struct ReaderSettingsModulePanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @Prop pageTurnSimulationAvailable: boolean = true;
   onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
@@ -124,11 +124,11 @@ export struct ReaderSettingsModulePanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? 262 : 286;
+    return this.expandedLayout ? 262 : 286;
   }
 
   private contentWidth(): number {
-    return this.isTablet ? 240 : 264;
+    return this.expandedLayout ? 240 : 264;
   }
 
   private groupOptions(group: ReaderSettingsSegmentGroup): string[] {

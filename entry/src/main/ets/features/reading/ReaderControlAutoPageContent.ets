@@ -55,7 +55,7 @@ export struct ReaderControlAutoPageContent {
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
   @Prop status: ReaderAutoPageStatus = 'stopped';
@@ -635,7 +635,9 @@ export struct ReaderControlAutoPageContent {
     .position({ x: this.frame().follow.x, y: this.frame().follow.y })
     .translate({ y: this.fullOnlyScrollTranslation() })
     .enabled(this.fullInput() && this.status === 'stopped')
-    .opacity(this.frame().follow.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+    .opacity(this.frame().follow.opacity * this.presentation().contentOpacity *
+      (this.appScheme === 'night' && !(this.fullInput() && this.status === 'stopped') ? 0.45 : 1))
+    .blur(this.presentation().contentBlur)
     .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
     .onClick((): void => this.onFollowHighlightChange(!this.followHighlight));
   }

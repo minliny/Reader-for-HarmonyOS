@@ -197,7 +197,7 @@ export struct BookshelfSettingsPage {
 
   @Builder
   private modeOption(value: 'cover' | 'list', label: string) {
-    Text(label).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp).fontColor(this.mode === value ? readerAppColor('app.BookshelfSettingsPage.modeOption.onSelected', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
+    Text(label).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp).fontColor(this.mode === value ? readerAppColor('app.selection.onMode', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
       .padding({ left: 14, right: 14, top: 10, bottom: 10 }).borderRadius(20)
       .backgroundColor(this.mode === value ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onClick((): void => this.selectMode(value));

@@ -353,7 +353,7 @@ export struct ReaderControlReplaceContent {
     Row({ space: 6 }) {
       Image(icon).width(20).height(20);
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontWeight)
-        .fontColor(add ? readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
+        .fontColor(add ? readerAppColor('app.replace.onToolbarAction', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
     }.width(0).layoutWeight(add ? 100.66 : 96.67).height(40).justifyContent(FlexAlign.Center)
       .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme)).borderRadius(8)
       .border({ width: TOK_BORDER_W, color: add ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
@@ -380,7 +380,7 @@ export struct ReaderControlReplaceContent {
       Row() {
         ReaderControlSwitchTrack({ value: rule().isEnabled, trackWidth: this.frame().toggleWidth,
           trackHeight: this.frame().toggleHeight, thumbSize: this.frame().thumbSize,
-          thumbColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFFFFFFF', this.appThemeScheme), inactiveColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFC9C5BE', this.appThemeScheme) });
+          thumbColor: readerAppColor('app.text.onAccent', this.appThemeScheme), inactiveColor: readerAppColor('app.replace.inactiveRule', this.appThemeScheme) });
       }.width(this.frame().toggleWidth).height(this.frame().rowHeight)
         .position({ x: this.frame().rowPadding, y: 0 }).alignItems(VerticalAlign.Center)
         .enabled(this.readyInput() && index() >= 0).accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)

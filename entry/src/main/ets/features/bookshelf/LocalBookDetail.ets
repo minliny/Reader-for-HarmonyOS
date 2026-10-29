@@ -1,14 +1,19 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bookCoverDisplayUrl } from '../common/BookCoverDisplay';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { ReaderPageGeometry, ReaderPageGeometryInput, readerEmptyPageGeometry,
+  resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor, mangaDirectoryContentTop, mangaDirectoryPositionStacked } from '../manga/MangaDirectoryVisual';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_INHERITED_BODY, TYPE_APP_SECTION_LABEL, TYPE_BOOK_DETAIL_ACTION, TYPE_BOOK_DETAIL_AUTHOR, TYPE_BOOK_DETAIL_DESCRIPTION, TYPE_BOOK_DETAIL_EMPTY, TYPE_BOOK_DETAIL_META, TYPE_BOOK_DETAIL_SOURCE_ACTION, TYPE_BOOK_DETAIL_TITLE, TYPE_BOOK_DIRECTORY_ENTRY } from '../common/ReaderTypography';
 import { bookAuthorLabel } from '../common/BookAuthorMetadata';
 import { readerAppColor, type ReaderAppColorRole } from '../common/ReaderThemeRegistry';
+import { ReaderRaisedSurface } from '../common/ReaderRaisedSurface';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
 import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
 import { bookIntroText } from '../common/BookIntroText';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -53,6 +58,7 @@ import { NoCoverCover } from './NoCoverCover';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SERIF_SC_BOLD } from '../common/ReaderFontFamilies';
 import { registerReaderFonts, prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import { DetailHeaderSpec, detailHeaderSpec } from '../common/ReaderHeaderSpecs';
 import { mangaDirectoryIsGroup, mangaDirectoryPresentation, type MangaDirectoryRowPresentation } from '../manga/MangaDirectoryPresentation';
 import { mangaDirectoryEntryRows, mangaDirectoryNearbyEntries, type MangaDirectoryLayoutRow } from '../manga/MangaDirectoryLayout';
 import { MangaDirectoryPressFeedback } from '../manga/MangaDirectoryPressFeedback';
@@ -107,7 +113,14 @@ export struct LocalBookDetail {
   private collapseEntries: LocalReadingTocEntry[] = [];
   @State private mangaFontsReady: boolean = false;
   @State private mangaDockMeasuredHeight: number = 68;
+  @State private dockSurfaceWidth: number = 0;
+  @State private dockSurfaceHeight: number = 0;
+  @State private headerScrolled: boolean = false;
+  private readonly detailScroller: Scroller = new Scroller();
   @State private mangaFontsFailed: boolean = false;
+  @State private headerMeasurementRevision: number = 0;
+  private readonly headerMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();
+  private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();
   private mounted: boolean = false;
   private mangaFontGeneration: number = 0;
   private mangaFontIdentity: string = '';
@@ -123,6 +136,7 @@ export struct LocalBookDetail {
   aboutToDisappear(): void {
     this.transientFeedback.reset();
     this.mounted = false;
+    this.headerScrolled = false;
     this.mangaFontGeneration += 1;
     this.mangaFontTask = undefined;
     this.introMeasurementGeneration += 1;
@@ -133,8 +147,8 @@ export struct LocalBookDetail {
     if (this.book.contentKind !== 'manga' || this.mangaFontsReady) {
       this.detailPage();
     } else {
-      ReaderPageScaffold({ variant: 'mangaDetail', headerKind: 'mangaDirectory',
-        content: (): void => { this.fontPreparationContent(); } });
+      ReaderPageScaffold({ frameStyle: this.frameStyle(),
+        geometry: readerEmptyPageGeometry(), content: (): void => { this.fontPreparationContent(); } });
     }
   }
 
@@ -151,14 +165,16 @@ export struct LocalBookDetail {
   @Builder
   private detailPage() {
     ReaderPageScaffold({
-      variant: this.book.contentKind === 'manga' ? 'mangaDetail' : 'detail',
-      headerKind: this.book.contentKind === 'manga' ? 'mangaDirectory' : 'floating',
-      headerTop: this.topInset() + 8,
-      headerInsetLeft: this.book.contentKind === 'manga' ? this.headerFrame().left : 16 + this.safeLeft(),
-      headerInsetRight: this.book.contentKind === 'manga' ? this.headerFrame().right : 16 + this.safeRight(),
-      footerBottom: this.bottomInset() + (this.book.contentKind === 'manga' ? visual.detailDockBottom : 12),
+      frameStyle: this.frameStyle(),
+      geometry: this.pageGeometry(),
+      headerMeasurementKey: this.headerMeasurementGeneration(),
       content: (): void => { this.detailScroll(); },
       header: (): void => { this.detailHeader(); },
+      onHeaderHeightChange: (height: number, presentedKey: number): void => {
+        if (this.book.contentKind !== 'manga' && height > 0 &&
+          this.headerMeasurements.record('detail:header', height, presentedKey, 0.1))
+          this.headerMeasurementRevision += 1;
+      },
       footer: (): void => { this.actionArea(); },
     })
       .onAreaChange((_old: Area, area: Area): void => {
@@ -172,8 +188,8 @@ export struct LocalBookDetail {
   }
 
   @Builder
-  private detailScroll() {
-    Scroll() {
+  private detailScroll(scrollIdentity: string = this.detailScrollIdentity()) {
+    Scroll(this.book.contentKind === 'manga' ? undefined : this.detailScroller) {
       Column({ space: this.book.contentKind === 'manga' ? 0 : 24 }) {
         this.hero();
         this.readingFacts();
@@ -184,16 +200,33 @@ export struct LocalBookDetail {
         }
       }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)
         .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
-        .padding({ top: this.topInset() + (this.book.contentKind === 'manga' ? mangaDirectoryContentTop(this.mangaFontScale()) : 76),
-          bottom: this.book.contentKind === 'manga' ? this.mangaContentBottomInset() : this.bottomInset() + 104 });
+        .padding({ top: this.book.contentKind === 'manga' ? this.topInset() + mangaDirectoryContentTop(this.mangaFontScale()) :
+          this.standardGeometry().content.startInset,
+          bottom: this.book.contentKind === 'manga' ? this.mangaContentBottomInset() : this.standardGeometry().content.endInset });
     }.width('100%').height('100%').scrollBar(this.book.contentKind === 'manga' ? BarState.Auto : BarState.Off)
       .scrollBarWidth(this.book.contentKind === 'manga' ? visual.scrollbarWidth : undefined)
-      .scrollBarColor(this.book.contentKind === 'manga' ? '#47000000' : undefined);
+      .scrollBarColor(this.book.contentKind === 'manga' ? mangaDirectoryColor('scrollbar', this.appThemeScheme) : undefined)
+      .onScroll((): void => this.onDetailScroll(scrollIdentity));
+  }
+
+  private detailScrollIdentity(): string {
+    return `${this.admissionIdentity}\u0000${this.book.sourceId}\u0000${this.book.bookId}`;
+  }
+
+  private onDetailScroll(identity: string): void {
+    if (!this.mounted || this.book.contentKind === 'manga' || identity !== this.detailScrollIdentity()) return;
+    const offset = this.detailScroller.currentOffset().yOffset;
+    if (!Number.isFinite(offset)) return;
+    const scrolled = offset > this.headerSpec.scrollThreshold;
+    if (scrolled !== this.headerScrolled) this.headerScrolled = scrolled;
   }
 
   @Builder
   private detailHeader() {
-    PageBackBar({ title: '书籍详情', floating: true, centered: true,
+    PageBackBar({ title: '书籍详情', floating: true,
+      elevation: this.book.contentKind === 'manga' ? 'fixed' : 'raised',
+      material: this.book.contentKind === 'manga' ? 'solid' : 'veil',
+      scrolled: this.book.contentKind !== 'manga' && this.headerScrolled, centered: true,
       variant: this.book.contentKind === 'manga' ? 'mangaDirectory' : 'standard',
       backIcon: this.book.contentKind === 'manga' ? (this.appThemeScheme === 'night' ? $r('app.media.manga_directory_back_theme_night') : $r('app.media.manga_directory_back')) :
         this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back'),
@@ -317,8 +350,10 @@ export struct LocalBookDetail {
           this.metadataTag(this.book.contentKind === 'audio' ? '有声' : '小说');
           this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
         }.width('100%');
-      }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ minHeight: 122 }).alignItems(VerticalAlign.Top);
+      }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start)
+        .padding({ top: this.headerSpec.contentGap + this.headerSpec.contentUnderlap });
+    }.width('100%').constraintSize({ minHeight: 122 + this.headerSpec.contentGap + this.headerSpec.contentUnderlap })
+      .alignItems(VerticalAlign.Top);
   }
 
   @Builder
@@ -538,7 +573,7 @@ export struct LocalBookDetail {
               .fontColor(readerAppColor(this.appThemeScheme === 'night' ? 'TOK_GREEN' : 'TOK_PRIMARY_DARK', this.appThemeScheme))
               .maxLines(1);
           }.width(94).height(30).padding({ left: 11, right: 11 })
-            .backgroundColor(readerAppColor('app.LocalBookDetail.chapterSection.backgroundColor.A3FFFCF8', this.appThemeScheme))
+            .backgroundColor(readerAppColor('app.surface.chapterSection', this.appThemeScheme))
             .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
             .borderRadius(999).alignItems(VerticalAlign.Center);
         }.width(94).height(44).enabled(!this.removing)
@@ -583,6 +618,15 @@ export struct LocalBookDetail {
 
   @Builder
   private actionArea() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ReaderRaisedSurface({ surfaceWidth: this.dockSurfaceWidth, surfaceHeight: this.dockSurfaceHeight,
+        cornerRadius: this.book.contentKind === 'manga' ? visual.detailDockRadius : 24, scheme: this.appThemeScheme });
+      this.actionSurface();
+    }.width(this.dockFrame().width).clip(false);
+  }
+
+  @Builder
+  private actionSurface() {
     // Measure the 48vp action row independently from the 68vp painted dock;
     // horizontal insets must not shrink its vertical button bounds.
     Stack({ alignContent: Alignment.Center }) {
@@ -638,13 +682,16 @@ export struct LocalBookDetail {
     }.width(this.dockFrame().width).height(this.book.contentKind === 'manga' ? undefined : 68)
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : 68 })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
-      .backgroundColor(this.detailColor('TOK_CARD_BG', 'surface')).borderRadius(this.book.contentKind === 'manga' ? visual.detailDockRadius : 24)
-      .border({ width: TOK_BORDER_W, color: this.detailColor('TOK_BORDER', 'line') })
-      .clip(true)
-      .shadow({ radius: this.book.contentKind === 'manga' ? visual.shadowRadius : this.appThemeScheme === 'night' ? 0 : 18,
-        color: this.book.contentKind === 'manga' ? mangaDirectoryColor('shadow', this.appThemeScheme) : '#14000000', offsetY: 5 })
+      .backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme)).borderRadius(this.book.contentKind === 'manga' ? visual.detailDockRadius : 24)
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
+      .clip(false)
       .onAreaChange((_old: Area, area: Area): void => {
+        const width = readerPageAreaLength(area.width);
         const height = readerPageAreaLength(area.height);
+        if (Number.isFinite(width) && width > 0 && Math.abs(width - this.dockSurfaceWidth) > .1)
+          this.dockSurfaceWidth = width;
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dockSurfaceHeight) > .1)
+          this.dockSurfaceHeight = height;
         if (this.book.contentKind === 'manga' && Number.isFinite(height) && height > 0 && Math.abs(height - this.mangaDockMeasuredHeight) > .1)
           this.mangaDockMeasuredHeight = height;
       });
@@ -695,9 +742,54 @@ export struct LocalBookDetail {
     });
   }
 
+  private headerMeasurementGeneration(): number {
+    return Math.max(0, this.readerWindowMetricsRevision);
+  }
+
+  private frameStyle(): ReaderFrameStyle {
+    const manga = this.book.contentKind === 'manga';
+    const pageBackground = manga ? mangaDirectoryColor('paper', this.appThemeScheme) :
+      readerAppColor('TOK_PAPER', this.appThemeScheme);
+    return readerFrameStyle({ backgroundColor: pageBackground, alignment: 'top',
+      headerBackground: pageBackground, headerTransparent: true, footerBackground: pageBackground });
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    if (this.book.contentKind !== 'manga') return this.standardGeometry();
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.liveWidth();
+    input.measurementRevision = this.headerMeasurementRevision;
+    input.headerTop = this.headerSpec.headerTop(this.topInset());
+    input.headerInsetLeft = this.headerFrame().left;
+    input.headerInsetRight = this.headerFrame().right;
+    input.footerBottom = this.bottomInset() + visual.detailDockBottom;
+    return resolveReaderPageGeometry(input);
+  }
+
+  private standardGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.liveWidth();
+    input.measurementRevision = this.headerMeasurementRevision;
+    input.headerTop = this.headerSpec.headerTop(this.topInset());
+    input.headerHeight = this.headerMeasurements.read('detail:header', this.headerSpec.barHeight);
+    input.headerInsetLeft = Math.max(8, this.safeLeft());
+    input.headerInsetRight = Math.max(8, this.safeRight());
+    input.footerBottom = this.bottomInset() + 12;
+    input.contentGap = this.headerSpec.contentGap;
+    input.contentUnderlap = this.headerSpec.contentUnderlap;
+    input.contentMaxWidth = TOK_CONTENT_MAX_W_TABLET;
+    input.contentHorizontalPadding = 18;
+    input.contentEndInset = this.bottomInset() + 104;
+    return resolveReaderPageGeometry(input);
+  }
+
   private contentFrame(): SurfaceHorizontalFrame {
+    if (this.book.contentKind !== 'manga') return this.standardGeometry().content.frame;
+    const inset = 20;
     return resolveHorizontalFrame(this.liveWidth(), this.safeLeft(), this.safeRight(),
-      new SurfaceWidthSpec(this.book.contentKind === 'manga' ? visual.contentWidthMax : 720, 20, 20, 'center'));
+      new SurfaceWidthSpec(visual.contentWidthMax, inset, inset, 'center'));
   }
   private headerFrame(): SurfaceHorizontalFrame {
     const frame = this.contentFrame();
@@ -705,9 +797,14 @@ export struct LocalBookDetail {
     return new SurfaceHorizontalFrame(Math.max(0, frame.left - expansion), Math.max(0, frame.right - expansion), frame.width + expansion * 2);
   }
   private dockFrame(): SurfaceHorizontalFrame {
+    if (this.book.contentKind !== 'manga') {
+      const content = this.contentFrame();
+      const inset = Math.min(TOK_SPACE_SM, content.width / 2);
+      return new SurfaceHorizontalFrame(content.left + inset, content.right + inset, content.width - 2 * inset);
+    }
     return resolveHorizontalFrame(this.liveWidth(), this.safeLeft(), this.safeRight(),
-      new SurfaceWidthSpec(this.book.contentKind === 'manga' ? visual.contentWidthMax - 2 * (visual.detailDockInset - visual.contentPaddingX) : 680,
-        this.book.contentKind === 'manga' ? visual.detailDockInset : 30, this.book.contentKind === 'manga' ? visual.detailDockInset : 30, 'center'));
+      new SurfaceWidthSpec(visual.contentWidthMax - 2 * (visual.detailDockInset - visual.contentPaddingX),
+        visual.detailDockInset, visual.detailDockInset, 'center'));
   }
   private liveWidth(): number {
     if (this.viewportWidth > 0) return this.viewportWidth;
@@ -736,10 +833,9 @@ export struct LocalBookDetail {
     if (signature === this.introMeasurementSignature) return;
     this.introMeasurementSignature = signature;
     const generation = ++this.introMeasurementGeneration;
-    this.introOverflow = false;
-    this.introMeasured = false;
     if (text.length === 0) {
       this.introExpanded = false;
+      this.introOverflow = false;
       this.introMeasured = true;
       return;
     }
@@ -751,39 +847,39 @@ export struct LocalBookDetail {
       fontFamily: this.book.contentKind === 'manga' ? READER_FONT_NOTO_SANS_SC_UI_REGULAR : 'ReaderNotoSansSC', fontSize: `${visual.introBodyFontSize}fp`,
       lineHeight: `${visual.introBodyLineHeight}fp`, fontWeight: visual.bodyFontWeight,
       wordBreak: WordBreak.BREAK_WORD, overflow: TextOverflow.Ellipsis, maxLines: 10000 };
-    void Promise.resolve().then((): void => {
+    // MeasureUtils is synchronous. Publish the completed receipt before the
+    // first build or book update can paint an unmeasured, expanded synopsis.
+    try {
       if (!this.mounted || (this.book.contentKind === 'manga' && !this.mangaFontsReady) || generation !== this.introMeasurementGeneration ||
         signature !== this.introMeasurementSignature) return;
-      try {
-        const measure = context.getMeasureUtils();
-        const full = Number(measure.measureTextSize(options).height);
-        options.maxLines = 3;
-        const folded = Number(measure.measureTextSize(options).height);
-        if (!Number.isFinite(full) || !Number.isFinite(folded) || full <= 0 || folded <= 0)
-          throw new Error('DETAIL_INTRO_MEASURE_INVALID');
-        if (!this.mounted || generation !== this.introMeasurementGeneration ||
-          signature !== this.introMeasurementSignature) return;
-        this.introOverflow = full > folded + .5;
-        if (!this.introOverflow) this.introExpanded = false;
-        this.introMeasured = true;
-      } catch (_) {
-        if (!this.mounted || generation !== this.introMeasurementGeneration ||
-          signature !== this.introMeasurementSignature) return;
-        // A measurement failure keeps the entire synopsis readable and hides
-        // the unavailable action; the next content/geometry change can retry.
-        this.introOverflow = false;
-        this.introMeasured = false;
-        this.introMeasurementSignature = '';
-        hilog.warn(0xD003210, 'Reader', 'Detail synopsis platform measurement unavailable');
-      }
-    });
+      const measure = context.getMeasureUtils();
+      const full = Number(measure.measureTextSize(options).height);
+      options.maxLines = 3;
+      const folded = Number(measure.measureTextSize(options).height);
+      if (!Number.isFinite(full) || !Number.isFinite(folded) || full <= 0 || folded <= 0)
+        throw new Error('DETAIL_INTRO_MEASURE_INVALID');
+      if (!this.mounted || generation !== this.introMeasurementGeneration ||
+        signature !== this.introMeasurementSignature) return;
+      this.introOverflow = full > folded + .5;
+      if (!this.introOverflow) this.introExpanded = false;
+      this.introMeasured = true;
+    } catch (_) {
+      if (!this.mounted || generation !== this.introMeasurementGeneration ||
+        signature !== this.introMeasurementSignature) return;
+      // A measurement failure keeps the entire synopsis readable and hides
+      // the unavailable action; the next content/geometry change can retry.
+      this.introOverflow = false;
+      this.introMeasured = false;
+      this.introMeasurementSignature = '';
+      hilog.warn(0xD003210, 'Reader', 'Detail synopsis platform measurement unavailable');
+    }
   }
   private lastShelfFeedback: string = '';
   private onShelfMessageChanged(): void {
     if (!this.shelfMessage) { this.lastShelfFeedback = ''; return; }
     if (!this.mounted || !this.detailBookAvailable() || !this.shelfMessage || this.shelfMessage === this.lastShelfFeedback) return;
     this.lastShelfFeedback = this.shelfMessage;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.shelfMessage, duration: 2000 }, (): boolean => this.mounted && this.detailBookAvailable()); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.shelfMessage, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.detailBookAvailable()); } catch (_) {}
   }
   private catalogLoading(): boolean { return this.catalogBusy; }
   private chapterEmptyMessage(): string {
@@ -817,6 +913,7 @@ export struct LocalBookDetail {
     if (this.mounted) this.onMangaFontIdentityChanged();
     const identity = `${this.book.sourceId}\u0000${this.book.bookId}`;
     if (identity === this.collapseIdentity) { this.prepareMangaPreview(); this.measureIntro(); return; }
+    this.headerScrolled = false;
     this.introExpanded = false;
     this.introMeasuredWidth = 0;
     this.introMeasurementSignature = '';

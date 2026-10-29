@@ -1,3 +1,5 @@
+import { MAIN_TAB_LABEL_LINE_HEIGHT } from './ReaderLayoutTokens';
+import { SEARCH_HISTORY_FONT_SIZE, SEARCH_HISTORY_LINE_HEIGHT } from './ReaderSearchControlGeometry';
 import {
   READER_FONT_INTER,
   READER_FONT_NOTO_SANS_SC,
@@ -98,7 +100,7 @@ export const TYPE_PAGE_TITLE = new ReaderTextStyle(
 export const TYPE_SECTION_HEADING = new ReaderTextStyle(
   READER_FONT_INTER, 900, 13, 15.6, undefined, 'system', 'figmaNode');
 export const TYPE_MAIN_TAB_LABEL = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 11, 18, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 11, MAIN_TAB_LABEL_LINE_HEIGHT, undefined, 'system', 'figmaNode');
 
 // Shared-select variants. Similar controls retain independent roles whenever
 // their Figma nodes differ; sharing the component never implies identical text.
@@ -128,6 +130,8 @@ export const TYPE_SETTINGS_SELECT_TABLET_OPTION = new ReaderTextStyle(
 // Search-field variants share input behavior but not geometry or typography.
 export const TYPE_SEARCH_BOOK_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 14, 21, undefined, 'system', 'figmaNode');
+export const TYPE_SEARCH_BOOK_PANEL_INPUT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 14, 20, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_SOURCE_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 12, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_DIRECTORY_INPUT = new ReaderTextStyle(
@@ -141,22 +145,20 @@ export const TYPE_SEARCH_READER_QUICK_INPUT = new ReaderTextStyle(
 export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 14, undefined, undefined, 'system', 'figmaNode');
 
-// Search result rows keep their current card geometry while moving all of the
-// cover, metadata and tag text tuples into named semantic roles. These roles
-// intentionally preserve the existing values; the later visual pass can tune
-// the whole result surface without leaving page-local font literals behind.
+// Approved 2026-10-28 static search hierarchy. These App metadata roles use
+// the same registered static UI family as the input; reader body roles stay separate.
 export const TYPE_SEARCH_RESULT_COVER_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 9, 11.7, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_RESULT_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 19.5, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, 24, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_RESULT_AUTHOR = new ReaderTextStyle(
-  READER_FONT_INTER, 400, 12, 12, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10.5, 16.3, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_RESULT_CHAPTER = new ReaderTextStyle(
-  READER_FONT_INTER, 400, 11, 11, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10, 16, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_RESULT_INTRO = new ReaderTextStyle(
-  READER_FONT_INTER, 400, 12, 18, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 18.7, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_RESULT_TAG = new ReaderTextStyle(
-  READER_FONT_INTER, 700, 10, 15, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 9.5, 15.2, undefined, 'system', 'appBaseline');
 
 // The chapter title is a reading-surface role, but it is not user body text.
 // Its line height remains owned by the responsive ReadingSurface layout map.
@@ -372,6 +374,12 @@ export const TYPE_APP_INHERITED_BODY = new ReaderInheritedTextStyle(
   undefined, undefined, 12, undefined, undefined, 'system', 'appBaseline');
 export const TYPE_APP_FILTER_OPTION = new ReaderTextStyle(
   READER_FONT_INTER, 500, 12, 18, undefined, 'system', 'appBaseline');
+// Shelf capsules contain Chinese and Latin text in one physical face. Keep
+// these roles separate from legacy app-wide Inter filter/badge consumers.
+export const TYPE_SHELF_FILTER_LABEL = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 12, 18, undefined, 'system', 'appBaseline');
+export const TYPE_SHELF_UPDATE_BADGE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 10, 16, undefined, 'system', 'appBaseline');
 export const TYPE_SHELF_SELECTION_ACTION = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 700, 13, 15.6, undefined, 'system', 'appBaseline');
 export const TYPE_SHELF_SELECTION_HEADING = new ReaderTextStyle(
@@ -505,10 +513,10 @@ export const TYPE_SEARCH_HISTORY_STATUS = new ReaderInheritedTextStyle(
 export const TYPE_SEARCH_HISTORY_HEADING = new ReaderTextStyle(
   READER_FONT_INTER, 700, 13, 19.5, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_HISTORY_KEYWORD = new ReaderTextStyle(
-  READER_FONT_INTER, 500, 13, 19.5, undefined, 'system', 'appBaseline');
+  READER_FONT_INTER, 400, SEARCH_HISTORY_FONT_SIZE, SEARCH_HISTORY_LINE_HEIGHT, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_PROGRESS_META = TYPE_FILE_IMPORT_WAIT;
 export const TYPE_SEARCH_RESULT_COUNT = new ReaderTextStyle(
-  READER_FONT_INTER, 700, 11, 16.5, undefined, 'system', 'appBaseline');
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 14, 21, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_STATE_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 17, 25.5, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_STATE_DESCRIPTION = new ReaderTextStyle(
@@ -580,12 +588,11 @@ export const TYPE_SHELF_SELECTION_AUTHOR_WIDE = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 13, 16, undefined, 'system', 'appBaseline');
 export const TYPE_SHELF_COVER_PLACEHOLDER = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 18.3, undefined, 'system', 'appBaseline');
-// Search/stop labels share a row with the native loading indicator. Keep the
-// original face, weight and size, but admit the CJK fallback line metrics.
+// Search/stop labels share a stable action slot with native LoadingProgress.
 export const TYPE_SEARCH_FIELD_ACTION = new ReaderTextStyle(
-  READER_FONT_INTER, 800, 13, 20, undefined, 'system', 'appBaseline');
+  READER_FONT_NOTO_SANS_SC, 700, 13, 20, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_FIELD_ACTION_WIDE = new ReaderTextStyle(
-  READER_FONT_INTER, 800, 14, 22, undefined, 'system', 'appBaseline');
+  READER_FONT_NOTO_SANS_SC, 700, 14, 22, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_SCOPE_LABEL = new ReaderTextStyle(
   READER_FONT_INTER, 500, 12, 12, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_SCOPE_SELECTED = TYPE_SOURCE_SWITCH_RECOVERY;

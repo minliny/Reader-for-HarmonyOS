@@ -1,4 +1,4 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../common/ReaderTransientFeedback';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -14,6 +14,8 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 
 import { MainTabShell } from '../shell/MainTabShell';
 import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerFloatingTabContentInset,
@@ -21,15 +23,7 @@ import {
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
+import { SurfaceHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
 import {
   TOK_BORDER_W,
   TOK_CARD_BG,
@@ -62,9 +56,10 @@ export struct DiscoverPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @State private fixedHeaderHeight: number = readerPageContentStartInset();
+  @State private measurementRevision: number = 0;
+  private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @Prop @Watch('onPresentationChanged') presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   onBack: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
@@ -97,7 +92,7 @@ export struct DiscoverPage {
     const operation = this.presentation.operation;
     if (this.presentation.loading || this.presentation.books.length === 0 ||
       (operation?.fact !== 'refreshFailed' && operation?.fact !== 'partial')) return;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery().message, duration: 2200 }, (): boolean => this.mounted); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: this.recovery().message, duration: READER_FEEDBACK_EXTENDED_MS }, (): boolean => this.mounted); } catch (_) {}
   }
 
   build() {
@@ -107,8 +102,8 @@ export struct DiscoverPage {
       header: (): void => { this.homeTopBar(); },
       content: (): void => { this.discoverContent(); },
       onHeaderHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
-          this.fixedHeaderHeight = height;
+        if (height > 0 && this.measurements.record('discover:header', height,
+          Math.max(0, this.readerWindowMetricsRevision))) this.measurementRevision += 1;
       },
     });
   }
@@ -139,7 +134,7 @@ export struct DiscoverPage {
       }
       .width('100%')
       .constraintSize({ maxWidth: this.contentFrame().width })
-      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.pageGeometry().content.startInset, bottom: this.pageGeometry().content.endInset });
     }
     .height('100%')
     .width('100%')
@@ -168,6 +163,19 @@ export struct DiscoverPage {
     return readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
   }
 
+  private pageGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = metrics.windowRect.width;
+    input.measurementRevision = this.measurementRevision;
+    input.headerHeight = this.measurements.read('discover:header', readerPageContentStartInset());
+    input.contentGap = TOK_SPACE_XS;
+    input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
+    input.contentEndInset = this.bottomContentInset();
+    return resolveReaderPageGeometry(input);
+  }
+
   @Builder
   private currentSourceCard() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
@@ -177,7 +185,7 @@ export struct DiscoverPage {
       .width(34)
       .height(34)
       .borderRadius(17)
-      .backgroundColor(readerAppColor('app.DiscoverPage.ICON_BOX_BG', this.appThemeScheme));
+      .backgroundColor(readerAppColor('app.discover.sourceIconSurface', this.appThemeScheme));
 
       Column({ space: 3 }) {
         Text(this.currentSourceName())
@@ -212,7 +220,7 @@ export struct DiscoverPage {
     .padding({ left: TOK_SPACE_SM, right: 13.1 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.CURRENT_SOURCE_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.discover.sourceBorder', this.appThemeScheme) })
     .borderRadius(8)
     .onClick((): void => this.onCycleSource());
   }
@@ -246,7 +254,7 @@ export struct DiscoverPage {
           .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
           .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
           .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
-          .fontColor(readerAppColor('app.DiscoverPage.filterRow.fontColor.FF3F372F', this.appThemeScheme))
+          .fontColor(readerAppColor('app.text.filter', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: 3 });
         Text(this.currentFilterText())
@@ -267,7 +275,7 @@ export struct DiscoverPage {
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: 5 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.FILTER_BORDER', this.appThemeScheme) })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.filter', this.appThemeScheme) })
       .borderRadius(8);
 
       ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'discover-apply', label: '应用',
@@ -354,7 +362,7 @@ export struct DiscoverPage {
             .width(52)
             .height(74)
             .borderRadius(4)
-            .backgroundColor(readerAppColor('app.DiscoverPage.resultRow.backgroundColor.FFE4E0D8', this.appThemeScheme));
+            .backgroundColor(readerAppColor('app.cover.placeholder', this.appThemeScheme));
         }
       }
 
@@ -386,7 +394,7 @@ export struct DiscoverPage {
             .fontWeight(TYPE_DISCOVER_INTRO.fontWeight)
             .fontSize(TYPE_DISCOVER_INTRO.fontSizeFp)
             .lineHeight(TYPE_DISCOVER_INTRO.lineHeightFp as number)
-            .fontColor(readerAppColor('app.DiscoverPage.resultRow.fontColor.FF5C554D', this.appThemeScheme))
+            .fontColor(readerAppColor('app.text.summary', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -416,13 +424,7 @@ export struct DiscoverPage {
     if (this.readerWindowMetricsRevision < 0) {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
+    return this.pageGeometry().content.frame;
   }
 
   private kindTitles(): string[] {

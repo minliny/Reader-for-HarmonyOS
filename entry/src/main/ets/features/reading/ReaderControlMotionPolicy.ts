@@ -4,8 +4,14 @@ import { copyReaderControlSessionState, sampleReaderControlSession,
 
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
   READER_CONTROL_DISMISS_MS, READER_CONTROL_RESTORE_MS } from '../common/ProductMotionTiming.ts';
+import { readerMotionValueDurationMs } from '../common/ReaderMotionDurationPolicy';
 export { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
   READER_CONTROL_DISMISS_MS, READER_CONTROL_RESTORE_MS } from '../common/ProductMotionTiming.ts';
+
+/** One reduce-motion admission for control clocks; callers keep their token. */
+export function readerControlMotionMs(durationMs: number, reduceMotion: boolean): number {
+  return readerMotionValueDurationMs(durationMs, reduceMotion);
+}
 
 export function readerControlMotionTargetDuration(state: ReaderControlSessionState,
   target: ReaderControlLocation, visualTarget?: ReaderControlVisualFrame): number | undefined {

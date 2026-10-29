@@ -1,6 +1,6 @@
+import { MainTabShell } from './MainTabShell';
 import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
-import { MainTabBar } from './MainTabBar';
 import { PageBackBar } from '../common/PageBackBar';
 import { AppTopBar } from '../common/AppTopBar';
 
@@ -10,7 +10,7 @@ import { AppTopBar } from '../common/AppTopBar';
 // 响应式页面边距。Settings 分 Home 与 General 两态(不互替): Home 显示设置菜单 + 底部栏,
 // General 显示返回栏 + 通用设置区块。页面只提供 homeContent/generalContent + activeSection/
 // onSectionChange + 导航回调; 不复制 TopBar/BackBar/BottomNav/Scroll 骨架。
-// ReaderStandardPage 统一持有 Scroll、顶栏、底栏与全高 overlay 宿主。
+// 首页复用 MainTabShell 的导航宿主；ReaderStandardPage 持有滚动与测量。
 // onOverlayOriginChange 上报宿主全局坐标，供业务浮层换算触发条相对位置。
 @Component
 export struct SettingsShell {
@@ -26,19 +26,19 @@ export struct SettingsShell {
   onOverlayOriginChange: (x: number, y: number) => void = (_x: number, _y: number): void => {};
   @BuilderParam homeContent: () => void;
   @BuilderParam generalContent: () => void;
-  @BuilderParam overlayContent: () => void;
+  @BuilderParam overlayContent: (contentStartInset: number) => void;
   private readonly homeScroller: Scroller = new Scroller();
   private readonly generalScroller: Scroller = new Scroller();
 
   build() {
     if (this.activeSection === 'home') {
-      ReaderStandardPage({
-        variant: 'settingsHome',
-        scroller: this.homeScroller,
+      MainTabShell({
+        activeTab: 'settings', standardScroll: true, standardPageVariant: 'settingsHome', scroller: this.homeScroller,
+        onMainTab: (key: string): void => this.onMainTab(key),
+        onCurrentTabTap: (_key: string): void => this.scrollHomeToTop(),
         content: (): void => { this.homeContent(); },
         header: (): void => { this.homeTopBar(); },
-        footer: (): void => { this.homeNavigation(); },
-        overlayContent: (): void => { this.pageOverlay(); },
+        scrollOverlayContent: (startInset: number): void => { this.pageOverlay(startInset); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     } else {
       ReaderStandardPage({
@@ -46,7 +46,7 @@ export struct SettingsShell {
         scroller: this.generalScroller,
         content: (): void => { this.generalContent(); },
         header: (): void => { this.generalTopBar(); },
-        overlayContent: (): void => { this.pageOverlay(); },
+        overlayContent: (contentStartInset: number): void => { this.pageOverlay(contentStartInset); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     }
   }
@@ -62,17 +62,8 @@ export struct SettingsShell {
   }
 
   @Builder
-  private homeNavigation() {
-    MainTabBar({
-      current: 'settings',
-      onSelect: (key: string): void => this.onMainTab(key),
-      onCurrentTap: (_key: string): void => this.scrollHomeToTop(),
-    });
-  }
-
-  @Builder
-  private pageOverlay() {
-    if (this.showOverlay) { this.overlayContent(); }
+  private pageOverlay(contentStartInset: number) {
+    if (this.showOverlay) { this.overlayContent(contentStartInset); }
   }
 
   private reportOverlayOrigin(area: Area): void {

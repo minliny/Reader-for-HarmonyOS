@@ -1,6 +1,6 @@
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
-import curves from '@ohos.curves';
-import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+import { readerEmptyPageGeometry } from '../common/ReaderPageGeometry';
+import { motionAnimateParam } from '../common/MotionSpec';
 import type { SourceSwitchCompletionPresentation } from '../source/SourceSwitchCompletionPresentation';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
 import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
@@ -11,6 +11,7 @@ import type { MangaDownloadAction, MangaDownloadActionId } from '../manga/MangaD
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import type { ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
 import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest, ReaderRetainedPresentation } from '../reading/LocalReadingExperience';
@@ -27,7 +28,7 @@ import type { ReaderBookIdentity } from '../reading/ReaderBookmarkProjection';
 import type { RemoteReadingBookSeed, RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import type { RemoteReadingFailureKind } from '../reading/RemoteContentAdmission';
 import { ReaderStatusBarPaper } from '../reading/ReaderStatusBarPaper';
-import { readerWidthClass } from '../reading/ReaderLayoutGeometry';
+import { readerWidthClassWithHint } from '../common/ReaderWidthClass';
 
 
 // ReaderShell —— 阅读会话的 UI 组合层 (Batch 2, FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §六)。
@@ -81,7 +82,7 @@ export struct ReaderShell {
   @Prop mangaChapterRequestGeneration: number = 0;
   @Prop mangaStartAtChapterFirst: boolean = false;
   @Prop requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop reduceMotion: boolean = false;
   // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
   @Prop visible: boolean = false;
@@ -170,8 +171,16 @@ export struct ReaderShell {
   onPickSource: (candidate: SourceSwitchCandidate, scopeId?: number) => void = (_candidate: SourceSwitchCandidate): void => {};
   onRollbackSourceSwitch: (scopeId?: number) => void = (): void => {};
 
+  private frameStyle(): ReaderFrameStyle {
+    return readerFrameStyle({ backgroundColor: this.chromeUnderlayColor, clip: false,
+      alignment: 'topStart', safeArea: this.contentKind === 'manga' ? 'systemCutoutAll' : 'systemVertical',
+      headerBackground: this.chromeUnderlayColor, headerTransparent: true,
+      footerBackground: this.chromeUnderlayColor });
+  }
+
   build() {
-    ReaderPageScaffold({ variant: 'reader', headerKind: 'reader', pageVisible: this.visible, readingContentKind: this.contentKind,
+    ReaderPageScaffold({ frameStyle: this.frameStyle(), pageVisible: this.visible,
+      geometry: readerEmptyPageGeometry(),
       content: (): void => { this.readingContent(); },
       overlayContent: (): void => { this.readingOverlay(); },
     });
@@ -221,7 +230,7 @@ export struct ReaderShell {
           requestedChapterIndex: this.requestedChapterIndex,
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
           bookmarkIdentity: this.bookmarkIdentity,
-          isTablet: this.isTablet,
+          expandedLayout: this.expandedLayout,
           windowChromeActive: this.visible,
           windowChromeOverlayActive: this.visible &&
             (this.route === 'directory' || this.sourceSwitchVisible),
@@ -378,10 +387,8 @@ export struct ReaderShell {
             .height('100%')
             .backgroundColor(readerAppColor('TOK_SS_DRAWER_SCRIM', this.appThemeScheme))
             .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs,
-                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
-              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs,
-                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) })))
+              TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.open')),
+              TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.close'))))
             .onClick((): void => this.onCloseSourceSwitch(scopeId));
           SourceSwitchPanel({
             state: this.sourceSwitchState,
@@ -520,8 +527,8 @@ export struct ReaderShell {
         viewportWidth: this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
         viewportHeight: this.chromeMetrics(this.windowMetricsRevision).windowRect.height,
         statusRect: this.chromeMetrics(this.windowMetricsRevision).statusBarRect,
-        expanded: readerWidthClass(this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
-          this.isTablet) === 'expanded',
+        expanded: readerWidthClassWithHint(this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+          this.expandedLayout) === 'expanded',
       }).zIndex(10).hitTestBehavior(HitTestMode.None)
         .id('reader-overlay-status-bar-underlay');
     }

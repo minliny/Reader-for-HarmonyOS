@@ -1,11 +1,15 @@
-import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
+import { BOOKSHELF_GRID_TEXT_GAP } from './BookshelfGridSpec';
+import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
+import { ReaderActionAccessibility } from '../common/ReaderActionAccessibility';
+import { readerMainViewport } from '../shell/MainNavigationSpec';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../common/ReaderTransientFeedback';
 import { ReaderPageState } from '../common/ReaderPageState';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
-import { TYPE_APP_COMPACT_BADGE, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_APP_SECTION_LABEL, TYPE_SECTION_HEADING } from '../common/ReaderTypography';
-import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
-import { readerPageInitialHeaderHeight } from '../common/ReaderPageShell';
+import { TYPE_SHELF_UPDATE_BADGE, TYPE_SHELF_FILTER_LABEL, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_SECTION_HEADING } from '../common/ReaderTypography';
+import { readerIsExpandedWidth } from '../common/ReaderWidthClass';
+import { bookshelfHeaderSpec } from '../common/ReaderHeaderSpecs';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TYPE_SHELF_ACTION,
@@ -15,11 +19,15 @@ import {
   TYPE_SHELF_LIST_STATUS,
   TYPE_SHELF_LIST_TITLE,
 } from '../common/ReaderTypography';
-import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
+import { BookshelfSectionHeader } from './BookshelfSectionHeader';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
 import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { BookshelfViewState } from './BookshelfViewState';
+import { bookshelfContinueCardFrame, BookshelfContinueCardFrame } from './BookshelfContinueCardSpec';
+import { BookshelfBookOrigin } from './BookshelfNavigationMotion';
+import { ReaderSurfaceRect, ReaderSurfaceRectIdentity } from '../common/ReaderSurfaceRect';
+import { readerMeasureSurfaceRect } from '../common/ReaderSurfaceRectMeasurement';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerScrimmedOpaqueColor } from '../common/ReaderScrimColor';
@@ -50,7 +58,7 @@ import {
 import { NoCoverCover } from './NoCoverCover';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
-import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
+import { SheetSurfaceSpec, resolveSheetSpec, readerSurfaceElevation } from '../common/ReaderSurfaceSpecs';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerFloatingBarBottomInset,
@@ -61,33 +69,46 @@ import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
+import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
 import {
-  readerInteractiveSafeLeft,
-  readerInteractiveSafeRight,
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
+import {
+  readerMainNavigationMode,
+  readerMainRailContentLeft,
+  readerMainRailContentRight,
+  type MainNavigationMode,
+} from '../shell/MainNavigationSpec';
 import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 import {
   BookshelfViewMotionContract,
   bookshelfViewCoverDelayMs,
   bookshelfViewMotionContract,
+  motionAnimateParam,
 } from '../common/MotionSpec';
+import { bookshelfCoverHeight, bookshelfGridFrame } from './BookshelfGridSpec';
 
-const PHONE_BOOK_WIDTH = 96.656;
-const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
-const TABLET_BOOK_WIDTH = 186.672;
-const TABLET_BOOK_HEIGHT_RATIO = 280 / TABLET_BOOK_WIDTH;
 const PHONE_LIST_COVER_WIDTH = 48;
 const PHONE_LIST_COVER_HEIGHT = 72;
 const TABLET_LIST_COVER_WIDTH = 64;
 const TABLET_LIST_COVER_HEIGHT = 104;
-const TABLET_RAIL_WIDTH = 82;
-const TABLET_RAIL_LEFT_GAP = 17;
-const TABLET_RAIL_CONTENT_GAP = 20;
-const TABLET_CONTENT_RIGHT_GAP = 21;
 
 type BookshelfViewMode = 'cover' | 'list';
+
+interface BookshelfFilterFrame {
+  generation: number;
+  startedAt: number;
+  fromHeight: number;
+  toHeight: number;
+  fromOpacity: number;
+  toOpacity: number;
+  heightDuration: number;
+  contentDuration: number;
+  heightCurve: curves.ICurve;
+  contentCurve: curves.ICurve;
+}
 
 class BookshelfMotionFrameCallback extends FrameCallback {
   private readonly callback: () => void;
@@ -154,41 +175,56 @@ export struct BookshelfPage {
   private viewportRestored: boolean = false;
   private viewportRestoreGeneration: number = 0;
   private firstVisibleItem: number = 0;
+  private headerScrollFrameQueued: string = '';
+  private headerScrollPublishedNavigation: number = -1;
+  private headerScrolled: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerMainViewportRevision') @Watch('scheduleContinueCardMeasurement') private mainViewportRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('scheduleContinueCardMeasurement') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   // The bookshelf page is rebuilt when leaving and returning from reading.
   // Keep the user's projection choice in app storage so route recreation does
   // not silently restore the cover projection.
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
   // Retire the removed group selector's transient filter without changing book groups.
   @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
-  @StorageLink('readerBookshelfReadingFilter') @Watch('onShelfFiltersChanged') private readingFilter: string = 'all';
   @StorageLink('readerBookshelfContentFilter') @Watch('onShelfFiltersChanged') private contentFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
   @Prop noticeTopInset: number = 0;
-  @Prop headerClearance: number = readerPageInitialHeaderHeight('bookshelf') + 14;
+  /** Presented header bottom (top + measured height), owned by the route. */
+  @Prop @Watch('scheduleContinueCardMeasurement') headerBottom: number = bookshelfHeaderSpec().frameHeight;
+  /** Route increments this when the current main tab is tapped. */
+  @Prop @Watch('onScrollToTopRequested') scrollToTopToken: number = 0;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
+  @Prop @Watch('scheduleReturnMotionOrigin') returnMotionBookKey: string = '';
   @Prop @Watch('modeFeedback') feedbackEnabled: boolean = true;
   @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: (navigation?: number) => void = (): void => {};
   onPreviousPageRequested: (navigation?: number) => void = (): void => {};
   onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string, navigation?: number) => void = (_readingState: string, _sourceKind: string): void => {};
-  @Prop continueReading: ShelfBook | undefined;
+  @Prop @Watch('onContinueReadingChanged') continueReading: ShelfBook | undefined;
+  /** Keep the shelf slot stable when the IME leaves no room to cover the card. */
+  @Prop continueCardSuppressed: boolean = false;
+  onContinueCardRect: (rect: ReaderSurfaceRect | undefined, navigation: number, bookKey: string) => void =
+    (_rect: ReaderSurfaceRect | undefined, _navigation: number, _bookKey: string): void => {};
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onRssRequested: (navigation?: number) => void = (): void => {};
   onSettingsRequested: (navigation?: number) => void = (): void => {};
   onDiscoverRequested: (navigation?: number) => void = (): void => {};
-  onBookSelected: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
+  onBookSelected: (book: ShelfBook, navigation?: number, origin?: BookshelfBookOrigin) => void = (_book: ShelfBook): void => {};
+  onReturnMotionOrigin: (origin: BookshelfBookOrigin, navigation?: number) => void = (_origin: BookshelfBookOrigin): void => {};
   onVisibleBooksChanged: (books: ShelfBook[], navigation?: number) => void = (_books: ShelfBook[]): void => {};
+  onHeaderScrolledChanged: (scrolled: boolean, navigation: number) => void =
+    (_scrolled: boolean, _navigation: number): void => {};
+  isCurrentChromeHost: (navigation?: number) => boolean = (_navigation?: number): boolean => true;
   onBookMultiSelectRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
   onBookGroupRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
   onBookInfoRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
   onBookRemoveRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
-  @State private viewportWidth: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
   @State private viewSwitchRunning: boolean = false;
   @State private viewSwitchHeaderOpacity: number = 1;
@@ -197,6 +233,17 @@ export struct BookshelfPage {
   @State private viewSwitchDestinationCoverOpacity: number = 1;
   @State private viewSwitchMorphCoverOpacity: number = 0;
   @State private filterRowVisible: boolean = false;
+  @State private filterPanelHeight: number = 0;
+  @State private filterContentOpacity: number = 0;
+  private filterNaturalHeight: number = 0;
+  private filterMotionGeneration: number = 0;
+  private filterMotionRunning: boolean = false;
+  private returnMotionReported: string = '';
+  private returnMotionFrameQueued: string = '';
+  private continueCardMeasureQueued: string = '';
+  private continueCardPublishedKey: string = '';
+  private continueCardPublishedNavigation: number = -1;
+  private continueCardPublishedRect: ReaderSurfaceRect | undefined = undefined;
   @State private viewModeError: string = '';
   private mounted: boolean = false;
   private projectionQueued: boolean = false;
@@ -223,10 +270,6 @@ export struct BookshelfPage {
   private viewSwitchSourceMode: BookshelfViewMode = 'cover';
   private viewSwitchDestinationMode: BookshelfViewMode = 'list';
   private viewTimeline: ReversibleMotionTimeline = new ReversibleMotionTimeline(this.viewMotion.totalMs);
-  private readonly viewFadeCurve = curves.cubicBezierCurve(0, 0, .58, 1);
-  private readonly viewContentCurve = curves.cubicBezierCurve(.4, 0, .2, 1);
-  private readonly viewMoveCurve = curves.cubicBezierCurve(.2, 0, 0, 1);
-  private readonly viewScaleCurve = curves.cubicBezierCurve(.25, .1, 0, 1);
   private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource((row: ShelfBook[]): string => this.bookRowRenderKey(row, 0));
   private readonly webDavCredentials: WebDavCredentialStore = WebDavCredentialStore.instance;
 
@@ -243,6 +286,10 @@ export struct BookshelfPage {
     this.storedViewMode = restoredMode;
     this.storedSelectedGroup = '';
     this.filterRowVisible = this.viewState.filterExpanded;
+    this.filterContentOpacity = this.filterRowVisible ? 1 : 0;
+    this.filterPanelHeight = 0;
+    this.filterNaturalHeight = 0;
+    this.filterMotionRunning = false;
     this.viewportRestored = false;
     this.setRestingProjectionOpacity(restoredMode);
     this.rebuildShelfProjection();
@@ -264,7 +311,7 @@ export struct BookshelfPage {
     if (!view.visible || this.viewModePending()) { this.lastModeFeedback = ''; return; }
     if (view.message === this.lastModeFeedback) return;
     this.lastModeFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted && this.feedbackEnabled); } catch (_) {}
+    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.feedbackEnabled); } catch (_) {}
   }
   private viewModeRecovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.viewModeSnapshot.receipt, this.viewModeSnapshot.readFacts);
@@ -317,17 +364,23 @@ export struct BookshelfPage {
 
   aboutToDisappear(): void {
     this.transientFeedback.reset();
+    this.publishContinueCardRect(undefined);
+    this.continueCardMeasureQueued = '';
     this.projectionGeneration += 1;
     this.projectionQueued = false;
     this.saveShelfViewport();
     this.viewState.filterExpanded = this.filterRowVisible;
+    this.filterMotionGeneration += 1;
+    this.filterMotionRunning = false;
+    this.returnMotionFrameQueued = '';
     this.viewportRestoreGeneration += 1;
+    this.headerScrollFrameQueued = '';
     this.mounted = false;
     this.modeReconcileBusy = false;
     this.bookActionSheetVisible = false;
     this.pendingBookAction = undefined;
     this.actionSheetAppearedId = '';
-    if (this.actionSheetChromeId.length > 0) ReaderWindowCoordinator.requestAppChrome();
+    if (this.actionSheetChromeId.length > 0 && this.isCurrentChromeHost(this.navigationGeneration)) ReaderWindowCoordinator.requestAppChrome();
     this.actionSheetChromeId = '';
     this.actionBook = undefined;
     this.actionSheetId = '';
@@ -353,18 +406,12 @@ export struct BookshelfPage {
           ReaderRecoveryNotice({ view: this.viewModeRecovery(), tag: '显示方式待确认', actionLabel: '核对显示方式',
             busy: this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
             onReconcile: (generation: number): void => this.retryViewMode(generation) });
-        }.width('100%').padding({ left: 17, right: 17, top: this.headerClearance + this.noticeTopInset })
+        }.width('100%').padding({ left: 17, right: 17, top: this.shelfHeaderClearance() + this.noticeTopInset })
           .hitTestBehavior(HitTestMode.Transparent);
       }
     }
     .width('100%')
     .height('100%')
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-        this.viewportWidth = width;
-      }
-    })
     .bindSheet(this.bookActionSheetVisible, this.bookActionSheetContent, this.bookActionSheetOptions());
   }
 
@@ -379,7 +426,9 @@ export struct BookshelfPage {
       backgroundColor: readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme),
       radius: { topLeft: this.bookActionSheetSpec().borderRadius, topRight: this.bookActionSheetSpec().borderRadius, bottomLeft: 0, bottomRight: 0 },
       maskColor: readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme),
-      shadow: { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 },
+      shadow: readerSurfaceElevation(this.bookActionSheetSpec().hostElevation, this.appThemeScheme),
+      borderWidth: { top: this.bookActionSheetSpec().hostBorderWidth },
+      borderColor: readerAppColor(this.bookActionSheetSpec().hostBorderRole, this.appThemeScheme),
       enableOutsideInteractive: false,
       onWillAppear: (): void => this.claimBookActionChrome(presentationId, book),
       onAppear: (): void => {
@@ -390,6 +439,10 @@ export struct BookshelfPage {
         // Ignore the opening gesture's release/outside hit until the native
         // sheet has finished entering. Back remains an explicit dismissal.
         if (dismissal.reason !== DismissReason.PRESS_BACK && this.actionSheetAppearedId !== presentationId) return;
+        // Native sheet mask and system-bar chrome are separate render paths.
+        // Release the latter at the same dismissal boundary; onDisappear keeps
+        // the cleanup idempotent for interrupted/native teardown paths.
+        this.releaseBookActionChrome(presentationId);
         this.dismissBookActionSheet(presentationId, book);
         dismissal.dismiss();
       },
@@ -398,6 +451,7 @@ export struct BookshelfPage {
   }
 
   private claimBookActionChrome(presentationId: string, book: ShelfBook | undefined): void {
+    if (!this.isCurrentChromeHost(this.actionSheetNavigation)) return;
     if (!this.isCurrentBookActionSheet(presentationId, book)) return;
     const mask = readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme);
     const paper = readerScrimmedOpaqueColor(readerAppColor('app.window.background', this.appThemeScheme), mask);
@@ -407,6 +461,13 @@ export struct BookshelfPage {
     style.navigationContentColor = readerAppColor('app.window.foreground', this.appThemeScheme);
     this.actionSheetChromeId = presentationId;
     ReaderWindowCoordinator.requestOverlayChrome(style);
+  }
+
+  private releaseBookActionChrome(presentationId: string): void {
+    if (!this.mounted || presentationId.length === 0 || presentationId !== this.actionSheetChromeId ||
+      !this.isCurrentChromeHost(this.actionSheetNavigation)) return;
+    this.actionSheetChromeId = '';
+    ReaderWindowCoordinator.requestAppChrome();
   }
 
   private bookActionSheetSpec(): SheetSurfaceSpec {
@@ -454,83 +515,116 @@ export struct BookshelfPage {
     .padding({ left: this.tabletContentFrame().left, right: this.tabletContentFrame().right });
   }
 
+  private continueCardFrame(expandedLayout: boolean): BookshelfContinueCardFrame {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return bookshelfContinueCardFrame(this.shelfContentWidth(expandedLayout), expandedLayout, scale);
+  }
+
+  private continueCardFontScale(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) ? Math.max(1, scale) : 1;
+  }
+
   @Builder
-  private continueReadingCard(bookProvider: () => ShelfBook | undefined, isTablet: boolean) {
-    Column({ space: 6 }) {
-      Text('继续阅读')
-        .width('100%')
-        .fontFamily(TYPE_SHELF_CONTINUE_LABEL.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_LABEL.fontWeight)
-          .fontSize(TYPE_SHELF_CONTINUE_LABEL.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_LABEL.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_LABEL.letterSpacingFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-      Row({ space: 12 }) {
-        if (this.hasCover(bookProvider())) {
-          Image(bookProvider()?.coverUrl ?? '')
-            .width(48)
-            .height(72)
-            .objectFit(ImageFit.Cover)
-            .borderRadius(8);
-        } else {
-          NoCoverCover({
-            coverWidth: 48,
-            coverHeight: 72,
-          });
-        }
-
-        Column({ space: 2 }) {
-          Text(bookProvider()?.title ?? '')
-          .width('100%')
-          .fontFamily(TYPE_SHELF_CONTINUE_TITLE.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_TITLE.fontWeight)
-          .fontSize(TYPE_SHELF_CONTINUE_TITLE.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_TITLE.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_TITLE.letterSpacingFp as number)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-          Text(bookProvider()?.author ?? '')
-            .width('100%')
-            .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
-          .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-          Text(this.continueReadingPosition(bookProvider()))
-            .width('100%')
-            .constraintSize({ minHeight: 15 })
-            .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
-          .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
-        .layoutWeight(1)
-        .height(72)
-        .alignItems(HorizontalAlign.Start)
-        .justifyContent(FlexAlign.Center);
-
-        Stack({ alignContent: Alignment.Center }) {
-          Text('阅读')
-            .fontFamily(TYPE_SHELF_ACTION.fontFamily).fontWeight(TYPE_SHELF_ACTION.fontWeight)
-          .fontSize(TYPE_SHELF_ACTION.fontSizeFp).lineHeight(TYPE_SHELF_ACTION.lineHeightFp as number).letterSpacing(TYPE_SHELF_ACTION.letterSpacingFp as number)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-        }
-        .width(54)
-        .height(40)
-        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-        .borderRadius(12);
+  private continueCardCover(bookProvider: () => ShelfBook | undefined, expandedLayout: boolean) {
+    Stack() {
+      if (this.hasCover(bookProvider())) {
+        Image(bookProvider()?.coverUrl ?? '')
+          .width(this.continueCardFrame(expandedLayout).coverWidth)
+          .height(this.continueCardFrame(expandedLayout).coverHeight)
+          .objectFit(ImageFit.Cover).borderRadius(8);
+      } else {
+        NoCoverCover({ coverWidth: this.continueCardFrame(expandedLayout).coverWidth,
+          coverHeight: this.continueCardFrame(expandedLayout).coverHeight });
       }
-      .width(this.shelfContentWidth(isTablet))
-      .height(100)
-      .padding({ left: 12, right: 12 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(18)
-      .onClick(this.bookSelectionHandler(bookProvider));
-    }
-    .width(this.shelfContentWidth(isTablet));
+    }.width(this.continueCardFrame(expandedLayout).coverWidth)
+      .height(this.continueCardFrame(expandedLayout).coverHeight).borderRadius(8).clip(true)
+      .id(this.bookCoverMotionId(bookProvider(), true));
+  }
+
+  @Builder
+  private continueCardCopy(bookProvider: () => ShelfBook | undefined, expandedLayout: boolean) {
+    Column({ space: this.continueCardFrame(expandedLayout).textGap }) {
+      Text(bookProvider()?.title ?? '').width('100%')
+        .fontFamily(TYPE_SHELF_CONTINUE_TITLE.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_TITLE.fontWeight)
+        .fontSize(TYPE_SHELF_CONTINUE_TITLE.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_TITLE.lineHeightFp as number)
+        .letterSpacing(TYPE_SHELF_CONTINUE_TITLE.letterSpacingFp as number)
+        .minFontScale(1).maxFontScale(this.continueCardFontScale())
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Text(bookProvider()?.author ?? '').width('100%')
+        .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
+        .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp as number)
+        .letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp as number)
+        .minFontScale(1).maxFontScale(this.continueCardFontScale())
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Text(this.continueReadingPosition(bookProvider())).width('100%')
+        .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
+        .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp as number)
+        .letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp as number)
+        .minFontScale(1).maxFontScale(this.continueCardFontScale())
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+    }.layoutWeight(1).constraintSize({ minHeight: this.continueCardFrame(expandedLayout).textMinHeight })
+      .alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Center);
+  }
+
+  @Builder
+  private continueCardReadAction(expandedLayout: boolean) {
+    Stack({ alignContent: Alignment.Center }) {
+      Text('阅读').fontFamily(TYPE_SHELF_ACTION.fontFamily).fontWeight(TYPE_SHELF_ACTION.fontWeight)
+        .fontSize(TYPE_SHELF_ACTION.fontSizeFp).lineHeight(TYPE_SHELF_ACTION.lineHeightFp as number)
+        .letterSpacing(TYPE_SHELF_ACTION.letterSpacingFp as number)
+        .minFontScale(1).maxFontScale(this.continueCardFontScale()).maxLines(2).textAlign(TextAlign.Center)
+        .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
+    }.width(this.continueCardFrame(expandedLayout).actionWidth)
+      .height(this.continueCardFrame(expandedLayout).actionHeight)
+      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(12);
+  }
+
+  @Builder
+  private continueReadingCard(bookProvider: () => ShelfBook | undefined, expandedLayout: boolean) {
+    Column({ space: 6 }) {
+      Text('继续阅读').width('100%')
+        .fontFamily(TYPE_SHELF_CONTINUE_LABEL.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_LABEL.fontWeight)
+        .fontSize(TYPE_SHELF_CONTINUE_LABEL.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_LABEL.lineHeightFp as number)
+        .letterSpacing(TYPE_SHELF_CONTINUE_LABEL.letterSpacingFp as number)
+        .minFontScale(1).maxFontScale(this.continueCardFontScale())
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Column({ space: this.continueCardFrame(expandedLayout).actionBelow ? this.continueCardFrame(expandedLayout).gap : 0 }) {
+        Row({ space: this.continueCardFrame(expandedLayout).gap }) {
+          this.continueCardCover(bookProvider, expandedLayout);
+          this.continueCardCopy(bookProvider, expandedLayout);
+          if (!this.continueCardFrame(expandedLayout).actionBelow) {
+            this.continueCardReadAction(expandedLayout);
+          }
+        }.width('100%').constraintSize({ minHeight: this.continueCardFrame(expandedLayout).bodyMinHeight })
+          .alignItems(VerticalAlign.Center);
+        if (this.continueCardFrame(expandedLayout).actionBelow) {
+          Row() {
+            Blank().layoutWeight(1);
+            this.continueCardReadAction(expandedLayout);
+          }.width('100%');
+        }
+      }.width(this.continueCardFrame(expandedLayout).width)
+        .constraintSize({ minHeight: this.continueCardFrame(expandedLayout).minHeight })
+        .padding({ left: this.continueCardFrame(expandedLayout).paddingHorizontal,
+          right: this.continueCardFrame(expandedLayout).paddingHorizontal,
+          top: this.continueCardFrame(expandedLayout).paddingVertical,
+          bottom: this.continueCardFrame(expandedLayout).paddingVertical })
+        .alignSelf(ItemAlign.Center)
+        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) }).borderRadius(18)
+        .id(this.continueCardRectId())
+        .onAreaChange(this.continueCardAreaHandler())
+        .onClick(this.bookSelectionHandler(bookProvider, true));
+    }.width(this.shelfContentWidth(expandedLayout)).alignItems(HorizontalAlign.Start)
+      .opacity(this.continueCardSuppressed ? 0 : 1)
+      .enabled(!this.continueCardSuppressed)
+      .hitTestBehavior(this.continueCardSuppressed ? HitTestMode.None : HitTestMode.Default)
+      .accessibilityLevel(this.continueCardSuppressed ? 'no-hide-descendants' : 'auto');
   }
 
   private mangaReadingPosition(book: ShelfBook): string {
@@ -551,50 +645,32 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private bookshelfList(isTablet: boolean) {
+  private bookshelfList(expandedLayout: boolean) {
     List({ space: TOK_SPACE_CONTROL_INLINE, scroller: this.shelfScroller }) {
       if (this.continueReading !== undefined) {
         ListItem() {
           // Retained Builder observers must read the live Prop instead of
           // capturing the book that happened to be current when mounted.
-          this.continueReadingCard((): ShelfBook | undefined => this.continueReading, isTablet);
-        }
+          this.continueReadingCard((): ShelfBook | undefined => this.continueReading, expandedLayout);
+        }.padding({ top: this.shelfFirstItemPadding() });
       }
       ListItem() {
-        Row() {
-          Text('我的书架')
-            .layoutWeight(1)
-            .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
-            .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
-            .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
-            .lineHeight(TYPE_APP_SECTION_LABEL.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .opacity(this.viewSwitchHeaderOpacity);
+        Column() {
+          BookshelfSectionHeader({
+            contentWidth: this.shelfContentWidth(expandedLayout),
+            titleOpacity: this.viewSwitchHeaderOpacity,
+            viewMode: this.viewMode,
+            filterExpanded: this.filterRowVisible,
+            hasActiveFilters: this.hasActiveFilters(),
+            onCover: (): void => this.setViewMode('cover'),
+            onList: (): void => this.setViewMode('list'),
+            onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible),
+          });
 
-          Row({ space: TOK_SPACE_XS }) {
-            this.sectionAction('bookshelf_grid', (): void => {
-              this.setViewMode('cover');
-            });
-            this.sectionAction('bookshelf_list', (): void => {
-              this.setViewMode('list');
-            });
-            this.sectionAction('bookshelf_filter', (): void => {
-              this.filterRowVisible = !this.filterRowVisible;
-            });
-          }
-          .height(34);
+          this.filterPanel();
         }
-        .width(this.shelfContentWidth(isTablet))
-        .height(38)
-        // The title follows the projection transition. Its persistent action
-        // siblings must stay visible while their selected asset changes.
-        .alignItems(VerticalAlign.Center);
-      }
-
-      if (this.filterRowVisible) {
-        ListItem() {
-          this.filterRow();
-        }
+        .width(this.shelfContentWidth(expandedLayout))
+        .padding({ top: this.continueReading === undefined ? this.shelfFirstItemPadding() : 0 });
       }
 
       if (this.visibleBookCount === 0) {
@@ -609,45 +685,46 @@ export struct BookshelfPage {
       // Figma shared-cover motion had no persistent actor to interpolate.
       LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
         ListItem() {
-          this.projectionRow(row, isTablet, rowIndex);
+          this.projectionRow(row, expandedLayout, rowIndex);
         }
       }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
     }
-    .width(this.shelfContentWidth(isTablet))
+    .width(this.shelfContentWidth(expandedLayout))
     .height('100%')
-    .contentStartOffset(this.headerClearance)
-    .contentEndOffset(this.isWideViewport() ? 24 : readerFloatingTabContentInset(ReaderWindowCoordinator.metrics()))
+    .id(this.shelfViewportMotionId())
+    .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
+    .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .scrollBar(BarState.Off)
     .maintainVisibleContentPosition(true)
     .onScrollIndex(this.shelfScrollHandler())
     .onReachStart(this.shelfPageHandler(true))
     .onReachEnd(this.shelfPageHandler(false))
-    .onScroll((): void => this.saveShelfViewport())
+    .onScroll(this.shelfViewportScrollHandler())
     .onAppear((): void => this.restoreShelfViewport());
   }
 
-  private shelfBottomContentInset(isTablet: boolean): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return isTablet ? readerFloatingBarBottomInset(metrics, TOK_SPACE_MD) : readerFloatingTabContentInset(metrics);
-  }
-
   private shelfHeaderItems(): number {
-    return 1 + (this.continueReading === undefined ? 0 : 1) +
-      (this.filterRowVisible ? 1 : 0) +
-      (this.viewModeError.length > 0 ? 1 : 0);
+    // Header and filter always share one ListItem; recovery is a separate overlay.
+    return 1 + (this.continueReading === undefined ? 0 : 1);
   }
 
   private saveShelfViewport(): void {
     if (!this.viewportRestored) return;
     try {
-      this.viewState.anchorOffset = this.shelfScroller.currentOffset().yOffset;
+      const offset = this.shelfScroller.currentOffset().yOffset;
+      const itemY = this.shelfScroller.getItemRect(this.firstVisibleItem).y;
+      if (!Number.isFinite(offset) || !Number.isFinite(itemY)) return;
       const rowIndex = this.firstVisibleItem - this.shelfHeaderItems();
       const row = rowIndex >= 0 && rowIndex < this.rowDataSource.totalCount() ?
         this.rowDataSource.getData(rowIndex) : undefined;
-      this.viewState.anchorKey = row !== undefined && row.length > 0 ?
+      const key = row !== undefined && row.length > 0 ?
         JSON.stringify([row[0].sourceId, row[0].bookId]) : '';
-      this.viewState.anchorItemY = this.shelfScroller.getItemRect(this.firstVisibleItem).y;
+      // Publish the complete native sample together. An invalid/detached read
+      // must not pair a new offset with the previous identity or item position.
+      this.viewState.anchorKey = key;
+      this.viewState.anchorOffset = offset;
+      this.viewState.anchorItemY = itemY;
+      this.viewState.anchorCaptured = true;
     } catch (_error) { /* Keep the last measured position after native detach. */ }
   }
 
@@ -656,6 +733,11 @@ export struct BookshelfPage {
     const key = this.viewState.anchorKey;
     const itemY = this.viewState.anchorItemY;
     const offset = this.viewState.anchorOffset;
+    const captured = this.viewState.anchorCaptured || key.length > 0 || (Number.isFinite(offset) && offset !== 0);
+    // A real List top is -startInset, not zero. Publish the known restoration
+    // target before its two native frames; do not flash idle for a saved row.
+    this.publishHeaderScrolled(key.length > 0 || (captured && Number.isFinite(offset) &&
+      offset + this.shelfContentStartInset() > bookshelfHeaderSpec().scrollThreshold));
     this.viewportRestored = false;
     this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
       if (!this.mounted || generation !== this.viewportRestoreGeneration) return;
@@ -665,7 +747,7 @@ export struct BookshelfPage {
           JSON.stringify([book.sourceId, book.bookId]) === key)) { anchor = index; break; }
       }
       if (anchor < 0) {
-        if (Number.isFinite(offset) && offset !== 0) {
+        if (captured && Number.isFinite(offset)) {
           this.shelfScroller.scrollTo({ xOffset: 0, yOffset: offset, animation: false });
         } else {
           // Native List's top edge includes contentStartOffset; scrollTo(0)
@@ -675,6 +757,7 @@ export struct BookshelfPage {
         }
         this.viewportRestored = true;
         this.publishVisibleReadingBooks();
+        this.scheduleReturnMotionOrigin();
         return;
       }
       const item = anchor + this.shelfHeaderItems();
@@ -686,19 +769,120 @@ export struct BookshelfPage {
         catch (_error) { /* A concurrent removal may discard the saved anchor. */ }
         this.viewportRestored = true;
         this.publishVisibleReadingBooks();
+        this.scheduleReturnMotionOrigin();
       }));
     }));
+  }
+
+  private onScrollToTopRequested(): void {
+    if (!this.mounted || this.scrollToTopToken <= 0) return;
+    this.viewState.anchorKey = '';
+    this.viewState.anchorCaptured = false;
+    this.viewState.anchorOffset = 0;
+    try {
+      this.shelfScroller.scrollEdge(Edge.Top);
+    } catch (_error) { /* The List may not be attached during a route swap. */ }
+  }
+
+  @Builder
+  private filterPanel() {
+    // Scroll measures its content with an unbounded vertical constraint even
+    // when the viewport is zero high. It is only a clip host: users cannot
+    // scroll it. One live content tree therefore supplies the current height
+    // after wrapping, window and font changes without a duplicate measure tree.
+    Scroll() {
+      Column() {
+        this.filterRow();
+      }
+      .width('100%')
+      .padding({ top: TOK_SPACE_CONTROL_INLINE })
+      .opacity(this.filterContentOpacity)
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        this.onFilterContentMeasured(this.numericAreaLength(newValue.height));
+      });
+    }
+    .width('100%')
+    .height(this.filterPanelHeight)
+    .scrollable(ScrollDirection.Vertical)
+    .enableScrollInteraction(false)
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.None)
+    .clip(true)
+    .enabled(this.filterRowVisible)
+    .focusable(false)
+    .accessibilityLevel(this.filterRowVisible ? 'auto' : 'no-hide-descendants')
+    .hitTestBehavior(this.filterRowVisible ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  private onFilterContentMeasured(height: number): void {
+    if (!this.mounted || !Number.isFinite(height) || height <= 0 ||
+      Math.abs(height - this.filterNaturalHeight) < 0.01) return;
+    this.filterNaturalHeight = height;
+    if (!this.filterRowVisible) return;
+    if (this.filterMotionRunning && !this.reduceMotion) this.animateFilterPanel();
+    else this.filterPanelHeight = height;
+  }
+
+  private setFilterExpanded(expanded: boolean): void {
+    if (!this.mounted || expanded === this.filterRowVisible) return;
+    this.filterRowVisible = expanded;
+    this.viewState.filterExpanded = expanded;
+    if (this.reduceMotion) this.settleFilterPanel();
+    else this.animateFilterPanel();
+  }
+
+  private animateFilterPanel(): void {
+    const generation = ++this.filterMotionGeneration;
+    const expanded = this.filterRowVisible;
+    this.filterMotionRunning = true;
+    const height = motionAnimateParam(expanded ? 'bookshelf.filter.expand' : 'bookshelf.filter.collapse');
+    const content = motionAnimateParam(expanded ? 'bookshelf.filter.content.in' : 'bookshelf.filter.content.out');
+    // Reuse the page's frame clock and shared segment sampler. State holds
+    // the displayed values, so a reversal starts there and reduced motion can
+    // stop immediately without reassigning an implicit animation's old target.
+    this.scheduleFilterFrame({ generation, startedAt: readerMotionNowMs(),
+      fromHeight: this.filterPanelHeight, toHeight: expanded ? this.filterNaturalHeight : 0,
+      fromOpacity: this.filterContentOpacity, toOpacity: expanded ? 1 : 0,
+      heightDuration: height.duration ?? 0, contentDuration: content.duration ?? 0,
+      // These registered filter tracks use native cubicBezierCurve objects.
+      heightCurve: height.curve as curves.ICurve, contentCurve: content.curve as curves.ICurve });
+  }
+
+  private scheduleFilterFrame(frame: BookshelfFilterFrame): void {
+    this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
+      if (!this.mounted || frame.generation !== this.filterMotionGeneration || !this.filterMotionRunning) return;
+      const elapsed = Math.max(0, readerMotionNowMs() - frame.startedAt);
+      const heightProgress = motionSegment(elapsed, 0, frame.heightDuration,
+        (fraction: number): number => frame.heightCurve.interpolate(fraction));
+      const contentProgress = motionSegment(elapsed, 0, frame.contentDuration,
+        (fraction: number): number => frame.contentCurve.interpolate(fraction));
+      this.filterPanelHeight = frame.fromHeight + (frame.toHeight - frame.fromHeight) * heightProgress;
+      this.filterContentOpacity = frame.fromOpacity + (frame.toOpacity - frame.fromOpacity) * contentProgress;
+      if (elapsed >= Math.max(frame.heightDuration, frame.contentDuration)) this.filterMotionRunning = false;
+      else this.scheduleFilterFrame(frame);
+    }));
+  }
+
+  private settleFilterPanel(): void {
+    this.filterMotionGeneration += 1;
+    this.filterMotionRunning = false;
+    this.filterPanelHeight = this.filterRowVisible ? this.filterNaturalHeight : 0;
+    this.filterContentOpacity = this.filterRowVisible ? 1 : 0;
   }
 
   /** PH60: view-only state/type conditions; grouping and updates have separate owners. */
   @Builder
   private filterRow() {
     Column({ space: 4 }) {
-      Row() {
+      Row({ space: TOK_SPACE_MD }) {
         Text('筛选').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
         Text('清除').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-          .height(28).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
-          .onClick((): void => this.clearFilters()).accessibilityText('清除内容类型和来源筛选');
+          .constraintSize({ minHeight: 44 }).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
+          .attributeModifier(new ReaderActionAccessibility('清除内容类型和来源筛选', this.hasActiveFilters()))
+          .onClick((): void => this.clearFilters());
+        Text('收起').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .constraintSize({ minHeight: 44 }).attributeModifier(new ReaderActionAccessibility('收起筛选'))
+          .onClick((): void => this.setFilterExpanded(false));
       }.width('100%');
       Text('内容类型').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
@@ -717,9 +901,15 @@ export struct BookshelfPage {
 
   @Builder
   private filterChip(dimension: string, value: string, label: string) {
-    Text(label)
-      .fontFamily(TYPE_APP_FILTER_OPTION.fontFamily).fontWeight(TYPE_APP_FILTER_OPTION.fontWeight).fontSize(TYPE_APP_FILTER_OPTION.fontSizeFp).lineHeight(TYPE_APP_FILTER_OPTION.lineHeightFp as number)
-      .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+    Row() {
+      Text(label)
+        .fontFamily(TYPE_SHELF_FILTER_LABEL.fontFamily).fontWeight(TYPE_SHELF_FILTER_LABEL.fontWeight)
+        .fontSize(TYPE_SHELF_FILTER_LABEL.fontSizeFp).lineHeight(TYPE_SHELF_FILTER_LABEL.lineHeightFp as number)
+        .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .constraintSize({ maxWidth: 136 }).textAlign(TextAlign.Center);
+    }
+      .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
       .padding({ left: 12, right: 12, top: 5, bottom: 5 })
       // Keep the semantic soft token for existing filter contracts while the
       // visible selected layer uses the demo's dark-green capsule.
@@ -729,13 +919,13 @@ export struct BookshelfPage {
         [[Color.Transparent, 0], [Color.Transparent, 1]] })
       .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(999).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: 160 })
-      .onClick((): void => this.selectFilter(dimension, value))
-      .accessibilityText(`${dimension === 'content' ? '内容类型' : dimension === 'reading' ? '阅读状态' : '来源'}:${label}${this.isFilterSelected(dimension, value) ? '，已选' : ''}`);
+      .constraintSize({ maxWidth: 160, minHeight: 44 })
+      .attributeModifier(new ReaderActionAccessibility(`${dimension === 'content' ? '内容类型' : '来源'}：${label}`, true, this.isFilterSelected(dimension, value)))
+      .onClick((): void => this.selectFilter(dimension, value));
   }
 
   private isFilterSelected(dimension: string, value: string): boolean {
-    return (dimension === 'content' ? this.contentFilter : dimension === 'reading' ? this.readingFilter : this.sourceFilter) === value;
+    return (dimension === 'content' ? this.contentFilter : this.sourceFilter) === value;
   }
 
   private hasActiveFilters(): boolean {
@@ -743,14 +933,12 @@ export struct BookshelfPage {
   }
 
   private selectFilter(dimension: string, value: string): void {
-    if (dimension === 'content') { this.contentFilter = value; this.readingFilter = 'all'; }
-    else if (dimension === 'reading') this.readingFilter = value;
+    if (dimension === 'content') this.contentFilter = value;
     else this.sourceFilter = value;
     this.queueShelfProjection();
   }
 
   private clearFilters(): void {
-    this.readingFilter = 'all';
     this.contentFilter = 'all';
     this.sourceFilter = 'all';
     this.queueShelfProjection();
@@ -774,76 +962,15 @@ export struct BookshelfPage {
     });
   }
 
-  // @Builder value parameters are not observed: the active variant must be
-  // read from view state inside the builder or the icon never swaps.
-  private isSectionActionActive(assetName: string): boolean {
-    if (assetName === 'bookshelf_grid') {
-      return this.viewMode === 'cover';
-    }
-    if (assetName === 'bookshelf_list') {
-      return this.viewMode === 'list';
-    }
-    if (assetName === 'bookshelf_filter') {
-      return this.filterRowVisible || this.hasActiveFilters();
-    }
-    return false;
-  }
-
-  // Keep the canonical active asset referenced for provenance and future
-  // state-layer parity; Figma's current active treatment uses the default
-  // outline glyph with a surrounding state layer.
-  private canonicalFilterActiveAsset(): Resource {
-    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_active_theme_night') : $r('app.media.bookshelf_filter_active'));
-  }
-
-  // A single unconditional Image per action: if/else nodes inside a
-  // multi-instance @Builder get mis-diffed on state change and whole actions
-  // vanish from the tree. Only the src attribute swaps.
-  private sectionActionAsset(assetName: string): Resource {
-    if (assetName === 'bookshelf_grid') {
-      return this.viewMode === 'cover'
-        ? (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_grid_theme_night') : $r('app.media.bookshelf_grid')) : (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_grid_outline_theme_night') : $r('app.media.bookshelf_grid_outline'));
-    }
-    if (assetName === 'bookshelf_list') {
-      return this.viewMode === 'list'
-        ? (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_list_active_theme_night') : $r('app.media.bookshelf_list_active')) : (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_list_theme_night') : $r('app.media.bookshelf_list'));
-    }
-    if (assetName === 'bookshelf_filter') {
-      return (this.filterRowVisible || this.hasActiveFilters())
-        ? this.canonicalFilterActiveAsset()
-        : (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
-    }
-    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
-  }
-
   @Builder
-  private sectionAction(assetName: string, action: () => void) {
-    Stack({ alignContent: Alignment.Center }) {
-      // State color lives in the asset variant (provenance palette):
-      // Image.fillColor refills outline paths even with fill="none".
-      Image(this.sectionActionAsset(assetName)).width(20).height(20);
-    }
-    .width(34)
-    .height(34)
-    .attributeModifier(new ReaderPressFeedback(this.isSectionActionActive(assetName) ?
-      readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent, this.appThemeScheme, 17, 12))
-    .border({ width: this.isSectionActionActive(assetName) ? 1 : 0, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    // Figma `Library/SectionAction` (`487:40`) keeps a 34×34 visual actor
-    // but expands its transparent hit target by 5vp on every side.
-    .responseRegion({ x: -5, y: -5, width: 44, height: 44 })
-    .accessibilityText(this.sectionActionLabel(assetName, this.isSectionActionActive(assetName)))
-    .onClick(action);
-  }
-
-  @Builder
-  private projectionRow(row: ShelfBook[], isTablet: boolean, rowIndex: number) {
+  private projectionRow(row: ShelfBook[], expandedLayout: boolean, rowIndex: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       ForEach(row, (book: ShelfBook, columnIndex: number) => {
-        this.projectionBookCard(book, isTablet, (rowIndex * 3) + columnIndex, columnIndex);
+        this.projectionBookCard(book, expandedLayout, (rowIndex * 3) + columnIndex, columnIndex);
       }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
     }
-    .width(this.shelfContentWidth(isTablet))
-    .height(this.projectionRowHeight(row, isTablet, rowIndex * 3));
+    .width(this.shelfContentWidth(expandedLayout))
+    .height(this.projectionRowHeight(row, expandedLayout, rowIndex * 3));
   }
 
   /**
@@ -855,21 +982,22 @@ export struct BookshelfPage {
   @Builder
   private projectionBookCard(
     book: ShelfBook,
-    isTablet: boolean,
+    expandedLayout: boolean,
     index: number,
     columnIndex: number,
   ) {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.projectionBookCover(book, isTablet, index);
-      this.projectionGridDetails(book, isTablet);
-      this.projectionListDetails(book, isTablet);
+      this.projectionBookCover(book, expandedLayout, index);
+      this.projectionGridDetails(book, expandedLayout);
+      this.projectionListDetails(book, expandedLayout);
     }
-    .width(this.projectionBookWidth(isTablet, index))
-    .height(this.projectionBookHeight(book, isTablet, index))
+    .width(this.projectionBookWidth(expandedLayout, index))
+    .height(this.projectionBookHeight(book, expandedLayout, index))
     .translate({
-      x: this.projectionBookTranslateX(columnIndex, isTablet, index),
-      y: this.projectionBookTranslateY(columnIndex, isTablet, index),
+      x: this.projectionBookTranslateX(columnIndex, expandedLayout, index),
+      y: this.projectionBookTranslateY(columnIndex, expandedLayout, index),
     })
+    .attributeModifier(new ReaderActionAccessibility(`${book.title}，${book.author}，${this.gridProgressLabel(book)}`))
     .onClick(this.bookSelectionHandler((): ShelfBook => book))
     .gesture(
       LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
@@ -878,24 +1006,25 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private projectionBookCover(book: ShelfBook, isTablet: boolean, index: number) {
+  private projectionBookCover(book: ShelfBook, expandedLayout: boolean, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.projectionBookCoverLayer(book, isTablet, false, index);
-      this.projectionBookCoverLayer(book, isTablet, true, index);
+      this.projectionBookCoverLayer(book, expandedLayout, false, index);
+      this.projectionBookCoverLayer(book, expandedLayout, true, index);
     }
-    .width(this.shelfBookCardWidth(isTablet))
-    .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
-    .borderRadius(this.projectionCoverRadius(isTablet, index))
+    .width(this.shelfBookCardWidth(expandedLayout))
+    .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
+    .id(this.bookCoverMotionId(book, false))
+    .borderRadius(this.projectionCoverRadius(expandedLayout, index))
     .clip(true)
     .scale({
-      x: this.projectionCoverScale(isTablet, index),
-      y: this.projectionCoverScale(isTablet, index),
+      x: this.projectionCoverScale(expandedLayout, index),
+      y: this.projectionCoverScale(expandedLayout, index),
       centerX: '50%',
       centerY: '50%',
     })
     .translate({
-      x: this.projectionCoverCompensationX(isTablet, index),
-      y: this.projectionCoverCompensationY(isTablet, index),
+      x: this.projectionCoverCompensationX(expandedLayout, index),
+      y: this.projectionCoverCompensationY(expandedLayout, index),
     })
     .zIndex(4)
     // Both cover layers are visual actors. The enclosing card alone owns
@@ -910,27 +1039,33 @@ export struct BookshelfPage {
    * incoming text would expose the shelf when the upper actor hands off.
    */
   @Builder
-  private projectionBookCoverLayer(book: ShelfBook, isTablet: boolean, morphLayer: boolean, index: number) {
+  private projectionBookCoverLayer(book: ShelfBook, expandedLayout: boolean, morphLayer: boolean, index: number) {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.hasCover(book)) {
         Image(book.coverUrl as string)
-          .width(this.shelfBookCardWidth(isTablet))
-          .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
+          .width(this.shelfBookCardWidth(expandedLayout))
+          .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
           .objectFit(ImageFit.Cover)
-          .borderRadius(this.projectionCoverRadius(isTablet, index))
-          .shadow({ radius: 26, color: readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme), offsetX: 0, offsetY: 8 });
+          .borderRadius(this.projectionCoverRadius(expandedLayout, index))
+          .shadow({ radius: BOOKSHELF_COVER_SHADOW_RADIUS, color: readerAppColor('app.shadow.cover', this.appThemeScheme),
+            offsetX: 0, offsetY: BOOKSHELF_COVER_SHADOW_OFFSET_Y });
       } else {
         NoCoverCover({
-          coverWidth: this.shelfBookCardWidth(isTablet),
-          coverHeight: this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet),
+          coverWidth: this.shelfBookCardWidth(expandedLayout),
+          coverHeight: this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout),
         });
       }
       if ((book.unreadCount ?? 0) > 0) {
-        Text(`更新 ${book.unreadCount} 章`)
-          .fontFamily(TYPE_APP_COMPACT_BADGE.fontFamily)
-          .fontWeight(TYPE_APP_COMPACT_BADGE.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_BADGE.fontSizeFp)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
+        Row() {
+          Text(`更新 ${book.unreadCount} 章`)
+            .fontFamily(TYPE_SHELF_UPDATE_BADGE.fontFamily)
+            .fontWeight(TYPE_SHELF_UPDATE_BADGE.fontWeight)
+            .fontSize(TYPE_SHELF_UPDATE_BADGE.fontSizeFp)
+            .lineHeight(TYPE_SHELF_UPDATE_BADGE.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
+            .maxLines(1).textAlign(TextAlign.Center);
+        }
+          .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
           .padding({ left: 7, right: 7, top: 3, bottom: 3 })
           .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
           .borderRadius(999)
@@ -939,13 +1074,13 @@ export struct BookshelfPage {
           .opacity(this.viewSwitchGridContentOpacity);
       }
     }
-    .width(this.shelfBookCardWidth(isTablet))
-    .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
+    .width(this.shelfBookCardWidth(expandedLayout))
+    .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
     .linearGradient({
       angle: 141.7,
       colors: [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]],
     })
-    .borderRadius(this.projectionCoverRadius(isTablet, index))
+    .borderRadius(this.projectionCoverRadius(expandedLayout, index))
     .clip(true)
     // Alpha belongs to the complete cover, including the fallback's paper,
     // rules and text. Otherwise the fading paper can cover the lower text
@@ -956,50 +1091,51 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private projectionGridDetails(book: ShelfBook, isTablet: boolean) {
-    Column({ space: 6 }) {
+  private projectionGridDetails(book: ShelfBook, expandedLayout: boolean) {
+    Column({ space: BOOKSHELF_GRID_TEXT_GAP }) {
       Text(book.title)
-        .width(this.shelfBookCardWidth(isTablet))
+        .width(this.shelfBookCardWidth(expandedLayout))
         .fontFamily(TYPE_SHELF_LIST_TITLE.fontFamily)
         .fontWeight(TYPE_SHELF_LIST_TITLE.fontWeight)
         .fontSize(TYPE_SHELF_LIST_TITLE.fontSizeFp)
-        .lineHeight(TYPE_SHELF_LIST_TITLE.lineHeightFp)
+        .lineHeight(`${TYPE_SHELF_LIST_TITLE.lineHeightFp}fp`)
         .letterSpacing(TYPE_SHELF_LIST_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Text(book.author)
-        .width(this.shelfBookCardWidth(isTablet))
+        .width(this.shelfBookCardWidth(expandedLayout))
         .fontFamily(TYPE_SHELF_LIST_AUTHOR.fontFamily)
         .fontWeight(TYPE_SHELF_LIST_AUTHOR.fontWeight)
         .fontSize(TYPE_SHELF_LIST_AUTHOR.fontSizeFp)
-        .lineHeight(TYPE_SHELF_LIST_AUTHOR.lineHeightFp)
+        .lineHeight(`${TYPE_SHELF_LIST_AUTHOR.lineHeightFp}fp`)
         .letterSpacing(TYPE_SHELF_LIST_AUTHOR.letterSpacingFp)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (this.gridProgressLabel(book).length > 0) {
         Text(this.gridProgressLabel(book))
-          .width(this.shelfBookCardWidth(isTablet))
+          .width(this.shelfBookCardWidth(expandedLayout))
           .fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
           .fontWeight(TYPE_SHELF_LIST_STATUS.fontWeight)
           .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp)
-          .lineHeight(TYPE_SHELF_LIST_STATUS.lineHeightFp)
+          .lineHeight(`${TYPE_SHELF_LIST_STATUS.lineHeightFp}fp`)
           .letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .maxLines(1);
       }
     }
-    .width(this.shelfBookCardWidth(isTablet))
+    .width(this.shelfBookCardWidth(expandedLayout))
     .alignItems(HorizontalAlign.Start)
-    .translate({ y: this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) + 6 })
+    .translate({ y: this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout) + BOOKSHELF_GRID_TEXT_GAP })
     .opacity(this.viewSwitchGridContentOpacity)
+    .accessibilityLevel(this.viewMode === 'cover' ? 'auto' : 'no-hide-descendants')
     .enabled(this.viewMode === 'cover')
     .hitTestBehavior(this.viewMode === 'cover' ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
-  private projectionListDetails(book: ShelfBook, isTablet: boolean) {
+  private projectionListDetails(book: ShelfBook, expandedLayout: boolean) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       ShelfBookListDetails({ book })
         .layoutWeight(1).constraintSize({ minWidth: 0 });
@@ -1010,16 +1146,17 @@ export struct BookshelfPage {
       .width(44)
       .height(44)
       .borderRadius(22)
-      .accessibilityText(`${book.title}更多操作`)
+      .attributeModifier(new ReaderActionAccessibility(`${book.title}更多操作`))
       .onClick(this.bookActionPresentationHandler(book));
     }
-    .width(this.projectionListDetailsWidth(isTablet))
-    .height(this.listCoverHeight(isTablet))
+    .width(this.projectionListDetailsWidth(expandedLayout))
+    .height(this.listCoverHeight(expandedLayout))
     .alignItems(VerticalAlign.Center)
-    .translate({ x: this.listCoverWidth(isTablet) + TOK_SPACE_CONTROL_INLINE })
+    .translate({ x: this.listCoverWidth(expandedLayout) + TOK_SPACE_CONTROL_INLINE })
     .opacity(this.viewSwitchListContentOpacity)
     // None skips only this Row. Disable its retained More button whenever the
     // list projection is hidden so it cannot intercept a neighboring cover.
+    .accessibilityLevel(this.viewMode === 'list' ? 'auto' : 'no-hide-descendants')
     .enabled(this.viewMode === 'list')
     .hitTestBehavior(this.viewMode === 'list' ? HitTestMode.Default : HitTestMode.None);
   }
@@ -1063,7 +1200,7 @@ export struct BookshelfPage {
     this.actionSheetAppearedId = '';
     if (this.actionSheetChromeId === presentationId) {
       this.actionSheetChromeId = '';
-      ReaderWindowCoordinator.requestAppChrome();
+      if (this.isCurrentChromeHost(this.navigationGeneration)) ReaderWindowCoordinator.requestAppChrome();
     }
     if (navigation === this.navigationGeneration && action !== undefined) action();
   }
@@ -1086,28 +1223,78 @@ export struct BookshelfPage {
     return this.phoneContentFrame().width;
   }
 
-  private shelfContentWidth(isTablet: boolean): number {
-    if (!isTablet) {
+  private shelfContentWidth(expandedLayout: boolean): number {
+    if (!expandedLayout) {
       return this.phoneContentWidth();
     }
     return this.tabletContentFrame().width;
   }
 
   private phoneContentFrame(): SurfaceHorizontalFrame {
-    return this.resolveContentFrame(
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
+    if (this.readerWindowMetricsRevision < 0) return new SurfaceHorizontalFrame(0, 0, 0);
+    return this.contentGeometry(false).content.frame;
   }
 
   private tabletContentFrame(): SurfaceHorizontalFrame {
-    return this.resolveContentFrame(
-      new SurfaceWidthSpec(
-        TOK_CONTENT_RAIL_W_TABLET,
-        this.tabletContentLeftGap(),
-        TABLET_CONTENT_RIGHT_GAP,
-        'center',
-      ),
-    );
+    if (this.readerWindowMetricsRevision < 0) return new SurfaceHorizontalFrame(0, 0, 0);
+    return this.contentGeometry(true).content.frame;
+  }
+
+  private contentGeometry(expandedLayout: boolean): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.effectiveViewportWidth();
+    input.headerHeight = this.headerBottom;
+    input.contentGap = bookshelfHeaderSpec().contentGap;
+    input.contentUnderlap = bookshelfHeaderSpec().contentUnderlap;
+    input.contentEndInset = this.shelfContentEndValue();
+    input.contentMaxWidth = expandedLayout ? TOK_CONTENT_RAIL_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+    input.contentLeftGap = expandedLayout ?
+      (this.railActive() ? readerMainRailContentLeft() : TOK_SCREEN_INSET) : TOK_SCREEN_INSET;
+    input.contentRightGap = expandedLayout ?
+      (this.railActive() ? readerMainRailContentRight() : TOK_SCREEN_INSET) : TOK_SCREEN_INSET;
+    return resolveReaderPageGeometry(input);
+  }
+
+  private navigationMode(): MainNavigationMode {
+    return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision, this.readerWindowMetricsRevision);
+  }
+
+  private railActive(): boolean {
+    return this.navigationMode() === 'rail';
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    return this.contentGeometry(this.isWideViewport());
+  }
+
+  private scrollLayout(): ReaderScrollLayout {
+    return readerScrollLayout(this.pageGeometry(), { mode: 'contentOffset' });
+  }
+
+  private shelfContentStartInset(): number {
+    return this.scrollLayout().startInset;
+  }
+
+  private shelfHeaderClearance(): number {
+    return this.pageGeometry().header.clearance;
+  }
+
+  private shelfFirstItemPadding(): number {
+    const spec = bookshelfHeaderSpec();
+    return spec.contentGap + spec.contentUnderlap;
+  }
+
+  private shelfContentEndInset(): number {
+    return this.scrollLayout().endInset;
+  }
+
+  private shelfContentEndValue(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return this.isWideViewport() && this.railActive()
+      ? Math.max(24, readerFloatingBarBottomInset(metrics, TOK_SPACE_MD))
+      : readerFloatingTabContentInset(metrics);
   }
 
   private resolveContentFrame(spec: SurfaceWidthSpec): SurfaceHorizontalFrame {
@@ -1127,44 +1314,19 @@ export struct BookshelfPage {
     if (this.readerWindowMetricsRevision < 0) {
       return 0;
     }
-    const metricsWidth = ReaderWindowCoordinator.metrics().windowRect.width;
-    return this.viewportWidth > 0 ? this.viewportWidth : metricsWidth;
+    return readerMainViewport(this.mainViewportRevision).width;
   }
 
   private isWideViewport(): boolean {
-    return this.effectiveViewportWidth() >= BOOKSHELF_WIDE_BREAKPOINT;
+    return readerIsExpandedWidth(this.effectiveViewportWidth());
   }
 
-  private tabletRailLeft(): number {
-    return Math.max(
-      TABLET_RAIL_LEFT_GAP,
-      readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()),
-    );
+  private listCoverWidth(expandedLayout: boolean): number {
+    return expandedLayout ? TABLET_LIST_COVER_WIDTH : PHONE_LIST_COVER_WIDTH;
   }
 
-  private tabletContentLeftGap(): number {
-    return this.tabletRailLeft() + TABLET_RAIL_WIDTH + TABLET_RAIL_CONTENT_GAP;
-  }
-
-  private sectionActionLabel(assetName: string, active: boolean): string {
-    if (assetName === 'bookshelf_grid') {
-      return active ? '封面模式，当前已选' : '切换到封面模式';
-    }
-    if (assetName === 'bookshelf_list') {
-      return active ? '列表模式，当前已选' : '切换到列表模式';
-    }
-    if (assetName === 'bookshelf_filter') {
-      return this.hasActiveFilters() ? '筛选书架，已有筛选条件' : this.filterRowVisible ? '筛选书架，已展开' : '筛选书架';
-    }
-    return '';
-  }
-
-  private listCoverWidth(isTablet: boolean): number {
-    return isTablet ? TABLET_LIST_COVER_WIDTH : PHONE_LIST_COVER_WIDTH;
-  }
-
-  private listCoverHeight(isTablet: boolean): number {
-    return isTablet ? TABLET_LIST_COVER_HEIGHT : PHONE_LIST_COVER_HEIGHT;
+  private listCoverHeight(expandedLayout: boolean): number {
+    return expandedLayout ? TABLET_LIST_COVER_HEIGHT : PHONE_LIST_COVER_HEIGHT;
   }
 
 
@@ -1177,28 +1339,20 @@ export struct BookshelfPage {
     return ShelfBookPresentation.progress(book, 'grid-caption');
   }
 
-  private shelfBookCardWidth(isTablet: boolean): number {
-    return this.bookCardWidth(this.shelfContentWidth(isTablet), isTablet);
+  private shelfBookCardWidth(expandedLayout: boolean): number {
+    return this.bookCardWidth(this.shelfContentWidth(expandedLayout), expandedLayout);
   }
 
-  private bookCardWidth(contentWidth: number, isTablet: boolean): number {
-    if (isTablet) {
-      return Math.min(TABLET_BOOK_WIDTH, Math.max(0, (contentWidth - (TOK_SPACE_XS * 2)) / 3));
-    }
-    return Math.min(PHONE_BOOK_WIDTH, Math.max(0, (contentWidth - (TOK_SPACE_XS * 2)) / 3));
+  private bookCardWidth(contentWidth: number, expandedLayout: boolean): number {
+    return bookshelfGridFrame(contentWidth, expandedLayout).cardWidth;
   }
 
-  private bookCardHeight(cardWidth: number, isTablet: boolean): number {
-    return cardWidth * (isTablet ? TABLET_BOOK_HEIGHT_RATIO : PHONE_BOOK_HEIGHT_RATIO);
+  private bookCardHeight(cardWidth: number, expandedLayout: boolean): number {
+    return bookshelfCoverHeight(cardWidth, expandedLayout);
   }
 
-  private bookRowSpace(contentWidth: number, isTablet: boolean): number {
-    if (isTablet) {
-      return Math.min(30,
-        Math.max(0, (contentWidth - (this.bookCardWidth(contentWidth, true) * 3)) / 2));
-    }
-    return Math.min(30,
-      Math.max(TOK_SPACE_XS, (contentWidth - (this.bookCardWidth(contentWidth, false) * 3)) / 2));
+  private bookRowSpace(contentWidth: number, expandedLayout: boolean): number {
+    return bookshelfGridFrame(contentWidth, expandedLayout).columnGap;
   }
 
   private numericAreaLength(value: Length): number {
@@ -1215,19 +1369,181 @@ export struct BookshelfPage {
   private onShelfPresentationChanged(): void {
     // Props update the retained page; revoke only its temporary Sheet.
     this.dismissBookActionSheet(this.actionSheetId, this.actionBook);
+    this.headerScrollPublishedNavigation = -1;
     this.publishVisibleReadingBooks();
+    this.scheduleReturnMotionOrigin();
+    this.scheduleContinueCardMeasurement();
+  }
+
+  private continueCardBookKey(): string {
+    const book = this.continueReading;
+    return book === undefined ? '' : JSON.stringify([book.sourceId, book.bookId]);
+  }
+
+  private continueCardRectId(): string {
+    return `reader.bookshelf.continue-card:${this.navigationGeneration}:${this.continueCardBookKey()}`;
+  }
+
+  private continueCardRectIdentity(): ReaderSurfaceRectIdentity {
+    return { route: 'bookshelf', owner: `continue-card:${this.continueCardBookKey()}`,
+      generation: this.navigationGeneration };
+  }
+
+  private onContinueReadingChanged(): void {
+    if (!this.mounted) return;
+    if (this.continueCardBookKey() !== this.continueCardPublishedKey) this.publishContinueCardRect(undefined);
+    this.scheduleContinueCardMeasurement();
+  }
+
+  private continueCardAreaHandler(): (_old: Area, _area: Area) => void {
+    const navigation = this.navigationGeneration;
+    const key = this.continueCardBookKey();
+    return (_old: Area, _area: Area): void => {
+      if (!this.isShelfPresentationCurrent(navigation) || key !== this.continueCardBookKey()) return;
+      this.scheduleContinueCardMeasurement();
+    };
+  }
+
+  private publishContinueCardRect(rect: ReaderSurfaceRect | undefined): void {
+    const navigation = this.navigationGeneration;
+    const key = this.continueCardBookKey();
+    const previous = this.continueCardPublishedRect;
+    const sameRect = previous === undefined ? rect === undefined : rect !== undefined &&
+      Math.abs(previous.x - rect.x) < 0.1 && Math.abs(previous.y - rect.y) < 0.1 &&
+      Math.abs(previous.width - rect.width) < 0.1 && Math.abs(previous.height - rect.height) < 0.1;
+    if (navigation === this.continueCardPublishedNavigation && key === this.continueCardPublishedKey && sameRect) return;
+    this.continueCardPublishedNavigation = navigation;
+    this.continueCardPublishedKey = key;
+    this.continueCardPublishedRect = rect;
+    this.onContinueCardRect(rect, navigation, key);
+  }
+
+  /** The card's real layout bounds are separate from the cover flight origin.
+   * Read a settled native frame, including scroll translation, and report vp
+   * window coordinates to Index. Suppression keeps this layout measurable. */
+  private scheduleContinueCardMeasurement(): void {
+    if (!this.mounted || !this.viewportRestored) return;
+    this.scheduleHeaderScrollMeasurement();
+    const navigation = this.navigationGeneration;
+    const key = this.continueCardBookKey();
+    if (key.length === 0) { this.publishContinueCardRect(undefined); return; }
+    const request = JSON.stringify([navigation, key]);
+    if (request === this.continueCardMeasureQueued) return;
+    this.continueCardMeasureQueued = request;
+    this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
+      if (this.continueCardMeasureQueued !== request) return;
+      this.continueCardMeasureQueued = '';
+      if (!this.isShelfPresentationCurrent(navigation) || key !== this.continueCardBookKey() || !this.viewportRestored) return;
+      const context = this.getUIContext();
+      const local = readerMeasureSurfaceRect(context, this.continueCardRectId(), this.shelfViewportMotionId(),
+        this.continueCardRectIdentity(), (): ReaderSurfaceRectIdentity => this.continueCardRectIdentity());
+      if (local === undefined) { this.publishContinueCardRect(undefined); return; }
+      try {
+        const viewport = context.getFrameNodeById(this.shelfViewportMotionId());
+        if (viewport === null) { this.publishContinueCardRect(undefined); return; }
+        const bounds = context.getComponentUtils().getRectangleById(this.shelfViewportMotionId());
+        const height = context.px2vp(bounds.size.height);
+        if (local.y + local.height <= this.shelfHeaderClearance() ||
+          local.y >= height - this.shelfContentEndInset()) {
+          this.publishContinueCardRect(undefined); return;
+        }
+        const position = viewport.getPositionToWindowWithTransform();
+        if (!this.isShelfPresentationCurrent(navigation) || key !== this.continueCardBookKey()) return;
+        this.publishContinueCardRect({ x: local.x + position.x, y: local.y + position.y,
+          width: local.width, height: local.height });
+      } catch (_error) { this.publishContinueCardRect(undefined); }
+    }));
   }
 
   private isShelfPresentationCurrent(navigation: number): boolean {
     return this.mounted && navigation === this.navigationGeneration;
   }
 
-  private bookSelectionHandler(provider: () => ShelfBook | undefined): () => void {
+  private bookCoverMotionId(book: ShelfBook | undefined, continuing: boolean): string {
+    return `reader.bookshelf.cover:${this.navigationGeneration}:${continuing ? 'continue' : 'shelf'}:${JSON.stringify([book?.sourceId ?? '', book?.bookId ?? ''])}`;
+  }
+
+  private shelfViewportMotionId(): string {
+    return `reader.bookshelf.viewport:${this.navigationGeneration}`;
+  }
+
+  private measureBookOrigin(book: ShelfBook, continuing: boolean): BookshelfBookOrigin | undefined {
+    if (!this.mounted || this.viewSwitchRunning || this.reduceMotion) return undefined;
+    try {
+      const context = this.getUIContext();
+      const id = this.bookCoverMotionId(book, continuing);
+      const node = context.getFrameNodeById(id);
+      const viewport = context.getFrameNodeById(this.shelfViewportMotionId());
+      if (node === null || viewport === null) return undefined;
+      const cover = context.getComponentUtils().getRectangleById(id);
+      const list = context.getComponentUtils().getRectangleById(this.shelfViewportMotionId());
+      // ComponentInfo.size is px before drawing scale; transformed FrameNode
+      // positions are vp and include the parent card's projection translation.
+      const position = node.getPositionToWindowWithTransform();
+      const bounds = viewport.getPositionToWindowWithTransform();
+      const width = context.px2vp(cover.size.width) * cover.scale.x;
+      const height = context.px2vp(cover.size.height) * cover.scale.y;
+      const viewportWidth = context.px2vp(list.size.width);
+      const viewportHeight = context.px2vp(list.size.height);
+      if (![position.x, position.y, width, height, bounds.x, bounds.y, viewportWidth, viewportHeight]
+        .every((value: number): boolean => Number.isFinite(value)) || width <= 0 || height <= 0) return undefined;
+      // A partially clipped/offscreen cover cannot safely own a shared actor.
+      // Exclude the persistent header and floating navigation overlap as well.
+      if (position.x < bounds.x - 0.5 || position.x + width > bounds.x + viewportWidth + 0.5 ||
+        position.y < bounds.y + this.shelfHeaderClearance() - 0.5 ||
+        position.y + height > bounds.y + viewportHeight - this.shelfContentEndInset() + 0.5) return undefined;
+      return {
+        sourceId: book.sourceId,
+        bookId: book.bookId,
+        coverUrl: book.coverUrl ?? '',
+        title: book.title,
+        rect: { x: position.x, y: position.y, width, height },
+        radius: continuing || this.viewMode === 'cover' ? 8 : 6,
+      };
+    } catch (_error) {
+      // Lazy rows can disappear between a route/frame callback and this read.
+      return undefined;
+    }
+  }
+
+  private scheduleReturnMotionOrigin(): void {
+    const key = this.returnMotionBookKey;
+    const navigation = this.navigationGeneration;
+    const request = JSON.stringify([key, navigation]);
+    if (!this.mounted || !this.viewportRestored || key.length === 0 || this.reduceMotion ||
+      request === this.returnMotionReported || request === this.returnMotionFrameQueued) return;
+    this.returnMotionFrameQueued = request;
+    this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
+      if (this.returnMotionFrameQueued === request) this.returnMotionFrameQueued = '';
+      if (!this.isShelfPresentationCurrent(navigation) || !this.viewportRestored ||
+        key !== this.returnMotionBookKey || request === this.returnMotionReported) return;
+      const continuing = key === this.viewState.openedBookKey && this.viewState.openedFromContinueReading;
+      let book: ShelfBook | undefined = continuing && this.continueReading !== undefined &&
+        JSON.stringify([this.continueReading.sourceId, this.continueReading.bookId]) === key ? this.continueReading : undefined;
+      if (!continuing) {
+        for (let index = 0; index < this.rowDataSource.totalCount() && book === undefined; index += 1) {
+          book = this.rowDataSource.getData(index).find((candidate: ShelfBook): boolean =>
+            JSON.stringify([candidate.sourceId, candidate.bookId]) === key);
+        }
+      }
+      if (book === undefined) return;
+      const origin = this.measureBookOrigin(book, continuing);
+      if (origin === undefined) return;
+      this.returnMotionReported = request;
+      this.onReturnMotionOrigin(origin, navigation);
+    }));
+  }
+
+  private bookSelectionHandler(provider: () => ShelfBook | undefined, continuing: boolean = false): () => void {
     const navigation = this.navigationGeneration;
     return (): void => {
       if (!this.isShelfPresentationCurrent(navigation) || this.actionBook !== undefined) return;
       const book = provider();
-      if (book !== undefined) this.onBookSelected(book, navigation);
+      if (book === undefined) return;
+      this.viewState.openedBookKey = JSON.stringify([book.sourceId, book.bookId]);
+      this.viewState.openedFromContinueReading = continuing;
+      this.saveShelfViewport();
+      this.onBookSelected(book, navigation, this.measureBookOrigin(book, continuing));
     };
   }
 
@@ -1255,6 +1571,47 @@ export struct BookshelfPage {
     };
   }
 
+  private shelfViewportScrollHandler(): () => void {
+    const navigation = this.navigationGeneration;
+    return (): void => {
+      if (!this.isShelfPresentationCurrent(navigation) || !this.viewportRestored) return;
+      this.saveShelfViewport();
+      this.scheduleContinueCardMeasurement();
+    };
+  }
+
+  private publishHeaderScrolled(scrolled: boolean): void {
+    if (!this.mounted) return;
+    const navigation = this.navigationGeneration;
+    if (navigation === this.headerScrollPublishedNavigation && scrolled === this.headerScrolled) return;
+    this.headerScrollPublishedNavigation = navigation;
+    this.headerScrolled = scrolled;
+    this.onHeaderScrolledChanged(scrolled, navigation);
+  }
+
+  private scheduleHeaderScrollMeasurement(): void {
+    if (!this.mounted || !this.viewportRestored) return;
+    const navigation = this.navigationGeneration;
+    const restoration = this.viewportRestoreGeneration;
+    const request = JSON.stringify([navigation, restoration]);
+    if (request === this.headerScrollFrameQueued) return;
+    this.headerScrollFrameQueued = request;
+    this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
+      if (this.headerScrollFrameQueued !== request) return;
+      this.headerScrollFrameQueued = '';
+      if (!this.isShelfPresentationCurrent(navigation) || !this.viewportRestored ||
+        restoration !== this.viewportRestoreGeneration) return;
+      if (this.firstVisibleItem > 0) { this.publishHeaderScrolled(true); return; }
+      try {
+        const first = this.shelfScroller.getItemRect(0);
+        if (!Number.isFinite(first.y) || !Number.isFinite(first.height) || first.height <= 0) return;
+        // P0 native sample: start=80 => item.y=80/offset=-80; scrollBy(8)
+        // => item.y=72/offset=-72. Sample item position after layout settles.
+        this.publishHeaderScrolled(this.shelfContentStartInset() - first.y > bookshelfHeaderSpec().scrollThreshold);
+      } catch (_error) { /* Detached native List keeps its last published material. */ }
+    }));
+  }
+
   private onBooksChanged(): void {
     if (this.actionBook !== undefined && !this.books.some((candidate: ShelfBook): boolean =>
       candidate.sourceId === this.actionBook?.sourceId && candidate.bookId === this.actionBook?.bookId)) {
@@ -1280,12 +1637,16 @@ export struct BookshelfPage {
     if (restore) this.viewportRestored = false;
     this.rowDataSource.replace(rows);
     if (restore) this.restoreShelfViewport();
-    else this.publishVisibleReadingBooks();
+    else {
+      this.publishVisibleReadingBooks();
+      this.scheduleReturnMotionOrigin();
+    }
   }
 
   /** The displayed rows own preparation; scrolling replaces this fixed window. */
   private publishVisibleReadingBooks(): void {
     if (!this.mounted || !this.viewportRestored) return;
+    this.scheduleContinueCardMeasurement();
     const books: ShelfBook[] = [];
     if (this.firstVisibleItem < this.shelfHeaderItems() && this.continueReading !== undefined) {
       books.push(this.continueReading);
@@ -1308,8 +1669,12 @@ export struct BookshelfPage {
     // invalidate the affected row; tuple encoding avoids delimiter collisions.
     return JSON.stringify(row.map((book: ShelfBook): Array<string | number> => [
       book.sourceId, book.bookId, book.title, book.author,
-      book.sourceName ?? '', book.coverUrl ?? '', book.currentChapterTitle ?? '', book.lastChapter ?? '',
+      book.sourceName ?? '', book.coverUrl ?? '', book.contentKind ?? '', book.currentChapterTitle ?? '',
+      book.currentChapterIndex ?? -1, book.chapterCount ?? -1, book.lastChapter ?? '',
       book.unreadCount ?? 0, book.readProgress ?? 0,
+      book.readingPosition?.chapterIndex ?? -1, book.readingPosition?.chapterOffset ?? -1,
+      book.readingPosition?.updatedAt ?? -1, book.readingPosition?.locationRevision ?? '',
+      book.readingPosition?.bodyVersion ?? '', book.readingPosition?.processingVersion ?? '',
     ]));
   }
 
@@ -1359,7 +1724,9 @@ export struct BookshelfPage {
   }
 
   private onReduceMotionChanged(): void {
-    if (!this.reduceMotion || !this.viewSwitchRunning) return;
+    if (!this.mounted || !this.reduceMotion) return;
+    this.settleFilterPanel();
+    if (!this.viewSwitchRunning) return;
     const target = this.pendingViewMode;
     this.resetViewSwitchMotion();
     this.viewMode = target;
@@ -1395,8 +1762,8 @@ export struct BookshelfPage {
   private sampleViewSwitch(): void {
     const t = this.viewSwitchTimeMs;
     const m = this.viewMotion;
-    const content = (p: number): number => this.viewContentCurve.interpolate(p);
-    const fade = (p: number): number => this.viewFadeCurve.interpolate(p);
+    const content = (p: number): number => this.viewMotion.contentCurve.interpolate(p);
+    const fade = (p: number): number => this.viewMotion.coverFadeCurve.interpolate(p);
     const outgoing = 1 - motionSegment(t, m.layoutCommitMs, m.outgoingDurationMs, content);
     const incoming = motionSegment(t, m.contentIncomingStartMs, m.contentIncomingDurationMs, content);
     this.viewSwitchHeaderOpacity = outgoing +
@@ -1438,62 +1805,63 @@ export struct BookshelfPage {
     const progress = motionSegment(this.viewSwitchTimeMs,
       this.viewMotion.layoutCommitMs + bookshelfViewCoverDelayMs(index),
       scale ? this.viewMotion.coverScaleDurationMs : this.viewMotion.coverMoveDurationMs,
-      (p: number): number => scale ? this.viewScaleCurve.interpolate(p) : this.viewMoveCurve.interpolate(p));
+      (p: number): number => scale ? this.viewMotion.coverScaleCurve.interpolate(p) :
+        this.viewMotion.coverMoveCurve.interpolate(p));
     return this.viewSwitchDestinationMode === 'list' ? progress : 1 - progress;
   }
 
-  private projectionRowHeight(row: ShelfBook[], isTablet: boolean, index: number): number {
+  private projectionRowHeight(row: ShelfBook[], expandedLayout: boolean, index: number): number {
     let grid = 0;
-    for (const book of row) grid = Math.max(grid, this.gridBookCardHeight(book, isTablet));
-    const list = row.length * this.listCoverHeight(isTablet) +
+    for (const book of row) grid = Math.max(grid, this.gridBookCardHeight(book, expandedLayout));
+    const list = row.length * this.listCoverHeight(expandedLayout) +
       Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE;
     return grid + (list - grid) * this.projectionListProgress(index);
   }
 
-  private projectionBookWidth(isTablet: boolean, index: number): number {
-    const grid = this.shelfBookCardWidth(isTablet);
-    return grid + (this.shelfContentWidth(isTablet) - grid) * this.projectionListProgress(index);
+  private projectionBookWidth(expandedLayout: boolean, index: number): number {
+    const grid = this.shelfBookCardWidth(expandedLayout);
+    return grid + (this.shelfContentWidth(expandedLayout) - grid) * this.projectionListProgress(index);
   }
 
-  private projectionBookHeight(book: ShelfBook, isTablet: boolean, index: number): number {
-    const grid = this.gridBookCardHeight(book, isTablet);
-    return grid + (this.listCoverHeight(isTablet) - grid) * this.projectionListProgress(index);
+  private projectionBookHeight(book: ShelfBook, expandedLayout: boolean, index: number): number {
+    const grid = this.gridBookCardHeight(book, expandedLayout);
+    return grid + (this.listCoverHeight(expandedLayout) - grid) * this.projectionListProgress(index);
   }
 
-  private projectionBookTranslateX(columnIndex: number, isTablet: boolean, index: number): number {
-    return columnIndex * (this.shelfBookCardWidth(isTablet) +
-      this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet)) * (1 - this.projectionListProgress(index));
+  private projectionBookTranslateX(columnIndex: number, expandedLayout: boolean, index: number): number {
+    return columnIndex * (this.shelfBookCardWidth(expandedLayout) +
+      this.bookRowSpace(this.shelfContentWidth(expandedLayout), expandedLayout)) * (1 - this.projectionListProgress(index));
   }
 
-  private projectionBookTranslateY(columnIndex: number, isTablet: boolean, index: number): number {
-    return columnIndex * (this.listCoverHeight(isTablet) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
+  private projectionBookTranslateY(columnIndex: number, expandedLayout: boolean, index: number): number {
+    return columnIndex * (this.listCoverHeight(expandedLayout) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
   }
 
-  private projectionCoverScale(isTablet: boolean, index: number): number {
-    const list = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
+  private projectionCoverScale(expandedLayout: boolean, index: number): number {
+    const list = this.listCoverWidth(expandedLayout) / this.shelfBookCardWidth(expandedLayout);
     return 1 + (list - 1) * this.projectionListProgress(index, true);
   }
 
-  private projectionCoverRadius(isTablet: boolean, index: number): number {
-    const list = 6 / (this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet));
+  private projectionCoverRadius(expandedLayout: boolean, index: number): number {
+    const list = 6 / (this.listCoverWidth(expandedLayout) / this.shelfBookCardWidth(expandedLayout));
     return 8 + (list - 8) * this.projectionListProgress(index, true);
   }
 
-  private projectionCoverCompensationX(isTablet: boolean, index: number): number {
-    return -(this.shelfBookCardWidth(isTablet) - this.listCoverWidth(isTablet)) / 2 *
+  private projectionCoverCompensationX(expandedLayout: boolean, index: number): number {
+    return -(this.shelfBookCardWidth(expandedLayout) - this.listCoverWidth(expandedLayout)) / 2 *
       this.projectionListProgress(index, true);
   }
 
-  private projectionCoverCompensationY(isTablet: boolean, index: number): number {
-    return -(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) -
-      this.listCoverHeight(isTablet)) / 2 * this.projectionListProgress(index, true);
+  private projectionCoverCompensationY(expandedLayout: boolean, index: number): number {
+    return -(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout) -
+      this.listCoverHeight(expandedLayout)) / 2 * this.projectionListProgress(index, true);
   }
 
-  private projectionListDetailsWidth(isTablet: boolean): number {
+  private projectionListDetailsWidth(expandedLayout: boolean): number {
     return Math.max(
       0,
-      this.shelfContentWidth(isTablet) -
-        this.listCoverWidth(isTablet) - TOK_SPACE_CONTROL_INLINE,
+      this.shelfContentWidth(expandedLayout) -
+        this.listCoverWidth(expandedLayout) - TOK_SPACE_CONTROL_INLINE,
     );
   }
 
@@ -1503,11 +1871,9 @@ export struct BookshelfPage {
       : this.viewSwitchDestinationCoverOpacity;
   }
 
-  private gridBookCardHeight(book: ShelfBook, isTablet: boolean): number {
-    const coverHeight = this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet);
-    const titleAndAuthor = 6 + 18.3 + 6 + 15;
-    const progress = this.gridProgressLabel(book).length > 0 ? 6 + 12 : 0;
-    return coverHeight + titleAndAuthor + progress;
+  private gridBookCardHeight(book: ShelfBook, expandedLayout: boolean): number {
+    return bookshelfGridFrame(this.shelfContentWidth(expandedLayout), expandedLayout,
+      ReaderWindowCoordinator.metrics().systemFontScale, this.gridProgressLabel(book).length > 0).cardHeight;
   }
 
   private hasCover(book: ShelfBook | undefined): boolean {

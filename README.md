@@ -2,10 +2,11 @@
 
 Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core` 的应用。
 
-## UI 与逻辑稿
+## 跨平台 UI 与交互参考
 
-工作区旧 UI 原型、状态稿与设计归档已按授权清理。新稿以本工作区已接通的应用逻辑为依据。
-入口为 [UI 稿](docs/ui-design/app-baseline/index.html) 与 [逻辑稿](docs/ui-design/app-baseline/LOGIC.md)。两者共用逐页参数，包含 iOS / Android 布局、排版、动效、平台适配与验收要求；当前模块索引、准入状态和证据统计以逻辑稿及其分类说明为准。逻辑稿提供各业务章节的入口、动作和返回路线图。预览可检查安全区、键盘和大字体，原生还原仍需逐端验收。
+非鸿蒙原生增强版本的通用界面交接入口为[跨平台界面参考](docs/ui-design/cross-platform-reference/README.md)，集中说明固定提交、页面与状态、样式动效、iOS 适配及有效来源。本轮使用已提交版本；正在进行的 UI 优化与原生特性分支另行保留，后续提交不自动改写参考。
+
+[历史 UI 稿](docs/ui-design/app-baseline/index.html)、[逻辑稿](docs/ui-design/app-baseline/LOGIC.md)及其分类账保留已观察画面和路线的证据。它们不是当前固定提交的全状态交付规格；历史截图、浏览器示意与各端原生验收分别记账。
 
 ## 开发准入
 

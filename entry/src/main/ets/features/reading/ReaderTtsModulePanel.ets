@@ -47,7 +47,7 @@ export struct ReaderTtsModulePanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop morphActorId: string = 'reader-session-morph-quickTts';
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop state: ReaderTtsState;
   @Prop timerMinutes: number = 15;
   onToggle: () => void = (): void => {};
@@ -67,7 +67,7 @@ export struct ReaderTtsModulePanel {
     }
     .width('100%')
     .constraintSize({ maxWidth: this.panelWidth() })
-    .height(this.isTablet ? TTS_MODULE_PANEL_HEIGHT_TABLET : TTS_MODULE_PANEL_HEIGHT_PHONE)
+    .height(this.expandedLayout ? TTS_MODULE_PANEL_HEIGHT_TABLET : TTS_MODULE_PANEL_HEIGHT_PHONE)
     .padding({
       left: TTS_MODULE_PANEL_PADDING_X,
       right: TTS_MODULE_PANEL_PADDING_X,
@@ -188,7 +188,7 @@ export struct ReaderTtsModulePanel {
     }
     .width(22)
     .height(22)
-    .backgroundColor(readerAppColor('app.ReaderTtsModulePanel.stopButton.backgroundColor.FFD7473E', this.appThemeScheme))
+    .backgroundColor(readerAppColor('app.action.destructive', this.appThemeScheme))
     .borderRadius(11)
     .position({ x: 69, y: 5 })
     .enabled(this.hasActiveQueue())
@@ -237,7 +237,7 @@ export struct ReaderTtsModulePanel {
           .fontFamily(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontWeight)
           .fontSize(TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE.fontSizeFp)
-          .fontColor(readerAppColor('app.ReaderTtsModulePanel.timerRow.fontColor.FF41484C', this.appThemeScheme));
+          .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
         Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
           .width(12)
           .height(12);
@@ -365,11 +365,11 @@ export struct ReaderTtsModulePanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? TTS_MODULE_PANEL_WIDTH_TABLET : TTS_MODULE_PANEL_WIDTH_PHONE;
+    return this.expandedLayout ? TTS_MODULE_PANEL_WIDTH_TABLET : TTS_MODULE_PANEL_WIDTH_PHONE;
   }
 
   private rateValueWidth(): number {
-    return this.isTablet ? TTS_MODULE_RATE_VALUE_WIDTH_TABLET : TTS_MODULE_RATE_VALUE_WIDTH_PHONE;
+    return this.expandedLayout ? TTS_MODULE_RATE_VALUE_WIDTH_TABLET : TTS_MODULE_RATE_VALUE_WIDTH_PHONE;
   }
 
   private isActivelySpeaking(): boolean {

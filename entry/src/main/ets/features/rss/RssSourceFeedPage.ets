@@ -38,7 +38,7 @@ export struct RssSourceFeedPage {
 
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop operation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
   @Prop presentationIdentity: string = '';
@@ -146,7 +146,7 @@ export struct RssSourceFeedPage {
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssSourceFeedPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -209,7 +209,7 @@ export struct RssSourceFeedPage {
     .height(Math.min(480, this.items.length * 72))
     .scrollBar(BarState.Off)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssSourceFeedPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -219,7 +219,7 @@ export struct RssSourceFeedPage {
       Text('')
         .width(7)
         .height(7)
-        .backgroundColor(item.read ? readerAppColor('app.RssSourceFeedPage.entryRow.backgroundColor.FFA9A39A', this.appThemeScheme) : readerAppColor('app.action.fill', this.appThemeScheme))
+        .backgroundColor(item.read ? readerAppColor('app.feed.unreadDot', this.appThemeScheme) : readerAppColor('app.action.fill', this.appThemeScheme))
         .borderRadius(3.5)
         .margin({ top: 25 });
 
@@ -248,7 +248,7 @@ export struct RssSourceFeedPage {
             .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
             .fontSize(TYPE_RSS_ENTRY_DESCRIPTION.fontSizeFp)
             .lineHeight(TYPE_RSS_ENTRY_DESCRIPTION.lineHeightFp as number)
-            .fontColor(readerAppColor('app.RssSourceFeedPage.entryRow.fontColor.FF6F655D', this.appThemeScheme))
+            .fontColor(readerAppColor('app.text.feedMeta', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }

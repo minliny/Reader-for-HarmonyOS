@@ -39,7 +39,7 @@ import {
 export struct ReaderAppearanceModulePanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
@@ -86,10 +86,10 @@ export struct ReaderAppearanceModulePanel {
           .width(88)
           .height(9)
           .margin({ left: this.themeSummaryGap(), top: 3.95 })
-          .fontFamily(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontFamily : TYPE_READER_THEME_SUMMARY_PHONE.fontFamily)
-          .fontWeight(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontWeight : TYPE_READER_THEME_SUMMARY_PHONE.fontWeight)
-          .fontSize(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontSizeFp : TYPE_READER_THEME_SUMMARY_PHONE.fontSizeFp)
-          .lineHeight((this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.lineHeightFp : TYPE_READER_THEME_SUMMARY_PHONE.lineHeightFp) as number)
+          .fontFamily(this.expandedLayout ? TYPE_READER_THEME_SUMMARY_TABLET.fontFamily : TYPE_READER_THEME_SUMMARY_PHONE.fontFamily)
+          .fontWeight(this.expandedLayout ? TYPE_READER_THEME_SUMMARY_TABLET.fontWeight : TYPE_READER_THEME_SUMMARY_PHONE.fontWeight)
+          .fontSize(this.expandedLayout ? TYPE_READER_THEME_SUMMARY_TABLET.fontSizeFp : TYPE_READER_THEME_SUMMARY_PHONE.fontSizeFp)
+          .lineHeight((this.expandedLayout ? TYPE_READER_THEME_SUMMARY_TABLET.lineHeightFp : TYPE_READER_THEME_SUMMARY_PHONE.lineHeightFp) as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.End)
           .maxLines(1);
@@ -133,7 +133,7 @@ export struct ReaderAppearanceModulePanel {
         .constraintSize({ maxWidth: 46 })
         .height(18)
         .backgroundColor(this.themeColor(theme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderAppearanceModulePanel.compactThemeCell.color.1F5B5046', this.appThemeScheme) })
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.shadow.themeSwatch', this.appThemeScheme) })
         .borderRadius(6);
     }
     .layoutWeight(1)
@@ -231,15 +231,15 @@ export struct ReaderAppearanceModulePanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? 262 : 286;
+    return this.expandedLayout ? 262 : 286;
   }
 
   private sectionWidth(): number {
-    return this.isTablet ? 238 : 262;
+    return this.expandedLayout ? 238 : 262;
   }
 
   private sectionX(): number {
-    return this.isTablet ? 12 : 11;
+    return this.expandedLayout ? 12 : 11;
   }
 
   private sectionRightGap(): number {
@@ -247,19 +247,19 @@ export struct ReaderAppearanceModulePanel {
   }
 
   private themeSectionY(): number {
-    return this.isTablet ? 13 : 12;
+    return this.expandedLayout ? 13 : 12;
   }
 
   private fontSectionY(): number {
-    return this.isTablet ? 98.89 : 97.9;
+    return this.expandedLayout ? 98.89 : 97.9;
   }
 
   private themeTitleWidth(): number {
-    return this.isTablet ? 144.48 : 168.5;
+    return this.expandedLayout ? 144.48 : 168.5;
   }
 
   private themeSummaryX(): number {
-    return this.isTablet ? 150 : 174;
+    return this.expandedLayout ? 150 : 174;
   }
 
   private themeSummaryGap(): number {
@@ -267,7 +267,7 @@ export struct ReaderAppearanceModulePanel {
   }
 
   private cellWidth(): number {
-    return this.isTablet ? 56.5 : 62.5;
+    return this.expandedLayout ? 56.5 : 62.5;
   }
 
   private fontIds(): ReaderAppearanceFontSlot[] {

@@ -1,14 +1,19 @@
-import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderPageState } from '../common/ReaderPageState';
-import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import { MESSAGE_META } from '../common/ReaderMessageStyle';
 import type { SearchOperationFacts } from './SearchPresentation';
-import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
-import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
+import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
+import { bookAuthorLabel, bookTitleAuthorKey, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
+import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
+import { ReaderSearchFilterPanel } from './ReaderSearchFilterPanel';
+import { ReaderSearchTaskPanel } from './ReaderSearchTaskPanel';
+import { searchBookSnapshot } from './SearchBookSnapshot';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { SearchSpinner } from './SearchSpinner';
+import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
+import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../common/ReaderScrollLayout';
+import { ReaderLibrarySearchModel } from './ReaderLibrarySearchModel';
 import { SearchViewState, type SearchContentType } from './SearchViewState';
 import { SearchPublication } from './SearchPublication';
 import type { SearchPresentation } from './SearchPresentation';
@@ -30,7 +35,7 @@ import {
   TYPE_SEARCH_RESULT_TAG,
   TYPE_SEARCH_RESULT_TITLE,
 } from '../common/ReaderTypography';
-import { ReaderSearchField } from '../common/ReaderSearchField';
+import { readerSearchControlHeight } from '../common/ReaderControlSpecs';
 import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
@@ -53,15 +58,16 @@ import {
   TOK_PRIMARY_DARK,
   TOK_PRIMARY_GRADIENT_START,
   TOK_PRIMARY_SOFT,
-  TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
-import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { ReaderMeasurementStore } from '../common/ReaderMeasurements';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
+import { SearchHeaderSpec, searchHeaderSpec } from '../common/ReaderHeaderSpecs';
 
 export type {
   SearchInitialPresentation,
@@ -78,10 +84,30 @@ export type {
 
 const SEARCH_LOCAL_SCOPE = '本地';
 const SEARCH_ONLINE_SCOPE = '在线';
+let nextSearchSurfaceOwner: number = 0;
 
 interface SearchScopeEntry {
   name: string;
   sourceIds: string[];
+}
+
+interface SearchResultSelection {
+  queryRevision: number;
+  book: SearchBook;
+  variants: SearchBook[];
+  coverUrl: string;
+}
+
+interface SearchNoticeFacts {
+  queryRevision: number;
+  progressText: string;
+  searching: boolean;
+  operationGeneration: number | undefined;
+  partial: boolean;
+  partialText: string;
+  failed: number;
+  skipped: number;
+  canRetry: boolean;
 }
 
 class SearchLayoutFrame extends FrameCallback {
@@ -329,12 +355,25 @@ export struct SearchPage {
   private restoreItemY: number = 0;
   private scrollRestored: boolean = false;
   private viewStateRevision: number = -1;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
-  @State private historyWidth: number = 0;
-  @State private resultStatsHeight: number = 28.5;
-  @State private fixedHeaderHeight: number = 0;
-  @State private fixedHeaderLayoutKey: string = '';
+  @Prop @Watch('externalHeaderChanged') externalHeaderHeight: number = 0;
+  /** Optional persistent surface; the query page remains the business owner. */
+  surfaceModel: ReaderLibrarySearchModel | undefined = undefined;
+  private surfaceOwner: number = 0;
+  /** Host checks the captured route, generation, mount, runtime and search host. */
+  isPresentationCurrent: () => boolean = (): boolean => true;
+  private readonly headerSpec: SearchHeaderSpec = searchHeaderSpec();
+  @State private measurementRevision: number = 0;
+  private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
+  @State private filtersExpanded: boolean = false;
+  private filterGeneration: number = 0;
+  @State private taskStatusExpanded: boolean = false;
+  private taskStatusGeneration: number = 0;
+  private queryAtMount: number = -1;
+  private startPositionedQuery: number = -1;
+  private headerAnchorPending: boolean = false;
+  private headerAnchorInset: number = 0;
   @State private spinnerRunKey: number = 0;
   onBack: () => void = (): void => {};
   /**
@@ -382,17 +421,25 @@ export struct SearchPage {
   private userInteracting: boolean = false;
   private userScrolling: boolean = false;
   private restoreScheduled: boolean = false;
+  private resultsDeferred: boolean = false;
+  private resultFlushEpoch: number = 0;
+  @State private displayIdleRevision: number = 0;
+  @State private resultNoticeFacts: SearchNoticeFacts | undefined = undefined;
 
   private acceptPublication(): void {
+    if (!this.ownsPageQuery()) return;
     this.presentation = this.publication.presentationAt(this.publicationRevision);
     this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
     this.searchSources = this.publication.sourcesAt(this.publicationRevision);
     this.refreshVisibleResults();
+    this.publishSurface();
   }
 
   aboutToAppear(): void {
     this.pageMounted = true;
     this.pageEpoch = ++this.viewState.pageRevision;
+    this.queryAtMount = this.viewState.revision;
+    this.startPositionedQuery = -1;
     this.restoreCancelled = false;
     registerReaderFonts(this.getUIContext().getFont());
     this.restoreKey = this.viewState.anchorKey;
@@ -401,24 +448,117 @@ export struct SearchPage {
     this.scrollRestored = false;
     this.selectedGroupName = this.viewState.category;
     this.selectedContentType = this.viewState.contentType;
+    this.filtersExpanded = false;
+    this.taskStatusExpanded = false;
+    this.viewState.filtersExpanded = false;
     this.focusInputOnAppear = this.viewState.consumeInputFocusRequest();
     this.keyword = this.viewState.keywordDraft;
     this.acceptPublication();
+    this.bindSurface();
   }
 
   aboutToDisappear(): void {
-    this.rememberAnchorNeighbors();
+    const current = this.ownsPageQuery();
+    this.surfaceModel?.release(this.surfaceOwner);
+    if (current) this.rememberAnchorNeighbors();
+    this.taskStatusExpanded = false;
+    this.taskStatusGeneration += 1;
     this.pageMounted = false;
     this.listMounted = false;
+    this.scrollRestored = false;
+    this.headerAnchorPending = false;
     this.restoreEpoch += 1;
     this.restoreScheduled = false;
-    this.onVisibleGroups([]);
+    this.resultsDeferred = false;
+    this.resultNoticeFacts = undefined;
+    this.resultFlushEpoch += 1;
+    this.userInteracting = false;
+    this.userScrolling = false;
+    if (current) this.onVisibleGroups([]);
   }
+
+  private ownsPageQuery(): boolean {
+    return this.pageMounted && this.isPresentationCurrent() && this.pageEpoch === this.viewState.pageRevision &&
+      this.queryAtMount === this.viewState.revision;
+  }
+
+  private ownsSurface(): boolean {
+    return this.ownsPageQuery() && this.surfaceModel?.owns(this.surfaceOwner) === true &&
+      this.surfaceModel?.interactive === true;
+  }
+
+  private submitFromSurface(): void {
+    if (!this.ownsSurface()) return;
+    if (this.keyword.trim().length > 0 && this.canSubmit() && this.presentation.kind !== 'loading') {
+      this.surfaceModel?.suspend();
+    }
+    this.submitSearch();
+  }
+
+  private bindSurface(): void {
+    const model = this.surfaceModel;
+    if (model === undefined) return;
+    this.surfaceOwner = ++nextSearchSurfaceOwner;
+    model.claim(this.surfaceOwner);
+    model.onBack = (): void => {
+      if (!this.ownsSurface()) return;
+      if (this.taskStatusExpanded) this.dismissTaskStatus(this.taskStatusIdentity());
+      else if (this.filtersExpanded) this.dismissSearchFilters(this.filterPresentationIdentity()); else this.onBack();
+    };
+    model.onText = (value: string): void => {
+      if (!this.ownsSurface()) return;
+      this.keyword = value; this.viewState.keywordDraft = value; this.publishSurface();
+    };
+    model.onSubmit = (): void => {
+      if (!this.ownsSurface()) return;
+      if (this.isSweeping()) this.onStop(); else this.submitFromSurface();
+    };
+    model.onAction = (): void => {
+      if (!this.ownsSurface()) return;
+      if (this.isSweeping()) this.onStop(); else this.submitFromSurface();
+    };
+    model.onClearHistory = (): void => { if (this.ownsSurface()) this.onClearHistory(); };
+    model.onRetryHistory = (): void => { if (this.ownsSurface()) this.onRetryHistory(); };
+    model.onHistory = (keyword: string): void => {
+      if (!this.ownsSurface()) return;
+      this.keyword = keyword; this.submitFromSurface();
+    };
+    model.onToggleFilters = (): void => { if (this.ownsSurface()) this.toggleSearchFilters(); };
+    model.onGroup = (value: string): void => { if (this.ownsSurface()) { this.selectGroup(value); this.publishSurface(); } };
+    model.onContentType = (value: SearchContentType): void => { if (this.ownsSurface()) { this.selectContentType(value); this.publishSurface(); } };
+    model.activate(this.surfaceOwner);
+    this.publishSurface();
+  }
+
+  private publishSurface(): void {
+    const model = this.surfaceModel;
+    if (model === undefined || this.surfaceOwner === 0 || !this.ownsSurface()) return;
+    const presentation = this.presentation;
+    model.keyword = this.keyword;
+    // History owns an independent revision and remains publishable while a query is retained.
+    model.history = presentation.history ?? [];
+    model.historyStatus = presentation.historyStatus;
+    model.hasSession = this.hasSearchSession();
+    model.sourceRecoveryVisible = presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError';
+    model.sweeping = this.isSweeping();
+    model.canSubmit = this.canSubmit();
+    model.fieldSubmitEnabled = presentation.kind !== 'loading';
+    model.focusOnAppear = this.focusInputOnAppear;
+    model.spinnerRunKey = this.spinnerRunKey;
+    model.progressText = this.searchProgressText();
+    model.filtersExpanded = this.filtersExpanded;
+    model.selectedGroup = this.selectedGroupName;
+    model.selectedContentType = this.selectedContentType;
+    model.groupNames = this.groupNames();
+  }
+
+  private ownsList(): boolean { return this.ownsPageQuery() && this.listMounted; }
 
   private publishVisibleGroups(start: number = this.visibleStart, end: number = this.visibleEnd): void {
     this.visibleStart = Math.max(0, start);
-    this.visibleEnd = Math.max(this.visibleStart, end);
-    const groups = this.presentation.kind !== 'results' || this.presentation.stopped === true ? [] :
+    this.visibleEnd = Math.max(-1, end);
+    const groups = this.presentation.kind !== 'results' || this.presentation.stopped === true ||
+      this.visibleEnd < this.visibleStart ? [] :
       this.visibleGroups.slice(this.visibleStart, Math.min(this.visibleEnd + 1, this.visibleStart + 6))
         .filter((group: SearchBookGroup): boolean => group.book.sourceId !== 'local')
         .map((group: SearchBookGroup): SearchBook[] => group.variants);
@@ -429,73 +569,151 @@ export struct SearchPage {
     this.onVisibleGroups(groups);
   }
 
+  private frameStyle(): ReaderFrameStyle {
+    const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
+    return readerFrameStyle({ backgroundColor: '#00000000',
+      headerBackground: pageBackground,
+      headerTransparent: true, footerBackground: pageBackground });
+  }
+
+  private sourceRecoveryVisible(): boolean {
+    return this.presentation.kind === 'sourceRequired' || this.presentation.kind === 'sourceLoadError';
+  }
+
   build() {
     ReaderPageScaffold({
-      variant: 'search', headerKind: 'search',
-      frameInsetLeft: this.contentFrame().left, frameInsetRight: this.contentFrame().right,
+      // Only the rounded card paints the header. A solid search host also
+      // paints its side/bottom gutters beyond that card's visible border.
+      frameStyle: this.frameStyle(),
+      headerVisible: false,
+      transparentContent: true,
+      geometry: this.pageGeometry(),
       content: (): void => { this.stateContent(); },
-      header: (): void => { this.searchHeader(); },
-      onHeaderHeightChange: (height: number): void => {
-        if (Number.isFinite(height) && height > 0) {
-          this.fixedHeaderLayoutKey = this.searchHeaderLayoutKey();
-          if (Math.abs(height - this.fixedHeaderHeight) > .1) this.fixedHeaderHeight = height;
-        }
-      },
-      overlayContent: (): void => { this.searchActivity(); },
     });
   }
 
-  @Builder
-  private searchHeader() {
-    Column() {
-      Column() {
-        this.searchBar();
-        if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
-          this.groupScopeRow();
-          this.contentTypeRow();
-        }
-      }.width('100%').constraintSize({ minHeight: this.searchHeaderHeight() });
-      if (this.presentation.kind === 'results') { this.resultStats(); }
-    }.width('100%');
+  private filterPresentationIdentity(): string {
+    return `${this.pageEpoch}:${this.viewState.revision}:${this.filterGeneration}`;
   }
 
-  @Builder
-  private searchActivity() {
-    // The activity actor stays anchored to the safe viewport independently
-    // from streaming result/filter rows.
-    Stack({ alignContent: Alignment.Bottom }) {
-      Column({ space: 18 }) {
-        SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
-          reduceMotion: this.reduceMotion, diameter: 36 });
-        Text('正在搜索本地与在线书籍…').fontFamily(MESSAGE_BODY.fontFamily)
-          .fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
-          .textAlign(TextAlign.Center)
-          .opacity(this.presentation.kind === 'loading' ? 1 : 0);
-      }.width('100%').margin({ bottom: 48 })
-        .visibility(this.isSweeping() ? Visibility.Visible : Visibility.Hidden)
-        .hitTestBehavior(HitTestMode.None);
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.None);
+  private acceptsFilter(identity: string): boolean {
+    return this.ownsPageQuery() && this.filtersExpanded && identity === this.filterPresentationIdentity();
   }
 
-  private searchHeaderHeight(): number {
-    const groups = this.presentation.kind === 'results' || this.presentation.kind === 'empty';
-    // Results/Empty renders two independent filter rows when search scopes
-    // are available: the source row followed by the content-type row. The
-    // stats bar and result list both use this value as their absolute start;
-    // omitting the second row lets them cover the content-type chips.
-    const filterRows = groups ? (this.groupNames().length > 0 ? 2 : 1) : 0;
-    return this.searchBarHeight() + filterRows * this.searchFilterHeight();
+  private dismissSearchFilters(identity: string): void {
+    if (!this.acceptsFilter(identity)) return;
+    this.filtersExpanded = false;
+    this.viewState.filtersExpanded = false;
+    this.publishSurface();
   }
 
-  private searchHeaderLayoutKey(): string {
-    return `${this.readerWindowMetricsRevision}:${this.isTablet}:${this.searchFontScale()}:${this.searchHeaderHeight()}:${this.presentation.kind === 'results' ? 'stats' : 'plain'}`;
+  private toggleSearchFilters(): void {
+    if (!this.ownsPageQuery()) return;
+    // Native popup is an overlay, not header content. It never changes the list inset.
+    if (!this.filtersExpanded) { this.filterGeneration += 1; this.taskStatusExpanded = false; }
+    this.filtersExpanded = !this.filtersExpanded;
+    this.viewState.filtersExpanded = this.filtersExpanded;
+    this.publishSurface();
+  }
+
+  private resetSearchFilters(identity: string): void {
+    if (!this.acceptsFilter(identity)) return;
+    if (this.selectedGroupName === '全部' && this.selectedContentType === '全部类型') return;
+    this.selectedGroupName = '全部'; this.selectedContentType = '全部类型';
+    this.viewState.category = '全部'; this.viewState.contentType = '全部类型';
+    this.resetFilteredResults(); this.publishSurface();
+  }
+
+  private taskStatusIdentity(): string {
+    return `${this.pageEpoch}:${this.viewState.revision}:${this.taskStatusGeneration}`;
+  }
+  private acceptsTaskStatus(identity: string): boolean {
+    return this.ownsPageQuery() && this.taskStatusExpanded && identity === this.taskStatusIdentity();
+  }
+  private dismissTaskStatus(identity: string): void {
+    if (this.acceptsTaskStatus(identity)) this.taskStatusExpanded = false;
+  }
+  private toggleTaskStatus(): void {
+    if (!this.ownsPageQuery()) return;
+    if (!this.taskStatusExpanded) {
+      this.taskStatusGeneration += 1;
+      this.filtersExpanded = false; this.viewState.filtersExpanded = false; this.publishSurface();
+    }
+    this.taskStatusExpanded = !this.taskStatusExpanded;
+  }
+
+  private acceptSearchHeaderHeight(height: number, presentedKey: number): void {
+    if (!this.ownsPageQuery() || presentedKey !== this.searchHeaderMeasurementKey() || !Number.isFinite(height) || height <= 0) return;
+    const previous = this.measurements.readForGeneration('search:header', presentedKey, this.externalHeaderHeight);
+    if (this.measurements.record('search:header', height, presentedKey)) this.measurementRevision += 1;
+    if (this.headerAnchorPending) {
+      const delta = height - this.headerAnchorInset;
+      this.restoreItemY += delta;
+      if (this.restoreKey.length === 0 && !this.viewState.anchorAtStart) this.restoreOffset -= delta;
+      this.headerAnchorPending = false;
+      if (this.viewState.anchorAtStart) this.startPositionedQuery = -1;
+      this.scheduleScrollRestore();
+    } else if (this.ownsList() && this.viewState.anchorAtStart && Math.abs(height - previous) > .5 &&
+      !this.userInteracting && !this.userScrolling) {
+      this.startPositionedQuery = -1;
+      this.restoreCancelled = false;
+      this.scheduleScrollRestore();
+    }
+  }
+
+  private hasSearchSession(): boolean {
+    return this.presentation.kind === 'loading' || this.presentation.kind === 'results' ||
+      this.presentation.kind === 'empty' || this.presentation.kind === 'error';
+  }
+
+  private searchSummaryHeight(): number {
+    return this.headerSpec.summaryHeight(this.searchSummaryStacked(), this.searchFontScale());
+  }
+
+  private searchSummaryStacked(): boolean {
+    // Window/font changes may reflow the summary; progress/count updates may
+    // not. At large accessibility sizes give both original labels a full row.
+    return this.headerSpec.summaryStacked(this.searchResultWidth() - SEARCH_RESULT_GEOMETRY.filterActionSize, this.searchFontScale());
+  }
+
+  private searchHeaderMeasurementKey(): number {
+    // Keep delayed loading/old-window receipts out of the current header.
+    // The window owner advances its revision for width and font changes.
+    const structure = this.hasSearchSession() ? 1 : 0;
+    return Math.max(0, this.readerWindowMetricsRevision) * 8 + (this.expandedLayout ? 4 : 0) + structure;
+  }
+
+  private resolvedHeaderHeight(): number {
+    return Number.isFinite(this.externalHeaderHeight) && this.externalHeaderHeight > 0 ? this.externalHeaderHeight : 0;
+  }
+
+  private externalHeaderChanged(): void {
+    if (this.ownsPageQuery() && Number.isFinite(this.externalHeaderHeight) && this.externalHeaderHeight > 0) {
+      this.acceptSearchHeaderHeight(this.externalHeaderHeight, this.searchHeaderMeasurementKey());
+    }
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = metrics.windowRect.width;
+    input.measurementRevision = this.measurementRevision;
+    input.headerHeight = this.resolvedHeaderHeight();
+    input.contentEndInset = this.searchBottomInset();
+    input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
+    return resolveReaderPageGeometry(input);
+  }
+
+  private scrollLayout(): ReaderScrollLayout {
+    return readerScrollLayout(this.pageGeometry(), { mode: 'contentOffset' });
   }
 
   private searchContentStartInset(): number {
-    if (this.fixedHeaderHeight > 0 && this.fixedHeaderLayoutKey === this.searchHeaderLayoutKey())
-      return this.fixedHeaderHeight;
-    return readerPageContentStartInset(this.searchHeaderHeight(), this.presentation.kind === 'results' ?
-      Math.max(this.resultStatsHeight, 12 + (TYPE_SEARCH_PROGRESS_META.lineHeightFp as number) * this.searchFontScale()) : 0);
+    return this.scrollLayout().startInset;
+  }
+
+  private searchContentEndInset(): number {
+    return this.scrollLayout().endInset;
   }
 
   private searchFontScale(): number {
@@ -503,18 +721,11 @@ export struct SearchPage {
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
-  private searchFilterHeight(): number {
-    return Math.max(41.5, 23 * Math.max(1, this.searchFontScale()) + 18);
-  }
+  private searchOuterInset(): number { return SEARCH_RESULT_GEOMETRY.outerInset; }
 
-  private searchFilterLabelWidth(): number {
-    return 51 * Math.max(1, this.searchFontScale());
-  }
+  private searchResultWidth(): number { return Math.max(0, this.contentFrame().width - 2 * this.searchOuterInset()); }
 
-  private searchBarHeight(): number {
-    return (this.isTablet ? 56 : 52) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) *
-      Math.max(0, this.searchFontScale() - 1);
-  }
+  private searchControlHeight(): number { return readerSearchControlHeight(this.searchFontScale()); }
 
   private searchBottomInset(minimum: number = 20): number {
     if (this.readerWindowMetricsRevision < 0) { return minimum; }
@@ -547,8 +758,7 @@ export struct SearchPage {
     if (this.isSweeping()) {
       return true;
     }
-    const scope = this.scopeSourceIds();
-    return scope === undefined || scope.length > 0;
+    return this.keyword.trim().length > 0;
   }
 
   /** Reads the presentation directly so minimal-update re-render tracks it. */
@@ -557,6 +767,7 @@ export struct SearchPage {
   }
 
   private submitSearch(): void {
+    if (!this.ownsPageQuery()) return;
     if (this.presentation.kind === 'loading') {
       return;
     }
@@ -564,16 +775,14 @@ export struct SearchPage {
     if (keyword.length === 0) {
       return;
     }
-    const scope = this.scopeSourceIds();
-    if (scope !== undefined && scope.length === 0) {
-      // A custom scope with zero usable sources cannot be searched; the pill
-      // renders dimmed so the dead submit reads as disabled, not broken.
-      return;
-    }
+    // Result filters do not silently restrict the next network query.
     this.viewState.reset(keyword);
     this.selectedGroupName = '全部';
     this.selectedContentType = '全部类型';
-    this.onSearch(keyword, scope);
+    this.filtersExpanded = false;
+    this.taskStatusExpanded = false;
+    this.taskStatusGeneration += 1;
+    this.onSearch(keyword);
   }
 
   /** undefined = all enabled sources; otherwise the selected group's usable subset. */
@@ -635,26 +844,38 @@ export struct SearchPage {
   }
 
   private selectGroup(name: string): void {
-    this.restoreEpoch += 1;
-    this.restoreCancelled = false;
+    if (!this.ownsPageQuery() || this.selectedGroupName === name) return;
     this.selectedGroupName = name;
     this.viewState.category = name;
+    this.resetFilteredResults();
+  }
+
+  private resetFilteredResults(): void {
+    this.userInteracting = false;
+    this.userScrolling = false;
+    this.resultFlushEpoch += 1;
+    this.restoreEpoch += 1;
+    this.restoreCancelled = false;
+    this.restoreScheduled = false;
     this.viewState.anchorKey = '';
     this.viewState.anchorOffset = 0;
     this.viewState.anchorIndex = 0;
     this.viewState.anchorItemY = 0;
+    this.viewState.anchorAtStart = true;
+    this.startPositionedQuery = -1;
     this.restoreKey = ''; this.restoreOffset = 0; this.restoreItemY = 0;
     this.viewState.anchorNeighbors = []; this.scrollRestored = false;
     this.resultScroller.scrollEdge(Edge.Top);
     this.refreshVisibleResults();
+    this.scheduleScrollRestore();
   }
 
   private selectContentType(contentType: SearchContentType): void {
-    if (this.selectedContentType === contentType) return;
+    if (!this.ownsPageQuery() || this.selectedContentType === contentType) return;
     this.selectedContentType = contentType;
     this.viewState.contentType = contentType;
     // Reuse scope navigation/anchor handling without changing the query run.
-    this.selectGroup(this.selectedGroupName);
+    this.resetFilteredResults();
   }
 
   private filteredEmptyMessage(): string {
@@ -669,83 +890,25 @@ export struct SearchPage {
   }
 
   @Builder
-  private searchBar() {
-    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')),
-        specId: 'navigation-back', accessibilityLabel: '返回', onTap: (): void => this.onBack() });
-
-      Row() {
-        ReaderSearchField({
-          variant: 'bookPage',
-          mode: 'submit',
-          focusOnAppear: this.focusInputOnAppear,
-          text: this.keyword,
-          placeholder: '搜索书名、作者...',
-          accessibilityLabel: '搜索书名或作者',
-          isTablet: this.isTablet,
-          clearable: true,
-          submitEnabled: this.presentation.kind !== 'loading',
-          onTextChange: (value: string): void => {
-            this.keyword = value;
-            this.viewState.keywordDraft = value;
-          },
-          onSubmit: (): void => this.submitSearch(),
-        });
-      }
-      .layoutWeight(1)
-      .alignItems(VerticalAlign.Center);
-
-      // The search action doubles as the ACQ-02 stop control: while a sweep
-      // is live the pill reads 停止 and stops the sweep; otherwise it submits.
-      // LoadingProgress paints a ring inside its layout box. Keep enough
-      // native drawing space for a visible ~16vp indicator in the 36vp pill.
-      ReaderButton({ scheme: this.appThemeScheme, specId: this.isTablet ? 'search-field-wide' : 'search-field-phone',
-        label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),
-        leading: (): void => this.searchActionLeading(),
-        onAction: (): void => { if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });
-    }
-    .width(this.contentFrame().width)
-    .constraintSize({ minHeight: this.searchBarHeight() })
-    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
-    .alignItems(VerticalAlign.Center)
-    .hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  @Builder
-  private searchActionLeading() {
-    SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
-      reduceMotion: this.reduceMotion, diameter: 28, light: true });
-  }
-
-  @Builder
   private stateContent() {
-    if (this.presentation.kind === 'initial') {
-      Scroll() {
-        Column() { this.initialContent(); }.width('100%').padding({ top: this.searchContentStartInset() });
-      }.width('100%').height('100%')
-        .align(Alignment.TopStart).scrollBar(BarState.Off);
-    } else if (this.presentation.kind === 'loading') {
-      this.loadingContent();
-    } else if (this.presentation.kind === 'results') {
+    if (this.hasSearchSession()) {
       this.resultsContent();
+    } else if (this.presentation.kind === 'initial') {
+      Blank().width('100%').height(0);
     } else if (this.presentation.kind === 'sourceRequired') {
       Scroll() {
         Column() {
           this.sourceRequiredContent(this.sourceRequiredReason());
-          this.initialContent();
-        }.width('100%').padding({ top: this.searchContentStartInset() });
-      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+        }.width('100%').padding({ top: this.searchContentStartInset() }).alignItems(HorizontalAlign.Center);
+      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off)
+        .hitTestBehavior(HitTestMode.Transparent);
     } else if (this.presentation.kind === 'sourceLoadError') {
       Scroll() {
         Column() {
           this.sourceLoadErrorContent();
-          this.initialContent();
-        }.width('100%').padding({ top: this.searchContentStartInset() });
-      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
-    } else if (this.presentation.kind === 'empty') {
-      this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount);
-    } else {
-      this.errorContent(this.presentation.searchedSourceCount);
+        }.width('100%').padding({ top: this.searchContentStartInset() }).alignItems(HorizontalAlign.Center);
+      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off)
+        .hitTestBehavior(HitTestMode.Transparent);
     }
   }
 
@@ -753,169 +916,21 @@ export struct SearchPage {
     return this.presentation.kind === 'sourceRequired' ? this.presentation.reason : 'noSources';
   }
 
-  // Reads presentation.history directly (never a @Builder value parameter):
-  // loadHistory can resolve after any entry state and must update the same
-  // history chips without relying on an untracked Builder parameter.
-  @Builder
-  private initialContent() {
-    Column({ space: 0 }) {
-      if (this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
-        this.presentation.kind === 'sourceLoadError') {
-        if (this.presentation.historyStatus === 'loading') {
-          ReaderPageState({ message: '正在读取搜索历史', loading: true, padded: false });
-        } else if (this.presentation.historyStatus === 'loadFailed' || this.presentation.historyStatus === 'clearFailed') {
-          ReaderPageState({ message: this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败',
-            padded: false, customActions: true, actionContent: (): void => {
-              this.secondaryPill(this.presentation.historyStatus === 'clearFailed' ? '重试清空' : '重试读取',
-                (): void => this.onRetryHistory());
-            } }).padding({ bottom: TOK_SPACE_XS });
-        }
-      }
-      if ((this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
-        this.presentation.kind === 'sourceLoadError') && this.presentation.history.length > 0) {
-        Row() {
-          Text('最近搜索')
-            .fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
-            .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
-            .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .layoutWeight(1);
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-clear', label: '清空记录',
-            actionEnabled: this.presentation.historyStatus !== 'loading', onAction: (): void => this.onClearHistory() });
-        }
-        .width('100%')
-        .constraintSize({ minHeight: 26 })
-        .alignItems(VerticalAlign.Center);
-
-        // All retained history is visible inside the existing page Scroll.
-        Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-          ForEach(this.presentation.history, (keyword: string) => {
-            ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: keyword, availableWidth: this.historyWidth,
-              onAction: (): void => { this.keyword = keyword; this.submitSearch(); } });
-          }, (keyword: string): string => `search-history-${keyword}`);
-        }
-        .width('100%')
-        .padding({ top: TOK_SPACE_CARD_PADDING });
-
-      }
-    }
-    .width('100%')
-    .padding({
-      left: this.isTablet ? 20 : 18,
-      right: this.isTablet ? 20 : 18,
-      top: TOK_SPACE_XS,
-      bottom: this.searchBottomInset(),
-    })
-    // Only constrain long chip width; history admission never depends on measurement.
-    .onAreaChange((_old: Area, next: Area): void => {
-      const outerWidth = readerPageAreaLength(next.width);
-      if (!Number.isFinite(outerWidth)) return;
-      const width = Math.max(0, outerWidth - (this.isTablet ? 40 : 36));
-      if (Math.abs(width - this.historyWidth) > .1) {
-        this.historyWidth = width;
-      }
-    });
-  }
-
-  // Figma 2635:58985 / 2635:59076: the chip wall sits directly under the
-  // search bar in Results/Empty — row 41.5 tall, chips 23 tall, 8px gaps.
-  // The first-release source scopes are fixed to local/online; future source
-  // groups must not change this row's shape.
-  @Builder
-  private groupScopeRow() {
-    if (this.groupNames().length > 0) {
-      Row({ space: TOK_SPACE_XS }) {
-        Text('来源')
-          .width(this.searchFilterLabelWidth())
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
-          .lineHeight(17)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        Scroll() {
-          Row({ space: TOK_SPACE_XS }) {
-            this.groupScopeChip('全部');
-            ForEach(this.groupNames(), (name: string) => {
-              this.groupScopeChip(name);
-            }, (name: string): string => `search-group-${name}`);
-          }
-          .alignItems(VerticalAlign.Center)
-          .padding({ right: this.isTablet ? 20 : 16 });
-        }
-        .layoutWeight(1)
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-        .height(this.searchFilterHeight())
-        .align(Alignment.Start);
-      }
-      .width('100%')
-      .height(this.searchFilterHeight())
-      .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
-      .alignItems(VerticalAlign.Center);
-    }
-  }
-
-  @Builder
-  private groupScopeChip(label: string) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-scope', label, primary: this.selectedGroupName === label,
-      actionAccessibilityLabel: this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`,
-      onAction: (): void => this.selectGroup(label) });
-  }
-
-  @Builder
-  private contentTypeRow() {
-    Row({ space: TOK_SPACE_XS }) {
-      Text('内容类型')
-        .width(this.searchFilterLabelWidth())
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(11)
-        .lineHeight(17)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      Scroll() {
-        Row({ space: TOK_SPACE_XS }) {
-          this.contentTypeChip('全部类型');
-          this.contentTypeChip('小说');
-          this.contentTypeChip('漫画');
-        }
-        .alignItems(VerticalAlign.Center)
-        .padding({ right: this.isTablet ? 20 : 16 });
-      }
-      .layoutWeight(1)
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .height(this.searchFilterHeight())
-      .align(Alignment.Start);
-    }
-    .width('100%')
-    .height(this.searchFilterHeight())
-    .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
-    .alignItems(VerticalAlign.Center);
-  }
-
-  @Builder
-  private contentTypeChip(label: SearchContentType) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(this.selectedContentType === label ? FontWeight.Bold : FontWeight.Medium)
-      .fontSize(12).lineHeight(12)
-      .fontColor(this.selectedContentType === label ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-      .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
-      .backgroundColor(this.selectedContentType === label ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: this.selectedContentType === label ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999).maxLines(1)
-      .id(`search-content-type-${label}`)
-      .onClick((): void => this.selectContentType(label))
-      .accessibilityText(this.selectedContentType === label ? `当前内容类型:${label}` : `筛选内容类型:${label}`);
-  }
-
   @Builder
   private loadingContent() {
-    Blank().width('100%').height('100%');
+    // Waiting feedback already belongs to the progress row and stop actor.
+    // Keep the same List without introducing a second loading panel.
+    Blank().width('100%').height(0);
   }
 
   private refreshVisibleResults(): void {
+    if (!this.ownsPageQuery()) return;
     this.spinnerRunKey = this.viewState.revision;
     if (this.viewStateRevision !== this.viewState.revision) {
+      this.resultsDeferred = false;
+      this.resultFlushEpoch += 1;
+      this.userInteracting = false;
+      this.userScrolling = false;
       this.viewStateRevision = this.viewState.revision;
       this.selectedGroupName = this.viewState.category;
       this.selectedContentType = this.viewState.contentType;
@@ -929,6 +944,14 @@ export struct SearchPage {
       this.resultProjection = undefined;
       this.projectedGroups = new Map();
     }
+    // Keep only the latest immutable publication while a finger or an inertial
+    // scroll owns the list. Projection's missed-delta path reconstructs it.
+    if (this.presentation.kind === 'results' && (this.userInteracting || this.userScrolling)) {
+      this.resultsDeferred = true;
+      return;
+    }
+    this.resultsDeferred = false;
+    this.acceptResultNoticeFacts();
     // API 23 can retain Repeat rows after replacement even with a state
     // array. Notify a lazy data source explicitly, as Source Management does.
     if (this.presentation.kind !== 'results') this.changedGroupKeys = new Set();
@@ -951,109 +974,310 @@ export struct SearchPage {
       const reordered = this.resultDataSource.replace(groups, this.changedGroupKeys);
       if (this.listMounted && !this.userInteracting && !this.userScrolling) {
         this.restoreCancelled = false;
-        // Metadata can change the measured height of a visible row, while
-        // ArkUI only promises automatic preservation for offscreen add/delete.
+        // Check actual layout once; non-geometric metadata never scrolls.
         if (reordered || !this.scrollRestored || (this.changedGroupKeys?.size ?? 0) > 0) this.scheduleScrollRestore();
       }
     }
     this.publishVisibleGroups();
   }
 
-  @Builder
-  private resultStats() {
-    Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
-      Text('找到 ')
-        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      Text(`${this.visibleGroups.length}`)
-        .fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily)
-        .fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
-        .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-      Text(' 本相关书籍')
-        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      // Reads the presentation directly (not a builder param) so the
-      // minimal-update re-render tracks it exactly like the search/stop
-      // pill does: the sweep counter must update live per source landing.
-      if (this.presentation.kind === 'results') {
-        if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status', label: this.partialSearchFailure(),
-            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-        }
-        if (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true) {
-          // ACQ-02: a stopped sweep keeps its partial results; the header
-          // states how far the interrupted sweep got so partials never read
-          // as a complete verdict.
-          Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
-            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        } else if (this.isSweeping()) {
-          Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
-            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
-        if (this.presentation.failedSourceCount > 0) {
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-progress',
-            label: ` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`,
-            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-        }
-        if ((this.presentation.skippedSourceCount ?? 0) > 0) {
-          Text(` · 跳过 ${this.presentation.skippedSourceCount} 个近期不可用书源，重试`)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .onClick((): void => this.onRetry());
-        }
-      }
+  private scheduleDeferredResults(): void {
+    if (!this.resultsDeferred || !this.pageMounted || this.userInteracting || this.userScrolling) return;
+    const flush = ++this.resultFlushEpoch;
+    const page = this.pageEpoch;
+    const query = this.viewState.revision;
+    this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+      if (flush !== this.resultFlushEpoch || !this.pageMounted || page !== this.pageEpoch ||
+        query !== this.viewState.revision || this.userInteracting || this.userScrolling) return;
+      if (this.resultsDeferred) this.refreshVisibleResults();
+    }));
+  }
+
+  private onListTouch(type: TouchType): void {
+    if (!this.ownsList()) return;
+    if (type === TouchType.Down) {
+      this.userInteracting = true;
+      this.resultFlushEpoch += 1;
+      this.cancelScrollRestoreForUser();
+    } else if (type === TouchType.Up || type === TouchType.Cancel) {
+      this.userInteracting = false;
+      // The click dispatch still owns its pressed identity until this event
+      // completes. Do not replace native rows in the Up handler itself.
+      this.scheduleDeferredResults();
+      if (!this.userScrolling) this.displayIdleRevision += 1;
     }
-    .width(this.contentFrame().width)
-    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
-    .hitTestBehavior(HitTestMode.Transparent)
-    .onAreaChange((_old: Area, next: Area): void => {
-      const height = readerPageAreaLength(next.height);
-      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.resultStatsHeight) > .1) {
-        this.resultStatsHeight = height;
-      }
-    });
+  }
+
+  private onListScrollStop(): void {
+    if (!this.ownsList()) return;
+    this.userScrolling = false;
+    this.saveScrollAnchor();
+    if (this.viewState.anchorAtStart) this.resultsDeferred = true;
+    this.scheduleDeferredResults();
+    if (!this.userInteracting) this.displayIdleRevision += 1;
+  }
+
+  private onListWillScroll(offset: number, source: ScrollSource): void {
+    if (!this.ownsList()) return;
+    const userInput = source === ScrollSource.DRAG || source === ScrollSource.FLING ||
+      source === ScrollSource.OTHER_USER_INPUT || source === ScrollSource.SCROLL_BAR ||
+      source === ScrollSource.SCROLL_BAR_FLING;
+    if (!userInput || !Number.isFinite(offset) || Math.abs(offset) < .01) return;
+    if (this.filtersExpanded) this.dismissSearchFilters(this.filterPresentationIdentity());
+    this.userScrolling = true;
+    this.resultFlushEpoch += 1;
+    this.cancelScrollRestoreForUser();
+  }
+
+  private onCardDisplayFactsChange(): void {
+    if (!this.ownsList() || this.userInteracting || this.userScrolling || this.headerAnchorPending) return;
+    // This callback precedes the card's next layout. Keep the current native
+    // anchor while an offscreen card admits its deferred metadata dimensions.
+    this.saveScrollAnchor();
+    this.restoreKey = this.viewState.anchorKey;
+    this.restoreItemY = this.viewState.anchorItemY;
+    this.restoreOffset = this.viewState.anchorOffset;
+    this.restoreCancelled = false;
+    this.scheduleScrollRestore();
+  }
+
+  @Builder
+  private resultSummary() {
+    Row({ space: 8 }) {
+      Flex({ direction: this.searchSummaryStacked() ? FlexDirection.Column : FlexDirection.Row,
+        alignItems: this.searchSummaryStacked() ? ItemAlign.Start : ItemAlign.Center }) {
+        Text() {
+          Span('搜索结果 · ');
+          Span(`${this.presentation.kind === 'results' ? this.visibleGroups.length : 0}`).fontWeight(FontWeight.Medium);
+        }.fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily).fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
+          .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
+          .layoutWeight(this.searchSummaryStacked() ? 0 : 1);
+      }.layoutWeight(1);
+      ReaderSearchFilterPanel({ expanded: this.filtersExpanded,
+        presentationIdentity: this.filterPresentationIdentity(),
+        selectedGroup: this.selectedGroupName, selectedType: this.selectedContentType,
+        onToggle: (): void => this.toggleSearchFilters(),
+        onReset: (identity: string): void => this.resetSearchFilters(identity),
+        onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
+        onGroup: (value: string, identity: string): void => {
+          if (!this.acceptsFilter(identity)) return;
+          this.selectGroup(value); this.publishSurface();
+        },
+        onType: (value: SearchContentType, identity: string): void => {
+          if (!this.acceptsFilter(identity)) return;
+          this.selectContentType(value); this.publishSurface();
+        } });
+    }.width('100%').constraintSize({ minHeight: this.searchSummaryHeight() });
+  }
+
+  private searchProgressFraction(): number {
+    if (this.presentation.kind !== 'results') return this.isSweeping() ? 0 : 1;
+    const total = this.presentation.totalSourceCount;
+    return total > 0 ? Math.min(1, Math.max(0, this.presentation.completedSourceCount / total)) : 0;
+  }
+
+  @Builder
+  private resultProgress() {
+    Row() {
+      Blank().width(`${this.searchProgressFraction() * 100}%`).height(2)
+        .backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+    }.width('100%').height(2).backgroundColor(readerAppColor('TOK_BORDER', this.appThemeScheme))
+      .borderRadius(1);
+  }
+
+  private searchStatusColor(): string {
+    if (this.presentation.kind === 'error') return readerAppColor('app.search.failedStatus', this.appThemeScheme);
+    if (this.isSweeping()) return readerAppColor('TOK_GREEN', this.appThemeScheme);
+    if (this.hasSearchNotice('partial') || this.hasSearchNotice('failed')) return readerAppColor('app.search.partialStatus', this.appThemeScheme);
+    return readerAppColor('TOK_MUTED', this.appThemeScheme);
+  }
+
+  private searchStopped(): boolean {
+    return (this.presentation.kind === 'results' || this.presentation.kind === 'empty') &&
+      (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true);
+  }
+
+  private searchStatusLabel(): string {
+    if (this.searchStopped()) return '已停止';
+    if (this.isSweeping()) return '';
+    if (this.presentation.kind === 'error') return '搜索失败';
+    if (this.hasSearchNotice('partial') || this.hasSearchNotice('failed')) return '部分失败';
+    return '搜索完成';
+  }
+
+  private searchProgressText(): string {
+    const presentation = this.presentation;
+    if (presentation.kind === 'loading') return '正在搜索本地与在线书籍…';
+    if (presentation.kind === 'results') {
+      if (presentation.totalSourceCount <= 0) return this.isSweeping() ?
+        '正在搜索本地与在线书籍…' : this.searchStopped() ? '已停止搜索' : '本次搜索已结束';
+      const progress = `${presentation.completedSourceCount}/${presentation.totalSourceCount} 个书源`;
+      return `已处理 ${progress}`;
+    }
+    if (presentation.kind === 'empty' || presentation.kind === 'error') {
+      if (presentation.searchedSourceCount > 0) return `已处理 ${presentation.searchedSourceCount} 个书源`;
+      return this.searchStopped() ? '已停止搜索' : presentation.kind === 'error' ? '本次搜索未完成' : '本次搜索已结束';
+    }
+    return '';
+  }
+
+  private hasSearchNotice(kind: string): boolean {
+    const facts = this.captureSearchNoticeFacts();
+    if (kind === 'partial') return facts.partial;
+    if (kind === 'failed') return facts.failed > 0;
+    return facts.skipped > 0;
+  }
+
+  private hasDisplayedSearchNotice(kind: string): boolean {
+    const facts = this.displayedSearchNoticeFacts();
+    if (kind === 'partial') return facts.partial;
+    if (kind === 'failed') return facts.failed > 0;
+    return facts.skipped > 0;
+  }
+
+  private captureSearchNoticeFacts(): SearchNoticeFacts {
+    const presentation = this.presentation;
+    const facts: SearchNoticeFacts = { queryRevision: this.viewState.revision,
+      progressText: this.searchProgressText(), searching: this.isSweeping(),
+      operationGeneration: this.operation()?.generation, partial: false,
+      partialText: '', failed: 0, skipped: 0, canRetry: false };
+    if (presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') {
+      facts.partial = presentation.localSearchFailed === true || presentation.sourceListFailed === true;
+      facts.partialText = facts.partial ? this.partialSearchFailure() : '';
+      facts.failed = presentation.failedSourceCount ?? 0;
+      facts.skipped = presentation.skippedSourceCount ?? 0;
+      facts.canRetry = this.operation()?.canRetry === true;
+    }
+    return facts;
+  }
+
+  private displayedSearchNoticeFacts(): SearchNoticeFacts {
+    const retained = this.resultNoticeFacts;
+    if (this.presentation.kind === 'results' && retained?.queryRevision === this.viewState.revision) return retained;
+    return this.captureSearchNoticeFacts();
+  }
+
+  private acceptResultNoticeFacts(): void {
+    if (this.presentation.kind !== 'results') {
+      if (this.resultNoticeFacts !== undefined) this.resultNoticeFacts = undefined;
+      return;
+    }
+    const next = this.captureSearchNoticeFacts();
+    const previous = this.resultNoticeFacts;
+    const sameQuery = previous?.queryRevision === next.queryRevision;
+    const sameText = sameQuery && previous?.progressText === next.progressText && previous?.searching === next.searching &&
+      previous?.partial === next.partial && previous?.partialText === next.partialText &&
+      previous?.failed === next.failed && previous?.skipped === next.skipped;
+    if (sameText && previous?.canRetry === next.canRetry && previous?.operationGeneration === next.operationGeneration) return;
+    // This executes only after the list's existing interaction freeze admits
+    // the latest publication. Capture geometry before the prefix can reflow.
+    if (sameQuery && !sameText) this.onCardDisplayFactsChange();
+    this.resultNoticeFacts = next;
+  }
+
+  private hasAnySearchNotice(): boolean {
+    return this.hasDisplayedSearchNotice('partial') || this.hasDisplayedSearchNotice('failed') || this.hasDisplayedSearchNotice('skipped');
+  }
+
+  private searchNoticeText(kind: string): string {
+    const facts = this.displayedSearchNoticeFacts();
+    if (kind === 'partial') return facts.partialText;
+    if (kind === 'failed') return `${facts.failed} 个书源本次搜索失败。`;
+    return `已跳过 ${facts.skipped} 个暂不可用的书源。`;
+  }
+
+  private searchNoticeActionEnabled(kind: string): boolean {
+    const displayed = this.displayedSearchNoticeFacts();
+    const current = this.captureSearchNoticeFacts();
+    if (displayed.queryRevision !== current.queryRevision || displayed.operationGeneration !== current.operationGeneration) return false;
+    const available = kind === 'partial' ? current.partial :
+      kind === 'failed' ? current.failed > 0 : kind === 'skipped' && current.skipped > 0;
+    return available && !this.isSweeping() && current.canRetry;
+  }
+
+  private searchNoticeRetryKind(): string {
+    const facts = this.displayedSearchNoticeFacts();
+    if (facts.partial) return 'partial';
+    if (facts.failed > 0) return 'failed';
+    return facts.skipped > 0 ? 'skipped' : '';
+  }
+
+  private searchNoticeOffersRetry(kind: string): boolean {
+    const facts = this.displayedSearchNoticeFacts();
+    return kind.length > 0 && kind === this.searchNoticeRetryKind() && !facts.searching &&
+      facts.canRetry && this.searchNoticeActionEnabled(kind);
+  }
+
+  private hasSearchNoticeRetry(): boolean {
+    return this.searchNoticeOffersRetry(this.searchNoticeRetryKind());
+  }
+
+  private searchProgressRetryHandler(kind: string): () => void {
+    const page = this.pageEpoch;
+    const query = this.viewState.revision;
+    const operationGeneration = this.displayedSearchNoticeFacts().operationGeneration;
+    return (): void => {
+      if (!this.pageMounted || page !== this.pageEpoch || query !== this.viewState.revision ||
+        operationGeneration !== this.operation()?.generation) return;
+      if (!this.searchNoticeActionEnabled(kind)) return;
+      this.retryOperation();
+    };
+  }
+
+  private searchNoticeActionKey(kind: string): string {
+    const facts = this.displayedSearchNoticeFacts();
+    return `${this.pageEpoch}:${facts.queryRevision}:${facts.operationGeneration}:${kind}`;
+  }
+
+  @Builder
+  private searchProgressDetails() {
+    ReaderSearchTaskPanel({ expanded: this.taskStatusExpanded, presentationIdentity: this.taskStatusIdentity(),
+      triggerWidth: Math.max(0, this.searchResultWidth() - SEARCH_RESULT_GEOMETRY.filterActionSize - 8),
+      progressText: this.displayedSearchNoticeFacts().progressText, statusLabel: this.searchStatusLabel(),
+      searching: this.displayedSearchNoticeFacts().searching,
+      partialText: this.displayedSearchNoticeFacts().partialText,
+      failed: this.displayedSearchNoticeFacts().failed, skipped: this.displayedSearchNoticeFacts().skipped,
+      failedText: this.searchNoticeText('failed'), skippedText: this.searchNoticeText('skipped'),
+      canRetry: this.hasSearchNoticeRetry(), retryIdentity: this.searchNoticeActionKey(this.searchNoticeRetryKind()),
+      onToggle: (): void => this.toggleTaskStatus(),
+      onDismiss: (identity: string): void => this.dismissTaskStatus(identity),
+      onRetry: this.searchProgressRetryHandler(this.searchNoticeRetryKind()) });
+  }
+
+  @Builder
+  private mainSearchNotices() {
+    Column() { this.resultSummary(); this.searchProgressDetails(); this.resultProgress(); }
+      .width('100%').padding({ bottom: 8 })
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   // ArkUI does not track mutable @Builder value parameters. Read state at
   // the consuming nodes so category changes and stop both update in place.
   @Builder
   private resultsContent() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-
-
-        if (this.visibleGroups.length === 0) {
-          ReaderPageState({ message: this.filteredEmptyMessage() });
-        }
         List({ scroller: this.resultScroller }) {
+          // The permanent result header is native index zero in every state.
+          ListItem() { this.mainSearchNotices(); }.id('search-main-notices');
+          if (this.presentation.kind === 'loading') {
+            ListItem() { this.loadingContent(); }
+          } else if (this.presentation.kind === 'empty') {
+            ListItem() { this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount); }
+          } else if (this.presentation.kind === 'error') {
+            ListItem() { this.errorContent(this.presentation.searchedSourceCount); }
+          } else if (this.visibleGroups.length === 0) {
+            ListItem() {
+              ReaderPageState({ message: this.filteredEmptyMessage() });
+            }
+          }
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
-              SearchResultCard({ group, isTablet: this.isTablet, cardWidth: this.contentFrame().width,
+              SearchResultCard({ group, viewState: this.viewState, queryRevision: this.viewState.revision,
+                displayIdleRevision: this.displayIdleRevision,
+                expandedLayout: this.expandedLayout, cardWidth: this.searchResultWidth(),
+                canRefreshDisplay: (): boolean => !this.userInteracting && !this.userScrolling,
+                onDisplayFactsChange: (): void => this.onCardDisplayFactsChange(),
                 onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => this.onSelectResult(book, variants, displayCoverUrl) });
             }
           }, (group: SearchBookGroup): string =>
@@ -1061,28 +1285,26 @@ export struct SearchPage {
         }
         .width('100%')
         .height('100%')
-        .contentStartOffset(this.searchContentStartInset())
-        .contentEndOffset(this.searchBottomInset())
+        .padding({ left: this.searchOuterInset(), right: this.searchOuterInset() })
+        .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
+        .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
         .scrollBar(BarState.Off)
+        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .maintainVisibleContentPosition(true)
-        .onTouch((event: TouchEvent): void => {
-          if (event.type === TouchType.Down) { this.userInteracting = true; this.cancelScrollRestoreForUser(); }
-          else if (event.type === TouchType.Up || event.type === TouchType.Cancel) this.userInteracting = false;
-        })
-        .onScrollStart((): void => { if (this.userInteracting) this.userScrolling = true; })
-        .onScrollStop((): void => { this.userScrolling = false; })
+        .onTouch((event: TouchEvent): void => this.onListTouch(event.type))
+        .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): void => this.onListWillScroll(offset, source))
+        .onScrollStart((): void => { if (this.ownsList() && this.userInteracting) this.userScrolling = true; })
+        .onScrollStop((): void => this.onListScrollStop())
         .onScrollIndex((start: number, end: number): void => this.onResultScrollIndex(start, end))
-        .onScroll((): void => { if (this.scrollRestored) this.saveScrollAnchor(); })
-        .onAppear((): void => { this.listMounted = true; this.scheduleScrollRestore(); })
-        .onDisAppear((): void => { this.listMounted = false; this.restoreEpoch += 1; })
-        .onAreaChange((): void => { if (!this.scrollRestored) this.scheduleScrollRestore(); });
-      }
-      .width('100%')
-      .height('100%');
-
-    }
-    .width('100%')
-    .height('100%');
+        .onScroll((): void => { if (this.ownsList() && this.scrollRestored) this.saveScrollAnchor(); })
+        .onAppear((): void => {
+          if (!this.ownsPageQuery()) return;
+          this.listMounted = true;
+          this.startPositionedQuery = -1;
+          this.scheduleScrollRestore();
+        })
+        .onDisAppear((): void => { this.listMounted = false; this.scrollRestored = false; this.restoreEpoch += 1; })
+        .onAreaChange((): void => { if (this.ownsList() && !this.scrollRestored) this.scheduleScrollRestore(); });
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
@@ -1090,7 +1312,8 @@ export struct SearchPage {
     if (this.resultProjection === undefined) this.resultProjection = new SearchResultProjection();
     if (this.projectedGroups === undefined) this.projectedGroups = new Map();
     const delta = this.presentation.kind === 'results' ? this.presentation.delta : undefined;
-    const update = this.resultProjection.update(results, this.shelfBooks, keyword, this.viewState, delta);
+    const update = this.resultProjection.update(results, this.shelfBooks, keyword, this.viewState, delta,
+      this.viewState.anchorAtStart && !this.userInteracting && !this.userScrolling);
     this.changedGroupKeys = update.changedKeys;
     for (const key of update.changedKeys) {
       const row = update.rows.get(key);
@@ -1136,22 +1359,47 @@ export struct SearchPage {
   }
 
   private saveScrollAnchor(): void {
+    if (!this.ownsList() || !this.scrollRestored || this.headerAnchorPending) return;
     this.viewState.anchorOffset = this.resultScroller.currentOffset().yOffset;
-    try { this.viewState.anchorItemY = this.resultScroller.getItemRect(this.viewState.anchorIndex).y; }
+    try {
+      const prefix = this.resultScroller.getItemRect(0);
+      if (Number.isFinite(prefix.y) && prefix.height > 0)
+        this.viewState.anchorAtStart = prefix.y >= this.searchContentStartInset() - .5;
+    } catch (_error) {
+      if (this.userScrolling) this.viewState.anchorAtStart = false;
+    }
+    if (this.viewState.anchorKey.length === 0) return;
+    try { this.viewState.anchorItemY = this.resultScroller.getItemRect(this.resultNativeIndex(this.viewState.anchorIndex)).y; }
     catch (_error) { /* A lazy row can be between layout passes. */ }
   }
 
+  private resultNativeIndex(bookIndex: number): number { return bookIndex + 1; }
+
   private onResultScrollIndex(start: number, end: number): void {
-    this.publishVisibleGroups(start, end);
+    if (!this.ownsList()) return;
+    this.publishVisibleGroups(Math.max(0, start - 1), end - 1);
     if (!this.scrollRestored) return;
-    const group = this.visibleGroups[start];
+    // While the notice prefix/top edge owns the viewport, retain the page
+    // offset instead of hiding newly admitted notices behind a book anchor.
+    if (start === 0 || this.resultScroller.currentOffset().yOffset <= .5) {
+      this.viewState.anchorKey = '';
+      this.viewState.anchorIndex = 0;
+      this.viewState.anchorItemY = 0;
+      this.viewState.anchorNeighbors = [];
+      this.saveScrollAnchor();
+      return;
+    }
+    const index = start - 1;
+    this.viewState.anchorAtStart = false;
+    const group = this.visibleGroups[index];
     if (group === undefined) return;
-    this.viewState.anchorIndex = start;
+    this.viewState.anchorIndex = index;
     this.viewState.anchorKey = this.resultGroupKey(group.book);
     this.saveScrollAnchor();
   }
 
   private rememberAnchorNeighbors(): void {
+    if (!this.ownsPageQuery()) return;
     const index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean =>
       this.resultGroupKey(group.book) === this.viewState.anchorKey);
     if (index < 0) return;
@@ -1170,71 +1418,84 @@ export struct SearchPage {
     this.scrollRestored = true;
   }
 
+  private restoreMeasuredAnchor(index: number, key: string): boolean {
+    try {
+      const rect = this.resultScroller.getItemRect(this.resultNativeIndex(index));
+      if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) return false;
+      const offset = Math.max(1 - rect.height,
+        Math.min(this.searchContentStartInset(), this.restoreItemY));
+      const displacement = rect.y - offset;
+      if (Math.abs(displacement) > .5) this.resultScroller.scrollBy(0, displacement);
+      this.viewState.anchorKey = key;
+      this.viewState.anchorIndex = index;
+      this.scrollRestored = true;
+      this.saveScrollAnchor();
+      return true;
+    } catch (_error) { return false; }
+  }
+
   private scheduleScrollRestore(attempt: number = 0): void {
-    if (!this.pageMounted || !this.listMounted || this.restoreCancelled || this.restoreScheduled) return;
+    if (!this.ownsList() || this.headerAnchorPending || this.restoreCancelled || this.restoreScheduled) return;
     this.scrollRestored = false;
     this.restoreScheduled = true;
     const restore = ++this.restoreEpoch;
     const page = this.pageEpoch;
     const list = this.listEpoch;
     const query = this.viewState.revision;
-    const current = (): boolean => this.pageMounted && this.listMounted && !this.restoreCancelled &&
+    const current = (): boolean => this.ownsList() && !this.restoreCancelled &&
       restore === this.restoreEpoch && page === this.pageEpoch && page === this.viewState.pageRevision &&
       list === this.listEpoch && query === this.viewState.revision;
-    // onIdle is after this frame's layout. It is not a display fence.
     this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
       if (!current()) return;
       let key = this.viewState.resolveKey(this.restoreKey);
       let index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === key);
-      if (index < 0) for (const neighbor of this.viewState.anchorNeighbors) {
+      if (index < 0 && this.restoreKey.length > 0) for (const neighbor of this.viewState.anchorNeighbors) {
         key = this.viewState.resolveKey(neighbor);
         index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === key);
         if (index >= 0) break;
       }
       if (index < 0) {
-        const offset = this.restoreKey.length === 0 ? this.restoreOffset : 0;
-        if (offset !== 0) this.resultScroller.scrollTo({ xOffset: 0, yOffset: offset });
-        else this.resultScroller.scrollEdge(Edge.Top);
-        this.restoreScheduled = false;
-        this.scrollRestored = true;
-        return;
-      }
-      const anchorKey = key;
-      this.resultScroller.scrollToIndex(index, false, ScrollAlign.START);
-      this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
-        if (!current()) return;
-        // No captured numeric index survives asynchronous layout.
-        const actual = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === anchorKey);
-        try {
-          if (actual < 0) throw new Error('anchor removed');
-          const rect = this.resultScroller.getItemRect(actual);
-          if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) throw new Error('anchor not laid out');
-          const offset = Math.max(1 - rect.height,
-            Math.min(this.searchContentStartInset(), this.restoreItemY));
-          this.resultScroller.scrollBy(0, rect.y - offset);
-          this.viewState.anchorKey = anchorKey;
-          this.viewState.anchorIndex = actual;
-          this.scrollRestored = true;
-          this.saveScrollAnchor();
-        } catch (_error) {
-          // Bounded retries cover lazy realization; area change can resume a
-          // later valid layout. User input always revokes this work.
-          this.restoreScheduled = false;
-          if (attempt < 2) this.scheduleScrollRestore(attempt + 1);
-          return;
+        if (this.viewState.anchorAtStart || this.restoreKey.length > 0) {
+          // List offset zero can consume contentStartOffset. The permanent
+          // header's native START is the semantic beginning of a fresh query.
+          if (this.startPositionedQuery !== query) {
+            this.resultScroller.scrollToIndex(0, false, ScrollAlign.START);
+            this.startPositionedQuery = query;
+          }
+          this.viewState.anchorAtStart = true;
+        } else {
+          let actual = 0;
+          try { actual = this.resultScroller.currentOffset().yOffset; } catch (_error) {}
+          if (Math.abs(actual - this.restoreOffset) > .5)
+            this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.restoreOffset });
         }
         this.restoreScheduled = false;
-      }));
+        this.scrollRestored = true;
+        this.saveScrollAnchor();
+        return;
+      }
+      // A realized row already has an authoritative position. Do not jump it
+      // to START and then correct it in the next frame for every metadata tick.
+      if (this.restoreMeasuredAnchor(index, key)) {
+        this.restoreScheduled = false;
+        return;
+      }
+      // Realize an offscreen anchor only once; subsequent frames only measure.
+      if (attempt === 0) this.resultScroller.scrollToIndex(this.resultNativeIndex(index), false, ScrollAlign.START);
+      this.restoreScheduled = false;
+      if (attempt < 2) this.scheduleScrollRestore(attempt + 1);
+      else this.scrollRestored = true;
     }));
   }
 
   private resultGroupKey(book: SearchBook): string {
     return book.sourceId === 'local' ? `local:${book.bookId}` :
-      `online:${book.groupKey ?? readerMediaIdentity(book.category === 'comic', this.normalizedBookKey(book.title, book.author))}`;
+      `online:${book.groupKey ?? readerMediaIdentity(book.category === 'comic',
+        this.normalizedBookKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion))}`;
   }
 
-  private normalizedBookKey(title: string, author: string): string {
-    return bookTitleAuthorKey(title, author);
+  private normalizedBookKey(title: string, author: string, proof?: BookAuthorIdentityProof, sourceVersion?: string): string {
+    return bookTitleAuthorKey(title, author, proof, sourceVersion);
   }
 
   private partialSearchFailure(): string {
@@ -1246,7 +1507,7 @@ export struct SearchPage {
     const failed = (this.presentation.failedSourceCount ?? 0) > 0 ?
       `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
     const skipped = (this.presentation.skippedSourceCount ?? 0) > 0 ?
-      `${this.presentation.skippedSourceCount} 个近期不可用书源已跳过，可点击重试` : '';
+      `${this.presentation.skippedSourceCount} 个暂不可用的书源已跳过` : '';
     return [failed, skipped].filter((message: string): boolean => message.length > 0).join('；');
   }
 
@@ -1258,38 +1519,26 @@ export struct SearchPage {
 
   private searchFailureMessage(): string {
     if (this.presentation.kind !== 'error') return '';
-    return this.partialSearchFailure();
+    return this.hasAnySearchNotice() ? '' : this.partialSearchFailure();
   }
 
   @Builder
   private emptyContent(keyword: string, searchedSourceCount: number) {
-    Scroll() {
-      Column({ space: 0 }) {
-        ReaderPageState({ title: '没有找到相关书籍', padded: false,
-          message: this.isStoppedEmpty()
-          ? (searchedSourceCount > 0
-            ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`
-            : `已停止搜索,未找到「${keyword}」的相关结果`)
-          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`,
-          leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
-          actionContent: (): void => { this.emptyStateActions(); } });
-      }
-      .width('100%')
-      .padding({ top: this.searchContentStartInset() + 50, bottom: this.searchBottomInset(40) });
-    }
-    .width('100%')
-    .height('100%')
-    .scrollBar(BarState.Off);
+        Column() {
+          ReaderPageState({ title: this.isStoppedEmpty() ? '搜索已停止' : '没有找到相关书籍', padded: false,
+            message: this.isStoppedEmpty()
+            ? (searchedSourceCount > 0
+              ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`
+              : '停止前尚未返回结果，可继续搜索')
+            : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`,
+            leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
+            actionContent: (): void => { this.emptyStateActions(); } });
+        }.width('100%').padding({ top: 50, bottom: this.searchBottomInset(40) });
   }
 
   @Builder
   private emptyStateActions() {
     Column({ space: 0 }) {
-      if (this.partialSearchFailure().length > 0) {
-        ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status-spaced', label: this.partialSearchFailure(),
-          actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-      }
-
       Column({ space: 0 }) {
         Text('搜索建议')
           .width('100%')
@@ -1303,7 +1552,7 @@ export struct SearchPage {
         this.suggestion('尝试更短的关键词或作者名');
         this.suggestion('前往书源管理添加或启用更多书源');
       }
-      .width(this.isTablet ? 300 : 190)
+      .width(this.expandedLayout ? 300 : 190)
       .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
       .margin({ top: 10 })
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -1314,7 +1563,7 @@ export struct SearchPage {
 
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
         this.primaryPill('添加更多书源', (): void => this.onManageSources());
-        this.secondaryPill('重新搜索', (): void => this.retryOperation());
+        if (!this.hasSearchNoticeRetry()) { this.secondaryPill('重新搜索', (): void => this.retryOperation()); }
       }
       .margin({ top: 20 })
       .alignSelf(ItemAlign.Center);
@@ -1334,8 +1583,9 @@ export struct SearchPage {
         leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
         actionContent: (): void => { this.sourceRequiredActions(reason); } });
     }
-    .width('100%')
-    .padding({ top: 50, bottom: 40 });
+    .width(this.searchResultWidth() > 0 ? this.searchResultWidth() : '100%')
+    .padding({ top: 50, bottom: 40 })
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -1354,9 +1604,10 @@ export struct SearchPage {
         padded: false, leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
         actionContent: (): void => { this.sourceLoadErrorActions(); } });
     }
-    .width('100%')
+    .width(this.searchResultWidth() > 0 ? this.searchResultWidth() : '100%')
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: 96, bottom: 40 });
+    .padding({ top: 96, bottom: 40 })
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -1405,23 +1656,20 @@ export struct SearchPage {
     // Figma Error (2635:59125): content is top-anchored at 96, retry is a solid
     // primary pill (not the outline used before the rebuild). The "检查书源"
     // secondary action is a P0 add-source flow addition.
-    Scroll() {
-    Column({ space: 0 }) {
-      ReaderPageState({ title: this.searchFailureTitle(), message: this.searchFailureMessage(), padded: false,
-        leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
-        actionContent: (): void => { this.searchErrorActions(); } });
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Center)
-    .padding({ top: this.searchContentStartInset() + 96, bottom: this.searchBottomInset(40) });
-    }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+      Column() {
+        ReaderPageState({ title: this.searchFailureTitle(), message: this.searchFailureMessage(), padded: false,
+          leading: (): void => { this.searchStateIllustration(true); }, customActions: true,
+          actionContent: (): void => { this.searchErrorActions(); } });
+      }.width('100%').padding({ top: 96, bottom: this.searchBottomInset(40) });
   }
 
   @Builder
   private searchErrorActions() {
     Column() {
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
-        actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      if (!this.hasSearchNoticeRetry()) {
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
+          actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      }
       ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-source', label: '检查书源', onAction: (): void => this.onManageSources() });
     }.width('100%');
   }
@@ -1453,6 +1701,13 @@ export struct SearchPage {
   }
 }
 
+interface SearchResultDisplayFacts {
+  queryRevision: number;
+  book: SearchBook;
+  sourceCount: number;
+  inBookshelf: boolean;
+}
+
 /** A stable lazy row observes enrichment without remounting the whole result. */
 @Component
 struct SearchResultCard {
@@ -1461,13 +1716,135 @@ struct SearchResultCard {
 
   // The data source keeps the same @Observed instance for the same book key.
   // ObjectLink delivers metadata changes without replacing the lazy child.
-  @ObjectLink group: SearchBookGroup;
-  @Prop isTablet: boolean = false;
+  @ObjectLink @Watch('acceptDisplayFacts') group: SearchBookGroup;
+  viewState: SearchViewState = new SearchViewState();
+  @Prop @Watch('acceptDisplayFacts') queryRevision: number = 0;
+  @Prop @Watch('acceptDisplayFacts') displayIdleRevision: number = 0;
+  @Prop expandedLayout: boolean = false;
   @Prop cardWidth: number = 0;
   onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string) => void = (): void => {};
+  canRefreshDisplay: () => boolean = (): boolean => true;
+  onDisplayFactsChange: () => void = (): void => {};
+  @State private displayedFacts: SearchResultDisplayFacts | undefined = undefined;
+  private displayedBookInput: SearchBook | undefined = undefined;
+  private displayVisible: boolean = false;
+  private visibilityEpoch: number = 0;
+  private mounted: boolean = false;
+  private selectionEpoch: number = 0;
+  private pressedSelection: SearchResultSelection | undefined = undefined;
+
+  aboutToAppear(): void {
+    this.mounted = true;
+    this.visibilityEpoch += 1;
+    this.selectionEpoch += 1;
+    this.pressedSelection = undefined;
+    this.displayVisible = false;
+    this.acceptDisplayFacts();
+  }
+
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.visibilityEpoch += 1;
+    this.displayVisible = false;
+    this.displayedFacts = undefined;
+    this.displayedBookInput = undefined;
+    this.selectionEpoch += 1;
+    this.pressedSelection = undefined;
+  }
+
+  private captureDisplayFacts(): SearchResultDisplayFacts {
+    return { queryRevision: this.queryRevision, book: searchBookSnapshot(this.group.book),
+      sourceCount: this.group.sourceCount, inBookshelf: this.group.inBookshelf };
+  }
+
+  private acceptDisplayFacts(): void {
+    if (!this.mounted) return;
+    // Prop/ObjectLink callbacks may arrive in either order within one update.
+    // The request identity also retires an old-query snapshot, so a new Prop
+    // value cannot accidentally pin the preceding query's book while visible.
+    const changedQuery = this.displayedFacts?.queryRevision !== this.queryRevision ||
+      this.displayedFacts?.book.searchRequestId !== this.group.book.searchRequestId;
+    if (changedQuery) {
+      this.visibilityEpoch += 1;
+      this.selectionEpoch += 1;
+      this.pressedSelection = undefined;
+    }
+    // Keep visible rows stable and leave offscreen height changes pending
+    // while a gesture owns the list. A new query replaces its old display.
+    if (!changedQuery && (this.displayVisible || !this.canRefreshDisplay())) return;
+    if (!changedQuery && this.displayedBookInput === this.group.book &&
+      this.displayedFacts?.sourceCount === this.group.sourceCount &&
+      this.displayedFacts?.inBookshelf === this.group.inBookshelf) return;
+    const next = this.captureDisplayFacts();
+    // The owner captures the old geometry before this text can be relaid out.
+    // Query changes already have their own navigation reset/restore owner.
+    if (!changedQuery) this.onDisplayFactsChange();
+    this.displayedBookInput = this.group.book;
+    this.displayedFacts = next;
+  }
+
+  private displayBook(): SearchBook { return this.displayedFacts?.book ?? this.group.book; }
+  private displaySourceCount(): number { return this.group.sourceCount; }
+  private displayInBookshelf(): boolean { return this.displayedFacts?.inBookshelf ?? this.group.inBookshelf; }
+
+  private displayVisibilityHandler(): (visible: boolean, ratio: number) => void {
+    const epoch = this.visibilityEpoch;
+    const query = this.queryRevision;
+    return (visible: boolean, ratio: number): void => {
+      if (!this.mounted || epoch !== this.visibilityEpoch || query !== this.queryRevision ||
+        query !== this.viewState.revision) return;
+      const nextVisible = visible && ratio > 0;
+      if (!nextVisible || !this.displayVisible) {
+        this.displayVisible = false;
+        this.acceptDisplayFacts();
+      }
+      this.displayVisible = nextVisible;
+    };
+  }
+
+  private captureSelection(): SearchResultSelection {
+    return { queryRevision: this.displayedFacts?.queryRevision ?? this.queryRevision, book: searchBookSnapshot(this.displayBook()),
+      variants: this.group.variants.map((book: SearchBook): SearchBook => searchBookSnapshot(book)),
+      coverUrl: this.group.coverUrl };
+  }
+
+  private onCardTouch(type: TouchType): void {
+    if (!this.mounted) return;
+    if (type === TouchType.Down) {
+      this.selectionEpoch += 1;
+      this.pressedSelection = this.captureSelection();
+    } else if (type === TouchType.Cancel) {
+      this.selectionEpoch += 1;
+      this.pressedSelection = undefined;
+    } else if (type === TouchType.Up) {
+      const selection = this.selectionEpoch;
+      // Up precedes Click. Retire a drag/no-click after event dispatch rather
+      // than dropping the pressed identity before the click can consume it.
+      this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+        if (selection === this.selectionEpoch) this.pressedSelection = undefined;
+      }));
+    }
+  }
+
+  private selectResult(source: SourceType): void {
+    if (!this.mounted) return;
+    const pressed = this.pressedSelection;
+    this.selectionEpoch += 1;
+    this.pressedSelection = undefined;
+    // A cancelled/retired touchscreen press must never fall back to whichever
+    // book happens to occupy this native row now. Keyboard/assistive clicks
+    // have no Down and intentionally select the currently presented identity.
+    if (source === SourceType.TouchScreen && pressed === undefined) return;
+    const selected = pressed ?? this.captureSelection();
+    if (selected.queryRevision !== this.viewState.revision) return;
+    this.onSelectResult(selected.book, selected.variants, selected.coverUrl);
+  }
 
   private displayIntro(): string {
-    return bookIntroText(this.group.book.intro);
+    return bookIntroText(this.displayBook().intro);
+  }
+  private showResultIntro(): boolean {
+    return this.displayBook().category !== 'comic' && this.displayIntro().length > 0;
   }
 
   private searchFontScale(): number {
@@ -1478,12 +1855,20 @@ struct SearchResultCard {
   private resultTagWidth(): number { return 30 * this.searchFontScale(); }
   private resultTagHeight(): number { return 16 + 14 * (this.searchFontScale() - 1); }
 
+  private resultAuthorLine(): string {
+    const book = this.displayBook();
+    const author = bookAuthorLabel(book.author, book.authorIdentity, book.sourceRuleVersion);
+    const type = book.category === 'comic' ? '漫画' :
+      book.category === 'novel' || (book.sourceId === 'local' && book.category === undefined) ? '小说' : '';
+    return [author, type].filter((value: string): boolean => value.length > 0).join(' · ');
+  }
+
   private coverWidth(): number {
-    return this.isTablet ? 96 : 88;
+    return SEARCH_RESULT_GEOMETRY.coverWidth(this.cardWidth, this.expandedLayout);
   }
 
   private coverHeight(): number {
-    return this.coverWidth() * (this.isTablet ? 92 / 68 : 82 / 60);
+    return this.coverWidth() * SEARCH_RESULT_GEOMETRY.coverAspect;
   }
 
   private coverErrorHandler(url: string): () => void {
@@ -1495,7 +1880,7 @@ struct SearchResultCard {
   }
 
   build() {
-    Row({ space: TOK_SPACE_SM }) {
+    Row({ space: SEARCH_RESULT_GEOMETRY.columnGap }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (this.group.coverUrl.length > 0) {
           Image(this.group.coverUrl)
@@ -1510,13 +1895,13 @@ struct SearchResultCard {
           // rule exists, so the sole primary gradient is reused as the
           // DESIGN_FIXTURE no-cover placeholder.
           Stack({ alignContent: Alignment.Bottom }) {
-            Text(this.group.book.title)
+            Text(this.displayBook().title)
               .width('100%')
               .fontFamily(TYPE_SEARCH_RESULT_COVER_TITLE.fontFamily)
               .fontWeight(TYPE_SEARCH_RESULT_COVER_TITLE.fontWeight)
               .fontSize(TYPE_SEARCH_RESULT_COVER_TITLE.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_COVER_TITLE.lineHeightFp as number)
-              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.99FFFAF4', this.appThemeScheme))
+              .fontColor(readerAppColor('app.search.onCoverMeta', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1535,37 +1920,19 @@ struct SearchResultCard {
       .height(this.coverHeight())
       .borderRadius(6);
 
-      Column() {
-        if (this.group.book.category === 'comic') {
-          Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-            space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
-            Text('漫画').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
-              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
-            if (this.group.book.sourceId === 'local') {
-              Text('本地').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
-                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
-            } else {
-              Text('在线').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
-                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
-            }
-          }.width('100%');
-        }
-
-        Column({ space: 4 }) {
-          Text(this.group.book.title)
+      Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
+        Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
+          Text(this.displayBook().title)
             .width('100%')
             .fontFamily(TYPE_SEARCH_RESULT_TITLE.fontFamily)
             .fontWeight(TYPE_SEARCH_RESULT_TITLE.fontWeight)
             .fontSize(TYPE_SEARCH_RESULT_TITLE.fontSizeFp)
             .lineHeight(TYPE_SEARCH_RESULT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1)
+            .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-          Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
+          Text(this.resultAuthorLine())
             .width('100%')
             .fontFamily(TYPE_SEARCH_RESULT_AUTHOR.fontFamily)
             .fontWeight(TYPE_SEARCH_RESULT_AUTHOR.fontWeight)
@@ -1575,8 +1942,8 @@ struct SearchResultCard {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-          if ((this.group.book.latestChapterTitle?.trim().length ?? 0) > 0) {
-            Text(this.group.book.category === 'comic' ? `最新 · ${this.group.book.latestChapterTitle}` : this.group.book.latestChapterTitle)
+          if (!this.showResultIntro() && (this.displayBook().latestChapterTitle?.trim().length ?? 0) > 0) {
+            Text(this.displayBook().category === 'comic' ? `最新 · ${this.displayBook().latestChapterTitle}` : this.displayBook().latestChapterTitle)
               .width('100%')
               .opacity(0.8)
               .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
@@ -1588,18 +1955,16 @@ struct SearchResultCard {
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
 
-          if (this.displayIntro().length > 0) {
-            if (this.group.book.category !== 'comic') {
+          if (this.showResultIntro()) {
             Text(this.displayIntro())
               .width('100%')
               .fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
               .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight)
               .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
-              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
+              .fontColor(readerAppColor('app.search.resultHint', this.appThemeScheme))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
-            }
           }
         }
         .width('100%')
@@ -1607,66 +1972,48 @@ struct SearchResultCard {
 
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
-          if (this.group.book.category !== 'comic') {
-            Text('小说')
-              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+          if (this.displayBook().sourceId === 'local') {
+            Text('本地书籍').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1);
+          } else {
+            if (this.displayBook().sourceName.length > 0) {
+              Text(this.displayBook().sourceName)
+                .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+                .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              Text('·').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            }
+            Text(`发现 ${this.displaySourceCount()} 个来源`)
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+              .fontColor(readerAppColor('app.search.discoveredSource', this.appThemeScheme))
+              .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          }
+          if (this.displayInBookshelf()) {
+            Text('已在书架').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
-          Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
-            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
-            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
-          if (this.group.inBookshelf) {
-            Text('已在书架')
-              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
-              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
-          }
-        }
-        .width('100%')
-        .margin({ top: 5 });
+        }.width('100%').margin({ top: SEARCH_RESULT_GEOMETRY.footerGap });
       }
       .layoutWeight(1)
-      // Only the gap above the tags grows for short metadata. Long metadata
-      // grows the row naturally, while the original cover ratio stays intact.
+      // Short metadata shares the cover's minimum height and leaves free
+      // space above its footer; longer content grows naturally without clipping.
       .constraintSize({ minHeight: this.coverHeight() })
-      .justifyContent(FlexAlign.Start)
+      .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.cardWidth)
-    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
+    .padding({ top: SEARCH_RESULT_GEOMETRY.rowPadding, bottom: SEARCH_RESULT_GEOMETRY.rowPadding })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
-      .onClick((): void => this.onSelectResult(this.group.book, this.group.variants, this.group.coverUrl));
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('app.search.listRule', this.appThemeScheme) } })
+      .onVisibleAreaChange([0], this.displayVisibilityHandler())
+      .onTouch((event: TouchEvent): void => this.onCardTouch(event.type))
+      .onClick((event: ClickEvent): void => this.selectResult(event.source));
   }
 
   @Builder

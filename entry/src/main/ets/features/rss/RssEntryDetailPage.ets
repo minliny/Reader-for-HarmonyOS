@@ -48,7 +48,7 @@ export struct RssEntryDetailPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop subscription: RssSubscription;
   @Prop item: RssItem;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   @Prop operation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
   @Prop presentationIdentity: string = '';
@@ -153,7 +153,7 @@ export struct RssEntryDetailPage {
     .width(32)
     .height(44)
     .borderRadius(16)
-    .backgroundColor(this.favoriteState === 'favorited' ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('app.RssEntryDetailPage.backBar.backgroundColor.00000000', this.appThemeScheme))
+    .backgroundColor(this.favoriteState === 'favorited' ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('app.surface.transparent', this.appThemeScheme))
     .opacity(this.favoriteState === 'loading' ? 0.45 : 1)
     .enabled(this.canRequestFavorite())
     .onClick((): void =>
@@ -199,7 +199,7 @@ export struct RssEntryDetailPage {
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssEntryDetailPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -220,7 +220,7 @@ export struct RssEntryDetailPage {
     .padding({ left: 14, right: 14, top: 16, bottom: 16 })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssEntryDetailPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -255,7 +255,7 @@ export struct RssEntryDetailPage {
           .fontWeight(TYPE_RSS_ARTICLE_BODY.fontWeight)
           .fontSize(TYPE_RSS_ARTICLE_BODY.fontSizeFp)
           .lineHeight(TYPE_RSS_ARTICLE_BODY.lineHeightFp as number)
-          .fontColor(readerAppColor('app.RssEntryDetailPage.summaryBodyCard.fontColor.FF3F372F', this.appThemeScheme));
+          .fontColor(readerAppColor('app.text.filter', this.appThemeScheme));
       }, (_paragraph: string, index: number): string =>
         `rss-summary-${this.item.subscriptionId.length}:${this.item.subscriptionId}-${this.item.guid.length}:${this.item.guid}-${index}`);
     }
@@ -263,7 +263,7 @@ export struct RssEntryDetailPage {
     .padding({ left: 16, right: 16, top: 16, bottom: 16 })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssEntryDetailPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -275,7 +275,7 @@ export struct RssEntryDetailPage {
       }
       .width(28)
       .height(28)
-      .backgroundColor(readerAppColor('app.RssEntryDetailPage.ACTION_BG', this.appThemeScheme))
+      .backgroundColor(readerAppColor('app.feed.actionSoft', this.appThemeScheme))
       .borderRadius(14);
 
       Column({ space: 3 }) {
@@ -314,7 +314,7 @@ export struct RssEntryDetailPage {
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssEntryDetailPage.CARD_BORDER', this.appThemeScheme) })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8)
     .onClick((): void => this.onOpenOriginal());
   }

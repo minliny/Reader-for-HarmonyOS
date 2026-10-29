@@ -453,6 +453,9 @@ export struct ReaderControlSearchContent {
         .width(this.frame().firstResult.width).height(this.resultListFrame().viewportHeightVp)
         .position({ x: this.frame().firstResult.x, y: 0 })
         .childrenMainSize(this.resultItemSizes).cachedCount(READER_SEARCH_LIST_CACHE_COUNT, true)
+        // Feature scroll exception: contentEndOffsetVp is a normalized native
+        // List coordinate (visualToNativeRatio), not page geometry.
+        // ReaderScrollLayout must not reinterpret it.
         .contentEndOffset(this.resultListFrame().contentEndOffsetVp)
         .maintainVisibleContentPosition(true)
         // Rows retain authored geometry outside their normalized native item.

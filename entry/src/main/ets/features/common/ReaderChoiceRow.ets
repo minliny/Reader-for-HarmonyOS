@@ -1,15 +1,19 @@
 import { ReaderChoiceSpec, ReaderChoiceSpecId, resolveReaderChoiceSpec } from './ReaderChoiceSpecs';
+import { readerReadableFontScale, readerScaledControlHeight } from './ReaderSurfaceResolvers';
 import { readerAppColor } from './ReaderThemeRegistry';
 import type { ReaderTextStyle } from './ReaderTypography';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 
 /** The finite row spec keeps AUTO attributes absent, rather than calling a
  * native setter with undefined (which has different platform semantics). */
 class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
   private id: ReaderChoiceSpecId;
   private selected: boolean;
-  constructor(id: ReaderChoiceSpecId, selected: boolean) {
+  private multiline: boolean;
+  constructor(id: ReaderChoiceSpecId, selected: boolean, multiline: boolean = false) {
     this.id = id;
     this.selected = selected;
+    this.multiline = multiline;
   }
   applyNormalAttribute(instance: TextAttribute): void {
     const spec = resolveReaderChoiceSpec(this.id);
@@ -21,7 +25,8 @@ class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
     instance.fontSize(text.fontSizeFp);
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
     if (spec.textAlignStart) instance.textAlign(TextAlign.Start);
-    if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });
+    if (this.multiline) instance.wordBreak(WordBreak.BREAK_WORD);
+    else if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });
   }
 }
 
@@ -29,6 +34,7 @@ class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
  * Caller owns choice identity/commit; the finite spec owns the whole row. */
 @Component
 export struct ReaderChoiceRow {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderChoiceSpecId = 'default-option';
   @Prop label: string = '';
   @Prop selected: boolean = false;
@@ -37,6 +43,8 @@ export struct ReaderChoiceRow {
   @Prop availableWidth: number = 0;
   @Prop chevronAngle: number = 0;
   @Prop actionEnabled: boolean = true;
+  @Prop wrapLabel: boolean = false;
+  onHeightChange: (height: number) => void = (_height: number): void => {};
   onChoose: (value: string) => void = (): void => {};
 
   private mounted: boolean = false;
@@ -44,6 +52,9 @@ export struct ReaderChoiceRow {
   aboutToDisappear(): void { this.mounted = false; }
 
   build() {
+    if (this.wrapLabel) {
+      this.flowRow();
+    } else {
     Column() {
       if (this.spec().layout === 'positioned') {
         this.positionedRow();
@@ -57,7 +68,31 @@ export struct ReaderChoiceRow {
         }.width('100%').height(this.spec().dividerHeight)
           .padding({ left: this.spec().padding, right: this.spec().padding });
       }
-    }.width('100%').height(this.spec().height);
+    }.width('100%').height(this.outerHeight());
+    }
+  }
+
+  @Builder
+  private flowRow() {
+    Row({ space: this.spec().layout === 'positioned' ? 7 : this.spec().gap }) {
+      Text(this.label).layoutWeight(1)
+        .attributeModifier(new ReaderChoiceLabelModifier(this.specId, this.selected, true))
+        .fontColor(this.textColor());
+      if (this.hasIcon()) {
+        Image(this.icon()).width(this.spec().iconWidth).height(this.spec().iconHeight).flexShrink(0)
+          .rotate({ angle: this.spec().rotateIcon ? this.chevronAngle : 0 });
+      }
+    }.width('100%').constraintSize({ minHeight: this.specId === 'default-selected' || this.specId === 'default-option' ? 44 : this.spec().height })
+      .padding({ left: this.spec().layout === 'positioned' ? this.spec().textLeft : this.spec().padding,
+        right: this.spec().layout === 'positioned' ? this.spec().iconRight - this.spec().iconWidth : this.spec().padding,
+        top: this.specId === 'appearance-library' ? 6 : 10, bottom: this.specId === 'appearance-library' ? 6 : 10 })
+      .alignItems(VerticalAlign.Center).borderRadius(this.spec().radius).flexShrink(0)
+      .backgroundColor(this.rowBackground()).enabled(this.actionEnabled)
+      .accessibilityText(this.accessibilityLabel()).onClick((): void => this.choose())
+      .onAreaChange((_old: Area, next: Area): void => {
+        const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height as string);
+        if (Number.isFinite(height) && height > 0) this.onHeightChange(height);
+      });
   }
 
   @Builder
@@ -97,7 +132,18 @@ export struct ReaderChoiceRow {
 
   private spec(): ReaderChoiceSpec { return resolveReaderChoiceSpec(this.specId); }
   private textStyle(): ReaderTextStyle { return this.selected ? this.spec().selectedText : this.spec().text; }
-  private rowHeight(): number { return this.spec().height - (this.showDivider ? this.spec().dividerHeight : 0); }
+  private rowHeight(): number {
+    const divider = this.showDivider ? this.spec().dividerHeight : 0;
+    return readerScaledControlHeight(this.spec().height - divider,
+      this.spec().text.lineHeightFp ?? this.spec().text.fontSizeFp * 1.5, this.fontScale());
+  }
+  private outerHeight(): number {
+    return this.rowHeight() + (this.showDivider ? this.spec().dividerHeight : 0);
+  }
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
   private textColor(): ResourceColor { return readerAppColor(this.selected ? this.spec().selectedTextRole : this.spec().textRole, this.scheme); }
   private rowBackground(): ResourceColor {
     return this.selected && this.spec().selectedBackground !== undefined ?

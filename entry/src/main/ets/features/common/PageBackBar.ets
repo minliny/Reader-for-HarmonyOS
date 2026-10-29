@@ -1,6 +1,9 @@
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../manga/MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from '../manga/MangaDirectoryPressFeedback';
 import { readerAppColor } from './ReaderThemeRegistry';
+import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from './ReaderSurfaceSpecs';
+import { ReaderRaisedSurface } from './ReaderRaisedSurface';
+import { readerPageAreaLength } from './ReaderPageShell';
 import {
   TOK_SPACE_CONTROL_INLINE,
   TOK_SURFACE_SOLID,
@@ -12,8 +15,10 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_PAGE_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_650 } from './ReaderFontFamilies.ts';
+import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from './ReaderHeaderMetrics';
+import { readerScaledBarHeight } from './ReaderSurfaceResolvers';
 
-// 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题,58 高、20vp 内边距。
+// 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题;高度读取 App 顶栏共享常量。
 // 曾被 Settings/SourceManagement/Sync/Rss/LocalBookDetail 各自复制实现。
 @Component
 export struct PageBackBar {
@@ -23,6 +28,12 @@ export struct PageBackBar {
   title: string = '';
   @Prop centered: boolean = false;
   @Prop floating: boolean = false;
+  /** Rounded fixed bars keep their geometry without inheriting lift. */
+  @Prop elevation: 'fixed' | 'floating' | 'raised' = 'fixed';
+  @Prop material: 'solid' | 'veil' = 'solid';
+  @Prop scrolled: boolean = false;
+  @State private raisedWidth: number = 0;
+  @State private raisedHeight: number = 0;
   @Prop variant: 'standard' | 'mangaDirectory' = 'standard';
   /**
    * Header surface is an explicit variant contract. Secondary pages are
@@ -41,6 +52,20 @@ export struct PageBackBar {
   @BuilderParam trailing?: () => void;
 
   build() {
+    if (this.raised()) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        ReaderRaisedSurface({ surfaceWidth: this.raisedWidth, surfaceHeight: this.raisedHeight,
+          cornerRadius: this.floating ? 18 : 0, scheme: this.appThemeScheme });
+        this.panel();
+      }.width('100%').clip(false).hitTestBehavior(HitTestMode.Transparent)
+        .onAreaChange((_old: Area, next: Area): void => this.captureRaisedArea(next));
+    } else {
+      this.panel();
+    }
+  }
+
+  @Builder
+  private panel() {
     Row({ space: this.variant === 'mangaDirectory' ? 0 : TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
         Image(this.backIcon !== undefined ? this.backIcon : (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')))
@@ -77,18 +102,27 @@ export struct PageBackBar {
       }
     }
     .width('100%')
-    .height(this.variant === 'mangaDirectory' ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.floating ? 52 : 58)
+    .constraintSize({ minHeight: this.barHeight() })
     .padding({ left: this.leftInset(), right: this.rightInset() })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.variant === 'mangaDirectory' ? mangaDirectoryColor('surface', this.appThemeScheme) : this.floating || this.surface === 'solid' ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
+    .backgroundEffect(this.veil() ? readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined)
+    .backgroundColor(this.variant === 'mangaDirectory' ? mangaDirectoryColor('surface', this.appThemeScheme) : this.veil() ? Color.Transparent : this.floating || this.surface === 'solid' ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
     .border({ width: this.floating ? this.variant === 'mangaDirectory' ? visual.borderWidth : 1 : 0,
-      color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('line', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
+      color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('line', this.appThemeScheme) : this.veil() ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('app.border.control', this.appThemeScheme) })
     .borderRadius(this.floating ? this.variant === 'mangaDirectory' ? visual.headerRadius : 18 : 0)
     .clip(this.floating)
-    .shadow(this.floating ? { radius: this.variant === 'mangaDirectory' ? visual.shadowRadius : 18,
-      color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('shadow', this.appThemeScheme) : readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
-      offsetX: 0, offsetY: this.variant === 'mangaDirectory' ? visual.shadowOffsetY : 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
-    .hitTestBehavior(HitTestMode.Transparent);
+    .shadow(readerSurfaceElevation(this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
+    .hitTestBehavior(this.raised() || this.veil() ? HitTestMode.Default : HitTestMode.Transparent);
+  }
+
+  private raised(): boolean { return this.variant === 'standard' && this.elevation === 'raised'; }
+  private veil(): boolean { return this.variant === 'standard' && this.material === 'veil'; }
+
+  private captureRaisedArea(next: Area): void {
+    const width = readerPageAreaLength(next.width);
+    const height = readerPageAreaLength(next.height);
+    if (width > 0 && Math.abs(width - this.raisedWidth) > 0.25) this.raisedWidth = width;
+    if (height > 0 && Math.abs(height - this.raisedHeight) > 0.25) this.raisedHeight = height;
   }
 
   private mangaFontScale(): number {
@@ -96,22 +130,35 @@ export struct PageBackBar {
     return mangaDirectoryScale(revision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  private barHeight(): number {
+    if (this.variant === 'mangaDirectory') return mangaDirectoryHeaderHeight(this.mangaFontScale());
+    return this.floating
+      ? readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, this.fontScale(), 0)
+      : readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0);
+  }
+
   private leftInset(): number {
     if (this.variant === 'mangaDirectory') return visual.headerPadding;
     // The floating frame's parent owns cutouts; keep internal slots symmetric.
-    if (this.floating) return 4;
+    if (this.floating) return 9;
     if (this.readerWindowMetricsRevision < 0) {
-      return this.floating ? 4 : 20;
+      return 20;
     }
-    return Math.max(this.floating ? 4 : 20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
+    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
   }
 
   private rightInset(): number {
     if (this.variant === 'mangaDirectory') return visual.headerPadding;
-    if (this.floating) return 4;
+    if (this.floating) return 9;
     if (this.readerWindowMetricsRevision < 0) {
-      return this.floating ? 4 : 20;
+      return 20;
     }
-    return Math.max(this.floating ? 4 : 20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
+    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
   }
 }

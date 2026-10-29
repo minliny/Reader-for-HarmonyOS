@@ -1,9 +1,12 @@
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { motionAnimateParam } from '../common/MotionSpec';
+import { readerMotionAnimateParam } from '../common/ReaderMotionPolicy';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
+import { readerReadableFontScale } from '../common/ReaderSurfaceResolvers';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 
 const SURFACE_ASSET_WIDTH = 232;
 const SURFACE_ASSET_HEIGHT = 268;
@@ -21,6 +24,7 @@ const SURFACE_SHADOW_INSET_TOP = 18;
 @Component
 export struct BookshelfMoreMenu {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop anchorRight: number = 0;
   @Prop anchorBottom: number = 0;
@@ -33,8 +37,6 @@ export struct BookshelfMoreMenu {
   @Prop canCheckUpdates: boolean = false;
   @Prop updateRunning: boolean = false;
   @Prop backgroundUpdateRunning: boolean = false;
-  @Prop updateProgressDone: number = 0;
-  @Prop updateProgressTotal: number = 0;
   @State private overlayWidth: number = 0;
   @State private overlayHeight: number = 0;
   onDismiss: () => void = (): void => {};
@@ -46,6 +48,11 @@ export struct BookshelfMoreMenu {
 
   private surfaceSpec(): PopupSurfaceSpec {
     return resolvePopupSpec('bookshelf-more-menu');
+  }
+
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
   aboutToAppear(): void {
@@ -61,8 +68,10 @@ export struct BookshelfMoreMenu {
   private onReduceMotionChanged(): void {
     if (!this.mounted || !this.reduceMotion) return;
     const generation = ++this.generation;
-    this.getUIContext().animateTo({ duration: 0 }, (): void => {
-      this.panelHeight = this.closeInFlight ? this.surfaceSpec().collapsedHeight : this.surfaceSpec().expandedHeight;
+    this.getUIContext().animateTo(readerMotionAnimateParam(
+      this.closeInFlight ? 'dropdown.menu.collapse' : 'dropdown.menu.expand', true), (): void => {
+      this.panelHeight = this.closeInFlight ? this.surfaceSpec().collapsedHeightFor(this.fontScale()) :
+        this.surfaceSpec().expandedHeightFor(this.fontScale());
     });
     if (this.closeInFlight) this.finishCollapse(generation);
   }
@@ -140,6 +149,7 @@ export struct BookshelfMoreMenu {
   private menuContent() {
     ReaderActionMenuSurface({
       specId: 'bookshelf-more-menu', scheme: this.appThemeScheme,
+      reduceMotion: this.reduceMotion,
       actions: this.menuActions(), availableWidth: this.menuWidth(),
       viewportHeight: Math.max(0, this.visiblePanelHeight() - this.surfaceSpec().pointerHeight),
       onAction: (id: string): void => this.performMenuAction(id),
@@ -149,29 +159,31 @@ export struct BookshelfMoreMenu {
   private menuActions(): ReaderMenuActionView[] {
     return ['batch', 'import', 'update', 'downloads', 'settings'].map((id: string): ReaderMenuActionView =>
       new ReaderMenuActionView(id, this.actionLabel(id), this.actionEnabled(id), this.actionIcon(id),
-        id === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(id)));
+        id === 'update' && !this.canCheckUpdates && !this.updatesRunning() ? '检查更新，没有在线书籍' : this.actionLabel(id),
+        '', '', '', 'default', false, id === 'update' && this.updatesRunning()));
   }
 
   private performMenuAction(id: string): void {
-    if (!this.actionEnabled(id)) return;
+    if (!this.mounted || !this.actionEnabled(id)) return;
     if (id === 'batch') this.commitAction(this.onBatchManage);
     else if (id === 'import') this.commitAction(this.onLocalImport);
-    else if (id === 'update') this.commitAction(this.onCheckUpdates);
+    else if (id === 'update') this.onCheckUpdates();
     else if (id === 'downloads') this.commitAction(this.onDownloadsRequested);
     else if (id === 'settings') this.commitAction(this.onBookshelfSettings);
   }
 
   private actionEnabled(key: string): boolean {
-    return !this.closeInFlight && (key !== 'update' || (this.canCheckUpdates && !this.updateRunning && !this.backgroundUpdateRunning));
+    return !this.closeInFlight && (key !== 'update' || (this.canCheckUpdates && !this.updatesRunning()));
   }
+
+  private updatesRunning(): boolean { return this.updateRunning || this.backgroundUpdateRunning; }
 
   private actionLabel(key: string): string {
     if (key === 'batch') return '批量管理';
     if (key === 'import') return '本地导入';
     if (key === 'settings') return '书架设置';
     if (key === 'downloads') return '下载管理';
-    if (this.updateRunning) return this.updateProgressTotal > 0 ? `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}` : '正在检查…';
-    return this.backgroundUpdateRunning ? '正在自动检查' : '检查更新';
+    return this.updatesRunning() ? '检查更新中' : '检查更新';
   }
 
   private actionIcon(key: string): Resource {
@@ -195,7 +207,7 @@ export struct BookshelfMoreMenu {
 
   private menuTop(): number {
     return Math.max(0, Math.min(this.anchorBottom - this.surfaceSpec().anchorOverlap,
-      this.overlayHeight - this.surfaceSpec().collapsedHeight - 8));
+      this.overlayHeight - this.surfaceSpec().collapsedHeightFor(this.fontScale()) - 8));
   }
 
   private visiblePanelHeight(): number {
@@ -210,11 +222,11 @@ export struct BookshelfMoreMenu {
   private expandMenu(): void {
     if (!this.mounted || this.closeInFlight) return;
     if (this.reduceMotion) {
-      this.panelHeight = this.surfaceSpec().expandedHeight;
+      this.panelHeight = this.surfaceSpec().expandedHeightFor(this.fontScale());
       return;
     }
     this.getUIContext().animateTo(motionAnimateParam('dropdown.menu.expand'), (): void => {
-      this.panelHeight = this.surfaceSpec().expandedHeight;
+      this.panelHeight = this.surfaceSpec().expandedHeightFor(this.fontScale());
     });
   }
 
@@ -228,7 +240,7 @@ export struct BookshelfMoreMenu {
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
-      this.panelHeight = this.surfaceSpec().collapsedHeight;
+      this.panelHeight = this.surfaceSpec().collapsedHeightFor(this.fontScale());
       this.finishCollapse(generation);
       return;
     }

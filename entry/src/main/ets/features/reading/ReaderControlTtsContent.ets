@@ -1,6 +1,8 @@
 import { TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL, TYPE_READER_TTS_SECTION_META, TYPE_READER_TTS_SECTION_SPEED_META } from '../common/ReaderTypography';
 import { TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE, TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL, TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS, TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE, TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_META, TYPE_READER_TTS_RETAINED_SPEED_VALUE, TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_LABEL, TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_META, TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE, TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL } from '../common/ReaderTypography';
 import { ReaderTtsWaveform } from './ReaderTtsWaveform';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
@@ -45,6 +47,7 @@ type ReaderControlTtsToggle = 'followHighlight' | 'pauseOnInterruption' | 'allow
 @Component
 export struct ReaderControlTtsContent {
   @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop sourceOnly: 'none' | 'quick' | 'full' = 'none';
@@ -72,7 +75,7 @@ export struct ReaderControlTtsContent {
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
-  @Prop isTablet: boolean = false;
+  @Prop expandedLayout: boolean = false;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
   @Prop state: ReaderTtsState;
@@ -87,6 +90,9 @@ export struct ReaderControlTtsContent {
   @Prop failurePolicy: 'skip' | 'stop' = 'stop';
   @Prop @Watch('onEngineChanged') engine: string = 'system';
   @Prop httpEngines: ReaderTtsEngineOption[] = [];
+  @Prop configurationRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop configurationLoading: boolean = false;
+  @Prop configurationLoadFailed: boolean = false;
   @Prop voiceOptions: ReaderTtsVoiceOption[] = [];
   @Prop language: string = 'zh-CN';
   @Prop person: number = 0;
@@ -128,7 +134,7 @@ export struct ReaderControlTtsContent {
   @State private managerBusy: boolean = false;
   @State private serviceTab: string = '';
   @State private serviceBusy: boolean = false;
-  @State private serviceError: string = '';
+  @State private measuredPlaybackErrorHeight: number = 42;
   private serviceGeneration: number = 0;
   private cachedOnlinePage: boolean = false;
   private configGeneration: number = 0;
@@ -145,9 +151,13 @@ export struct ReaderControlTtsContent {
   private cachedFrame: ReaderControlTtsFrame = sampleReaderControlTts(0, 286);
 
   private p(): number { return readerControlUnit(this.motionProgress); }
+  private playbackExtraHeight(): number {
+    return (this.state.totalSlices > 1 ? 32 : 0) +
+      (this.state.errorMessage ? this.measuredPlaybackErrorHeight + 12 : 0);
+  }
   private frame(): ReaderControlTtsFrame {
     const rate = (this.effectiveRate() - READER_TTS_RATE_MIN) / (READER_TTS_RATE_MAX - READER_TTS_RATE_MIN);
-    const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);
+    const seek = this.playbackExtraHeight();
     if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||
       this.cachedRate !== rate || this.cachedSeek !== seek || this.cachedOnlinePage !== this.onlineServicePage()) {
       this.cachedProgress = this.motionProgress; this.cachedWidth = this.availableWidth;
@@ -264,7 +274,7 @@ export struct ReaderControlTtsContent {
     return this.cachedPaint;
   }
   private outlineOpacity(kind: ReaderControlTtsSection): number {
-    const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);
+    const seek = this.playbackExtraHeight();
     const full = sampleReaderControlTts(1, this.availableWidth, 0, seek);
     const actor = kind === 'playback' ? full.playback : kind === 'timer' ? full.timer : full.speed;
     return readerControlMotionOutlineOpacity(this.motionProgress, actor.y, actor.height,
@@ -276,8 +286,8 @@ export struct ReaderControlTtsContent {
   private sharedClip(kind: ReaderControlTtsSection): PathShape {
     const density = this.getUIContext().vp2px(1);
     return this.pathCache.sample(kind, [this.motionProgress, this.availableWidth, this.fullViewportHeight,
-      this.scrollMotion.fullScrollOffset, density, this.state.totalSlices > 1 ? 32 : 0, this.state.errorMessage ? 24 : 0, this.effectiveRate()], (): string => {
-      const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);
+      this.scrollMotion.fullScrollOffset, density, this.playbackExtraHeight(), this.effectiveRate()], (): string => {
+      const seek = this.playbackExtraHeight();
       const full = sampleReaderControlTts(1, this.availableWidth, 0, seek);
       const quick = sampleReaderControlTts(0, this.availableWidth, 0, seek);
       const current = this.frame();
@@ -432,6 +442,8 @@ export struct ReaderControlTtsContent {
   private managerOverlay() {
     ReaderTtsConfigOverlay({ title: '第三方 TTS 配置', manager: true, windowModal: true,
       engines: this.httpEngines, engine: this.onlineEngineId(), selectionId: this.configIdentity,
+      recoveryView: this.configurationRecovery,
+      listLoading: this.configurationLoading, listLoadFailed: this.configurationLoadFailed,
       onChoose: (id: string, identity: string): Promise<void> => this.commitConfiguration(id, identity),
       onPut: this.onHttpEnginePut, onDelete: this.onHttpEngineDelete,
       onBusyChange: (busy: boolean): void => { this.managerBusy = busy; },
@@ -449,6 +461,9 @@ export struct ReaderControlTtsContent {
         availableWidth: this.availableWidth, availableHeight: this.availableHeight,
         anchorY: this.configurationAnchorY(), voicePicker: this.configField === 'voice',
         engines: this.httpEngines, engine: this.engine, selectionId: this.configIdentity,
+        recoveryView: this.configurationRecovery,
+        listLoading: this.configField === 'engine' && this.configurationLoading,
+        listLoadFailed: this.configField === 'engine' && this.configurationLoadFailed,
         onChoose: (id: string, identity: string): Promise<void> => this.commitConfiguration(id, identity),
         onPreview: (id: string, identity: string): Promise<void> => this.previewConfigurationVoice(id, identity),
         onPreviewStop: (): void => this.onAuditionStop(),
@@ -587,9 +602,19 @@ export struct ReaderControlTtsContent {
             });
         }
         if (this.state.errorMessage !== undefined && this.state.errorMessage.length > 0) {
-          Text(this.state.errorMessage).width(this.frame().playback.width - 32).height(24)
-            .fontFamily(TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS.fontSizeFp).lineHeight(TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_CLAY', this.appScheme)).maxLines(2)
-            .position({ x: 16, y: this.state.totalSlices > 1 ? 230 : 198 }).opacity(this.p());
+          Text(this.state.errorMessage).width(this.frame().playback.width - 32)
+            .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_TTS_CLAY', this.appScheme)).wordBreak(WordBreak.BREAK_WORD)
+            .position({ x: 16, y: this.state.totalSlices > 1 ? 230 : 198 }).opacity(this.p())
+            .onAreaChange((_old: Area, area: Area): void => {
+              // The persistent playback task keeps its error in context. Its
+              // measured height also extends the actor, clip and scroll range.
+              const height = Number(area.height);
+              if (Number.isFinite(height) && height > 0 && Math.abs(height - this.measuredPlaybackErrorHeight) > .1) {
+                this.measuredPlaybackErrorHeight = height;
+              }
+            });
         }
       }.width(this.frame().playback.width).height(this.frame().playback.height)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -857,7 +882,7 @@ export struct ReaderControlTtsContent {
     }.width('100%').alignItems(HorizontalAlign.Start);
   }
   @Builder
-  private ttsConfigHeader() { this.sectionHeader('朗读引擎', this.serviceError); }
+  private ttsConfigHeader() { this.sectionHeader('朗读引擎', ''); }
 
   @Builder
   private ttsServiceTypeTabs() {
@@ -875,11 +900,11 @@ export struct ReaderControlTtsContent {
       }.width('100%').height(20);
       Column({ space: 3 }) {
         Text(http ? '在线 TTS' : '系统 TTS').fontFamily(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontWeight)
-          .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).height(17).maxLines(1);
+          .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).constraintSize({ minHeight: 17 }).maxLines(1);
         Text(http ? this.onlineServiceDescription() : '设备内置语音').fontFamily(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontWeight)
-          .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme)).height(14).maxLines(1);
+          .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme)).constraintSize({ minHeight: 14 }).maxLines(1);
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.layoutWeight(1).height(87).padding(12).alignItems(HorizontalAlign.Start)
+    }.layoutWeight(1).constraintSize({ minHeight: 87 }).padding(12).alignItems(HorizontalAlign.Start)
       .backgroundColor(this.isTtsServiceTabSelected(http) ? readerAppColor('app.control.paint.172F6373', this.appScheme) : readerAppColor('app.control.paint.99FFF8EF', this.appScheme))
       .border({ width: this.isTtsServiceTabSelected(http) ? 1.5 : 0.5,
         color: this.isTtsServiceTabSelected(http) ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.66B4A697', this.appScheme) }).borderRadius(10)
@@ -905,7 +930,7 @@ export struct ReaderControlTtsContent {
       Text(this.fieldLabel(kind)).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontWeight)
         .fontSize(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).maxLines(1);
       this.ttsSelectValueField(kind);
-    }.width('100%').height(48).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
+    }.width('100%').constraintSize({ minHeight: 48 }).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
       .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) });
   }
   @Builder
@@ -921,7 +946,7 @@ export struct ReaderControlTtsContent {
     Row() {
       Text('音色').layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
       this.ttsSelectValueField('voice');
-    }.width('100%').height(52).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
+    }.width('100%').constraintSize({ minHeight: 52 }).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
       .enabled(this.fullInput());
   }
   @Builder
@@ -931,13 +956,13 @@ export struct ReaderControlTtsContent {
         Text(this.currentVoiceLabel().includes('女') ? '女' : this.currentVoiceLabel().includes('男') ? '男' : '声')
           .width(24).height(24).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_TEAL', this.appScheme))
-          .backgroundColor(readerAppColor('app.control.paint.212F6373', this.appScheme)).borderRadius(999);
+          .backgroundColor(readerAppColor('app.control.paint.212F6373', this.appScheme)).borderRadius(999).flexShrink(0);
       }
       Text(this.fieldValue(kind)).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.fontSizeFp)
         .fontColor(kind === 'voice' ? readerAppColor('TOK_TTS_INK', this.appScheme) : readerAppColor('app.control.paint.5B5046', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.End);
-      Image($r(this.appScheme === 'night' ? 'app.media.reader_appearance_make_chevron_theme_night' : 'app.media.reader_appearance_make_chevron')).width(12).height(12);
-    }.width(this.fieldWidth(kind)).height(kind === 'voice' ? 30 : 48)
+      Image($r(this.appScheme === 'night' ? 'app.media.reader_appearance_make_chevron_theme_night' : 'app.media.reader_appearance_make_chevron')).width(12).height(12).flexShrink(0);
+    }.width(this.fieldWidth(kind)).height(this.fieldHeight(kind)).flexShrink(0)
       .padding({ left: kind === 'voice' ? 4 : 0, right: kind === 'voice' ? 8 : 0 }).alignItems(VerticalAlign.Center)
       .backgroundColor(kind === 'voice' ? readerAppColor('TOK_TTS_FIELD', this.appScheme) : Color.Transparent)
       .border({ width: kind === 'voice' ? 0.5 : 0, color: readerAppColor('TOK_TTS_LINE', this.appScheme) })
@@ -977,7 +1002,25 @@ export struct ReaderControlTtsContent {
   }
 
   private fieldWidth(kind: ReaderControlTtsField): number {
-    return Math.max(70, Math.min(170, this.frame().config.width * 0.56));
+    this.readerWindowMetricsRevision;
+    const style = TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY;
+    const context = this.getUIContext();
+    const width = context.px2vp(context.getMeasureUtils().measureText({ textContent: this.fieldValue(kind),
+      fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
+    // Voice: 12 padding + 24 badge + two 6 gaps + 12 arrow + 1 border.
+    const chrome = kind === 'voice' ? 61 : 18;
+    const cap = Math.max(70, Math.min(170, this.frame().config.width * 0.56));
+    return Math.min(cap, Math.ceil(Number.isFinite(width) ? width : 0) + chrome);
+  }
+
+  private fieldHeight(kind: ReaderControlTtsField): number {
+    this.readerWindowMetricsRevision;
+    const style = TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY;
+    const context = this.getUIContext();
+    const measured = context.getMeasureUtils().measureTextSize({ textContent: this.fieldValue(kind) || '字',
+      fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight });
+    const height = context.px2vp(Number(measured.height));
+    return Math.max(kind === 'voice' ? 30 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
   }
 
   private toggleValue(kind: ReaderControlTtsToggle): boolean {
@@ -1081,17 +1124,16 @@ export struct ReaderControlTtsContent {
   private selectTtsServiceType(http: boolean): void {
     if (!this.fullInput() || this.serviceBusy) return;
     this.serviceTab = http ? 'online' : 'system';
-    this.serviceError = '';
     const target = http ? this.onlineEngineId() : 'system';
     // Browsing the unconfigured Online tab cannot invent an executable engine.
     if (target === '') { if (this.hasActiveQueue()) this.onStop(); return; }
     if (target === this.engine) return;
     const generation = ++this.serviceGeneration;
     this.serviceBusy = true;
-    void this.onEngineChange(target).catch((error: Error): void => {
+    void this.onEngineChange(target).catch((_error: Error): void => {
       if (generation !== this.serviceGeneration) return;
       this.serviceTab = this.isHttpEngineSelected() ? 'online' : 'system';
-      this.serviceError = error.message;
+      // The original host exposes the selection receipt and owns feedback.
     }).finally((): void => {
       if (generation === this.serviceGeneration) this.serviceBusy = false;
     });

@@ -1,12 +1,11 @@
-import { ReaderHeaderFrameModifier, ReaderHeaderKind, ReaderHeaderSurface, readerPageAreaLength } from './ReaderPageShell';
+import { ReaderHeaderFrameModifier, readerPageAreaLength } from './ReaderPageShell';
+import { ReaderHeaderFrameStyle } from './ReaderFrameStyle';
 
 /** Actual native header owner. Compound title/tools or search/filter/statistics
  * slots measure together so expansion updates their scroll clearance. */
 @Component
 export struct ReaderFixedHeaderHost {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @Prop kind: ReaderHeaderKind = 'standard';
-  @Prop surface: ReaderHeaderSurface = 'solid';
+  @Prop style: ReaderHeaderFrameStyle;
   @Prop measurementKey: number = 0;
   onHeightChange: (height: number, presentedKey: number) => void = (_height: number, _presentedKey: number): void => {};
   @BuilderParam content: () => void = this.emptySlot;
@@ -15,7 +14,7 @@ export struct ReaderFixedHeaderHost {
   build() {
     Column() { this.content(); }
       .width('100%')
-      .attributeModifier(new ReaderHeaderFrameModifier(this.kind, this.surface, this.appThemeScheme))
+      .attributeModifier(new ReaderHeaderFrameModifier(this.style))
       .hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange(this.areaChangeHandler(this.measurementKey));
   }

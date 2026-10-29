@@ -48,7 +48,7 @@ export struct SyncPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
-  @Prop isTablet: boolean;
+  @Prop expandedLayout: boolean;
   onBack: () => void = (): void => {};
   onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _backupPass: string, _path: string): void => {};
@@ -112,7 +112,7 @@ export struct SyncPage {
   private backBar() {
     PageBackBar({
       title: '同步与备份',
-      titleColor: readerAppColor('app.SyncPage.backBar.paint.FF1A1612', this.appThemeScheme),
+      titleColor: readerAppColor('app.text.syncHeading', this.appThemeScheme),
       onBack: (): void => this.onBack(),
     });
   }
@@ -139,7 +139,7 @@ export struct SyncPage {
       .fontFamily(TYPE_SYNC_MUTED_HEADING.fontFamily)
       .fontWeight(TYPE_SYNC_MUTED_HEADING.fontWeight)
       .fontSize(TYPE_SYNC_MUTED_HEADING.fontSizeFp)
-      .fontColor(readerAppColor('app.SyncPage.sectionHeadingMuted.fontColor.FF9C9488', this.appThemeScheme))
+      .fontColor(readerAppColor('app.text.syncHint', this.appThemeScheme))
       .letterSpacing(TYPE_SYNC_MUTED_HEADING.letterSpacingFp as number)
       .padding({ left: TOK_SPACE_SM });
   }
@@ -220,8 +220,8 @@ export struct SyncPage {
     }
     .width('100%')
     .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(readerAppColor('app.SyncPage.ROW_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.ROW_BORDER', this.appThemeScheme) })
+    .backgroundColor(readerAppColor('app.surface.syncRow', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -327,9 +327,9 @@ export struct SyncPage {
         cardWidth: this.contentFrame().width }) {
         Column() {
           this.gatedRow('保存位置', this.snapshot.saveLocation);
-          Row().width('100%').height(1).backgroundColor(readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme));
+          Row().width('100%').height(1).backgroundColor(readerAppColor('app.border.statusCard', this.appThemeScheme));
           this.gatedRow('备份频率', this.snapshot.backupFrequency);
-          Row().width('100%').height(1).backgroundColor(readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme));
+          Row().width('100%').height(1).backgroundColor(readerAppColor('app.border.statusCard', this.appThemeScheme));
           this.scopeRow();
         }
         .width('100%');
@@ -346,7 +346,7 @@ export struct SyncPage {
         .fontFamily(TYPE_SYNC_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_SYNC_ROW_LABEL.fontWeight)
         .fontSize(TYPE_SYNC_ROW_LABEL.fontSizeFp)
-        .fontColor(readerAppColor('app.SyncPage.gatedRow.fontColor.FF1A1612', this.appThemeScheme));
+        .fontColor(readerAppColor('app.text.syncHeading', this.appThemeScheme));
       Text(value)
         .fontFamily(TYPE_FORM_ACTION.fontFamily)
         .fontWeight(TYPE_FORM_ACTION.fontWeight)
@@ -370,7 +370,7 @@ export struct SyncPage {
         .fontFamily(TYPE_SYNC_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_SYNC_ROW_LABEL.fontWeight)
         .fontSize(TYPE_SYNC_ROW_LABEL.fontSizeFp)
-        .fontColor(readerAppColor('app.SyncPage.scopeRow.fontColor.FF1A1612', this.appThemeScheme))
+        .fontColor(readerAppColor('app.text.syncHeading', this.appThemeScheme))
         .maxLines(1);
       Row({ space: 8 }) {
         Text(this.scopeSummary())
@@ -456,19 +456,19 @@ export struct SyncPage {
               .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)
               .fontWeight(TYPE_APP_SMALL_LABEL.fontWeight)
               .fontSize(TYPE_APP_SMALL_LABEL.fontSizeFp)
-              .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF243D30', this.appThemeScheme))
+              .fontColor(readerAppColor('app.text.syncBadge', this.appThemeScheme))
               .maxLines(1);
           }
           .width(64)
           .height(24)
           .borderRadius(12)
-          .backgroundColor(readerAppColor('app.SyncPage.BADGE_BG', this.appThemeScheme));
+          .backgroundColor(readerAppColor('app.sync.badgeSurface', this.appThemeScheme));
 
           Text(entry.timestamp)
             .fontFamily(TYPE_SYNC_INPUT.fontFamily)
             .fontWeight(TYPE_SYNC_INPUT.fontWeight)
             .fontSize(TYPE_SYNC_INPUT.fontSizeFp)
-            .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF5C564E', this.appThemeScheme))
+            .fontColor(readerAppColor('app.text.syncMeta', this.appThemeScheme))
             .maxLines(1)
             .margin({ left: TOK_SPACE_CONTROL_INLINE });
         }
@@ -483,13 +483,13 @@ export struct SyncPage {
             .fontFamily(TYPE_SYNC_HISTORY_STATUS.fontFamily)
             .fontWeight(TYPE_SYNC_HISTORY_STATUS.fontWeight)
             .fontSize(TYPE_SYNC_HISTORY_STATUS.fontSizeFp)
-            .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF5C564E', this.appThemeScheme))
+            .fontColor(readerAppColor('app.text.syncMeta', this.appThemeScheme))
             .maxLines(1);
           Text(`${(entry.size / 1048576).toFixed(1)} MB`)
             .fontFamily(TYPE_SYNC_INPUT.fontFamily)
             .fontWeight(TYPE_SYNC_INPUT.fontWeight)
             .fontSize(TYPE_SYNC_INPUT.fontSizeFp)
-            .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF9C9488', this.appThemeScheme))
+            .fontColor(readerAppColor('app.text.syncHint', this.appThemeScheme))
             .maxLines(1);
         }
         .width('100%')

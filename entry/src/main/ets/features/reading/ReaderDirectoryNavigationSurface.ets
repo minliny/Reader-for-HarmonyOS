@@ -5,6 +5,7 @@ import { ReaderTransientFeedback } from '../common/ReaderTransientFeedback';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderScrollLayout } from '../common/ReaderScrollLayout';
 import { prepareMangaSheetFonts } from '../common/ReaderFonts';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../common/ReaderFontFamilies';
 import type { JsonObject } from '@reader/core-harmony';
@@ -53,8 +54,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop listPaddingX: number = 10;
   @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 5;
-  @Prop contentStartInset: number = 0;
-  @Prop contentEndInset: number = 0;
+  @Prop scrollLayout: ReaderScrollLayout = new ReaderScrollLayout(0, 0, 'contentOffset');
   @Prop listPaddingTop: number = -1;
   @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
@@ -534,7 +534,7 @@ export struct ReaderDirectoryNavigationSurface {
               listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
               listPaddingRight: this.listPaddingRight,
               listPaddingTop: this.listPaddingTop, listPaddingBottom: this.listPaddingBottom,
-              contentStartInset: this.contentStartInset, contentEndInset: this.contentEndInset,
+              scrollLayout: this.scrollLayout,
               edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
               chapterEntries: this.chapterEntries,
               chapterDownloadEnabled: this.chapterDownloadEnabled,
