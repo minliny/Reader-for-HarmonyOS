@@ -7558,7 +7558,7 @@
       }
     },
     "test-shared-download-ui-sdk.mjs": {
-      "sourceSha256": "51eec2a58e04b28decea82ec39a6f2ab4df36ae5b6dfae5b37731fffbe336bf2",
+      "sourceSha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded",
       "cases": {
         "page-assembly": {
           "resources": [],
@@ -11067,6 +11067,15 @@
           "qualification": "QUALIFIED"
         },
         "policy-dedup": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-search-cover-continuity.mjs": {
+      "sourceSha256": "32e500ebaf3748dab51b6599ffb4ed888075770175328c025365b3855f50dfd0",
+      "cases": {
+        "cover-continuity": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -15104,19 +15113,6 @@
           "HarmonyOS ETS SDK loader配置"
         ],
         "scope": "仅按需验证runtime current语义或这五个isCurrentSession实现，非所有app改动前置。"
-      },
-      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
-    },
-    "test-search-cover-continuity.mjs": {
-      "resources": [],
-      "basis": {
-        "reviewedCostType": "sdk-transpile",
-        "prerequisites": [
-          "Node支持TS strip/registerHooks",
-          "仓库fixture及lib依赖",
-          "HarmonyOS ETS SDK loader配置"
-        ],
-        "scope": "仅按需验证Search分组metadata更新、封面选择/error或ObjectLink retained行为。"
       },
       "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
     },

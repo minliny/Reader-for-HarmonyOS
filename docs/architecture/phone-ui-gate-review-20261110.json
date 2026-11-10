@@ -1,0 +1,687 @@
+{
+  "schema": "reader.phone-ui-gate-definition-review.v1",
+  "status": "PASS_TWO_REQUALIFIED_INDEXED_CASES",
+  "authorization": "User independent review on2026-11-10 requests a separate change for the two drifted gates; this change follows the frozen Host source commit d52a7883 and changes no production code, Native, HAP or device state.",
+  "scope": [
+    "H-search-cover-continuity exact cover-continuity case",
+    "H-shared-download-ui-sdk#page-assembly exact case; parent navigation text mirrors this scope"
+  ],
+  "sourceCandidate": {
+    "hostCommit": "d52a7883c9dde562b9f1e4dea123f5174995982a",
+    "uiCommit": "cff94a46c1f9280fbd3a33088641f0f090d1d1fb",
+    "appBuildId": "0.2.0.DEV.a4438c05bb65",
+    "hapSha256": "ef1f22c043cd4ed81e7e3ab51d32bfffb6f1e810d516a5efe5c271758a8ac249",
+    "scope": "Same effective production inputs; new test evidence never changes original dirty manifest or relabels its old failures."
+  },
+  "priorIndexRecords": [
+    {
+      "id": "H-search-cover-continuity",
+      "file": "tools/test-search-cover-continuity.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "qualification": "QUALIFIED",
+      "protectedBehavior": "搜索同组文本/来源数量更新不能替换已准入封面actor/URI；失败URL仅尝试同组候选，旧query图片回调不能污染新query。",
+      "mechanism": "11-34从生产抽真实Group/DataSource，no structural CHANGE；38-75 SDK ObservedObject/ObjectLink连续60次更新保留image/native node，77-94error回调/候选/新query矩阵。",
+      "productionBinding": "SearchPage.ets:149 SearchResultDataSource、1515 SearchResultCard与SearchBookGroup封面选择。",
+      "failureExample": "static: 每次代表书变更都换封面会使70URI非a；旧onError没query guard会使94封面被拒。",
+      "overlap": "view-state/publication关注group结构和revision；本条独有真实SDK image actor/URI稳定与failure fallback，不能用静态图片regex替代。",
+      "minimumTrigger": "仅按需验证Search分组metadata更新、封面选择/error或ObjectLink retained行为。",
+      "necessityReason": "真实Group和Card observer联合，端口是native属性记录，明确只证输入与node保留，因此局部充分。",
+      "limitations": "没有加载实际图片或验证解码/屏幕闪烁；字体tuple为fixture依赖，非批准视觉证据。",
+      "needs": [
+        "search cover",
+        "Image retained",
+        "ObjectLink",
+        "error fallback",
+        "query隔离"
+      ],
+      "prerequisites": [
+        "Node支持TS strip/registerHooks",
+        "仓库fixture及lib依赖",
+        "HarmonyOS ETS SDK loader配置"
+      ],
+      "repair": null,
+      "reviewedSourceSha256": "f96fc7e3e2f142315275390a9371e735dcabbf8371ef8367ddceebcbd5972c83",
+      "estimatedCostType": "sdk-transpile",
+      "definitionInputProblems": [],
+      "definitionInputs": [
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/manga-directory-entry-row-probe.mjs",
+          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+        },
+        {
+          "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
+          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+        },
+        {
+          "path": "tools/lib/reader-foundation-control-probe.mjs",
+          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+        },
+        {
+          "path": "tools/lib/reader-icon-button-probe.mjs",
+          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+        },
+        {
+          "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
+          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+        },
+        {
+          "path": "tools/lib/reader-page-builder-slots.mjs",
+          "sha256": "2251794243816f47db01a06f8ff4d86ffc98566bd72e8b08952b03f00aa54454"
+        },
+        {
+          "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
+          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+        },
+        {
+          "path": "tools/lib/reader-press-feedback-probe.mjs",
+          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+        },
+        {
+          "path": "tools/lib/reader-switch-control-probe.mjs",
+          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+        },
+        {
+          "path": "tools/test-search-cover-continuity.mjs",
+          "sha256": "f96fc7e3e2f142315275390a9371e735dcabbf8371ef8367ddceebcbd5972c83"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        }
+      ],
+      "definitionIdentityState": "REVIEWED",
+      "definitionIdentityPurpose": "Change-detection snapshot only; semantic evidence is in mechanism/productionBinding, not inferred from these hashes. Dynamic fixture paths may require further explicit identity entries.",
+      "tests": [
+        "test-search-cover-continuity.mjs"
+      ],
+      "repairAction": null,
+      "resourceDefinitionSha256": "9882bbc0e84680b6c16366318f4ead65c4b0951486f95429a8c1c0fbbd28668c"
+    },
+    {
+      "id": "H-shared-download-ui-sdk",
+      "file": "tools/test-shared-download-ui-sdk.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "qualification": "NAVIGATION",
+      "protectedBehavior": "下载及相关page组装应能被安装SDK解析/降级，custom component输入字段存在，storageSummary保留Prop，下载Button必须Normal而非隐式Capsule。",
+      "mechanism": "['删除全entry递归parse/17无关Index/settings/bookshelf root降低；保当前实际下载页直接元数据闭包', '不冻结6个InlineSelect数目，仍禁止下载页平台Select；真实Normal Button constructor/storageSummary OneWay Prop lowering保留']",
+      "productionBinding": "全entry源码parser；SharedDownloadPage.ets:73；Index/Settings/Startup和Bookshelf各selected page编译输入。",
+      "failureExample": "Historical review retained in implementation/prior catalog; current case assertions and validation are separate.",
+      "overlap": "其他SDK consumer执行局部真实树也parse，但本条广域registration/lowering可捕获未被局部挂载的字段；全项目扫描超下载需求。",
+      "minimumTrigger": "仅按需验证SharedDownload assembly或SDK升级兼容；当前入口广域扫描不作为普通下载修复必跑。",
+      "necessityReason": "真实官方SDK transformer有编译层价值，明确不是语义typecheck/HAP；需限定实际依赖闭包，避免全repo语法暗门禁。",
+      "limitations": "spread属性跳过检查，field存在不验证类型/必填；resource前缀匹配非精确名字；cwd须Harmony根。",
+      "needs": [
+        "download SDK",
+        "component lowering",
+        "field binding",
+        "Normal Button",
+        "resource"
+      ],
+      "prerequisites": [
+        "Node支持TS strip/registerHooks",
+        "仓库fixture及lib依赖",
+        "HarmonyOS ETS SDK loader配置"
+      ],
+      "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
+      "repairAction": null,
+      "reviewedSourceSha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e",
+      "estimatedCostType": "sdk-transpile",
+      "definitionInputProblems": [],
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+        },
+        {
+          "path": "tools/test-shared-download-ui-sdk.mjs",
+          "sha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e"
+        }
+      ],
+      "definitionIdentityState": "REVIEWED",
+      "definitionIdentityPurpose": "Change-detection snapshot only; semantic evidence is in mechanism/productionBinding, not inferred from these hashes. Dynamic fixture paths may require further explicit identity entries.",
+      "tests": [
+        "test-shared-download-ui-sdk.mjs"
+      ],
+      "priorReviewMechanism": "14-48递归解析全仓ETS/TS；49-93对17 selected页field绑定和component lowering；99-137下载Prop/Button/6InlineSelect/DTO getter检查；143-145资源文件存在。",
+      "priorReviewCounterexample": "static: caller传不存在field会使72失败；Button省type会使117失败；无关reader文件语法错同样阻47。",
+      "implementation": "IMPLEMENTED",
+      "focusedEntries": [
+        "H-shared-download-ui-sdk#page-assembly"
+      ],
+      "coverageAdoption": [
+        {
+          "id": "H-manga-ui-assembly-sdk",
+          "case": "index",
+          "reason": "Index SDK assembly已由对应有限root入口接纳"
+        },
+        {
+          "id": "H-manga-ui-assembly-sdk",
+          "case": "bookshelf",
+          "reason": "Bookshelf SDK assembly归对应有限root，不随下载页自动跑"
+        }
+      ],
+      "implementationEvidence": {
+        "path": ".reader-artifacts/gate-audit-20261019/reaudit/implementation",
+        "changes": [
+          "删除全entry递归parse/17无关Index/settings/bookshelf root降低；保当前实际下载页直接元数据闭包",
+          "不冻结6个InlineSelect数目，仍禁止下载页平台Select；真实Normal Button constructor/storageSummary OneWay Prop lowering保留"
+        ],
+        "validation": {
+          "syntax": "PASS",
+          "case": "NOT_RUN",
+          "selectedExecutedCases": []
+        },
+        "remaining": []
+      }
+    },
+    {
+      "file": "tools/test-shared-download-ui-sdk.mjs",
+      "needs": [
+        "download SDK",
+        "component lowering",
+        "field binding",
+        "Normal Button",
+        "resource"
+      ],
+      "productionBinding": "全entry源码parser；SharedDownloadPage.ets:73；Index/Settings/Startup和Bookshelf各selected page编译输入。",
+      "overlap": "其他SDK consumer执行局部真实树也parse，但本条广域registration/lowering可捕获未被局部挂载的字段；全项目扫描超下载需求。",
+      "minimumTrigger": "仅按需验证SharedDownload assembly或SDK升级兼容；当前入口广域扫描不作为普通下载修复必跑。; exact case: page-assembly",
+      "necessityReason": "真实官方SDK transformer有编译层价值，明确不是语义typecheck/HAP；需限定实际依赖闭包，避免全repo语法暗门禁。",
+      "limitations": [
+        "Actual selected local method/SDK layer only; native pixels/device/timing not implied."
+      ],
+      "id": "H-shared-download-ui-sdk#page-assembly",
+      "parentId": "H-shared-download-ui-sdk",
+      "caseId": "page-assembly",
+      "qualification": "QUALIFIED",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-shared-download-ui-sdk.mjs"
+      ],
+      "caseSelection": {
+        "test-shared-download-ui-sdk.mjs": [
+          "page-assembly"
+        ]
+      },
+      "resourceNeeds": [],
+      "protectedBehavior": "仅实际SharedDownloadPage+直接import元数据SDK parse/initializer字段/lowering/storageSummary Prop/Normal Button/InlineSelect与直接media",
+      "prerequisites": [
+        "Node.js with built-in TypeScript/stripTypeScriptTypes/registerHooks support",
+        "Installed Harmony ETS SDK selected by tools/lib/tool-environment.mjs; local production/fixture inputs named in this case",
+        "Only explicit local fake native/IO/owner/measurement ports used by the selected branch; no implicit Core/network/device"
+      ],
+      "mechanism": "仅实际SharedDownloadPage+直接import元数据SDK parse/initializer字段/lowering/storageSummary Prop/Normal Button/InlineSelect与直接media; owner implementation record: [\"删除全entry递归parse/17无关Index/settings/bookshelf root降低；保当前实际下载页直接元数据闭包\", \"不冻结6个InlineSelect数目，仍禁止下载页平台Select；真实Normal Button constructor/storageSummary OneWay Prop lowering保留\"]",
+      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "estimatedCostType": "selected-sdk-or-method",
+      "reviewedSourceSha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+        },
+        {
+          "path": "tools/test-shared-download-ui-sdk.mjs",
+          "sha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e"
+        }
+      ],
+      "definitionInputProblems": [],
+      "releaseEligible": null,
+      "repairAction": null,
+      "repair": null,
+      "implementation": "IMPLEMENTED",
+      "validationEvidence": {
+        "syntax": "PASS",
+        "case": "NOT_RUN",
+        "selectedExecutedCases": []
+      },
+      "evidenceBoundary": [
+        "Actual selected local method/SDK layer only; native pixels/device/timing not implied."
+      ],
+      "nestedActions": [],
+      "nestedCalls": [],
+      "resourceDefinitionSha256": "a5ef912ab57faa2bad692fc27bc510cbdade55711d18fc272cba27567be0a436"
+    }
+  ],
+  "priorResourceRecords": {
+    "searchLegacy": {
+      "resources": [],
+      "basis": {
+        "reviewedCostType": "sdk-transpile",
+        "prerequisites": [
+          "Node支持TS strip/registerHooks",
+          "仓库fixture及lib依赖",
+          "HarmonyOS ETS SDK loader配置"
+        ],
+        "scope": "仅按需验证Search分组metadata更新、封面选择/error或ObjectLink retained行为。"
+      },
+      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
+    },
+    "downloadFile": {
+      "sourceSha256": "51eec2a58e04b28decea82ec39a6f2ab4df36ae5b6dfae5b37731fffbe336bf2",
+      "cases": {
+        "page-assembly": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    }
+  },
+  "runnerReview": {
+    "file": "tools/run-contract-tests.mjs",
+    "sealedSourceSha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074",
+    "sealedGitCommit": "8a8328822d9002a8f6fb044ed508a7cc6b000bac",
+    "currentSourceSha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179",
+    "reviewedReachablePath": "gate-index -> explicit --tests one file and exact --cases -> workers1 -> resource controller=null, no adaptive sampling/timer/getconf/PowerShell. Only declared selected case enters owned child; timeout/process-group settlement and unique exact PASS receipt are required. Changed focused-import regex tolerates whitespace; selected files have actual static selection imports.",
+    "unreviewedForThisChange": "Adaptive or implicit full/tier/scope execution remains outside this review; no runner code is changed."
+  },
+  "necessaryIndexedChecks": [
+    {
+      "entry": "node tools/gate-index.mjs --id H-search-cover-continuity --run --change <independent test definition repair>",
+      "nested": [
+        "current definition/resource hashes",
+        "explicit runner --tests test-search-cover-continuity.mjs --cases test-search-cover-continuity.mjs#cover-continuity",
+        "single worker, actual SDK finite Group/DataSource/Card fixture and local negative controls",
+        "unique exact case receipt"
+      ],
+      "risk": "old fixture skipped lifecycle and targeted obsolete row/click identity; previous index run never executed the test body",
+      "necessity": "Current search binding/cover continuity touched by original candidate needs gate-level evidence under the corrected actual contract",
+      "status": "PASS_EXACT_INDEXED_CASE_UNIQUE_RECEIPT"
+    },
+    {
+      "entry": "node tools/gate-index.mjs --id H-shared-download-ui-sdk#page-assembly --run --change <independent assembly definition repair>",
+      "nested": [
+        "current definition/resource hashes",
+        "explicit runner --tests test-shared-download-ui-sdk.mjs --cases test-shared-download-ui-sdk.mjs#page-assembly",
+        "single worker, current root/direct-import metadata/SDK lowering and finite in-memory negative controls",
+        "unique exact case receipt"
+      ],
+      "risk": "old definition skipped initializer spreads, used prefix resource matches, and carried stale lowering/hit-test assumptions",
+      "necessity": "Current download page changed; this is the corresponding corrected finite assembly layer, separate from native pixel and cover-lifecycle cases",
+      "status": "PASS_EXACT_INDEXED_CASE_UNIQUE_RECEIPT"
+    }
+  ],
+  "defaultExecution": "OFF",
+  "fullSuite": "NOT_RUN",
+  "developmentValidation": {
+    "search": {
+      "status": "PASS",
+      "enrichments": 60,
+      "negativeControlsRejected": 4,
+      "affectedRetainedGroupCase": "PASS",
+      "noArgument": "NOT_RUN",
+      "evidenceLayer": {
+        "called": "Actual SDK runtime classes, Group/DataSource/row-key/frame declarations, complete Card @ObjectLink/Watch/lifecycle, native observer recording and selector. One fresh source/runtime/owner per composition; compiler output may be cached but state is not shared.",
+        "topLevel": "Shared builder imports also read/compile finite current tokens, typography, source/reading/index projection declarations and actual page policy/native attribute modules; these are bounded setup, not imports of sibling test files or business IO.",
+        "dormant": "Card contains no ReaderButton/Field/InlineSelect/BoundedSurface/MangaDirectoryEntryRow/Index builders, so their generic helper mounting/owner/business branches are not executed. They are not requalified as product behaviors by this gate.",
+        "window": "Readonly window fixture invokes the actual reader port against explicit fake metrics; no coordinator install/window policy is called.",
+        "toolchain": "etsLoader and ArkUI runtime resolved from the configured installed SDK. No Core build, network fixture, source traversal of all entry, shared output write, signing or device command.",
+        "renderer": "Subscriber delivery and native property seams are instrumented. Terminal empty cover is a real group fact plus a separately mounted initial-placeholder branch; no intermediate renderer removal, pixel, decode or scroll proof."
+      }
+    },
+    "download": {
+      "status": "PASS",
+      "negativeControlsRejected": 12,
+      "rootDirectImportFiles": 39,
+      "initializerFields": 103,
+      "exactMediaStems": 32,
+      "unrelatedPage": "not read",
+      "attempts": [
+        {
+          "status": "FAIL",
+          "finding": "Old sheetOverlay explicit-Default assertion is stale: its root Stack retains native default with no explicit modifier; actual sheetSurface, operationsSurface and confirmationOverlay carry Default. Repair only the probe to inspect these real owners and reject Block on the root and descendant surfaces."
+        },
+        {
+          "status": "PASS",
+          "finding": "Final actual SDK parse/lowering and finite consumer assertions pass. All 12 private negative controls are rejected, including root Block and None. The unrelated broken page is not read; the unchanged finite root still lowers. Exactly one page-assembly PASS receipt was emitted."
+        }
+      ]
+    }
+  },
+  "finalDefinitions": {
+    "search": {
+      "definitionInputs": [
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
+          "path": "tools/lib/manga-directory-entry-row-probe.mjs",
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
+        },
+        {
+          "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-foundation-control-probe.mjs",
+          "sha256": "a429521e0909b97b28162b0dd76456fe3a635919937789236bd2f1a72e3dd41b"
+        },
+        {
+          "path": "tools/lib/reader-icon-button-probe.mjs",
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
+        },
+        {
+          "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
+          "sha256": "5ceec3d314c0acc6f08b432a5e8a89a0cb69bfa5f89c2a738fe7f92280e98d48"
+        },
+        {
+          "path": "tools/lib/reader-page-builder-slots.mjs",
+          "sha256": "2251794243816f47db01a06f8ff4d86ffc98566bd72e8b08952b03f00aa54454"
+        },
+        {
+          "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-press-feedback-probe.mjs",
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
+        },
+        {
+          "path": "tools/lib/reader-switch-control-probe.mjs",
+          "sha256": "ceff22891d23daab0e0e9924712325c04762328c9ed0d8e32e099fa388fbb72b"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "2ab61ffd56f993012ac3c190c487de9e3b4ad4268b0cb5676ba9b89ae6751798"
+        },
+        {
+          "path": "tools/lib/search-result-continuity-probe.mjs",
+          "sha256": "ea6fe88976421c89b8a020b766870a60f13cc39cb5ffd9f08ce6fe30788ae7d2"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/test-search-cover-continuity.mjs",
+          "sha256": "32e500ebaf3748dab51b6599ffb4ed888075770175328c025365b3855f50dfd0"
+        }
+      ],
+      "resource": {
+        "sourceSha256": "32e500ebaf3748dab51b6599ffb4ed888075770175328c025365b3855f50dfd0",
+        "cases": {
+          "cover-continuity": {
+            "resources": [],
+            "qualification": "QUALIFIED"
+          }
+        }
+      },
+      "resourceDefinitionSha256": "96407cf68fa1cdd3735e5ac2c543e68d9d0d4a3db2d3cea65139f3a97e60f073",
+      "sealedOrigins": {
+        "tools/lib/arkui-property-runtime-probe.mjs": "cd1c71a23258261a6eb0caf8bfc77c4b28b3b563",
+        "tools/lib/bounded-surface-sdk-probe.mjs": "8a8328822d9002a8f6fb044ed508a7cc6b000bac",
+        "tools/lib/manga-directory-entry-row-probe.mjs": "7f2d70e7410f0cbe46736c60c0fed6b6d5bf8694",
+        "tools/lib/manga-directory-press-feedback-probe.mjs": "a5fc5c63a670ea6ae722b540000914c69d6b16e7",
+        "tools/lib/reader-control-builder-probe.mjs": "8a8328822d9002a8f6fb044ed508a7cc6b000bac",
+        "tools/lib/reader-foundation-control-probe.mjs": "4c83d9642b0e25c92b88cb2e80231e0399a404ca",
+        "tools/lib/reader-icon-button-probe.mjs": "8a8328822d9002a8f6fb044ed508a7cc6b000bac",
+        "tools/lib/reader-labeled-icon-action-probe.mjs": "053da19fc680bc9dcec8dd4c67d6c4f3735363e0",
+        "tools/lib/reader-page-shell-runtime-probe.mjs": "4c83d9642b0e25c92b88cb2e80231e0399a404ca",
+        "tools/lib/reader-press-feedback-probe.mjs": "33d13827ce58be77dc87599ace7854bb99a27603",
+        "tools/lib/reader-switch-control-probe.mjs": "d61eb9c3b0d5a0b1608d838e98f11dedb74511f3",
+        "tools/lib/reader-typography-probe.mjs": "8a8328822d9002a8f6fb044ed508a7cc6b000bac",
+        "tools/run-contract-tests.mjs": "8a8328822d9002a8f6fb044ed508a7cc6b000bac",
+        "tools/test-search-cover-continuity.mjs": "053da19fc680bc9dcec8dd4c67d6c4f3735363e0"
+      }
+    },
+    "download": {
+      "definitionInputs": [
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/test-shared-download-ui-sdk.mjs",
+          "sha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded"
+        }
+      ],
+      "resource": {
+        "sourceSha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded",
+        "cases": {
+          "page-assembly": {
+            "resources": [],
+            "qualification": "QUALIFIED"
+          }
+        }
+      },
+      "resourceDefinitionSha256": "2428b1ee9fcf2970dc1f5802d329c1b0f3276f9ae63ef1f5946adbc07fcd5904"
+    }
+  },
+  "indexedResults": {
+    "search": {
+      "status": "PASS",
+      "gateIds": [
+        "H-search-cover-continuity"
+      ],
+      "caseSelection": {
+        "test-search-cover-continuity.mjs": [
+          "cover-continuity"
+        ]
+      },
+      "selectedStatus": "PASS",
+      "fullSuite": "NOT_RUN",
+      "treeSettled": true,
+      "execution": {
+        "mode": "explicit",
+        "capacity": 1,
+        "peakConcurrency": 1,
+        "scheduling": [],
+        "resources": []
+      },
+      "caseReceipts": [
+        {
+          "kind": "reader-contract-case-result",
+          "case": "cover-continuity",
+          "status": "PASS"
+        }
+      ],
+      "resultSha256": "cee93b0e928675f824996a463a104e0dfa8ec1181d0e36ac1ead0d1fcd2ca580"
+    },
+    "download": {
+      "status": "PASS",
+      "gateIds": [
+        "H-shared-download-ui-sdk#page-assembly"
+      ],
+      "caseSelection": {
+        "test-shared-download-ui-sdk.mjs": [
+          "page-assembly"
+        ]
+      },
+      "selectedStatus": "PASS",
+      "fullSuite": "NOT_RUN",
+      "treeSettled": true,
+      "execution": {
+        "mode": "explicit",
+        "capacity": 1,
+        "peakConcurrency": 1,
+        "scheduling": [],
+        "resources": []
+      },
+      "caseReceipts": [
+        {
+          "kind": "reader-contract-case-result",
+          "case": "page-assembly",
+          "status": "PASS"
+        }
+      ],
+      "resultSha256": "c55ef06069ba79d6b9dddfb8810f4837d8914824f9b6e6e72a11565c303d12d4"
+    }
+  },
+  "boundaries": [
+    "No broad source scanning, sibling suites, fixture-mutation on production files, Native build, HAP build, VM or network work.",
+    "SDK input/lowering, object observation and native attribute recording are not native pixel or complete semantic type checking.",
+    "Old selected failures are retained as old-version evidence. New PASS requires the new exact indexed entry and valid case receipt."
+  ],
+  "reviewedAt": "2026-11-10T11:36:55.478773+00:00",
+  "applicationIdentityAfterGovernanceChange": {
+    "command": "node scripts/hap-pipeline.mjs identity --channel DEV --abi x86_64",
+    "status": "PLAN_ONLY",
+    "appBuildId": "0.2.0.DEV.a4438c05bb65",
+    "appContentHash": "a4438c05bb6551524a3e174d75635a7de5d90613459db5d62c644273a1601faa",
+    "interpretation": "Read-only identity computation matches frozen candidate; not a new HAP build/sign/install/test PASS."
+  },
+  "completedAt": "2026-11-10T11:40:31.552012+00:00"
+}

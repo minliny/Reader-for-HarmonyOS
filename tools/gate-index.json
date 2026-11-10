@@ -64090,14 +64090,14 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "qualification": "QUALIFIED",
-      "protectedBehavior": "搜索同组文本/来源数量更新不能替换已准入封面actor/URI；失败URL仅尝试同组候选，旧query图片回调不能污染新query。",
-      "mechanism": "11-34从生产抽真实Group/DataSource，no structural CHANGE；38-75 SDK ObservedObject/ObjectLink连续60次更新保留image/native node，77-94error回调/候选/新query矩阵。",
-      "productionBinding": "SearchPage.ets:149 SearchResultDataSource、1515 SearchResultCard与SearchBookGroup封面选择。",
-      "failureExample": "static: 每次代表书变更都换封面会使70URI非a；旧onError没query guard会使94封面被拒。",
+      "protectedBehavior": "当前真实Group/DataSource/完整Card在60次富化中保留group/key/native row/封面actor及已准入URI；可见/按下快照与旧query回调保留各自权限。",
+      "mechanism": "单一显式cover-continuity；真实SDK ObservedObject/ObjectLink及完整Card appear/visibility/Down-Up-Click/query生命周期，实际父级payload；4个精确私有生产源码mutant必须被对应行为断言拒绝。",
+      "productionBinding": "SearchPage.ets实际SearchBookGroup、SearchResultDataSource、SearchResultCard、row-key方法与SearchLayoutFrame；同源view-state、selection snapshot及几何合同。",
+      "failureExample": "移除retained group、替换已准入cover、移除旧query图片guard或允许旧touch落入新query occupant，分别被当前真实SDK行为断言拒绝。",
       "overlap": "view-state/publication关注group结构和revision；本条独有真实SDK image actor/URI稳定与failure fallback，不能用静态图片regex替代。",
-      "minimumTrigger": "仅按需验证Search分组metadata更新、封面选择/error或ObjectLink retained行为。",
+      "minimumTrigger": "仅按需验证搜索同组富化、封面选择/失败回退、展示或按下快照、旧query权限和ObjectLink retained行为。",
       "necessityReason": "真实Group和Card observer联合，端口是native属性记录，明确只证输入与node保留，因此局部充分。",
-      "limitations": "没有加载实际图片或验证解码/屏幕闪烁；字体tuple为fixture依赖，非批准视觉证据。",
+      "limitations": "SDK subscriber/native属性记录，不加载真实图片，不证明屏幕闪烁/滚动/解码/原生时序；初始placeholder分支单独挂载，中间空封面分支的renderer teardown未模拟。",
       "needs": [
         "search cover",
         "Image retained",
@@ -64111,17 +64111,37 @@
         "HarmonyOS ETS SDK loader配置"
       ],
       "repair": null,
-      "reviewedSourceSha256": "f96fc7e3e2f142315275390a9371e735dcabbf8371ef8367ddceebcbd5972c83",
+      "reviewedSourceSha256": "32e500ebaf3748dab51b6599ffb4ed888075770175328c025365b3855f50dfd0",
       "estimatedCostType": "sdk-transpile",
       "definitionInputProblems": [],
       "definitionInputs": [
         {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
         },
         {
           "path": "tools/lib/ets-compiler-runtime.mjs",
@@ -64132,28 +64152,36 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "a429521e0909b97b28162b0dd76456fe3a635919937789236bd2f1a72e3dd41b"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "5ceec3d314c0acc6f08b432a5e8a89a0cb69bfa5f89c2a738fe7f92280e98d48"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -64161,19 +64189,43 @@
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "ceff22891d23daab0e0e9924712325c04762328c9ed0d8e32e099fa388fbb72b"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "2ab61ffd56f993012ac3c190c487de9e3b4ad4268b0cb5676ba9b89ae6751798"
+        },
+        {
+          "path": "tools/lib/search-result-continuity-probe.mjs",
+          "sha256": "ea6fe88976421c89b8a020b766870a60f13cc39cb5ffd9f08ce6fe30788ae7d2"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -64185,15 +64237,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-search-cover-continuity.mjs",
-          "sha256": "f96fc7e3e2f142315275390a9371e735dcabbf8371ef8367ddceebcbd5972c83"
-        },
-        {
-          "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+          "sha256": "32e500ebaf3748dab51b6599ffb4ed888075770175328c025365b3855f50dfd0"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -64202,7 +64250,29 @@
         "test-search-cover-continuity.mjs"
       ],
       "repairAction": null,
-      "resourceDefinitionSha256": "9882bbc0e84680b6c16366318f4ead65c4b0951486f95429a8c1c0fbbd28668c"
+      "resourceDefinitionSha256": "96407cf68fa1cdd3735e5ac2c543e68d9d0d4a3db2d3cea65139f3a97e60f073",
+      "caseSelection": {
+        "test-search-cover-continuity.mjs": [
+          "cover-continuity"
+        ]
+      },
+      "caseId": "cover-continuity",
+      "resourceNeeds": [],
+      "reviewedAt": "2026-11-10T11:36:55.478773+00:00",
+      "nestedCalls": [
+        "exact --tests/--cases dispatch, workers1, unique PASS receipt",
+        "finite installed SDK Group/DataSource/Card fixture",
+        "four private exact source mutants; no sibling test imports"
+      ],
+      "evidenceBoundary": [
+        "Current installed SDK and instrumented subscriber/native inputs only; no real image loader/layout/pixels/scroll/device."
+      ],
+      "independentRequalification": {
+        "review": "docs/architecture/phone-ui-gate-review-20261110.json",
+        "status": "FINAL_DEFINITION_REVIEWED",
+        "defaultExecution": "OFF",
+        "indexedEvidence": "docs/architecture/phone-ui-gate-review-20261110.json"
+      }
     },
     {
       "id": "H-search-detail-cache-first",
@@ -67875,14 +67945,16 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "qualification": "NAVIGATION",
-      "protectedBehavior": "下载及相关page组装应能被安装SDK解析/降级，custom component输入字段存在，storageSummary保留Prop，下载Button必须Normal而非隐式Capsule。",
-      "mechanism": "['删除全entry递归parse/17无关Index/settings/bookshelf root降低；保当前实际下载页直接元数据闭包', '不冻结6个InlineSelect数目，仍禁止下载页平台Select；真实Normal Button constructor/storageSummary OneWay Prop lowering保留']",
-      "productionBinding": "全entry源码parser；SharedDownloadPage.ets:73；Index/Settings/Startup和Bookshelf各selected page编译输入。",
-      "failureExample": "Historical review retained in implementation/prior catalog; current case assertions and validation are separate.",
+      "protectedBehavior": "有限下载根SDK parse/initializer字段/lowering、storageSummary Prop、Normal Button、InlineSelect、DTO getter、精确media stem及实际overlay/action-sheet命中策略。",
+      "mechanism": "准确page-assembly case；spread/不透明initializer明确拒绝，32个media stem精确匹配；12个私有负对照被拒绝，无关损坏页面保持不读。",
+      "productionBinding": "SharedDownloadPage根及38个直接本地import元数据；initializer字段仅实际根component调用；直接media及ReaderBoundedFrameModifier action-sheet实际分支。",
+      "failureExample": "未知child字段、spread/不透明initializer、丢失Prop/Normal、overlay None/Block、错误同前缀资源、平台Select、DTO getter或选中根语法损坏均被拒绝；无关页损坏不影响此有限检查。",
       "overlap": "其他SDK consumer执行局部真实树也parse，但本条广域registration/lowering可捕获未被局部挂载的字段；全项目扫描超下载需求。",
-      "minimumTrigger": "仅按需验证SharedDownload assembly或SDK升级兼容；当前入口广域扫描不作为普通下载修复必跑。",
+      "minimumTrigger": "仅SharedDownloadPage根装配或其直接import字段/原生构造/命中策略变更，以及当前SDK对应兼容需求。",
       "necessityReason": "真实官方SDK transformer有编译层价值，明确不是语义typecheck/HAP；需限定实际依赖闭包，避免全repo语法暗门禁。",
-      "limitations": "spread属性跳过检查，field存在不验证类型/必填；resource前缀匹配非精确名字；cwd须Harmony根。",
+      "limitations": [
+        "只覆盖根页面和直接import元数据的SDK parse/initializer/lowering；不做完整语义类型、递归全生产、运行时封面/事件/像素或设备证明。"
+      ],
       "needs": [
         "download SDK",
         "component lowering",
@@ -67897,10 +67969,14 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e",
+      "reviewedSourceSha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded",
       "estimatedCostType": "sdk-transpile",
       "definitionInputProblems": [],
       "definitionInputs": [
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
@@ -67919,11 +67995,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-shared-download-ui-sdk.mjs",
-          "sha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e"
+          "sha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -67961,6 +68037,14 @@
           "selectedExecutedCases": []
         },
         "remaining": []
+      },
+      "resourceDefinitionSha256": "2428b1ee9fcf2970dc1f5802d329c1b0f3276f9ae63ef1f5946adbc07fcd5904",
+      "reviewedAt": "2026-11-10T11:36:55.478773+00:00",
+      "independentRequalification": {
+        "review": "docs/architecture/phone-ui-gate-review-20261110.json",
+        "status": "FINAL_DEFINITION_REVIEWED",
+        "defaultExecution": "OFF",
+        "indexedEvidence": "docs/architecture/phone-ui-gate-review-20261110.json"
       }
     },
     {
@@ -275674,12 +275758,12 @@
         "Normal Button",
         "resource"
       ],
-      "productionBinding": "全entry源码parser；SharedDownloadPage.ets:73；Index/Settings/Startup和Bookshelf各selected page编译输入。",
+      "productionBinding": "SharedDownloadPage根及38个直接本地import元数据；initializer字段仅实际根component调用；直接media及ReaderBoundedFrameModifier action-sheet实际分支。",
       "overlap": "其他SDK consumer执行局部真实树也parse，但本条广域registration/lowering可捕获未被局部挂载的字段；全项目扫描超下载需求。",
-      "minimumTrigger": "仅按需验证SharedDownload assembly或SDK升级兼容；当前入口广域扫描不作为普通下载修复必跑。; exact case: page-assembly",
+      "minimumTrigger": "仅SharedDownloadPage根装配或其直接import字段/原生构造/命中策略变更，以及当前SDK对应兼容需求。",
       "necessityReason": "真实官方SDK transformer有编译层价值，明确不是语义typecheck/HAP；需限定实际依赖闭包，避免全repo语法暗门禁。",
       "limitations": [
-        "Actual selected local method/SDK layer only; native pixels/device/timing not implied."
+        "只覆盖根页面和直接import元数据的SDK parse/initializer/lowering；不做完整语义类型、递归全生产、运行时封面/事件/像素或设备证明。"
       ],
       "id": "H-shared-download-ui-sdk#page-assembly",
       "parentId": "H-shared-download-ui-sdk",
@@ -275696,17 +275780,21 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "仅实际SharedDownloadPage+直接import元数据SDK parse/initializer字段/lowering/storageSummary Prop/Normal Button/InlineSelect与直接media",
+      "protectedBehavior": "有限下载根SDK parse/initializer字段/lowering、storageSummary Prop、Normal Button、InlineSelect、DTO getter、精确media stem及实际overlay/action-sheet命中策略。",
       "prerequisites": [
         "Node.js with built-in TypeScript/stripTypeScriptTypes/registerHooks support",
         "Installed Harmony ETS SDK selected by tools/lib/tool-environment.mjs; local production/fixture inputs named in this case",
         "Only explicit local fake native/IO/owner/measurement ports used by the selected branch; no implicit Core/network/device"
       ],
-      "mechanism": "仅实际SharedDownloadPage+直接import元数据SDK parse/initializer字段/lowering/storageSummary Prop/Normal Button/InlineSelect与直接media; owner implementation record: [\"删除全entry递归parse/17无关Index/settings/bookshelf root降低；保当前实际下载页直接元数据闭包\", \"不冻结6个InlineSelect数目，仍禁止下载页平台Select；真实Normal Button constructor/storageSummary OneWay Prop lowering保留\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "准确page-assembly case；spread/不透明initializer明确拒绝，32个media stem精确匹配；12个私有负对照被拒绝，无关损坏页面保持不读。",
+      "failureExample": "未知child字段、spread/不透明initializer、丢失Prop/Normal、overlay None/Block、错误同前缀资源、平台Select、DTO getter或选中根语法损坏均被拒绝；无关页损坏不影响此有限检查。",
       "estimatedCostType": "selected-sdk-or-method",
-      "reviewedSourceSha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e",
+      "reviewedSourceSha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded",
       "definitionInputs": [
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
@@ -275725,11 +275813,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-shared-download-ui-sdk.mjs",
-          "sha256": "e4922ea68ae502376eda18b6a8d8303b7eb6b8782182491845a0740eb262297e"
+          "sha256": "86343d05ca80e8d8fadad1669e159f8aeb4fd392535f66af2b217490cbd35ded"
         }
       ],
       "definitionInputProblems": [],
@@ -275743,11 +275831,23 @@
         "selectedExecutedCases": []
       },
       "evidenceBoundary": [
-        "Actual selected local method/SDK layer only; native pixels/device/timing not implied."
+        "Finite SDK parse/initializer/component lowering only; native input delivery, pixels and complete semantic typecheck not implied."
       ],
       "nestedActions": [],
-      "nestedCalls": [],
-      "resourceDefinitionSha256": "a5ef912ab57faa2bad692fc27bc510cbdade55711d18fc272cba27567be0a436"
+      "nestedCalls": [
+        "exact --tests/--cases dispatch, workers1, unique PASS receipt",
+        "installed SDK finite root/direct-import metadata/component lowering",
+        "twelve private in-memory controls plus ignored unrelated-page damage"
+      ],
+      "resourceDefinitionSha256": "2428b1ee9fcf2970dc1f5802d329c1b0f3276f9ae63ef1f5946adbc07fcd5904",
+      "definitionIdentityState": "REVIEWED",
+      "reviewedAt": "2026-11-10T11:36:55.478773+00:00",
+      "independentRequalification": {
+        "review": "docs/architecture/phone-ui-gate-review-20261110.json",
+        "status": "FINAL_DEFINITION_REVIEWED",
+        "defaultExecution": "OFF",
+        "indexedEvidence": "docs/architecture/phone-ui-gate-review-20261110.json"
+      }
     },
     {
       "file": "tools/test-shared-download-visual-contract.mjs",

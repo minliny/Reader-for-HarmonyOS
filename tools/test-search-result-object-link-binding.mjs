@@ -104,71 +104,9 @@ for (const id of selected) {
 
 async function retainedGroupUpdates() {
   const { default: assert } = await import('node:assert/strict');
-  const { readFileSync } = await import('node:fs');
-  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-  const { bookTitleAuthorKey, bookAuthorLabel } = await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
-  const { bookIntroText } = await import('../entry/src/main/ets/app/library/BookIntroText.ts');
-  const { readerMediaIdentity } = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
-  const { SearchViewState } = await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
-  const { searchBookSnapshot } = await import('../entry/src/main/ets/features/search/presentation/SearchBookSnapshot.ts');
-  const { SEARCH_RESULT_GEOMETRY } = await import('../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
-  const { ts, options, require, root } = installedEtsCompiler();
-  const source = readFileSync(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets', import.meta.url), 'utf8');
-  const tree = ts.createSourceFile('SearchPage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const groupNode = tree.statements.find(node => node.name?.text === 'SearchBookGroup');
-  const dataNode = tree.statements.find(node => node.name?.text === 'SearchResultDataSource');
-  const pageNode = tree.statements.find(node => node.name?.text === 'SearchPage');
-  const cardNode = tree.statements.find(node => node.name?.text === 'SearchResultCard');
-  const keyMethods = ['resultGroupKey', 'normalizedBookKey'].map(name =>
-    pageNode.members.find(node => node.name?.text === name).getText(tree)).join('\n');
-  const emitted = ts.transpileModule(`${groupNode.getText(tree).replace(/^@Observed\s*/, '')}\n${dataNode.getText(tree)}\nclass RowKeys { ${keyMethods} }`, {
-    fileName: 'RetainedSearchGroups.ts', reportDiagnostics: true,
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
-  });
-  assert.deepEqual(emitted.diagnostics, [], 'actual group, datasource and row key methods emit without diagnostics');
-  const { SearchBookGroup, SearchResultDataSource, RowKeys } = new Function('bookTitleAuthorKey', 'readerMediaIdentity', 'DataOperationType',
-    `${emitted.outputText};return { SearchBookGroup, SearchResultDataSource, RowKeys };`)(bookTitleAuthorKey, readerMediaIdentity,
-      { ADD: 'add', DELETE: 'delete', CHANGE: 'change', RELOAD: 'reload', MOVE: 'move' });
-  const book = (sourceId, intro, searchRequestId = 'query-1') => ({ sourceId, bookId: sourceId,
-    groupKey: 'retained-book', title: '同一本书', author: '作者', sourceName: sourceId,
-    coverUrl: `https://example.test/${sourceId}.jpg`, intro, searchRequestId, category: 'novel' });
-  const makeGroup = (books, inBookshelf = false) => {
-    const next = new SearchBookGroup(books[0], 1, inBookshelf);
-    for (const candidate of books.slice(1)) next.admit(candidate, inBookshelf);
-    return next;
-  };
-  const runtime = createArkUIPropertyRuntimeProbe();
-  const original = makeGroup([book('a', '初始简介')]);
-  const observed = runtime.sdk.ObservedObject.createNew(original, undefined);
-  const data = new SearchResultDataSource();
-  data.replace([observed]);
-  const nativeChanges = [];
-  data.registerDataChangeListener({ onDatasetChange: operations => nativeChanges.push(...operations) });
-  const keys = new RowKeys();
-  const rowKey = keys.resultGroupKey(observed.book);
-  const syntax = require(`${root}/lib/validate_ui_syntax.js`);
-  syntax.observedClassCollection.add('SearchBookGroup');
-  const viewState = new SearchViewState();
-  viewState.reset('第一轮');
-  const TouchType = { Down: 'down', Up: 'up', Cancel: 'cancel' };
-  const SourceType = { TouchScreen: 'touchscreen', Keyboard: 'keyboard' };
-  const members = cardNode.members.filter(node => node.name).map(node => node.name.getText(tree));
-  const { owner } = createReaderBuilderProbe(cardNode.getText(tree), members, {
-    ...runtime.sdk, SynchedPropertyNesedObjectPU: runtime.sdk.SynchedPropertyNestedObjectPU,
-    SearchViewState, searchBookSnapshot, SEARCH_RESULT_GEOMETRY, bookIntroText, bookAuthorLabel, TouchType, SourceType,
-  }, { ...runtime.hooks, allowEmptyBranchAdmission: true });
-  owner.updateStateVars({ group: observed, queryRevision: viewState.revision, cardWidth: 350 });
-  owner.viewState = viewState;
-  const selected = [];
-  owner.onSelectResult = (...selection) => selected.push(selection);
-  owner.aboutToAppear();
-  owner.initialRender();
-  // Native focus IDs are attributes and can overwrite the record's `id`.
-  // Physical retention belongs to the SDK observer-map key.
-  const [buttonElement, button] = [...owner.nodes].find(([, node]) => node.type === 'Button' && node.onClick);
-  const [imageElement, image] = [...owner.nodes].find(([, node]) => node.type === 'Image');
+  const { createSearchResultContinuityProbe } = await import('./lib/search-result-continuity-probe.mjs');
+  const { owner, runtime, data, observed, keys, rowKey, nativeChanges, selected, makeGroup, book, viewState,
+    TouchType, SourceType, buttonElement, button, imageElement, image } = await createSearchResultContinuityProbe();
   assert.ok(button && image, 'actual native row and cover actors are mounted');
   const oldVisibility = button.onVisibleAreaChange[1];
   const oldImageError = image.onError;
