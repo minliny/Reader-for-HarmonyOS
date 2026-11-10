@@ -5,6 +5,7 @@ import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBri
 import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';
 import { ReaderNativeAlertWindow } from '../ui/platform/ReaderNativeAlertWindow';
 import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
+import { bindReaderWindowMetricsSource } from '../ui/foundation/ReaderWindowEnvironment';
 import { findReaderTheme } from '../ui/foundation/ReaderThemeRegistry';
 import {
   ReaderInsetsVp,
@@ -835,3 +836,7 @@ export class ReaderWindowCoordinator {
     }
   }
 }
+
+// Bind only a getter. Metrics storage, revision publication and every window
+// lifecycle/policy operation remain on this coordinator.
+bindReaderWindowMetricsSource((): ReaderWindowMetricsSnapshot => ReaderWindowCoordinator.metrics());

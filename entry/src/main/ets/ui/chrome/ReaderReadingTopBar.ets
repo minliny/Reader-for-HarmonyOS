@@ -28,7 +28,8 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
     const reading = this.variant === 'reading';
     const style = reading ? (this.primary ? TYPE_READER_CONTROL_BOOK_TITLE : TYPE_READER_CONTROL_CHAPTER_SOURCE) :
       (this.primary ? TYPE_READER_DIRECTORY_BOOK_TITLE : TYPE_READER_DIRECTORY_CHAPTER);
-    if (reading) instance.lineHeight(style.lineHeightFp as number).letterSpacing(style.letterSpacingFp as number);
+    if (reading) instance.width('100%').textAlign(TextAlign.Start)
+      .lineHeight(style.lineHeightFp as number).letterSpacing(style.letterSpacingFp as number);
     else instance.width('100%').height(this.primary ? 22 : 17);
     instance.fontFamily(style.fontFamily).fontWeight(style.fontWeight).fontSize(style.fontSizeFp)
       .fontColor(readerAppColor(this.primary ? 'TOK_READ_INK' : 'TOK_READ_MUTED', this.scheme));
@@ -57,7 +58,7 @@ export struct ReaderReadingTopBar {
         Text(this.bookTitle).attributeModifier(new ReaderReadingTopBarTitle(this.variant, true, this.scheme));
         Text(this.subtitle).attributeModifier(new ReaderReadingTopBarTitle(this.variant, false, this.scheme));
       }.layoutWeight(1).height(this.variant === 'reading' ? 45 : undefined)
-        .constraintSize(this.variant === 'directory' ? { minWidth: 0 } : {})
+        .constraintSize({ minWidth: 0 })
         .margin({ left: this.variant === 'directory' ? 8 : 0 })
         .alignItems(this.variant === 'reading' ? HorizontalAlign.Start : HorizontalAlign.Center);
       this.trailing();

@@ -4,7 +4,7 @@ import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 /** Shared action presentation. Admission and business work stay at the owner;
  * ArkUI owns pointer release/cancel and pressed state. A retained intent must
@@ -203,7 +203,7 @@ export struct ReaderButton {
   }
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

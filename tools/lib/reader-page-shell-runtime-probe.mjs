@@ -7,7 +7,9 @@ const { ts } = installedEtsCompiler();
 const sdkModuleEmits = new Map();
 export const readerPageShellSourceUrl = new URL(
   '../../entry/src/main/ets/ui/layout/ReaderPageShell.ts', import.meta.url);
+const nativeAttributesUrl = new URL('ReaderPageNativeAttributes.ets', readerPageShellSourceUrl);
 const allowed = new Set([readerPageShellSourceUrl.href, new URL('ReaderFrameStyle.ts', readerPageShellSourceUrl).href]);
+allowed.add(nativeAttributesUrl.href);
 const layoutFiles = ['ReaderFrameStyle.ts', 'ReaderPageGeometry.ts', 'ReaderScrollLayout.ts', 'ReaderMeasurements.ts'];
 const headerSpecs = '../foundation/ReaderHeaderSpecs.ets';
 for (const file of [...layoutFiles, 'SurfaceHorizontalGeometry.ts', 'ReaderFloatingBarMetrics.ts',
@@ -53,7 +55,10 @@ function pageModuleLoader(source = readFileSync(readerPageShellSourceUrl, 'utf8'
 }
 
 export function actualReaderPageShell(source) {
-  return pageModuleLoader(source)(readerPageShellSourceUrl);
+  // Builder probes receive both real modules at their native seam. Production
+  // ETS consumers import modifiers directly, never through TypeScript policy.
+  const load = pageModuleLoader(source);
+  return Object.assign({}, load(readerPageShellSourceUrl), load(nativeAttributesUrl));
 }
 
 export function actualReaderFloatingBarMetrics() {
@@ -62,6 +67,6 @@ export function actualReaderFloatingBarMetrics() {
 
 export function actualReaderPageLayout() {
   const load = pageModuleLoader();
-  return Object.assign({}, load(readerPageShellSourceUrl), ...layoutFiles.map(file => load(new URL(file, readerPageShellSourceUrl))),
+  return Object.assign({}, load(readerPageShellSourceUrl), load(nativeAttributesUrl), ...layoutFiles.map(file => load(new URL(file, readerPageShellSourceUrl))),
     { readerPageInitialHeaderHeight: load(new URL(headerSpecs, readerPageShellSourceUrl)).readerPageInitialHeaderHeight });
 }

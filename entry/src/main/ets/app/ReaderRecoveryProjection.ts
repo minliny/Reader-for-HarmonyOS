@@ -22,8 +22,9 @@ export function readerRecoveryView<T>(receipt?: PersistedReceiptProjection<T>, r
  * an unsupported replacement nor marks its source as imported. */
 export function readerLegacySnapshotRecoveryView(reason: ReaderLegacySnapshotRecovery = 'none'): ReaderRecoveryView {
   if (reason === 'none') return { message: '', visible: false, canRetry: false, generation: 0 };
-  return { message: reason === 'unsupportedStorageFormat' ?
-    '旧版快照尚未导入：当前存储不支持完整快照恢复，原文件和当前数据已保留。' :
+  return { message: reason === 'automaticImportDeferred' ?
+    '旧版快照已保留，当前书库继续使用现有数据，不会自动导入旧文件。' : reason === 'unsupportedStorageFormat' ?
+    '旧版快照尚未导入：当前存储不支持导入此旧版快照，原文件和当前数据已保留。' :
     '旧版快照尚未导入：恢复能力尚未确认，原文件和当前数据已保留。',
     visible: true, canRetry: false, generation: 1 };
 }

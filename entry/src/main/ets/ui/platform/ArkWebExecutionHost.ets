@@ -1,6 +1,6 @@
 import inputMethod from '@ohos.inputMethod';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderActionAccessibility } from '../controls/ReaderActionAccessibility';
 import { consumeReaderControlKeyboardBack } from '../foundation/ReaderKeyboardBack';
@@ -65,7 +65,7 @@ export struct ArkWebExecutionHost {
     if (surface === undefined) return false;
     // Keep Back in the closing window until the native Web detaches.
     if (!this.interactive || !ArkWebExecutor.instance.isSurfaceCurrent(surface)) return true;
-    if (!consumeReaderControlKeyboardBack(ReaderWindowCoordinator.metrics(), {
+    if (!consumeReaderControlKeyboardBack(readerWindowMetrics(), {
       hideTextInput: (): Promise<void> => inputMethod.getController().hideTextInput(),
       onFailure: (error: Error): void => {
         hilog.warn(0x5244, 'Reader', 'Source login keyboard dismissal failed: %{private}s', error.message);

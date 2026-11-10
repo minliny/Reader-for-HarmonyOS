@@ -38,6 +38,7 @@ SKILL.md
 .agent/
 .claude/
 .codex/
+.codegenie/
 .cursor/
 .cursorrules
 .trae/

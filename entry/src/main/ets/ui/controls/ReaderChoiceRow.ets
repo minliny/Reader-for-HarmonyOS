@@ -8,7 +8,7 @@ import {
 
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderActionAccessibility } from './ReaderActionAccessibility';
 
 type ReaderChoiceSpecId = 'settings-phone' | 'settings-tablet' | 'appearance-library' |
@@ -364,7 +364,7 @@ export struct ReaderChoiceRow {
   }
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private textColor(): ResourceColor { return readerAppColor(this.selected ? this.spec().selectedTextRole : this.spec().textRole, this.scheme); }
   private rowBackground(): ResourceColor {

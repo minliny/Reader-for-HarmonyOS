@@ -13,8 +13,8 @@ function isFeatureSource(file, consumer) {
 }
 
 function isAppOwnerSource(file) {
-  // The finite metrics() import is admitted by its usage check below. A
-  // namespace or facade must not inherit an exemption for the entire owner.
+  // Window metrics now have a foundation read port. No app owner needs a
+  // public-UI exception, including a namespace or facade of the coordinator.
   return file.startsWith('app/');
 }
 
@@ -222,7 +222,7 @@ function forwardedExports(ts, tree, binding) {
 }
 
 /** Resolve direct and forwarded bindings to the boundary's forbidden sources. */
-function boundaryImports(ts, options, file, source, files, readSource, isForbidden, allowWindowMetricsPort = false) {
+function boundaryImports(ts, options, file, source, files, readSource, isForbidden) {
   function parse(module, contents) {
     const tree = ts.createSourceFile(module, contents, ts.ScriptTarget.Latest, true,
       module.endsWith('.ets') ? ts.ScriptKind.ETS : ts.ScriptKind.TS, options);
@@ -232,33 +232,14 @@ function boundaryImports(ts, options, file, source, files, readSource, isForbidd
   const tree = parse(file, source);
   const trees = new Map([[file, tree]]);
   const edges = [];
-  function windowMetricsImport(specifier, kind, bindings) {
-    if (!allowWindowMetricsPort || kind !== 'import' || bindings.length !== 1 || bindings[0] !== 'ReaderWindowCoordinator') return false;
-    const declaration = tree.statements.find(node => ts.isImportDeclaration(node) && node.moduleSpecifier === specifier);
-    if (!declaration || declaration.importClause?.isTypeOnly) return false;
-    const names = new Set(importedNames(ts, declaration).keys());
-    let escaped = false;
-    function visit(node) {
-      if (ts.isImportDeclaration(node)) return;
-      if (ts.isIdentifier(node) && names.has(node.text)) {
-        const access = node.parent, call = access?.parent;
-        if (!access || !ts.isPropertyAccessExpression(access) || access.expression !== node || access.name.text !== 'metrics' ||
-          !call || !ts.isCallExpression(call) || call.expression !== access) escaped = true;
-      }
-      ts.forEachChild(node, visit);
-    }
-    visit(tree);
-    if (escaped) edges.push({ file, target: 'app/ReaderWindowCoordinator.ts', kind: 'non-metric access or escaped window owner', bindings, through: [] });
-    return true;
+  function isEnvironmentWriter(module, binding) {
+    return isSharedUiSource(file) && module === 'ui/foundation/ReaderWindowEnvironment.ts' &&
+      !['readerWindowMetrics', 'ReaderWindowMetricsSource'].includes(binding);
   }
   function collect(specifier, kind, bindings) {
     assert.ok(specifier && ts.isStringLiteralLike(specifier), file + ': nonliteral ' + kind);
     const target = targetFile(file, specifier.text, files);
     if (!target) return;
-    // The existing environment seam exposes metrics reads to shared UI, not
-    // brightness, chrome or lifecycle ownership. Do not follow unused members
-    // of its class as though a metrics() call exported that entire API.
-    if (target === 'app/ReaderWindowCoordinator.ts' && windowMetricsImport(specifier, kind, bindings)) return;
     if (isForbidden(target)) {
       edges.push({ file, target, kind, bindings, through: [] });
       return;
@@ -268,7 +249,7 @@ function boundaryImports(ts, options, file, source, files, readSource, isForbidd
       const key = `${module}:${binding}`;
       if (visited.has(key)) return;
       visited.add(key);
-      if (isForbidden(module)) {
+      if (isForbidden(module) || isEnvironmentWriter(module, binding)) {
         edges.push({ file, target: module, kind, bindings, through });
         return;
       }
@@ -309,7 +290,7 @@ function boundaryImports(ts, options, file, source, files, readSource, isForbidd
 
 export function sharedUiFeatureImports(ts, options, file, source, files, readSource) {
   return boundaryImports(ts, options, file, source, files, readSource,
-    target => isFeatureSource(target, file) || isAppOwnerSource(target), true);
+    target => isFeatureSource(target, file) || isAppOwnerSource(target));
 }
 
 export function platformUiImports(ts, options, file, source, files, readSource) {

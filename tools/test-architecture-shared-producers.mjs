@@ -138,14 +138,25 @@ if (selectedCase === 'ui-boundary') {
     /nonliteral dynamic import/);
 
   assertSharedUiFeatureImports(sharedUiFeatureImports(ts, options, consumer,
-    "import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';", files, readSource));
+    "import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment'; const current = readerWindowMetrics();", files, readSource));
   assertSharedUiFeatureImports(sharedUiFeatureImports(ts, options, consumer,
-    "import { ReaderWindowCoordinator as WindowMetrics } from '../../app/ReaderWindowCoordinator'; const current = WindowMetrics.metrics();", files, readSource));
+    "import { readerWindowMetrics as currentMetrics } from '../foundation/ReaderWindowEnvironment'; const current = currentMetrics();", files, readSource));
+  for (const source of [
+    "import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';",
+    "import { ReaderWindowCoordinator as WindowMetrics } from '../../app/ReaderWindowCoordinator'; const current = WindowMetrics.metrics();",
+    "import { bindReaderWindowMetricsSource } from '../foundation/ReaderWindowEnvironment';",
+    "export { bindReaderWindowMetricsSource } from '../foundation/ReaderWindowEnvironment';",
+    "import * as Environment from '../foundation/ReaderWindowEnvironment';",
+    "const load = () => import('../foundation/ReaderWindowEnvironment');",
+  ]) {
+    assert.throws(() => assertSharedUiFeatureImports(sharedUiFeatureImports(ts, options, consumer,
+      source, files, readSource)), /shared UI cannot depend/, 'only the read port belongs to public UI');
+  }
   for (const use of ['ReaderWindowCoordinator.brightness()', 'ReaderWindowCoordinator.detach()',
     'ReaderWindowCoordinator.metrics', 'ReaderWindowCoordinator']) {
     assert.throws(() => assertSharedUiFeatureImports(sharedUiFeatureImports(ts, options, consumer,
       "import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator'; const escaped = " + use + ';', files, readSource)),
-      /non-metric access or escaped window owner/);
+      /shared UI cannot depend on app\/ReaderWindowCoordinator/);
   }
   const facade = 'common/BoundaryFixtureFacade.ts';
   const forwarder = 'common/BoundaryFixtureForwarder.ts';

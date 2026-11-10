@@ -33,6 +33,7 @@ import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 import { boundedSurfaceSdk, readerSurfaceSpecsForProbe } from './bounded-surface-sdk-probe.mjs';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { ReaderTransientFeedback } from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
+import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
 import { readerFoundationTokens } from './reader-tokens-probe.mjs';
 
 const sdkRoot = resolveEtsLoaderRoot();
@@ -644,6 +645,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };
+  // Existing fixtures supply an explicit fake metrics source under the old
+  // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
+  globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
+    () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
   globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
     { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });

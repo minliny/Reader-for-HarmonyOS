@@ -1,5 +1,6 @@
 import { readerMainTabItemHeight } from '../../ui/layout/ReaderFloatingBarMetrics';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { effectiveReaderWideNavigationRail } from '../../app/ReaderProductScope';
 import { MAIN_TABS } from '../../app/navigation/ReaderMainTabs';
 export { MAIN_TABS } from '../../app/navigation/ReaderMainTabs';
 export type { MainTabDef } from '../../app/navigation/ReaderMainTabs';
@@ -78,7 +79,7 @@ export function mainTabRailTop(windowHeight: number, safeTop: number, safeBottom
 export function readerMainNavigationMode(useRail: boolean, revision: number = 0, _metricsRevision: number = 0): MainNavigationMode {
   const metrics = ReaderWindowCoordinator.metrics();
   const viewport = readerMainViewport(revision);
-  return mainNavigationMode(useRail, viewport.width, viewport.height,
+  return mainNavigationMode(effectiveReaderWideNavigationRail(useRail), viewport.width, viewport.height,
     0, readerInteractiveSafeBottom(metrics), MAIN_TABS.length, metrics.systemFontScale);
 }
 

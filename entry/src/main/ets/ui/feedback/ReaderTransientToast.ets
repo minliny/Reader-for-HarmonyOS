@@ -1,4 +1,4 @@
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -119,8 +119,8 @@ export struct ReaderTransientToast {
     }
     .width('100%')
     .height(this.bounded ? undefined : '100%')
-    .padding({ left: 15 + readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics(), true),
-      right: 15 + readerInteractiveSafeRight(ReaderWindowCoordinator.metrics(), true), bottom: this.toastBottomInset() })
+    .padding({ left: 15 + readerInteractiveSafeLeft(readerWindowMetrics(), true),
+      right: 15 + readerInteractiveSafeRight(readerWindowMetrics(), true), bottom: this.toastBottomInset() })
     .zIndex(1000)
     .visibility(this.displayed ? Visibility.Visible : Visibility.Hidden)
     .hitTestBehavior(HitTestMode.None);
@@ -128,7 +128,7 @@ export struct ReaderTransientToast {
 
   private toastBottomInset(): number {
     if (this.metricsRevision < 0) return 52;
-    return Math.max(52, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics(), true) + 16);
+    return Math.max(52, readerInteractiveSafeBottom(readerWindowMetrics(), true) + 16);
   }
 
   private syncToast(): void {

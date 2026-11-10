@@ -1,7 +1,7 @@
 import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActionSheetSpec, type ActionSheetSpecId } from './ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
@@ -190,7 +190,7 @@ export struct ReaderActionMenuSurface {
 
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
 
   private action(id: string): ReaderMenuActionView {

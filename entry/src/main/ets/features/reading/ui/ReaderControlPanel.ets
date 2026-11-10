@@ -2014,6 +2014,7 @@ export struct ReaderControlPanel {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Column({ space: 3.75 }) {
       Image($r(this.appScheme === 'night' ? 'app.media.rc_switch_horizontal_theme_night' : 'app.media.rc_switch_horizontal'))
+        .fillColor(readerAppColor(this.isLocalBook() ? 'TOK_READ_UNREAD' : 'app.icon.rc_switch_horizontal.1F1B17', this.appScheme))
         .width(20)
         .height(20)
         .margin({ top: 1.25 });
@@ -2023,7 +2024,7 @@ export struct ReaderControlPanel {
         .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
         .lineHeight(TYPE_READER_CONTROL_SOURCE_ACTION.lineHeightFp)
         .letterSpacing(TYPE_READER_CONTROL_SOURCE_ACTION.letterSpacingFp)
-        .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
+        .fontColor(readerAppColor(this.isLocalBook() ? 'TOK_READ_UNREAD' : 'TOK_READ_INK', this.appScheme))
         .maxLines(1);
     }
     .width(62)
@@ -2031,7 +2032,6 @@ export struct ReaderControlPanel {
     .alignItems(HorizontalAlign.Center);
     }.width(62).height(42).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control'))
-    .opacity(this.isLocalBook() ? 0.4 : 1)
     .responseRegion(readerActionTouchRegion(62, 42))
     .attributeModifier(new ReaderActionAccessibility('换源',
       this.inputEnabled && !this.controlObscured && !this.temporaryLayerActive && !this.moreMenuVisible && !this.isLocalBook(), false, true, undefined, 'nativeButton'))

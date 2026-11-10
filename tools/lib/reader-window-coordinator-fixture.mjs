@@ -5,6 +5,7 @@ import {ReaderBrightnessWriter} from '../../entry/src/main/ets/app/ReaderBrightn
 import * as metrics from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import {findReaderTheme} from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import {installedEtsCompiler} from './ets-compiler-runtime.mjs';
+import {readerWindowEnvironmentForProbe} from './reader-window-environment-probe.mjs';
 const base=new URL('../../entry/src/main/ets/',import.meta.url);
 export async function createWindowCoordinatorFixture(){
  const extensionHook=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -19,7 +20,8 @@ export async function createWindowCoordinatorFixture(){
  const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
    '../ui/foundation/ReaderThemeRegistry':{findReaderTheme},
    './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
-   '../ui/foundation/ReaderWindowMetrics':metrics};
+   '../ui/foundation/ReaderWindowMetrics':metrics,
+   '../ui/foundation/ReaderWindowEnvironment':readerWindowEnvironmentForProbe()};
  const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
  const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
  const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);

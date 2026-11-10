@@ -1,6 +1,6 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../foundation/ReaderSourceChromeVisual';
 
 export type ReaderSurfaceElevationKind = 'embedded' | 'fixed' | 'floating' | 'raised' | 'popover' | 'sheet';
@@ -34,7 +34,7 @@ function resolveSurfaceElevationSpec(kind: ReaderSurfaceElevationKind): ReaderSu
  * Specs are logical vp, resolved once through the live window density. */
 export function readerSurfaceElevation(kind: ReaderSurfaceElevationKind, scheme: string): ShadowOptions {
   const spec = resolveSurfaceElevationSpec(kind);
-  const observedDensity = ReaderWindowCoordinator.metrics().densityPixels;
+  const observedDensity = readerWindowMetrics().densityPixels;
   const density = Number.isFinite(observedDensity) && observedDensity > 0 ? observedDensity : 1;
   if (kind === 'raised') {
     // The actual material node owns its native border, radius and shadow.

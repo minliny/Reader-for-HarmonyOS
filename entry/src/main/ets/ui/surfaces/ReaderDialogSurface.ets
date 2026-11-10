@@ -1,6 +1,6 @@
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
 import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from '../foundation/ReaderTypography';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../layout/SurfaceHorizontalGeometry';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -215,7 +215,7 @@ export struct ReaderDialogSurface {
 
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
 
   private frameWidth(): string | number {
@@ -247,7 +247,7 @@ export struct ReaderDialogSurface {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
     const spec = this.spec();
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     return resolveHorizontalFrame(metrics.windowRect.width,
       readerInteractiveSafeLeft(metrics, spec.usesKeyboardSafeArea),
       readerInteractiveSafeRight(metrics, spec.usesKeyboardSafeArea),

@@ -1,4 +1,5 @@
-import { ReaderHeaderFrameModifier, readerPageAreaLength } from './ReaderPageShell';
+import { readerPageAreaLength } from './ReaderPageShell';
+import { ReaderHeaderFrameModifier } from './ReaderPageNativeAttributes';
 import { ReaderHeaderFrameStyle } from './ReaderFrameStyle';
 
 /** Actual native header owner. Compound title/tools or search/filter/statistics

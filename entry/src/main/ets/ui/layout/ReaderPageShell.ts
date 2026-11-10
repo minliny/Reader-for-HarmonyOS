@@ -3,7 +3,7 @@ import { APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
 import { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';
-import { ReaderFooterFrameStyle, ReaderFrameStyle, ReaderHeaderFrameStyle } from './ReaderFrameStyle';
+// Pure page policy stays in TypeScript; ArkUI consumers import native modifiers from the ETS boundary.
 
 export type ReaderFooterSurface = 'solid' | 'transparent';
 export type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';
@@ -48,9 +48,9 @@ export function readerPresentedHeaderBottom(headerTop: number, headerHeight: num
   return Math.max(0, headerTop) + Math.max(0, headerHeight);
 }
 
-/** ArkUI Area reports numeric vp or a vp Length string. Keep the platform
- * conversion shared so a narrow measured host never falls back to window width. */
-export function readerPageAreaLength(value: Length): number {
+/** Native Length can also contain a resource object. Measurements accept
+ * numeric vp or vp strings only; resource objects have no measured size. */
+export function readerPageAreaLength(value: number | string | object): number {
   return typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;
 }
 
@@ -67,31 +67,4 @@ export function readerStandardPageContentEndInset(variant: ReaderStandardPageVar
   if (variant === 'settingsHome') return readerFloatingTabContentInset(metrics, footerHeight);
   if (variant === 'rssDetail') return Math.max(62, footerHeight) + readerStandardPageFooterBottom(variant, metrics);
   return readerFloatingBarBottomInset(metrics, readerStandardPageSpec(variant).minimumBottom);
-}
-
-export class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {
-  private readonly style: ReaderFrameStyle;
-  constructor(style: ReaderFrameStyle) { this.style = style; }
-  applyNormalAttribute(instance: CommonAttribute): void {
-    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(0);
-  }
-}
-
-/** The feature owns the resolved header surface; the frame only applies it. */
-export class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttribute> {
-  private readonly style: ReaderHeaderFrameStyle;
-  constructor(style: ReaderHeaderFrameStyle) { this.style = style; }
-  applyNormalAttribute(instance: CommonAttribute): void {
-    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(10);
-  }
-}
-
-/** A fixed dock masks the complete footer lane, including horizontal gutters
- * and bottom safe area. Floating/flowing footers keep their bounded card paint. */
-export class ReaderFooterFrameModifier implements AttributeModifier<CommonAttribute> {
-  private readonly style: ReaderFooterFrameStyle;
-  constructor(style: ReaderFooterFrameStyle) { this.style = style; }
-  applyNormalAttribute(instance: CommonAttribute): void {
-    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(0);
-  }
 }

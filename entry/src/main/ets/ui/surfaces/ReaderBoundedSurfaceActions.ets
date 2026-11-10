@@ -1,6 +1,6 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_CANCEL,
   TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE,
   TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE } from '../foundation/ReaderTypography';
@@ -67,7 +67,7 @@ export struct ReaderBoundedSurfaceActions {
 
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
 
   private actionEnabled(id: ReaderBoundedActionId): boolean { return id === 'primary' ? this.primaryEnabled : this.cancelEnabled; }

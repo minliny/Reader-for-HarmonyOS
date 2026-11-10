@@ -1,4 +1,5 @@
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { effectiveReaderWideNavigationRail, isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import type { CommitReadbackSummary } from '../../../app/ReaderOperationFacts';
 import { READER_REDUCE_MOTION_STORAGE_KEY } from '../../../ui/foundation/ReaderMotionPolicy';
 import { createDefaultSettingsSnapshot, SettingsGateway, type GeneralSettingsKey, type SettingsSnapshot } from '../application/SettingsGateway';
@@ -34,7 +35,7 @@ export class SettingsPresentation {
         (snapshot: SettingsSnapshot): void => {
           if (this.opening?.isRouteCurrent() !== true) return;
           this.snapshot = snapshot;
-          AppStorage.setOrCreate<boolean>('readerWideNavigationRail', snapshot.wideNavigationRail);
+          AppStorage.setOrCreate<boolean>('readerWideNavigationRail', effectiveReaderWideNavigationRail(snapshot.wideNavigationRail));
         },
         (): SettingsSnapshot => this.snapshot,
         (): boolean => this.opening?.isRouteCurrent() === true,
@@ -53,13 +54,13 @@ export class SettingsPresentation {
 
   mount(owner: ReaderRuntimeOwner, changed: () => void): void {
     this.unsubscribe?.();
-    AppStorage.setOrCreate<boolean>('readerWideNavigationRail', this.snapshot.wideNavigationRail === true);
+    AppStorage.setOrCreate<boolean>('readerWideNavigationRail', effectiveReaderWideNavigationRail(this.snapshot.wideNavigationRail === true));
     this.cacheCleanup = this.settingsHost().cacheCleanupSnapshot(owner);
     const gateway = new SettingsGateway(owner.getUIAbilityContext());
     this.unsubscribe = gateway.subscribe((snapshot: SettingsSnapshot): void => {
       this.applicationSnapshot = snapshot;
       AppStorage.setOrCreate<boolean>(READER_REDUCE_MOTION_STORAGE_KEY, snapshot.reduceMotion === true);
-      AppStorage.setOrCreate<boolean>('readerWideNavigationRail', snapshot.wideNavigationRail === true);
+      AppStorage.setOrCreate<boolean>('readerWideNavigationRail', effectiveReaderWideNavigationRail(snapshot.wideNavigationRail === true));
       AppStorage.setOrCreate<boolean>('readerDeveloperMode', snapshot.developerMode === true);
       if (this.opening?.isRouteCurrent() !== true) this.snapshot = snapshot;
       changed();
@@ -114,6 +115,7 @@ export class SettingsPresentation {
   }
 
   toggle(identity: string, key: GeneralSettingsKey, value: boolean): void {
+    if (key === 'wideNavigationRail' && !isReaderProductSurfaceEnabled('wideNavigationRail')) return;
     if (this.isCurrent(identity)) this.host?.toggle(key, value, identity);
   }
 

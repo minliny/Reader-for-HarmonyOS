@@ -1,7 +1,7 @@
 import { ReaderFormFieldSpecId, resolveReaderFormFieldSpec } from './ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 /** Controlled native field. Draft and keyboard ownership remain with its
  * caller; AUTO omissions and credential masking belong to finite variants. */
@@ -123,7 +123,7 @@ export struct ReaderFormField {
   }
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private editChanged(editing: boolean): void { if (this.mounted && this.isEditable) this.onEditingChange(editing); }
   private submit(): void { if (this.mounted && this.isEditable) this.onSubmit(); }

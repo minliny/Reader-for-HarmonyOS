@@ -1,7 +1,7 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth } from '../foundation/ReaderSelectGeometry';
 import {
@@ -237,7 +237,7 @@ export struct ReaderSelectPanel {
     }
     const naturalWidth = Math.ceil(ctx.px2vp(maxPx)) + this.resolvedChrome();
     if (this.variant !== 'default' && this.variant !== 'sourceGroup') return naturalWidth;
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     const viewportWidth = this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width;
     return readerSelectMenuWidth(naturalWidth, viewportWidth, readerSelectAvailableWidth(viewportWidth,
       readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)), this.menuKind);
@@ -246,7 +246,7 @@ export struct ReaderSelectPanel {
   private panelX(): number {
     const requested = this.alignRight ? this.x - this.resolvedWidth() : this.x;
     if (this.variant !== 'sourceGroup') return requested;
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     return Math.max(Math.max(16, readerInteractiveSafeLeft(metrics)), Math.min(requested,
       metrics.windowRect.width - Math.max(16, readerInteractiveSafeRight(metrics)) - this.resolvedWidth()));
   }

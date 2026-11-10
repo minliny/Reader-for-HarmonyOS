@@ -10,6 +10,7 @@ import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.
 import * as readerFonts from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
 import { ReaderInsetsVp, readerVisualSafeTop } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
 const read=(directory,name)=>readFileSync(new URL(`../../entry/src/main/ets/${directory}/${name}.ets`,import.meta.url),'utf8');
 const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`);
@@ -30,12 +31,12 @@ const { readerReadableFontScale, readerScaledControlHeight } = new Function('rea
   `${stripped(surfaceResolvers.replace(/^import[^;]+;\s*/gm, ''))};return { readerReadableFontScale, readerScaledControlHeight };`)(readerVisualSafeTop);
 export function readerSurfaceSpecsForProbe(metrics = { densityPixels: 1 }) {
   const textAlign = { Start: 'TextAlign.Start', Center: 'TextAlign.Center' };
-  const coordinator = { metrics: () => metrics };
+  const { readerWindowMetrics } = readerWindowEnvironmentForProbe(() => metrics);
   const implementation = stripped(read('ui/surfaces','ReaderSurfaceSpecs')).replace(/^import[^;]+;\s*/gm, '');
-  return new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', 'ReaderWindowCoordinator', 'readerAppColor', 'ShadowType',
+  return new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', 'readerWindowMetrics', 'readerAppColor', 'ShadowType',
     `${implementation};return { resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveActionSheetSpec,
       resolveDrawerSpec, readerSurfaceElevation, readerRaisedSurfaceSpec, readerHeaderVeilMaterial, readerHeaderVeilBorder };`)(
-    textAlign, SOURCE_SWITCH_VISUAL, coordinator, readerAppColor, { COLOR: 'ShadowType.COLOR' });
+    textAlign, SOURCE_SWITCH_VISUAL, readerWindowMetrics, readerAppColor, { COLOR: 'ShadowType.COLOR' });
 }
 const specs = readerSurfaceSpecsForProbe();
 // Finite native color port for the actual per-book SVG stroke actor. Channel

@@ -1,5 +1,5 @@
 // Generated from Reader-UI/theme/registry.json. Do not edit.
-// SHA256 335d2306c2836fabf896b479082a1287303b59dbe890b766c048ceb9277a0ebd
+// SHA256 cc3fce571cbc5c8bab7011fbcf814f7543fc8590792ee01e04c26235fdc67124
 export type ReaderThemeScheme = 'day' | 'night';
 export type ReaderAppThemeMode = ReaderThemeScheme | 'system';
 export type ReaderThemeId = "day" | "warm" | "night" | "warmNight" | "paper" | "green" | "paperNight" | "greenNight";
@@ -71,7 +71,7 @@ const DAY: Record<ReaderAppColorRole, string> = {
   "TOK_READ_INK": "#FF332C25",
   "TOK_READ_MUTED": "#FF5B5046",
   "TOK_READ_PRIMARY": "#FF2F6373",
-  "TOK_READ_SURFACE": "#FAFFFAF4",
+  "TOK_READ_SURFACE": "#FFFFFAF4",
   "TOK_READ_UNREAD": "#FF8A7D6E",
   "TOK_ROW_DIVIDER": "#38B4A697",
   "TOK_SETTING_ACTION_BG": "#1A2379A4",

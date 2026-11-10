@@ -1,5 +1,6 @@
 import { ReaderFixedHeaderHost } from './ReaderFixedHeaderHost';
-import { ReaderFooterFrameModifier, ReaderFooterSurface, ReaderPageFrameModifier, readerPageAreaLength } from './ReaderPageShell';
+import { ReaderFooterSurface, readerPageAreaLength } from './ReaderPageShell';
+import { ReaderFooterFrameModifier, ReaderPageFrameModifier } from './ReaderPageNativeAttributes';
 import { ReaderPageGeometry } from './ReaderPageGeometry';
 import { ReaderFrameStyle } from './ReaderFrameStyle';
 

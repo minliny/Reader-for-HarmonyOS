@@ -6,7 +6,7 @@ import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRai
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerActionTouchRegion } from '../controls/ReaderActionAccessibility';
 import { TOK_SPACE_CONTROL_INLINE } from '../foundation/ReaderTokens';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -188,7 +188,7 @@ export struct PageBackBar {
 
   private panelRadius(): number {
     return this.currentRaisedShape()?.radius ?? resolveReaderRaisedShape(this.raisedShapeIdentity(),
-      ReaderWindowCoordinator.metrics().windowRect.width, this.barHeight(), this.requestedRadius())?.radius ?? 0;
+      readerWindowMetrics().windowRect.width, this.barHeight(), this.requestedRadius())?.radius ?? 0;
   }
 
   private panelAreaChangeHandler(): (_old: Area, next: Area) => void {
@@ -214,12 +214,12 @@ export struct PageBackBar {
 
   private mangaFontScale(): number {
     const revision = this.readerWindowMetricsRevision;
-    return mangaDirectoryScale(revision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale);
+    return mangaDirectoryScale(revision < 0 ? 1 : readerWindowMetrics().systemFontScale);
   }
 
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
-    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
+    const scale = readerWindowMetrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
@@ -238,7 +238,7 @@ export struct PageBackBar {
     if (this.readerWindowMetricsRevision < 0) {
       return 20;
     }
-    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
+    return Math.max(20, readerInteractiveSafeLeft(readerWindowMetrics()));
   }
 
   private rightInset(): number {
@@ -247,6 +247,6 @@ export struct PageBackBar {
     if (this.readerWindowMetricsRevision < 0) {
       return 20;
     }
-    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
+    return Math.max(20, readerInteractiveSafeRight(readerWindowMetrics()));
   }
 }

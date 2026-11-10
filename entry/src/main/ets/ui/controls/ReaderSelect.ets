@@ -2,7 +2,7 @@ import type { MeasureOptions } from '@ohos.measure';
 import { TYPE_SELECT_LIBRARY_VALUE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { readerSelectAvailableWidth, readerSelectTriggerWidth } from '../foundation/ReaderSelectGeometry';
 import {
@@ -254,7 +254,7 @@ export struct ReaderSelect {
       const style = TYPE_SELECT_DEFAULT_VALUE;
       const width = context.px2vp(context.getMeasureUtils().measureText({ textContent: this.value,
         fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
-      const metrics = ReaderWindowCoordinator.metrics();
+      const metrics = readerWindowMetrics();
       return readerSelectTriggerWidth(width, readerSelectAvailableWidth(
         this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width,
         readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)), this.controlWidth);

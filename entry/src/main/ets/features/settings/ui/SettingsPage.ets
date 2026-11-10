@@ -37,6 +37,8 @@ import {
   TOK_SPACE_SM,
 } from '../../../ui/foundation/ReaderTokens';
 import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
+import { emptyReaderAppBuildInfo, readReaderAppBuildInfo, readerAppBuildDisplay, readerAppBuildCopy, type ReaderAppBuildInfo } from '../../../platform/bundle/ReaderAppBuildInfo';
+import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipboardHost';
 
 // 页面私有布局常量 (不属共享 token: 页面独有下拉行对齐常量)。
 // Figma Article 行右内距 12 (= TOK_SPACE_SM, 直引)。
@@ -92,6 +94,8 @@ export struct SettingsPage {
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
   @State private temporaryBackIdentity: string = '';
   @State private appThemeControlGeneration: number = 0;
+  @State private aboutPageId: string = '';
+  @State private aboutInfo: ReaderAppBuildInfo = emptyReaderAppBuildInfo();
   @State private developerPageId: string = '';
   @State private messagePreviewId: string = '';
   private messagePreviewBackHandler: (() => boolean) | undefined = undefined;
@@ -140,6 +144,7 @@ export struct SettingsPage {
 
   aboutToDisappear(): void {
     this.transientFeedback.reset();
+    this.aboutPageId = '';
     this.retireDeveloperPages();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
@@ -153,6 +158,7 @@ export struct SettingsPage {
 
   private consumeTemporaryBack(identity: string): boolean {
     if (!this.mounted || identity !== this.temporaryBackIdentity) return false;
+    if (this.aboutPageCurrent(this.aboutPageId)) { this.closeAboutPage(this.aboutPageId); return true; }
     if (this.messagePreviewCurrent(this.messagePreviewId)) {
       if (this.messagePreviewBackHandler?.() !== true) this.closeMessagePreview(this.messagePreviewId);
       return true;
@@ -167,7 +173,9 @@ export struct SettingsPage {
   }
 
   build() {
-    if (this.messagePreviewCurrent(this.messagePreviewId)) {
+    if (this.aboutPageCurrent(this.aboutPageId)) {
+      ForEach([this.aboutPageId], (identity: string): void => { this.aboutPage(identity); }, (identity: string): string => identity);
+    } else if (this.messagePreviewCurrent(this.messagePreviewId)) {
       ForEach([this.messagePreviewId], (identity: string): void => {
         ReaderMessagePreviewPage({
           previewEnabled: this.messagePreviewCurrent(identity),
@@ -209,6 +217,75 @@ export struct SettingsPage {
       generalContent: (): void => { this.buildGeneral(); },
       overlayContent: (contentStartInset: number): void => { this.buildOverlay(contentStartInset); },
     }).enabled(!this.resetInFlight);
+    }
+  }
+
+  private aboutPageCurrent(identity: string): boolean {
+    return identity.length > 0 && identity === this.aboutPageId && this.mounted && this.activeSection === 'home' &&
+      this.isOpeningCurrent() && ReaderRuntimeOwner.isCurrent(this.themeOwner);
+  }
+
+  private openAboutPage(): void {
+    if (!this.settingsInputIsCurrent() || this.activeSection !== 'home' || this.resetInFlight) return;
+    this.nativeAlertOwner.retire();
+    this.retireSelection();
+    this.aboutInfo = readReaderAppBuildInfo();
+    this.aboutPageId = `about:${++settingsSelectionGeneration}`;
+  }
+
+  private closeAboutPage(identity: string): void {
+    if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent()) return;
+    this.transientFeedback.reset();
+    this.aboutPageId = '';
+  }
+
+  private showAboutFeedback(message: string, identity: string): void {
+    this.transientFeedback.show(() => this.getUIContext(), { message },
+      (): boolean => this.aboutPageCurrent(identity) && this.settingsInputIsCurrent());
+  }
+
+  private copyAboutBuild(identity: string): void {
+    if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent()) return;
+    const value = readerAppBuildCopy(this.aboutInfo);
+    if (!value) return;
+    try { copyReaderBuildIdentity(value); this.showAboutFeedback('已复制完整构建信息', identity); }
+    catch (_) { if (this.aboutPageCurrent(identity)) this.showAboutFeedback('复制失败，请重试', identity); }
+  }
+
+  @Builder
+  private aboutPage(identity: string) {
+    ReaderStandardPage({ variant: 'settingsGeneral',
+      header: (): void => { this.aboutPageHeader(identity); },
+      content: (): void => { this.aboutPageContent(identity); },
+      overlayContent: (contentStartInset: number): void => { this.pendingFeedback(contentStartInset); },
+    });
+  }
+
+  @Builder
+  private aboutPageHeader(identity: string) {
+    PageBackBar({ title: '关于 Reader', onBack: (): void => {
+      this.closeAboutPage(identity);
+    } });
+  }
+
+  @Builder
+  private aboutPageContent(identity: string) {
+    CategorySection({ title: '版本与构建' }) {
+      Column({ space: 12 }) {
+        Text(readerAppBuildDisplay(this.aboutInfo)).width('100%')
+          .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        if (this.aboutInfo.status === 'available') {
+          Text(`版本代码：${this.aboutInfo.versionCode}`).width('100%')
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+          Text(this.aboutInfo.appBuildId).width('100%').wordBreak(WordBreak.BREAK_ALL)
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+          Text(`内容摘要：${this.aboutInfo.appContentHash}`).width('100%').wordBreak(WordBreak.BREAK_ALL)
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        }
+      }.width('100%').padding(12);
+      ReaderFormRow({ label: '复制完整构建信息', actionEnabled: this.aboutInfo.status === 'available' && this.aboutPageCurrent(identity),
+        onAction: (): void => this.copyAboutBuild(identity) });
     }
   }
 
@@ -263,6 +340,8 @@ export struct SettingsPage {
     this.appThemeControlGeneration += 1;
     this.resetSectionRevision += 1;
     this.resetMessage = '';
+    if (this.aboutPageId.length > 0) this.transientFeedback.reset();
+    this.aboutPageId = '';
     if (this.activeSection === 'general') return;
     this.nativeAlertOwner.retire();
     this.retireSelection();
@@ -313,7 +392,7 @@ export struct SettingsPage {
   @Builder
   private buildHome() {
     this.operationFeedback();
-    CategorySection({ title: '设置' }) {
+    CategorySection({ title: '应用与阅读' }) {
       this.navRow('通用设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
         this.onSectionChange('general');
       });
@@ -323,9 +402,7 @@ export struct SettingsPage {
       }
       this.navRow('书架设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
       this.navRow('下载管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), this.onOpenDownloads);
-      if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-        this.navRow('关于与反馈', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => {});
-      }
+      this.navRow('关于 Reader', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => this.openAboutPage());
     }
   }
 
@@ -333,6 +410,7 @@ export struct SettingsPage {
   private buildGeneral() {
     this.preferenceCard();
     this.behaviorCard();
+    this.maintenanceCard();
     if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
       this.permissionCard();
     }
@@ -497,17 +575,27 @@ export struct SettingsPage {
     CategorySection({ title: '行为与反馈' }) {
       this.switchRow('自动检查更新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), 'autoCheckUpdate');
       this.switchRow('减少动态效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'reduceMotion');
-      this.switchRow('宽屏使用侧边导航', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_navigation_theme_night') : $r('app.media.settings_gen_navigation')), 'wideNavigationRail');
+      if (isReaderProductSurfaceEnabled('wideNavigationRail')) {
+        this.switchRow('宽屏使用侧边导航', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_navigation_theme_night') : $r('app.media.settings_gen_navigation')), 'wideNavigationRail');
+      }
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.switchRow('点击当前底栏回顶部', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
         this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
         this.selectRow('动画效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
       }
+    }
+  }
+
+  @Builder
+  private maintenanceCard() {
+    CategorySection({ title: '存储维护' }) {
+      this.cacheActionRow();
+    }
+    CategorySection({ title: '开发工具' }) {
       ForEach([this.temporaryBackIdentity], (identity: string): void => {
         this.navRow('开发者模式', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')),
           (): void => this.openDeveloperPage(identity));
       }, (identity: string): string => identity);
-      this.cacheActionRow();
     }
   }
 
@@ -568,6 +656,7 @@ export struct SettingsPage {
     identity: string = this.temporaryBackIdentity,
   ): void {
     if (!this.settingCanToggle(identity)) return;
+    if (key === 'wideNavigationRail' && !isReaderProductSurfaceEnabled('wideNavigationRail')) return;
     // The Settings owner publishes the accepted snapshot before/after its
     // actual IO. The page never paints an unaccepted optimistic mirror.
     this.lastOperationToast = '';

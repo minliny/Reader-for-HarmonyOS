@@ -33,6 +33,8 @@ import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
 import { embeddedStorageCompatibility, readInstalledSqliteVersion, readInstalledStorageLineage, storageUpdateRoute, loadStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState } from './lib/hap-storage-admission.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
+import { APP_IDENTITY_SCHEMA, APP_RELEASE_LEDGER, createAppBuildIdentity, packagedAppVersion, assertAppVersion, installedAppIdentity } from './lib/app-build-identity.mjs';
+import { prepareAppIdentity, assertAppIdentityUnchanged, verifyAppContentEvidence } from './lib/app-build-context.mjs';
 import { selectBundledSources } from '../tools/verify-bundled-test-book-sources-live.mjs';
 import { contractTests, contractSelection, explicitContractTests, contractCaseSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
 
@@ -60,6 +62,7 @@ export function resolveHarmonyAbi(value = 'arm64-v8a') {
 }
 const BUILD_INPUTS = [
   'AppScope',
+  APP_RELEASE_LEDGER,
   'entry/src',
   'entry/libs',
   'entry/vendor/core-harmony',
@@ -74,6 +77,10 @@ const BUILD_INPUTS = [
   'entry/oh-package.json5',
   'entry/oh-package-lock.json5',
 ];
+// Identity-generation/build code is an effective input, but the ledger's
+// assigned version fields are deliberately outside the app content domain.
+const APP_CONTENT_INPUTS = [...BUILD_INPUTS, 'scripts/hap-pipeline.mjs',
+  'scripts/lib/app-build-identity.mjs', 'scripts/lib/app-build-context.mjs', 'scripts/lib/harmony-toolchain.mjs'];
 const HARMONY_GATE_INPUTS = [
   'scripts/check-local.sh',
   'scripts/check-local.mjs',
@@ -620,9 +627,12 @@ function archiveEntryRecord(hapPath, entryPath) {
     storageCompatibility: embeddedStorageCompatibility(bytes) };
 }
 
-export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources, abi = 'arm64-v8a') {
+export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources, abi = 'arm64-v8a', expectedVersion) {
   if (abi !== 'arm64-v8a' && abi !== 'x86_64') fail(`unsupported HAP inspection ABI: ${abi}`);
   const names = archiveNames(hapPath);
+  if (names.filter(name => name === 'module.json').length !== 1) fail('HAP module configuration is missing or duplicated');
+  const appVersion = packagedAppVersion(JSON.parse(readArchive(['-p', hapPath, 'module.json'])), { required: expectedVersion !== undefined });
+  if (expectedVersion) assertAppVersion(expectedVersion, appVersion, 'HAP');
   const nativeEntries = names.filter((name) => name.startsWith('libs/')).sort();
   const expectedNativeEntries = EXPECTED_NATIVE_ENTRIES.map((name) => name.replace('arm64-v8a', abi));
   if (JSON.stringify(nativeEntries) !== JSON.stringify(expectedNativeEntries)) {
@@ -637,6 +647,7 @@ export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requir
     kind,
     ...fileRecord(hapPath, publicPath),
     signature,
+    appVersion,
     nativeEntries,
     embeddedCoreNapi: archiveEntryRecord(hapPath, `libs/${abi}/libreader_core_napi.so`),
     ...(requiredResources ? { requiredResources } : {}),
@@ -760,11 +771,18 @@ export function assertIdeSigningUnchanged(session) {
   }
 }
 
+export function prepareIdeAppBuildIdentity({ buildMode, product }, env = process.env) {
+  const abi = resolveHarmonyAbi(env.READER_HARMONY_ABI);
+  return prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi, buildMode, product, env });
+}
+
 export function verifyIdeSignedHap(path, session, env = process.env) {
   const lease = acquireBuildLease(env);
   try {
     assertIdeSigningUnchanged(session);
-    const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT), resolveHarmonyAbi(env.READER_HARMONY_ABI));
+    if (!session.appIdentity) fail('DevEco app identity was not configured before packaging');
+    assertAppIdentityUnchanged(session.appIdentity, env);
+    const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT), resolveHarmonyAbi(env.READER_HARMONY_ABI), session.appIdentity.expectedVersion);
     if (artifact.signature.status !== 'signed' || artifact.signature.verified !== true) {
       fail('DevEco build did not produce a verified signed HAP.');
     }
@@ -1066,8 +1084,9 @@ function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCom
 }
 
 export function buildContractScope(options, root = REPO_ROOT) {
-  const allowed = ['--class', '--abi', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
+  const allowed = ['--class', '--channel', '--abi', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
   for (const key of options.keys()) if (!allowed.includes(key)) fail(`unknown build argument: ${key}`, 2);
+  if (options.has('--channel') && !['DEV', 'RC', 'REL'].includes(requiredOption(options, '--channel'))) fail('--channel must be DEV, RC or REL', 2);
   resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
@@ -1226,6 +1245,9 @@ function buildImpl(options) {
       }
     }
 
+    const appIdentity = prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi,
+      channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local' });
+    console.log(JSON.stringify({ stage: 'appBuildIdentity', ...appIdentity.expectedVersion }));
     const sandboxRepo = resolve(sandboxRoot, 'Reader-for-HarmonyOS');
     copySourceSandbox(REPO_ROOT, sandboxRepo, sandboxRoot);
     const moduleProfilePath = resolve(sandboxRepo, 'entry/build-profile.json5');
@@ -1242,9 +1264,11 @@ function buildImpl(options) {
       chmodSync(resolve(sandboxRepo, 'build-profile.json5'), 0o600);
     }
     const effectiveProfile = fileRecord(resolve(sandboxRepo, 'build-profile.json5'), 'build-profile.json5');
+    const identityInputPath = resolve(sandboxRepo, '.reader-app-build.json');
+    writeJson(identityInputPath, appIdentity.expectedVersion);
     const pipelineToken = randomUUID();
     writeFileSync(resolve(sandboxRepo, '.reader-pipeline-session.json'), JSON.stringify({
-      token: pipelineToken, profileSha256: effectiveProfile.sha256,
+      token: pipelineToken, profileSha256: effectiveProfile.sha256, appIdentitySha256: fileRecord(identityInputPath).sha256,
     }), { mode: 0o600 });
     const sandboxBefore = sourceSnapshot(sandboxRepo);
 
@@ -1300,6 +1324,7 @@ function buildImpl(options) {
       }
     }
 
+    assertAppIdentityUnchanged(appIdentity, nativeEnvironment);
     const sandboxAfter = sourceSnapshot(sandboxRepo);
     assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
     assertResolvedCorePackage(sandboxRepo);
@@ -1347,11 +1372,14 @@ function buildImpl(options) {
       basename(path),
       requiredResources,
       abi,
+      appIdentity.expectedVersion,
     ));
     if (buildClass === 'acceptance' && !artifacts.some((artifact) => artifact.kind === 'signed')) {
       fail('acceptance build did not produce a signed artifact');
     }
 
+    writeJson(resolve(runDir, 'app-content-snapshot.json'), appIdentity.contentSnapshot);
+    writeJson(resolve(runDir, 'app-release-ledger.json'), appIdentity.ledger);
     writeJson(resolve(runDir, 'source-snapshot.json'), sourceBefore);
     copyFileSync(moduleProfilePath, resolve(runDir, effectiveModuleProfile.path));
     writeJson(resolve(runDir, 'controller-snapshot.json'), harmonyGateBefore);
@@ -1388,6 +1416,10 @@ function buildImpl(options) {
     const manifest = {
       schemaVersion: 2,
       deliveryEvidenceVersion: 1,
+      appIdentitySchema: APP_IDENTITY_SCHEMA,
+      expectedVersion: appIdentity.expectedVersion,
+      appContentInputs: fileRecord(resolve(runDir, 'app-content-snapshot.json'), 'app-content-snapshot.json'),
+      appReleaseLedger: fileRecord(resolve(runDir, 'app-release-ledger.json'), 'app-release-ledger.json'),
       name: 'reader-harmonyos-hap-run',
       abi,
       effectiveModuleProfile,
@@ -1467,6 +1499,8 @@ function buildImpl(options) {
     console.log(JSON.stringify({
       status: 'PASS',
       runId,
+      appBuildId: appIdentity.expectedVersion.appBuildId,
+      expectedVersion: appIdentity.expectedVersion,
       buildClass,
       contractsScope: contracts.scope,
       harmonyContracts: manifest.gates.harmonyContracts,
@@ -1745,6 +1779,26 @@ export function verifyAbiEvidence(directory, manifest, artifacts) {
   }
 }
 
+export function verifyAppIdentityEvidence(directory, manifest) {
+  const controllerFile = resolve(directory, 'controller-snapshot.json');
+  const requiresIdentity = existsSync(controllerFile) && JSON.parse(readFileSync(controllerFile, 'utf8')).files.some(
+    file => file.path.replaceAll('\\', '/') === 'scripts/lib/app-build-identity.mjs');
+  if (!requiresIdentity && manifest.appIdentitySchema === undefined && manifest.expectedVersion === undefined) return 'LEGACY_NOT_PRESENT';
+  if (manifest.appIdentitySchema !== APP_IDENTITY_SCHEMA || !manifest.expectedVersion) fail('Current app identity evidence is missing or unsupported');
+  const snapshot = JSON.parse(readFileSync(verifiedContractFile(directory, manifest.appContentInputs, 'app-content-snapshot.json'), 'utf8'));
+  const ledger = JSON.parse(readFileSync(verifiedContractFile(directory, manifest.appReleaseLedger, 'app-release-ledger.json'), 'utf8'));
+  verifyAppContentEvidence(snapshot, manifest.expectedVersion);
+  if (snapshot.buildIdentityInputs.abi !== manifest.abi) fail('App identity and HAP ABI disagree');
+  const expected = createAppBuildIdentity({ files: snapshot.files, buildIdentityInputs: snapshot.buildIdentityInputs,
+    ledger, channel: manifest.expectedVersion.channel, buildClass: manifest.buildClass,
+    signed: manifest.artifacts?.some(artifact => artifact.kind === 'signed') });
+  assertAppVersion(expected, manifest.expectedVersion, 'Manifest');
+  if (expected.channel !== 'DEV' && (manifest.source?.harmony?.dirty !== false || manifest.source?.core?.dirty !== false)) {
+    fail('RC/REL app identity requires clean recorded Harmony/Core inputs');
+  }
+  return 'PASS';
+}
+
 function verifyManifest(path) {
   const loaded = loadManifest(path);
   // Historical runs omitted ABI and were exclusively arm64. Never infer it
@@ -1786,6 +1840,7 @@ function verifyManifest(path) {
       if (coreReceipt.inputs.gitCommit !== loaded.manifest.source.core.commit) fail('Core gate and acceptance source commit differ');
     }
   }
+  verifyAppIdentityEvidence(loaded.directory, loaded.manifest);
   const seenKinds = new Set();
   const verified = [];
   for (const artifact of loaded.manifest.artifacts) {
@@ -1798,13 +1853,15 @@ function verifyManifest(path) {
     const artifactPath = resolve(loaded.directory, artifact.path);
     if (!existsSync(artifactPath)) fail(`manifest artifact is missing: ${artifactPath}`);
     if (loaded.manifest.deliveryEvidenceVersion === 1 && !artifact.requiredResources?.length) fail('Required HAP resource inventory is missing');
-    const current = inspectHap(artifactPath, artifact.kind, artifact.path, artifact.requiredResources, abi);
+    const current = inspectHap(artifactPath, artifact.kind, artifact.path, artifact.requiredResources, abi, loaded.manifest.expectedVersion);
     if (current.sha256 !== artifact.sha256 || current.bytes !== artifact.bytes ||
         current.embeddedCoreNapi.sha256 !== artifact.embeddedCoreNapi.sha256) {
       fail(`manifest artifact identity mismatch: ${artifactPath}`);
     }
     verified.push(current);
   }
+  if (loaded.manifest.expectedVersion && ['RC', 'REL'].includes(loaded.manifest.expectedVersion.channel) &&
+      !verified.some(artifact => artifact.kind === 'signed')) fail('RC/REL has no signed artifact');
   verifyAbiEvidence(loaded.directory, loaded.manifest, verified);
   return { ...loaded, artifacts: verified };
 }
@@ -1842,6 +1899,7 @@ export function parseBundleMetadata(output, bundleListOutput = '') {
     bundleName: BUNDLE_NAME,
     versionName: data.versionName,
     versionCode: data.versionCode,
+    ...(installedAppIdentity(data) ? { appVersion: installedAppIdentity(data) } : {}),
     appSignType: app.appSignType,
     appProvisionType: app.appProvisionType.toLowerCase(),
     cpuAbi: app.cpuAbi,
@@ -1983,6 +2041,10 @@ function resolveDeployment(options) {
     query });
   const installed = installedMetadata(hdc, target);
   let route = deploymentSigningRoute({ targetKind, installed, artifact });
+  if (verified.manifest.expectedVersion && installed.bundlePresent &&
+      (!Number.isSafeInteger(installed.versionCode) || installed.versionCode > verified.manifest.expectedVersion.versionCode)) {
+    route = { allowed: false, reason: 'app-version-code-would-regress-or-is-unavailable' };
+  }
   if (options.has('--storage-transition') && !installed.bundlePresent) fail('storage transition requires an existing installed bundle');
   let storageEvidence = null;
   let revalidateStorageTransition = null;
@@ -2061,6 +2123,13 @@ function inspectDeployment(options) {
   if (!resolved.route.allowed) process.exitCode = 3;
 }
 
+export function assertInstalledAppVersion(expected, installed) {
+  if (!installed.bundlePresent || installed.versionName !== expected.versionName || installed.versionCode !== expected.versionCode) {
+    fail('Installed system version does not match the manifest; stopped before launch without uninstalling');
+  }
+  assertAppVersion(expected, installed.appVersion, 'Installed bundle');
+}
+
 function installDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
@@ -2101,6 +2170,9 @@ function installDeployment(options) {
     if (!postInstall.bundlePresent || !installedRoute.allowed) {
       fail('HAP was installed but its reported signing identity does not match; stopped before launch without uninstalling', 3);
     }
+    if (resolved.verified.manifest.expectedVersion) {
+      assertInstalledAppVersion(resolved.verified.manifest.expectedVersion, postInstall);
+    }
     let launch = 'NOT_RUN';
     if (options.get('--no-launch') !== true) {
       const start = runTargetHdc(resolved.hdc, resolved.target, [
@@ -2117,6 +2189,7 @@ function installDeployment(options) {
       schemaVersion: 1,
       name: 'reader-harmonyos-deployment-receipt',
       runId: resolved.verified.manifest.runId,
+      ...(resolved.verified.manifest.expectedVersion ? { expectedVersion: resolved.verified.manifest.expectedVersion, appVersionCheck: 'PASS' } : { appVersionCheck: 'LEGACY_NOT_PRESENT' }),
       targetKind: resolved.targetKind,
       targetRef: resolved.targetRef,
       artifact: {
@@ -2153,7 +2226,8 @@ function installDeployment(options) {
 
 function usage() {
   console.error(`Usage:
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--abi arm64-v8a|x86_64] [--contracts-scope none|full|manga-image-cache|search-return-runtime] [--rationale <reviewed-item-reasons>] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
+  node scripts/hap-pipeline.mjs identity [--channel DEV] [--abi arm64-v8a|x86_64] [--build-mode debug|release]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--channel DEV|RC|REL] [--abi arm64-v8a|x86_64] [--contracts-scope none|full|manga-image-cache|search-return-runtime] [--rationale <reviewed-item-reasons>] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [--abi arm64-v8a|x86_64] [sync-core alias]
@@ -2169,7 +2243,16 @@ function main() {
     return;
   }
   const options = parseOptions(process.argv.slice(3));
-  if (command === 'build') build(options);
+  if (command === 'identity') {
+    const session = prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, {
+      abi: resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI)),
+      channel: option(options, '--channel', process.env.READER_APP_CHANNEL),
+      buildMode: option(options, '--build-mode', 'debug'),
+    });
+    console.log(JSON.stringify({ status: 'PLAN_ONLY', expectedVersion: session.expectedVersion,
+      buildIdentityInputs: session.contentSnapshot.buildIdentityInputs, fileCount: session.contentSnapshot.files.length }));
+  }
+  else if (command === 'build') build(options);
   else if (command === 'sync-signing') syncSigning(options);
   else if (command === 'sync-native' || command === 'sync-core') {
     for (const key of options.keys()) if (key !== '--abi') fail(`unknown sync-native argument: ${key}`, 2);
@@ -2181,6 +2264,8 @@ function main() {
     console.log(JSON.stringify({
       status: 'PASS',
       runId: verified.manifest.runId,
+      appBuildId: verified.manifest.expectedVersion?.appBuildId,
+      appIdentity: verified.manifest.expectedVersion ? 'PASS' : 'LEGACY_NOT_PRESENT',
       contractsScope: verified.manifest.gates?.contracts?.scope,
       harmonyContracts: verified.manifest.gates?.harmonyContracts,
       selectedStatus: verified.manifest.gates?.contracts?.selectedStatus,

@@ -1359,7 +1359,7 @@
       "member": "build",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "根装配提供当前阅读、详情及漫画恢复视图；当前Runtime保留的旧版快照待恢复事实仅在可交互书架展示，暂隐不清除原文件或标记迁移完成。展示和点击都检查当前前景与覆盖状态。",
+      "effectiveHost": "根装配提供当前阅读、详情及漫画恢复视图；当前Runtime保留的旧版快照待恢复事实仅在可交互书架展示，暂隐不清除原文件或标记迁移完成。Library47可移植操作支持不自动授权消费旧Host文件，automaticImportDeferred仅表达旧文件保留与当前书库继续使用现有数据，不提供重试或导入按钮。展示和点击都检查当前前景与覆盖状态。",
       "retireRule": "导航或原操作代次变化退役旧按钮。应用弹层、原生 Web、后台和书架转场暂停展示和操作，原 owner 保留回执；旧版快照提示随Runtime投影退役，无不支持的恢复按钮，也不进入阅读控制的布局。",
       "status": "registered-source-entry"
     },
@@ -1517,6 +1517,17 @@
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "Index 载入前的独立启动恢复页，消费当前 WindowStage 的 ReaderStartupContentOwner 发布状态。",
       "retireRule": "宿主退场取消订阅。按钮绑定当前启动 owner 和恢复发布代次，旧按钮不能重启新一次启动。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.showAboutFeedback::shared.transient",
+      "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+      "owner": "SettingsPage",
+      "member": "showAboutFeedback",
+      "family": "shared.transient",
+      "category": "普通完成/失败短反馈",
+      "effectiveHost": "当前已挂载且可输入的设置首页关于 Reader 子页；复制前及展示中检查 aboutPageId、isOpeningCurrent、runtime 和当前输入准入。",
+      "retireRule": "关于页返回、设置切换或退场清除 aboutPageId 并 reset 短反馈；旧代复制与短反馈失效，不涉及任何业务写入。",
       "status": "registered-source-entry"
     }
   ],

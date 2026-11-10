@@ -1,5 +1,5 @@
 import { ReaderPageScaffold } from './ReaderPageScaffold';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { ReaderMeasurementStore } from './ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from './ReaderPageGeometry';
@@ -60,15 +60,15 @@ export struct ReaderStandardPage {
   }
 
   private headerHeight(): number {
-    return this.measurements.read('standard:header', APP_HEADER_BAR_HEIGHT);
+    return this.measurements.readForGeneration('standard:header', this.measurementKey, APP_HEADER_BAR_HEIGHT);
   }
 
   private footerHeight(): number {
-    return this.contentLeadingRail > 0 ? 0 : this.measurements.read('standard:footer', 0);
+    return this.contentLeadingRail > 0 ? 0 : this.measurements.readForGeneration('standard:footer', this.measurementKey, 0);
   }
 
   private refreshGeometry(): void {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.viewportWidth;
     input.viewportHeight = this.viewportHeight;

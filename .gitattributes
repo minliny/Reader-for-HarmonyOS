@@ -1,0 +1,23 @@
+# Build-source checkouts use LF on every host; binary inputs retain exact bytes.
+*.ets text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.json5 text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.cmake text eol=lf
+CMakeLists.txt text eol=lf
+*.so -text
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.ttf -text
+*.otf -text
+*.woff2 -text
+
+# Preserve the exact vendored SDK bytes used by frozen a4438c05bb65 inputs.
+entry/vendor/core-harmony/Index.ts -text
+entry/vendor/core-harmony/sdk/smoke_report.ts -text

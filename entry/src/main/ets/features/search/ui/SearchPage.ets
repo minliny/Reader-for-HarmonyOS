@@ -1304,7 +1304,7 @@ export struct SearchPage {
           }
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
-              SearchResultCard({ group, viewState: this.viewState, queryRevision: this.viewState.revision,
+              SearchResultCard({ group: group, viewState: this.viewState, queryRevision: this.viewState.revision,
                 displayIdleRevision: this.displayIdleRevision,
                 expandedLayout: this.expandedLayout, cardWidth: this.searchResultWidth(),
                 focusId: this.resultFocusId(this.resultGroupKey(group.book)),

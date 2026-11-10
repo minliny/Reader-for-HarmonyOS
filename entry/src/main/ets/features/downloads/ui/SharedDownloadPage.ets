@@ -20,12 +20,13 @@ import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { prepareSharedDownloadFonts } from '../../../ui/foundation/ReaderFonts';
 import { DOWNLOAD_VISUAL, downloadVisualColor, downloadOverlayChromeStyle, sharedDownloadSheetMaxHeight, sharedDownloadContentInsets } from './SharedDownloadVisualSpec';
+import { SharedDownloadBookCover } from './SharedDownloadBookCover';
 import {
   TYPE_DOWNLOAD_CONTROL, TYPE_DOWNLOAD_META, TYPE_DOWNLOAD_TAG,
   TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_SHEET_TITLE, TYPE_DOWNLOAD_EMPTY_TITLE,
   TYPE_DOWNLOAD_CONFIRM_TITLE, TYPE_DOWNLOAD_META_LINE,
   TYPE_DOWNLOAD_STORAGE_META, TYPE_DOWNLOAD_STATUS_BODY, TYPE_DOWNLOAD_CONFIRM_BODY,
-  TYPE_DOWNLOAD_COVER, TYPE_DOWNLOAD_TAB, TYPE_DOWNLOAD_TAB_SELECTED,
+  TYPE_DOWNLOAD_TAB, TYPE_DOWNLOAD_TAB_SELECTED,
   TYPE_DOWNLOAD_SEARCH, TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
   TYPE_DOWNLOAD_CHAPTER_TITLE, TYPE_DOWNLOAD_QUICK_SELECT,
   TYPE_DOWNLOAD_STORAGE_TOTAL, TYPE_DOWNLOAD_STORAGE_VALUE,
@@ -269,7 +270,9 @@ export struct SharedDownloadPage {
   @Builder
   private fixedHeader() {
     if (this.fontsReady && !this.mainChromeOverflow()) {
-      Column() { this.topBar(); }.width('100%').enabled(!this.modalBlocking())
+      Column() { this.topBar(); }.width('100%')
+        .padding({ top: this.headerTop(), left: this.leftInset(), right: this.rightInset() })
+        .enabled(!this.modalBlocking())
         .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
         .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Transparent);
     }
@@ -548,13 +551,9 @@ export struct SharedDownloadPage {
   private bookRow(book: () => DownloadBookView, secondary: boolean, ownerGeneration: number = this.presentationGeneration) {
     Row({ space: DOWNLOAD_VISUAL.bookGap }) {
       Stack() {
-        if ((book().coverUrl?.trim().length ?? 0) > 0) {
-          Image(book().coverUrl ?? '').width(DOWNLOAD_VISUAL.coverWidth).height(this.bookHeight(book().key)).objectFit(ImageFit.Contain);
-        } else {
-          Text(book().title).fontFamily(TYPE_DOWNLOAD_COVER.fontFamily).fontWeight(TYPE_DOWNLOAD_COVER.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_COVER.fontSizeFp).lineHeight(TYPE_DOWNLOAD_COVER.lineHeightFp as number).halfLeading(true)
-            .fontColor(downloadVisualColor('ink', this.appThemeScheme)).textAlign(TextAlign.Center).padding(DOWNLOAD_VISUAL.coverPadding);
-        }
+        SharedDownloadBookCover({ bookKey: book().key, coverUrl: book().coverUrl ?? '',
+          presentationGeneration: ownerGeneration, coverWidth: DOWNLOAD_VISUAL.coverWidth,
+          coverHeight: this.bookHeight(book().key) });
       }.width(DOWNLOAD_VISUAL.coverWidth).height(this.bookHeight(book().key)).borderRadius(DOWNLOAD_VISUAL.coverRadius).clip(true)
         .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) })
         .backgroundColor(downloadVisualColor(book().contentKind === 'manga' ? 'softGreen' : 'soft', this.appThemeScheme))
@@ -2493,7 +2492,7 @@ export struct SharedDownloadPage {
   private frameStyle(): ReaderFrameStyle {
     const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
     return readerFrameStyle({ backgroundColor: pageBackground, headerBackground: pageBackground,
-      headerTransparent: true, footerBackground: pageBackground });
+      headerTransparent: false, footerBackground: pageBackground });
   }
 
   private currentMetrics(): ReaderWindowMetricsSnapshot {
@@ -2583,10 +2582,13 @@ export struct SharedDownloadPage {
     input.viewportHeight = this.availableHeight();
     input.measurementRevision = this.measurementRevision;
     input.chromeMode = overflow ? 'inline' : 'overlay';
-    input.headerTop = this.headerTop();
-    input.headerHeight = this.resolvedHeaderHeight();
-    input.headerInsetLeft = this.leftInset();
-    input.headerInsetRight = this.rightInset();
+    // The existing fixed-header material also owns its top/side breathing
+    // room, so scrolled search borders cannot paint through that lane.
+    // Moving those offsets into the slot preserves the bar and list bounds.
+    input.headerTop = 0;
+    input.headerHeight = this.headerTop() + this.resolvedHeaderHeight();
+    input.headerInsetLeft = 0;
+    input.headerInsetRight = 0;
     input.contentGap = this.headerContentGap();
     input.footerHeight = this.resolvedDockHeight();
     input.footerBottom = this.bottomInset();

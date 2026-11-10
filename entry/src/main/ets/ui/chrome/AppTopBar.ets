@@ -4,7 +4,7 @@ import {
   TOK_INK,
   TOK_SURFACE_SOLID,
 } from '../foundation/ReaderTokens';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -37,7 +37,7 @@ export struct AppTopBar {
   @BuilderParam trailing?: () => void;
 
   private barHeight(): number {
-    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale;
     return this.floating
       ? readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, scale, 0)
       : readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_APP_HOME_TITLE.lineHeightFp as number, scale, 6);
@@ -105,7 +105,7 @@ export struct AppTopBar {
     }
     return Math.max(
       TOK_HOME_TOP_BAR_INSET,
-      readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()),
+      readerInteractiveSafeLeft(readerWindowMetrics()),
     );
   }
 
@@ -116,7 +116,7 @@ export struct AppTopBar {
     }
     return Math.max(
       TOK_HOME_TOP_BAR_INSET,
-      readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()),
+      readerInteractiveSafeRight(readerWindowMetrics()),
     );
   }
 }

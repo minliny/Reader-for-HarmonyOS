@@ -1,6 +1,6 @@
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import {
   ReaderTextStyle,
   TYPE_SEARCH_BOOK_PANEL_INPUT,
@@ -424,7 +424,7 @@ export struct ReaderSearchField {
   }
 
   private bookFontScale(): number {
-    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 

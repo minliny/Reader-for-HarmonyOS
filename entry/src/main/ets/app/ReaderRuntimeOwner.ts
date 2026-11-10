@@ -12,6 +12,7 @@ import {
   type ReaderCoreRuntime,
   type RequestOptions,
 } from '@reader/core-harmony';
+import type { CoreStorageFormatInfo, CoreStorageCapabilities } from '@reader/core-harmony/sdk/reader_core';
 import {
   type BookSourceJsonSelection,
   type LocalBookAssetCommit,
@@ -112,8 +113,8 @@ type CoreStorageCompatibility = {
 };
 
 /** An opened Core's format capability; Host never derives this from a schema number. */
-type CoreStorageFormat = { format: 'legacy' | 'library47'; portableSnapshotSupported: boolean; };
-export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' | 'storageCapabilityUnavailable';
+type CoreStorageFormat = CoreStorageFormatInfo;
+export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' | 'storageCapabilityUnavailable' | 'automaticImportDeferred';
 
 type BundledSourceInstallSummary = {
   collectionRecords: number;
@@ -1723,13 +1724,14 @@ export class ReaderRuntimeOwner {
       hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
       this.legacySnapshotRecovery = 'none';
       if (startupReads[1]) {
-        // A valid persistent store may contain facts that the portable snapshot
-        // cannot represent. Only the opened Core can admit this full replacement.
-        // Deferred snapshots and their migration marker remain untouched.
-        if (storageFormat?.portableSnapshotSupported !== true) {
-          this.legacySnapshotRecovery = storageFormat === undefined ?
-            'storageCapabilityUnavailable' : 'unsupportedStorageFormat';
-          hilog.warn(LOG_DOMAIN, 'Reader', 'Legacy snapshot migration deferred by Core storage capability');
+        // Portable export/restore support is not permission to replay this old
+        // Host file into a current Library47 store. Keep its original data and
+        // migration marker intact; any explicit import remains Core-owned.
+        const operation = storageFormat?.capabilities;
+        if (operation === undefined || storageFormat?.format !== 'legacy' || !operation.legacyHostImport) {
+          this.legacySnapshotRecovery = operation === undefined ? 'storageCapabilityUnavailable' :
+            storageFormat?.format === 'library47' ? 'automaticImportDeferred' : 'unsupportedStorageFormat';
+          hilog.warn(LOG_DOMAIN, 'Reader', 'Legacy snapshot migration deferred: %{public}s', this.legacySnapshotRecovery);
         } else {
           await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>
             runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 }));
@@ -2223,10 +2225,37 @@ export class ReaderRuntimeOwner {
     const format = fields['format'];
     const portable = fields['portableSnapshotSupported'];
     if ((format !== 'legacy' && format !== 'library47') || typeof portable !== 'boolean' ||
-      (format === 'legacy' && !portable) || (format === 'library47' && portable)) {
+      Object.keys(fields).some((key: string): boolean => !['format', 'portableSnapshotSupported', 'capabilities'].includes(key))) {
       throw new Error('core.info returned invalid storage format capability');
     }
-    return { format, portableSnapshotSupported: portable };
+    if (fields['capabilities'] === undefined) return { format, portableSnapshotSupported: portable };
+    const capabilities = this.requireCoreStorageCapabilities(fields['capabilities']);
+    if (portable !== (capabilities.logicalExport && capabilities.logicalRestore && capabilities.legacyHostImport) ||
+      (format !== 'library47' && (capabilities.physicalBackup || capabilities.physicalRestore))) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    return { format, portableSnapshotSupported: portable, capabilities };
+  }
+
+  private requireCoreStorageCapabilities(value: unknown): CoreStorageCapabilities {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    const fields = value as Record<string, unknown>;
+    const keys: string[] = ['logicalExport', 'logicalRestore', 'legacyHostImport', 'physicalBackup', 'physicalRestore',
+      'webdavConfigRestore', 'activeLibrarySync', 'logicalExportRequiresDataPreflight',
+      'logicalRestoreRequiresCompleteCoverage', 'resourceEvidenceOnly', 'externalFilesIncluded'];
+    if (Object.keys(fields).length !== keys.length || keys.some((key: string): boolean => typeof fields[key] !== 'boolean') ||
+      fields['activeLibrarySync'] !== false || fields['logicalExportRequiresDataPreflight'] !== true ||
+      fields['logicalRestoreRequiresCompleteCoverage'] !== true || fields['resourceEvidenceOnly'] !== true ||
+      fields['externalFilesIncluded'] !== false) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    return { logicalExport: fields['logicalExport'] as boolean, logicalRestore: fields['logicalRestore'] as boolean,
+      legacyHostImport: fields['legacyHostImport'] as boolean, physicalBackup: fields['physicalBackup'] as boolean,
+      physicalRestore: fields['physicalRestore'] as boolean, webdavConfigRestore: fields['webdavConfigRestore'] as boolean,
+      activeLibrarySync: false, logicalExportRequiresDataPreflight: true, logicalRestoreRequiresCompleteCoverage: true,
+      resourceEvidenceOnly: true, externalFilesIncluded: false };
   }
 
   private requireSourceSwitchRecoveryCount(value: unknown): number {
