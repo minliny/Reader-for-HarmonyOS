@@ -20,7 +20,7 @@ export const CONTRACT_CASES = {
 };
 
 async function case_cold_entry_retry() {
-const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts');
+const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts');
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
@@ -30,18 +30,18 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
-const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const controlSelection = await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const controlSelection = await import('../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
-const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
@@ -60,7 +60,7 @@ class Gateway {
   hasPendingSourceSwitch() { return this.transactionId !== undefined; }
   remoteSession() { return this.source.kind === 'remote' ? this.source.session : undefined; }
 }
-const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
+const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
 Gateway.open = OpenGateway.open;
 const Reader = productionMotionMethods(source, ['ensureReadingSession','restartPreparedReadingEntry','activeGateway',
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
@@ -237,7 +237,7 @@ for(const stage of ['catalog','transaction'])for(const kind of ['chapter','bookm
 }
 
 async function case_failure_actions_input() {
-const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts');
+const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts');
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
@@ -247,17 +247,17 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
-const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const controlSelection = await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const controlSelection = await import('../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
-const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 // SDK-transformed production Builder: render actual actions and invoke their captured callbacks.
 for(const local of [false,true])for(const switchFailure of [false,true]) {
   const actions=[];
@@ -289,7 +289,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderPageInteractionLayer');
-  const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets',import.meta.url),'utf8');
+  const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets',import.meta.url),'utf8');
   syntax.propCollection.set('ReaderPageInteractionLayer',new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   for(const phase of ['loading','measuring','ready','failed'])for(const sourceError of ['', '目标目录失败']) {
@@ -307,7 +307,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
 }
 
 async function case_shell_window_owner() {
-const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts');
+const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts');
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
@@ -317,18 +317,18 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
-const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const controlSelection = await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const controlSelection = await import('../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
-const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
@@ -347,7 +347,7 @@ class Gateway {
   hasPendingSourceSwitch() { return this.transactionId !== undefined; }
   remoteSession() { return this.source.kind === 'remote' ? this.source.session : undefined; }
 }
-const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
+const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
 Gateway.open = OpenGateway.open;
 const Reader = productionMotionMethods(source, ['ensureReadingSession','restartPreparedReadingEntry','activeGateway',
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
@@ -429,7 +429,7 @@ function fixture(options={}) {
       bookTurnSession:{setEventListener:()=>calls.push('dispose-turn')},chapterWindow:{clear:()=>calls.push('dispose-window')},
       quickSearchPublication:{cancel(){}},autoPageCoordinator:{dispose(){}},
       screenAwakeLease:{dispose:()=>calls.push('dispose-screen')},readingSystemEventHost:{dispose:()=>calls.push('dispose-events')},
-      onExitRequestHandler:()=>calls.push('unregister'),});
+      withdrawExitRequest:()=>calls.push('unregister'),});
     for(const name of ['finishSessionCapsuleMorph','invalidatePageTurnRuntime','clearDeferredPageTurnWork',
       'restoreInitialWindowBrightness','onControlInputBoundaryChanged','invalidateReplaceMutationOwner','cancelPendingAutoPageStart',
       'clearAutoPageTimer','clearAutoPageSessionTimer','clearPageChromeStatusTimer','clearReadingRecordTimer','releaseAllReadingImages',
@@ -458,7 +458,7 @@ function fixture(options={}) {
 // Compile the exact retained ForEach from ReaderShell. Callbacks captured by
 // an old child must not unregister or publish chapter/catalog state for a new one.
 {
-  const shellPath=new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url);
+  const shellPath=new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url);
   const raw=readFileSync(shellPath,'utf8');
   const start=raw.indexOf('        ForEach([this.readingIdentityKey()]');
   const tail='        }, (identity: string): string => identity);';
@@ -470,21 +470,27 @@ function fixture(options={}) {
   syntax.propCollection.set('ReadingExperience',new Set([...readFileSync(source,'utf8').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   const {owner}=createReaderBuilderProbe(wrapper,['readingOwner'],{ReadingExperience:Child});
-  const Shell=productionMotionMethods(shellPath,['readingIdentityKey']);
+  const Shell=productionMotionMethods(shellPath,['readingIdentityKey','readingContentIsForeground','acceptsTextInput']);
   const calls=[];let bookmarkGuard;
-  Object.assign(owner,{sourceId:'source-A',bookId:'book',route:'reading',visible:true,
-    readingIdentityKey:Shell.prototype.readingIdentityKey,
+  Object.assign(owner,{sourceId:'source-A',bookId:'book',route:'reading',visible:true,contentKind:'text',inputAllowed:true,
+    readingIdentityKey:Shell.prototype.readingIdentityKey,readingContentIsForeground:Shell.prototype.readingContentIsForeground,
+    acceptsTextInput:Shell.prototype.acceptsTextInput,
     resolveSourceSwitchTransactionId:async()=>{calls.push('resolve');return 'transaction';},
     onLoadControlBookmarks:async(_source,_book,guard)=>{calls.push('bookmarks');bookmarkGuard=guard;}});
   const callbacks=['onExitRequestHandler','onExit','onExitCancelled','onReadingReady','onReadingCommitted','onReadingFailure',
     'onChapterCommitted','onDirectoryProjectionChanged','onRemoteSessionReady','onRetryFailedSourceSwitch',
-    'onDismissSourceSwitchFailure','onOpenDirectory','onOpenBookInfo','onSwitchSource','onOpenRulesManagement',
+    'onDismissSourceSwitchFailure','onOpenBookInfo','onSwitchSource','onOpenRulesManagement',
     'onDownloadChapter','onDownloadBook','onDeleteBookmarks','onCreateChapterStartBookmark','onTogglePageBookmark'];
   for(const name of callbacks)owner[name]=()=>calls.push(name);
   owner.readingOwner();const old=[...owner.children.values()][0].params;
   assert.equal(old.isReaderIdentityCurrent(),true);
   for(const name of callbacks)old[name](()=>{});
   assert.deepEqual(calls,callbacks);calls.length=0;
+  owner.inputAllowed=false;
+  old.onOpenBookInfo();old.onSwitchSource();old.onDownloadBook();old.onTogglePageBookmark();
+  old.onReadingReady(1);old.onReadingCommitted({});
+  assert.deepEqual(calls,['onReadingReady','onReadingCommitted'],'cover blocks new intents while the same reader can publish accepted work');
+  calls.length=0;owner.inputAllowed=true;
   await old.onLoadControlBookmarks('source-A','book',()=>true);assert.equal(bookmarkGuard(),true);
   assert.equal(await old.resolveSourceSwitchTransactionId('source-A','book'),'transaction');calls.length=0;
   owner.sourceId='source-B';assert.equal(old.isReaderIdentityCurrent(),false);assert.equal(bookmarkGuard(),false);
@@ -517,7 +523,7 @@ function fixture(options={}) {
 }
 
 async function case_chapter_loading_recovery() {
-const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts');
+const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts');
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { default: assert } = await import('node:assert/strict');
@@ -527,18 +533,18 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
-const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const controlSelection = await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } = await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const controlSelection = await import('../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
-const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
@@ -557,7 +563,7 @@ class Gateway {
   hasPendingSourceSwitch() { return this.transactionId !== undefined; }
   remoteSession() { return this.source.kind === 'remote' ? this.source.session : undefined; }
 }
-const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
+const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
 Gateway.open = OpenGateway.open;
 const Reader = productionMotionMethods(source, ['ensureReadingSession','restartPreparedReadingEntry','activeGateway',
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
@@ -632,8 +638,8 @@ function fixture(options={}) {
     assert.ok(node,`real loading member ${name}`);return node.getText(tree);});
   const call='      this.chapterLoadingContent();';
   const scene='@Component struct ReadingExperience {\n'+members.join('\n')+'\nbuild(){Stack(){'+call+'}}\n}';
-  const loadingSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderChapterLoadingState.ets',import.meta.url),'utf8');
-  const paperSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPaperBackground.ets',import.meta.url),'utf8');
+  const loadingSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderChapterLoadingState.ets',import.meta.url),'utf8');
+  const paperSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPaperBackground.ets',import.meta.url),'utf8');
   const metrics={systemInsets:new ReaderInsetsVp(22,0,0,0),cutoutInsets:new ReaderInsetsVp(30,7,0,0),
     gestureInsets:new ReaderInsetsVp(),navigationInsets:new ReaderInsetsVp(),keyboardInsets:new ReaderInsetsVp()};
   function loadingFixture(fields={},definition=scene) {
@@ -667,14 +673,14 @@ function fixture(options={}) {
     return{owner,loading,nodes,exit,controls};
   }
   for(const theme of ['day','night'])for(const active of [false,true])for(const reduced of [false,true]) {
-    const f=loadingFixture({appearanceSnapshot:{activeTheme:theme},appForeground:active,reduceMotion:reduced,isTablet:theme==='night'});
+    const f=loadingFixture({appearanceSnapshot:{activeTheme:theme},appForeground:active,reduceMotion:reduced,isTablet:false});
     assert.equal(f.loading().length,1);const layer=f.loading()[0],nodes=f.nodes();
     const spinner=nodes.filter(node=>node.type==='LoadingProgress');assert.equal(spinner.length,1);
     assert.ok(spinner[0].width>0&&spinner[0].height>0);assert.equal(spinner[0].color,readerAppearanceThemeStyle(theme).ink);assert.equal(spinner[0].enableLoading,active&&!reduced,'native loading enablement follows activity/motion policy');
     assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='第325章 目标章节'));
     assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='正在加载章节…'));
     assert.ok([...layer.nodes.values()].some(node=>node.backgroundColor===readerAppearanceThemeStyle(theme).paperStart&&
-      node.hitTestBehavior==='HitTestMode.Block'),'the loading state paints opaque paper and owns input');
+      node.hitTestBehavior==='HitTestMode.Default'),'the loading state masks the old body and admits the real cancel child');
     const back=nodes.find(node=>node.accessibilityText==='取消加载并返回');assert.ok(back?.onClick);
     const position=[...layer.nodes.values()].find(node=>node.type==='__Common__'&&node.position);
     assert.ok(position.position.x>=readerInteractiveSafeLeft(metrics)&&position.position.y>=readerVisualSafeTop(metrics),'cancel actor stays within current safe edges; exact design offsets require separate evidence');
@@ -746,8 +752,9 @@ function fixture(options={}) {
     assert.equal(r.phase,'failed');assert.equal(notices.length,1);
     assert.equal(loadingFixture({phase:r.phase,pendingControlSelection:ticket}).loading().length,0,
       'unresolved reconciliation exposes recovery rather than an indefinite spinner');
-    const failureSdk=boundedSurfaceSdk(),failure=failureSdk.consumer(raw,['readingFailureContent'],{LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle});
+    const failureSdk=boundedSurfaceSdk(),failure=failureSdk.consumer(raw,['readingFailureContent','readingFailureActions'],{LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle});
     Object.assign(failure,{sourceId:'target',sourceSwitchFailureMessage:'',failureCode:'章节加载失败',appearanceSnapshot:{activeTheme:'day'},
+      readerRecoveryView:{visible:false},
       readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:30}),
       retryReading:()=>r.retryReading(),openReaderControl(){},onSwitchSource(){}});
     failure.readingFailureContent();

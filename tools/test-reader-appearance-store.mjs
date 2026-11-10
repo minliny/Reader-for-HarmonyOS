@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
-import * as state from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const read = name => readFileSync(new URL(name, reading), 'utf8');

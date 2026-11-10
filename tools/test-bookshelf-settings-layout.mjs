@@ -16,18 +16,18 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { projectOperationFacts } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
-const { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisualSafeLeft, readerVisualSafeRight,
-  readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+  readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 const { loadReaderTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_PAGE_TITLE } = loadReaderTypographyRoles(typographySource);
-const file = new URL('../entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
-const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');
+const headerSource = readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
@@ -36,21 +36,16 @@ syntax.componentCollection.customComponents.add('ReaderRecoveryNotice');
 syntax.propCollection.set('ReaderRecoveryNotice',new Set(['view','actionLabel']));
 syntax.propCollection.set('PageBackBar', new Set(['titleColor']));
 class Header { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-let activeOwner, activeId;
-const Toggle = new Proxy({ name: 'Toggle' }, { get: (target, key) => key === 'name' ? target.name : (...args) => {
-  if (key !== 'pop') activeOwner.nodes.get(activeId)[key] = args.length === 1 ? args[0] : args;
-} });
 let metrics = new ReaderWindowMetricsSnapshot();
 class Notice {constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}}
-const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
+const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Header,
   ReaderWindowCoordinator: { metrics: () => metrics }, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
   READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, TYPE_PAGE_TITLE };
-const methods = ['settingsPending','modePending','pendingOverlay','retrySettingsAccepted','viewModeRecovery','build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery', 'modeOption', 'pageContent', 'pageHeader'];
+const methods = ['settingsPending','modePending','pendingOverlay','retrySettingsAccepted','viewModeRecovery','build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','preferenceControlIdentity','pageContent','pageHeader'];
 if (source.includes('private contentFrame(')) methods.push('contentFrame');
-const { Component } = createReaderBuilderProbe(source, methods, deps,
-  { onObserverEnter(owner, id) { activeOwner = owner; activeId = id; } });
+const { Component } = createReaderBuilderProbe(source, methods, deps);
 const { Component: HeaderComponent } = createReaderBuilderProbe(headerSource, ['trailing', 'build', 'leftInset', 'rightInset'], deps);
 if(selectedCase==='settings-render') {
 for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [390, 844, 32, 24, 24], [1280, 800, 48, 32, 48]]) {
@@ -58,6 +53,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
     new ReaderInsetsVp(0, 48, 0, safeBottom), new ReaderInsetsVp(left, 0, right, 0));
   const owner = new Component(undefined, {}); let backs = 0; const updates = [], selections = [];
   Object.assign(owner, { appThemeScheme: 'day', mode: 'cover', operation:{action:'load'}, viewModeSnapshot:{canonical:'cover'}, error: '', autoCheckUpdate: true,
+    navigationGeneration: 1, presentationRevision: 1, mounted: true, viewModeHost: { canSave: () => true },
     readerWindowMetricsRevision: 1, onBack: () => { backs++; }, onAutoCheckUpdate: value => updates.push(value),
     selectMode: value => selections.push(value) });
   owner.initialRender();
@@ -89,8 +85,9 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   const content=nodes.find(node=>node.type==='Column' && Number.isFinite(node.padding?.top) && Number.isFinite(node.padding?.bottom));
   assert.ok(content); assert.equal(content.padding.left,frame.left); assert.equal(content.padding.right,frame.right); assert.ok(content.padding.bottom>=safeBottom);
   const toggle = nodes.find(node => node.type === 'Toggle');
-  toggle.onChange(false); toggle.onChange(true); assert.deepEqual(updates, [false, true]);
-  for (const label of ['封面', '列表']) nodes.find(node => node.type === 'Text' && node.create === label).onClick();
+  toggle.onChange(false); assert.deepEqual(updates, [false]);
+  toggle.onChange(false); assert.deepEqual(updates, [false], 'old native switch callback is retired');
+  for (const label of ['封面', '列表']) nodes.find(node => node.type === 'Button' && node.accessibilityText === label).onClick();
   assert.deepEqual(selections, ['cover', 'list']);
   for (const scheme of ['night', 'day']) {
     // StorageLink delivery is the platform seam: deliver one global scheme to
@@ -100,7 +97,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
     assert.equal(title.fontColor, readerAppColor('TOK_INK', scheme));
     assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme));
     assert.equal(nodes.find(node => node.type === 'Text' && node.create === '封面').fontColor,
-      readerAppColor('app.BookshelfSettingsPage.modeOption.onSelected', scheme));
+      readerAppColor('app.selection.onMode', scheme));
   }
 }
 const retryOwner = new Component(undefined, {});
@@ -118,7 +115,7 @@ if(selectedCase==='read-state') {
 function readStatePage(definition=source) {
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   const Model=sdk.consumer(definition,['operation','viewModeSnapshot','modeLoadBusy','modeReconcileBusy',
-    'settingsPending','modePending','viewModeRecovery','pageContent','modeOption'],{readerRecoveryView}).constructor;
+    'settingsPending','modePending','viewModeRecovery','pageContent','preferenceControlIdentity'],{readerRecoveryView}).constructor;
   return (facts,extra={})=>{
     const owner=new Model(undefined,{}),reads=[];
     Object.assign(owner,{appThemeScheme:'day',operation:{action:'load',readFacts:facts},viewModeSnapshot:{canonical:undefined,readFacts:facts},
@@ -172,7 +169,7 @@ for(const phase of ['loading','refreshing']){
   const actual=actualModeHost({loadBookshelfViewMode:()=>new Promise(resolve=>{finishLoad=resolve;})});
   let finishLoad;
   const page=sdk.consumer(source,['operation','viewModeSnapshot','modeLoadBusy','modeReconcileBusy','mounted','revision','mode',
-    'settingsPending','modePending','viewModeRecovery','pageContent','modeOption','loadMode','applyModeSnapshot','modeFeedback','modePending','aboutToDisappear'],{readerRecoveryView});
+    'settingsPending','modePending','viewModeRecovery','pageContent','preferenceControlIdentity','loadMode','applyModeSnapshot','modeFeedback','aboutToDisappear'],{readerRecoveryView});
   Object.assign(page,{mounted:true,revision:0,presentationRevision:0,appThemeScheme:'day',operation:{action:'load',readFacts:projectOperationFacts({phase:'idle'})},viewModeHost:actual,
     viewModeSnapshot:{canonical:undefined},lastModeFeedback:'',getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
   page.loadMode();assert.equal(page.modeLoadBusy,true);assert.equal(actual.current().readFacts,undefined);

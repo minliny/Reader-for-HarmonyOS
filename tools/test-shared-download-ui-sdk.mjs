@@ -16,7 +16,7 @@ const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`), compiler = require(`${sdk}/lib/process_component_class.js`), main = require(`${sdk}/main.js`), utils = require(`${sdk}/lib/utils.js`), ui = require(`${sdk}/lib/process_ui_syntax.js`), componentMap = require(`${sdk}/lib/component_map.js`);
 const root = resolve('entry/src/main/ets');
-const selected=['features/downloads/SharedDownloadPage.ets'];const files=[];
+const selected=['features/downloads/ui/SharedDownloadPage.ets'];const files=[];
 for(const relative of selected){const file=resolve(root,relative);files.push(file);const tree=ts.createSourceFile(file,readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);for(const node of tree.statements.filter(ts.isImportDeclaration)){const module=node.moduleSpecifier.text;if(!module.startsWith('.'))continue;const target=resolve(file,'..',module),dependency=[target+'.ets',target+'.ts'].find(existsSync);if(dependency&&!files.includes(dependency))files.push(dependency);}}
 const trees = new Map(), components = new Map();
 const parseFailures = [];
@@ -85,7 +85,7 @@ for (const relative of selected) {
     }]);
     transformed.dispose();
     assert.deepEqual(diagnostics, [], `${relative}: real SDK component transform`);
-    if (relative === 'features/downloads/SharedDownloadPage.ets') {
+    if (relative === 'features/downloads/ui/SharedDownloadPage.ets') {
         // The SDK mutates the supplied class while lowering. Inspect a fresh
         // AST of the identical input text for source constructors/signatures;
         // retain the real lowered class separately for emitted-call assertions.
@@ -115,6 +115,19 @@ for (const relative of selected) {
             'real SDK lowering observes subsequent structured storage publications');
         assert.match(output, /Button\.createWithChild\(\{\s*type:\s*ButtonType\.Normal/, 'the actual SDK lowering retains the explicit Normal constructor');
         assert.doesNotMatch(output, /Button\.createWithChild\(\s*\)/, 'SDK output contains no implicit Capsule constructor');
+        for (const name of ['sheetOverlay', 'operationsSurface', 'confirmationOverlay']) {
+            const method = lowered.members.find(member => member.name?.getText(tree) === name);
+            const native = ts.createPrinter().printNode(ts.EmitHint.Unspecified, method, tree);
+            assert.match(native, /\.hitTestBehavior\(HitTestMode\.Default\)/, `${name} admits its real descendants`);
+            assert.doesNotMatch(native, /HitTestMode\.Block/, `${name} cannot swallow clicks intended for native actions`);
+        }
+        const frameTree = trees.get(resolve(root, 'ui/surfaces/ReaderBoundedSurface.ets'));
+        const frame = frameTree.statements.find(n => n.name?.getText(frameTree) === 'ReaderBoundedFrameModifier');
+        const apply = frame.members.find(n => n.name?.getText(frameTree) === 'applyNormalAttribute');
+        const actionSheet = apply.body.statements.find(n => ts.isIfStatement(n) &&
+            n.expression.getText(frameTree) === "this.id === 'reader-action-sheet'");
+        assert.match(actionSheet.thenStatement.getText(frameTree), /\.hitTestBehavior\(HitTestMode\.Default\)/,
+            'the actual bounded action-sheet frame also admits its native children');
         const selectCalls = [], inlineSelectCalls = [];
         const visitSelects = n => {
             if ((ts.isCallExpression(n) || ts.isEtsComponentExpression(n)) && ts.isIdentifier(n.expression) && n.expression.text === 'Select') selectCalls.push(n);

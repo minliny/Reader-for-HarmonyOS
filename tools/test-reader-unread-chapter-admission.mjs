@@ -5,12 +5,12 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
-const { RemoteReadingSourceError, remoteReadingFailureKindOf } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const { RemoteReadingSourceError, remoteReadingFailureKindOf } = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
-const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['loadInitialChapter', 'openChapter', 'loadSessionChapter', 'readingTocEntries', 'requireKnownChapter', 'normalizedRequestedChapter'],
   { ReadingSurfaceLayoutMap, RemoteReadingSourceError, remoteReadingFailureKindOf, RemoteChapterCacheRefreshError, LOCAL_READING_SOURCE_ID: 'local' });
 const deferred = () => { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; };

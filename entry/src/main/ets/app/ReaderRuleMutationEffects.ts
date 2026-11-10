@@ -1,12 +1,13 @@
 import type { JsonObject } from '@reader/core-harmony';
-import { RULES_MUTATION_METHODS } from '../features/settings/RulesMutationContract';
+import { RULES_MUTATION_METHODS } from '../features/settings/application/RulesMutationContract';
 
 export interface ReaderRuleMutationEffectRequest { method: string; params: JsonObject; }
 
 /** Classification only. The SDK must still receive the original typed envelope.
- * Reuse the closed Core/Host rule family, never dispatch or reinterpret its DTO.
+ * Reuse the existing effects for versioned Core mutations.
  * Malformed or future envelopes cannot borrow another command's effects. */
 export function readerRuleMutationEffects(method: string, params: JsonObject): ReaderRuleMutationEffectRequest {
+  if (method === 'manga.sourceSwitch.commit.v2') return { method: 'manga.sourceSwitch.commit', params };
   if (method !== 'rules.mutation.apply' && method !== 'bookshelf.management.mutation.apply') return { method, params };
   const mutation = params['mutation'];
   if (typeof params['operationId'] !== 'string' || (params['operationId'] as string).trim().length === 0 ||

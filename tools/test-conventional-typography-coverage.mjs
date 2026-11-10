@@ -13,7 +13,7 @@ const { auditTypographyConsumers, typographyExpressionContext, isSharedTypograph
 const { registeredProducerTypographySlots } = await import('./lib/architecture-shared-producer-contract.mjs');
 
 
-const root = new URL('../entry/src/main/ets/features/', import.meta.url);
+const root = new URL('../entry/src/main/ets/', import.meta.url);
 const producerContract = JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json', import.meta.url), 'utf8'));
 
 // The user-enabled layout inspector is a runtime diagnostic, like the exact
@@ -21,7 +21,7 @@ const producerContract = JSON.parse(readFileSync(new URL('./fixtures/architectur
 // Scope its physical telemetry label to one actual owner/method/tuple. It is
 // neither a shared typography producer nor a common-directory exemption.
 const diagnosticTypography = new Map([
-  ['common/ReaderLayoutDebugOverlay.ets', {
+  ['app/composition/ReaderLayoutDebugOverlay.ets', {
     owner: 'ReaderLayoutDebugOverlay', method: 'build', kind: 'Text',
     modifiers: { fontSize: { expression: '10', extra: [] } },
   }],
@@ -44,8 +44,8 @@ function diagnosticTypographyNodes(source, file) {
 // an obsolete debt entry. Retain only actual public roles/specs and the exact
 // finite producer slots already verified by the shared contract.
 function verifySource(source, file) {
-  const expressionContext = typographyExpressionContext(source, 'entry/src/main/ets/features/' + file);
-  const producerSlots = registeredProducerTypographySlots(source, 'entry/src/main/ets/features/' + file, producerContract);
+  const expressionContext = typographyExpressionContext(source, 'entry/src/main/ets/' + file);
+  const producerSlots = registeredProducerTypographySlots(source, 'entry/src/main/ets/' + file, producerContract);
 
   const diagnosticNodes = diagnosticTypographyNodes(source, file);
   let consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, approvedArguments = 0, diagnosticArguments = 0;
@@ -65,7 +65,7 @@ function verifySource(source, file) {
 let files=0,consumers=0,sharedArguments=0,sharedProducerArguments=0,approvedArguments=0,diagnosticArguments=0;
 // Exercise actual current consumers in memory. Neither negative control edits
 // production files or creates a second rendering implementation.
-const menuFile = 'common/ReaderActionMenuSurface.ets';
+const menuFile = 'ui/surfaces/ReaderActionMenuSurface.ets';
 const menu = readFileSync(new URL(menuFile, root), 'utf8');
 const action = auditTypographyConsumers(menu, menuFile).find(node => node.method === 'actionRow' && node.modifiers.fontWeight);
 assert.ok(action, 'actual shared menu action-row typography carrier');
@@ -74,7 +74,7 @@ const weight = action.modifiers.fontWeight;
 assert.throws(() => verifySource(menu.slice(0, weight.start) + 'FontWeight.Medium' + menu.slice(weight.end), menuFile),
   /private style.*FontWeight\.Medium|finite shared physical inputs\/role bindings changed/, 'retired menu weight must not regain admission');
 
-const selectFile = 'settings/SettingsSelectOverlay.ets';
+const selectFile = 'features/settings/ui/SettingsSelectOverlay.ets';
 const select = readFileSync(new URL(selectFile, root), 'utf8');
 const phoneMethod = 'private phoneOption(option: string, index: number) {';
 assert.equal(select.split(phoneMethod).length, 2, 'actual phone selection consumer method');
@@ -83,7 +83,7 @@ const legacySelectedRow = select.replace(phoneMethod, phoneMethod + '\n    Text(
 assert.throws(() => verifySource(legacySelectedRow, selectFile),
   /private style.*FontWeight\.Bold/, 'retired selected-weight row must not regain admission');
 
-const diagnosticFile = 'common/ReaderLayoutDebugOverlay.ets';
+const diagnosticFile = 'app/composition/ReaderLayoutDebugOverlay.ets';
 const diagnosticSource = readFileSync(new URL(diagnosticFile, root), 'utf8');
 verifySource(diagnosticSource,diagnosticFile);
 assert.throws(() => verifySource(diagnosticSource.replace('.fontSize(10)', '.fontSize(99)'), diagnosticFile),
@@ -92,7 +92,7 @@ assert.throws(() => verifySource(diagnosticSource.replace('.fontSize(10)', '.fon
   /exact diagnostic typography/, 'diagnostic tuple cannot admit another physical style');
 assert.throws(() => verifySource(diagnosticSource.replace('Canvas(this.drawingContext)', "Text('copied').fontSize(10); Canvas(this.drawingContext)"), diagnosticFile),
   /exact single diagnostic telemetry carrier/, 'diagnostic admission cannot hide a copied label');
-assert.throws(() => verifySource(diagnosticSource, 'common/ReaderLayoutDebugOverlayCopy.ets'),
+assert.throws(() => verifySource(diagnosticSource, 'features/common/ReaderLayoutDebugOverlayCopy.ets'),
   /private style/, 'diagnostic admission cannot be copied to another common path');
 
 console.log(`PASS selected typography negative controls: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} public role/spec arguments + ${sharedProducerArguments} exact finite producer arguments; ${approvedArguments} exact approved manga arguments + ${diagnosticArguments} exact diagnostic telemetry argument, no unregistered private arguments or retired debt; 6 actual-source regression controls rejected`);

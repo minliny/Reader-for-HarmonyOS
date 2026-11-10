@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
-const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url),
+const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url),
   ['saveVisible', 'positionIdentity', 'updateViewport', 'displayChapterTitle']);
 const manifest = { chapter: { sourceId: 's', bookId: 'b', chapterId: '/second' }, manifestVersion: 'v1' };
 const facts = [0, 1, 2].map(ordinal => ({ ordinal, pageId: `page-${ordinal}` }));

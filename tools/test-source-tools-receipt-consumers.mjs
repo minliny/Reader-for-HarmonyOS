@@ -11,12 +11,12 @@ const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
 const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts),ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence'),readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
-const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource}')};
-const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
-const {SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=load('features/source/SourceToolsOrchestrator.ets','{SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts});
+const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('platform/network/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/application/ReaderSourceCategory.ts','{classifyReaderSource}')};
+const SourceGateway=load('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
+const {SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=load('features/source/application/SourceToolsOrchestrator.ets','{SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts});
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-for(const [name,path] of [['SourceToolsPage','features/source/SourceToolsPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets'],['ReaderRecoveryNotice','features/common/ReaderRecoveryNotice.ets'],['ReaderPageState','features/common/ReaderPageState.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));}
+for(const [name,path] of [['SourceToolsPage','features/source/ui/SourceToolsPage.ets'],['ReaderRecoveryAction','ui/feedback/ReaderRecoveryAction.ets'],['ReaderRecoveryNotice','ui/feedback/ReaderRecoveryNotice.ets'],['ReaderPageState','ui/feedback/ReaderPageState.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));}
 const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const document=id=>JSON.stringify({bookSourceUrl:id,bookSourceName:id,bookSourceType:0,enabled:true});
@@ -34,7 +34,7 @@ function makeIndex(r){const index=createReaderBuilderProbe(source('pages/Index.e
 function fixture(){const r=rpc();currentOwner=r;const index=makeIndex(r);const owner=index.getSourceToolsOrchestrator();
  const settle=async()=>{await owner.operationTail;};
  const refresh=()=>{index.sourceToolsContent();return [...index.children.values()].at(-1).params;};
- const page=()=>{const child=refresh();const page=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['statusCard','recovery','recoveryAction','originalRecoveryActions','originalRecoveryIdentity','isCurrentOriginalRecovery','reconcileOriginal','continueOriginal'],{readerRecoveryView,ReaderRecoveryAction:Child,ReaderRecoveryNotice:Child,ReaderPageState:Child}).owner;Object.assign(page,child,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();return page;};
+ const page=()=>{const child=refresh();const page=createReaderBuilderProbe(source('features/source/ui/SourceToolsPage.ets'),['statusCard','recovery','recoveryAction','originalRecoveryActions','originalRecoveryIdentity','isCurrentOriginalRecovery','reconcileOriginal','continueOriginal'],{readerRecoveryView,ReaderRecoveryAction:Child,ReaderRecoveryNotice:Child,ReaderPageState:Child}).owner;Object.assign(page,child,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();return page;};
  const retry=p=>{const c=[...p.children.values()][0];if(c.params.onAction)c.params.onAction();else c.params.onReconcile(c.params.view?.generation??c.params.generation);};
  return{r,index,owner,settle,refresh,page,retry,open:async()=>{owner.open([]);await settle();},edit:async()=>{owner.openEditor('https://a.test');await settle();owner.updateEditorDraft(document('https://a.test'));},receipt:()=>index.sourceToolsSnapshot.receipt};}
 for(const action of ['toggle','delete','editor']){
@@ -66,7 +66,7 @@ for(const action of ['toggle','delete','editor']){
 // action tuples; users retain read-only checking/export/recovery access.
 {
  const f=fixture();await f.open();f.owner.selectAll();f.r.writeFail=true;f.owner.setSelectedEnabled(['https://a.test'],false);await f.settle();
- const shared=foundationControls();const p=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['batchCard','heading','actionButton','canWriteSources'],shared.dependencies,shared.hooks).owner;
+ const shared=foundationControls();const p=createReaderBuilderProbe(source('features/source/ui/SourceToolsPage.ets'),['batchCard','heading','actionButton','canWriteSources'],shared.dependencies,shared.hooks).owner;
  Object.assign(p,f.refresh(),{appThemeScheme:'day'});p.batchCard();const count=f.r.calls.length;
  for(const label of ['启用','停用','删除']){const node=shared.nodes(p).find(n=>n.type==='Text'&&n.create===label);assert.ok(node,label);assert.equal(node.opacity,.62);node.onClick();}
  assert.equal(f.r.calls.length,count);assert.equal(f.owner.current().receipt.receipt.confirmation,'unknown');

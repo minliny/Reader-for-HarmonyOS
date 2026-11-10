@@ -13,21 +13,21 @@ const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-pr
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
 const {mangaSurfaceSdkDependencies} = await import('./lib/manga-surface-sdk-probe.mjs');
 const {actualGeneralSettingsTypes,actualGeneralSettingsHostField} = await import('./lib/general-settings-owner-probe.mjs');
-const {actualSourceManagementTypes,actualSourceManagementHostField} = await import('./lib/source-management-owner-probe.mjs');
+const {actualSourceJourneyTypes} = await import('./lib/source-management-owner-probe.mjs');
 const {actualBookshelfOperationTypes,actualBookshelfHostField} = await import('./lib/bookshelf-operation-owner-probe.mjs');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
-const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
-const {sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight} = await import('../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts');
+const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
+const {sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight} = await import('../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
 
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`),map=require(`${sdk}/lib/component_map.js`);
 const read=relative=>readFileSync(new URL(`../entry/src/main/ets/${relative}`,import.meta.url),'utf8');
-const index=read('pages/Index.ets'),shell=read('features/shell/ReaderShell.ets'),panel=read('features/reading/SourceSwitchPanel.ets'),window=read('features/source/SourceSwitchWindow.ets');
+const index=read('pages/Index.ets'),shell=read('features/reading/ui/ReaderShell.ets'),panel=read('features/source/ui/SourceSwitchPanel.ets'),window=read('features/source/ui/SourceSwitchWindow.ets');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 function component(name,source){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(row=>row[1])));}
-component('ReaderShell',shell);component('MangaReadingSurface',read('features/manga/MangaReadingSurface.ets'));
+component('ReaderShell',shell);component('MangaReadingSurface',read('features/manga/ui/MangaReadingSurface.ets'));
 component('SourceSwitchPanel',panel);component('SourceSwitchWindow',window);component('ArkWebExecutionHost','');
 for(const name of ['ReadingExperience','ReaderFullDirectory','ReaderStatusBarPaper'])component(name,'');
 const noOp=()=>{};
@@ -46,7 +46,7 @@ const assertSharedScrim=transition=>{
 };
 const runtimePort={supportsCoreCapability:()=>true},Runtime=runtimeOwnerIdentityProbe(()=>runtimePort);
 const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:Runtime});
-const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
+const sourceTypes=actualSourceJourneyTypes({ReaderRuntimeOwner:Runtime});
 const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime});
 // Constructor inputs are copied from the actual selected component declarations.
 // In particular, scope identity must come from Index's State initializer, not a
@@ -82,7 +82,7 @@ function indexOwner(overrides={}){
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
   const name=node.expression.text;if(!syntax.componentCollection.customComponents.has(name))component(name,'');deps[name]=Child;
  }ts.forEachChild(node,visit);};visit(tree);
- const owner=reactiveBuilder(index,[...sourceSwitchConstructorFields,'build','sourceSwitchOverlayContent','canCancelMangaSourcePreparation','nextNavigationGeneration','onDirectoryChapterSelected','directoryRecovery','directoryOperationBindingId','directoryOperationPresentationId',...retirementMembers],deps);
+ const owner=reactiveBuilder(index,[...sourceSwitchConstructorFields,'build','sourceSwitchOverlayContent','canCancelMangaSourcePreparation','nextNavigationGeneration','onDirectoryChapterSelected','directoryRecovery',...retirementMembers],deps);
  Object.assign(owner,{route:'reading',readingSessionActive:true,readingContentKind:'manga',detailInBookshelf:false,
   detailBook:{sourceId:'source',bookId:'book',title:'Manga',author:'Author',contentKind:'manga'},detailToc:[{index:3,title:'First'},{index:7,title:'Next'}],
   requestedChapterIndex:3,mangaChapterRequestGeneration:4,mangaChapterStartRequestGeneration:4,navigationGeneration:2,
@@ -99,7 +99,7 @@ function indexOwner(overrides={}){
   rssEditorOrchestrator:undefined,rssOrchestrator:undefined,discoverOrchestrator:undefined,rulesManagementOrchestrator:undefined,syncOrchestrator:undefined,
   ...overrides});
  owner.settingsHost=actualGeneralSettingsHostField(owner,settingsTypes.SettingsHost);
- owner.sourceHost=actualSourceManagementHostField(owner,sourceTypes.SourceHost);
+ owner.sourceJourney=new sourceTypes.SourceJourneyPresentation();
  owner.bookshelfHost=actualBookshelfHostField(owner,shelfTypes.Host,{setOrCreate(){}});
  return owner;
 }
@@ -136,26 +136,32 @@ for(const locked of [false,true]){
  const shellOwner=reactiveBuilder(shell,[...shellConstructorFields,'build','mangaSurface','mangaIdentityKey','keepsMangaReadingSession','onMangaChapterReady','selectAdjacentMangaChapter','sourceSwitchOverlayContent','overlayStatusBarUnderlay','chromeMetrics'],{
   ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,SourceSwitchPanel:Child,TransitionEffect:transitionEffects,curves:sourceCurves,SOURCE_SWITCH_VISUAL,ReaderRuntimeOwner:{current:()=>({})}}, {initialParams:props});
  shellOwner.initialRender();
- const scrim=[...shellOwner.nodes.values()].find(node=>node.transition!==undefined);
- assertSharedScrim(scrim.transition);
  const panelProps=[...shellOwner.children.values()].find(row=>row.params.currentSourceId!==undefined).params;
  assert.equal(panelProps.contentKind,'manga');
  assert.equal(panelProps.allowCancelWhileSwitching,!locked);
  const detail=indexOwner({route:'detail',readingSessionActive:false,sourceSwitchVisible:true,mangaSourceSwitchCommitGeneration:locked?2:-1});
  detail.initialRender();assert.equal(child(detail,'SourceSwitchPanel').allowCancelWhileSwitching,!locked);
- const detailScrims=[...detail.nodes.values()].filter(node=>node.type==='Stack'&&typeof node.onClick==='function');
+ const {sourceSwitchMotionSdk}=await import('./lib/source-switch-sdk-consumer.mjs');
+ const motion=sourceSwitchMotionSdk(sourceCurves,{EaseIn:'ease-in',EaseOut:'ease-out',EaseInOut:'ease-in-out',Linear:'linear'});
+ const wrapperDeps={...mangaSurfaceSdkDependencies,...motion,SourceSwitchWindow:Child,TransitionEffect:transitionEffects};
+ const detailPanel=reactiveBuilder(panel,[...panelConstructorFields,'build','panel'],wrapperDeps,
+  {initialParams:child(detail,'SourceSwitchPanel')});
+ detailPanel.initialRender();
+ const detailScrims=[...detailPanel.nodes.values()].filter(node=>node.type==='Stack'&&typeof node.onClick==='function');
  assert.equal(detailScrims.length,1,'the actual manga Index overlay has one dismissing scrim');
  assert.equal(detailScrims[0].width,'100%');assert.equal(detailScrims[0].height,'100%');
  assertSharedScrim(detailScrims[0].transition);
 
  // The SDK emits this outer frame immediately before its inner scrim. Bind
  // alignment to that frame so another bottom-aligned Index stack cannot satisfy it.
- const detailFrame=detail.nodes.get(detailScrims[0].id-1);
+ const detailFrame=detailPanel.nodes.get(detailScrims[0].id-1);
  assert.equal(detailFrame.type,'Stack');assert.equal(detailFrame.create.alignContent,'Alignment.Bottom');
  assert.equal(detailFrame.width,'100%');assert.equal(detailFrame.height,'100%');
  // Compile the real Panel wrapper to verify it forwards the parent decision.
- const wrapper=reactiveBuilder(panel,[...panelConstructorFields,'build'],{SourceSwitchWindow:Child},{initialParams:panelProps});
+ const wrapper=reactiveBuilder(panel,[...panelConstructorFields,'build','panel'],wrapperDeps,{initialParams:panelProps});
  wrapper.initialRender();
+ const scrim=[...wrapper.nodes.values()].find(node=>node.transition!==undefined);
+ assertSharedScrim(scrim.transition);
  const final=[...wrapper.children.values()][0].params;assert.equal(final.allowCancelWhileSwitching,!locked);
  const visual=reactiveBuilder(window,['appThemeScheme','readerWindowMetricsRevision','selectionPending','allowCancelWhileSwitching','reduceMotion','consumeTopInset',
   'onStop','onClose','onRetry','onRefresh','onSelectCandidate','onRollback',

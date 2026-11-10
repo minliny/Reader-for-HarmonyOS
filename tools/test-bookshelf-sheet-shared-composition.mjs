@@ -10,12 +10,12 @@ const { readFileSync } = await import('node:fs');
 const { createHash } = await import('node:crypto');
 const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
-const source = read('features/bookshelf/BookshelfBookActionSheet.ets');
-const actionsSource = read('features/common/ReaderSheetActionList.ets');
+const source = read('features/bookshelf/ui/BookshelfBookActionSheet.ets');
+const actionsSource = read('features/bookshelf/ui/ReaderSheetActionList.ets');
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/bookshelf-sheet-shared-baseline.json', import.meta.url)));
 
 
@@ -23,8 +23,7 @@ const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/bookshelf-sh
 // content/header flow and four vertical actions. Historical source remains
 // provenance above, not an equality oracle for the rejected 270/24 box.
 const approvedBookSheet={contentBottom:20,titleSize:24,titleLine:32.4,icon:22,tile:36,row:56,secondaryRow:72,divider:.5,dividerInset:48};
-const rendererSource=read('features/common/ReaderActionMenuSurface.ets');
-const contentSource=read('features/common/ReaderActionSheetContent.ets');
+const rendererSource=read('ui/surfaces/ReaderActionMenuSurface.ets');
 // ColorMetrics and ColorFilter are native ports. Feed the two actual theme
 // resources as channels, and retain the production matrix without inventing
 // a host rasterizer or replacing the bookshelf business/render methods.
@@ -64,8 +63,6 @@ function open(id = 'opening:1', options = {}, extra = {}) {
   p.hooks.lifecycleChildren = true;
   p.hooks.childSources.ReaderActionMenuSurface=rendererSource;
   p.deps.ReaderActionMenuSurface=createReaderBuilderProbe(rendererSource,boundedMembers(rendererSource),{...p.deps,...iconPlatform},p.hooks).Component;
-  p.hooks.childSources.ReaderActionSheetContent=contentSource;
-  p.deps.ReaderActionSheetContent=createReaderBuilderProbe(contentSource,boundedMembers(contentSource),p.deps,p.hooks).Component;
   p.hooks.childSources.ReaderSheetActionList = actionsSource;
   p.deps.ReaderSheetActionList = createReaderBuilderProbe(actionsSource, boundedMembers(actionsSource), p.deps, p.hooks).Component;
   const calls = [];
@@ -76,7 +73,7 @@ function open(id = 'opening:1', options = {}, extra = {}) {
     onEditGroup: () => calls.push('group'), onRemoveFromBookshelf: () => calls.push('remove'), ...extra });
   owner.initialRender();
   const actionOwner = p.walk(owner).find(child => child instanceof p.deps.ReaderSheetActionList);
-  const content = p.walk(owner).find(child => child instanceof p.deps.ReaderActionSheetContent);
+  const content = p.walk(actionOwner).find(child => child instanceof p.deps.ReaderActionMenuSurface);
   const frame = p.walk(owner).find(child => child instanceof p.deps.ReaderBoundedSurface);
   const header = p.walk(owner).find(child => child instanceof p.deps.ReaderBoundedSurfaceHeader);
   return { p, owner, actionOwner, frame, header, calls,
@@ -161,7 +158,7 @@ assert.throws(() => {
   const bad = open('opening:1', { leafSource: source.replace('actions: (): void => { this.sheetActions(); }', 'actions: this.sheetActions') });
   assert.equal(bad.actionOwner.presentationId, 'opening:1', 'direct Builder reference loses the business receiver');
 }, /opening:1/);
-const frameSource = read('features/common/ReaderBoundedSurface.ets');
+const frameSource = read('ui/surfaces/ReaderBoundedSurface.ets');
 const frameMarker="instance.width('100%').padding({ bottom: spec.contentBottom });";
 assert.ok(frameSource.includes(frameMarker));
 const changedFrame = frameSource.replace(frameMarker,"instance.width('100%').height(270).padding({ bottom: spec.contentBottom });");

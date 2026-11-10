@@ -1,22 +1,22 @@
-import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import * as fontFamilies from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderDirectoryNavigationGateway, decodeReaderDirectoryOpen, decodeReaderDirectoryPage,
-  readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
+  readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts';
 
-import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
 import { mangaGridBuilderMembers, mangaGridProbeDependencies, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
 import { mangaDirectoryEntryRowSdk } from './lib/manga-directory-entry-row-probe.mjs';
 
-const listPath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
+const listPath = new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url);
 const listSource = readFileSync(listPath, 'utf8');
-const fallbackSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets', import.meta.url), 'utf8');
+const fallbackSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets', import.meta.url), 'utf8');
 const identity = { sourceId: 'manga', bookId: 'book', catalogRevision: 'c1', structureRevision: 's1' };
 const wireGroup = { nodeId: 'g', title: '确定卷组', kind: 'group', depth: 0,
   hasChildren: true, expanded: true, readableDescendantCount: 318 };

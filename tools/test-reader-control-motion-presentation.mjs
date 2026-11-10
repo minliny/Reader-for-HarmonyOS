@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as tts from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
+import * as presentation from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts';
+import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
+import * as scroll from '../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts';
+import * as tts from '../entry/src/main/ets/features/reading/application/ReaderTtsState.ts';
 import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reader-control-builder-probe.mjs';
 
 const sample = presentation.sampleReaderControlMotionPresentation;
@@ -68,7 +68,7 @@ for (const offset of [0, 300, 523, 564, 565, 3300]) {
   }
 }
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
 assert.equal((source.match(/\.opacity\(this\.presentation\(\)\.contentOpacity\)\.blur\(this\.presentation\(\)\.contentBlur\)/g) ?? []).length, 3,
   'all three shared module content wrappers use one paint curve');
 for (const kind of ['detail', 'config']) assert.ok(source.includes(`this.frame().${kind}.opacity * this.presentation().contentOpacity`));

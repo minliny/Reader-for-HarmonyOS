@@ -3,7 +3,7 @@ const definitions={"rows": {"description": "实际DataSource保留ObjectLink元�
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const {selectedProductionMethods,selectedProductionClasses} = await import('./lib/selected-production-methods.mjs');
+const {selectedProductionMethods,selectedProductionClasses,selectedProductionValues} = await import('./lib/selected-production-methods.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { registerHooks, stripTypeScriptTypes } = await import('node:module');
@@ -13,17 +13,17 @@ const { fileURLToPath } = await import('node:url');
 
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
-const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
-const { searchResultRelevance, SearchResultRelevance } = await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
-const authorMetadata = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
-const mediaIdentity = await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/presentation/SearchCandidatePolicy.ts');
+const { searchResultRelevance, SearchResultRelevance } = await import('../entry/src/main/ets/features/search/presentation/SearchResultRelevance.ts');
+const authorMetadata = await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
+const mediaIdentity = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(resolve(repo, path), 'utf8');
-const page=read('entry/src/main/ets/features/search/SearchPage.ets');const {SearchViewState}=await import('../entry/src/main/ets/features/search/SearchViewState.ts');
-const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),['SearchBookGroup','SearchResultDataSource'],{...authorMetadata,...mediaIdentity,DataOperationType:{ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'}});
+const page=read('entry/src/main/ets/features/search/ui/SearchPage.ets');const {SearchViewState}=await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
+const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),['SearchBookGroup','SearchResultDataSource'],{...authorMetadata,...mediaIdentity,DataOperationType:{ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'}});
 // Keep the production module graph intact, including bookshelf identity and
 // candidate policy. Stripping every import hides new real dependencies.
-const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
+const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
 function listen(ds, listener) {
   ds.registerDataChangeListener({ ...listener, onDatasetChange(operations) {
     for (const op of operations) {
@@ -43,11 +43,25 @@ const originalLower=String.prototype.toLocaleLowerCase,originalIndexOf=Array.pro
 
 if(!['rows', 'stream-batch', 'navigation', 'incremental-row', 'native-batch', 'broad-reorder', 'media-identity'].includes(selectedCase)){
 const {actualReaderPageShell}=await import('./lib/reader-page-shell-runtime-probe.mjs');
-const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',
-  ['searchContentStartInset','searchHeaderLayoutKey','searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'submitSearch', 'scopeSourceIds', 'scopeEntries', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
-  {...actualReaderPageShell(),...authorMetadata,...mediaIdentity,ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, SEARCH_LOCAL_SCOPE: '本地', SEARCH_ONLINE_SCOPE: '在线', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
+const { SearchPublication } = await import('../entry/src/main/ets/features/search/presentation/SearchPublication.ts');
+const modelFile = new URL('../entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets', import.meta.url);
+const { ReaderLibrarySearchModel } = selectedProductionClasses(modelFile, ['ReaderLibrarySearchModel']);
+const { READER_LIBRARY_SEARCH_BACK_FOCUS_ID } = selectedProductionValues(modelFile, ['READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
+let restoredAppChrome = 0;
+const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'SearchPage',
+  ['aboutToAppear', 'aboutToDisappear', 'acceptPublication', 'bindSurface', 'publishSurface', 'ownsSurface', 'hasSearchSession', 'canSubmit',
+    'ownsPageQuery', 'ownsList', 'searchFontScale', 'submitSearch', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'finishScrollRestore', 'restoreMeasuredAnchor', 'resultNativeIndex', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex',
+    'retirePanelScope', 'publishSurfacePanelInput', 'cancelSearchFocusRestore', 'pendingResultFocus', 'resetFilteredResults', 'releaseNativePanelChrome',
+    'filterPresentationIdentity', 'taskStatusIdentity', 'acceptsFilter', 'acceptsTaskStatus', 'dismissSearchFilters', 'dismissTaskStatus', 'searchPanelOwnsInput',
+    'onListTouch', 'scheduleDeferredResults', 'restoreResultFocus', 'resultFocusId', 'resultViewportId',
+    'acceptResultNoticeFacts', 'captureSearchNoticeFacts', 'searchProgressText', 'searchStopped', 'isSweeping', 'operation',
+    'partialSearchFailure', 'onCardDisplayFactsChange'],
+  {...actualReaderPageShell(),...authorMetadata,...mediaIdentity,
+    ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }), requestAppChrome: () => { restoredAppChrome++; } },
+    nextSearchSurfaceOwner: 0, READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
+    SEARCH_LOCAL_SCOPE: '本地', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } },
-    ScrollAlign: { START: 0 }, Edge: { Top: 'top' } });
+    ScrollAlign: { START: 0 }, Edge: { Top: 'top' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' }, registerReaderFonts() {} });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
 const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
@@ -74,19 +88,26 @@ assert.equal(p.groupResults(aliases)[0].variants.length, 2);
 
 }
 if(selectedCase==='progressive-anchor'){
-// The precise old progressive-order guarantee applies within equal relevance.
-// Reversed later source buckets and enriched source counts must not shuffle ties.
+// A scrolled result keeps the displayed order while new results and source
+// counts arrive. The relevance case separately verifies ranking at the top.
+const frames = [], scrollMoves = [];
 const t = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部',
+  pageMounted: true, pageEpoch: 0, queryAtMount: 0, isPresentationCurrent: () => true,
+  listMounted: true, listEpoch: 0, restoreEpoch: 0, resultFlushEpoch: 0, scrollRestored: true,
+  searchContentStartInset: () => 54, getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }),
   visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) { this.publishedGroups = groups; },
   resultDataSource: new SearchResultDataSource() });
 const tieA = book('tie-a', '诡秘之主·甲');
 const tieB = book('tie-b', '诡秘之主·乙');
 const ordered = t.groupResults([tieA, tieB]);
+t.visibleGroups = ordered;
 t.resultDataSource.replace(ordered);
 const retainedB = t.resultDataSource.getData(1);
 t.viewState.anchorIndex = 1; t.viewState.anchorKey = t.resultGroupKey(tieB);
-t.resultScroller = { currentOffset: () => ({ yOffset: 137 }), getItemRect: () => ({ y: -23 }) };
+t.resultScroller = { currentOffset: () => ({ yOffset: 137 }),
+  getItemRect: index => index === 0 ? { y: -137, height: 35 } : { y: -23, height: 100 },
+  scrollBy: (_x, delta) => scrollMoves.push(delta) };
 t.saveScrollAnchor();
 assert.equal(t.viewState.anchorOffset, 137); assert.equal(t.viewState.anchorItemY, -23);
 const anchorBefore = [t.viewState.anchorKey, t.viewState.anchorOffset, t.viewState.anchorItemY];
@@ -96,16 +117,26 @@ t.viewStateRevision = t.viewState.revision;
 t.scrollRestored = true;
 t.refreshVisibleResults();
 assert.deepEqual(t.publishedGroups, [t.visibleGroups[0].variants], 'actual refresh publishes the current visible candidate group');
-assert.deepEqual(t.visibleGroups.map(g => g.book.sourceId), ['original', 'tie-a', 'tie-b']);
-assert.equal(t.resultDataSource.getData(2), retainedB, 'rank insertion retains the observed anchored row');
+assert.deepEqual(t.visibleGroups.map(g => g.book.sourceId), ['tie-a', 'tie-b', 'original']);
+assert.equal(t.resultDataSource.getData(1), retainedB, 'streaming insertion retains the observed anchored row');
 assert.equal(retainedB.sourceCount, 2, 'source enrichment keeps the same first-seen tie');
 assert.deepEqual([t.viewState.anchorKey, t.viewState.anchorOffset, t.viewState.anchorItemY], anchorBefore);
-assert.equal(t.scrollRestored, true, 'streaming refresh does not restart navigation restoration');
-// A genuine remount/revision applies the saved key plus actual item offset;
-// it does not substitute the old numerical index after relevance reordered rows.
-t.viewStateRevision = -1; t.refreshVisibleResults();
-assert.equal(t.restoreKey, anchorBefore[0]); assert.equal(t.restoreOffset, 137); assert.equal(t.restoreItemY, -23);
-assert.equal(t.scrollRestored, false);
+assert.equal(frames.length, 1, 'the retained list remeasures after streamed metadata');
+frames.shift().onIdle();
+assert.deepEqual(scrollMoves, [], 'an already realized anchor needs no corrective scroll');
+assert.equal(t.scrollRestored, true);
+
+const publication = new SearchPublication();
+publication.publish(t.presentation);
+t.aboutToDisappear();
+const remounted = Object.assign(new Page(), { viewState: t.viewState, publication, publicationRevision: 1,
+  viewStateRevision: -1, listMounted: false, isPresentationCurrent: () => true,
+  getUIContext: () => ({ getFont() {} }), visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups() {},
+  resultDataSource: new SearchResultDataSource() });
+remounted.aboutToAppear();
+assert.deepEqual([remounted.restoreKey, remounted.restoreOffset, remounted.restoreItemY], anchorBefore);
+assert.equal(remounted.retainedViewportPending, true);
+assert.equal(remounted.scrollRestored, false);
 
 
 
@@ -287,57 +318,143 @@ if(selectedCase==='query-delta'){
 }
 
 }
-if(selectedCase==='layout-restoration'){
-function restoration() {
-  const frames=[],moves=[];const state=new SearchViewState();state.pageRevision=1;state.anchorKey='online:b';state.anchorItemY=-23;
-  const p=Object.assign(new Page(),{viewState:state,pageEpoch:1,listEpoch:1,restoreEpoch:0,pageMounted:true,listMounted:true,
-    presentation:{kind:'results'},isTablet:false,groupNames:()=>[],resultStatsHeight:28.5,
-    restoreCancelled:false,restoreScheduled:false,scrollRestored:false,restoreKey:state.anchorKey,restoreOffset:137,restoreItemY:-23,
-    visibleGroups:['a','b','c'].map(k=>group(k)),getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),publishVisibleGroups(){}});
-  let y=0,height=100;
-  p.resultScroller={scrollToIndex:i=>{moves.push(['index',i]);y=0;},scrollTo:offset=>moves.push(['offset',offset.yOffset]),
-    scrollEdge:edge=>moves.push(['edge',edge]),
-    scrollBy:(_x,offset)=>{moves.push(['by',offset]);y-=offset;},getItemRect:()=>({y,height}),currentOffset:()=>({yOffset:137})};
-  return {p,frames,moves,setHeight:v=>height=v,tick(){const f=frames.shift();assert.ok(f,'expected layout callback');f.onIdle();}};
-}
-{
-  const f=restoration();f.p.scheduleScrollRestore();assert.equal(f.moves.length,0);
-  f.p.visibleGroups=[group('x'),...f.p.visibleGroups];f.p.listEpoch++;f.p.restoreEpoch++;f.p.restoreScheduled=false;f.p.scheduleScrollRestore();
-  f.tick();assert.equal(f.moves.length,0,'old list frame is inert');f.tick();assert.deepEqual(f.moves,[['index',2]]);
-  f.p.onResultScrollIndex(2,2);assert.equal(f.p.restoreCancelled,false,'programmatic scroll does not masquerade as user input');
-  f.tick();assert.deepEqual(f.moves,[['index',2],['by',23]]);assert.equal(f.p.viewState.anchorIndex,2);assert.equal(f.p.viewState.anchorItemY,-23);
-}
-for(const boundary of ['query','page','user']) {
-  const f=restoration();f.p.scheduleScrollRestore();f.tick();
-  if(boundary==='query')f.p.viewState.reset('new query');
-  if(boundary==='page'){f.p.pageMounted=false;f.p.viewState.pageRevision++;}
-  if(boundary==='user')f.p.cancelScrollRestoreForUser();
-  const before=[f.p.viewState.anchorKey,f.p.viewState.anchorIndex,f.p.viewState.anchorItemY];
-  f.tick();assert.equal(f.moves.length,1,`${boundary} invalidates the correction frame`);
-  assert.deepEqual([f.p.viewState.anchorKey,f.p.viewState.anchorIndex,f.p.viewState.anchorItemY],before);
-}
-{
-  const f=restoration();f.p.restoreKey='online:merged';f.p.viewState.redirects.set('online:merged','online:b');f.p.scheduleScrollRestore();f.tick();f.tick();
-  assert.equal(f.p.viewState.anchorKey,'online:b');
-  const neighbor=restoration();neighbor.p.restoreKey='online:removed';neighbor.p.viewState.anchorNeighbors=['online:gone','online:c','online:a'];
-  neighbor.p.scheduleScrollRestore();neighbor.tick();neighbor.tick();assert.equal(neighbor.p.viewState.anchorKey,'online:c');
-  const late=restoration();late.setHeight(0);late.p.scheduleScrollRestore();late.tick();late.tick();
-  assert.equal(late.p.scrollRestored,false);late.setHeight(100);late.tick();late.tick();assert.equal(late.p.scrollRestored,true);
-}
-for (const offset of [0, -30, -80.5, 137]) {
-  const f=restoration();f.p.restoreKey='';f.p.restoreOffset=offset;f.p.scheduleScrollRestore();f.tick();
-  assert.deepEqual(f.moves,offset!==0?[['offset',offset]]:[['edge','top']],
-    'fresh zero restores native top clearance, while saved signed offsets retain their position within the clearance');
-  assert.equal(f.p.scrollRestored,true);
-}
-{
-  const removed=restoration();removed.p.restoreKey='online:removed';removed.p.scheduleScrollRestore();removed.tick();
-  assert.deepEqual(removed.moves,[['edge','top']], 'a removed key without surviving neighbors resets to the native top edge');
+if (selectedCase === 'layout-restoration') {
+  function restoration({ anchored = true, measured = false, focusKey = '', focusNodePresent = true } = {}) {
+    const frames = [], moves = [], focusRequests = [], warmups = [];
+    const state = new SearchViewState(), publication = new SearchPublication(), model = new ReaderLibrarySearchModel();
+    publication.publish({ kind: 'results', keyword: '', results: ['a', 'b', 'c'].map(key => group(key).book), history: [],
+      totalSourceCount: 1, completedSourceCount: 1, searching: false });
+    state.anchorAtStart = !anchored;
+    if (anchored) {
+      state.anchorKey = 'online:b';
+      state.anchorItemY = -23;
+      state.anchorOffset = 137;
+    }
+    if (focusKey.length > 0) { state.rememberDetailResult(focusKey); state.returnFromDetail(); }
+    const p = Object.assign(new Page(), { viewState: state, publication, surfaceModel: model, publicationRevision: 1,
+      listEpoch: 0, restoreEpoch: 0, viewStateRevision: -1, resultFlushEpoch: 0, taskStatusGeneration: 0,
+      visibleStart: 0, visibleEnd: 0, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
+      listMounted: false, headerAnchorPending: false, isPresentationCurrent: () => true, isPresentationVisible: () => true,
+      searchContentStartInset: () => 54, searchContentEndInset: () => 28, onVisibleGroups: groups => warmups.push(groups),
+      getUIContext: () => ({
+        getFont() {}, postFrameCallback: frame => frames.push(frame), px2vp: value => value / 2,
+        getFrameNodeById: id => focusNodePresent && id === p.resultFocusId(state.resolveKey(focusKey)) ? {} : null,
+        getComponentUtils: () => ({ getRectangleById(id) {
+          assert.equal(id, p.resultViewportId()); return { size: { height: 1200 } };
+        } }),
+        getFocusController: () => ({ requestFocus: id => focusRequests.push(id) }),
+      }) });
+    let y = 0, height = measured ? 100 : 0, offset = 0;
+    p.resultScroller = {
+      scrollToIndex: index => { moves.push(['index', index]); y = 0; },
+      scrollTo: target => { moves.push(['offset', target.yOffset]); offset = target.yOffset; },
+      scrollBy: (_x, delta) => { moves.push(['by', delta]); y -= delta; offset += delta; },
+      getItemRect: () => ({ y, height }), currentOffset: () => ({ yOffset: offset }),
+    };
+    p.aboutToAppear();
+    p.listMounted = true;
+    return { p, model, frames, moves, focusRequests, warmups, setHeight: value => { height = value; },
+      tick() { const frame = frames.shift(); assert.ok(frame, 'expected layout callback'); frame.onIdle(); } };
+  }
+
+  {
+    const f = restoration();
+    assert.equal(f.p.retainedViewportPending, true, 'a remounted scrolled result starts behind the surface mask');
+    f.p.scheduleScrollRestore();
+    f.p.visibleGroups = [group('x'), ...f.p.visibleGroups];
+    f.p.listEpoch++; f.p.restoreEpoch++; f.p.restoreScheduled = false;
+    f.p.scheduleScrollRestore();
+    f.tick();
+    assert.deepEqual(f.moves, [], 'old list frame is inert');
+    f.tick();
+    assert.deepEqual(f.moves, [['index', 3]], 'native notice prefix is included in the target index');
+    f.p.onResultScrollIndex(3, 3);
+    assert.equal(f.p.restoreCancelled, false, 'programmatic scrolling does not cancel the restoration');
+    f.setHeight(100);
+    f.tick();
+    assert.deepEqual(f.moves, [['index', 3], ['by', 23]]);
+    assert.equal(f.p.retainedViewportPending, true, 'a scroll command does not publish an unsettled viewport');
+    assert.equal(f.p.scrollRestored, false);
+    f.tick();
+    assert.equal(f.p.retainedViewportPending, false);
+    assert.equal(f.p.scrollRestored, true);
+    assert.equal(f.p.viewState.anchorIndex, 2);
+    assert.equal(f.p.viewState.anchorItemY, -23);
+  }
+
+  for (const boundary of ['query', 'page', 'user']) {
+    const f = restoration({ measured: true });
+    f.p.scheduleScrollRestore(); f.tick();
+    assert.equal(f.p.retainedViewportPending, true);
+    if (boundary === 'query') f.p.viewState.reset('new query');
+    if (boundary === 'page') f.p.aboutToDisappear();
+    if (boundary === 'user') f.p.onListTouch('down');
+    const before = [f.p.viewState.anchorKey, f.p.viewState.anchorIndex, f.p.viewState.anchorItemY];
+    f.tick();
+    assert.deepEqual(f.moves, [['by', 23]], boundary + ' retires the pending reveal');
+    assert.deepEqual([f.p.viewState.anchorKey, f.p.viewState.anchorIndex, f.p.viewState.anchorItemY], before);
+    assert.equal(f.p.retainedViewportPending, boundary === 'query');
+  }
+
+  for (const [key, neighbors, target] of [
+    ['online:merged', [], 'online:b'], ['online:removed', ['online:gone', 'online:c'], 'online:c'],
+  ]) {
+    const f = restoration({ measured: true });
+    f.p.restoreKey = key;
+    f.p.viewState.redirects.set('online:merged', 'online:b');
+    f.p.viewState.anchorNeighbors = neighbors;
+    f.p.scheduleScrollRestore(); f.tick(); f.tick();
+    assert.equal(f.p.viewState.anchorKey, target);
+    assert.equal(f.p.retainedViewportPending, false);
+  }
+
+  for (const offset of [0, -30, -80.5, 137]) {
+    const f = restoration({ anchored: offset !== 0 });
+    f.p.restoreKey = '';
+    f.p.restoreOffset = offset;
+    f.p.scheduleScrollRestore(); f.tick();
+    assert.deepEqual(f.moves, offset !== 0 ? [['offset', offset]] : [['index', 0]]);
+    if (offset !== 0) {
+      assert.equal(f.p.retainedViewportPending, true);
+      f.tick();
+    }
+    assert.equal(f.p.retainedViewportPending, false);
+    assert.equal(f.p.scrollRestored, true);
+  }
+
+  const missing = restoration();
+  missing.p.restoreKey = 'online:removed';
+  missing.p.scheduleScrollRestore(); missing.tick(); missing.tick();
+  assert.deepEqual(missing.moves, [['index', 0]], 'a removed key without surviving neighbors opens at the native start');
+  const unrealized = restoration();
+  unrealized.p.scheduleScrollRestore();
+  unrealized.tick(); unrealized.tick(); unrealized.tick();
+  assert.equal(unrealized.p.retainedViewportPending, true);
+  unrealized.tick();
+  assert.equal(unrealized.p.retainedViewportPending, false, 'bounded native attempts cannot hide the page indefinitely');
+
+  for (const target of ['realized', 'missing', 'foreground-lost', 'retired']) {
+    const f = restoration({ measured: true, focusKey: 'online:b', focusNodePresent: target !== 'missing' });
+    assert.equal(f.model.interactive, true);
+    f.p.scheduleScrollRestore(); f.tick(); f.tick();
+    assert.deepEqual(f.focusRequests, [], 'focus waits for the restored viewport frame');
+    if (target === 'foreground-lost') f.p.isPresentationVisible = () => false;
+    if (target === 'retired') {
+      f.p.nativePanel = { kind: 'filter', identity: 'filter-before-exit', chromeClaimed: true };
+      f.p.publishSurfacePanelInput();
+      const chrome = restoredAppChrome;
+      f.p.aboutToDisappear();
+      assert.equal(restoredAppChrome, chrome + 1, 'retirement releases the current native panel chrome');
+      assert.equal(f.model.currentOwner(), 0);
+      assert.equal(f.model.panelOwnsInput, false);
+      assert.deepEqual(f.warmups.at(-1), [], 'retirement releases visible candidate warming');
+    }
+    f.tick();
+    assert.deepEqual(f.focusRequests, target === 'realized' ? [f.p.resultFocusId('online:b')] :
+      target === 'missing' ? [READER_LIBRARY_SEARCH_BACK_FOCUS_ID] : [], target);
+  }
 }
 
-
-
-}
 if(selectedCase==='candidate-facts'){
 // Legacy timestamps and chapter/refresh failures cannot alter whole-book availability.
 {
@@ -366,7 +483,7 @@ if(selectedCase==='safe-failure-text'){
 // R3 safe branch explanations are rendered on both partial and stopped-empty
 // surfaces; raw query-owned errors are never rendered by these methods.
 {
-  const FailurePage=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',
+  const FailurePage=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'SearchPage',
     ['partialSearchFailure','searchFailureMessage'],{});
   for(const kind of ['results','empty','error']) {
     const owner=Object.assign(new FailurePage(),{presentation:{kind,localSearchFailed:true,sourceListFailed:true,
@@ -394,13 +511,16 @@ const unsupported = book('other-a', '漫画一人之下', '作者', { category: 
 const allBooks = [remoteNovel, remoteManga, remoteMangaVariant, localNovel, unsupported];
 const queryPresentation = { kind: 'results', keyword: '一人之下', results: allBooks,
   searching: true, completedSourceCount: 4, totalSourceCount: 6 };
-let searches = 0, retries = 0, warmups = 0, scrollResets = 0;
+const searches = [];
+let retries = 0, warmups = 0, scrollResets = 0;
 const filtered = Object.assign(new Page(), {
   presentation: queryPresentation, viewState: filterState, shelfBooks: [], selectedGroupName: '全部',
   selectedContentType: '全部类型', keyword: '一人之下',
+  pageMounted: true, pageEpoch: filterState.pageRevision, queryAtMount: filterState.revision,
+  isPresentationCurrent: () => true,
   visibleStart: 0, visibleEnd: 5, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
   resultScroller: { scrollTo() { scrollResets++; }, scrollEdge() { scrollResets++; } },
-  onVisibleGroups() { warmups++; }, onSearch() { searches++; }, onRetry() { retries++; },
+  onVisibleGroups() { warmups++; }, onSearch(keyword) { searches.push(keyword); }, onRetry() { retries++; },
 });
 filtered.refreshVisibleResults();
 const originalOrder = filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book));
@@ -409,16 +529,82 @@ const mangaGroup = filtered.visibleGroups.find(group => group.book.category === 
 assert.deepEqual(mangaGroup.variants, [remoteManga, remoteMangaVariant]);
 const projection = filtered.resultProjection;
 const queryRevision = filterState.revision;
-const { owner: chips } = createReaderBuilderProbe(page, ['contentTypeRow', 'contentTypeChip'],
-  { TOK_SPACE_XS: 8, TOK_BORDER_W: 1, ScrollDirection: { Horizontal: 'horizontal' } });
-Object.assign(chips, { appThemeScheme: 'day', selectedContentType: filtered.selectedContentType,
-  selectContentType(label) { filtered.selectContentType(label); this.selectedContentType = filtered.selectedContentType; } });
-chips.contentTypeRow();
-const chip = label => [...chips.nodes.values()].find(node => node.type === 'Text' && node.create === label);
-assert.deepEqual(['全部类型', '小说', '漫画'].map(label => chip(label).create), ['全部类型', '小说', '漫画']);
-chip('漫画').onClick(); chips.replay();
+const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+const controls = foundationControls();
+const filterPanel = read('entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets');
+const { owner: chips } = createReaderBuilderProbe(filterPanel,
+  ['scheme', 'selectedType', 'presentationIdentity', 'expanded', 'mounted', 'onType', 'accepts', 'typeChip'],
+  controls.dependencies, controls.hooks);
+const sheetIdentity = 'content-filter';
+Object.assign(chips, { mounted: true, expanded: true, presentationIdentity: sheetIdentity,
+  onType(label, identity) {
+    assert.equal(identity, sheetIdentity);
+    filtered.selectContentType(label);
+    this.selectedType = filtered.selectedContentType;
+  } });
+// Exercise the current trigger actors as well as the existing real chip path.
+// Native sheet lifecycle remains the production binding, not reconstructed callbacks.
+const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const sheetSurfaces = boundedSurfaceSdk();
+const surfaceGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const resultGeometry = await import('../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
+const sheetDeps = { ...sheetSurfaces.deps, ...surfaceGeometry, ...windowMetrics, ...resultGeometry,
+  SheetSize: { FIT_CONTENT: 'fit' }, SheetType: { BOTTOM: 'bottom' }, DismissReason: { PRESS_BACK: 'back' } };
+const { SearchResultSheetBinding } = pureModuleProbe(read('entry/src/main/ets/features/search/ui/SearchResultSheetBinding.ets'),
+  'SearchResultSheetBinding.ets', sheetDeps, ['SearchResultSheetBinding']);
+const { owner: filterTrigger } = createReaderBuilderProbe(filterPanel,
+  ['build', 'active', 'toggleAction', 'sheetContent', 'sheetOptions', 'sheetSpec', 'sheetWidth', 'accepts', 'nativeSheet'],
+  { ...sheetDeps, SearchResultSheetBinding }, sheetSurfaces.hooks);
+const triggerEvents = [];
+Object.assign(filterTrigger, { mounted: true, expanded: false, scheme: 'day', selectedType: '漫画', selectedGroup: '全部',
+  presentationIdentity: 'filter-trigger', triggerFocusId: 'filter-return',
+  onToggle: (identity, expanded) => triggerEvents.push(['toggle', identity, expanded]),
+  onNativeOpening: identity => triggerEvents.push(['opening', identity]),
+  onNativeClosing() {}, onDismiss() {}, onClosed() {} });
+filterTrigger.initialRender();
+const physicalFilter = [...filterTrigger.nodes.values()].find(node => node.type === 'Button' && node.onClick);
+assert.ok(physicalFilter, 'actual filter trigger is a native Button');
+assert.equal(physicalFilter.id, 'filter-return');
+assert.equal(physicalFilter.width, resultGeometry.SEARCH_RESULT_GEOMETRY.filterActionSize);
+assert.ok(Array.isArray(physicalFilter.bindSheet), 'native sheet stays attached to the same filter actor');
+physicalFilter.onClick();
+physicalFilter.bindSheet[2].onWillAppear();
+assert.deepEqual(triggerEvents, [['toggle', 'filter-trigger', false], ['opening', 'filter-trigger']]);
+filterTrigger.mounted = false;
+physicalFilter.onClick(); physicalFilter.bindSheet[2].onWillAppear();
+assert.equal(triggerEvents.length, 2, 'retired trigger and native opening cannot dispatch');
+assert.ok(![...filterTrigger.nodes.values()].some(node => node.type === 'Stack' && node.onClick),
+  'filter visual Stack has no duplicate toggle');
+
+const historySource = read('entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets');
+const historyGeometry = await import('../entry/src/main/ets/features/search/ui/SearchHistoryGeometry.ts');
+let clears = 0;
+const { owner: history } = createReaderBuilderProbe(historySource,
+  ['build', 'actionsEnabled', 'projectedRows', 'measuredControlWidth', 'measuredWidths', 'measuredRevision', 'metricsRevision'],
+  { ...controls.dependencies, ...historyGeometry }, controls.hooks);
+Object.assign(history, { appThemeScheme: 'day', history: ['已保留关键词'], status: undefined,
+  geometry: new historyGeometry.SearchHistoryGeometry(350, 180, 1, false),
+  onClear: () => clears++, onSelect() {}, getUIContext: () => ({ px2vp: value => value,
+    getMeasureUtils: () => ({ measureText: () => 80 }) }) });
+history.initialRender();
+const clearHistory = [...history.nodes.values()].find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
+assert.ok(clearHistory, 'actual history clear is one native Button');
+assert.equal(clearHistory.height, history.geometry.headingHeight);
+clearHistory.onClick(); assert.equal(clears, 1);
+history.status = 'loading'; clearHistory.onClick(); assert.equal(clears, 1, 'busy history rejects a retained native callback');
+assert.ok(![...history.nodes.values()].some(node => node.type === 'Row' && node.onClick),
+  'history visual Row cannot clear twice');
+const typeLabels = ['全部类型', '小说', '漫画'];
+const geometry = { choiceWidths: [64, 64, 64], choiceHeight: 44 };
+typeLabels.forEach((label, index) => chips.typeChip(label, index, sheetIdentity, geometry));
+const chip = label => controls.nodes(chips).find(node => node.onClick &&
+  [`当前内容:${label}`, `筛选内容:${label}`].includes(node.accessibilityText));
+assert.deepEqual(typeLabels.map(label => Boolean(chip(label))), [true, true, true]);
+chip('漫画').onClick(); controls.flush(chips);
 assert.deepEqual(filtered.visibleGroups, [mangaGroup], 'actual SDK chip dispatch filters real projection without regrouping');
-assert.equal(chip('漫画').accessibilityText, '当前内容类型:漫画');
+assert.equal(chip('漫画').accessibilityText, '当前内容:漫画');
 assert.equal(filterState.contentType, '漫画');
 assert.equal(filtered.resultProjection, projection);
 assert.equal(filtered.presentation, queryPresentation);
@@ -432,15 +618,15 @@ filtered.presentation = { ...queryPresentation, searching: false, stopped: true 
 assert.match(filtered.filteredEmptyMessage(), /搜索已停止.*已返回的结果/);
 filtered.presentation = { ...queryPresentation, searching: false, stopped: false };
 assert.match(filtered.filteredEmptyMessage(), /已返回的结果.*可切换范围或内容类型/);
-chip('小说').onClick(); chips.replay();
+chip('小说').onClick(); controls.flush(chips);
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [localNovel]);
 filtered.selectGroup('在线');
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [remoteNovel]);
-chip('全部类型').onClick(); chips.replay();
+chip('全部类型').onClick(); controls.flush(chips);
 assert.ok(filtered.visibleGroups.some(group => group.book === unsupported), 'All retains existing unknown-type admission without relabeling');
 filtered.selectGroup('全部');
 assert.deepEqual(filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book)), originalOrder, 'existing ordering is restored exactly');
-assert.equal(searches, 0); assert.equal(retries, 0); assert.equal(filterState.revision, queryRevision);
+assert.deepEqual(searches, []); assert.equal(retries, 0); assert.equal(filterState.revision, queryRevision);
 assert.ok(warmups > 0, 'existing visible-item warmup lifecycle remains active; zero total HTTP is not asserted');
 assert.ok(scrollResets > 0);
 chip('漫画').onClick();
@@ -459,9 +645,32 @@ filtered.refreshVisibleResults();
 assert.equal(filtered.selectedContentType, '漫画');
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [remoteManga, lateManga]);
 filtered.presentation = { ...filtered.presentation, searching: false };
+filtered.selectGroup('在线');
+filterState.anchorKey = filtered.resultGroupKey(remoteManga);
+const retainedAnchor = filterState.anchorKey;
+filtered.submitSearch('   ');
+assert.deepEqual(searches, [], 'blank input never dispatches');
+filtered.submitSearch('  一人之下  ');
+assert.deepEqual(searches, ['一人之下'], 'the page dispatches the trimmed intent only');
+assert.equal(filterState.contentType, '漫画');
+assert.equal(filterState.category, '在线');
+assert.equal(filterState.anchorKey, retainedAnchor);
+assert.equal(filterState.revision, queryRevision, 'an intent without admission preserves the current query');
+
+const SearchHost = selectedProductionMethods(new URL('../entry/src/main/ets/features/search/application/SearchHost.ets', import.meta.url),
+  'SearchHost', ['search']);
+const accepted = [];
+const host = Object.assign(new SearchHost(), { viewState: filterState,
+  getOrchestrator: () => ({ search: (keyword, scope) => accepted.push([keyword, scope]) }) });
+filtered.onSearch = keyword => host.search(keyword);
 filtered.submitSearch();
-assert.equal(searches, 1, 'only explicit submit starts another query');
+filtered.submitSearch();
+assert.deepEqual(accepted, [['一人之下', undefined]], 'same-keyword submit starts one all-source query and retires the old page lease');
+assert.equal(filterState.revision, queryRevision + 1);
+assert.equal(filterState.anchorKey, '');
 assert.equal(filterState.contentType, '全部类型');
+filtered.queryAtMount = filterState.revision;
+filtered.refreshVisibleResults();
 assert.equal(filtered.selectedContentType, '全部类型');
 assert.equal(filterState.category, '全部');
 // A fixed canonical group whose admitted metadata changes must enter/leave
@@ -473,7 +682,7 @@ assert.equal(changing.groupResults([unknownFact]).length, 0);
 const textFact = { ...unknownFact, category: 'novel' };
 assert.equal(changing.groupResults([textFact])[0].book, textFact);
 assert.equal(changing.groupResults([unknownFact]).length, 0);
-assert.equal(searches, 1); assert.equal(retries, 0);
+assert.equal(retries, 0);
 
 
 }

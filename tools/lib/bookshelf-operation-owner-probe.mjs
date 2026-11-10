@@ -1,8 +1,8 @@
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
-import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/BookshelfReadOwner.ts';
+import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/application/BookshelfReadOwner.ts';
 import {projectOperationFacts} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
-import {classifyReaderSource} from '../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
-import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
+import {classifyReaderSource} from '../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
+import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts';
 import {readFileSync} from 'node:fs';
 import {BookRequestNotDispatchedError} from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
 import {ReaderWriteEvidence} from '../../entry/src/main/ets/app/ReaderWriteEvidence.ts';
@@ -22,12 +22,12 @@ export function bookshelfOperationClass(path,result,deps={}) {
 }
 export function actualBookshelfOperationTypes(deps) {
  deps=actualBookshelfRemovalTypes(deps);
- const presentation=bookshelfOperationClass('features/bookshelf/LocalImportPresentationOwner.ts','({LocalImportPresentation,LocalImportPresentationOwner,LOCAL_IMPORT_PRESENTATION_KEY})');
- const operation=bookshelfOperationClass('features/bookshelf/BookshelfOperationOwner.ts','({BookshelfOperationOwner,EMPTY_BOOKSHELF_OPERATION_SNAPSHOT})',{...deps,...presentation});
- const readable=bookshelfOperationClass('features/bookshelf/BookshelfReadableAdmissionOwner.ts','({BookshelfReadableAdmissionOwner,EMPTY_READABLE_ADMISSION})',deps);
- const BookshelfProjectionOwner=bookshelfOperationClass('features/bookshelf/BookshelfProjectionOwner.ts','BookshelfProjectionOwner',{BookshelfReadOwner,projectOperationFacts,...sourceNames});
- const SourceGateway=bookshelfOperationClass('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:deps.ReaderRuntimeOwner,classifyReaderSource});
- const Host=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost',{...deps,...operation,...readable,BookshelfProjectionOwner,SourceGateway});
+ const presentation=bookshelfOperationClass('features/bookshelf/presentation/LocalImportPresentationOwner.ts','({LocalImportPresentation,LocalImportPresentationOwner,LOCAL_IMPORT_PRESENTATION_KEY})');
+ const operation=bookshelfOperationClass('features/bookshelf/application/BookshelfOperationOwner.ts','({BookshelfOperationOwner,EMPTY_BOOKSHELF_OPERATION_SNAPSHOT})',{...deps,...presentation});
+ const readable=bookshelfOperationClass('features/bookshelf/application/BookshelfReadableAdmissionOwner.ts','({BookshelfReadableAdmissionOwner,EMPTY_READABLE_ADMISSION})',deps);
+ const BookshelfProjectionOwner=bookshelfOperationClass('features/bookshelf/application/BookshelfProjectionOwner.ts','BookshelfProjectionOwner',{BookshelfReadOwner,projectOperationFacts,...sourceNames});
+ const SourceGateway=bookshelfOperationClass('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:deps.ReaderRuntimeOwner,classifyReaderSource});
+ const Host=bookshelfOperationClass('features/bookshelf/application/BookshelfHost.ets','BookshelfHost',{...deps,...operation,...readable,BookshelfProjectionOwner,SourceGateway});
  return {...presentation,...operation,...readable,Host};
 }
 /** Actual finite authority classes. Tests exercising native IO must supply
@@ -36,13 +36,13 @@ export function actualBookshelfOperationTypes(deps) {
 export function actualBookshelfRemovalTypes(deps) {
  deps={ReaderWriteEvidence,BookRequestNotDispatchedError,isReaderCoreTransactionPendingError,...deps};
  const unavailable=()=>{throw Error('actual bookshelf intent platform IO seam is required');};
- const store=bookshelfOperationClass('features/bookshelf/BookshelfManagementIntentStore.ts',
+ const store=bookshelfOperationClass('features/bookshelf/application/BookshelfManagementIntentStore.ts',
    '({BookshelfManagementIntentStore,isBookshelfRemovalMethod})',{
      fileIo:{readText:unavailable},util:{generateRandomUUID:unavailable},replaceReaderAtomicSnapshot:unavailable,sha256Hex:unavailable,...deps});
  deps={...store,...deps};
  deps.ReaderCoreGateway??=bookshelfOperationClass('app/ReaderCoreGateway.ts','ReaderCoreGateway',deps);
- deps.BookshelfManagementGateway??=bookshelfOperationClass('features/bookshelf/BookshelfManagementGateway.ts','BookshelfManagementGateway',deps);
- deps.BookshelfRemovalGateway??=bookshelfOperationClass('features/bookshelf/BookshelfRemovalGateway.ts','BookshelfRemovalGateway',deps);
+ deps.BookshelfManagementGateway??=bookshelfOperationClass('features/bookshelf/application/BookshelfManagementGateway.ts','BookshelfManagementGateway',deps);
+ deps.BookshelfRemovalGateway??=bookshelfOperationClass('features/bookshelf/application/BookshelfRemovalGateway.ts','BookshelfRemovalGateway',deps);
  return deps;
 }
 export function actualBookshelfHostField(index,Host,AppStorage) {

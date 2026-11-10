@@ -5,12 +5,12 @@ import {stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 const app=new URL('../entry/src/main/ets/app/',import.meta.url);
 const read=name=>readFileSync(new URL(name,app),'utf8');
-const policy=stripTypeScriptTypes(read('HttpTransportPolicy.ts')).replace(/^export /gm,'');
-const routeProduction=stripTypeScriptTypes(read('NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
+const policy=stripTypeScriptTypes(read('../platform/network/HttpTransportPolicy.ts')).replace(/^export /gm,'');
+const routeProduction=stripTypeScriptTypes(read('../platform/network/NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const NetworkEnvironmentError=new Function('connection',policy+routeProduction+';return NetworkEnvironmentError;')({});
 const WebNetErrorList=Object.fromEntries([...readFileSync((resolveOpenHarmonySdkRoot() + '/ets/api/@ohos.web.netErrorList.d.ts'),'utf8').matchAll(/^\s+(ERR_\w+) = (-?\d+),/gm)].map(match=>[match[1],Number(match[2])]));
 assert.equal(WebNetErrorList.ERR_PROXY_CONNECTION_FAILED,-130);
-const production=stripTypeScriptTypes(read('ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
+const production=stripTypeScriptTypes(read('../platform/network/ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
 const ticks=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 class Clock {
  now=1000;next=1;timers=new Map();
@@ -98,8 +98,8 @@ for(const failure of ['timeout','cancel','detach','cookie-generation','network',
  const s=setup();s.setLoad(()=>s.resource(base+'/html.m3u8'));const result=await s.e.execute(params({document:{kind:'html',body:'<html/>',baseUrl:base+'/post-result'}}),30);assert.equal(result.value,base+'/html.m3u8');clean(s);
  assert.throws(()=>s.e.execute(params({resourceUrlMatcherJavaScript:''}),31));
  assert.throws(()=>s.e.execute(params({resourceUrlMatcherJavaScript:'x'.repeat(65537)}),32));
- assert.match(read('ArkWebExecutionHost.ets'),/\.onResourceLoad\([\s\S]*?onResourceLoad\(event\.url, surface\)/);
- assert.ok(!read('ArkWebExecutor.ts').includes("performance.getEntriesByType"));
+ assert.match(read('../ui/platform/ArkWebExecutionHost.ets'),/\.onResourceLoad\([\s\S]*?onResourceLoad\(event\.url, surface\)/);
+ assert.ok(!read('../platform/network/ArkWebExecutor.ts').includes("performance.getEntriesByType"));
  console.log('PASS POST HTML capture, bounded matcher admission and production callback wiring');
 }
 for(const failure of ['matcher-reject','matcher-sync-throw','initialization-reject','load-throw']){
@@ -137,7 +137,7 @@ for(const failure of ['matcher-reject','matcher-sync-throw','initialization-reje
  const s=setup({autoDetach:false});const events=[];s.e.attachDiagnosticObserver(event=>events.push(event));
  let providerCalls=0;
  class Response {setResponseCode(value){this.code=value;}setReasonMessage(){}setResponseMimeType(){}setResponseData(){}}
- const {owner}=createReaderBuilderProbe(read('ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
+ const {owner}=createReaderBuilderProbe(read('../ui/platform/ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
   ArkWebExecutor:{instance:s.e},WebResourceResponse:Response,
   redactedHttpUrl:new Function(policy+';return redactedHttpUrl;')(),
  });
@@ -260,7 +260,7 @@ for(const kind of ['apply','remove']){
  console.log('PASS synchronous proxy '+kind+' failure is typed; setup can recover, unconfirmed cleanup blocks all later loads');
 }
 function nativeHost(s){
- const {owner}=createReaderBuilderProbe(read('ArkWebExecutionHost.ets'),['build','surfacesForRender'],{ArkWebExecutor:{instance:s.e}});
+ const {owner}=createReaderBuilderProbe(read('../ui/platform/ArkWebExecutionHost.ets'),['build','surfacesForRender'],{ArkWebExecutor:{instance:s.e}});
  Object.assign(owner,{surfaceId:s.surface.id,currentSurface:s.surface,interactive:false,appThemeScheme:'day'});owner.initialRender();
  return [...owner.nodes.values()].find(n=>n.type==='Web');
 }

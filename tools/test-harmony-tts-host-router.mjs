@@ -10,7 +10,7 @@ async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const { stripTypeScriptTypes } = await import('node:module');
 const { readFile } = await import('node:fs/promises');
-const { HarmonyTtsHostRouter } = await import('../entry/src/main/ets/app/HarmonyTtsHostRouter.ts');
+const { HarmonyTtsHostRouter } = await import('../entry/src/main/ets/platform/tts/HarmonyTtsHostRouter.ts');
 
 
 class FakeHost {
@@ -270,7 +270,7 @@ for (const ending of ['deactivate', 'close', 'replace']) {
 
 }
 if(selectedCase==='http-owner' || selectedCase==='http-request-policy') {
-const httpHostSource=await readFile(new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts',import.meta.url),'utf8');
+const httpHostSource=await readFile(new URL('../entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts',import.meta.url),'utf8');
 // Exercise the Host-only credential expansion without constructing platform
 // audio objects. Private methods remain normal ArkTS methods after erasure;
 // this probe supplies only their explicit credential-store dependencies.

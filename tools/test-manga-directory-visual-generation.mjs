@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryColumns, mangaDirectoryLabelsFit,
   mangaDirectoryHeaderHeight, mangaDirectoryContentTop, mangaDirectoryFooterStacked, mangaDirectoryQuickFlowGaps,
-  mangaDirectoryQuickMinimumListHeight, mangaDirectoryFullFlowFooter } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+  mangaDirectoryQuickMinimumListHeight, mangaDirectoryFullFlowFooter } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 
 const ui = new URL('../../Reader-UI/design/manga-directory/', import.meta.url);
 const require = createRequire(new URL('../../Reader-UI/package.json', import.meta.url));

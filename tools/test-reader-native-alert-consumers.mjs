@@ -20,7 +20,7 @@ const { default: assert } = await import('node:assert/strict');
 const { ReaderNativeAlertOwner, ReaderNativeAlertLease } = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
-const Reading = productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),
+const Reading = productionMotionMethods(file('features/reading/ui/LocalReadingExperience.ets'),
   ['requestCachedChapterRefresh', 'showReaderRecovery', 'reconcileReaderRecovery']);
 for (const stale of ['none', 'generation', 'unmount', 'exit']) {
   let refreshed = 0, native = 0;
@@ -46,12 +46,17 @@ const { default: assert } = await import('node:assert/strict');
 const { ReaderNativeAlertOwner, ReaderNativeAlertLease } = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
-const Source = productionMotionMethods(file('features/source/SourceToolsPage.ets'), ['confirmExportThen'], { ReaderNativeAlertOwner, ReaderNativeAlertLease, hilog: { warn() {} } });
+const platformValues = new Map([['readerAppForeground', true]]);
+const Source = productionMotionMethods(file('features/source/ui/SourceToolsPage.ets'), ['confirmExportThen'], {
+  ReaderNativeAlertOwner, ReaderNativeAlertLease,
+  AppStorage: { get(key) { assert.equal(key, 'readerAppForeground'); return platformValues.get(key); } },
+  hilog: { warn() {} },
+});
 for (const stale of ['none', 'selection', 'sources', 'session', 'busy', 'exit']) {
   let shown, exports = 0;
   const source = Object.assign(new Source(), { nativeAlertOwner: new ReaderNativeAlertOwner(), mounted: true, exportRevision: 1,
     snapshot: { sourceListRevision: 2, selectionRevision: 3, busy: false },
-    getUIContext: () => ({ showAlertDialog(o) { shown = o; } }) });
+    getUIContext: () => ({ showAlertDialog(o) { shown = o; o.onWillAppear(); o.onDidAppear(); } }) });
   source.confirmExportThen(() => exports++);
   if (stale === 'selection') source.snapshot.selectionRevision++;
   if (stale === 'sources') source.snapshot.sourceListRevision++;
@@ -60,6 +65,9 @@ for (const stale of ['none', 'selection', 'sources', 'session', 'busy', 'exit'])
   if (stale === 'exit') source.mounted = false;
   shown.primaryButton.action(); shown.primaryButton.action(); assert.equal(exports, stale === 'none' ? 1 : 0);
   assert.equal(shown.primaryButton.value, '继续导出'); assert.equal(shown.secondaryButton.value, '取消');
+  // The fake Native port reports real lifecycle callbacks after each original
+  // decision test; a decision itself cannot release the window attachment.
+  shown.onWillDisappear(); shown.onDidDisappear();
 }
 
 }
@@ -68,16 +76,26 @@ async function case_settings_reset_lease() {
 const { default: assert } = await import('node:assert/strict');
 const { ReaderNativeAlertOwner, ReaderNativeAlertLease } = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { runtimeOwnerIdentityProbe } = await import('./lib/reader-runtime-admission-probe.mjs');
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
-const Settings = productionMotionMethods(file('features/settings/SettingsPage.ets'), ['requestRestoreDefaults'], { ReaderNativeAlertOwner, ReaderNativeAlertLease, hilog: { warn() {} } });
-for (const stale of [false, true]) {
+const runtime = {};
+const Settings = productionMotionMethods(file('features/settings/ui/SettingsPage.ets'),
+  ['requestRestoreDefaults', 'settingsInputIsCurrent', 'generalConfirmationCurrent', 'settingsNavigationCurrent'],
+  { ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => runtime), hilog: { warn() {} } });
+for (const stale of ['none', 'revision', 'route']) {
   let shown, resets = 0;
+  let routeCurrent = true;
   const settings = Object.assign(new Settings(), { nativeAlertOwner: new ReaderNativeAlertOwner(), mounted: true,
+    activeSection: 'general', temporaryBackIdentity: 'settings:1', developerPageId: '', themeOwner: runtime,
+    isOpeningCurrent: () => routeCurrent,
     resetRevision: 1, resetInFlight: false, appThemeScheme: 'day', performRestoreDefaults() { resets++; },
-    getUIContext: () => ({ showAlertDialog(o) { shown = o; } }) });
-  settings.requestRestoreDefaults(); if (stale) settings.resetRevision++;
-  shown.secondaryButton.action(); shown.secondaryButton.action(); assert.equal(resets, stale ? 0 : 1);
+    getUIContext: () => ({ showAlertDialog(o) { shown = o; o.onWillAppear(); o.onDidAppear(); } }) });
+  settings.requestRestoreDefaults();
+  if (stale === 'revision') settings.resetRevision++;
+  if (stale === 'route') routeCurrent = false;
+  shown.secondaryButton.action(); shown.secondaryButton.action(); assert.equal(resets, stale === 'none' ? 1 : 0);
   assert.equal(Object.hasOwn(shown, 'autoCancel'), false, 'original native AUTO policy remains omitted');
+  shown.onWillDisappear(); shown.onDidDisappear();
 }
 
 }

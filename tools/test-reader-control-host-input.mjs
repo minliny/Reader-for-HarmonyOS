@@ -9,13 +9,13 @@ const { resolveEtsLoaderRoot, virtualFilePath }=await import('./lib/tool-environ
 const {default:assert}=await import('node:assert/strict');
 const { existsSync, readFileSync }=await import('node:fs');
 const { createRequire, stripTypeScriptTypes }=await import('node:module');
-const hostPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const sessionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const rapidPolicy=await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const backdropPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlBackdropTouch.ts');
+const hostPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const sessionPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const rapidPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const backdropPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlBackdropTouch.ts');
 
 const source = readFileSync(new URL(
-  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+  '../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const methodNames = ['controlVisible', 'controlShellExitArmed', 'controlPage',
   'controlMotionSession', 'controlMotionVisible', 'controlMotionPage',
   'isReaderPageInteractionEnabled', 'requestPageTurn', 'canTurnPage', 'onControlBackdropTouch',

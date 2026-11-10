@@ -7,14 +7,14 @@ const { tmpdir }=await import('node:os');
 const { join }=await import('node:path');
 const { stripTypeScriptTypes }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const { ReadingSurfaceLayoutMap, readingChapterLayoutMap }=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
-const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes }=await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
-const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap }=await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes }=await import('../entry/src/main/ets/features/reading/application/ReadingEntryHandoff.ts');
+const style=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 
 // Execute production page assembly against explicit native metric receipts.
 // These fixtures prove admission/ownership, not platform shaping or pixels.
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
   readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
@@ -25,7 +25,7 @@ const MeasuredReadingLine = declaration('MeasuredReadingLine', 'class PhysicalRe
 const PhysicalReadingPage = declaration('PhysicalReadingPage', '/** Immutable display inputs');
 const PreviousChapterMeasurement = declaration('PreviousChapterMeasurement', 'class CoreReadingAnchor');
 const ParagraphRange = declaration('ParagraphRange', 'class MeasurementParagraph');
-const nativeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
+const nativeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
 const heightSource = nativeSource.slice(nativeSource.indexOf('export function readerNativeParagraphHeight'), nativeSource.indexOf('/** A viewport'));
 const height = new Function('graphicsText', stripTypeScriptTypes(heightSource).replace('export ', '') + ';return readerNativeParagraphHeight;')({ RectWidthStyle: { TIGHT: 0 }, RectHeightStyle: { TIGHT: 0 } });
 class Controller { getLayoutManager() { return this.manager; } }
@@ -264,7 +264,7 @@ if(id==='reverse-assembly'){
 }else if(id==='native-title-ownership'){
 // Native node allocation is the platform boundary; measure/clear/take below
 // execute the complete production owner with its actual node/controller lists.
-const ownershipSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
+const ownershipSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
 const ownershipClass = stripTypeScriptTypes(ownershipSource.replace(/^import.*$/gm, '').replace(/^export /gm, ''));
 function nativeOwnershipFixture(paragraphs, endScalar, options = {}) {
   const o = create(paragraphs, endScalar, options);

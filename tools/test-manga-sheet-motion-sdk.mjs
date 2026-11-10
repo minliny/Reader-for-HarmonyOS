@@ -11,24 +11,38 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { mangaSurfaceSdkDependencies, mangaSurfaceBoundedControls } = await import('./lib/manga-surface-sdk-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const timing = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const { SOURCE_CHROME_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts');
+const { readerIsExpandedWidth } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
+const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
-const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
+const { motionAnimateParam } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
+  'MotionSpec.ets', { ...timing, SOURCE_SWITCH_VISUAL: SOURCE_CHROME_VISUAL,
+    MANGA_DIRECTORY_VISUAL: mangaSurfaceSdkDependencies.MANGA_DIRECTORY_VISUAL,
+    Curve: new Proxy({}, { get: (_target, key) => `Curve.${String(key)}` }),
+    curves: new Proxy({}, { get: (_target, key) => (...args) => ({ nativeCurve: String(key), args }) }) }, ['motionAnimateParam']);
+const { readerActionIcon } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderActionIconResources.ets', import.meta.url), 'utf8'),
+  'ReaderActionIconResources.ets', { $r: value => value }, ['readerActionIcon']);
 const subsetTitles = new Set(['章节目录', '阅读方式', '漫画阅读设置', '更多', '本书下载', '本话下载']);
 const fields = [...mangaDirectoryAdaptiveFields, 'mounted', 'panel', 'panelOffset', 'panelScrimOpacity', 'panelPhase', 'panelGeneration',
-  'panelActionGeneration', 'morePresentationGeneration', 'panelCloseTask', 'panelCloseResolve', 'reduceMotion', 'directoryQuery',
+  'panelActionGeneration', 'actionPanelPresentationGeneration', 'panelCloseTask', 'panelCloseResolve', 'reduceMotion', 'directoryQuery',
   'directoryRevision', 'directoryOpenRevision', 'chapterEnd', 'controlsVisible', 'backgroundPreference',
   'panelFontsReady', 'panelFontGeneration', 'refreshing', 'moreMenuVariant', 'brightnessOwner', 'exiting', 'zoom', 'directoryAscending', 'brightnessPercent', 'showPageNumbers', 'fitPreference', 'horizontal',
-  'quickHeaderMeasured', 'quickToolsMeasured', 'quickFooterMeasured', 'windowMetricsRevision',
-  'downloadActionsChapterIndex', 'downloadActions', 'downloadActionsLoading', 'downloadActionsFailure',
-  'rollbackChapterController', 'rollbackChapterImages', 'previousChapterPixels'];
+  'quickHeaderMeasured', 'quickToolsMeasured', 'quickFooterMeasured', 'actionHeaderMeasuredHeight', 'windowMetricsRevision',
+  'downloadActionsChapterIndex', 'downloadActionsGeneration', 'downloadActions', 'downloadActionsLoading', 'downloadActionsFailure',
+  'rollbackChapterController', 'rollbackChapterImages', 'previousChapterPixels',
+  'panelFocusGeneration', 'panelReturnFocusTarget', 'pageTurnInputRevision', 'transientFeedback'];
 const methods = [...mangaDirectoryAdaptiveMembers, 'openPanel', 'closePanel', 'invalidatePanelMotion', 'dismissPanelKeyboard', 'settlePanel',
   'preparePanelFonts', 'performPanelAction', 'beginPanelDrag', 'updatePanelDrag', 'finishPanelDrag', 'panelTravel', 'panelHeight',
   'panelWidth', 'panelContentHeight', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'widePanel', 'persistentDirectory', 'directoryColumnWidth', 'tabletDirectory', 'panelTitle', 'panelOverlay', 'directoryPanel',
   'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'pageOrdinal', 'adjacentChapter', 'selectAdjacentChapter', 'directoryBody', 'panelContentInset', 'directoryFallback', 'modePanel', 'settingsPanel', 'morePanel', 'moreActions', 'performMoreAction', 'performMorePanelAction', 'sectionTitle', 'sheetChoice', 'fitLine', 'choiceIcon',
-  'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody',
+  'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody', 'actionHeaderHeight',
+  'directorySheet', 'directoryBottomHeader', 'directorySideHeader', 'measureDirectorySheetHeader', 'chromeScheme',
+  'panelInputCurrent', 'preferencePanelInputCurrent', 'requestPanelFocus', 'panelCloseFocusId', 'panelTriggerFocusId',
   'isSheetChoiceSelected', 'paperColor', 'surfaceColor', 'inkColor', 'mutedColor', 'faintColor', 'lineColor',
   'softSurfaceColor', 'greenColor', 'accentColor', 'aboutToDisappear', 'handleBack', 'openDirectory',
   'showDetail', 'openSourceSwitch', 'selectDirectoryTarget', 'displayedBrightnessPercent', 'resetMangaPreferences',
@@ -46,7 +60,7 @@ function fixture(text = source, options = {}) {
   const shared=mangaSurfaceBoundedControls(properties, { panGesture });
   let owner;
   const uiContext = {
-    getFocusController: () => ({ clearFocus: () => events.push('clear-focus') }),
+    getFocusController: () => ({ clearFocus: () => events.push('clear-focus'), requestFocus: target => events.push(['focus', target]) }),
     postFrameCallback: frame => frames.push(frame),
     animateTo(params, apply) {
       const before = [owner.panelOffset, owner.panelScrimOpacity];
@@ -55,13 +69,14 @@ function fixture(text = source, options = {}) {
   };
   const dependencies = {
     ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...shared.deps, ...fonts, uiContext,
+    readerIsExpandedWidth, motionAnimateParam, readerActionIcon,
     inputMethod: { getController: () => ({ hideTextInput: () => { events.push('hide-input'); return options.keyboard ?? Promise.resolve(); } }) },
     prepareMangaSheetFonts: () => { events.push(['prepare-font', 'required-static-receipts']); return options.font ?? Promise.resolve(true); },
     prepareReaderFontFamily: family => { events.push(['prepare-serif', family]); return options.serif ?? Promise.resolve(); },
     Curve: { EaseInOut: 'easeInOut' },
     curves: { interpolatingSpring: (...args) => ({ kind: 'native-interpolatingSpring', args }) },
     hilog: { warn: (...args) => events.push(['keyboard-warning', ...args]) },
-    ReaderWindowCoordinator: { brightness: () => ({ release: async () => {} }), metrics: () => ({systemInsets:{left:0,top:0,right:0,bottom:0},cutoutInsets:{left:0,top:0,right:0,bottom:0},gestureInsets:{left:0,top:0,right:0,bottom:0},navigationInsets:{left:0,top:0,right:0,bottom:0},statusBarRect:{top:0,height:0}}) },
+    ReaderWindowCoordinator: { isTabletDevice: () => false, brightness: () => ({ release: async () => {} }), metrics: () => ({systemFontScale:1,systemInsets:{left:0,top:0,right:0,bottom:0},cutoutInsets:{left:0,top:0,right:0,bottom:0},gestureInsets:{left:0,top:0,right:0,bottom:0},navigationInsets:{left:0,top:0,right:0,bottom:0},statusBarRect:{top:0,height:0}}) },
   };
   const hooks = { ...shared.hooks, allowEmptyBranchAdmission: options.allowEmptyBranchAdmission,
     childSources: { ...shared.childSources, MangaDirectoryCurrentFooter: footerSource }, mountChildren: true };
@@ -70,11 +85,12 @@ function fixture(text = source, options = {}) {
   owner = probe.owner;
   const chapter = {};
   Object.assign(owner, {
-    // This suite owns sheet frames, not a mounted system-window identity.
+    // Admit the sheet's reader identity while keeping native chrome outside this probe.
     sourceId: '', bookId: '',
-    isReaderIdentityCurrent: () => false,
+    isReaderIdentityCurrent: () => true,
     retainPreparationOnDisappear: () => false,
-    mounted: true, viewportWidth: 390, viewportHeight: 844, stageWidth: 390, stageHeight: 844,
+    mounted: true, appForeground: true, windowChromeActive: true,
+    viewportWidth: 390, viewportHeight: 844, stageWidth: 390, stageHeight: 844,
     error: '', openingRetry: false, recovering: false, loginRequiredForControls: false,
     windowChromeOverlayActive: false,
     runtime: {}, title: '第5话', bookTitle: '示例漫画', offline: false, inBookshelf: true, controller: { chapter, close: async () => { events.push('controller-close'); } },
@@ -82,15 +98,28 @@ function fixture(text = source, options = {}) {
     directoryEntries: () => [],
     onBack: () => events.push('back'), onDetail: () => events.push('detail'),
     onSwitchSource: () => events.push('source'), onSelectDirectoryTarget: (...args) => events.push(['target', ...args]),
+    refreshLoginRequiredForControls() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {},
     setBackground() {}, setBrightness() {}, setPageNumbers() {}, resetMangaPreferences: async () => {},
     toggleDirection() {}, changeFit: async () => {},
   });
   const walk = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? walk(child) : [])];
   return { owner, frames, animations, events, properties, pans, output: probe.output,
     nodes: () => walk(owner).flatMap(child => [...child.nodes.values()]),
-    frame: () => { const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested'); next.onFrame(16); },
-    enterFrames: () => { const before = animations.length; assert.equal(frames.length, 1); frames.shift().onFrame(16); assert.equal(animations.length, before, 'onFrame may precede build: admission frame cannot start animation'); assert.equal(frames.length, 1); frames.shift().onFrame(32); },
-    finish: index => { assert.equal(typeof animations[index]?.params.onFinish, 'function'); animations[index].params.onFinish(); },
+    frame: () => { const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested'); next.onFrame(16); next.onIdle(0); },
+    enterFrames: () => {
+      const before = animations.length;
+      assert.equal(frames.length, 1, 'one native idle admission precedes animation');
+      const frame = frames.shift(); frame.onFrame(16);
+      assert.equal(animations.length, before, 'onFrame may precede build: admission frame cannot start animation');
+      frame.onIdle(0);
+    },
+    finish: index => {
+      assert.equal(typeof animations[index]?.params.onFinish, 'function');
+      const before = frames.length; animations[index].params.onFinish();
+      // Native focus scheduling remains the real production frame callback.
+      // Finish only frames admitted by this completion, not a later opening.
+      for (const frame of frames.splice(before)) { frame.onFrame(16); frame.onIdle(0); }
+    },
   };
 }
 function assertOpening(f, panel) {
@@ -98,8 +127,10 @@ function assertOpening(f, panel) {
   assert.ok(Number.isFinite(f.owner.panelOffset)&&f.owner.panelOffset>0,'current admitted sheet begins outside its bounded frame');
   assert.equal(f.owner.panelScrimOpacity, 0); assert.equal(f.animations.length, 0);
   f.owner.panelOverlay();
-  const sheet = f.nodes().find(node => (panel==='more'||panel==='downloads'?node.type==='__Common__':node.type==='Stack'&&node.clip===true) && node.translate);
-  const scrim = f.nodes().find(node => node.type === 'Column' && node.backgroundColor === '#57000000');
+  const sheet = f.nodes().find(node => node.type === 'Column' && node.hitTestBehavior === 'HitTestMode.Default' && node.translate);
+  assert.ok(sheet, 'phone surface ancestor admits child actions and masks the lower scrim');
+  const scrim = f.nodes().find(node => node.type === 'Column' && node.width === '100%' && node.height === '100%' &&
+    typeof node.onClick === 'function' && Object.hasOwn(node, 'opacity'));
   assert.deepEqual(sheet.translate, { x: 0, y: f.owner.panelOffset }, 'actual SDK lowered actor starts outside the phone');
   assert.equal(scrim.opacity, 0, 'actual SDK lowered scrim starts transparent');
   if (panel === 'directory') {
@@ -110,7 +141,7 @@ function assertOpening(f, panel) {
   }
   f.enterFrames();
   assert.equal(f.animations.length, 2);
-  assert.ok(f.animations.every(a=>a.params&&typeof a.params.onFinish==='function'),'actual native completion callbacks own phase publication');
+  assert.equal(typeof f.animations[1].params.onFinish, 'function', 'the native movement completion owns phase publication');
   assert.equal(f.owner.panelPhase, 'opening', 'target mutation is not treated as animation completion');
   f.finish(1); assert.equal(f.owner.panelPhase, 'open');
 }
@@ -130,7 +161,10 @@ async function verifyMotion(text = source) {
     await f.owner.selectDirectoryTarget(99); assert.ok(!f.events.some(event => Array.isArray(event) && event[0] === 'target'), 'late directory selection cannot navigate during exit');
     assert.equal(f.owner.panelTitle(), { directory: '章节目录', mode: '阅读方式', settings: '漫画阅读设置', more: '更多' }[panel]);
     f.properties.flush(); f.owner.replay();
-    assert.equal(f.nodes().find(node => (panel==='more'?node.type==='__Common__':node.type==='Stack'&&node.clip===true) && node.translate).enabled, false,
+    const content = f.nodes().find(node => panel === 'directory'
+      ? node.type === 'Stack' && node.create?.alignContent === 'Alignment.TopEnd'
+      : node.type === '__Common__' && Object.hasOwn(node, 'enabled'));
+    assert.equal(content.enabled, false,
       'native content is blocked during the closing lifecycle');
     f.finish(3); assert.equal(await closing, true); assert.equal(f.owner.panel, '');
   }
@@ -169,8 +203,9 @@ async function verifyRaces(text = source) {
 if(selectedCase==='lifecycle'){await verifyMotion();await verifyRaces();}
 if(selectedCase==='drag-reduced') {
   const f = fixture(); f.owner.reduceMotion = true; f.owner.isReaderIdentityCurrent = () => true;
-  Object.assign(f.owner, { refreshLoginRequiredForControls() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {} });
-  await f.owner.openPanel('more'); const token = f.owner.morePresentationGeneration;
+  Object.assign(f.owner, { appForeground: true, windowChromeActive: true,
+    refreshLoginRequiredForControls() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {} });
+  await f.owner.openPanel('more'); const token = f.owner.actionPanelPresentationGeneration;
   f.owner.panelOverlay();
   assert.equal(f.pans.length, 1, 'the composed shared header registers exactly one native handle recognizer');
   const pan = f.pans[0];
@@ -290,6 +325,7 @@ if(selectedCase==='font-admission') await verifyPersistentFontAdmission();
 
 async function verifyReachableWideDirectory(text=source) {
   const f=fixture(text);Object.assign(f.owner,{stageWidth:920,stageHeight:900,viewportWidth:662,viewportHeight:900});
+  f.owner.readerPanelForeground = () => true;
   await f.owner.openPanel('directory');
   assert.equal(f.owner.panel,'directory','real tablet directory action opens the right panel');
   assert.equal(f.owner.panelPhase,'opening');assert.ok(f.owner.panelOffset>0);
@@ -360,12 +396,12 @@ if(selectedCase==='lifecycle') await assert.rejects(() => verifyMotion(mutate('o
   const requests = [];
   const visit = node => { if (ts.isCallExpression(node) && node.expression?.name?.getText(tree) === 'postFrameCallback') requests.push(node); ts.forEachChild(node, visit); };
   visit(tree);
-  assert.equal(requests.length, 2, 'the production entry fence has two native frame admissions');
-  const inner = requests[1];
-  return text.replace(inner.getText(tree), `${inner.arguments[0].getText(tree)}.onFrame(0)`);
-})), /admission frame cannot start animation/);
+  assert.equal(requests.length, 1, 'the production entry fence has one native idle admission');
+  const request = requests[0];
+  return text.replace(request.getText(tree), `${request.arguments[0].getText(tree)}.onIdle(0)`);
+})), /current admitted sheet begins outside its bounded frame|native idle admission precedes animation|admission frame cannot start animation/);
 if(selectedCase==='lifecycle') await assert.rejects(() => verifyRaces(mutate('settlePanel', text =>
-  text.replace("if (this.mounted && generation === this.panelGeneration && this.panelPhase === 'opening')", 'if (true)'))),
+  text.replace("if (this.panelPhase === 'opening' && this.panelOpeningCurrent(generation))", 'if (true)'))),
 /unmounted entry callback is inert/);
 if(selectedCase==='font-admission') await assert.rejects(() => verifyPersistentFontAdmission(mutate('tabletDirectory', text =>
   text.replace('if (this.panelFontsReady)', 'if (true)'))), /persistent catalog cannot paint/);
@@ -400,9 +436,10 @@ if(selectedCase==='directory-selection') await assert.rejects(()=>verifyReachabl
 
 if(selectedCase==='download-navigation') {
   const f=fixture();f.owner.reduceMotion=true;f.owner.isReaderIdentityCurrent=()=>true;
-  Object.assign(f.owner,{downloadEnabled:true,refreshLoginRequiredForControls(){},applyWindowChrome(){},applyWindowPolicyForChromeOwner(){},
+  Object.assign(f.owner,{downloadEnabled:true,appForeground:true,windowChromeActive:true,
+    refreshLoginRequiredForControls(){},applyWindowChrome(){},applyWindowPolicyForChromeOwner(){},
     onOpenDownloads:()=>f.events.push('downloads'),onLoadDownloadActions:()=>{throw Error('management navigation cannot open the per-chapter actions popup');}});
-  await f.owner.openPanel('more');const token=f.owner.morePresentationGeneration;
+  await f.owner.openPanel('more');const token=f.owner.actionPanelPresentationGeneration;
   f.owner.performMoreAction('downloadManager',token);await new Promise(done=>setImmediate(done));
   assert.equal(f.events.filter(event=>event==='downloads').length,1);
   f.owner.performMoreAction('downloadManager',token);await new Promise(done=>setImmediate(done));

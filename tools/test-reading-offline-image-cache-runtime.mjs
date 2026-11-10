@@ -17,7 +17,7 @@ if(id.startsWith('worker-'))checkMangaAtomicPayloadSdk();
 // Execute the whole production class. Only Harmony's platform APIs are adapted
 // to a real temporary filesystem; this is not device or platform durability proof.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
+const source = readFileSync(join(repo, 'entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts'), 'utf8');
 // Negative control restores the former whole-book deletion in the executed
 // class. The same filesystem assertions must catch its ownership violation.
 const negativeControl=id==='negative-whole-tree-clear';

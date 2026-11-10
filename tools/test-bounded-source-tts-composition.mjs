@@ -9,13 +9,13 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { boundedSurfaceSdk,boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const {sourceSwitchLiveSdk} = await import('./lib/source-switch-sdk-consumer.mjs');
-const horizontal = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
-const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
-const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const horizontal = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
+const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.meta.url),'utf8');
-const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
+const source=read('features/source/ui/SourceSwitchWindow.ets'),tts=read('features/reading/ui/ReaderTtsConfigOverlay.ets');
 const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
 function sourceOwner(input=source,options={}){
   const p=boundedSurfaceSdk(options),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});

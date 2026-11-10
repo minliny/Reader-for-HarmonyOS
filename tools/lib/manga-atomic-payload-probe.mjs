@@ -8,12 +8,12 @@ import { spawnSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
-const path = localFilePath(new URL('../../entry/src/main/ets/app/MangaAtomicPayloadReader.ets', import.meta.url));
+const path = localFilePath(new URL('../../entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets', import.meta.url));
 const ts = require(`${sdk}/node_modules/typescript`);
 const ui = require(`${sdk}/lib/process_ui_syntax.js`);
 const main = require(`${sdk}/main.js`);
 const sdkOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const portPath = localFilePath(new URL('../../entry/src/main/ets/app/MangaAtomicPayloadPort.ts', import.meta.url));
+const portPath = localFilePath(new URL('../../entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadPort.ts', import.meta.url));
 
 // The official ETS pass supplies the concurrent directive. Removing a
 // decorator ourselves would conceal the native taskpool admission contract.
@@ -51,7 +51,7 @@ export function checkMangaAtomicPayloadSdk() {
   // 10605999). Flattened worker syntax checks cannot establish this boundary.
   const moduleOptions = { ...sdkOptions, ...options, incremental:false,
     needDoArkTsLinter:true, isCompatibleVersion:false, tsImportSendableEnable:false, etsLoaderPath:sdk };
-  const clients = ['ReadingImageDiskCache.ts', 'MangaDisplayRetention.ts'].map(name => localFilePath(new URL(`../../entry/src/main/ets/app/${name}`, import.meta.url)));
+  const clients = ['ReadingImageDiskCache.ts', 'MangaDisplayRetention.ts'].map(name => localFilePath(new URL(`../../entry/src/main/ets/platform/reading-resources/${name}`, import.meta.url)));
   const directionErrors = mutate => {
     const host = ts.createCompilerHost(moduleOptions), get = host.getSourceFile.bind(host);
     if (mutate) host.getSourceFile = (name, ...args) => clients.includes(name) ?
@@ -74,7 +74,7 @@ export function checkMangaAtomicPayloadSdk() {
     assert.equal(actual.status, 0, actual.stderr || actual.stdout || String(actual.error));
     assert.notEqual(parse(invalid).status, 0, 'official bytecode frontend rejects invalid syntax');
     for (const name of ['ReadingImageDiskCache.ts', 'MangaDisplayRetention.ts', 'MangaAtomicPayloadPort.ts']) {
-      const result = parse(localFilePath(new URL(`../../entry/src/main/ets/app/${name}`, import.meta.url)));
+      const result = parse(localFilePath(new URL(`../../entry/src/main/ets/platform/reading-resources/${name}`, import.meta.url)));
       assert.equal(result.status, 0, result.stderr || result.stdout || String(result.error));
     }
   } finally { rmSync(directory, { recursive:true, force:true }); }
@@ -105,7 +105,7 @@ export function createMangaAtomicPayloadBindingFixture(io, hooks = {}) {
       return work;
     }
   } };
-  const executable = stripTypeScriptTypes(mangaAtomicPayloadSdkSource.replace(/^import .*?;\n/gm, '').replace(/^export /gm, ''));
+  const executable = stripTypeScriptTypes(mangaAtomicPayloadSdkSource.replace(/^import[\s\S]*?;\s*/gm, '').replace(/^export /gm, ''));
   const port = stripTypeScriptTypes(readFileSync(portPath, 'utf8').replace(/^export /gm, ''));
   return new Function('fs', 'taskpool', `${port}\n${executable}\nreturn { readMangaAtomicPayload, installMangaAtomicPayloadReader, bindMangaAtomicPayloadReader };`)(fs, taskpool);
 }

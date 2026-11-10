@@ -2,14 +2,14 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
-import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts';
-import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-import * as readerWindowMetrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../entry/src/main/ets/features/manga/ui/MangaLayoutPolicy.ts';
+import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
+import * as readerWindowMetrics from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { isReaderProductSurfaceEnabled, isReaderMainTabEnabled } from '../../entry/src/main/ets/app/ReaderProductScope.ts';
-import { readerWidthClass } from '../../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
-import * as mangaDirectoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { readerWidthClass } from '../../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
+import * as mangaDirectoryVisual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+  READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 
 // SDK probes resolve the production extensionless TypeScript imports exactly
 // as the other Host Owner probes; no recovery projector is reconstructed.
@@ -17,7 +17,7 @@ registerHooks({resolve(specifier,context,next){try{return next(specifier,context
   if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);
   throw error;
 }}});
-const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 
 /** Register the same imported child names/Props as the SDK frontend. Child
  * native paint is outside the surface ownership/geometry probes. */
@@ -25,7 +25,7 @@ const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const ts = require(`${sdk}/node_modules/typescript`);
-const surfaceSource = readFileSync(new URL('../../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const surfaceSource = readFileSync(new URL('../../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const surfaceTree = ts.createSourceFile(virtualFilePath('MangaFrameSdkBoundary.ets'), surfaceSource, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const sheetFrame = surfaceTree.statements.find(node => node.name?.getText(surfaceTree) === 'MangaSheetFrame');
@@ -45,19 +45,19 @@ export function mountMangaViewportBuilder(owner) {
   return wrappers.length;
 }
 const actionControls = boundedSurfaceSdk();
-const ReaderActionSheetAction = actionControls.deps.ReaderActionSheetAction;
+const ReaderMenuActionView = actionControls.deps.ReaderMenuActionView;
 export function mangaSurfaceBoundedControls(properties, options = {}) { return boundedSurfaceSdk({ ...options, properties, allowEmptyBranchAdmission: true }); }
 for (const [name, relative] of [
-  ['ReaderIconButton', '../../entry/src/main/ets/features/common/ReaderIconButton.ets'],
-  ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets'],
-  ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets'],
-  ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets'],
-  ['ReaderActionSheetContent', '../../entry/src/main/ets/features/common/ReaderActionSheetContent.ets'],
-  ['ReaderBoundedSurface', '../../entry/src/main/ets/features/common/ReaderBoundedSurface.ets'],
-  ['ReaderBoundedSurfaceHeader', '../../entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets'],
-  ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets'],
+  ['ReaderIconButton', '../../entry/src/main/ets/ui/controls/ReaderIconButton.ets'],
+  ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets'],
+  ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets'],
+  ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/ui/MangaDownloadOperationsPanel.ets'],
+  ['ReaderActionMenuSurface', '../../entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets'],
+  ['ReaderBoundedSurface', '../../entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets'],
+  ['ReaderBoundedSurfaceHeader', '../../entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets'],
+  ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/ui/MangaDirectoryCurrentFooter.ets'],
   ['PullToRefresh', '../../entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets'],
-  ['MangaBoundaryTurnFeedback', '../../entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets'],
+  ['MangaBoundaryTurnFeedback', '../../entry/src/main/ets/features/manga/ui/MangaBoundaryTurnFeedback.ets'],
 ]) {
   const source = readFileSync(new URL(relative, import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(name);
@@ -68,7 +68,7 @@ export const mangaSurfaceSdkDependencies = {
     .map(name => [name, new Proxy({}, { get: (_target, key) => `${name}.${String(key)}` })])),
   READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
-  ReaderActionSheetAction,
+  ReaderMenuActionView,
   resolveDrawerSpec: actionControls.deps.resolveDrawerSpec, readerAppColor: actionControls.deps.readerAppColor,
   ...mangaDirectoryVisual, visual: mangaDirectoryVisual.MANGA_DIRECTORY_VISUAL,
   PanGesture: nativeGesture, PanDirection: { Vertical: 'vertical' },
@@ -78,7 +78,7 @@ export const mangaSurfaceSdkDependencies = {
   ReaderDirectoryNavigationSurface: ImportedChildBoundary,
   MangaReadingDirectoryFallback: ImportedChildBoundary,
   MangaDownloadOperationsPanel: ImportedChildBoundary,
-  ReaderActionSheetContent: ImportedChildBoundary,
+  ReaderActionMenuSurface: ImportedChildBoundary,
   ReaderBoundedSurface: ImportedChildBoundary,
   ReaderBoundedSurfaceHeader: ImportedChildBoundary,
   MangaDirectoryCurrentFooter: ImportedChildBoundary,

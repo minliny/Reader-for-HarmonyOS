@@ -10,7 +10,7 @@ const { readFileSync } = await import('node:fs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
 
 
-const source = readFileSync('entry/src/main/ets/features/manga/MangaReadingSurface.ets', 'utf8');
+const source = readFileSync('entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', 'utf8');
 let checks = 0;
 for (const scheme of ['day', 'night']) {
   for (const label of ['返回', '更多']) {
@@ -34,6 +34,30 @@ const negative = iconButtonControls(); let taps = 0;
 const owner = negative.consumer(removed, ['iconAction']); owner.iconAction('manga-icon', '返回', () => taps++);
 const child = negative.walk(owner).find(actor => actor instanceof negative.icon.Component), hit = negative.nodes(child).find(node => node.onClick);
 assert.equal(hit.enabled, false); hit.onClick(); assert.equal(taps, 0, 'missing real accessible-name Prop reproduces disabled manga controls');
+const chrome = iconButtonControls();
+let switches = 0, current = true;
+const toolbar = chrome.consumer(source, ['topControls', 'mangaTopBarBack', 'mangaTopBarActions', 'chromeScheme',
+  'readerPanelForeground', 'openSourceSwitch'], {
+  ButtonType: { Normal: 'ButtonType.Normal' }, TOK_BORDER_W: 1,
+});
+Object.assign(toolbar, {
+  mounted: true, exiting: false, appForeground: true, windowChromeActive: true, windowChromeOverlayActive: false,
+  isReaderIdentityCurrent: () => current, onSwitchSource: () => switches++, iconAction() {},
+  performPanelAction: async action => { await action(); return true; },
+  inkColor: () => '#111111', mutedColor: () => '#666666', surfaceColor: () => '#F8F4EC', lineColor: () => '#DDD8D0',
+  backgroundPreference: 'paper', bookTitle: '漫画', title: '本话', offlineProbeStatus: '',
+  recovering: false, loginRequiredForControls: false,
+});
+toolbar.topControls();
+const frame = chrome.nodes(toolbar).find(node => node.type === 'Row' && node.height === 52 && node.clip === true);
+assert.deepEqual([frame.width, frame.borderRadius, frame.backgroundColor, frame.border.color],
+  ['100%', 18, '#FFFCF8', '#E7E0D5'], 'shared frame paints the original manga toolbar geometry and material');
+const sourceSwitch = chrome.nodes(toolbar).find(node => node.type === 'Button' && node.accessibilityText === '换源');
+assert.deepEqual([sourceSwitch.width, sourceSwitch.height, sourceSwitch.enabled], [44, 44, true]);
+sourceSwitch.onClick();
+toolbar.windowChromeOverlayActive = true; sourceSwitch.onClick();
+toolbar.windowChromeOverlayActive = false; current = false; sourceSwitch.onClick();
+assert.equal(switches, 1, 'covered and retired manga surfaces cannot dispatch the captured switch action');
 console.log(`PASS approved manga/floating icon SDK: ${checks} day/night real manga Builder→shared icon actions, finite retained dimensions/radii, names/eligibility, retired callbacks and missing-Prop negative. Native focus/layout/device remain separate.`);
 
 }

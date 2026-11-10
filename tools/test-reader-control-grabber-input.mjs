@@ -12,11 +12,11 @@ const { readFileSync }=await import('node:fs');
 const { createRequire, registerHooks }=await import('node:module');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const motion=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const session=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const metrics=await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
-const { ReaderControlRuntime }=await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
-const { ReaderPageInputClock }=await import('../entry/src/main/ets/features/reading/ReaderPageInputClock.ts');
+const motion=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const session=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const metrics=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
+const { ReaderControlRuntime }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts');
+const { ReaderPageInputClock }=await import('../entry/src/main/ets/features/reading/ui/ReaderPageInputClock.ts');
 const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
@@ -25,12 +25,12 @@ const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   }
 } });
 try {
-const hostPolicy = await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+const hostPolicy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const Host = selectedCase==='grabber-ownership'?productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['isControlInputEnabled'], hostPolicy):undefined;
 
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = (resolveEtsLoaderRoot());
@@ -38,8 +38,9 @@ const ts = require(`${sdk}/node_modules/typescript`), syntax = require(`${sdk}/l
 const children = ['topBar', 'controlContent', 'controlHeader', 'brightnessRail', 'moduleNavBar', 'readerMoreMenu', 'launchSourceContent'];
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };
 let receivedAt = 0;
+const progressMembers = ['syncProgressInput', 'invalidateProgressInput', 'progressInputEnabled', 'progressChangeHandler', 'clampPercent'];
 const names = ['handleControlTouch', 'acceptRuntime', 'rememberVisibleContentLocation', 'contentLocation',
-  'commitVisualSession', 'confirmLaunchSourceReady'];
+  'commitVisualSession', 'confirmLaunchSourceReady', 'contentInputEnabled', ...progressMembers];
 const Panel = productionMotionMethods(file, names, { ...session, TouchType, ReaderPageInputClock,
   readerMotionNowMs: () => receivedAt, DEBUG: false });
 function mount(text, module = 'settings', full = false, width = 364, height = 736, quick = 330, initialClosed = false) {
@@ -67,12 +68,13 @@ function mount(text, module = 'settings', full = false, width = 364, height = 73
   const runtime = new ReaderControlRuntime(config);
   Object.assign(owner, { runtime, runtimeMounted: true, inputEnabled: true, controlObscured: false,
     temporaryLayerActive: false, appScheme: 'day', launchSample: undefined, moreMenuVisible: false,
+    runtimeLifecycle: 1, controlOpenRevision: 1, progressInputRevision: 0, progressInputScope: '', progressPreviewPercent: -1,
     visualHeldPointerId: -1, visualExpansionProgress: full ? 1 : 0, visualVisibilityProgress: initialClosed ? 0 : 1, controlActorsRetained: false,
     lastVisibleContentLocation: current.location, controlSession: current, visualSession: current,
     layout: { viewportWidth: width + 26, viewportHeight: height + 108, fullPanelWidth: width,
       topBarWidth: width, topBarTop: 19 }, rootScreenX: 0, rootScreenY: 0,
     dockRect: {}, backdropRegions: [], onVisualSessionChange() {}, reportBackdropRegions() {},
-    scheduleRuntimeFrame() {}, contentInputEnabled: () => true, controlPanelHeight: () => height,
+    scheduleRuntimeFrame() {}, controlPanelHeight: () => height,
     dockTop: () => top, dockLeft: () => 13,
     frame() { return motion.sampleReaderControlMotionComposition({ expansionProgress: this.visualExpansionProgress,
       visibilityProgress: this.visualVisibilityProgress }, bounds); },
@@ -211,10 +213,21 @@ if(selectedCase==='progress-slider'){
 // The actual native Slider observer owns continuous pointer previews and emits
 // only committed End/Click values; a second interaction needs no module reopen.
 const { owner: slider } = createReaderBuilderProbe(source,
-  ['progressRow', 'effectiveProgressPercent', 'clampPercent'], metrics);
+  ['progressRow', 'effectiveProgressPercent', 'contentInputEnabled', 'contentLocation', ...progressMembers], metrics);
+const progressSession = session.openReaderControlSession(session.createReaderControlSessionState(), 0);
+const progressRuntime = new ReaderControlRuntime({
+  axis: motion.readerControlMotionAxis(motion.readerControlMotionBounds(364, 736, 19, 330), 89),
+  tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 100, showDurationMs: 100, dismissDurationMs: 100,
+});
+progressRuntime.start(progressSession);
 const values = [];
 Object.assign(slider, { appScheme: 'day', progressPreviewPercent: -1, progressPercent: 10,
+  runtime: progressRuntime, runtimeMounted: true, runtimeLifecycle: 1, controlOpenRevision: 1,
+  progressInputRevision: 0, progressInputScope: '', inputEnabled: true, controlObscured: false,
+  temporaryLayerActive: false, moreMenuVisible: false, lastVisibleContentLocation: progressSession.location,
+  visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1,
   totalChapters: 30, onProgressChange: p => values.push(p) });
+slider.syncProgressInput();
 slider.progressRow(); const track = [...slider.nodes.values()].find(n => n.accessibilityText === '阅读进度');
 track.onChange(25, 'SliderChangeMode.Moving'); assert.deepEqual(values, []);
 track.onChange(25, 'SliderChangeMode.End'); track.onChange(75, 'SliderChangeMode.End');

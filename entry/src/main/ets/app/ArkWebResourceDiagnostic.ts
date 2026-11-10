@@ -1,7 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
-import { ArkWebExecutor, type ArkWebDiagnosticEvent } from './ArkWebExecutor';
+import { ArkWebExecutor, type ArkWebDiagnosticEvent } from '../platform/network/ArkWebExecutor';
 
 type DiagnosticDataDocumentShape = {
   metadata: string;

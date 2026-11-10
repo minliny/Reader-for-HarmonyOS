@@ -12,7 +12,7 @@ if(selectedCase==='caller-barrier') {
   let writes = 0, expectedSuppression = true;
   const policy = {}, pending = new Promise(() => {});
   const storage = new Map(), storageWrites = [];
-  const Owner = selectedProductionMethods(new URL('features/reading/LocalReadingExperience.ets', appRoot),'LocalReadingExperience',
+  const Owner = selectedProductionMethods(new URL('features/reading/ui/LocalReadingExperience.ets', appRoot),'LocalReadingExperience',
     ['applyReaderWindowPolicy'], { AppStorage: {
       get(key) { return storage.get(key); },
       setOrCreate(key, value) { storage.set(key, value); storageWrites.push([key, value]); },

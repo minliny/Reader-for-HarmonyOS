@@ -4,7 +4,7 @@ async function run(id){
 const {registerHooks}=await import("node:module");
 const {readFileSync}=await import("node:fs");
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 const {projectPersistedReceipt}=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
 const book={sourceId:'s',bookId:'b',title:'书',author:'作者'};
@@ -13,7 +13,7 @@ const directory=(confirmation,readback,extra={})=>({action:'delete',book,generat
  completion:'complete',canContinueOriginal:false,projection:receipt(confirmation,readback),...extra});
 const offline=(confirmation,readback,extra={})=>({action:'book',sourceId:'s',bookId:'b',generation:8,
  materialization:'succeeded',canContinueOriginal:false,projection:receipt(confirmation,readback),...extra});
-const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRecoverySurface.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets',import.meta.url),'utf8');
 function mount(recovery){
  const sdk=boundedSurfaceSdk(),messages=[],calls=[];
  const owner=sdk.consumer(source,undefined,{EMPTY_READING_DIRECTORY_RECOVERY});
@@ -107,7 +107,7 @@ for(const family of ['bookmarks','offline']){
  const f=await fixture(true),x=makeIndex(f,{remote:family==='offline'});
  const writeMethod=family==='bookmarks'?'bookmark.create':'cache.clear',readMethod=family==='bookmarks'?'bookmark.list':'cache.book.status';
  f.options.status=true;f.options.beforeMethod=writeMethod;
- if(family==='bookmarks')x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else x.idx.clearDirectoryBookOffline();
+ if(family==='bookmarks')x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else x.idx.directoryOperations.clearOffline();
  await until(()=>f.writes().length===1);await settled(f);
  const label=family==='bookmarks'?'重新载入核对书签':'核对离线结果',leaf=x.render('ReaderFullDirectory');
  const original=x.actions(leaf).find(action=>action.label===label);assert.ok(original);

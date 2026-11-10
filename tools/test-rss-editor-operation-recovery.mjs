@@ -10,7 +10,7 @@ function fixture(){
 }
 function page(f){
   const shared=rssRecoverySurfaceSdk();
-  const owner=shared.consumer(rssSource('features/rss/RssSubscriptionEditorPage.ets'),
+  const owner=shared.consumer(rssSource('features/rss/ui/RssSubscriptionEditorPage.ets'),
     ['snapshot','operationRecovery','saveAction','recoveryActionIdentities','recoveryGeneration','dispatchRecovery'],
     {EMPTY_RSS_EDITOR_SNAPSHOT:RssEmptyEditor});
   Object.assign(owner,{appThemeScheme:'day',onSave:()=>f.editor.save(),onReconcile:g=>f.editor.reconcile(g),onRetryRead:g=>f.editor.retryLoad(g)});

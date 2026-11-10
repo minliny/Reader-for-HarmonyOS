@@ -13,10 +13,10 @@ const { createHash } = await import('node:crypto');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
-const { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
 
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
 
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */

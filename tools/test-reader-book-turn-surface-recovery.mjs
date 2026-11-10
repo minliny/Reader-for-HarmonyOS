@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createBookTurnTextureOwner} from './lib/reader-book-turn-owner-fixture.mjs';
-import {cancelReaderPagePan,completeReaderPageGestureSettlement} from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
-const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+import {cancelReaderPagePan,completeReaderPageGestureSettlement} from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
+const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 const source=readFileSync(file,'utf8');
 const events=Object.fromEntries(['SURFACE_READY','TEXTURE_READY','VISUAL_COMMIT_ENDPOINT','ROLLBACK_COMPLETE',
   'SURFACE_LOST','RENDER_FAILURE','SLOTS_COMMITTED','TERMINAL_RELEASED','FRAME_PRESENTED']

@@ -5,7 +5,7 @@ import {stripTypeScriptTypes} from 'node:module';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const root=new URL('./fixtures/manga-orientation/',import.meta.url);
 const fixtures=JSON.parse(readFileSync(new URL('goldens.json',root),'utf8'));
-const code=stripTypeScriptTypes(readFileSync(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
+const code=stripTypeScriptTypes(readFileSync(new URL('../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
 let fixture, pixels, current=true, cancelOnRotate=false, released=0, closed=0, decoded=[];
 class Pixels {
  constructor(width,height,rgba){this.width=width;this.height=height;this.rgba=rgba;}

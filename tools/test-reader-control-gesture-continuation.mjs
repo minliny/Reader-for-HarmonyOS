@@ -3,12 +3,12 @@ import {
   advanceReaderControlSession, createReaderControlSessionState, dismissReaderControlSession,
   enterReaderControlModule, expandReaderControlSession, openReaderControlSession,
   readerControlTargetLocation, sampleReaderControlSession,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 import {
   beginReaderControlGesture, cancelReaderControlGesture, createReaderControlGestureState,
   endReaderControlGesture, readerControlGestureTargetDuration,
   updateReaderControlGesture, readerControlGrabberScreenY,
-} from '../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts';
 
 const config = {
   axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 },

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import {reduceReaderThemeSelection as reduce, effectiveAppScheme, encodeReaderThemeSelection, restoreReaderThemeSelection, migrateLegacyReaderThemeSelection} from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
-import { createDefaultReaderAppearanceSnapshot, normalizeReaderAppearanceSnapshot, setReaderAppearanceTheme, appearanceThemeSelection } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
+import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import {reduceReaderThemeSelection as reduce, effectiveAppScheme, encodeReaderThemeSelection, restoreReaderThemeSelection, migrateLegacyReaderThemeSelection} from '../entry/src/main/ets/app/ReaderThemeSelection.ts';
+import { createDefaultReaderAppearanceSnapshot, normalizeReaderAppearanceSnapshot, setReaderAppearanceTheme, appearanceThemeSelection } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 for(const system of ['day','night'])for(const mode of ['system','day','night'])for(const theme of READER_THEME_DEFINITIONS){
  const base={appThemeMode:mode,readerThemeId:'paper',defaultDayReaderThemeId:'warm',defaultNightReaderThemeId:'greenNight'};
  const before=structuredClone(base);const selected=reduce(base,'reader',theme.id,system);

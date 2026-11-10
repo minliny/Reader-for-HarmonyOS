@@ -7,8 +7,8 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { stripTypeScriptTypes } from 'node:module';
-const source = readFileSync(new URL('../entry/src/main/ets/features/settings/SettingsPage.ets', import.meta.url), 'utf8');
-const overlaySource = readFileSync(new URL('../entry/src/main/ets/features/settings/SettingsSelectOverlay.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsPage.ets', import.meta.url), 'utf8');
+const overlaySource = readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsSelectOverlay.ets', import.meta.url), 'utf8');
 const overlayMembers = ['isTablet', 'field', 'selectionId', 'value', 'options', 'anchorRight', 'anchorBottom',
   'onSelect', 'onDismiss', 'appThemeScheme', 'mounted', 'closed', 'aboutToAppear', 'aboutToDisappear',
   'onFieldChanged', 'ownsOpening', 'dismiss', 'choose', 'build', 'phoneSheet', 'phoneOption',
@@ -95,7 +95,7 @@ assert.notEqual(unguardedChoose, overlaySource);
 
 // Replay the real trigger's native Area wrapper, including unit-bearing vp
 // coordinates, before passing its anchor to the retained actual overlay.
-const selectSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSelect.ets', import.meta.url), 'utf8');
+const selectSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url), 'utf8');
 const actualConstants = text => stripTypeScriptTypes(text.slice(0, text.indexOf('@Component')))
   .replace(/^import[\s\S]*?;\s*/gm, '').replace(/^export /gm, '');
 const selectConstants = new Function('TOK_SPACE_CONTROL_INLINE', actualConstants(selectSource) +
@@ -142,7 +142,7 @@ function triggerAnchor(pageSource = source) {
     'Number mutation reproduces invalid vp anchor in the actual SDK callback'); cases++;
 }
 {
-  const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/SettingsShell.ets',import.meta.url),'utf8');
+  const shellSource=readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsShell.ets',import.meta.url),'utf8');
   const shell=createReaderBuilderProbe(shellSource,['reportOverlayOrigin']).owner;
   const points=[]; shell.onOverlayOriginChange=(x,y)=>points.push([x,y]);
   shell.reportOverlayOrigin({globalPosition:{x:10,y:39}});

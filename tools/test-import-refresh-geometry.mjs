@@ -12,17 +12,29 @@ const {readFileSync,writeFileSync,existsSync} = await import('node:fs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 
 const root=new URL('../',import.meta.url);
-const source=readFileSync(new URL('entry/src/main/ets/features/bookshelf/LocalImportDialog.ets',root),'utf8');
+const source=readFileSync(new URL('entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets',root),'utf8');
 const {owner}=createReaderBuilderProbe(source,['resultSummary']);
 Object.assign(owner,{appThemeScheme:'day',summaryIcon:()=> 'app.media.import_success',allSucceeded:()=>true,
   summaryTitle:()=> '导入完成',resultCountText:()=> '1本已在书架'});
 owner.resultSummary();const records=[];
 // The actual current file-picker action owns native 18vp busy feedback.
-const sdk=boundedSurfaceSdk(),picker=sdk.consumer(source,['fileSelectionActions'],{}, {state:'pickerOpening',selectionEnabled:true});
-Object.assign(picker,{state:'pickerOpening',selectionEnabled:true});picker.fileSelectionActions();const choose=sdk.walk(picker).find(actor=>actor instanceof sdk.deps.ReaderRecoveryAction&&actor.label==='选择文件');
+const sdk=boundedSurfaceSdk(),picker=sdk.consumer(source,['fileSelectionActions','canSelectFiles','canDismissSelection'],{},
+ {state:'pickerOpening',selectionEnabled:true});
+let dismissals=0;
+Object.assign(picker,{state:'pickerOpening',selectionEnabled:true,mounted:true,foreground:true,onClose:()=>dismissals++});
+picker.fileSelectionActions();const choose=sdk.walk(picker).find(actor=>actor instanceof sdk.deps.ReaderRecoveryAction&&actor.label==='选择文件');
 assert.ok(choose);const pickerNodes=sdk.nodes(choose),loader=pickerNodes.find(node=>node.type==='LoadingProgress');
 assert.deepEqual([loader.width,loader.height],[18,18]);assert.equal(pickerNodes.find(node=>node.type==='Text').opacity,0);
 assert.equal(pickerNodes.find(node=>node.type==='Stack'&&node.onClick).enabled,false);
+const cancel=sdk.walk(picker).find(actor=>actor instanceof sdk.deps.ReaderRecoveryAction&&actor.label==='取消');
+const cancelClick=sdk.nodes(cancel).find(node=>node.onClick).onClick;
+cancelClick();assert.equal(dismissals,1,'the foreground picker-opening step still accepts Cancel');
+for(const state of ['importing','result']){
+  picker.state=state;cancelClick();
+  assert.equal(dismissals,1,'the captured selection Cancel cannot dismiss a later step');
+}
+picker.state='fileSelection';picker.foreground=false;cancelClick();
+assert.equal(dismissals,1,'the captured selection Cancel cannot dismiss from the background');
 // The historical SVG remains provenance, but approved result feedback is now
 // a plain, measured message count; its old decorative arc is not rendered.
 for(const scheme of ['day','night','day']){

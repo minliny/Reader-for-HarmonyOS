@@ -12,11 +12,11 @@ import {
   readerInteractiveSafeRight,
   readerVisualSafeBottom,
   readerVisualSafeInsets,
-} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
-} from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+} from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 
 const VIEWPORT_WIDTHS = [320, 360, 365.71, 390, 500, 599, 600, 720, 760, 840];
 const EPSILON = 0.000001;

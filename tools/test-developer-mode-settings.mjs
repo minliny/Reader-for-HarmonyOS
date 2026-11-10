@@ -21,7 +21,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const clearedTimers = [];
 let timerCount = 0;
 const Owner = selectedProductionMethods(path.join(root,
-  'entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
+  'entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
 ['scanFrameTree', 'collectFrameBounds', 'paintFrameBounds', 'onDeveloperModeChanged', 'aboutToDisappear'], {
   FRAME_NODE_SCAN_LIMIT: 10000,
   ExpandMode: { NOT_EXPAND: 0 },

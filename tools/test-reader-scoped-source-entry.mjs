@@ -6,7 +6,7 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const calls = [];
 let enabled = true, version = 'v1';
 let resolveOld;

@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { chromeTypography, readerPageChromeTopTextStyle, measureReaderPageChromeText } from './lib/reader-page-chrome-measurement-probe.mjs';
-import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout } from '../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts';
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (error) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw error;
 } } });
-const { ReaderRectVp: Rect, ReaderWindowMetricsSnapshot: Metrics } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { ReaderRectVp: Rect, ReaderWindowMetricsSnapshot: Metrics } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 
 function reading(height = 48, extended = true) {
   const metrics = new Metrics();
@@ -141,7 +141,7 @@ for (const invalidHeight of [0, -1, NaN, Infinity]) {
 }
 console.log(`PASS ${proportionalCases} proportional status positions: expanded clearance, separate text heights, bookmark, visibility, cutout and fallback`);
 
-const TopStyleOwner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url),
+const TopStyleOwner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageChrome.ets', import.meta.url),
   ['topTextStyle'], {readerPageChromeTopTextStyle});
 const owner = Object.assign(new TopStyleOwner(), {layout: reading(), getUIContext: () => context});
 const beforeReads = resourceReads;

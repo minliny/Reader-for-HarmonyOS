@@ -3,10 +3,10 @@ import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 const app=new URL('../entry/src/main/ets/app/',import.meta.url);
 const read=name=>readFileSync(new URL(name,app),'utf8');
-const policy=stripTypeScriptTypes(read('HttpTransportPolicy.ts')).replace(/^export /gm,'');
+const policy=stripTypeScriptTypes(read('../platform/network/HttpTransportPolicy.ts')).replace(/^export /gm,'');
 const redact=new Function(policy+';return redactedHttpUrl;')();
-const routePolicy=stripTypeScriptTypes(read('NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
-const executor=stripTypeScriptTypes(read('ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
+const routePolicy=stripTypeScriptTypes(read('../platform/network/NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
+const executor=stripTypeScriptTypes(read('../platform/network/ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
 let generation=0;let fetchCookies=async()=>[];let reconciled;
 let dns=async()=>[{address:'93.184.216.34'}];const pins=[];
 const Executor=new Function('connection','webview','CookieSessionStore',policy+routePolicy+executor+';return ArkWebExecutor;')({getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAppNet:async()=>null,getDefaultNet:async()=>({netId:1}),getAddressesByName:host=>dns(host)}, {WebviewController:{setHostIP:(...args)=>pins.push(args)},WebCookieManager:{fetchAllCookies:()=>fetchCookies()},WebHttpCookieSameSitePolicy:{STRICT:1,LAX:2,NONE:3}}, {instance:{sessionGeneration:()=>generation,reconcileArkWebCookies:async(...args)=>{reconciled=args;}}});
@@ -51,8 +51,8 @@ assert.equal(reconciled[2].length,1);
 assert.equal(reconciled[2][0].domain,'public.example');
 console.log('PASS: ArkWeb cookie capture keeps exact admitted host scope');
 
-const hostSource=read('ArkWebExecutionHost.ets');
+const hostSource=read('../ui/platform/ArkWebExecutionHost.ets');
 assert.match(hostSource,/this\.currentUrl = redactedHttpUrl\(pageUrl\)/,
   'interactive chrome must never render a raw page URL');
-assert.match(read('ArkWebExecutor.ts'),/finalUrl: job\.finalUrl === undefined \? '' : redactedHttpUrl\(job\.finalUrl\)/,
+assert.match(read('../platform/network/ArkWebExecutor.ts'),/finalUrl: job\.finalUrl === undefined \? '' : redactedHttpUrl\(job\.finalUrl\)/,
   'timeout evidence must contain only the redacted URL projection');

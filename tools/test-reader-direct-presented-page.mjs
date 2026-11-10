@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as rapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
+import * as rapid from '../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
 
 // Production presentation and receipt code; RPC completion is explicitly
 // controlled. This proves model/input ownership, never compositor timing.
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const text = readFileSync(source, 'utf8');
 const anchorStart = text.indexOf('class CoreReadingAnchor implements');
 const anchorEnd = text.indexOf('\nclass ', anchorStart + 1);

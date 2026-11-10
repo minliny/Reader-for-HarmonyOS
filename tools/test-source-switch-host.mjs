@@ -636,10 +636,10 @@ if(id==='startup-rollback'){
 }
 }
 if(id==='live-picker'){
-const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs');const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');const metricsApi=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {sourceSwitchLiveSdk,sourceSwitchRecoveryAction}=await import('./lib/source-switch-sdk-consumer.mjs');const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');const metricsApi=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
-  const source=read('features/source/SourceSwitchWindow.ets'),p=boundedSurfaceSdk();
+  const source=read('features/source/ui/SourceSwitchWindow.ets'),p=boundedSurfaceSdk();
 
   const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
   const scope=f.host.current().scopeId;
@@ -650,7 +650,7 @@ const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs')
   owner.aboutToAppear();owner.initialRender();const nodes=p.nodes(owner);
   assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='换源结果未确认'));
   assert.equal(nodes.some(node=>node.type==='Text'&&node.create==='换源失败'),false,'unknown Core must not render a failed-commit title');
-  const retry=nodes.find(node=>node.type==='Button'&&node.createWithLabel?.[0]==='重试核对');assert.ok(retry?.onClick);
+  const retry=sourceSwitchRecoveryAction(p,owner,'重试核对');
   const originalFrame=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%');
   assert.ok(originalFrame,'the approved live picker retains one full-viewport owner');
   const frames=p.walk(owner).filter(child=>child instanceof p.deps.ReaderBoundedSurface);
@@ -793,6 +793,130 @@ assert.notEqual(unsafe,hostSource);
     'negative control reproduces the old identity-only automatic rollback on actual Gateway calls');
 }
 }
+if(id==='manga-cold-receipt'||id==='manga-legacy-receipt'){
+const modern=id==='manga-cold-receipt';
+const f=fixture({open:false});
+const gateway=f.runtime.request.bind(f.runtime);
+const origin={sourceId:'old',bookId:'comic'};
+const destination={sourceId:'new',bookId:'same-comic'};
+const chapter={...destination,chapterId:'/chapter'};
+const proposal={fromSourceId:origin.sourceId,fromBookId:origin.bookId,expectedFrom:{epoch:2,revision:5},
+  expectedTarget:{epoch:2,revision:8},targetPageOrdinal:0,chapterTitle:'C',mapping:'approximate',
+  firstImage:{chapter,chapterIndex:4,manifestVersion:'manifest-v1',sourceRuleVersion:'source-v1',decodeRevision:'identity-v1',
+    pageId:'mp1:'+'1'.repeat(64),resourceRef:'manga:mp1:'+'1'.repeat(64),imageRevision:'pixels',width:600,height:800}};
+const queries=[],writes=[];
+let acknowledged, fixed, loseAck=false, wrongReceipt=false, absent=false;
+f.runtime.supportsCoreCapability=capability=>modern&&capability==='manga.sourceSwitch.receipt.v1';
+f.runtime.start=async()=>{};
+f.runtime.request=async(method,params,options)=>{
+  if(method==='manga.sourceSwitch.operation.query.v1'){
+    assert.equal(modern,true,'old Core receives no unknown operation query');
+    queries.push(structuredClone(params));
+    if(params.operationId!==undefined)assert.deepEqual(params.expected,fixed,'the persisted DTO and original ID are queried exactly');
+    const receipt=structuredClone(acknowledged??null);
+    if(wrongReceipt&&receipt)receipt.progress.location.pageId='wrong';
+    return {data:{head:acknowledged?.binding??null,receipt:params.operationId===undefined||absent?null:receipt}};
+  }
+  if(method!=='manga.sourceSwitch.commit'&&method!=='manga.sourceSwitch.commit.v2')return gateway(method,params,options);
+  assert.equal(method,modern?'manga.sourceSwitch.commit.v2':'manga.sourceSwitch.commit');
+  assert.equal(options.shouldCancel,undefined,'a dispatched shelf mutation survives page retirement');
+  assert.equal(options.canDispatch(),true);
+  const durable=JSON.parse(f.mangaDisk.durable);
+  const intent=durable.find(row=>row.params.fromBookId===params.fromBookId);
+  assert.ok(intent,'no RPC before file and directory durability');
+  assert.deepEqual(intent.params.firstImage,params.firstImage);
+  options.onDispatch();
+  writes.push(method);
+  const page=params.firstImage;
+  acknowledged={mapping:'approximate',progress:{token:{epoch:2,revision:9},location:{kind:'manga',chapter:page.chapter,
+    manifestVersion:page.manifestVersion,pageId:page.pageId,pageOrdinalFallback:0,x:0,y:0,progressRevision:9}}};
+  if(modern){
+    assert.equal(params.operationId,intent.operationId);assert.equal(params.sequence,intent.sequence);
+    acknowledged.binding={operationId:params.operationId,sequence:params.sequence,payloadFingerprint:'a'.repeat(64)};
+    fixed=structuredClone(params);
+  }
+  if(loseAck)throw Error('lost after durable Core effect');
+  return {data:acknowledged};
+};
+if(modern){
+  f.options.mangaSyncFailure=true;
+  await assert.rejects(f.host.commitMangaSwitch(proposal,()=>true),/保存未确认/);
+  assert.equal(writes.length,0);
+  assert.equal(f.mangaDisk.durable,undefined);
+  await assert.rejects(f.host.assertMangaSwitchAvailable(origin,destination),/仍需核对/);
+  f.options.mangaSyncFailure=false;
+  const fresh=f.coldMangaHost();
+  loseAck=true;
+  await assert.rejects(fresh.commitMangaSwitch(proposal,()=>true),/尚未确认/);
+  const pending=f.mangaDisk.durable;
+  const cold=f.coldMangaHost();
+  await assert.rejects(cold.assertMangaSwitchAvailable(origin,destination),/仍需核对/);
+  const beforeUnrelated=queries.length;
+  assert.equal(await cold.reconcileMangaSwitch(origin,{...destination,bookId:'other-target'}),false);
+  assert.equal(await cold.reconcileMangaSwitch({...origin,bookId:'other-origin'},destination),false);
+  assert.equal(queries.length,beforeUnrelated,'interactive recovery only queries the exact original and target pair');
+  assert.equal(f.mangaDisk.durable,pending,'unrelated recovery must leave the original intent intact');
+  const [{operationId}]=JSON.parse(pending);
+  const assertExactRecoveryReads=(before,count,label)=>assert.deepEqual(
+    queries.slice(before).map(query=>query.operationId),Array(count).fill(operationId),label);
+  absent=true;
+  const beforeAbsent=queries.length;
+  assert.deepEqual(await cold.inspectMangaRecovery(),[{operationId,fact:'unknown'}]);
+  assertExactRecoveryReads(beforeAbsent,1,'missing receipt inspection reads the exact original operation once');
+  assert.equal(f.mangaDisk.durable,pending,'a missing receipt cannot retire the original intent');
+  absent=false;wrongReceipt=true;
+  const beforeWrong=queries.length;
+  assert.deepEqual(await cold.retryMangaRecovery(operationId),{operationId,fact:'unknown'});
+  assertExactRecoveryReads(beforeWrong,1,'invalid receipt retry reads the exact original operation once');
+  assert.equal(f.mangaDisk.durable,pending,'a wrong receipt cannot retire the original intent');
+  wrongReceipt=false;
+  f.options.mangaSyncFailure=true;
+  const beforeCleanupFailure=queries.length;
+  assert.deepEqual(await cold.retryMangaRecovery(operationId),{operationId,fact:'cleanupPending'});
+  assertExactRecoveryReads(beforeCleanupFailure,1,'valid receipt is read exactly once before local cleanup fails');
+  assert.equal(f.mangaDisk.durable,pending,'failed cleanup retains the exact pending record');
+  f.options.mangaSyncFailure=false;
+  const beforeCleanupRetry=queries.length;
+  assert.deepEqual(await cold.retryMangaRecovery(operationId),{operationId,fact:'confirmed'});
+  assertExactRecoveryReads(beforeCleanupRetry,0,'receipt-proven cleanup retry only repairs local durability');
+  const beforeRemovedRetry=queries.length;
+  assert.equal(await cold.retryMangaRecovery(operationId),undefined,'an already removed record cannot be queried again');
+  assertExactRecoveryReads(beforeRemovedRetry,0,'removed operation retry performs no Core query');
+  assert.deepEqual(JSON.parse(f.mangaDisk.durable),[]);
+  assert.equal(writes.length,1,'cold startup only reads the original Core operation');
+  assert.equal(queries.filter(query=>query.operationId===fixed.operationId).length,3);
+  loseAck=false;
+  await cold.commitMangaSwitch(proposal,()=>true);
+  assert.equal(fixed.sequence,2,'a new user admission uses the current durable head');
+  assert.deepEqual(JSON.parse(f.mangaDisk.durable),[]);
+}else{
+  let current=true;
+  const syncGate=deferred();f.options.mangaSyncGate=syncGate;
+  const retired=f.host.commitMangaSwitch(proposal,()=>current);
+  await untilOwner(()=>f.mangaDisk.published!==undefined);
+  current=false;delete f.options.mangaSyncGate;syncGate.resolve();
+  await assert.rejects(retired,/MANGA_SWITCH_CANCELLED/);
+  assert.deepEqual(JSON.parse(f.mangaDisk.durable),[],'known retirement before dispatch can clear the pending record');
+  assert.equal(writes.length,0);
+  await f.host.commitMangaSwitch(proposal,()=>true);
+  assert.deepEqual(JSON.parse(f.mangaDisk.durable),[],'strict legacy live ACK settles the existing supported path');
+  loseAck=true;
+  await assert.rejects(f.host.commitMangaSwitch(proposal,()=>true),/尚未确认/);
+  const pending=f.mangaDisk.durable;
+  const cold=f.coldMangaHost();
+  const [{operationId}]=JSON.parse(pending);
+  assert.deepEqual(await cold.inspectMangaRecovery(),[{operationId,fact:'unsupported'}]);
+  await assert.rejects(cold.reconcileMangaSwitch(origin,destination),/无法核对/);
+  await assert.rejects(cold.commitMangaSwitch(proposal,()=>true),/仍需核对/);
+  await assert.rejects(cold.assertMangaSwitchAvailable(destination,origin),/仍需核对/);
+  assert.equal(f.mangaDisk.durable,pending);
+  assert.equal(queries.length,0);assert.equal(writes.length,2);
+  loseAck=false;
+  await cold.commitMangaSwitch({...proposal,fromBookId:'unrelated-old',
+    firstImage:{...proposal.firstImage,chapter:{...chapter,bookId:'unrelated-new'}}},()=>true);
+  assert.equal(f.mangaDisk.durable,pending,'a disjoint legacy write cannot overwrite an unresolved intent');
+}
+}
 if(id==='negative-old-scope'){
 {
   const unsafeScopes=hostSource.replace('scopeId === this.snapshot.scopeId && this.currentLease()', 'this.currentLease()');
@@ -805,4 +929,6 @@ if(id==='negative-old-scope'){
 }finally{for(const host of owned)host.retire();setCurrentRuntime(undefined);clock?.restore();}
 }
 const definitions={"registry-qualification": "registry-qualification actual scoped owner/gateway/storage path; controlled Core/OS ports", "qualification-retirement": "qualification-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "acquisition-lock": "acquisition-lock actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-retirement": "preview-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "known-author-proof": "known-author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-resolution": "author-resolution actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-author": "late-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-author": "retired-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-read-error": "author-read-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "streaming-latency": "streaming-latency actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-rebind": "failure-rebind actual scoped owner/gateway/storage path; controlled Core/OS ports", "runtime-owner": "runtime-owner actual scoped owner/gateway/storage path; controlled Core/OS ports", "commit-lineage": "commit-lineage actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-commit": "retired-commit actual scoped owner/gateway/storage path; controlled Core/OS ports", "pre-dispatch": "pre-dispatch actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-readback": "unknown-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "partial-envelope": "partial-envelope actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-no-write": "preview-no-write actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-scope": "old-scope actual scoped owner/gateway/storage path; controlled Core/OS ports", "book-before-dispatch": "book-before-dispatch actual scoped owner/gateway/storage path; controlled Core/OS ports", "dirty-related": "dirty-related actual scoped owner/gateway/storage path; controlled Core/OS ports", "observer-failure": "observer-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "progress-lane": "progress-lane actual scoped owner/gateway/storage path; controlled Core/OS ports", "journal-before-send": "journal-before-send actual scoped owner/gateway/storage path; controlled Core/OS ports", "local-sync-ack": "local-sync-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "confirmed-read-error": "confirmed-read-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "advanced-head": "advanced-head actual scoped owner/gateway/storage path; controlled Core/OS ports", "warm-handoff": "warm-handoff actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-intent": "cold-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "cross-runtime-tail": "cross-runtime-tail actual scoped owner/gateway/storage path; controlled Core/OS ports", "large-intent": "large-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "terminal-sync": "terminal-sync actual scoped owner/gateway/storage path; controlled Core/OS ports", "unreadable-intent": "unreadable-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-exact-id": "wrong-exact-id actual scoped owner/gateway/storage path; controlled Core/OS ports", "rollback-lost-ack": "rollback-lost-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-rollback": "cold-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "next-choice": "next-choice actual scoped owner/gateway/storage path; controlled Core/OS ports", "startup-rollback": "startup-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "live-picker": "live-picker actual scoped owner/gateway/storage path; controlled Core/OS ports", "recommendation-filter": "recommendation-filter actual scoped owner/gateway/storage path; controlled Core/OS ports", "polluted-alias": "polluted-alias actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-detail": "wrong-detail actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-manga": "wrong-manga actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-retire-lock": "negative-retire-lock actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-qualification-finally": "negative-qualification-finally actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-preview-finally": "negative-preview-finally actual scoped owner/gateway/storage path; controlled Core/OS ports", "public-failure": "public-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-identity-rollback": "negative-identity-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-old-scope": "negative-old-scope actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['manga-cold-receipt']='Real manga Host/AtomicFile cold recovery reads missing, invalid and valid exact receipts once each; receipt-proven local cleanup retries make no Core query';
+definitions['manga-legacy-receipt']='Old Core live receipt, cold uncertainty and exact source/target replay fencing';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

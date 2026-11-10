@@ -10,9 +10,9 @@ const require = createRequire(import.meta.url);
 const loaderRoot = resolveEtsLoaderRoot();
 const ts = require(`${loaderRoot}/node_modules/typescript`);
 const officialChecker = require(`${loaderRoot}/lib/ets_checker.js`);
-const ownerPath = fileURLToPath(new URL('../entry/src/main/ets/features/manga/MangaRetainedTileCache.ts', import.meta.url));
-const controllerPath = fileURLToPath(new URL('../entry/src/main/ets/features/manga/MangaSessionController.ts', import.meta.url));
-const imagePath = fileURLToPath(new URL('../entry/src/main/ets/features/reading/ReadingGatewayRuntime.ts', import.meta.url));
+const ownerPath = fileURLToPath(new URL('../entry/src/main/ets/features/manga/application/MangaRetainedTileCache.ts', import.meta.url));
+const controllerPath = fileURLToPath(new URL('../entry/src/main/ets/features/manga/application/MangaSessionController.ts', import.meta.url));
+const imagePath = fileURLToPath(new URL('../entry/src/main/ets/features/reading/application/ReadingGatewayRuntime.ts', import.meta.url));
 function declaration(path, name) {
   const tree = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   return tree.statements.find(node => node.name?.text === name).getText(tree);

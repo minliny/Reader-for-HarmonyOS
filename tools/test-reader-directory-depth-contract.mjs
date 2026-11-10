@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { decodeReaderDirectoryOpen, ReaderDirectoryNavigationGateway } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import { decodeReaderDirectoryOpen, ReaderDirectoryNavigationGateway } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url), 'utf8');
 // The pre-fix row has no displayLevel method; run its actual Builder too so
 // RED reports the wrong displayed level, rather than a missing test dependency.
 const members = ['row', ...(source.includes('private displayLevel(') ? ['displayLevel'] : [])];

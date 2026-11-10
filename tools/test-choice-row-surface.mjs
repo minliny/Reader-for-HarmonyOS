@@ -9,6 +9,7 @@ const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {choiceRowProbe,resolveReaderChoiceSpec,choiceSource} = await import('./lib/reader-choice-row-probe.mjs');
+const {boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 
 
 const read=file=>readFileSync(new URL(`../entry/src/main/ets/features/${file}.ets`,import.meta.url),'utf8');
@@ -24,12 +25,12 @@ function settings(tablet,resolve=resolveReaderChoiceSpec) {
 }
 function inline(variant,selected=true,resolve=resolveReaderChoiceSpec) {
   const shared=choiceRowProbe(resolve),commits=[];
-  const source=read('common/ReaderSelectPanel');
-  const {owner}=createReaderBuilderProbe(source,
-    ['appearanceLibraryOption','selectedRow','optionRow','renderedValue','renderedOptions','selectAndCollapse','collapsePanel','finishCollapse'],
-    {...shared.dependencies,OPTION_H:36,motionAnimateParam:(_id,onFinish)=>({onFinish})},shared.hooks);
+  const source=read('../ui/controls/ReaderSelectPanel');
+  const {owner}=createReaderBuilderProbe(source,boundedMembers(source),
+    {...shared.properties.sdk,...shared.dependencies,OPTION_H:36,motionAnimateParam:(_id,onFinish)=>({onFinish})},
+    {...shared.hooks,initialParams:{reduceMotion:true,selectionId:'field-1'}});
   Object.assign(owner,{value:'中文',options:['中文','English'],variant,appThemeScheme:'day',mounted:true,closeInFlight:false,
-    generation:0,reduceMotion:true,selectionId:'field-1',chevronAngle:-180,expandedHeight:72,
+    generation:0,chevronAngle:-180,expandedHeight:72,
     resolvedWidth:()=>180,onCommit:option=>commits.push(option),onDismiss:()=>{}});
   variant==='appearanceLibrary'?owner.appearanceLibraryOption('中文'):selected?owner.selectedRow():owner.optionRow('English');
   return {owner,shared,commits,nodes:()=>shared.nodes(owner),child:[...owner.children.values()][0]};
@@ -52,9 +53,10 @@ for(const [id,render,height,size,line,iconWidth] of cases) {
 
   const calls=view.child.attributeCalls.filter(call=>call.id===text.id),spec=resolveReaderChoiceSpec(view.child.specId);
   assert.equal(calls.some(call=>call.property==='lineHeight'),(view.child.selected?spec.selectedText:spec.text).lineHeightFp!==undefined,`${id}: AUTO means setter is absent, not undefined`);
+  assert.equal(calls.some(call=>call.property==='wordBreak'),view.child.wrapLabel,`${id}: multiline is owned by the actual parent`);
   if(spec.layout==='row'){
     assert.equal(calls.some(call=>call.property==='textAlign'),spec.textAlignStart,`${id}: native text alignment AUTO`);
-    assert.equal(calls.some(call=>call.property==='textOverflow'),spec.ellipsis,`${id}: native overflow AUTO`);
+    assert.equal(calls.some(call=>call.property==='textOverflow'),!view.child.wrapLabel&&spec.ellipsis,`${id}: native overflow AUTO`);
     assert.deepEqual(calls.find(call=>call.property==='fontWeight').args.length,spec.variableWeight?2:1,`${id}: optional font-weight settings are omitted unless authored`);
   }
   assert.ok(!calls.some(call=>['fontFamily','fontWeight','fontSize','lineHeight','textAlign','textOverflow'].includes(call.property)&&call.args.some(arg=>arg===undefined)),`${id}: no explicit undefined native attribute`);

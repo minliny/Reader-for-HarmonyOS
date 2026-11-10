@@ -110,11 +110,28 @@ css += `.source-flow-modal[data-height-profile="short"] .source-flow-drawer{heig
 css += `.source-flow-modal[data-flow-chrome="true"] .source-flow-drawer{overflow:auto;overscroll-behavior:contain;touch-action:pan-y}.source-flow-modal[data-flow-chrome="true"] :is(.source-flow-grip,.source-flow-heading,.source-flow-book,.source-flow-discovery,.source-flow-columns,.source-flow-footer){flex-shrink:0}.source-flow-modal[data-flow-chrome="true"] .source-flow-results{flex:none;overflow:visible}\n`;
 css += `@keyframes source-flow-spin{to{transform:rotate(360deg)}}\n[data-reduced="true"] :is(.source-flow-activity,.source-flow-switch-activity){animation:none}@media(prefers-reduced-motion:reduce){.source-flow-activity,.source-flow-switch-activity{animation:none}}\n`;
 
+const chromeMetrics = [
+  'closeDurationMs', 'closeIconSize', 'drawerCornerRadius', 'drawerMaxWidth', 'easingX1', 'easingX2',
+  'easingY1', 'easingY2', 'gripHeight', 'gripMarginBottom', 'gripMarginTop', 'gripWidth',
+  'headingHeight', 'latestChapterFontSize', 'latestChapterLineHeight', 'narrowSideInset',
+  'narrowWidthThreshold', 'normalSideInset', 'openDurationMs', 'rowEnterDurationMs', 'rowGap',
+  'rowHeight', 'rowPaddingY', 'sourceNameFontSize', 'sourceNameLineHeight', 'titleFontSize',
+  'titleFontWeight', 'titleLineHeight',
+];
+const chromeValues = Object.fromEntries(chromeMetrics.map(key => {
+  if (!(key in n)) throw new Error(`SOURCE_SWITCH_CHROME_METRIC_MISSING ${key}`);
+  return [key, n[key]];
+}));
+const chromeTypes = chromeMetrics.map(key => `  readonly ${key}: number;`).join('\n');
+const sourceChrome = generatedHeader.split('\n').map(line => `// ${line}`).join('\n') +
+  `\nexport interface ReaderSourceChromeVisual {\n${chromeTypes}\n}\n\n` +
+  `export const SOURCE_CHROME_VISUAL: ReaderSourceChromeVisual = ${JSON.stringify(chromeValues, null, 2)};\n`;
 const outputs = [
-  [path.join(host, 'entry/src/main/ets/features/source/SourceSwitchVisual.ts'), code],
+  [path.join(host, 'entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts'), code],
+  [path.join(host, 'entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts'), sourceChrome],
   [path.join(host, 'docs/ui-design/source-switch-reference/source-switch-reference.css'), css],
 ];
-const typographyFile = path.join(host, 'entry/src/main/ets/features/common/ReaderTypography.ets');
+const typographyFile = path.join(host, 'entry/src/main/ets/ui/foundation/ReaderTypography.ets');
 const typography = fs.readFileSync(typographyFile, 'utf8');
 const startMarker = '// Selected 2026-10-06 novel source drawer.';
 const endMarker = '// Source-management rows use one compact metadata tuple';

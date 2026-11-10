@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { coreCliPath } from './tool-environment.mjs';
-import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
+import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
@@ -16,10 +16,10 @@ registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith
 const { ReaderWriteEvidence } = await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const { projectPersistedReceipt } = await import('../../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const { projectOperationFacts } = await import('../../entry/src/main/ets/app/ReaderOperationFacts.ts');
-const { LocalReadingFlowGateway, LOCAL_SOURCE_ID } = await import('../../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
-const { MangaDownloadActionsGateway } = await import('../../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts');
-const { loadReaderControlBookmarkProjection } = await import('../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
+const { LocalReadingFlowGateway, LOCAL_SOURCE_ID } = await import('../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+const { MangaDownloadActionsGateway } = await import('../../entry/src/main/ets/features/manga/application/MangaDownloadActionsGateway.ts');
+const { loadReaderControlBookmarkProjection } = await import('../../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
 const sdk = await import('../../entry/vendor/core-harmony/sdk/reader_core.ts');
 const run = promisify(execFile);
 const { ts } = installedEtsCompiler();
@@ -75,12 +75,12 @@ export async function fixture(official=false,existing,{domain='all'}={}){
    finishWrite(){fs.renameSync(this.tmp,this.path);io.finishes++;if(options.loseFinishAt===io.finishes)throw Error('actual rename published but finish ACK lost');}
    failWrite(){io.failWrites++;try{fs.unlinkSync(this.tmp);}catch{}}}};
  const replaceReaderAtomicSnapshot=compile('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo},official);
- const classes=compile('features/reading/ReadingOperationIntents.ts','({BookmarkOperationIntentStore,CacheClearOperationIntentStore,ReadingOperationPendingError})',
+ const classes=compile('features/reading/application/ReadingOperationIntents.ts','({BookmarkOperationIntentStore,CacheClearOperationIntentStore,ReadingOperationPendingError})',
   {ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,...sdk},false);
  // Each fixture loads the entire production module, resetting only cold JS statics.
  // For SDK mode emit that same whole module once, preserving its two shared lanes.
  let types=classes;
- if(official){const source=read('features/reading/ReadingOperationIntents.ts'),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');const output=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(output.diagnostics,[]);types={};new Function('exports','ReaderRuntimeOwner','fileIo','util','replaceReaderAtomicSnapshot','ReaderCoreRequestError','isReaderCoreTransactionPendingError',output.outputText)(types,Runtime,fileIo,{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sdk.ReaderCoreRequestError,sdk.isReaderCoreTransactionPendingError);}
+ if(official){const source=read('features/reading/application/ReadingOperationIntents.ts'),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');const output=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(output.diagnostics,[]);types={};new Function('exports','ReaderRuntimeOwner','fileIo','util','replaceReaderAtomicSnapshot','ReaderCoreRequestError','isReaderCoreTransactionPendingError',output.outputText)(types,Runtime,fileIo,{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sdk.ReaderCoreRequestError,sdk.isReaderCoreTransactionPendingError);}
  async function command(method,params){const result=await run(coreBinary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:16*1024*1024});const event=result.stdout.trim().split('\n').map(v=>JSON.parse(v)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event;}
  const runtime={getUIAbilityContext:()=>({filesDir:files}),closed:false,
   supportsCoreCapability:()=>true,async clearOfflineBookImages(s,b){calls.push({platform:[s,b]});if(options.imageFailure)throw Error('image cleanup failed');},
@@ -102,7 +102,7 @@ export async function fixture(official=false,existing,{domain='all'}={}){
  const textPersistence={async loadLegacyProtection(){return[];},async saveLegacyProtection(){},
   async loadSettingsTextCleanup(){try{const encoded=await fsp.readFile(journalPath,'utf8');return encoded===''?undefined:JSON.parse(encoded);}catch(error){if(error.code==='ENOENT')return undefined;throw error;}},
   async saveSettingsTextCleanup(journal){await replaceReaderAtomicSnapshot(journalPath,files,journal===undefined?'':JSON.stringify(journal));}};
- const Storage=compile('features/downloads/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{...sdk,SharedDownloadIntentPreferences:class{}},official);
+ const Storage=compile('features/downloads/application/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{...sdk,SharedDownloadIntentPreferences:class{}},official);
  const storageDisk={async captureReadingStorageInventory(){return{files:[],hostImageChapters:[],protectedChapters:[],writeRevision:0};},
   isReadingStorageInventoryCurrent:()=>true,async readPolicy(){return{capacityBytes:1024**3,expiryDays:7};},
   async readingStorageSummary(){return{totalBytes:0,retainedBytes:0,automaticBytes:0,cleanableBytes:0,classificationKnown:true};},
@@ -115,21 +115,21 @@ export async function fixture(official=false,existing,{domain='all'}={}){
  }
  installed=runtime;
  const dirDeps={ReaderWriteEvidence,projectPersistedReceipt,LocalReadingFlowGateway,LOCAL_SOURCE_ID,loadReaderControlBookmarkProjection};
- const Directory=compile('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',dirDeps,official);
+ const Directory=compile('features/reading/application/ReaderDirectoryHost.ts','ReaderDirectoryHost',dirDeps,official);
  const bookmarkStore=new types.BookmarkOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));
  const directory=Directory.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,bookmarkStore);
  let Offline,SettingsGateway,SettingsOwner,SettingsHost,clearStore,offline,settings;
  if(domain!=='bookmark'){
- Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway},official);
+ Offline=compile('features/reading/application/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway},official);
  if(domain==='all'){
- SettingsGateway=compile('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
- SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,formatDownloadStorageBytes,SettingsCacheGateway:SettingsGateway},official);
+ SettingsGateway=compile('features/settings/application/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
+ SettingsOwner=compile('features/settings/application/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,formatDownloadStorageBytes,SettingsCacheGateway:SettingsGateway},official);
  const {fixture:actualGeneralSettingsFixture}=await import('./general-settings-persistence-probe.mjs');
  const general=actualGeneralSettingsFixture();general.setActive(runtime);
  general.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);general.Runtime.current=()=>Runtime.current();
  const generalHost=new general.Host(()=>{},()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false}),()=>true,()=>runtime.getUIAbilityContext());
  assert.equal(generalHost.bindPresentation(runtime,'reading-cache-general-factory',()=>Runtime.isCurrent(runtime)),true);
- SettingsHost=compile('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:generalHost.orchestrator.constructor},official);
+ SettingsHost=compile('features/settings/application/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:generalHost.orchestrator.constructor},official);
  settings=SettingsOwner.forRuntime(runtime,v=>publications.push(structuredClone(v)));
  }
  clearStore=new types.CacheClearOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));

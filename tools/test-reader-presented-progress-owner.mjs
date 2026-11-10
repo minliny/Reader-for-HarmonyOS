@@ -9,8 +9,8 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 const layout = { viewportWidth: 390, viewportHeight: 800, fontScale: 1 };
 const anchor = offset => ({ chapterIndex: 2, chapterOffset: offset, chapterProgress: offset / 1000,
   bodyVersion: 'body', processingVersion: 'processing' });
@@ -63,15 +63,19 @@ function fixture(sourceId = 'local') {
 const cases = [];
 // Execute the actual retained-page exit, producer and local/remote CAS command
 // path. Constructors are extracted unchanged from production, not restated.
-const readerFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const readerFile = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const tree = ts.createSourceFile(virtualFilePath('ReaderRetainedProgress.ets'), readFileSync(readerFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const commitTree = ts.createSourceFile(virtualFilePath('ReadingCommit.ts'),
+  readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts', import.meta.url), 'utf8'),
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.TS, options);
 const dto = Object.fromEntries(['CoreReadingAnchor', 'ReadingCommit'].map(name => {
-  const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
+  const classTree = name === 'ReadingCommit' ? commitTree : tree;
+  const node = classTree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(classTree) === name);
   assert.ok(node, name);
-  return [name, new Function(stripTypeScriptTypes(node.getText(tree)).replace(/^export /, '') + `;return ${name};`)()];
+  return [name, new Function(stripTypeScriptTypes(node.getText(classTree)).replace(/^export /, '') + `;return ${name};`)()];
 }));
 const RetainedReader = productionMotionMethods(readerFile,
   ['commitVisiblePage', 'admitCommittedProgress', 'admitRetainedReadingRecency', 'isVisiblePageCurrent',
@@ -440,7 +444,7 @@ for (const mutation of ['replace-rule.update', 'replace.undo', 'runtime-close'])
   const f = fixture(), gateway = f.gateway(), gate = deferred(); f.gates.push(gate);
   const writing = gateway.persistPresentedProgress('book', 'chapter', anchor(20), layout); await settle();
   const reopened = f.gateway(), opened = [];
-  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
     ['loadInitialChapter'], { LOCAL_READING_SOURCE_ID: 'local' });
   const owner = Object.assign(new Owner(), { sourceId: 'local', bookId: 'book', chapterSelectionToken: 2,
     preparedReadingEntry: { isCurrent: () => true, toc: { entries: [{ index: 1 }, { index: 2 }] },
@@ -462,7 +466,7 @@ for (const failure of ['lost-receipt', 'prewrite-read']) {
   const f = fixture(), gateway = f.gateway();
   if (failure === 'lost-receipt') f.effects.push('lost'); else f.readEffects.push('reject');
   await assert.rejects(gateway.persistPresentedProgress('book', 'chapter', anchor(20), layout));
-  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
     ['awaitOrdinaryFirstPagePersistence', 'isOrdinaryFirstPagePresentationCurrent']);
   const owner = Object.assign(new Owner(), { lifecycleToken: 1, chapterSelectionToken: 2, visiblePageSelectionToken: 2,
     visiblePage: { startScalar: 20 }, chapter: { chapterIndex: 2 }, sessionGateway: gateway,

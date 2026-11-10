@@ -3,7 +3,7 @@ import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { stripTypeScriptTypes } from 'node:module';
-import * as state from '../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderTtsPreferencesState.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);

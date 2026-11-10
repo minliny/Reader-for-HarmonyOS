@@ -2,10 +2,10 @@ import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mj
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
-import * as selection from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
-import * as registry from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import {ReaderAppearanceStore} from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
+import * as selection from '../entry/src/main/ets/app/ReaderThemeSelection.ts';
+import * as registry from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import {ReaderAppearanceStore} from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 const source=readFileSync(new URL('../entry/src/main/ets/app/ReaderThemeHost.ts',import.meta.url),'utf8');
 const storage=new Map(),chrome=[];let currentOwner;
 const deps={ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>currentOwner),...selection,...registry,...appearance,ReaderAppearanceStore,AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},

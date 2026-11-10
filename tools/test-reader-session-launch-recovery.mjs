@@ -21,20 +21,20 @@ export const CONTRACT_CASES = {
 
 async function case_recovery_handoff() {
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const sessionPolicy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const sessionPolicy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire} = await import('node:module');
 const require=createRequire(import.meta.url);
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const file=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
+const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 const g=buildReaderSessionLaunchGeometry({source:new ReaderSessionMorphSourceMeasurement('quickTts','tts',30,510,286,190,1),targetLeft:260,targetTop:790,topBarExitDistance:90,dockExitDistance:330});
 const P=productionMotionMethods(file('ReaderControlPanel.ets'),['frame','controlPanelHeight','onLaunchSourceVisible','confirmLaunchSourceReady','setMoreMenuVisible','dismissMoreMenu','performMoreAction','onRuntimeEnabledChanged']);
@@ -81,20 +81,20 @@ for(const time of [0,100,450,1100,1700,2200]){
 
 async function case_more_menu() {
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const sessionPolicy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const sessionPolicy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire} = await import('node:module');
 const require=createRequire(import.meta.url);
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const file=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
+const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 const P=productionMotionMethods(file('ReaderControlPanel.ets'),['frame','controlPanelHeight','onLaunchSourceVisible','confirmLaunchSourceReady','setMoreMenuVisible','dismissMoreMenu','performMoreAction','onRuntimeEnabledChanged']);
 for(const local of [true,false]){
@@ -112,7 +112,7 @@ for(const local of [true,false]){
 
 async function case_source_builder_isolation() {
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const sessionPolicy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const sessionPolicy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire} = await import('node:module');
@@ -120,13 +120,13 @@ const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const file=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
+const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 // Pure-source Builders use the same visual section functions, omit the normal
 // Scroll/modal host, and cannot dispatch measurement/business callbacks.
@@ -134,10 +134,11 @@ for(const [name,module] of [['ReaderControlTtsContent.ets','tts'],['ReaderContro
  const source=readFileSync(file(name),'utf8');
  for(const m of source.matchAll(/@Builder\s+private (\w+)\(/g)) require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(m[1]);
  for(const form of ['quick','full']){
-  const members=module==='autoPage'?['launchSourceContent','quickHeader','headerMeta']:['launchSourceContent'];
+  const members=module==='autoPage'?['launchSourceContent','sourceMinimumCurrent','quickHeader','headerMeta']:['launchSourceContent','sourceMinimumCurrent'];
   const {owner}=createReaderBuilderProbe(source,members,{readerControlMorphScrollTranslation});
   const sections=[];
-  Object.assign(owner,{sourceOnly:form,availableWidth:286,availableHeight:190,appScheme:'day',status:'stopped',
+  Object.assign(owner,{sourceOnly:form,sourceMinimum:undefined,sourceMinimumIdentity:'',sourceMinimumKey:'',
+   sourceMinimumMetricsRevision:-1,availableWidth:286,availableHeight:190,appScheme:'day',status:'stopped',
    motionProgress:form==='quick'?0:1,p:()=>form==='quick'?0:1,scrollMotion:createReaderControlMorphScroll(),
    presentation:()=>({contentOpacity:1,contentBlur:0}),
    frame:()=>({playback:{x:8,y:24,width:280,height:128},control:{width:280,height:100},
@@ -150,7 +151,9 @@ for(const [name,module] of [['ReaderControlTtsContent.ets','tts'],['ReaderContro
   assert.ok([...owner.nodes.values()].every(n=>n.type!=='Scroll'));
   if(module==='autoPage')assert.equal([...owner.nodes.values()].filter(n=>n.type==='Text'&&n.create==='自动翻页').length,
    form==='quick'?1:0,'PH51 retained Quick source executes its real header Builder, Full source only contains playback');
-  const root=[...owner.nodes.values()][0];assert.equal(root.enabled,false);assert.equal(root.accessibilityLevel,'no-hide-descendants');
+  // The current receipt guard lowers to a logical If before the native paint container.
+  const root=[...owner.nodes.values()].find(n=>n.type==='Stack');assert.ok(root,'source paint container exists');
+  assert.equal(root.enabled,false);assert.equal(root.accessibilityLevel,'no-hide-descendants');
  }
  const C=productionMotionMethods(file(name),['onMotionChanged','measureActor','reportMorphActor','onFullDidScroll','onSourceDetachedChanged'],{readerControlPlaybackSourceKind});
  const c=Object.assign(new C(),{sourceOnly:'full',sourceDetached:false,scroller:{currentOffset:()=>{throw Error('source scroller invoked');}},
@@ -162,7 +165,7 @@ for(const [name,module] of [['ReaderControlTtsContent.ets','tts'],['ReaderContro
 
 async function case_playback_theme_icons() {
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const sessionPolicy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const sessionPolicy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire} = await import('node:module');
@@ -170,13 +173,13 @@ const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const file=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
+const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 for(const [name,builder] of [['ReaderControlAutoPageContent.ets','runningButton'],['ReaderControlTtsContent.ets','roundControl']]){
  const source=readFileSync(file(name),'utf8');

@@ -27,11 +27,14 @@ code+=`export function readerAppColor(role: ReaderAppColorRole, scheme: string):
 code+=`export interface ReaderThemeDefinition {\n  id: ReaderThemeId; scheme: ReaderThemeScheme; order: number; displayName: string;\n  paperStart: string; paperEnd: string; ink: string; chromeMeta: string;\n  statusBackground: string; statusForeground: string; swatch: string; selection: string; paperBack: string; turnShadow: string;\n  paperTexture: boolean; sourcePaperLighting: boolean;\n}\n`;
 code+=`export const READER_THEME_DEFINITIONS: ReaderThemeDefinition[] = ${JSON.stringify(ids.map(id=>{const d=registry.reader[id];return {id,scheme:d.scheme,order:d.order,displayName:d.displayName,...Object.fromEntries(readerKeys.map(k=>[k,argb(d.roles[k])])),...d.effects}}),null,2)};\n`;
 code+=`export function findReaderTheme(id: string): ReaderThemeDefinition | undefined {\n  return READER_THEME_DEFINITIONS.find((theme: ReaderThemeDefinition): boolean => theme.id === id);\n}\nexport function readerThemeDefinition(id: string): ReaderThemeDefinition {\n  return findReaderTheme(id) ?? READER_THEME_DEFINITIONS[0];\n}\n`;
-const outputs=[path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderThemeRegistry.ts'),path.join(root,'Reader-UI/theme/ReaderThemeRegistry.ts')];
+const outputs=[path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'),path.join(root,'Reader-UI/theme/ReaderThemeRegistry.ts')];
 for(const out of outputs){if(process.argv.includes('--check')){if(fs.readFileSync(out,'utf8')!==code)throw Error('THEME_ADAPTER_STALE '+out);}else fs.writeFileSync(out,code);}
 console.log(`Theme registry: ${appRoles.length} complete App roles × 2; ${ids.length} Reader palettes; canonical hash verified.`);
 
 const selectionSource=fs.readFileSync(path.join(root,'Reader-UI/theme/ReaderThemeSelection.ts'),'utf8');
-const selectionOutput=path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderThemeSelection.ts');
-const selectionCode='// Generated copy of Reader-UI/theme/ReaderThemeSelection.ts. Do not edit.\n'+selectionSource;
+const selectionOutput=path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderThemeSelection.ts');
+const canonicalSelectionImport="from './ReaderThemeRegistry.ts';";
+if(!selectionSource.includes(canonicalSelectionImport))throw Error('THEME_SELECTION_REGISTRY_IMPORT_MISSING');
+const selectionCode='// Generated copy of Reader-UI/theme/ReaderThemeSelection.ts. Do not edit.\n'+
+  selectionSource.replace(canonicalSelectionImport,"from '../ui/foundation/ReaderThemeRegistry.ts';");
 if(process.argv.includes('--check')){if(fs.readFileSync(selectionOutput,'utf8')!==selectionCode)throw Error('THEME_SELECTION_ADAPTER_STALE');}else fs.writeFileSync(selectionOutput,selectionCode);

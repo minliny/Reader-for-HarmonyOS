@@ -9,7 +9,7 @@ const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {auditTypographyConsumers,typographyExpressionContext,isSharedTypographyExpression} = await import('./lib/reader-typography-consumer-audit.mjs');
 
-const files={bookshelf:'features/bookshelf/BookshelfManagementPage.ets',rules:'features/settings/RulesManagementPage.ets',sync:'features/sync/SyncPage.ets'};
+const files={bookshelf:'features/bookshelf/ui/BookshelfManagementPage.ets',rules:'features/settings/ui/RulesManagementPage.ets',sync:'features/sync/ui/SyncPage.ets'};
 const file='entry/src/main/ets/'+files[selectedCase],source=readFileSync(new URL('../'+file,import.meta.url),'utf8');
 function verify(text) {
  const context=typographyExpressionContext(text,file),nodes=auditTypographyConsumers(text,file).filter(n=>n.modifiers.fontSize);

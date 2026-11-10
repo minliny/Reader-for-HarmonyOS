@@ -4,11 +4,11 @@ registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(s + '.ts', c); throw e;
 } } });
 const { readPreparedReadingEntrySnapshot, readReadingEntrySnapshot, qualifyReadingEntryWindow } =
-  await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+  await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
 const { readingChapterLayoutMap, prepareReadingChapterLayoutMap } =
-  await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+  await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
 const { ReadingSessionFlowGateway } =
-  await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+  await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 
 function fixture(content, start = 0, total = start + Array.from(content).length, anchor = start) {
   const end = start + Array.from(content).length;

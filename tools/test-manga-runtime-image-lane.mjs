@@ -9,7 +9,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRuleVersion:'rules',manifestVersion:'v',decodeRevision:'bytes-v1',pages:[{ordinal:0,pageId:'page',resourceRef:'page'}]};
 const file = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 const methods = ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage',
@@ -247,7 +247,7 @@ for (const manga of [true,false]) {
 // Execute the actual gateway against the actual Runtime methods; removing the
 // old outer region lock must not strand next-chapter prefetch behind itself.
 {
-  const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaResourceGateway.ts',import.meta.url),'utf8');
+  const source=readFileSync(new URL('../entry/src/main/ets/features/manga/application/MangaResourceGateway.ts',import.meta.url),'utf8');
   const Gateway=new Function(`${stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''))};return MangaResourceGateway;`)();
   const f=fixture(), gateway=new Gateway(f.owner),scope={sourceId:'s',bookId:'b1',chapterIndex:0,contentVersion:'v',chapterUrl:'chapter',sourceRuleVersion:manifest.sourceRuleVersion,decodeRevision:manifest.decodeRevision},page={url:'image',resourceRef:'page'};
   const image=await gateway.loadPage(scope,page,true,()=>true,0);assert.ok(image.fileUri);

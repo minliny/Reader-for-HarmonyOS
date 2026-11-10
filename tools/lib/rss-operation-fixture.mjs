@@ -3,7 +3,18 @@ import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs'
 import { stripTypeScriptTypes } from 'node:module';
 import { isReaderCoreTransactionPendingError, ReaderCoreRequestError } from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 
-export const rssSource = name => readFileSync(new URL(`../../entry/src/main/ets/${name}`, import.meta.url), 'utf8');
+const relocatedRssPages = Object.freeze({
+  'features/rss/RssPage.ets': 'features/rss/ui/RssPage.ets',
+  'features/rss/RssSourceFeedPage.ets': 'features/rss/ui/RssSourceFeedPage.ets',
+  'features/rss/RssEntryDetailPage.ets': 'features/rss/ui/RssEntryDetailPage.ets',
+  'features/rss/RssSubscriptionManagementPage.ets': 'features/rss/ui/RssSubscriptionManagementPage.ets',
+  'features/rss/RssSubscriptionEditorPage.ets': 'features/rss/ui/RssSubscriptionEditorPage.ets',
+});
+
+export const rssSource = name => {
+  const file = Object.hasOwn(relocatedRssPages, name) ? relocatedRssPages[name] : name;
+  return readFileSync(new URL(`../../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
+};
 const ordinary = source => stripTypeScriptTypes(source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm, ''));
 export const rssFacts = new Function(ordinary(rssSource('app/ReaderOperationFacts.ts')) + ';return {projectOperationFacts,projectCommitReadback};')();
 export const rssProjection = new Function(...Object.keys(rssFacts), ordinary(rssSource('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(rssFacts));
@@ -13,10 +24,10 @@ let currentOwner;
 export const RssRuntime = runtimeOwnerIdentityProbe(() => currentOwner);
 export const replaceRssRuntime = owner => { currentOwner = owner; };
 const quiet = { warn(){},error(){} };
-export const RealRssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(rssSource('features/rss/RssGateway.ts')) + ';return RssGateway;')(RssRuntime,isReaderCoreTransactionPendingError);
-export const RealRssRouteHost = new Function('ReaderWriteEvidence','projectPersistedReceipt','projectOperationFacts', ordinary(rssSource('features/rss/RssRouteOperationHost.ts')) + ';return RssRouteOperationHost;')(RssWriteEvidence,rssProjection,rssFacts.projectOperationFacts);
-export const RealRssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts', ordinary(rssSource('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RealRssGateway,RssRuntime,RssWriteEvidence,RealRssRouteHost,quiet,isReaderCoreTransactionPendingError,rssProjection,rssFacts.projectOperationFacts);
-const editorClasses = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','hilog','projectPersistedReceipt','projectOperationFacts', ordinary(rssSource('features/rss/RssSubscriptionEditorOrchestrator.ets')) + ';return {RssSubscriptionEditorOrchestrator,EMPTY_RSS_EDITOR_SNAPSHOT};')(RealRssGateway,RssRuntime,RssWriteEvidence,quiet,rssProjection,rssFacts.projectOperationFacts);
+export const RealRssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(rssSource('features/rss/application/RssGateway.ts')) + ';return RssGateway;')(RssRuntime,isReaderCoreTransactionPendingError);
+export const RealRssRouteHost = new Function('ReaderWriteEvidence','projectPersistedReceipt','projectOperationFacts', ordinary(rssSource('features/rss/application/RssRouteOperationHost.ts')) + ';return RssRouteOperationHost;')(RssWriteEvidence,rssProjection,rssFacts.projectOperationFacts);
+export const RealRssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts', ordinary(rssSource('features/rss/application/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RealRssGateway,RssRuntime,RssWriteEvidence,RealRssRouteHost,quiet,isReaderCoreTransactionPendingError,rssProjection,rssFacts.projectOperationFacts);
+const editorClasses = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','hilog','projectPersistedReceipt','projectOperationFacts', ordinary(rssSource('features/rss/application/RssSubscriptionEditorOrchestrator.ets')) + ';return {RssSubscriptionEditorOrchestrator,EMPTY_RSS_EDITOR_SNAPSHOT};')(RealRssGateway,RssRuntime,RssWriteEvidence,quiet,rssProjection,rssFacts.projectOperationFacts);
 export const RealRssEditor = editorClasses.RssSubscriptionEditorOrchestrator;
 export const RssEmptyEditor = editorClasses.EMPTY_RSS_EDITOR_SNAPSHOT;
 export const deferredRss = () => {let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};};

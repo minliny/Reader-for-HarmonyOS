@@ -5,9 +5,9 @@ async function run(id){
 const {ProductionHost,compileHost,read,setRuntime,readingEvidence,content,BookAcquisitionCoordinator}=await import('./lib/reading-entry-owner-probe.mjs');
 const {fixture:productionFixture,deferred,seed,book,session}=await import('./lib/reading-entry-index-fixture.mjs');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f);return f;};const tick=()=>new Promise(setImmediate);async function until(p){for(let t=0;t<1500;t++){if(p())return;await tick();}assert.fail('controlled Host boundary not reached');}
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const checkpoints=[];
 function mangaFixture(){
  const f=fixture(),sourceId='s1',bookId='book',chapterId='https://source/book/0',pageId='mp1:'+'1'.repeat(64);
@@ -293,7 +293,7 @@ if(id==='same-book-generation'){
 }
 if(id==='negative-probe-generation'){
 {
- const source=read('features/reading/ReadingEntryHost.ts');
+ const source=read('features/reading/application/ReadingEntryHost.ts');
  const unsafe=source.replace('generation === this.probeGeneration &&','true &&').replace('scope === this.state.scopeId &&','true &&');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe)),gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);
  f.control.bodyIgnoreCancellation=true;f.host.bindReader(book(),session(),[],false,f.lease);const work=f.host.probe(f.host.snapshot().scopeId);
@@ -303,7 +303,7 @@ if(id==='negative-probe-generation'){
 }
 if(id==='negative-projection-identity'){
 {
- const source=read('features/reading/ReadingEntryHost.ts');
+ const source=read('features/reading/application/ReadingEntryHost.ts');
  const unsafe=source.replace('projection?.origin === session.identity.sourceId && projection.bookUrl === session.identity.bookId &&','true &&');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe));f.host.bindReader(book(),session(),[],false,f.lease);
  f.host.acceptSession(session(),f.coordinator.readingProjectionRevision(),{origin:'foreign',bookUrl:'foreign',acquisition:{schemaVersion:2,
@@ -411,7 +411,7 @@ if(id==='visible-text-only'){
 }
 if(id==='negative-audio-guard'){
 {
- const source=read('features/reading/ReadingEntryHost.ts');
+ const source=read('features/reading/application/ReadingEntryHost.ts');
  const unsafe=source.replace("if (seed.contentKind === 'audio') {",'if (false) {');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe));
  await f.host.openRemote({seed:{...seed(),contentKind:'audio'},sourceName:'Source',shelfSnapshot:book(),resumeImmediately:true},f.lease);
@@ -487,7 +487,7 @@ if(id==='manga-prepared-display'){
  f.chapter.chapterIndex=0;f.chapter.chapterTitle=retained.entries[0].title;f.chapter.manifest.chapter.chapterId=retained.entries[0].url;
  const saved={kind:'manga',chapter:f.chapter.manifest.chapter,manifestVersion:'manifest',pageId,pageOrdinalFallback:0,x:.27,y:.61,progressRevision:2};
  const prepared={chapter:f.chapter,targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:2,revision:2},location:saved}};
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),
   ['open','acquireCatalog','openDirectory'],{MangaSessionGateway:class{async entry(){return prepared;}},MangaBookPresentation,AppStorage:{setOrCreate(){}}});
  const pixels=[],restored=[],controller={chapter:f.chapter,savedLocation:saved,displayedOrdinal:0,recoveryRequired:false,
   async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(value){assert.equal(value,prepared);pixels.push('open');},pageAt:()=>({pageId})};

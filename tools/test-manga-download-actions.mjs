@@ -10,18 +10,18 @@ const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirect
 const {default: assert} = await import('node:assert/strict');
 const {createRequire,registerHooks,stripTypeScriptTypes} = await import('node:module');
 const {readFileSync} = await import('node:fs');
-const {mangaDirectoryEntryRows} = await import('../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts');
+const {mangaDirectoryEntryRows} = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts');
 const {mangaDirectoryEntryRowSdk} = await import('./lib/manga-directory-entry-row-probe.mjs');
 const {mangaRowBuilderMembers,mangaGridProbeDependencies} = await import('./lib/manga-directory-grid-probe.mjs');
-const horizontalGeometry = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const horizontalGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const {MangaDownloadActionsGateway}=await import('../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts');
-const {ReadingOfflineHost}=await import('../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
+const {MangaDownloadActionsGateway}=await import('../entry/src/main/ets/features/manga/application/MangaDownloadActionsGateway.ts');
+const {ReadingOfflineHost}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineHost.ts');
 const {runtimeOwnerIdentityProbe}=await import('./lib/reader-runtime-admission-probe.mjs');
 const {ReaderWriteEvidence}=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
-const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 const session={contentKind:'manga',identity:{sourceId:'source',bookId:'book'},entries:[]};
 const chapter=id=>({sourceId:'source',bookId:'book',chapterId:id});
 function fixture(){
@@ -81,9 +81,9 @@ function indexFixture(){
  const offline=new ReadingOfflineHost({gateway:offlineGateway,mangaActions:f.gateway,ownsRuntime:()=>true});
  const Index=productionMotionMethods(indexFile,['performMangaDownloadAction','loadMangaDownloadActions','submitReaderDownload',
   'downloadDirectoryChapter','downloadDirectoryBook','clearDirectoryBookOffline','requestClearDirectoryBookOffline',
-  'offlineBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries',
+  'offlineBinding','applyOwnedDirectoryEntries',
   'requestReaderBookInfo','cancelReaderExitDestination','onReaderExited','currentReaderPresentationIdentity'],{
-  ReaderRuntimeOwner:{current:()=>f.runtime},hilog:{warn(){},error(){}},DOMAIN:0,errorMessageOf:e=>e.message,readingOfflineFailureHint:e=>e.message});
+  ReaderRuntimeOwner:{current:()=>f.runtime},ReadingOfflineHost:{forRuntime:()=>offline},hilog:{warn(){},error(){}},DOMAIN:0,errorMessageOf:e=>e.message,readingOfflineFailureHint:e=>e.message});
  const owner=Object.assign(new Index(),{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,route:'detail',
   navigationGeneration:0,detailShelfAdmissionMount:0,remoteSessionGeneration:0,readingReadyGeneration:0,
   remoteReadingSession:admitted,detailBook:{...admitted.identity,contentKind:'manga'},detailToc:entries,

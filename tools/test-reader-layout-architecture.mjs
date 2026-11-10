@@ -2,8 +2,8 @@ import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selec
 const selected=selectContractCases({geometry:{description:'Actual reading/control safe-frame, explicit inset, font/title and keyboard geometry invariants',resources:[]},'owner-snapshot':{description:'Actual LRE uses coordinator revision cache and preserves frozen/settling layout identity',resources:[]},'sdk-forwarding':{description:'Actual PageTurnSurface SDK build forwards exact layout snapshot and retained update',resources:[]}});
 async function run(id){
  const{default:assert}=await import('node:assert/strict');
- const wm=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
- const geometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+ const wm=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+ const geometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
  const metrics=({top=0,left=0,bottom=0,keyboard=0,font=1}={})=>new wm.ReaderWindowMetricsSnapshot(new wm.ReaderRectVp(0,0,390,844),new wm.ReaderRectVp(0,0,390,844),new wm.ReaderInsetsVp(0,top,0,0),new wm.ReaderInsetsVp(left,0,0,0),new wm.ReaderInsetsVp(0,0,0,bottom),new wm.ReaderInsetsVp(),new wm.ReaderInsetsVp(0,0,0,keyboard),3,font,1,true);
  if(id==='geometry'){
   for(const width of [320,390,599,600,760,1100]){
@@ -28,7 +28,7 @@ async function run(id){
  }else if(id==='owner-snapshot'){
   const{selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
   let current=metrics();current.ready=false;current.revision=1;
-  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',['readingLayout','controlLayout'],{ReaderWindowCoordinator:{metrics:()=>current},...geometry});
+  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',['readingLayout','controlLayout'],{ReaderWindowCoordinator:{metrics:()=>current},...geometry});
   const owner=Object.assign(new Owner(),{readerSettingsSnapshot:{extendIntoCutout:false,hideStatusBar:true,navigationMode:'paged'},isTablet:false,effectiveViewportWidth:()=>390,effectiveViewportHeight:()=>844,getUIContext(){assert.fail('unready metrics do not measure chrome');}});
   const reading=owner.readingLayout(),control=owner.controlLayout(1);assert.equal(owner.readingLayout(),reading);assert.equal(owner.controlLayout(1),control);
   current=metrics({keyboard:300});current.ready=false;current.revision=2;
@@ -37,8 +37,8 @@ async function run(id){
   owner.pageTurnSettlementLayout=control;assert.equal(owner.readingLayout(),control,'settling snapshot has first ownership');
  }else{
   const{readFileSync}=await import('node:fs');const{createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url),'utf8');
-  const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),'utf8');
+  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets',import.meta.url),'utf8');
+  const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets',import.meta.url),'utf8');
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   const owner=createReaderBuilderProbe(source,['build'],{ReadingSurface:Child,COVER_OCCLUSION_RADIUS_VP:0,COVER_OCCLUSION_OFFSET_X_VP:0},{componentName:'ReaderPageTurnSurface',childSources:{ReadingSurface:surface}}).owner;
   const first=geometry.resolveReaderReadingLayout(390,844,false,metrics()),second=geometry.resolveReaderReadingLayout(760,960,true,metrics());

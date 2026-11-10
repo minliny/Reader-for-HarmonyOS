@@ -126,7 +126,7 @@ const { createMangaAtomicPayloadReaderFixture } = await import('./lib/manga-atom
 // Full production methods, real temporary files. The sparse quota fixtures
 // report their real stat.size without allocating gigabytes of test payload.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
+const source = readFileSync(join(repo, 'entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts'), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const handles = new Map();
 let rejectUnlink = () => false;

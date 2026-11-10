@@ -4,14 +4,14 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
-import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
+import { bookIntroText } from '../entry/src/main/ets/app/library/BookIntroText.ts';
+import { bookAuthorLabel } from '../entry/src/main/ets/app/library/BookAuthorMetadata.ts';
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
-const source = read('features/search/SearchPage.ets');
+const source = read('features/search/ui/SearchPage.ets');
 const classes = source.slice(source.indexOf('@Observed\nclass SearchBookGroup'), source.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
 const { SearchBookGroup, SearchResultDataSource } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(`
 const DataOperationType = { ADD:'add', DELETE:'delete', CHANGE:'change', RELOAD:'reload', MOVE:'move' };
-${read('features/common/BookAuthorMetadata.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`)).toString('base64')}`);
+${read('app/library/BookAuthorMetadata.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`)).toString('base64')}`);
 const book = (id, coverUrl, extra = {}) => ({ sourceId: id, bookId: id, groupKey:'same-book',
   searchRequestId:'query-1', sourceName:id, title:'测试书', author:'作者', coverUrl, intro:'简介', ...extra });
 const a = book('a','https://example.test/a.jpg');

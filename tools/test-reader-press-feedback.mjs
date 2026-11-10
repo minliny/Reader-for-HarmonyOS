@@ -15,7 +15,7 @@ async function case_native_composition() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 for (const scheme of ['day', 'night']) {
   const bases = [], overlays = [];
   const Modifier = productionReaderPressFeedback({ ColorMetrics: {
@@ -56,11 +56,11 @@ async function case_platform_failure_fallback() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 // Every official composition stage can fail independently. Preserve the
 // complete original normal recipe, while the gradient-oriented public helper
 // still returns the original unblended surface without leaking an exception.
-const actualSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderPressFeedback.ets',import.meta.url),'utf8');
+const actualSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets',import.meta.url),'utf8');
 function failedCompositionFallback(source=actualSource) {
   for(const stage of ['accent','rgba','base','blend']) {
     let requests=0;

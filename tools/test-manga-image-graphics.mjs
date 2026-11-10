@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { validateMangaGraphicsDimensions, validateMangaGraphicsPlan } from '../entry/src/main/ets/app/MangaImageGraphicsPlan.ts';
-import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
+import { validateMangaGraphicsDimensions, validateMangaGraphicsPlan } from '../entry/src/main/ets/platform/reading-resources/MangaImageGraphicsPlan.ts';
+import { MangaImageDecodeHost } from '../entry/src/main/ets/platform/reading-resources/MangaImageDecodeHost.ts';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
  if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
-const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 const fixture=name=>readFileSync(new URL(`./fixtures/manga-graphics/${name}`,import.meta.url));
 const plan=JSON.parse(fixture('plan.json')), encoded=new Uint8Array(fixture('input.png'));
 const expected=fixture('expected-bgra.bin'), original=fixture('input-bgra.bin'), jpeg=new Uint8Array(fixture('expected.jpg'));
@@ -36,7 +36,7 @@ function graphicsFixture(fault='',sourceBarrier) {
   order.push('create-output');assert.ok(order.lastIndexOf('release-source-end')>order.lastIndexOf('read'),'source decoder must finish release before output allocation');assert.deepEqual(Buffer.from(pixels),expected,'actual production regional-read placements equal independent BGRA golden');
   assert.equal(options.srcPixelFormat,4,'regional BGRA bytes must be identified before ImageKit converts to RGB565');assert.equal(options.pixelFormat,2);assert.deepEqual(options.size,{width:8,height:103});return output;
  },createImagePacker(){order.push('create-packer');return {async packing(value,options){assert.equal(value,output);assert.equal(options.format,'image/jpeg');assert.equal(options.quality,90);assert.equal(options.bufferSize,16777216);if(fault==='pack')throw Error('native packing failed');return jpeg.slice().buffer},async release(){released.push('packer')}}}};
- const Host=productionMotionMethods(new URL('../entry/src/main/ets/app/MangaImageGraphicsHost.ts',import.meta.url),['current','encoded','workingSet','dimensions','inspect','transform','performTransform'],{image,MAX_BYTES:16777216,MAX_GRAPHICS_WORKING_BYTES:33554432,validateMangaGraphicsDimensions,validateMangaGraphicsPlan});
+ const Host=productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/MangaImageGraphicsHost.ts',import.meta.url),['current','encoded','workingSet','dimensions','inspect','transform','performTransform'],{image,MAX_BYTES:16777216,MAX_GRAPHICS_WORKING_BYTES:33554432,validateMangaGraphicsDimensions,validateMangaGraphicsPlan});
  const host=new Host();host.pending=0;host.tail=Promise.resolve();
  return {host,current:()=>alive,released,calls,reads:()=>reads,allocations:()=>allocations,order};
 }

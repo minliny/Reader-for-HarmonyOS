@@ -1,13 +1,14 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import {mangaUserError} from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
+import {diagnosticCodeOf} from '../entry/src/main/ets/app/LogPrivacy.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {PhotoViewScaleModel} from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
-import {createDefaultReaderSettingsSnapshot,normalizeReaderSettingsSnapshot,setReaderPageTurnStyle} from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+import {createDefaultReaderSettingsSnapshot,normalizeReaderSettingsSnapshot,setReaderPageTurnStyle} from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
+const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(source)};return MangaStripProjection`)();
 const p=new Projection();
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'navigation-v1',pages:Array.from({length:3},(_,ordinal)=>({ordinal,pageId:`logical-${ordinal}`}))};
@@ -21,7 +22,7 @@ p.publish(manifest,geometry);
 assert.equal(p.index(1,0.991),199,'orientation changes preserve original image identity');
 assert.equal(p.position(199,110,1000),0.9911);
 assert.equal(p.position(199,330,3000),0.9911,'zoom is presentation only');
-const surfaceURL=new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url);
+const surfaceURL=new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url);
 const surfaceSource=readFileSync(surfaceURL,'utf8');
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
@@ -55,6 +56,7 @@ const saved=[];const settings=[];
 const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p,notify:()=>{}},
  first:150,last:150,viewportWidth:500,viewportHeight:900,zoom:2,scalePolicy:new PhotoViewScaleModel(),horizontal:false,horizontalPage:0,
  opened:true,mounted:true,panel:'',panelPhase:'closed',panelGeneration:0,panelActionGeneration:0,panelFontGeneration:0,panelFontsReady:false,reduceMotion:true,chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
+ appForeground:true,windowChromeActive:true,interactionBlocked:false,pageTurnInputRevision:0,
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}})}),
@@ -103,14 +105,16 @@ const safeUnknown='漫画暂时无法加载，请重试；仍失败时可尝试�
 assert.equal(mangaUserError(unknownDiagnostic),safeUnknown,'unknown diagnostics have a recoverable public hint');
 assert.equal(mangaUserError('upstream /private/book?token=secret'),safeUnknown,'unrecognized upstream details never become public copy');
 const diagnostics=[];
-const ErrorSurface=productionMotionMethods(surfaceURL,['displayError'],{mangaUserError,hilog:{warn:(...args)=>diagnostics.push(args)}});
+const ErrorSurface=productionMotionMethods(surfaceURL,['displayError'],{mangaUserError,diagnosticCodeOf,hilog:{warn:(...args)=>diagnostics.push(args)}});
 const errorSurface=Object.assign(new ErrorSurface(),{reportedErrorCodes:new Set()});
 assert.equal(errorSurface.displayError(unknownDiagnostic),safeUnknown);
 assert.equal(errorSurface.displayError(unknownDiagnostic),safeUnknown);
-assert.deepEqual([...errorSurface.reportedErrorCodes],[unknownDiagnostic],'presentation keeps the original diagnostic identity');
-assert.equal(diagnostics.length,1,'repeated rendering does not repeat the same diagnostic');
-assert.equal(diagnostics[0].at(-1),unknownDiagnostic,'the actual Surface diagnostic retains the original code');
-console.log('PASS targeted manga error messages retain diagnostic facts while exposing safe animation/offline/unknown recovery hints');
+assert.equal(errorSurface.displayError('upstream /private/book?token=secret'),safeUnknown);
+assert.deepEqual([...errorSurface.reportedErrorCodes],['OPERATION_FAILED']);
+assert.equal(diagnostics.length,1,'errors in the same public category share the warning');
+assert.equal(diagnostics[0].at(-1),'OPERATION_FAILED');
+assert.doesNotMatch(JSON.stringify(diagnostics),/UNEXPECTED_DIAGNOSTIC|private\/book|token=secret/);
+console.log('PASS manga error hints and finite public diagnostics');
 
 let finishSave;const actions=[];
 owner.saveVisible=()=>new Promise(resolve=>{finishSave=resolve;});

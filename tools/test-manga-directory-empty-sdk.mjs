@@ -12,15 +12,15 @@ const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts');
-const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const { MANGA_DIRECTORY_VISUAL: visual, mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const { MANGA_DIRECTORY_VISUAL: visual, mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
 
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}.ets`, import.meta.url), 'utf8');
-const listSource = read('features/reading/ReaderDirectoryList');
-const pageSource = read('features/bookshelf/BookDirectoryPage');
-const stateSource = read('features/common/ReaderPageState');
+const listSource = read('features/reading/ui/ReaderDirectoryList');
+const pageSource = read('features/reading/ui/BookDirectoryPage');
+const stateSource = read('ui/feedback/ReaderPageState');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -33,7 +33,8 @@ const DirectoryListDataSource = new Function('sameReaderDirectoryData', 'snapsho
   (sameReaderDirectoryData, snapshotReaderDirectoryData);
 class ChildrenMainSize { constructor(size) { this.childDefaultSize = size; } }
 const names = ['mangaFlatList', 'mangaEmptyState', 'mangaFontScale', 'mangaContentTopInset', 'mangaListBottomClearance',
-  'searchDraft', 'searchQuery', 'catalogMessage', 'catalogBusy', 'catalogLoading', 'catalogRetryVisible', 'mangaToolsHeight', 'readerWindowMetricsRevision', 'onMangaMetricsChanged'];
+  'searchDraft', 'searchQuery', 'catalogMessage', 'catalogBusy', 'catalogLoading', 'catalogRetryVisible', 'mangaToolsHeight', 'readerWindowMetricsRevision', 'onMangaMetricsChanged',
+  'sourceId', 'bookId', 'interactive', 'isOpeningCurrent', 'admittedIdentity', 'identity', 'directoryInputIsCurrent'];
 
 function check(candidate = pageSource, listCandidate = listSource, exhaustive = true) {
   for (const scheme of exhaustive ? ['day', 'night'] : ['night']) for (const scale of exhaustive ? [1, 3.2] : [3.2]) {
@@ -50,7 +51,8 @@ function check(candidate = pageSource, listCandidate = listSource, exhaustive = 
       { ...properties.hooks, childSources: { ReaderDirectoryList: listCandidate, ReaderPageState: stateSource }, mountChildren: true });
     const searches = [];
     Object.assign(owner, { appThemeScheme: scheme, searchDraft: '找不到', searchQuery: '找不到', catalogMessage: '',
-      mangaToolsHeight: 175, readerWindowMetricsRevision: 0, mounted: false,
+      mangaToolsHeight: 175, readerWindowMetricsRevision: 0, mounted: true,
+      sourceId: 'source', bookId: 'book', admittedIdentity: 'source\0book',
       contentFrame: () => ({ left: 20, right: 20, width: 280 }), topInset: () => 24,
       mangaLayoutEntries: () => [], mangaFlowFooter: () => true, mangaBottomClearance: () => 82,
       emptyMessage: () => '没有匹配章节', applySearch() { searches.push(this.searchDraft); },

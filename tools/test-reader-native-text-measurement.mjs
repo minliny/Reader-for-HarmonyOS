@@ -2,7 +2,7 @@ import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs'
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
-const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets',import.meta.url));
+const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets',import.meta.url));
 const source=readFileSync(file,'utf8');
 const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);

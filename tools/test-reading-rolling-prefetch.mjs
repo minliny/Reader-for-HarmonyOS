@@ -3,7 +3,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function run(id){
 const { resolveEtsLoaderRoot, virtualFilePath }=await import('./lib/tool-environment.mjs');
 
-const { registerHooks,createRequire }=await import('node:module');
+const { registerHooks,createRequire,stripTypeScriptTypes }=await import('node:module');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 const { readFileSync }=await import('node:fs');
 const { createHash }=await import('node:crypto');
@@ -12,17 +12,27 @@ const { readingPrefetchOwnerProbe }=await import('./lib/reading-prefetch-owner-p
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const root=new URL('../',import.meta.url);
-const { ReadingOfflineGateway }=await import(new URL('entry/src/main/ets/features/reading/ReadingOfflineGateway.ts',root));
-const { RemoteReadingFlowGateway }=await import(new URL('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts',root));
-const { LocalReadingFlowGateway }=await import(new URL('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts',root));
-const { sameRemoteSessionEvidence }=await import(new URL('entry/src/main/ets/features/reading/RemoteReadingEvidence.ts',root));
-const { BookAcquisitionCoordinator }=await import(new URL('entry/src/main/ets/app/BookAcquisitionCoordinator.ts',root));
+const { ReadingOfflineGateway }=await import(new URL('entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts',root));
+const { RemoteReadingFlowGateway }=await import(new URL('entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts',root));
+const { LocalReadingFlowGateway }=await import(new URL('entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts',root));
+const { sameRemoteSessionEvidence }=await import(new URL('entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts',root));
+const { SourceSwitchCompletionPresentation }=await import(new URL('entry/src/main/ets/features/source/presentation/SourceSwitchCompletionPresentation.ts',root));
+const { BookAcquisitionCoordinator }=await import(new URL('entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts',root));
 const file=new URL('entry/src/main/ets/pages/Index.ets',root),checks=[],warnings=[];
 let currentOwner;const ownedHosts=new Set();
 const ownerProbe=readingPrefetchOwnerProbe(()=>currentOwner);
-const Index=productionMotionMethods(file,['applyReadingCommit','prefetchReadingWindow','readingPrefetchLease','isRemoteCatalogNearEnd','bindReadingEntryReader'],{
+const commitSource=readFileSync(new URL('entry/src/main/ets/features/reading/presentation/ReadingCommitPresentation.ets',root),'utf8');
+const ReadingCommitPresentation=new Function('ReadingPrefetchHost','sameRemoteSessionEvidence','SourceSwitchCompletionPresentation',
+ stripTypeScriptTypes(commitSource.replace(/^import[^;]+;\s*/gm,'').replace(/^@Observed\n/gm,'').replace(/^export /gm,''))+';return ReadingCommitPresentation;')(
+ ownerProbe.ReadingPrefetchHost,sameRemoteSessionEvidence,SourceSwitchCompletionPresentation);
+const BaseIndex=productionMotionMethods(file,['readingCommits','readingCommitPorts','readingEntry','currentReadingRuntime','getReadingEntryHost','bindReadingEntryReader'],{
+ ReadingCommitPresentation,
  ...ownerProbe,ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'},LOCAL_SOURCE_ID:'local',ReadingOfflineGateway,RemoteReadingFlowGateway,LocalReadingFlowGateway,sameRemoteSessionEvidence,READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,DOMAIN:0,hilog:{warn(...v){warnings.push(v);},error(...v){assert.fail(`unexpected directory failure ${v}`);}},
 });
+class Index extends BaseIndex {
+ applyReadingCommit(commit){this.readingCommits.accept(commit);}
+ prefetchReadingWindow(...args){return this.readingCommits.prefetch(...args);}
+}
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
 // Exact registered Index attributes and exact retained ReaderShell ForEach;
 // generated SDK observers retain the same ReadingExperience child on TOC patch.
@@ -33,13 +43,13 @@ function sdkReaderPayload(page){
  let call;const visit=n=>{if(ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderShell')call=n;ts.forEachChild(n,visit);};visit(tree);
  const names=new Set(['sourceId','bookId','readingReadyGeneration','remoteSession','tocEntries','onReadingCommitted']);
  const props=call.arguments[0].properties.filter(p=>names.has(p.name?.getText(tree))).map(p=>p.getText(tree));assert.equal(props.length,6);
- const shellSource=readFileSync(new URL('entry/src/main/ets/features/shell/ReaderShell.ets',root),'utf8'),readingSource=readFileSync(new URL('entry/src/main/ets/features/reading/LocalReadingExperience.ets',root),'utf8');
+ const shellSource=readFileSync(new URL('entry/src/main/ets/features/reading/ui/ReaderShell.ets',root),'utf8'),readingSource=readFileSync(new URL('entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',root),'utf8');
  const readerConstructions=[];
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});if(params.directoryEntries!==undefined)readerConstructions.push(id);}updateStateVars(params){Object.assign(this.params,params);}}
  const carrier=createReaderBuilderProbe('@Component struct ActualPrefetchIndex {@Builder payload(){ReaderShell({'+props.join(',')+'});}build(){Column(){}}}',
   ['payload'],{ReaderShell:Child},{childSources:{ReaderShell:shellSource}}).owner;
- for(const name of ['detailBook','detailToc','remoteReadingSession','readingReadyGeneration'])Object.defineProperty(carrier,name,{get:()=>page[name]});
- carrier.applyReadingCommit=commit=>page.applyReadingCommit(commit);carrier.payload();
+ for(const name of ['readingEntry','readingCommits','readingReadyGeneration'])Object.defineProperty(carrier,name,{get:()=>page[name]});
+ carrier.payload();
  const start=shellSource.indexOf('        ForEach([this.readingIdentityKey()]'),tail='        }, (identity: string): string => identity);',end=shellSource.indexOf(tail,start)+tail.length;
  const retained=createReaderBuilderProbe('@Component struct ActualPrefetchReader {@Builder reading(){'+shellSource.slice(start,end)+'}build(){Column(){}}}',
   ['reading'],{ReadingExperience:Child},{childSources:{ReadingExperience:readingSource}}).owner;
@@ -69,8 +79,9 @@ function fixture(count=1370){
  currentOwner=runtime;setRuntime(runtime);
  const page=Object.assign(new Index(),{readingEntryScopeId:-1,route:'reading',readingOriginRoute:'detail',readableAdmissions:[],shelfOperation:{removalKey:'',busy:false},mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,remoteSessionGeneration:1,detailBook:{sourceId,bookId,...session.book},remoteReadingSession:session,readingSessionActive:true,navigationGeneration:1,readingReadyGeneration:1,consumeSystemFileOpen(){},refreshRemoteCatalogNearEnd(){assert.fail('fixture chapter not near tail');}});
  let publications=0,toc=session.entries.map(e=>({index:e.index,title:e.title,navigable:true,downloadState:'completed',bookmarks:[]}));
- Object.defineProperty(page,'detailToc',{get:()=>toc,set:v=>{publications++;toc=v;}});
- const active=[],prefetch=page.prefetchReadingWindow.bind(page);page.prefetchReadingWindow=(...a)=>{const work=prefetch(...a);const host=ownerProbe.ReadingPrefetchHost.forRuntime(runtime);if(host)ownedHosts.add(host);active.push(work);return work;};
+ Object.defineProperty(page.readingEntry,'toc',{get:()=>toc,set:v=>{publications++;toc=v;}});
+ const active=[],prefetch=page.readingCommits.prefetch.bind(page.readingCommits);
+ page.readingCommits.prefetch=(...a)=>{const work=prefetch(...a);const host=ownerProbe.ReadingPrefetchHost.forRuntime(runtime);if(host)ownedHosts.add(host);active.push(work);return work;};
  const commit=(index=988,offset=0)=>page.applyReadingCommit({...page.remoteReadingSession.identity,chapterIndex:index,chapterOffset:offset});
  return{session,state,runtime,page,calls,body,execute,commit,publications:()=>publications,count:m=>calls.filter(c=>c.method===m).length,settle:()=>Promise.all(active),reads:()=>calls.filter(c=>c.method==='chapter.content').map(c=>c.p.chapterIndex)};
 }

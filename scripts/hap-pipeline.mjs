@@ -31,6 +31,7 @@ import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/bu
 import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
+import { embeddedStorageCompatibility, readInstalledSqliteVersion, readInstalledStorageLineage, storageUpdateRoute, loadStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState } from './lib/hap-storage-admission.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
 import { selectBundledSources } from '../tools/verify-bundled-test-book-sources-live.mjs';
 import { contractTests, contractSelection, explicitContractTests, contractCaseSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
@@ -51,6 +52,12 @@ const EXPECTED_NATIVE_ENTRIES = [
   'libs/arm64-v8a/libreader_bookturn_napi.so',
   'libs/arm64-v8a/libreader_core_napi.so',
 ];
+
+/** One explicit ABI follows the Native package through build and verification. */
+export function resolveHarmonyAbi(value = 'arm64-v8a') {
+  if (value !== 'arm64-v8a' && value !== 'x86_64') fail(`unsupported Harmony ABI: ${value}`, 2);
+  return value;
+}
 const BUILD_INPUTS = [
   'AppScope',
   'entry/src',
@@ -593,34 +600,45 @@ function verifySignature(hapPath) {
   }
 }
 
+function readArchive(args, encoding = 'utf8') {
+  const binary = resolveHarmonyTool('unzip');
+  // Info-ZIP interprets UNZIP and ZIPINFO as default arguments. UNZIP can
+  // select our executable and must not also reach that executable as flags.
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+    !/^(?:UNZIP|ZIPINFO)(?:OPT)?$/i.test(key)));
+  return run(binary, args, { encoding, env }).stdout;
+}
+
 function archiveNames(hapPath) {
-  return capture(resolveHarmonyTool('unzip'), ['-Z1', hapPath]).split(/\r?\n/).filter(Boolean);
+  return readArchive(['-Z1', hapPath]).split(/\r?\n/).filter(Boolean);
 }
 
 function archiveEntryRecord(hapPath, entryPath) {
-  const result = run(resolveHarmonyTool('unzip'), ['-p', hapPath, entryPath], { encoding: null });
-  const bytes = result.stdout;
+  const bytes = readArchive(['-p', hapPath, entryPath], null);
   if (!Buffer.isBuffer(bytes)) fail(`unable to read ${entryPath} from ${hapPath}`);
-  return { path: entryPath, bytes: bytes.length, sha256: sha256Bytes(bytes) };
+  return { path: entryPath, bytes: bytes.length, sha256: sha256Bytes(bytes),
+    storageCompatibility: embeddedStorageCompatibility(bytes) };
 }
 
-export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources) {
+export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources, abi = 'arm64-v8a') {
+  if (abi !== 'arm64-v8a' && abi !== 'x86_64') fail(`unsupported HAP inspection ABI: ${abi}`);
   const names = archiveNames(hapPath);
   const nativeEntries = names.filter((name) => name.startsWith('libs/')).sort();
-  if (JSON.stringify(nativeEntries) !== JSON.stringify(EXPECTED_NATIVE_ENTRIES)) {
+  const expectedNativeEntries = EXPECTED_NATIVE_ENTRIES.map((name) => name.replace('arm64-v8a', abi));
+  if (JSON.stringify(nativeEntries) !== JSON.stringify(expectedNativeEntries)) {
     fail(`unexpected native archive layout in ${hapPath}: ${JSON.stringify(nativeEntries)}`);
   }
   const signature = verifySignature(hapPath);
   if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
   if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
   if (requiredResources) verifyRequiredHapResources(requiredResources, names,
-    entry => run(resolveHarmonyTool('unzip'), ['-p', hapPath, entry], { encoding: null }).stdout);
+    entry => readArchive(['-p', hapPath, entry], null));
   return {
     kind,
     ...fileRecord(hapPath, publicPath),
     signature,
     nativeEntries,
-    embeddedCoreNapi: archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so'),
+    embeddedCoreNapi: archiveEntryRecord(hapPath, `libs/${abi}/libreader_core_napi.so`),
     ...(requiredResources ? { requiredResources } : {}),
   };
 }
@@ -746,7 +764,7 @@ export function verifyIdeSignedHap(path, session, env = process.env) {
   const lease = acquireBuildLease(env);
   try {
     assertIdeSigningUnchanged(session);
-    const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT));
+    const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT), resolveHarmonyAbi(env.READER_HARMONY_ABI));
     if (artifact.signature.status !== 'signed' || artifact.signature.verified !== true) {
       fail('DevEco build did not produce a verified signed HAP.');
     }
@@ -854,13 +872,14 @@ function findBuiltHaps(outputDir, signingMode) {
 export function nativeInputPaths(coreRoot = CORE_ROOT, env = process.env) {
   // Cargo resolves relative target directories from the Core producer's cwd,
   // not from the Harmony checkout or the pipeline invocation directory.
-  const base = resolve(coreRoot, env.CARGO_TARGET_DIR || 'target', 'harmony-napi/arm64-v8a');
+  const abi = resolveHarmonyAbi(env.READER_HARMONY_ABI);
+  const base = resolve(coreRoot, env.CARGO_TARGET_DIR || 'target', 'harmony-napi', abi);
   return {
     identity: resolve(base, 'core-build-identity.json'),
     inputSnapshot: resolve(base, 'core-input-snapshot.json'),
     packageManifest: resolve(base, 'harmony-package-manifest.sha256'),
     buildEvidence: resolve(base, 'harmony-napi-build-evidence.txt'),
-    nativeSo: resolve(base, 'package/libs/arm64-v8a/libreader_core_napi.so'),
+    nativeSo: resolve(base, 'package/libs', abi, 'libreader_core_napi.so'),
   };
 }
 
@@ -873,12 +892,13 @@ export function requireAcceptanceInputs(coreRoot = CORE_ROOT, env = process.env)
 }
 
 function nativeProvenanceArguments(env = process.env) {
+  const abi = resolveHarmonyAbi(env.READER_HARMONY_ABI);
   const inputs = requireAcceptanceInputs(CORE_ROOT, env);
   return [
-    '--core-repo', CORE_ROOT, '--harmony-repo', REPO_ROOT,
+    '--abi', abi, '--core-repo', CORE_ROOT, '--harmony-repo', REPO_ROOT,
     '--core-identity', inputs.identity, '--core-input-snapshot', inputs.inputSnapshot,
     '--napi-manifest', inputs.packageManifest, '--native-so', inputs.nativeSo,
-    '--app-native-so', resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
+    '--app-native-so', resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so'),
     '--harmony-vendor', resolve(REPO_ROOT, 'entry/vendor/core-harmony'),
     '--core-build-evidence', inputs.buildEvidence,
   ];
@@ -940,13 +960,18 @@ export function ideNativeInputState(corePaths, appNativePath, sdkPath) {
 
 export function preflightIdeNative(env = process.env) {
   assertWorkspaceLayout(WORKSPACE_ROOT);
+  const abi = resolveHarmonyAbi(env.READER_HARMONY_ABI);
+  const declaredAbis = parseBuildProfile(resolve(REPO_ROOT, 'entry/build-profile.json5')).buildOption?.externalNativeOptions?.abiFilters;
+  if (!Array.isArray(declaredAbis) || declaredAbis.length !== 1 || declaredAbis[0] !== abi) {
+    fail('IDE Native ABI must match the single entry build-profile ABI; isolated builds select --abi explicitly.');
+  }
   const lease = acquireBuildLease(env);
   const buildEnv = ideNativeBuildEnvironment(lease.env);
   try {
     return prepareIdeNativeInputs({
       check() {
         const state = ideNativeInputState(Object.values(nativeInputPaths(CORE_ROOT, buildEnv)),
-          resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'), resolve(REPO_ROOT, 'entry/vendor/core-harmony'));
+          resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so'), resolve(REPO_ROOT, 'entry/vendor/core-harmony'));
         if (state === 'rebuild') throw Object.assign(new Error('Reader DevEco Native package is missing'), { code: 'READER_IDE_NATIVE_PACKAGE_MISSING' });
         if (state === 'synchronize') {
           throw Object.assign(new Error('Reader DevEco Native/SDK inputs are missing'), { code: 'READER_IDE_NATIVE_HOST_MISSING' });
@@ -955,7 +980,7 @@ export function preflightIdeNative(env = process.env) {
       },
       rebuild() {
         console.log('Reader DevEco: Core Native inputs changed; rebuilding the current local Core/SDK package.');
-        run('bash', [resolve(CORE_ROOT, 'scripts/build-harmony-napi.sh')], {
+        run('bash', [resolve(CORE_ROOT, 'scripts/build-harmony-napi.sh'), '--abi', abi], {
           cwd: CORE_ROOT, stdio: 'inherit', env: { ...buildEnv, READER_NATIVE_BUILD_LOCKED: '1' },
         });
       },
@@ -967,10 +992,11 @@ export function preflightIdeNative(env = process.env) {
 // Synchronize local build inputs through the same provenance checker used by
 // HAP builds. Never download a binary or silently accept an older package.
 function syncNative(env = process.env) {
+  const abi = resolveHarmonyAbi(env.READER_HARMONY_ABI);
   const inputs = requireAcceptanceInputs(CORE_ROOT, env);
   const packageRoot = resolve(dirname(inputs.packageManifest), 'package');
   const localRoot = resolve(REPO_ROOT, '.reader-local/native-sync');
-  for (const path of [localRoot, resolve(REPO_ROOT, 'entry/vendor'), resolve(REPO_ROOT, 'entry/libs/arm64-v8a')]) {
+  for (const path of [localRoot, resolve(REPO_ROOT, 'entry/vendor'), resolve(REPO_ROOT, 'entry/libs', abi)]) {
     for (let parent = path; parent !== REPO_ROOT; parent = dirname(parent)) {
       const stat = lstatSync(parent, { throwIfNoEntry: false });
       if (stat && !stat.isDirectory()) fail('Native synchronization parents must be real directories');
@@ -981,7 +1007,7 @@ function syncNative(env = process.env) {
   const stagedSdk = join(stage, 'sdk');
   const stagedNative = join(stage, 'libreader_core_napi.so');
   const sdk = resolve(REPO_ROOT, 'entry/vendor/core-harmony');
-  const native = resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so');
+  const native = resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so');
   const sdkBackup = join(stage, 'previous-sdk');
   const nativeBackup = join(stage, 'previous-native.so');
   let sdkMoved = false, nativeMoved = false, sdkInstalled = false, nativeInstalled = false;
@@ -1010,7 +1036,7 @@ function syncNative(env = process.env) {
     if (existsSync(native)) { renameSync(native, nativeBackup); nativeMoved = true; }
     renameSync(stagedSdk, sdk); sdkInstalled = true;
     renameSync(stagedNative, native); nativeInstalled = true;
-    console.log(JSON.stringify({ status: 'PASS', operation: 'sync-native',
+    console.log(JSON.stringify({ status: 'PASS', operation: 'sync-native', abi,
       nativeSha256: fileRecord(native).sha256, recovery: stage }));
   } catch (error) {
     if (nativeInstalled) rmSync(native);
@@ -1021,13 +1047,13 @@ function syncNative(env = process.env) {
   }
 }
 
-function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass) {
+function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass, env = process.env) {
   const generator = resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs');
   const stripTool = resolveHarmonyTool('objcopy');
   const output = resolve(runDir, `${buildClass}-${basename(signedHap, '.hap')}-provenance.json`);
   run(process.execPath, [
     generator,
-    ...nativeProvenanceArguments(),
+    ...nativeProvenanceArguments(env),
     ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
     '--hap', signedHap,
     '--output', output,
@@ -1040,8 +1066,9 @@ function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCom
 }
 
 export function buildContractScope(options, root = REPO_ROOT) {
-  const allowed = ['--class', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
+  const allowed = ['--class', '--abi', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
   for (const key of options.keys()) if (!allowed.includes(key)) fail(`unknown build argument: ${key}`, 2);
+  resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
   if (options.get('--live-sources') === true) fail('--live-sources no longer starts the whole collection. Use --live-source-ids with exact IDs and --rationale, or run the explicit all-source tool plan separately.', 2);
@@ -1092,6 +1119,8 @@ function buildImpl(options) {
   assertWorkspaceLayout(WORKSPACE_ROOT);
   const contractsScope = buildContractScope(options);
   const buildClass = option(options, '--class', 'iteration');
+  const abi = resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
+  const nativeEnvironment = { ...process.env, READER_HARMONY_ABI: abi };
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
   const requestedSigning = option(options, '--signing', 'auto');
   if (!['auto', 'local', 'unsigned'].includes(requestedSigning)) {
@@ -1129,7 +1158,7 @@ function buildImpl(options) {
   let contractsDispatched = false;
   try {
     run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
-      ...nativeProvenanceArguments(), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
+      ...nativeProvenanceArguments(nativeEnvironment), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
       ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
     ]);
     const artifactRoot = resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT));
@@ -1199,6 +1228,15 @@ function buildImpl(options) {
 
     const sandboxRepo = resolve(sandboxRoot, 'Reader-for-HarmonyOS');
     copySourceSandbox(REPO_ROOT, sandboxRepo, sandboxRoot);
+    const moduleProfilePath = resolve(sandboxRepo, 'entry/build-profile.json5');
+    const moduleProfile = parseBuildProfile(moduleProfilePath);
+    if (!moduleProfile.buildOption?.externalNativeOptions) fail('entry Native build options are missing');
+    moduleProfile.buildOption.externalNativeOptions.abiFilters = [abi];
+    writeFileSync(moduleProfilePath, JSON.stringify(moduleProfile, null, 2) + '\n');
+    // A checkout can retain both locally generated ABI packages. Select only
+    // this run's ABI in the disposable sandbox; source inputs remain intact.
+    rmSync(resolve(sandboxRepo, 'entry/libs', abi === 'arm64-v8a' ? 'x86_64' : 'arm64-v8a'), { recursive: true, force: true });
+    const effectiveModuleProfile = fileRecord(moduleProfilePath, 'module-build-profile.json');
     if (signingMode === 'local') {
       writeFileSync(resolve(sandboxRepo, 'build-profile.json5'), JSON.stringify(signingProfile, null, 2) + '\n');
       chmodSync(resolve(sandboxRepo, 'build-profile.json5'), 0o600);
@@ -1242,6 +1280,7 @@ function buildImpl(options) {
     cpSync(sharedHvigorTools, isolatedHvigorTools, { recursive: true, preserveTimestamps: true, verbatimSymlinks: true });
     const buildEnvironment = {
       ...buildLease.env,
+      READER_HARMONY_ABI: abi,
       HVIGOR_USER_HOME: hvigorUserHome,
       npm_config_cache: resolve(sandboxRoot, 'npm-cache'),
       READER_HAP_PIPELINE_ROOT: sandboxRepo,
@@ -1307,12 +1346,14 @@ function buildImpl(options) {
       basename(path).endsWith('-signed.hap') ? 'signed' : 'unsigned',
       basename(path),
       requiredResources,
+      abi,
     ));
     if (buildClass === 'acceptance' && !artifacts.some((artifact) => artifact.kind === 'signed')) {
       fail('acceptance build did not produce a signed artifact');
     }
 
     writeJson(resolve(runDir, 'source-snapshot.json'), sourceBefore);
+    copyFileSync(moduleProfilePath, resolve(runDir, effectiveModuleProfile.path));
     writeJson(resolve(runDir, 'controller-snapshot.json'), harmonyGateBefore);
     writeJson(resolve(runDir, 'workspace-contract-snapshot.json'), workspaceContractBefore);
     writeJson(resolve(runDir, 'contract-toolchain-snapshot.json'), contractToolchainBefore);
@@ -1335,19 +1376,23 @@ function buildImpl(options) {
         hvigorVersion,
         buildCommand,
         buildClass,
+        nativeEnvironment,
       );
       nativeProvenance.push(provenance);
       if (buildClass === 'acceptance' && artifact.kind === 'signed') acceptanceProvenance = provenance;
     }
     const vendoredNapi = fileRecord(
-      resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
-      'entry/libs/arm64-v8a/libreader_core_napi.so',
+      resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so'),
+      `entry/libs/${abi}/libreader_core_napi.so`,
     );
     const manifest = {
       schemaVersion: 2,
       deliveryEvidenceVersion: 1,
       name: 'reader-harmonyos-hap-run',
+      abi,
+      effectiveModuleProfile,
       nativeProvenance,
+      nativeProvenanceInputs: nativeProvenance.map(path => fileRecord(resolve(runDir, path), path)),
       runId,
       buildClass,
       acceptanceEligible: buildClass === 'acceptance' && contractsScope === undefined && Boolean(coreGateFile),
@@ -1659,8 +1704,52 @@ function verifySnapshotIdentity(directory, descriptor, expectedName, label) {
   return snapshot;
 }
 
+/** New ABI-aware runs bind the actual module profile and Native provenance.
+ * Old manifests remain arm64-only and retain their original evidence format. */
+export function verifyAbiEvidence(directory, manifest, artifacts) {
+  if (manifest.abi === undefined) return;
+  const abi = resolveHarmonyAbi(manifest.abi);
+  if (!['iteration', 'acceptance'].includes(manifest.buildClass)) fail('ABI run has an invalid build class');
+  const profile = manifest.effectiveModuleProfile;
+  if (profile?.path !== 'module-build-profile.json') fail('ABI run is missing its effective module profile');
+  const profilePath = resolve(directory, profile.path);
+  const profileRecord = fileRecord(profilePath, profile.path);
+  if (profileRecord.sha256 !== profile.sha256 || profileRecord.bytes !== profile.bytes) fail('effective module profile identity mismatch');
+  // The isolated controller serializes this published profile as strict JSON.
+  const filters = JSON.parse(readFileSync(profilePath, 'utf8')).buildOption?.externalNativeOptions?.abiFilters;
+  if (!Array.isArray(filters) || filters.length !== 1 || filters[0] !== abi) fail('effective module profile ABI differs from the immutable run');
+  const inputs = manifest.nativeProvenanceInputs;
+  if (!Array.isArray(inputs) || inputs.length !== artifacts.length ||
+      !Array.isArray(manifest.nativeProvenance) || manifest.nativeProvenance.length !== artifacts.length) {
+    fail('ABI run is missing complete Native provenance inputs');
+  }
+  const expectedNative = manifest.source?.vendoredCoreNapi;
+  if (expectedNative?.path !== `entry/libs/${abi}/libreader_core_napi.so`) fail('ABI run Native source path is inconsistent');
+  for (const artifact of artifacts) {
+    const name = `${manifest.buildClass}-${basename(artifact.path, '.hap')}-provenance.json`;
+    const records = inputs.filter(record => record.path === name);
+    if (records.length !== 1 || !manifest.nativeProvenance.includes(name)) fail('ABI artifact provenance selection is inconsistent');
+    const path = resolve(directory, name);
+    const actual = fileRecord(path, name);
+    if (actual.sha256 !== records[0].sha256 || actual.bytes !== records[0].bytes) fail('Native provenance identity mismatch');
+    const provenance = JSON.parse(readFileSync(path, 'utf8'));
+    if (provenance.name !== 'reader-harmonyos-build-provenance' || provenance.abi !== abi ||
+        provenance.core?.buildEvidence?.values?.ohos_arch !== abi ||
+        provenance.core?.buildEvidence?.values?.target !== (abi === 'arm64-v8a' ? 'aarch64-unknown-linux-ohos' : 'x86_64-unknown-linux-ohos') ||
+        provenance.hap?.path !== artifact.path || provenance.hap?.sha256 !== artifact.sha256 ||
+        provenance.hap?.embeddedNative?.path !== `libs/${abi}/libreader_core_napi.so` ||
+        provenance.hap?.embeddedNative?.sha256 !== artifact.embeddedCoreNapi.sha256 ||
+        provenance.napi?.nativeInput?.sha256 !== expectedNative.sha256) {
+      fail('Native provenance does not bind the selected ABI and artifact');
+    }
+  }
+}
+
 function verifyManifest(path) {
   const loaded = loadManifest(path);
+  // Historical runs omitted ABI and were exclusively arm64. Never infer it
+  // from mutable environment or choose another architecture after publishing.
+  const abi = resolveHarmonyAbi(loaded.manifest.abi ?? 'arm64-v8a');
   verifySnapshotIdentity(
     loaded.directory,
     loaded.manifest.source?.buildInputs,
@@ -1709,13 +1798,14 @@ function verifyManifest(path) {
     const artifactPath = resolve(loaded.directory, artifact.path);
     if (!existsSync(artifactPath)) fail(`manifest artifact is missing: ${artifactPath}`);
     if (loaded.manifest.deliveryEvidenceVersion === 1 && !artifact.requiredResources?.length) fail('Required HAP resource inventory is missing');
-    const current = inspectHap(artifactPath, artifact.kind, artifact.path, artifact.requiredResources);
+    const current = inspectHap(artifactPath, artifact.kind, artifact.path, artifact.requiredResources, abi);
     if (current.sha256 !== artifact.sha256 || current.bytes !== artifact.bytes ||
         current.embeddedCoreNapi.sha256 !== artifact.embeddedCoreNapi.sha256) {
       fail(`manifest artifact identity mismatch: ${artifactPath}`);
     }
     verified.push(current);
   }
+  verifyAbiEvidence(loaded.directory, loaded.manifest, verified);
   return { ...loaded, artifacts: verified };
 }
 
@@ -1757,10 +1847,12 @@ export function parseBundleMetadata(output, bundleListOutput = '') {
     cpuAbi: app.cpuAbi,
     appIdSha256: identityHash(data.appId),
     appIdentifierSha256: identityHash(data.appIdentifier),
+    ...(Number.isSafeInteger(app.uid) && app.uid > 0 ? { uid: app.uid } : {}),
+    ...(Number.isSafeInteger(data.updateTime) && data.updateTime > 0 ? { updateTime: data.updateTime } : {}),
   };
 }
 
-export function deploymentRoute({ targetKind, installed, artifact }) {
+export function deploymentSigningRoute({ targetKind, installed, artifact }) {
   if (!['vm', 'physical'].includes(targetKind)) return { allowed: false, reason: 'invalid-target-kind' };
   if (targetKind === 'physical' && artifact.signature.status !== 'signed') {
     return { allowed: false, reason: 'physical-device-requires-signed-hap' };
@@ -1784,6 +1876,14 @@ export function deploymentRoute({ targetKind, installed, artifact }) {
     return { allowed: false, reason: 'application-signing-identity-unresolved-or-mismatched' };
   }
   return { allowed: true, reason: 'matching-identity-signed-update-candidate', preservesData: true };
+}
+
+export function deploymentRoute({ targetKind, installed, artifact, storageEvidence }) {
+  const signature = deploymentSigningRoute({ targetKind, installed, artifact });
+  if (!signature.allowed || !installed.bundlePresent) return signature;
+  const storage = storageUpdateRoute({ ...(storageEvidence ?? {}),
+    candidateNativeSha256: artifact.embeddedCoreNapi?.sha256, candidateHapSha256: artifact.sha256 });
+  return storage.allowed ? { ...signature, reason: storage.reason } : storage;
 }
 
 function hdcBinary() {
@@ -1814,6 +1914,55 @@ function installedMetadata(hdc, target) {
   return parseBundleMetadata(output);
 }
 
+function storageTransitionCandidate(verified, artifact) {
+  const matches = [];
+  for (const record of verified.manifest.nativeProvenanceInputs ?? []) {
+    const path = resolve(verified.directory, record.path), current = fileRecord(path, record.path);
+    if (current.sha256 !== record.sha256 || current.bytes !== record.bytes) fail('Native provenance changed before storage transition');
+    const provenance = JSON.parse(readFileSync(path, 'utf8'));
+    if (provenance.hap?.sha256 === artifact.sha256 && provenance.abi === verified.manifest.abi) matches.push(provenance);
+  }
+  if (matches.length !== 1) fail('storage transition requires exactly one matching native provenance');
+  const provenance = matches[0], identity = provenance.core?.buildIdentity;
+  if (identity?.schemaVersion !== 1 || !identity.storageCompatibility ||
+      JSON.stringify(identity.storageCompatibility) !== JSON.stringify(artifact.embeddedCoreNapi.storageCompatibility)) {
+    fail('candidate storage declaration and compiled Core provenance disagree');
+  }
+  // A new proof cannot upgrade an old controller's package contract.
+  const controller = JSON.parse(readFileSync(resolve(verified.directory, 'controller-snapshot.json'), 'utf8'));
+  for (const path of ['scripts/hap-pipeline.mjs', 'scripts/lib/hap-storage-admission.mjs']) {
+    const recorded = controller.files.find(file => file.path === path), current = fileRecord(resolve(REPO_ROOT, path), path);
+    if (!recorded || recorded.sha256 !== current.sha256 || recorded.bytes !== current.bytes) fail('storage transition controller is not the candidate controller');
+  }
+  return { runId: verified.manifest.runId, manifestSha256: fileRecord(verified.path).sha256,
+    hapSha256: artifact.sha256, nativeSha256: artifact.embeddedCoreNapi.sha256, abi: verified.manifest.abi,
+    coreBuildId: identity.buildId, coreInputFingerprint: provenance.core.buildInputFingerprint,
+    protocolSha256: identity.protocolSha256, storageCompatibility: identity.storageCompatibility,
+    controllerFingerprint: verified.manifest.gates.controllerInputs.fingerprint,
+    coreInputSnapshotSha256: provenance.core.buildInputSnapshot.sha256,
+    coreInputSnapshotBytes: provenance.core.buildInputSnapshot.bytes };
+}
+
+function archiveStorageTransition(verified, handle) {
+  const directoryName = `storage-transition-${handle.receiptSha256}`;
+  const root = resolve(verified.directory, directoryName), records = [];
+  for (const file of storageTransitionResources(handle)) {
+    const path = resolve(root, file.path);
+    for (let parent = dirname(path); parent !== verified.directory; parent = dirname(parent)) {
+      const stat = lstatSync(parent, { throwIfNoEntry: false });
+      if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) fail('storage transition archive parents must be regular directories');
+    }
+    mkdirSync(dirname(path), { recursive: true });
+    const existing = lstatSync(path, { throwIfNoEntry: false });
+    if (existing) {
+      if (!existing.isFile() || existing.isSymbolicLink() || fileRecord(path).sha256 !== file.sha256) fail('storage transition archive collision');
+    } else writeFileSync(path, file.bytes, { flag: 'wx' });
+    records.push(fileRecord(path, `${directoryName}/${file.path}`));
+  }
+  return { contract: handle.contract, receiptSha256: handle.receiptSha256,
+    files: records, evidenceLayer: handle.evidenceLayer };
+}
+
 function resolveDeployment(options) {
   const manifestPath = requiredOption(options, '--manifest');
   const artifactKind = requiredOption(options, '--artifact');
@@ -1827,11 +1976,55 @@ function resolveDeployment(options) {
   const artifactPath = resolve(verified.directory, artifact.path);
   const hdc = hdcBinary();
   assertTargetConnected(hdc, target);
-  const readiness = targetReadiness({ targetKind, vmLog: option(options, '--vm-log'),
-    query: command => capture(process.execPath, [HDC_LEASE_SCRIPT, '--target', target, '--hdc', hdc,
-      '--server-key', HDC_SERVER, '--', '-s', HDC_SERVER, '-t', target, 'shell', command], { timeoutMs: 10_000, maxBuffer: 1024 * 1024 }) });
+  const deviceQuery = (...command) => capture(process.execPath, [HDC_LEASE_SCRIPT, '--target', target, '--hdc', hdc,
+    '--server-key', HDC_SERVER, '--', '-s', HDC_SERVER, '-t', target, ...command], { timeoutMs: 10_000, maxBuffer: 1024 * 1024 });
+  const query = command => deviceQuery('shell', command);
+  const readiness = targetReadiness({ targetKind, targetEndpoint: target, vmLog: option(options, '--vm-log'),
+    query });
   const installed = installedMetadata(hdc, target);
-  const route = deploymentRoute({ targetKind, installed, artifact });
+  let route = deploymentSigningRoute({ targetKind, installed, artifact });
+  if (options.has('--storage-transition') && !installed.bundlePresent) fail('storage transition requires an existing installed bundle');
+  let storageEvidence = null;
+  let revalidateStorageTransition = null;
+  if (route.allowed && installed.bundlePresent && options.has('--storage-transition')) {
+    const localProof = loadStorageTransitionProof(requiredOption(options, '--storage-transition'), storageTransitionCandidate(verified, artifact));
+    const querySandbox = command => deviceQuery('shell', '-b', BUNDLE_NAME, command);
+    const observe = () => readStoppedStorageTransitionState({ bundleName: BUNDLE_NAME, installed,
+      abi: verified.manifest.abi, targetRef: targetReference(target), targetKind, query, querySandbox });
+    const observedStorage = observe();
+    const transition = bindStorageTransitionTarget(localProof, observedStorage);
+    storageEvidence = { targetSqliteVersion: transition.sourceSqliteUserVersion,
+      candidateStorage: artifact.embeddedCoreNapi.storageCompatibility, installedStorage: null,
+      versionSource: 'verified-stopped-snapshot-and-formal-runtime-clone', transition };
+    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence });
+    revalidateStorageTransition = () => {
+      if (JSON.stringify(installedMetadata(hdc, target)) !== JSON.stringify(installed)) fail('installed identity changed before storage transition');
+      bindStorageTransitionTarget(localProof, observe());
+    };
+    if (route.allowed) revalidateStorageTransition();
+  } else if (route.allowed && installed.bundlePresent) {
+    const optionalQuery = (...command) => {
+      try { return deviceQuery(...command); } catch { return ''; }
+    };
+    const querySandbox = command => optionalQuery('shell', '-b', BUNDLE_NAME, command);
+    const readVersion = () => readInstalledSqliteVersion({ bundleName: BUNDLE_NAME, uid: installed.uid, querySandbox });
+    const readLineage = () => readInstalledStorageLineage({ bundleName: BUNDLE_NAME, query: command => optionalQuery('shell', command) });
+    const headerVersion = readVersion();
+    const candidateStorage = artifact.embeddedCoreNapi.storageCompatibility;
+    const installedStorage = candidateStorage && (headerVersion === null ||
+      headerVersion <= candidateStorage.sqliteMaxUserVersion) ? readLineage() : null;
+    const liveVersion = installedStorage?.sqliteUserVersion ?? null;
+    const targetSqliteVersion = headerVersion ?? liveVersion;
+    storageEvidence = { targetSqliteVersion, candidateStorage, installedStorage,
+      versionSource: headerVersion !== null ? 'stable-sqlite-header' : liveVersion !== null ? 'installed-core' : null };
+    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence });
+    if (route.allowed && (!installed.updateTime || JSON.stringify(installedMetadata(hdc, target)) !== JSON.stringify(installed) ||
+      (headerVersion !== null && liveVersion !== null && headerVersion !== liveVersion) ||
+      (headerVersion === null ? JSON.stringify(readLineage()) !== JSON.stringify(installedStorage) :
+        readVersion() !== targetSqliteVersion))) {
+      route = { allowed: false, reason: 'target-storage-evidence-changed' };
+    }
+  }
   return {
     verified,
     artifact,
@@ -1843,6 +2036,8 @@ function resolveDeployment(options) {
     installed,
     route,
     readiness,
+    storageEvidence,
+    revalidateStorageTransition,
   };
 }
 
@@ -1861,6 +2056,7 @@ function inspectDeployment(options) {
     installed: resolved.installed,
     route: resolved.route,
     readiness: resolved.readiness,
+    storageEvidence: resolved.storageEvidence,
   }, null, 2));
   if (!resolved.route.allowed) process.exitCode = 3;
 }
@@ -1885,6 +2081,11 @@ function installDeployment(options) {
       `retention-install-${resolved.targetKind}-${resolved.targetRef}.json`);
     writeJson(installProtection, { name: 'reader-hap-install-protection',
       runId: resolved.verified.manifest.runId, startedAt: new Date().toISOString() });
+    const storageTransition = resolved.storageEvidence?.transition ?
+      archiveStorageTransition(resolved.verified, resolved.storageEvidence.transition) : null;
+    // This runs while the same immutable run and target locks are held, after
+    // archiving exact consumed proof bytes and immediately before replacement.
+    resolved.revalidateStorageTransition?.();
     const install = runTargetHdc(resolved.hdc, resolved.target, [
       '-t', resolved.target, 'install', '-r', resolved.artifactPath,
     ], { allowFailure: true });
@@ -1895,7 +2096,7 @@ function installDeployment(options) {
       fail(`HAP install failed while preserving data: ${installOutput.trim()}`, 3);
     }
     const postInstall = installedMetadata(resolved.hdc, resolved.target);
-    const installedRoute = deploymentRoute({ targetKind: resolved.targetKind,
+    const installedRoute = deploymentSigningRoute({ targetKind: resolved.targetKind,
       installed: postInstall, artifact: resolved.artifact });
     if (!postInstall.bundlePresent || !installedRoute.allowed) {
       fail('HAP was installed but its reported signing identity does not match; stopped before launch without uninstalling', 3);
@@ -1925,6 +2126,8 @@ function installDeployment(options) {
       },
       dataPolicy: 'preserve',
       readiness: resolved.readiness,
+      storageEvidence: resolved.storageEvidence,
+      ...(storageTransition ? { storageTransition } : {}),
       install: 'PASS',
       launch,
       preInstall: resolved.installed,
@@ -1950,13 +2153,13 @@ function installDeployment(options) {
 
 function usage() {
   console.error(`Usage:
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope none|full|manga-image-cache|search-return-runtime] [--rationale <reviewed-item-reasons>] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--abi arm64-v8a|x86_64] [--contracts-scope none|full|manga-image-cache|search-return-runtime] [--rationale <reviewed-item-reasons>] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
-  node scripts/hap-pipeline.mjs sync-native [sync-core alias]
+  node scripts/hap-pipeline.mjs sync-native [--abi arm64-v8a|x86_64] [sync-core alias]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
-  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-log <current-emulator.log>]
-  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--no-launch]`);
+  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>]
+  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>] [--no-launch]`);
 }
 
 function main() {
@@ -1968,7 +2171,11 @@ function main() {
   const options = parseOptions(process.argv.slice(3));
   if (command === 'build') build(options);
   else if (command === 'sync-signing') syncSigning(options);
-  else if (command === 'sync-native' || command === 'sync-core') withArtifactLock(syncNative);
+  else if (command === 'sync-native' || command === 'sync-core') {
+    for (const key of options.keys()) if (key !== '--abi') fail(`unknown sync-native argument: ${key}`, 2);
+    const abi = resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
+    withArtifactLock(env => syncNative({ ...env, READER_HARMONY_ABI: abi }));
+  }
   else if (command === 'verify') {
     const verified = verifyManifest(requiredOption(options, '--manifest'));
     console.log(JSON.stringify({

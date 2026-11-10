@@ -126,7 +126,7 @@ assert.deepEqual([firstOrigin, secondOrigin], [158.5, 191.75]);
 // A prepared next-chapter first page already occupies physical slot b during
 // the turn. Exercise production role selection and both actual SDK component
 // call boundaries when the same resident slot is promoted to current.
-const StageMethods = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url),
+const StageMethods = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets', import.meta.url),
   ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage']);
 const stageOnly = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
 const stage = createReaderBuilderProbe(stageOnly, ['build'], { ReaderPageTurnSurface: Child }).owner;

@@ -6,8 +6,8 @@ const { readFileSync }=await import('node:fs');
 const { stripTypeScriptTypes }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 
-const source=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const source=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 class RemoteChapterCacheRefreshError extends Error { refreshPreserved = false; }

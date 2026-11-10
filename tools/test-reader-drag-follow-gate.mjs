@@ -33,7 +33,7 @@ async function run(id){
    assert.equal(begun.length,2);
   }
  }else{
-  const {startReaderPagePan,updateReaderPagePanInPlace}=await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+  const {startReaderPagePan,updateReaderPagePanInPlace}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
   const Layer=selectedProductionMethods(new URL('ReaderPageInteractionLayer.ets',base),'ReaderPageInteractionLayer',['onReadinessChanged'],{updateReaderPagePanInPlace});
   const delivered=[];const state=startReaderPagePan(390,300,100,1,844);
   updateReaderPagePanInPlace(state,-80,0,0,220,100,0,10);

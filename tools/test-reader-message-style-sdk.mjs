@@ -1,11 +1,11 @@
 import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
-const selected=selectContractCases({'fonts-carriers':{description:'Upstream real static font tables and current SDK message role/action/loader carriers',resources:[]},'detail-notice':{description:'Actual Index detail notice original identity and single safe-top ownership',resources:[]},'group-receipt':{description:'Actual Index group presentation obeys original receipt/unfinished cleanup',resources:[]}});
+const selected=selectContractCases({'fonts-carriers':{description:'Upstream real static font tables and current SDK message role/action/loader carriers',resources:[]},'detail-notice':{description:'Actual Index detail notice original identity and single safe-top ownership',resources:[]},'group-receipt':{description:'Actual BookshelfGroupPresentation obeys original receipt/unfinished cleanup',resources:[]}});
 async function run(id){
 const{default:assert}=await import('node:assert/strict');const{readFileSync}=await import('node:fs');const{boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
-const{readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const{readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const{readerMessageStyles,readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
-const windowMetrics=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/common/${name}.ets`,import.meta.url),'utf8');const sdk=boundedSurfaceSdk(),runtime={};
+const windowMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read=name=>readFileSync(new URL(`../entry/src/main/ets/ui/feedback/${name}.ets`,import.meta.url),'utf8');const sdk=boundedSurfaceSdk(),runtime={};
 if(id==='fonts-carriers'){
 const messageFaces={ReaderNotoSansSCUIRegular:['NotoSansSC-UIRegular.otf',400],ReaderNotoSansSCUIMedium:['NotoSansSC-UIMedium.otf',500],ReaderMangaSans600:['ReaderMangaSans600.otf',600]};
 const {execFileSync}=await import('node:child_process');const{fileURLToPath}=await import('node:url');
@@ -27,8 +27,8 @@ console.log(JSON.stringify({kind:'message-font-table-evidence',...fontTables}));
 // Platform registration explicitly maps an application alias to a physical file;
 // embedded name records are evidence, not the application registration key.
 const{stripTypeScriptTypes}=await import('node:module');
-const families=await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const loads=[];const registrarSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderFonts.ets',import.meta.url),'utf8').replace(/import[\s\S]*?from\s+['"][^'"]+['"];\s*/g,'').replace(/^export /gm,'');
+const families=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const loads=[];const registrarSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderFonts.ets',import.meta.url),'utf8').replace(/import[\s\S]*?from\s+['"][^'"]+['"];\s*/g,'').replace(/^export /gm,'');
 const registrar=new Function(...Object.keys(families),'$rawfile','loadReaderFontChecked','readerFontLoadReady','hilog',stripTypeScriptTypes(registrarSource)+';return {registerReaderShelfFonts};')(...Object.values(families),value=>value,(family,src)=>{loads.push({family,src});return Promise.resolve();},()=>false,{warn(){}});
 registrar.registerReaderShelfFonts({});
 for(const[family,[asset]]of Object.entries(messageFaces))assert.equal(loads.find(row=>row.family===family)?.src,asset,'actual checked registrar binds application alias to inspected physical asset');
@@ -108,7 +108,8 @@ assert.equal(measured.find(options => options.constraintWidth).fontFamily, 'Read
 const noticeTitle = sdk.nodes(notice).find(node => node.type === 'Text' && node.fontSize === readerMessageStyles.MESSAGE_NOTICE_TITLE.fontSizeFp);
 assert.equal(noticeTitle.fontFamily, 'ReaderNotoSansSCUIRegular');
 for (const specId of ['book-removal', 'json-import', 'shelf-group', 'local-import']) {
-  const dialog = sdk.consumer(read('ReaderDialogSurface'), undefined,
+  const dialogSource = readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets',import.meta.url),'utf8');
+  const dialog = sdk.consumer(dialogSource, undefined,
     { ...windowMetrics, ButtonType: { Normal: 'ButtonType.Normal' } });
   Object.assign(dialog, { specId, title: '确认操作', showCloseButton: false,
     actions: [{ id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: false }] });
@@ -161,7 +162,7 @@ index.navigationGeneration++;current();await Promise.resolve();assert.equal(read
 console.log('PASS Index detail pending top-host action retains exact detail opening, runtime, navigation and original write generation; recheck never reissues deletion');
 
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const metrics = createDefaultReaderWindowMetrics();metrics.systemInsets.top = 39;
 const SafeTop = selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),'Index',
   ['messageSafeTop','readerOwnsWindowEdges'], { ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop });
@@ -178,31 +179,35 @@ console.log('PASS message host safe top: ordinary App padding is not counted twi
 // A confirmed write can still own unfinished durable cleanup. Closing its
 // presentation then would hide the original check/continuation entry.
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
-const GroupCompletion = selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),'Index',
-  ['assignShelfDefaultGroup'], { hilog: { error() {} }, DOMAIN: 0, errorMessageOf: String });
+const GroupCompletion = selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfGroupPresentation.ets', import.meta.url),'BookshelfGroupPresentation',
+  ['assignDefault','isCurrent','retire'], { hilog: { error() {} }, errorMessageOf: String,
+    EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT: {busy:false} });
 for (const [confirmation, blocked, fact] of [
   ['confirmed', false, 'succeeded'], ['confirmed', false, 'confirmedRefreshFailed'],
   ['confirmed', true, 'confirmedRefreshFailed'], ['unknown', true, 'pendingReconciliation'],
 ]) {
   let closes = 0, refreshes = 0, writes = 0; const toasts = [];
+  const identity = 'original-group-opening', book = { sourceId: 'source', bookId: 'book' };
   const presentation = Object.assign(new GroupCompletion(), {
-    editingShelfGroupPresentation: 6, editingShelfGroupBusy: false,
-    isCurrentShelfGroup: () => true, bookshelfManagementIdentity: () => 'original-group-opening',
-    bookshelfHost: { assignDefaultGroup: async () => { writes++; return {
+    identity, assigning: false,
+    opening: { owner: runtime, book, identity, isRouteCurrent: () => true,
+      onApplied() { refreshes++; }, onNotice(message, current) { if (current()) toasts.push(message); } },
+    host: { isManagementPresentationCurrent: (owner, currentIdentity) => owner === runtime && currentIdentity === identity,
+      detachManagementPresentation() { closes++; },
+      assignDefaultGroup: async (currentBook, currentIdentity) => {
+      assert.equal(currentBook, book); assert.equal(currentIdentity, identity); writes++; return {
       receipt: { receipt: { confirmation, fact } }, managementMutation: { blocked },
     }; } },
-    invalidateBookshelfProjection() {}, refreshBookshelf() { refreshes++; },
-    closeShelfGroup() { closes++; }, getUIContext: () => ({ getPromptAction: () => ({ showToast: value => toasts.push(value.message) }) }),
   });
-  await presentation.assignShelfDefaultGroup(6, 1, runtime, 2, { sourceId: 'source', bookId: 'book' });
+  await presentation.assignDefault(identity);
   assert.equal(writes, 1, 'presentation consumes exactly the original write result');
   assert.equal(closes, confirmation === 'confirmed' && !blocked ? 1 : 0,
     'unfinished original cleanup and unknown receipts retain their pending presentation');
   assert.equal(refreshes, closes);
   assert.equal(toasts.length, confirmation === 'confirmed' && !blocked && fact === 'confirmedRefreshFailed' ? 1 : 0);
-  assert.equal(presentation.editingShelfGroupBusy, false);
+  assert.equal(presentation.assigning, false);
 }
-console.log('PASS Index group completion: confirmed refresh failure closes with Toast; confirmed blocked/unknown retain original pending entry');
+console.log('PASS actual group completion: confirmed refresh failure closes with feedback; confirmed blocked/unknown retain original pending entry');
 
 }
 }

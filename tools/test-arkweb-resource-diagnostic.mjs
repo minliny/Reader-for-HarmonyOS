@@ -176,7 +176,7 @@ for(const lateOld of [false,true]){
 {
  const h=harness();const pending=h.diagnostic.run('cancel');await ticks();
  let providerCalls=0;
- const {owner}=createReaderBuilderProbe(read('ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
+ const {owner}=createReaderBuilderProbe(read('../ui/platform/ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
   ArkWebExecutor:{instance:{blockNetworkUrl:url=>url==='https://denied.example/private-token'}},
   WebResourceResponse:Response,
  });
@@ -211,7 +211,7 @@ for(const lateOld of [false,true]){
  assert.notEqual(h.documents[0].baseUrl,h.documents[1].baseUrl);
  console.log('PASS new run rejects previous run main URL and data document');
 }
-const host=read('ArkWebExecutionHost.ets');const policyPosition=host.indexOf('if (!ArkWebExecutor.instance.blockNetworkUrl(');
+const host=read('../ui/platform/ArkWebExecutionHost.ets');const policyPosition=host.indexOf('if (!ArkWebExecutor.instance.blockNetworkUrl(');
 assert.ok(policyPosition>=0&&host.indexOf('return this.diagnosticResourceProvider(',policyPosition)>policyPosition);
 assert.match(host,/diagnosticResourceProvider:[^\n]+undefined = undefined/);
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('onResourceLoad('),'runner never fabricates native callbacks');

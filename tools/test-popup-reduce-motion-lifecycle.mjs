@@ -14,14 +14,8 @@ const definitions = {
     methods: ['aboutToAppear','aboutToDisappear','shouldAnimatePanel','requestCollapse','onReduceMotionChanged','finishCollapse'],
     props: { reduceMotion:false,animateFromControl:true },
   },
-  menu: {
-    file:'bookshelf/BookshelfMoreMenu.ets',
-    fields:['reduceMotion','panelHeight','closeInFlight','mounted','generation','closeFinish'],
-    methods:['aboutToAppear','aboutToDisappear','surfaceSpec','expandMenu','collapseMenu','onReduceMotionChanged','finishCollapse'],
-    props:{reduceMotion:false},
-  },
   select: {
-    file:'common/ReaderSelectPanel.ets',
+    file:'../ui/controls/ReaderSelectPanel.ets',
     fields:['reduceMotion','value','options','variant','closing','selectionId','expandedHeight','chevronAngle','closeInFlight','mounted','generation','closingValue','closingOptions','closeFinish','onSelect','onCommit','onDismiss'],
     methods:['aboutToAppear','aboutToDisappear','expandPanel','fullPanelHeight','collapsePanel','onReduceMotionChanged','finishCollapse','onIdentityChanged','onClosingChanged','selectAndCollapse'],
     props:{reduceMotion:false,value:'a',options:['a','b'],variant:'default',closing:false,selectionId:'A'},
@@ -49,7 +43,6 @@ function fixture(kind,mutate = source => source) {
 for(const kind of Object.keys(definitions)) {
   const f=fixture(kind);let finished=0,committed=0;
   if(kind==='directory'){f.tasks.shift()();f.owner.onExit=()=>finished++;f.owner.requestCollapse();}
-  else if(kind==='menu')f.owner.collapseMenu(()=>finished++,()=>committed++);
   else f.owner.collapsePanel(()=>finished++,()=>committed++);
   const old=f.animations.findLast(p=>p.onFinish);assert.ok(old);
   assert.equal(finished,0);f.update({reduceMotion:true});assert.equal(finished,1,'real SDK Prop reset delivers the Watch and captured completion');
@@ -61,7 +54,6 @@ for(const kind of Object.keys(definitions)) {
 for(const kind of Object.keys(definitions)) {
   const f=fixture(kind);let done=0;
   if(kind==='directory'){f.tasks.shift()();f.owner.onExit=()=>done++;f.owner.requestCollapse();}
-  else if(kind==='menu')f.owner.collapseMenu(()=>done++);
   else f.owner.collapsePanel(()=>done++);
   const old=f.animations.findLast(p=>p.onFinish);f.owner.aboutToDisappear();f.update({reduceMotion:true});old.onFinish();
   assert.equal(done,0,'unmounted old presentation releases its captured completion without publishing');cases++;
@@ -80,7 +72,9 @@ for(const kind of Object.keys(definitions)) {
 for(const kind of Object.keys(definitions)) {
   const f=fixture(kind,source=>source.replace("@Prop @Watch('onReduceMotionChanged') reduceMotion",'@Prop reduceMotion'));
   let done=0;if(kind==='directory'){f.tasks.shift()();f.owner.onExit=()=>done++;f.owner.requestCollapse();}
-  else if(kind==='menu')f.owner.collapseMenu(()=>done++);else f.owner.collapsePanel(()=>done++);
+  else f.owner.collapsePanel(()=>done++);
   f.update({reduceMotion:true});assert.equal(done,0,'omission control reproduces the missing current Prop reaction');cases++;
 }
+// Bookshelf More has a native onDisappear boundary instead of a custom
+// collapse animator or reduceMotion Watch. See the shelf Back leaf case.
 console.log(`PASS ${cases} popup motion contracts: real SDK Prop/Watch runtime; queued expand re-admission, zero-duration current endpoint, captured completion once, original action once, identity replacement and unmount negatives; no page remount or native scanout claim.`);

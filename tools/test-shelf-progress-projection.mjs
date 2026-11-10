@@ -6,8 +6,8 @@ const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
-const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 
@@ -121,13 +121,15 @@ assert.equal(textNodes(grid(frozenGrid, ShelfBookPresentation, row(Infinity))).a
 // run real SDK one-way Prop updates. Keep the already-mounted child/nodes.
 if(selectedCase==='retained-list'){
   const properties = createArkUIPropertyRuntimeProbe();
+  const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
+  const icons = iconButtonControls({ properties });
   const child = createReaderBuilderProbe(listSource, ['appThemeScheme', 'book', 'mangaRevision', 'positionLabel', 'metadataTag', 'build'],
     { ...properties.sdk, ShelfBookPresentation }, properties.hooks);
   const names = ['projectionListDetails', 'projectionListDetailsWidth', 'listCoverWidth', 'listCoverHeight',
-    'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'presentBookActionSheet'];
-  const parent = createReaderBuilderProbe(pageSource, names, { ...properties.sdk, ...geometry, ...tokens,
+    'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'presentBookActionSheet'];
+  const parent = createReaderBuilderProbe(pageSource, names, { ...icons.dependencies, ...geometry, ...tokens,
     ShelfBookListDetails: child.Component, ShelfBookPresentation, runtime: forbiddenTransport },
-    { ...properties.hooks, childSources: { ShelfBookListDetails: listSource }, mountChildren: true });
+    { ...icons.hooks, childSources: { ...icons.hooks.childSources, ShelfBookListDetails: listSource } });
   const book = { ...row(1) };
   Object.assign(parent.owner, { appThemeScheme: 'day', viewMode: 'list', viewSwitchListContentOpacity: 1,
     shelfContentWidth: () => 326, mounted: true, navigationGeneration: 7, books: [book], actionSheetRevision: 0 });
@@ -135,7 +137,10 @@ if(selectedCase==='retained-list'){
   const actualChild = [...parent.owner.children.values()][0];
   const label = textNodes(actualChild).find(n => n.create === '已读 <1%');
   const bar = [...actualChild.nodes.values()].find(n => n.type === 'Progress');
-  const more = [...parent.owner.nodes.values()].find(n => n.type === 'Stack' && n.onClick);
+  const moreActor = [...parent.owner.children.values()].find(actor => actor instanceof icons.icon.Component);
+  const more = icons.nodes(moreActor).find(node => node.type === 'Stack' && node.onClick);
+  assert.deepEqual([more.width, more.height, more.borderRadius], [44,44,22]);
+  assert.equal(moreActor.focusId, parent.owner.bookActionFocusKey(book, true));
   assert.ok(label); assert.equal(bar.create.value, .01); assert.equal(actualChild.book.bookId, book.bookId);
   book.readProgress = 8765; parent.owner.replay(); properties.flush();
   assert.equal(textNodes(actualChild).find(n => n.create === '已读 87%'), label, 'Prop update retains the original label actor');

@@ -10,10 +10,10 @@ const {ReaderNativeAlertOwner}=await import('./lib/reader-native-alert-sdk-probe
 const {readerRecoveryView}=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 function makeSettings(f,{mount=1}={}){
- const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('features/settings/SettingsPage.ets');
+ const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('features/settings/ui/SettingsPage.ets');
  const pageNames=['operation','cacheCleanup','onReconcile','onRetryAccepted','onReconcileCache','onContinueCache','onClearCache',
   'operationFeedback','pendingFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction',
-  'clearTextCache','applyCacheCleanup','onCacheCleanupChanged','mounted','themeOwner','temporaryBackIdentity','resetMessage','cacheCleanupInFlight','cacheActionLabel'];
+  'clearTextCache','onCacheCleanupChanged','mounted','themeOwner','temporaryBackIdentity','resetMessage','cacheActionLabel'];
  const pageDeps={ReaderRuntimeOwner:f.Runtime,readerRecoveryView,ReaderNativeAlertOwner};p.hooks.childSources.SettingsPage=pageSource;
  const leaf=p.consumer(pageSource,pageNames,pageDeps).constructor;
  const idx=p.consumer(read('pages/Index.ets'),['settingsSnapshot','settingsOperation','settingsCacheCleanup','settingsContent','settingsSurface','bindSettingsPresentation','retireSettingsPresentation','isCurrentSettingsPresentation','isCurrentRuntime','reconcileSettingsCache','clearTextCache'],
@@ -58,12 +58,12 @@ for(const boundary of ['before','after']){
  const warm=await fixture(true);warm.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.clear';await seedLegacySettingsClear(warm);
 const original=JSON.parse(warm.disk('cacheClear'));
  const f=await fixture(true,warm),directory=makeDirectory(f,{remote:true}),settings=makeSettings(f);f.options.status=true;
- await f.offline.load(directory.idx.offlineBinding(f.runtime,directory.idx.remoteReadingSession));await settled(f);
+ await f.offline.load(directory.idx.directoryOperations.offlineBinding(f.runtime,directory.idx.remoteReadingSession));await settled(f);
  const operation=directory.idx.offlineOperation;assert.equal(operation.sourceId,'cache');assert.equal(operation.bookId,'global-text');
  assert.equal(operation.projection.receipt.confirmation,'unknown');assert.equal(operation.canContinueOriginal,false);
  const recovery=directory.idx.directoryRecovery();assert.match(recovery.offline.message,/原全局.*返回设置/);assert.equal(recovery.offlineBlocked,true);
  const leaf=directory.render('ReaderFullDirectory');assert.equal(directory.actions(leaf).length,0,'foreign origin has no wrong-book reconcile/continue action');
- const writes=f.writes().length;directory.idx.downloadDirectoryChapter(0);directory.idx.clearDirectoryBookOffline();await settled(f);assert.equal(f.writes().length,writes,'original pending global clear blocks new book mutation');
+ const writes=f.writes().length;directory.idx.downloadDirectoryChapter(0);directory.idx.directoryOperations.clearOffline();await settled(f);assert.equal(f.writes().length,writes,'original pending global clear blocks new book mutation');
  await settings.idx.reconcileSettingsCache(undefined);assert.equal(f.writes().length,writes,'cold opening is pure exact receipt query, never a new clear');
  if(boundary==='before'){
   assert.equal(settings.idx.settingsCacheCleanup.confirmation,'unknown');const page=settings.render();
@@ -71,7 +71,7 @@ const original=JSON.parse(warm.disk('cacheClear'));
   assert.equal(f.writes().length,writes,'unsafe historical global scope cannot be continued');
   assert.deepEqual(JSON.parse(f.disk('cacheClear')).params,original.params);
  }else assert.equal(settings.idx.settingsCacheCleanup.confirmation,'confirmed');
- await f.offline.load(directory.idx.offlineBinding(f.runtime,directory.idx.remoteReadingSession));await settled(f);
+ await f.offline.load(directory.idx.directoryOperations.offlineBinding(f.runtime,directory.idx.remoteReadingSession));await settled(f);
  assert.equal(directory.idx.directoryRecovery().offlineBlocked,boundary==='before');
  assert.equal(directory.idx.directoryRecovery().offline.visible,boundary==='before');
  assert.equal(directory.idx.offlineOperation.projection.receipt.confirmation,'unknown','absence of original intent changes capacity only, never invents this book ACK');

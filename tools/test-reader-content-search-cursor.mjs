@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { ReaderContentSearchPublication } from './lib/reader-content-search-owner-probe.mjs';
-import { decodeRemotePositionScope } from '../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts';
-import { classifyRemoteReadingCommandFailure } from '../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
+import { decodeRemotePositionScope } from '../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts';
+import { classifyRemoteReadingCommandFailure } from '../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts', import.meta.url), 'utf8');
 const Gateway = new Function('decodeRemotePositionScope', 'classifyRemoteReadingCommandFailure',
   stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '')).replace(/^export /gm, '') + ';return ReadingSessionFlowGateway;')(
   decodeRemotePositionScope, classifyRemoteReadingCommandFailure);

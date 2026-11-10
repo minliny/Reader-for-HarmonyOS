@@ -9,15 +9,16 @@ registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; }
 } });
-const { ReadingOfflineGateway } = await import('../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { MangaDownloadActionsGateway } = await import('../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts');
-const { readingOfflineFailureHint } = await import('../entry/src/main/ets/features/reading/ReadingOfflineFailurePresentation.ts');
+const { ReadingOfflineGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { MangaDownloadActionsGateway } = await import('../entry/src/main/ets/features/manga/application/MangaDownloadActionsGateway.ts');
+const { readingOfflineFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingOfflineFailurePresentation.ts');
+const { classifyReaderSource } = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 
 // Execute the complete production Coordinator and its real offline gateway.
 // The fixed clear-intent adapter below is only the separately tested platform
 // durability boundary; Core queue/body transactions are fixture RPCs.
-const source = readFileSync(new URL('../entry/src/main/ets/features/downloads/SharedDownloadCoordinator.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/downloads/application/SharedDownloadCoordinator.ts', import.meta.url), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 class ClearIntentPort {
   constructor(runtime) { this.runtime = runtime; }
@@ -27,9 +28,10 @@ class ClearIntentPort {
 }
 const { SharedDownloadCoordinator, SharedDownloadProjectionRefreshError } = new Function('ReadingOfflineGateway', 'RemoteReadingFlowGateway',
   'MangaDownloadActionsGateway', 'CacheClearOperationIntentStore', 'SharedDownloadIntentPreferences',
-  'readingOfflineFailureHint',
+  'readingOfflineFailureHint', 'classifyReaderSource',
   `${executable}\nreturn { SharedDownloadCoordinator, SharedDownloadProjectionRefreshError };`)(ReadingOfflineGateway, RemoteReadingFlowGateway,
-  MangaDownloadActionsGateway, ClearIntentPort, class { constructor() { throw Error('test persistence must be explicit'); } }, readingOfflineFailureHint);
+  MangaDownloadActionsGateway, ClearIntentPort, class { constructor() { throw Error('test persistence must be explicit'); } },
+  readingOfflineFailureHint, classifyReaderSource);
 
 const session = (count = 45, bookId = 'book') => ({ identity: { sourceId: 'source', bookId },
   acquisitionMode: 'online', contentKind: 'text', detailUrl: bookId, tocUrl: 'toc',
@@ -471,6 +473,43 @@ if(id==='intent-flush'){
   await assert.rejects(coordinator.close(), /preferences flush failed/); await f.close();
 }
 }
+if(id==='legacy-book-kind'){
+const book = { sourceId: 'source', bookId: 'legacy-book', title: 'Fixture book', author: '', addedAt: 1 };
+const source = { sourceId: book.sourceId, name: 'Fixture novels', bookSource: { bookSourceType: 0 } };
+for (const [name, sources] of [
+  ['exact text source', [source]],
+  ['foreign source', [{ ...source, sourceId: 'other' }]],
+  ['ambiguous source', [source, source]],
+  ['audio', [{ ...source, bookSource: { bookSourceType: 1 } }]],
+  ['missing kind', [{ ...source, bookSource: {} }]],
+  ['null kind', [{ ...source, bookSource: { bookSourceType: null } }]],
+  ['misdeclared file source', [{ ...source, name: 'download list' }]],
+]) {
+  const f = fixture(); f.setAutomatic(true);
+  const request = f.runtime.request.bind(f.runtime);
+  f.runtime.request = async (method, params, options) => {
+    if (method !== 'source.list') return request(method, params, options);
+    f.calls.push([method, params]);
+    assert.deepEqual(params, { sourceId: book.sourceId });
+    return { data: { sources } };
+  };
+  const submit = () => f.coordinator.operate('download', { book, chapterIndexes: [4],
+    expectedChapters: [{ chapterIndex: 4, chapterId: '/4' }] });
+  if (name === 'exact text source') {
+    const result = await submit();
+    assert.equal(result.accepted, true);
+    await until(() => f.coordinator.jobs()[0].status === 'completed', 'legacy shelf and cached catalog materialize');
+    assert.equal(f.saved[0].book.contentKind, 'text');
+    assert.equal(f.saved[0].session.contentKind, 'text');
+    assert.deepEqual(f.calls.filter(call => call[0] === 'cache.book.prefetch').map(call => call[1].chapterRange), [[4, 5]]);
+    assert.ok(f.calls.findIndex(call => call[0] === 'flush') < f.calls.findIndex(call => call[0] === 'cache.book.prefetch'));
+  } else {
+    await assert.rejects(submit(), /下载内容类型需要重新确认/, name);
+    assert.deepEqual(f.calls.map(call => call[0]), ['source.list'], `${name} never reaches catalog or intent writes`);
+  }
+  await f.close();
+}
+}
 if(id==='first-request-proof'){
 {
   const f = fixture(), book = { sourceId: 'source', bookId: 'book', title: 'Fixture book', author: '', contentKind: 'text', addedAt: 1 };
@@ -533,6 +572,52 @@ if(id==='restore-atomic'){
   assert.equal(restored.jobs()[0].status, 'paused'); await restored.close(); await f.close();
 }
 }
+if(id==='restore-close'){
+await withControlDiagnostics(async () => {
+  const f = await feedbackFixture();
+  f.failProjectionOnce();
+  await assert.rejects(f.coordinator.operate('cancel', { book: f.coordinator.books()[0] }),
+    error => error instanceof SharedDownloadProjectionRefreshError && error.action === 'cancel');
+  assert.equal(f.queueState, 'cancelled');
+  const cancelled = structuredClone(f.saved[0]);
+  await f.close();
+  const active = scaleIntent(session(45, 'restored-active'), [2]);
+  active.status = 'downloading';
+  const records = [cancelled, active];
+  for (const mode of ['unread', 'read-error', 'invalid-record', 'loading']) {
+    let stored = mode === 'invalid-record' ? [...records, { version: 9 }] : records;
+    const before = structuredClone(stored);
+    let load, finishLoad, writes = 0;
+    const coordinator = new SharedDownloadCoordinator(f.runtime, () => true, {
+      async load() {
+        if (mode === 'read-error') throw Error('platform read temporarily failed');
+        if (mode === 'loading') await new Promise(resolve => { finishLoad = resolve; });
+        return structuredClone(stored);
+      },
+      async save(intents) { writes++; stored = structuredClone(intents); },
+    });
+    if (mode === 'loading') load = assert.rejects(coordinator.restore(), /运行环境已关闭/);
+    else if (mode !== 'unread') await assert.rejects(coordinator.restore());
+    await coordinator.close();
+    if (load !== undefined) { finishLoad(); await load; }
+    assert.equal(writes, 0, `${mode}: retirement cannot flush unadmitted records`);
+    assert.deepEqual(stored, before, `${mode}: original journal remains recoverable`);
+
+    // Simulate recovery of the read port or removal of the known bad record.
+    const rebuilt = fixture(mode === 'invalid-record' ? stored.slice(0, -1) : stored);
+    rebuilt.setAutomatic(true);
+    await rebuilt.coordinator.restore();
+    await until(() => rebuilt.coordinator.job('source', 'restored-active').status === 'completed', 'interrupted sibling restored');
+    const stopped = rebuilt.coordinator.job(cancelled.book.sourceId, cancelled.book.bookId);
+    assert.equal(stopped.status, 'cancelled');
+    assert.deepEqual(stopped.requestedIndexes, []);
+    assert.deepEqual(stopped.retainedIndexes, [0, 1]);
+    const prefetches = rebuilt.calls.filter(call => call[0] === 'cache.book.prefetch');
+    assert.deepEqual(prefetches.map(call => [call[1].bookId, call[1].chapterRange]), [['restored-active', [2, 3]]]);
+    await rebuilt.close();
+  }
+});
+}
 if(id==='delete-drain'){
 {
   const f = fixture(); await f.coordinator.submit(session()); await until(() => f.pending.has(0), 'delete race');
@@ -575,4 +660,6 @@ if(id==='index-submit'){
 }finally{for(const cleanup of owned)await cleanup();}
 }
 const definitions={"scale-identities": "scale-identities actual scoped owner/gateway/storage path; controlled Core/OS ports", "scale-ready": "scale-ready actual scoped owner/gateway/storage path; controlled Core/OS ports", "range-extension": "range-extension actual scoped owner/gateway/storage path; controlled Core/OS ports", "changed-after-control": "changed-after-control actual scoped owner/gateway/storage path; controlled Core/OS ports", "whole-book": "whole-book actual scoped owner/gateway/storage path; controlled Core/OS ports", "pause-resume-retention": "pause-resume-retention actual scoped owner/gateway/storage path; controlled Core/OS ports", "control-readback": "control-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "physical-guard-diagnostics": "physical-guard-diagnostics actual scoped owner/gateway/storage path; controlled Core/OS ports", "unsafe-diagnostics": "unsafe-diagnostics actual scoped owner/gateway/storage path; controlled Core/OS ports", "resume-readback": "resume-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-control": "unknown-control actual scoped owner/gateway/storage path; controlled Core/OS ports", "control-identity": "control-identity actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-privacy": "failure-privacy actual scoped owner/gateway/storage path; controlled Core/OS ports", "intent-flush": "intent-flush actual scoped owner/gateway/storage path; controlled Core/OS ports", "first-request-proof": "first-request-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-active": "cold-active actual scoped owner/gateway/storage path; controlled Core/OS ports", "url-rebind": "url-rebind actual scoped owner/gateway/storage path; controlled Core/OS ports", "restore-atomic": "restore-atomic actual scoped owner/gateway/storage path; controlled Core/OS ports", "delete-drain": "delete-drain actual scoped owner/gateway/storage path; controlled Core/OS ports", "content-epoch": "content-epoch actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-submit": "index-submit actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['restore-close'] = 'Retiring unadmitted intent journals preserves cancellation and active sibling restart';
+definitions['legacy-book-kind'] = 'Legacy shelf and cached catalog require exact source media admission before any durable download intent';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

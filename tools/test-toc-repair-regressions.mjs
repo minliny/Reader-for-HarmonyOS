@@ -4,9 +4,9 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
 } });
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { RemoteReadingGatewayError, classifyRemoteReadingCommandFailure, remoteReadingFailureRecord } = await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { RemoteReadingGatewayError, classifyRemoteReadingCommandFailure, remoteReadingFailureRecord } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
 const key = (s,b) => JSON.stringify([s,b]);
 const seed = (sourceId='s1', bookId='/book') => ({ sourceId, bookId, detailUrl:bookId, title:'Book', author:'Author', sourceVersion:'v2' });
 function fixture({ facts, variable='{}', enabled=true, cacheError, cacheIdentity, volumes=false, missingBody=false, networkError, miss=false, cachedVariables={token:'old'},onlineToc,onlineHttp }={}) {

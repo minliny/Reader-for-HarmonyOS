@@ -13,8 +13,8 @@ const {default:fs}=await import('node:fs');
 // Structural wiring checks only. These do not claim ArkTS compilation, touch,
 // first-frame ordering, or visual parity; production policy executes separately.
 const read = (path) => themeDayDesignSource(fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
-const content = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
-const panel = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
+const content = read('entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets');
+const panel = read('entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets');
 
 assert.match(content, /@Prop embeddedInControl: boolean = false;/,
   'standalone Detail directory keeps its existing shell by default');
@@ -200,9 +200,9 @@ console.log('reader control directory content: structural wiring passed (not run
  const {default:assert}=await import('node:assert/strict');const {readFileSync}=await import('node:fs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
  const {readerControlNativeTree}=await import('./fixtures/reader-control-native-tree.mjs');
- const {sampleReaderControlMotionPresentation}=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
- const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets',import.meta.url),'utf8');
- const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets',import.meta.url),'utf8');
+ const {sampleReaderControlMotionPresentation}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets',import.meta.url),'utf8');
+ const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets',import.meta.url),'utf8');
  for(const tab of ['directory','bookmarks'])for(const p of [0,.25,.5,.75,1]){
   const tree=readerControlNativeTree();
   class Toolbar {constructor(owner,params){this.owner=owner;this.params=params;}initialRender(){}updateStateVars(next){Object.assign(this.params,next);}}

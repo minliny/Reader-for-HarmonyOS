@@ -28,7 +28,7 @@ const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
 class Frame { constructor(action) { this.action = action; } }
-const marks = await import('../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts');
+const marks = await import('../entry/src/main/ets/features/reading/ui/ReaderDynamicHighlight.ts');
 // Unicode output oracle is independent of the cache's UTF16 scan.
 const cache = new marks.ReaderHighlightTextCache();
 for (const text of ['汉'.repeat(1000), '甲𠮷🙂乙\r\n尾', '', 'A\ud800B']) {
@@ -69,7 +69,7 @@ const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
 class Frame { constructor(action) { this.action = action; } }
-const marks = await import('../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts');
+const marks = await import('../entry/src/main/ets/features/reading/ui/ReaderDynamicHighlight.ts');
 const Fragment = productionMotionMethods(source('ReadingSurface'), ['scheduleHighlightGeometry', 'measureHighlightGeometry',
   'highlightRange', 'highlightPrefix', 'highlightBody', 'highlightSuffix', 'usesTtsHighlight', 'indentPrefix', 'themeStyle'],
   { ...marks, ReaderHighlightFrame: Frame, graphicsText: { RectWidthStyle: { TIGHT: 1 }, RectHeightStyle: { TIGHT: 1 } },
@@ -142,7 +142,7 @@ const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
 class Frame { constructor(action) { this.action = action; } }
-const marks = await import('../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts');
+const marks = await import('../entry/src/main/ets/features/reading/ui/ReaderDynamicHighlight.ts');
 let uploads = 0, accepted = true;
 const Session = productionMotionMethods(source('BookTurnPresentationSession'),
   ['setDynamicHighlights', 'configure', 'onNativeEvent', 'clearCapturedTextures', 'releasePendingSnapshot'],
@@ -163,9 +163,9 @@ const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
 class Frame { constructor(action) { this.action = action; } }
-const paint = await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
-const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
-const actors = await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const paint = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts');
+const actors = await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
 let paths = 0, rectangles = 0;
 const clipCache = new paint.ReaderControlMotionClipCache(path => { paths++; return { path }; }, () => { rectangles++; return { rect: true }; });
 const Settings = productionMotionMethods(source('ReaderControlSettingsContent'), ['p', 'geometry', 'sharedRect', 'sharedClip'], { ...geometry, ...actors, ...paint });

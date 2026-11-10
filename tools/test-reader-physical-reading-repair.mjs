@@ -30,26 +30,26 @@ const { readFileSync, writeFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { readerAppearanceCubicBezierProgress : b } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts');
-const motion = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const policy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { readerProbeCubicBezierProgress: b } = await import('./lib/reader-motion-curve-fixture.mjs');
+const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const policy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
-const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
 const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.42,0,1,1),
   easeOut:p=>b(p,0,0,.58,1),easeInOut:p=>b(p,.42,0,.58,1)};
 const identity = {lifecycle:1,bookIdentity:'src:book',moduleVisit:1,viewportRevision:1,scrollRevision:1,
   layoutRevision:1,paletteRevision:1,fontRevision:1,sourceRevision:1,sourceActorId:'source'};
 const clocks=[];
-const {READER_SESSION_LAUNCH_TIME_SCALE:scale}=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const {READER_SESSION_LAUNCH_DURATION_MS:duration,READER_SESSION_LAUNCH_SETTLED_MS:settled,READER_SESSION_LAUNCH_SOURCE_RELEASE_MS:sourceRelease,READER_SESSION_LAUNCH_CONTROL_RELEASE_MS:controlRelease}=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
+const {READER_SESSION_LAUNCH_TIME_SCALE:scale}=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const {READER_SESSION_LAUNCH_DURATION_MS:duration,READER_SESSION_LAUNCH_SETTLED_MS:settled,READER_SESSION_LAUNCH_SOURCE_RELEASE_MS:sourceRelease,READER_SESSION_LAUNCH_CONTROL_RELEASE_MS:controlRelease}=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
 for(const kind of ['quickAutoPage','quickTts','fullAutoPagePlayback','fullTtsPlayback']) {
   const d=readerSessionLaunchDesign(kind),g=buildReaderSessionLaunchGeometry({source:
     new ReaderSessionMorphSourceMeasurement(kind,'source',30,400,d.width,d.height,1),
@@ -83,18 +83,18 @@ const { readFileSync, writeFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { readerAppearanceCubicBezierProgress : b } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts');
-const motion = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const policy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { readerProbeCubicBezierProgress: b } = await import('./lib/reader-motion-curve-fixture.mjs');
+const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const policy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
-const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
 const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.42,0,1,1),
   easeOut:p=>b(p,0,0,.58,1),easeInOut:p=>b(p,.42,0,.58,1)};
@@ -153,18 +153,18 @@ const { readFileSync, writeFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { readerAppearanceCubicBezierProgress : b } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts');
-const motion = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const policy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { readerProbeCubicBezierProgress: b } = await import('./lib/reader-motion-curve-fixture.mjs');
+const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const policy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
-const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
 const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.42,0,1,1),
   easeOut:p=>b(p,0,0,.58,1),easeInOut:p=>b(p,.42,0,.58,1)};
@@ -213,18 +213,18 @@ const { readFileSync, writeFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { readerAppearanceCubicBezierProgress : b } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts');
-const motion = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const policy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { readerProbeCubicBezierProgress: b } = await import('./lib/reader-motion-curve-fixture.mjs');
+const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const policy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
-const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
 const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.42,0,1,1),
   easeOut:p=>b(p,0,0,.58,1),easeInOut:p=>b(p,.42,0,.58,1)};
@@ -279,25 +279,25 @@ const { readFileSync, writeFileSync } = await import('node:fs');
 const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { readerAppearanceCubicBezierProgress : b } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts');
-const motion = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const policy = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { readerProbeCubicBezierProgress: b } = await import('./lib/reader-motion-curve-fixture.mjs');
+const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const policy = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
-const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const { projectReaderBookmarkRows } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
 const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.42,0,1,1),
   easeOut:p=>b(p,0,0,.58,1),easeInOut:p=>b(p,.42,0,.58,1)};
 const identity = {lifecycle:1,bookIdentity:'src:book',moduleVisit:1,viewportRevision:1,scrollRevision:1,
   layoutRevision:1,paletteRevision:1,fontRevision:1,sourceRevision:1,sourceActorId:'source'};
 const clocks=[];
-const {readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const {readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const feedbackSource=readFileSync(file('LocalReadingExperience.ets'),'utf8');
 for(const [status,offset,preview,expectVisible] of [['empty',24,true,true],['bookmarked',24,true,true],
  ['empty',24,false,true],['empty',0,false,false],['bookmarked',0,false,true],['unknown',0,false,false]]) {

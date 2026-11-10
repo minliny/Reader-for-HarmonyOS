@@ -6,7 +6,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
-import { MangaStripProjection } from '../entry/src/main/ets/features/manga/MangaStripProjection.ts';
+import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
 import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
 
 // Model-only sizes reproduce the recorded proportions, not guest intrinsic
@@ -15,7 +15,7 @@ import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor
 // receipts are controlled. In particular, header work never invents geometry.
 const MODEL = { width: 1280, height: 2133, tileHeight: 524, viewportHeight: 2832, density: 3.5 };
 const REQUESTED_Y = 0.6721680877983167;
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/manga-restore-e1e7d06c-methods.json', import.meta.url), 'utf8'));
 assert.equal(baseline.referencedVersion, 'e1e7d06c7e02b0439e837985dc878b22bac14d1a');
 assert.equal(createHash('sha256').update(JSON.stringify(baseline.methods)).digest('hex'),

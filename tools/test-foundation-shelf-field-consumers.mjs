@@ -7,7 +7,7 @@ for (const id of selectContractCases(definitions)) {
 async function runSelectedCase(selectedCase) {
 const {readFileSync} = await import('node:fs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {foundationControls,foundationSpecs,readerFoundationTokens} = await import('./lib/reader-foundation-control-probe.mjs');
+const {foundationControls,foundationSpecs,readerFoundationTokens,withReaderSectionHeading} = await import('./lib/reader-foundation-control-probe.mjs');
 const {readerTypographyRoles} = await import('./lib/reader-typography-probe.mjs');
 
 const {default: assert} = await import('node:assert/strict');
@@ -22,8 +22,11 @@ const methods=['actionButton','smallAction','groupRow','assignmentBookRow','grou
 let cases=0;
 function fixture(tail,scheme,busy=false,blocked=false){
  const f=baseline.files.find(f=>f.path.endsWith(tail)),shared=foundationControls(),beforeShared=foundationControls(),beforeSource='@Component struct OriginalFiniteControls {\n'+f.methods.join('\n')+'\nbuild(){Column(){}}\n}',afterSource=readFileSync(new URL('../'+f.path,import.meta.url),'utf8');
+ const sourceTools=tail==='SourceToolsPage.ets';
+ if(sourceTools)withReaderSectionHeading(shared);
+ const afterNames=sourceTools?f.names.filter(name=>name!=='heading'):f.names;
  const deps={...readerFoundationTokens,RSS_DETAIL_ACTION_AREA_HEIGHT:68,InputType:{Number:"InputType.Number"},ScrollDirection:{Horizontal:"ScrollDirection.Horizontal"},Repeat};
- const before=createReaderBuilderProbe(beforeSource,f.names,{...beforeShared.dependencies,...deps},beforeShared.hooks).owner,after=createReaderBuilderProbe(afterSource,f.names,{...shared.dependencies,...deps},shared.hooks).owner;
+ const before=createReaderBuilderProbe(beforeSource,f.names,{...beforeShared.dependencies,...deps},beforeShared.hooks).owner,after=createReaderBuilderProbe(afterSource,afterNames,{...shared.dependencies,...deps},shared.hooks).owner;
  const states={appThemeScheme:scheme,snapshot:{busy,mutationBlocked:blocked,selectedGroupId:3,selectedSourceId:2,selectedBookId:7,groupNameDraft:'原分组',groupOrderDraft:'12',assignmentGroupDraft:'目标分组',data:{books:[],groups:[]},editorSourceId:'source',editorText:'{"bookSourceUrl":"exact"}'},item:{link:'https://original.test'},cardWidth:300};
  Object.assign(before,structuredClone(states));Object.assign(after,structuredClone(states));before.__Repeat=after.__Repeat=items=>Repeat(items);before.contentFrame=after.contentFrame=()=>({width:300,left:18,right:18});const calls={before:[],after:[]};
  for(const name of callbacks){before[name]=(...args)=>calls.before.push([name,...args]);after[name]=(...args)=>calls.after.push([name,...args]);}

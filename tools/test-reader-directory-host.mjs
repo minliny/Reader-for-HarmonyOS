@@ -9,15 +9,18 @@ const {default:assert}=await import('node:assert/strict');
 const { registerHooks }=await import('node:module');
 const resolution=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 try {
-const {ReaderDirectoryHost}=await import(selectedCase==='sdk-protocol' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReaderDirectoryHost.ts');
-const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {ReaderDirectoryHost}=await import(selectedCase==='sdk-protocol' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/application/ReaderDirectoryHost.ts');
+const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 const clone=structuredClone, tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:()=>resolve()};};
 const book={sourceId:'local',sourceName:'local',bookId:'book',title:'Book',author:'Author'};
 function fixture(){let runtimeCurrent=true,routeCurrent=true;const delivered=[],settled=[];let entries=[{index:0,title:'Chapter',level:2,downloadState:'completed',bookmarks:[]}];
- const rpc={calls:[],rows:[],failList:false,lost:false,pause:undefined,deleteFailAt:undefined,async request(method,params,options={}){
+ const rpc={calls:[],rows:[],failList:false,lost:false,pause:undefined,chapterPause:undefined,
+  chapterData:{sourceId:'local',bookId:'book',chapterIndex:0,chapterTitle:'Chapter',content:'Core supplied chapter',
+    bodyVersion:'core-returned-body',processingVersion:'core-returned-processing'},deleteFailAt:undefined,async request(method,params,options={}){
   this.calls.push({method,params:clone(params),options});
+  if(method==='local_book.chapter.content'){if(this.chapterPause)await this.chapterPause.promise;return {data:clone(this.chapterData)};}
   if(method==='bookmark.list'){if(this.failList)throw Error('readback failure');return {data:{bookmarks:clone(this.rows)}};}
   assert.equal(options.shouldCancel,undefined,'accepted bookmark write is not UI cancellation');
   if(this.pause)await this.pause.promise;
@@ -26,7 +29,7 @@ function fixture(){let runtimeCurrent=true,routeCurrent=true;const delivered=[],
   throw Error(method);
  }};
  const host=ReaderDirectoryHost.forRuntime(rpc,()=>runtimeCurrent);
- const binding={book,current:()=>routeCurrent,currentEntries:()=>entries,emitEntries:v=>entries=v,emitOperation:o=>delivered.push(clone(o)),failed:()=>{},onSettled:v=>settled.push(v)};
+ const binding={book:{...book},current:()=>routeCurrent,currentEntries:()=>entries,emitEntries:v=>entries=v,emitOperation:o=>delivered.push(clone(o)),failed:()=>{},onSettled:v=>settled.push(v)};
  const create=()=>host.createPosition({bookName:book.title,bookAuthor:book.author,chapterIndex:0,chapterOffset:0,chapterTitle:'Chapter'},binding);
  return{rpc,host,binding,create,delivered,settled,entries:()=>entries,setEntries:v=>entries=v,retire:()=>routeCurrent=false,unset:()=>runtimeCurrent=false,restore:()=>{routeCurrent=runtimeCurrent=true;}};
 }
@@ -59,6 +62,42 @@ for(const retire of ['retire','unset']){
  const successor=fixture();assert.notEqual(successor.host,f.host);
  assert.equal(ReaderDirectoryHost.forRuntime(f.rpc,()=>false),undefined,'retired lookup cannot replace successor cached owner');
  assert.equal(ReaderDirectoryHost.forRuntime(successor.rpc,()=>true),successor.host);
+}
+{
+ const f=fixture();await f.host.createChapterStart(0,f.binding);
+ const reads=f.rpc.calls.filter(c=>c.method==='local_book.chapter.content'),writes=f.rpc.calls.filter(c=>c.method==='bookmark.create');
+ assert.equal(reads.length,1);assert.deepEqual(reads[0].params,{bookId:'book',chapterIndex:0});
+ assert.equal(writes.length,1);assert.equal(writes[0].params.chapterPos,0);
+ assert.deepEqual(writes[0].params.positionScope,{sourceId:'local',bookId:'book',chapterIndex:0,
+  bodyVersion:f.rpc.chapterData.bodyVersion,processingVersion:f.rpc.chapterData.processingVersion},'new local chapter-start uses only the exact Core-returned versions');
+ assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.entries()[0].bookmarks.length,1);
+ assert.deepEqual(f.settled,[true]);
+}
+for(const change of [data=>{delete data.bodyVersion;delete data.processingVersion;},data=>{delete data.processingVersion;},
+ data=>{data.bookId='another-book';},data=>{data.chapterIndex=1;},data=>{data.chapterTitle='Changed chapter';}]){
+ const f=fixture();change(f.rpc.chapterData);await f.host.createChapterStart(0,f.binding);
+ assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.create').length,0,'unproved or changed local content never reaches mutation');
+ assert.equal(f.host.snapshot().completion,'notDispatched');assert.deepEqual(f.entries()[0].bookmarks,[]);
+}
+for(const change of [f=>f.retire(),f=>f.unset(),f=>{f.binding.book={...book,bookId:'new-book'};},
+ f=>{f.binding.book={...book,sourceId:'another-source'};},f=>{f.binding.book={...book,title:'Renamed book'};},
+ f=>{f.binding.book={...book,author:'Changed author'};},
+ f=>f.setEntries([{index:0,title:'Changed chapter',navigable:true,downloadState:'completed',bookmarks:[]}]),
+ f=>f.setEntries([{index:0,title:'Chapter',navigable:false,downloadState:'completed',bookmarks:[]}])]){
+ const f=fixture(),d=defer();f.rpc.chapterPause=d;
+ const task=f.host.createChapterStart(0,f.binding);await tick();assert.equal(f.rpc.calls[0].method,'local_book.chapter.content');
+ change(f);d.resolve();await task;
+ assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.create').length,0,'retirement or changed original book/chapter after read forbids a new write');
+ assert.equal(f.host.busy(),false);
+}
+{
+ const f=fixture();f.rpc.lost=true;await f.create();
+ const original=f.rpc.calls.find(c=>c.method==='bookmark.create'),bytes=JSON.stringify(original.params),count=f.rpc.calls.length;
+ await f.host.createChapterStart(0,f.binding);
+ f.binding.book={...book,bookId:'second-book'};await f.host.createChapterStart(0,f.binding);
+ assert.equal(f.rpc.calls.length,count,'an existing unknown blocks even a second book before any new version read or dispatch');
+ assert.equal(JSON.stringify(original.params),bytes,'existing unknown params are never upgraded with a new local scope');
+ assert.equal(f.host.snapshot().projection.receipt.confirmation,'unknown');
 }
 console.log('PASS actual LocalReadingFlowGateway -> ReaderDirectoryHost: qualified ACK/unknown/partial/retirement/runtime-unset/read-only reconciliation/foreign keys/presentation isolation');
 

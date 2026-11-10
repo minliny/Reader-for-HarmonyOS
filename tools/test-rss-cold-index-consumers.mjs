@@ -8,7 +8,7 @@ const {fixture,seedEntry,draft,settle}=await import("./lib/rss-management-durabl
 const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
 const {boundedSurfaceSdk,boundedMembers}=await import("./lib/bounded-surface-sdk-probe.mjs");
 const {projectOperationFacts}=await import("../entry/src/main/ets/app/ReaderOperationFacts.ts");
-const {RssPresentationProjection}=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const {RssPresentationProjection}=await import("../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts");
 const {readerRecoveryView}=await import("../entry/src/main/ets/app/ReaderRecoveryProjection.ts");
 const {actualReaderPageShell}=await import("./lib/reader-page-shell-runtime-probe.mjs");
 const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));syntax.builderParamObjectCollection.set('MainTabShell',new Set(['content']));
@@ -58,10 +58,11 @@ function index(f,kind='management',instance=1,indexSource=read('pages/Index.ets'
 function page(f,x,kind){
  let compiled=pageTypes.get(kind);
  if(compiled===undefined){
-  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),source=read('features/rss/'+pages[kind]+'.ets'),shared=read('features/rss/RssOriginalRecoverySurface.ets');
+  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),source=read('features/rss/'+pages[kind]+'.ets'),shared=read('features/rss/ui/RssOriginalRecoverySurface.ets');
   sdk.childSources.RssOriginalRecoverySurface=shared;
   const Surface=createReaderBuilderProbe(shared,boundedMembers(shared),sdk.deps,sdk.hooks).Component;sdk.deps.RssOriginalRecoverySurface=Surface;
-  for(const n of ['ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField','PageBackBar','ReaderSearchField','StatusBadge'])sdk.childSources[n]=read('features/common/'+n+'.ets');
+  sdk.childSources.PageBackBar=read('ui/chrome/PageBackBar.ets');
+  for(const n of ['ReaderSearchField','StatusBadge','ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField'])sdk.childSources[n]=read('ui/controls/'+n+'.ets');
   sdk.childSources.MainTabShell=read('features/shell/MainTabShell.ets');
   const constants={};if(kind==='main'){
    const declaration=source.match(/^const RSS_FLOATING_HEADER_HEIGHT = ([^;]+);/m);assert.ok(declaration,'actual RSS header fallback declaration');

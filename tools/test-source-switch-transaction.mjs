@@ -6,7 +6,7 @@ async function rowIdentity(){
  const {resolveEtsLoaderRoot,virtualFilePath}=await import('./lib/tool-environment.mjs');
  const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
  const {sourceSwitchRowSdk}=await import('./lib/source-switch-row-sdk-probe.mjs');
- const window=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
+ const window=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets',import.meta.url),'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);

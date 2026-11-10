@@ -8,12 +8,12 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { SearchViewState } = await import('../entry/src/main/ets/features/search/SearchViewState.ts');
+const { SearchViewState } = await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 const { readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'utf8');
 // StateContent branches reference the page's other real Builders; register
 // their production names with the same SDK registry without executing them.
 const require = createRequire(import.meta.url);
@@ -158,7 +158,7 @@ check('history loading, failure and retry render independently on every entry su
 
 });
 check('native focus waits for layout and a removed or returning page never steals it',()=>{
-  const path=new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets',import.meta.url);
+  const path=new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets',import.meta.url);
   const frames=[],focus=[];
   const Field=selectedProductionMethods(path,'ReaderSearchField',['aboutToAppear','aboutToDisappear'],{
     ReaderSearchFocusFrame:class{constructor(action){this.action=action;}onIdle(){this.action();}}});

@@ -3,11 +3,11 @@ import {
   advanceReaderControlSession, createReaderControlSessionState, dismissReaderControlSession,
   enterReaderControlModule, expandReaderControlSession, openReaderControlSession,
   resumeReaderControlSessionTarget,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 import {
   moveReaderControlSpatialPath, projectReaderControlSpatialPath,
   readerControlSpatialFrameAt, readerControlSpatialY, sampleReaderControlSpatialPath,
-} from '../entry/src/main/ets/features/reading/ReaderControlSpatialPath.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts';
 
 // Hidden field is the Quick hidden pose. Every captured composition closes by
 // the same independently archived MR1 18vp, not towards one off-screen point.

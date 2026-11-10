@@ -7,8 +7,10 @@ for (const id of selectContractCases(definitions)) {
 async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync,existsSync} = await import('node:fs');
+const {projectCurrentSharedProducers} = await import('./lib/architecture-shared-producer-contract.mjs');
 
-const contract=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url),'utf8'));
+const historical=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url),'utf8'));
+const contract=projectCurrentSharedProducers(historical);
 for(const field of ['id','component','file']) assert.equal(new Set(contract.producers.map(p=>p[field])).size,contract.producers.length,'duplicate registration '+field);
 for(const producer of contract.producers) {
  assert.ok(existsSync(new URL('../'+producer.file,import.meta.url)),'registered producer definition exists');

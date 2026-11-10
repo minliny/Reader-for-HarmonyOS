@@ -15,7 +15,7 @@ if(selected.length){
     }
     return next(specifier,context);
   }});
-  const {ReaderPageGeometryInput,resolveReaderPageGeometry}=await import('../entry/src/main/ets/features/common/ReaderPageGeometry.ts');
+  const {ReaderPageGeometryInput,resolveReaderPageGeometry}=await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
   const input=new ReaderPageGeometryInput();
   input.viewportWidth=366;input.viewportHeight=800;
   input.headerTop=40;input.headerHeight=53;input.contentGap=14;

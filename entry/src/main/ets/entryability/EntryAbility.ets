@@ -1,10 +1,10 @@
-import { prepareReaderShelfFonts, prepareReaderFontFamily } from '../features/common/ReaderFonts';
-import { readerAppearanceSnapshotFontFamily } from '../features/reading/ReaderAppearanceRenderStyle';
-import { setReaderAppearanceFont, type ReaderAppearanceSnapshot } from '../features/reading/ReaderAppearanceState';
+import { prepareReaderShelfFonts, prepareReaderFontFamily } from '../ui/foundation/ReaderFonts';
+import { readerAppearanceSnapshotFontFamily } from '../features/reading/ui/ReaderAppearanceRenderStyle';
+import { setReaderAppearanceFont, type ReaderAppearanceSnapshot } from '../features/reading/application/ReaderAppearanceState';
 import { ReaderCustomFontHost } from '../app/ReaderCustomFontHost';
-import { ReaderSettingsGateway } from '../features/reading/ReaderSettingsGateway';
-import { SyncGateway } from '../features/sync/SyncGateway';
-import { LocalConfigurationReset } from '../features/settings/LocalConfigurationReset';
+import { ReaderSettingsGateway } from '../features/reading/application/ReaderSettingsGateway';
+import { SyncGateway } from '../features/sync/application/SyncGateway';
+import { LocalConfigurationReset } from '../features/settings/application/LocalConfigurationReset';
 import { ReaderThemeHost } from '../app/ReaderThemeHost';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import { window } from '@kit.ArkUI';
@@ -12,24 +12,28 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { errorMessageOf, localReadFailureSummary } from '../app/ErrorMessage';
 import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
-import { installMangaAtomicPayloadReader } from '../app/MangaAtomicPayloadReader';
-import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
+import { installMangaAtomicPayloadReader } from '../platform/reading-resources/MangaAtomicPayloadReader';
+import { ReaderSystemFileOpenHost } from '../app/composition/system-open/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
+import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
 import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerRebuildableCacheClearEnabled, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
 import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
 import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
+import { probeReaderCoreCopy, readerCoreCopyOnlyEnabled, type ReaderCoreCopyProbeSample } from '../app/diagnostics/ReaderCoreCopyProbe';
 import { ReaderMangaPlatformDiagnostic } from '../app/ReaderMangaPlatformDiagnostic';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
 import { ReaderCapacityProbe, type ReaderCapacityQueryOptions } from '../app/ReaderCapacityProbe';
 import type { JsonObject } from '@reader/core-harmony';
-import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
+import { readerMotionNowMs } from '../ui/foundation/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
-import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
+import { WebDavCredentialStore } from '../features/sync/application/WebDavCredentialStore';
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
+  private coreCopyProbeGeneration: number = 0;
+  private coreCopyOnly: boolean = false;
   private startupContent: ReaderStartupContentOwner | undefined = undefined;
   private coldStartPage: string = 'pages/Index';
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
@@ -44,6 +48,19 @@ export default class EntryAbility extends UIAbility {
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    const coreCopyProbeGeneration = ++this.coreCopyProbeGeneration;
+    this.coreCopyOnly = readerCoreCopyOnlyEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCoreCopyProbe,
+      want.parameters?.readerCoreCopyOnly, want.parameters?.readerCoreCopyMode, want.parameters?.readerCoreCopyId);
+    if (this.coreCopyOnly) {
+      hilog.info(DOMAIN, 'Reader', 'READER_CORE_COPY_ONLY mainRuntime=disabled');
+      void probeReaderCoreCopy(DEBUG, BUILD_MODE_NAME, true, want.parameters?.readerCoreCopyMode,
+        want.parameters?.readerCoreCopyId, this.context.filesDir,
+        (): boolean => this.coreCopyOnly && this.coreCopyProbeGeneration === coreCopyProbeGeneration,
+        (sample: ReaderCoreCopyProbeSample): void => hilog.info(DOMAIN, 'Reader',
+          'READER_CORE_COPY phase=%{public}s code=%{public}s count=%{public}d', sample.phase, sample.code, sample.count))
+        .catch((): void => {});
+      return;
+    }
     installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
@@ -65,6 +82,7 @@ export default class EntryAbility extends UIAbility {
         });
     }
     AppStorage.setOrCreate('readerAppForeground', true);
+    ReaderDocumentPickerActivity.setForeground(true);
     WebDavCredentialStore.instance.attachContext(this.context);
     this.bookshelfModeReady = trace.measure('startup.bookshelf-mode',
       (): Promise<'cover' | 'list'> => WebDavCredentialStore.instance.loadBookshelfViewMode())
@@ -161,9 +179,20 @@ export default class EntryAbility extends UIAbility {
           hilog.info(DOMAIN, 'Reader', 'READER_ASSET_INVENTORY %{public}s', JSON.stringify(sample));
         })).catch((): void => {});
     }
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCoreCopyProbe === true) {
+      void this.recoveryReady.then((): Promise<void> => probeReaderCoreCopy(DEBUG, BUILD_MODE_NAME,
+        true, want.parameters?.readerCoreCopyMode, want.parameters?.readerCoreCopyId, this.context.filesDir,
+        (): boolean => this.coreCopyProbeGeneration === coreCopyProbeGeneration &&
+          this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner),
+        (sample: ReaderCoreCopyProbeSample): void => {
+          hilog.info(DOMAIN, 'Reader', 'READER_CORE_COPY phase=%{public}s code=%{public}s count=%{public}d',
+            sample.phase, sample.code, sample.count);
+        })).catch((): void => {});
+    }
   }
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    if (this.coreCopyOnly) return;
     // Never reload the window or route directly; Index saves the active
     // reading session before presenting a successfully imported file.
     this.scheduleRebuildableCacheClear?.(want, this.runtimeOwner);
@@ -239,6 +268,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
+    if (this.coreCopyOnly) return;
     ReaderStartupTrace.current()?.mark('window.create');
     const generation = ++this.windowStageGeneration;
     this.startupContent?.close();
@@ -276,15 +306,17 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy(): void {
+    if (this.coreCopyOnly) return;
     this.eventLoopProbe?.stop('window-destroyed');
     this.capacityProbe?.stop();
     this.startupContent?.close();
     this.startupContent = undefined;
     this.windowStageGeneration += 1;
-    ReaderWindowCoordinator.detach();
+    ReaderWindowCoordinator.destroyWindow();
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
+    if (this.coreCopyOnly) return;
     if (newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ||
         newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT) {
       void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')
@@ -297,14 +329,18 @@ export default class EntryAbility extends UIAbility {
   }
 
   onForeground(): void {
+    if (this.coreCopyOnly) return;
     AppStorage.setOrCreate('readerAppForeground', true);
+    ReaderDocumentPickerActivity.setForeground(true);
     this.runtimeOwner?.setReadingPreparationContext(true, false);
     ReaderWindowCoordinator.reapplyChrome();
     ReaderWindowCoordinator.reapplyWindowPolicy();
   }
 
   onBackground(): void {
+    if (this.coreCopyOnly) return;
     AppStorage.setOrCreate('readerAppForeground', false);
+    ReaderDocumentPickerActivity.setForeground(false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
     this.runtimeOwner?.releaseMangaOfflineProbe();
     this.eventLoopProbe?.stop('background');
@@ -319,6 +355,8 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    this.coreCopyProbeGeneration += 1;
+    if (this.coreCopyOnly) { this.coreCopyOnly = false; return; }
     this.mangaPlatformDiagnostic?.stop(); this.mangaPlatformDiagnostic = undefined;
     this.eventLoopProbe?.stop('destroyed');
     this.capacityProbe?.stop();
@@ -326,8 +364,9 @@ export default class EntryAbility extends UIAbility {
     this.startupContent = undefined;
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
-    ReaderWindowCoordinator.detach();
+    ReaderWindowCoordinator.destroyWindow();
     AppStorage.setOrCreate('readerAppForeground', false);
+    ReaderDocumentPickerActivity.setForeground(false);
     const owner = this.runtimeOwner;
     ReaderSystemFileOpenHost.detach(owner);
     this.runtimeOwner = undefined;

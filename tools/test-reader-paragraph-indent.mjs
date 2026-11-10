@@ -18,11 +18,11 @@ const {
   readerAppearanceParagraphContentScalarOffset,
   readerAppearanceParagraphDisplayText,
   readerAppearanceParagraphIndentPrefix,
-} = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const {
   collectReadingParagraphUtf16Ranges,
   readingParagraphBoundaryMode,
-} = await import('../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReadingParagraphProjection.ts');
 assert.equal(readingParagraphBoundaryMode('remote-source', 'TXT'), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('remote-source', undefined), 'lineSeparated');
 
@@ -134,9 +134,9 @@ const readingDir = new URL('../entry/src/main/ets/features/reading/', import.met
 async function case_native_measurement_boundary(){
 const {default:assert}=await import('node:assert/strict');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const Paragraph=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),['indentPrefix'],style);
-const Host=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),['measurementNodeText','measureNativeParagraph'],{...style,FontWeight:{Regular:400},TextAlign:{JUSTIFY:'justify',Start:'start'}});
+const style=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const Paragraph=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets',import.meta.url),['indentPrefix'],style);
+const Host=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['measurementNodeText','measureNativeParagraph'],{...style,FontWeight:{Regular:400},TextAlign:{JUSTIFY:'justify',Start:'start'}});
 for(const start of [true,false])for(const indent of ['none','single','firstLine']){
  const display=Object.assign(new Paragraph(),{isParagraphStart:start,appearance:{indent}});assert.equal(display.indentPrefix(),start?style.readerAppearanceParagraphIndentPrefix(indent):'');
  const captures=[];const owner=Object.assign(new Host(),{appearanceSnapshot:{fontSize:20,font:'serif',activeTheme:'paper',indent,lineSpacing:1,letterSpacing:0,alignment:'left'},measurementTextWidth:()=>300,getUIContext:()=>({px2vp:v=>v/3,fp2px:v=>v*3}),nativeTextMeasurement:{measure:(_c,text,_controller,recipe)=>captures.push({text,recipe})}});

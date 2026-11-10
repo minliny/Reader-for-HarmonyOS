@@ -3,16 +3,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
-import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
-import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
+import { motionSegment } from '../entry/src/main/ets/ui/foundation/MotionTimeline.ts';
+import { readerProbeCubicBezierProgress as bezier } from './lib/reader-motion-curve-fixture.mjs';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 
 // Execute the real SDK-emitted Builder callbacks and production sample methods.
 // This checks composition inputs and retained node identity, not native pixels.
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/${name}`, import.meta.url), 'utf8');
-const source = read('bookshelf/BookshelfPage.ets');
-const noCoverSource = read('bookshelf/NoCoverCover.ets');
-const motionSource = read('common/MotionSpec.ets');
+const source = read('bookshelf/ui/BookshelfPage.ets');
+const noCoverSource = read('../ui/patterns/NoCoverCover.ets');
+const motionSource = read('../ui/foundation/MotionSpec.ets');
 const tokensSource = read('common/ReaderTokens.ets');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -39,11 +39,16 @@ const delay = motionTree.statements.find(statement => ts.isFunctionDeclaration(s
 assert.ok(delay);
 const bookshelfViewCoverDelayMs = new Function('BOOKSHELF_VIEW_MOTION',
   `${stripTypeScriptTypes(delay.getText(motionTree)).replace(/^export /, '')}; return bookshelfViewCoverDelayMs;`)(motion);
-for (const [name, props] of [['NoCoverCover', ['coverWidth', 'coverHeight']], ['ShelfBookListDetails', ['book']]]) {
+for (const [name, props] of [['NoCoverCover', ['coverWidth', 'coverHeight']], ['ShelfBookListDetails', ['book']],
+  ['ReaderIconButton', ['specId', 'icon', 'accessibilityLabel', 'focusId']]]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set(props));
 }
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const childPropsFor = owner => [...owner.children.values()].map(child => {
+  const { onTap, ...props } = child.params;
+  return structuredClone(props);
+});
 const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProjectionOpacity',
   'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
   'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
@@ -51,10 +56,10 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight',
   'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover',
   'projectionBookCover', 'projectionBookCoverLayer', 'projectionGridDetails', 'projectionListDetails',
-  'bookActionPresentationHandler', 'isShelfPresentationCurrent'];
+  'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent'];
 function fixture(text = source) {
   const { owner } = createReaderBuilderProbe(text, methods, { ...tokens, ...geometry,
-    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child, ShelfBookPresentation,
+    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child, ReaderIconButton: Child, ShelfBookPresentation,
     ImageFit: { Cover: 'cover' } });
   Object.assign(owner, { viewMotion: motion, viewContentCurve: curves.cubicBezierCurve(.4, 0, .2, 1),
     viewFadeCurve: curves.cubicBezierCurve(0, 0, .58, 1), viewMoveCurve: curves.cubicBezierCurve(.2, 0, 0, 1),
@@ -150,7 +155,7 @@ for (const hasImage of [false, true]) {
     verifyDetailsInput(owner);
     const initialBranches = branches.slice();
     const nodeIds = [...owner.nodes.keys()], childIds = [...owner.children.keys()];
-    const childProps = [...owner.children.values()].map(child => structuredClone(child.params));
+    const childProps = childPropsFor(owner);
     const covers = [...owner.nodes.values()].filter(node => node.type === 'Image' && node.create === rowBook.coverUrl);
     assert.equal(covers.length, hasImage ? 2 : 0, 'the two cover actors use the same current image');
     const defaultCovers = [...owner.children.values()].filter(child => 'coverWidth' in child.params);
@@ -166,7 +171,7 @@ for (const hasImage of [false, true]) {
       assert.deepEqual(branches, initialBranches, 'opacity updates do not replace a conditional cover subtree');
       assert.deepEqual([...owner.nodes.keys()], nodeIds);
       assert.deepEqual([...owner.children.keys()], childIds);
-      assert.deepEqual([...owner.children.values()].map(child => structuredClone(child.params)), childProps);
+      assert.deepEqual(childPropsFor(owner), childProps);
       assert.deepEqual(covers.map(node => ({ id: node.id, source: node.create, width: node.width, height: node.height, fit: node.objectFit })), imageProps);
     }
     for (const id of nodeIds) {

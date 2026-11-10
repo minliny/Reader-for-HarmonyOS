@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
-import { readerDirectoryScopeKey } from '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+import * as layout from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
+import { readerDirectoryScopeKey } from '../../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
 
-export const mangaDirectoryNavigationListSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url), 'utf8');
+export const mangaDirectoryNavigationListSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url), 'utf8');
 /** Official platform cache is an IO seam; the complete production DataSource,
  * page-window and admission/notification methods are executed unchanged. */
 export function productionMangaDirectoryNavigationDataSource(source = mangaDirectoryNavigationListSource) {

@@ -6,7 +6,7 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const settle = async () => { for (let n = 0; n < 20; n++) await Promise.resolve(); };
 const layout = { viewportWidth: 390, viewportHeight: 800, fontScale: 1 };

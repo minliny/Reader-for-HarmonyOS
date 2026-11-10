@@ -1,11 +1,93 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, mkdtempSync, mkdirSync, openSync, closeSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, availableParallelism, freemem, totalmem, cpus } from 'node:os';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { execFile } from 'node:child_process';
 import { spawnSync, spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { randomUUID, createHash } from 'node:crypto';
+
+const MiB = 1024 ** 2;
+// Policy scales with the machine; reserve capacity for the OS, SDK and VM.
+export function resourceLimit({ cpu, free, total, active, jobBytes, load = 0, jobCpu = 1 }) {
+  const reserve = Math.max(512 * MiB, total * 0.1);
+  const memorySlots = active + Math.floor((free - reserve) / Math.max(256 * MiB, jobBytes));
+  const cpuSlots = Math.floor((cpu - Math.max(0, load - active * jobCpu)) / jobCpu);
+  return Math.max(1, Math.min(cpu, cpuSlots, memorySlots));
+}
+
+export function adaptiveResources() {
+  const cpu = availableParallelism();
+  let jobBytes = 512 * MiB, hostFree, hostResident = 0, hostPending = false, hostSampleAt = -Infinity;
+  const history = [], cpuSamples = new Map();
+  const clockTicks = process.platform === 'linux' ? Number(spawnSync('getconf', ['CLK_TCK'], { encoding: 'utf8' }).stdout) || 100 : 100;
+  let jobCpu = 1, previousCpu;
+  const cpuTime = () => cpus().reduce((sum, core) => ({
+    idle: sum.idle + core.times.idle,
+    total: sum.total + Object.values(core.times).reduce((a, b) => a + b, 0),
+  }), { idle: 0, total: 0 });
+  previousCpu = cpuTime();
+  function sample(children) {
+    const now = Date.now();
+    // WSL's free RAM can exceed the Windows host's remaining physical RAM.
+    // Query asynchronously so resource observation never blocks child deadlines.
+    if (process.env.WSL_DISTRO_NAME && !hostPending && now - hostSampleAt > 10_000) {
+      hostPending = true; hostSampleAt = now;
+      execFile('/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', '$o=Get-CimInstance Win32_OperatingSystem; $v=Get-Process -Name vmmemWSL -ErrorAction SilentlyContinue; [Console]::Write(($o.FreePhysicalMemory * 1024).ToString()+[char]44+(($v | Measure-Object WorkingSet64 -Sum).Sum).ToString())'],
+        { timeout: 5_000 }, (error, output) => {
+          const [free, resident] = output.trim().split(',').map(Number);
+          if (!error && free > 0 && Number.isFinite(resident)) { hostFree = free; hostResident = resident; }
+          hostPending = false;
+        });
+    }
+    let peak = 0;
+    if (process.platform === 'linux') {
+      const processes = new Map();
+      for (const pid of readdirSync('/proc').filter(value => /^\d+$/.test(value))) {
+        try {
+          const status = readFileSync(`/proc/${pid}/status`, 'utf8');
+          processes.set(Number(pid), { parent: Number(status.match(/^PPid:\s+(\d+)/m)?.[1]),
+            rss: Number(status.match(/^VmRSS:\s+(\d+)/m)?.[1] ?? 0) * 1024,
+            ticks: readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ').at(-1).split(' ').slice(11, 13).reduce((a, b) => a + Number(b), 0) });
+        } catch { /* A process may exit between directory and status reads. */ }
+      }
+      for (const child of children) {
+        const descendants = new Set([child.pid]);
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const [pid, info] of processes) if (!descendants.has(pid) && descendants.has(info.parent)) {
+            descendants.add(pid); changed = true;
+          }
+        }
+        const ticks = [...descendants].reduce((sum, pid) => sum + (processes.get(pid)?.ticks ?? 0), 0);
+        const previous = cpuSamples.get(child.pid);
+        if (previous && ticks >= previous.ticks && now > previous.at) {
+          jobCpu = Math.max(jobCpu, (ticks - previous.ticks) / clockTicks / ((now - previous.at) / 1000));
+        }
+        cpuSamples.set(child.pid, { ticks, at: now });
+        peak = Math.max(peak, [...descendants].reduce((sum, pid) => sum + (processes.get(pid)?.rss ?? 0), 0));
+      }
+    }
+    for (const pid of cpuSamples.keys()) if (!children.some(child => child.pid === pid)) cpuSamples.delete(pid);
+    jobBytes = Math.max(jobBytes, peak * 1.2);
+    const currentCpu = cpuTime();
+    const totalDelta = currentCpu.total - previousCpu.total;
+    const load = totalDelta > 0 ? cpu * (1 - (currentCpu.idle - previousCpu.idle) / totalDelta) : 0;
+    previousCpu = currentCpu;
+    const guestFree = freemem();
+    // Already resident but guest-free pages need no additional host allocation.
+    const residentSlack = Math.max(0, hostResident - (totalmem() - guestFree));
+    const free = Math.min(guestFree, hostFree === undefined ? Infinity : hostFree + residentSlack);
+    const snapshot = { cpu, free, total: totalmem(), active: children.length, jobBytes, hostFree, hostResident, residentSlack, jobCpu, load };
+    const limit = resourceLimit(snapshot);
+    history.push({ at: now, ...snapshot, limit });
+    return limit;
+  }
+  return { cpu, history, sample };
+}
 
 export const MAX_CONTRACT_TIMEOUT_MS = 110_000;
 export const MAX_CONTRACT_KILL_GRACE_MS = 1_000;
@@ -249,7 +331,7 @@ export function contractCaseSelection(root, names, requested = {}) {
   const selections = {}, resources = new Set();
   for (const name of names) {
     const source = readFileSync(resolve(root, 'tools', name), 'utf8');
-    const focused = /from\s+['"]\.\/lib\/contract-case-selection\.mjs['"]/.test(source);
+    const focused = /\bfrom\s*['"]\.\/lib\/contract-case-selection\.mjs['"]/.test(source);
     const ids = requested[name] ?? [];
     assert.ok(Array.isArray(ids) && new Set(ids).size === ids.length, 'select unique case IDs');
     if (focused) assert.ok(ids.length > 0, `${name}: focused case selection required; a list is NOT_RUN, never PASS`);
@@ -337,7 +419,13 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   // not prove descendant settlement: taskkill /T cannot recover an exited
   // parent's tree. POSIX uses the OS process group instead.
   const treeCapability = process.platform === 'win32' ? 'direct-child' : 'posix-process-group';
-  assert.ok(Number.isInteger(workers) && workers >= 1 && workers <= 4, 'workers must be an integer in 1..4');
+  const automatic = workers === 'auto';
+  assert.ok(automatic || Number.isInteger(workers) && workers >= 1 && workers <= availableParallelism(),
+    'workers must be auto or an integer within available CPU capacity');
+  const resources = automatic ? adaptiveResources() : null;
+  const capacity = automatic ? resources.cpu : workers;
+  let admitted = automatic ? 1 : workers, peakConcurrency = 0;
+  const scheduling = [];
   const timeoutMs = testOptions.timeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
   const killGraceMs = testOptions.killGraceMs ?? MAX_CONTRACT_KILL_GRACE_MS;
   const explicit = testOptions.tests !== undefined;
@@ -372,10 +460,19 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   if (testOptions.signal?.aborted) cancel();
   const scopeDeadline = scopeTimeoutMs === null ? undefined : setTimeout(expireScope,
     Math.max(0, scopeTimeoutMs - (performance.now() - runStarted)));
-  async function worker() {
+  const resourceTimer = automatic ? setInterval(() => {
+    const target = resources.sample([...active.keys()]);
+    admitted = Math.min(target, admitted + 1);
+    scheduling.push({ at: Date.now(), admitted, target, active: active.size });
+  }, 1_000) : undefined;
+  async function worker(slot) {
     while (cursor < selected.length) {
       if (scopeTimeoutMs !== null && performance.now() - runStarted >= scopeTimeoutMs) expireScope();
       if (scopeExpired || treeRecoveryBlocked || cancelled || failureStopped) return;
+      if (slot >= admitted || active.size >= admitted) {
+        await new Promise(resume => setTimeout(resume, 50));
+        continue;
+      }
       const name = selected[cursor++], started = performance.now(), wallStarted = Date.now(), log = resolve(logRoot, name + '.log');
       const temporaryDirectory = resolve(logRoot, 'temporary', name);
       mkdirSync(temporaryDirectory, { recursive: true });
@@ -386,7 +483,9 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
       delete childEnvironment.READER_CONTRACT_RESULTS_FILE;
       delete childEnvironment.READER_CONTRACT_SCOPE_TIMEOUT_MS;
       const caseIds = caseSelection.selections[name] ?? [];
-      const result = await runOwnedContract(root, name, fd, childEnvironment, timeoutMs, killGraceMs, active, blockDispatch, caseIds);
+      const pendingResult = runOwnedContract(root, name, fd, childEnvironment, timeoutMs, killGraceMs, active, blockDispatch, caseIds);
+      peakConcurrency = Math.max(peakConcurrency, active.size);
+      const result = await pendingResult;
       closeSync(fd);
       let receipts = [];
       if (!result.error && !result.timedOut && result.status === 0) {
@@ -408,7 +507,7 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
       console.log(`${name}: ${!row.error && !row.timedOut && row.status === 0 && row.treeSettled !== false ? 'PASS' : 'FAIL'} (${row.milliseconds}ms)`);
     }
   }
-  const workersStarted = Array.from({ length: Math.min(workers, selected.length) }, worker);
+  const workersStarted = Array.from({ length: Math.min(capacity, selected.length) }, (_, slot) => worker(slot));
   let workerFailure;
   try { await Promise.all(workersStarted); }
   catch (error) {
@@ -416,7 +515,7 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
     expireScope();
     await Promise.allSettled(workersStarted); // Reap every owned child before clearing the deadline.
   } finally {
-    clearTimeout(scopeDeadline); testOptions.signal?.removeEventListener('abort', cancel);
+    clearTimeout(scopeDeadline); clearInterval(resourceTimer); testOptions.signal?.removeEventListener('abort', cancel);
     process.removeListener('SIGTERM', cancel); process.removeListener('SIGINT', cancel);
   }
   const millisecondsTotal = Math.ceil(performance.now() - runStarted);
@@ -439,7 +538,8 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
     harmonyContracts: !selectedPassed ? 'FAIL' : completeSuite ? 'PASS' : 'PARTIAL',
     fullSuite: completeSuite ? selectedPassed ? 'PASS' : 'FAIL' : 'NOT_RUN', acceptanceEligible: false,
     ...(scopePolicy?.layers ? { evidenceLayers: scopePolicy.layers } : {}),
-    treeSettled: treeRecoveryBlocked ? false : treeCapability === 'direct-child' ? null : results.every(row => row.treeSettled), results };
+    treeSettled: treeRecoveryBlocked ? false : treeCapability === 'direct-child' ? null : results.every(row => row.treeSettled), results,
+    execution: { mode: automatic ? 'adaptive' : 'explicit', capacity, peakConcurrency, scheduling, resources: resources?.history ?? [] } };
   try {
     writeFileSync(resolve(logRoot, 'results.json'), JSON.stringify(report, null, 2) + '\n');
     if (testOptions.resultsFile) writeFileSync(testOptions.resultsFile, JSON.stringify(report, null, 2) + '\n', { flag: 'wx' });
@@ -504,7 +604,8 @@ if (process.argv[1] && process.argv[1] !== '-' && realpathSync(process.argv[1]) 
   try {
     Object.assign(process.env, lease.env);
     await runContractsBounded(repository, tier,
-      tests ? 1 : Number(process.env.READER_CONTRACT_TEST_WORKERS ?? 1), { scope, tests, cases,
+      tests ? 1 : process.env.READER_CONTRACT_TEST_WORKERS === undefined || process.env.READER_CONTRACT_TEST_WORKERS === 'auto'
+        ? 'auto' : Number(process.env.READER_CONTRACT_TEST_WORKERS), { scope, tests, cases,
         timeoutMs: Number(options.get('--test-timeout-ms') ?? process.env.READER_CONTRACT_TEST_TIMEOUT_MS ?? MAX_CONTRACT_TIMEOUT_MS),
         scopeTimeoutMs: scope === undefined || process.env.READER_CONTRACT_SCOPE_TIMEOUT_MS === undefined ? undefined : Number(process.env.READER_CONTRACT_SCOPE_TIMEOUT_MS),
         resultsFile: options.get('--results-file') ?? process.env.READER_CONTRACT_RESULTS_FILE,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import * as state from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import * as policy from '../entry/src/main/ets/features/reading/ReaderControlMotionPolicy.ts';
-import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ReaderControlRuntime.ts';
+import * as state from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
+import * as policy from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts';
+import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts';
 
 const config = { axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 },
   tapMaxDurationMs: 350, directionSlopVp: 2, settleDurationMs: 1150, showDurationMs: 420,
@@ -77,7 +77,7 @@ for (const slope of [0, .2, 1, 2, 3]) {
 }
 console.log('PASS all control modules 320/260/200/220, initial opening 220, remaining-distance release, hold/regrab/reverse, monotone velocity continuation; device acceptance separate');
 
-const { sampleReaderControlMorphProgress: morphProgress } = await import('../entry/src/main/ets/features/reading/ReaderControlMotionPolicy.ts');
+const { sampleReaderControlMorphProgress: morphProgress } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts');
 assert.equal(morphProgress(0), 0); assert.equal(morphProgress(1), 1);
 assert.equal(morphProgress(.5), .5);
 assert.ok(morphProgress(.25) > .1 && morphProgress(.75) < .9,

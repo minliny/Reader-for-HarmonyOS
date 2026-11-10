@@ -8,7 +8,7 @@ async function runCase(selectedCase){
  const assets=[['directory','reader_directory_list_active','rc_list','rc_list'],['tts','reader_tts_nav_active','rc_headphones','rc_headphones'],['appearance','reader_appearance_nav_active','rc_palette','rc_palette'],['settings','reader_settings_nav_active','rc_settings','rc_settings']];
  if(selectedCase==='icon-map'){
   const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
-  const Control=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets',import.meta.url),'ReaderControlPanel',['moduleIcon']);
+  const Control=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),'ReaderControlPanel',['moduleIcon']);
   const owner=new Control();
   for(const [module,active,fallback,nightInactive] of assets)for(const enabled of [true,false])for(const scheme of ['day','night']){
    owner.appScheme=scheme;owner.isActiveModule=()=>enabled;

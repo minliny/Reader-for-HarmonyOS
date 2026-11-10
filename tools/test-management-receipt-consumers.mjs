@@ -15,15 +15,15 @@ const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','pr
 const ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence');
 const readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
-const RulesManagementGateway=load('features/settings/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner});
+const RulesManagementGateway=load('features/settings/application/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner});
 const unused=class{observeWrites(){}};
-const Rules=load('features/settings/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,RulesManagementGateway,SourceGateway:unused,RssGateway:unused,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
-const BookshelfManagementGateway=load('features/bookshelf/BookshelfManagementGateway.ts','BookshelfManagementGateway',{ReaderRuntimeOwner,ReaderCoreGateway:class{constructor(owner){this.owner=owner;}async loadBookshelf(){return this.owner.shelf;}}});
-const Shelf=load('features/bookshelf/BookshelfManagementOrchestrator.ets','{BookshelfManagementOrchestrator,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,BookshelfManagementGateway,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
+const Rules=load('features/settings/application/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,RulesManagementGateway,SourceGateway:unused,RssGateway:unused,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
+const BookshelfManagementGateway=load('features/bookshelf/application/BookshelfManagementGateway.ts','BookshelfManagementGateway',{ReaderRuntimeOwner,ReaderCoreGateway:class{constructor(owner){this.owner=owner;}async loadBookshelf(){return this.owner.shelf;}}});
+const Shelf=load('features/bookshelf/application/BookshelfManagementOrchestrator.ets','{BookshelfManagementOrchestrator,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,BookshelfManagementGateway,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-for(const [name,path] of [['RulesManagementPage','features/settings/RulesManagementPage.ets'],['BookshelfManagementPage','features/bookshelf/BookshelfManagementPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){
+for(const [name,path] of [['RulesManagementPage','features/settings/ui/RulesManagementPage.ets'],['BookshelfManagementPage','features/bookshelf/ui/BookshelfManagementPage.ets'],['ReaderRecoveryAction','ui/feedback/ReaderRecoveryAction.ets']]){
  syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
 const clone=v=>v===undefined?undefined:structuredClone(v);
@@ -54,7 +54,7 @@ async function fixture(kind){const isRules=kind==='rules',actual=isRules?await d
    return event;
   };
   runtime.count=m=>actual.calls.filter(c=>c.method===m).length;
-  rules=load('features/settings/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',
+  rules=load('features/settings/application/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',
    {ReaderRuntimeOwner:actual.Runtime,ReaderWriteEvidence,RulesManagementGateway:actual.Gateway,SourceGateway:unused,RssGateway:unused,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
  }
  const cls=isRules?rules.RulesManagementOrchestrator:actual.Orchestrator;
@@ -69,7 +69,7 @@ async function fixture(kind){const isRules=kind==='rules',actual=isRules?await d
  host.isManagementPresentationCurrent=(runtime,expected)=>owner.owns(runtime)&&owner.isPresentationCurrent(expected);
  Object.assign(index,{bookshelfManagementPresentationIdentity:identity});
  Object.assign(index,{getRulesManagementOrchestrator:()=>owner,bookshelfHost:host,openJsonImport(){},returnFromRulesManagement(){},returnToBookshelf(){}});
- function page(){Object.assign(index,{rulesManagementSnapshot:snapshot,bookshelfManagementSnapshot:snapshot});if(isRules)index[method](1,runtime,1,owner,identity);else index[method](1,runtime,1,host,identity);const child=[...index.children.values()][0];const pagePath=isRules?'features/settings/RulesManagementPage.ets':'features/bookshelf/BookshelfManagementPage.ets';
+ function page(){Object.assign(index,{rulesManagementSnapshot:snapshot,bookshelfManagementSnapshot:snapshot});if(isRules)index[method](1,runtime,1,owner,identity);else index[method](1,runtime,1,host,identity);const child=[...index.children.values()][0];const pagePath=isRules?'features/settings/ui/RulesManagementPage.ets':'features/bookshelf/ui/BookshelfManagementPage.ets';
   const sdk=boundedSurfaceSdk(),page=sdk.consumer(source(pagePath),[...(isRules?['recoveryAction']:['pendingOverlay','pageContent','hasReadData','originalPending']),'statusCard','recovery'],{readerRecoveryView,EMPTY_RULES_MANAGEMENT_SNAPSHOT:Rules.EMPTY_RULES_MANAGEMENT_SNAPSHOT,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:Shelf.EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT});
   for(const name of ['bundleCard','replaceCard','txtTocCard','dictCard','subscriptionCard','statisticsCard','groupEditorCard','groupsCard','assignmentCard','recordsCard']) page[name]=()=>{};
   page.contentFrame=()=>({width:350,left:19,right:19});page.bottomContentInset=()=>12;

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { stopBookTurnMotion } from '../entry/src/main/ets/features/reading/BookTurnMotionState.ts';
+import { stopBookTurnMotion } from '../entry/src/main/ets/features/reading/ui/BookTurnMotionState.ts';
 
 const root=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
 const file=new URL('LocalReadingExperience.ets',root);

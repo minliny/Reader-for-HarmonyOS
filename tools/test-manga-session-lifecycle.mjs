@@ -9,9 +9,9 @@ import { errorMessageOf } from '../entry/src/main/ets/app/ErrorMessage.ts';
 // existing coordinator suite covers actual session protection, late open and
 // activation disposal. This probe does not claim native lifecycle delivery.
 const files = {
-  shell: new URL('../entry/src/main/ets/features/shell/ReaderShell.ets', import.meta.url),
-  surface: new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url),
-  controller: new URL('../entry/src/main/ets/features/manga/MangaSessionController.ts', import.meta.url),
+  shell: new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets', import.meta.url),
+  surface: new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url),
+  controller: new URL('../entry/src/main/ets/features/manga/application/MangaSessionController.ts', import.meta.url),
   runtime: new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
 };
 const sources = Object.fromEntries(Object.entries(files).map(([name, file]) => [name, readFileSync(file)]));
@@ -38,6 +38,15 @@ const Controller = productionMotionMethods(files.controller, ['close']);
   gate.resolve();await exiting;
   assert.ok(events.indexOf('session.released')<events.indexOf('exit.callback'));
   assert.ok(events.indexOf('pixels.released')<events.indexOf('exit.callback'));
+  const saveFailed=Object.assign(new Surface(),{mounted:true,controller,panel:'',panelPhase:'closed',
+    panelGeneration:0,panelActionGeneration:0,exiting:false,saveVisible:async()=>false,closePanel:async()=>true,
+    onBack:()=>assert.fail('a rejected progress write cannot deliver a navigation exit'),
+    onExitCancelled:()=>events.push('exit.cancelled')});
+  const releases=events.filter(event=>event==='session.released').length;
+  await saveFailed.handleBack('navigation');
+  assert.equal(events.at(-1),'exit.cancelled');
+  assert.equal(events.filter(event=>event==='session.released').length,releases);
+  assert.equal(saveFailed.exiting,false);
   pass('explicit Surface exit saves visible progress and waits for actual Controller session and pixel cleanup before Index may delete downloads');
 }
 function surfaceFixture(shell, previousIdentity) {

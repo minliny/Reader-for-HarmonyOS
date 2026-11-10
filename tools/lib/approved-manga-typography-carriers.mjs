@@ -5,15 +5,16 @@ import { createHash } from 'node:crypto';
 import {createRequire} from 'node:module';
 import { auditTypographyConsumers, auditNativeTextElements, typographyRoleImports } from './reader-typography-consumer-audit.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
-import * as families from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import {SOURCE_SWITCH_VISUAL_SHA256} from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import * as families from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import {SOURCE_SWITCH_VISUAL_SHA256} from '../../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts';
 import { normalizeApprovedTypographyLayout } from './reader-typography-layout-successor.mjs';
+import { originalSharedUiFile } from './shared-ui-source-paths.mjs';
 
 export const approvedMangaTypography = JSON.parse(readFileSync(new URL('../fixtures/design/approved-manga-typography-carriers-20261005.json', import.meta.url), 'utf8'));
 export const novelSourceSwitchSuccessorPath = 'tools/fixtures/design/novel-source-switch-successor-20261006.json';
 export const novelSourceSwitchSuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/novel-source-switch-successor-20261006.json', import.meta.url), 'utf8'));
-const novelPaths = ['entry/src/main/ets/features/source/SourceSwitchWindow.ets', 'entry/src/main/ets/features/source/SourceSwitchProgress.ets'];
-const completionPath = 'entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets';
+const novelPaths = ['entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets', 'entry/src/main/ets/features/source/ui/SourceSwitchProgress.ets'];
+const completionPath = 'entry/src/main/ets/features/source/ui/SourceSwitchCompletionOverlay.ets';
 /** Explicit witness maintenance; importing/querying one consumer does not validate unrelated families. */
 export function validateNovelSourceSwitchTypographySuccessor() {
   assert.equal(novelSourceSwitchSuccessor.schema, 1);
@@ -58,13 +59,13 @@ export const mangaDirectoryTypographySuccessor = JSON.parse(readFileSync(new URL
 // Only the seven user-selected directory/detail consumers have successors;
 // ordinary novel rows and non-directory manga controls cannot disappear.
 const directoryRetainedHistorical = {
-  'entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets': { carriers: [0], nativeDefaults: [0, 1] },
-  'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets': { carriers: [6, 10, 11, 12, 19, 20, 21, 22], nativeDefaults: [] },
+  'entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets': { carriers: [0], nativeDefaults: [0, 1] },
+  'entry/src/main/ets/features/reading/ui/LocalBookDetail.ets': { carriers: [6, 10, 11, 12, 19, 20, 21, 22], nativeDefaults: [] },
   'entry/src/main/ets/features/common/PageBackBar.ets': { carriers: [], nativeDefaults: [] },
-  'entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets': { carriers: [], nativeDefaults: [] },
-  'entry/src/main/ets/features/manga/MangaReadingSurface.ets': { carriers: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36], nativeDefaults: [0, 2, 3] },
-  'entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets': { carriers: [6, 7, 8], nativeDefaults: [] },
-  'entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets': { carriers: [2], nativeDefaults: [] },
+  'entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets': { carriers: [], nativeDefaults: [] },
+  'entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets': { carriers: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36], nativeDefaults: [0, 2, 3] },
+  'entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets': { carriers: [6, 7, 8], nativeDefaults: [] },
+  'entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets': { carriers: [2], nativeDefaults: [] },
 };
 const directoryReadSource = file => readFileSync(new URL('../../' + file, import.meta.url), 'utf8');
 const directoryDigest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -78,7 +79,7 @@ export function validateMangaDirectoryTypographySuccessor(successor, readSource 
   assert.equal(directoryDigest(historicalBytes), successor.historicalFixtureSha256, 'historical manga typography fixture stays immutable');
   const historical = JSON.parse(historicalBytes);
   assert.equal(successor.visualSpecSource, '../Reader-UI/design/manga-directory/visual.json', 'only the frozen directory visual source');
-  assert.equal(successor.generatedVisualSource, 'entry/src/main/ets/features/manga/MangaDirectoryVisual.ts', 'only its finite native generated spec');
+  assert.equal(successor.generatedVisualSource, 'entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts', 'only its finite native generated spec');
   assert.equal(directoryDigest(readSource(successor.visualSpecSource)), successor.visualSpecSha256, 'directory typography witness binds exact visual source');
   const generated = readSource(successor.generatedVisualSource);
   assert.ok(generated.split('\n').includes('// Visual definition SHA256 ' + successor.visualSpecSha256), 'directory native spec binds the same visual source');
@@ -193,9 +194,9 @@ export function validateSourceSwitchFrameSuccessor(successor, readSource = direc
 export const unifiedActionSheetTypographySuccessorPath = 'tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json';
 export const unifiedActionSheetTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/unified-action-sheet-typography-successor-20261014.json', import.meta.url), 'utf8'));
 const actionSheetOrigins = [
-  { path: 'entry/src/main/ets/features/manga/MangaReadingSurface.ets', fixture: mangaDirectoryTypographySuccessorPath,
+  { path: 'entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', fixture: mangaDirectoryTypographySuccessorPath,
     retired: [23, 28], method: 'morePanel', variant: 'this.moreMenuVariant' },
-  { path: 'entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets', fixture: novelSourceSwitchSuccessor.historicalFixture,
+  { path: 'entry/src/main/ets/features/manga/ui/MangaDownloadOperationsPanel.ets', fixture: novelSourceSwitchSuccessor.historicalFixture,
     retired: [3], method: 'build', variant: "'grouped'" },
 ];
 /** An exact successor retires only the two old More actors and the download
@@ -227,17 +228,18 @@ export function validateUnifiedActionSheetTypographySuccessor(successor, readSou
 }
 
 function validatesActionSheetDelegate(source, entry) {
+  const component = 'ReaderActionMenuSurface';
   const tree = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, 'actual action-sheet delegate SDK AST');
-  const imported = tree.statements.some(node => ts.isImportDeclaration(node) && /ReaderActionSheetContent$/.test(node.moduleSpecifier.text) &&
-    node.importClause?.namedBindings?.elements?.some(element => element.name.text === entry.delegate.component));
+  const imported = tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier.text.endsWith('/' + component) &&
+    node.importClause?.namedBindings?.elements?.some(element => element.name.text === component));
   assert.ok(imported, 'actual shared action-content import');
   const owner = tree.statements.find(node => ts.isStructDeclaration(node) && node.members.some(member => member.name?.text === entry.delegate.method));
   const method = owner?.members.find(member => ts.isMethodDeclaration(member) && member.name.text === entry.delegate.method);
   assert.ok(method, 'actual action-sheet binding method');
   const calls = [];
   const walk = node => {
-    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression?.getText(tree) === entry.delegate.component) calls.push(node);
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression?.getText(tree) === component) calls.push(node);
     ts.forEachChild(node, walk);
   };
   walk(method);
@@ -279,7 +281,7 @@ export function validateMangaDirectoryWorktreeSuccessor(successor, readSource = 
   assert.equal(successor.previousDirectoryFixtureSha256, '30e243b894f58f3d0be5d26d6a9be687ed7be1e3d041249b9cfd202acc6b58e9');
   assert.equal(directoryDigest(readSource(successor.previousDirectoryFixture)), successor.previousDirectoryFixtureSha256, 'integration cannot rewrite the f4 directory witness');
   assert.equal(successor.implementationEvidence, 'docs/architecture/manga-directory-worktree-integration-20261015.md');
-  const paths = ['entry/src/main/ets/features/bookshelf/LocalBookDetail.ets', 'entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets'];
+  const paths = ['entry/src/main/ets/features/reading/ui/LocalBookDetail.ets', 'entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets'];
   assert.deepEqual(successor.files.map(entry => entry.path), paths, 'only measured intro and existing canonical manga rows acquire finite successors');
   const previousFiles = JSON.parse(readSource(successor.previousDirectoryFixture)).files;
   for (const [index, entry] of successor.files.entries()) {
@@ -320,8 +322,8 @@ export function validateMangaDirectoryWorktreeSuccessor(successor, readSource = 
 
 export const directoryRecoveryTypographySuccessorPath = 'tools/fixtures/design/directory-recovery-typography-successor-20261016.json';
 export const directoryRecoveryTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/directory-recovery-typography-successor-20261016.json', import.meta.url), 'utf8'));
-const recoveryPaths = ['entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets',
-  'entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets'];
+const recoveryPaths = ['entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets',
+  'entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets'];
 const recoveryText = ["this.loadFailed ? '目录加载失败，已保留当前条目' : '正在加载目录'",
   "this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :\n        this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整'"];
 export function validateDirectoryRecoveryTypographySuccessor(successor = directoryRecoveryTypographySuccessor, readSource = directoryReadSource) {
@@ -387,7 +389,8 @@ export function validateMessageTypographySuccessor() {
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
-  const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
+  const relative = /^(features|pages|ui)\//.test(file) ? file : 'features/' + file;
+  const fullPath = originalSharedUiFile(file.startsWith('entry/') ? file : 'entry/src/main/ets/' + relative);
   return messageTypographySuccessor.files.find(entry => entry.path === fullPath) ?? directoryRecoveryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryWorktreeSuccessor.files.find(entry => entry.path === fullPath) ?? sourceSwitchFrameSuccessor.files.find(entry => entry.path === fullPath) ?? unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
@@ -399,6 +402,12 @@ export const approvedTypographyFile = file => {
 export function approvedTypographyContract(source, file) {
   const entry = approvedTypographyFile(file);
   if (!entry) return { registered: false, has: () => false, count: 0 };
+  if (entry.path === completionPath) {
+    // The selected local toast is historical evidence. Its live successor
+    // delegates paper only; ReaderTransientToast owns the completion text.
+    assert.deepEqual(approvedNativeAllCarrierFacts(source, entry.path), [], 'completion wash cannot paint a private notice');
+    return { registered: true, entry, count: 0, hasNative: () => false, has: () => false };
+  }
   if (messageTypographySuccessor.files.includes(entry)) {
     validateMessageTypographySuccessor();
     const actual = auditTypographyConsumers(source, entry.path).map(typographyCarrierShape);
@@ -446,26 +455,31 @@ export function approvedTypographyContract(source, file) {
   assert.deepEqual(actual, entry.carriers, 'exact approved typography carrier/tuple changed: ' + entry.path);
   const imports = typographyRoleImports(source, entry.path);
   for (const [name, tuple] of Object.entries(entry.roles)) {
-    if (novelPaths.includes(entry.path)||entry.path===completionPath||directoryRecoveryTypographySuccessor.files.includes(entry)) assert.ok(imports.has(name), 'actual selected novel public role import: ' + name);
+    if (novelPaths.includes(entry.path)||directoryRecoveryTypographySuccessor.files.includes(entry)) assert.ok(imports.has(name), 'actual selected novel public role import: ' + name);
     assert.deepEqual(JSON.parse(JSON.stringify(readerTypographyRoles[name])), tuple, 'approved public role tuple changed: ' + name);
   }
   for (const [name, value] of Object.entries(entry.fontFamilies)) assert.equal(families[name], value, 'approved physical font binding changed: ' + name);
   const nativeFacts = approvedNativeCarrierFacts(source,entry.path);
   const native = normalizeApprovedTypographyLayout(source, entry, 'nativeDefaults', nativeFacts);
   assert.deepEqual(native,entry.nativeDefaults,'exact approved native AUTO carrier changed: '+entry.path);
-  if(entry.path===completionPath)assert.deepEqual(approvedNativeAllCarrierFacts(source,entry.path),entry.nativeActors,'exact completion text actor native attributes changed');
   const nativeKeys=new Set(nativeFacts.map(carrier=>JSON.stringify(carrier)));
   const keys = new Set(actualFacts.map(carrier => JSON.stringify(carrier)));
-  return { registered: true, entry, count: actual.length, hasNative: node=>nativeKeys.has(JSON.stringify(approvedNativeCarrierShape(node,approvedNativeOwner(source,entry.path,node.line)))), has: node => keys.has(JSON.stringify(typographyCarrierShape(node))) };
+  const nativeOwner = approvedNativeOwner(source, entry.path);
+  return { registered: true, entry, count: actual.length, hasNative: node=>nativeKeys.has(JSON.stringify(approvedNativeCarrierShape(node,nativeOwner(node.line)))), has: node => keys.has(JSON.stringify(typographyCarrierShape(node))) };
 }
 
 export const approvedNativeCarrierShape=(node,owner)=>JSON.parse(JSON.stringify({owner:owner??node.owner??'@module',method:node.method,kind:node.kind,text:node.text,inheritsTextStyle:node.inheritsTextStyle,attributes:node.attributes}));
 
 const sdk=resolveEtsLoaderRoot(),require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-function approvedNativeOwner(source,file,line){
+function approvedNativeOwner(source,file){
  const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
- const owner=tree.statements.filter(node=>ts.isStructDeclaration(node)||ts.isClassDeclaration(node)).find(node=>line>=tree.getLineAndCharacterOfPosition(node.getStart(tree)).line+1&&line<=tree.getLineAndCharacterOfPosition(node.end).line+1);
- return owner?.name?.getText(tree)??'@module';
+ // One current-source parse per audit, rather than reparsing the entire page
+ // for each native actor. Bounds are local to this call, never reused across
+ // changed-source negative controls or compiler options.
+ const owners=tree.statements.filter(node=>ts.isStructDeclaration(node)||ts.isClassDeclaration(node)).map(node=>({
+  start:tree.getLineAndCharacterOfPosition(node.getStart(tree)).line+1,
+  end:tree.getLineAndCharacterOfPosition(node.end).line+1,name:node.name?.getText(tree)??'@module'}));
+ return line=>owners.find(owner=>line>=owner.start&&line<=owner.end)?.name??'@module';
 }
-export function approvedNativeCarrierFacts(source,file){return auditNativeTextElements(source,file).filter(node=>Object.keys(node.modifiers).length===0).map(node=>approvedNativeCarrierShape(node,approvedNativeOwner(source,file,node.line)));}
-export function approvedNativeAllCarrierFacts(source,file){return auditNativeTextElements(source,file).map(node=>approvedNativeCarrierShape(node,approvedNativeOwner(source,file,node.line)));}
+export function approvedNativeCarrierFacts(source,file){const owner=approvedNativeOwner(source,file);return auditNativeTextElements(source,file).filter(node=>Object.keys(node.modifiers).length===0).map(node=>approvedNativeCarrierShape(node,owner(node.line)));}
+export function approvedNativeAllCarrierFacts(source,file){const owner=approvedNativeOwner(source,file);return auditNativeTextElements(source,file).map(node=>approvedNativeCarrierShape(node,owner(node.line)));}

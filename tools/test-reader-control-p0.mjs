@@ -51,7 +51,7 @@ function assertShellReduceMotionWiring(source) {
   return wiring;
 }
 
-const shell=read('entry/src/main/ets/features/shell/ReaderShell.ets');
+const shell=read('entry/src/main/ets/features/reading/ui/ReaderShell.ets');
 if(selectedCase==='shell-motion-owners'){
 for (const owner of assertShellReduceMotionWiring(shell)) {
   // Keep the old global count unchanged while breaking one real owner. The
@@ -82,7 +82,7 @@ function assertReadingVisibilityDelegation(candidate, scaffold) {
   assert.equal(visible[0].initializer.getText(tree),'this.visible','the actual reading owner supplies its current visible fact');
   assert.match(scaffold,/\.opacity\(this\.pageVisible \? 1 : 0\)/,'native shared root applies original visible/hidden opacity');
 }
-const scaffold=read('entry/src/main/ets/features/common/ReaderPageScaffold.ets');
+const scaffold=read('entry/src/main/ets/ui/layout/ReaderPageScaffold.ets');
 assertReadingVisibilityDelegation(shell,scaffold);
 const disconnectedVisibility=shell.replace('pageVisible: this.visible','pageVisible: false');
 assert.notEqual(disconnectedVisibility,shell);

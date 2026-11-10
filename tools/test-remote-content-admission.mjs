@@ -28,13 +28,13 @@ const {
   RemoteContentAdmission,
   RemoteReadingSourceError,
   verdictForFailureKind,
-} = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+} = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
 const {
   RemoteReadingFlowGateway,
-} = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+} = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const {
   RemoteReadingGatewayError,
-} = await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+} = await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
 
 const longRealBody = '山间的风掠过竹林，带来一阵沙沙的响声。'.repeat(30);
 
@@ -239,8 +239,8 @@ if(id==='image-admission'){
 }
 if(id==='cache-provenance'){
 {
-  const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+  const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
   const session = { identity: { sourceId: 'cache-source', bookId: 'cache-book' }, sourceVersion: 'v1',
     acquisitionMode: 'offline', detailUrl: '/book', tocUrl: '/toc', book: { title: '缓存书', author: '作者' },
     continuationVariables: [], hostRequirements: [], entries: [{ index: 0, title: '第一章', url: '/chapter', variables: [] }] };

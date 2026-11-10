@@ -10,16 +10,17 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { ReadingSessionFlowGateway } = await import('../../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { RemoteReadingFlowGateway } = await import('../../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { MangaAdmissionGateway } = await import('../../entry/src/main/ets/features/manga/MangaAdmissionGateway.ts');
-const content = await import('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+const { ReadingSessionFlowGateway } = await import('../../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { RemoteReadingFlowGateway } = await import('../../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { MangaAdmissionGateway } = await import('../../entry/src/main/ets/features/manga/application/MangaAdmissionGateway.ts');
+const mangaSwitch = await import('../../entry/src/main/ets/features/manga/application/MangaSourceSwitchGateway.ts');
+const content = await import('../../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
 const errors = await import('../../entry/src/main/ets/app/ErrorMessage.ts');
-const metadata = await import('../../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
-const searchTiming = await import('../../entry/src/main/ets/features/common/BookSearchTiming.ts');
-const acquisition = await import('../../entry/src/main/ets/features/common/BookAcquisitionPresentation.ts');
-const category = await import('../../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
-const providerFamily = await import('../../entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts');
+const metadata = await import('../../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
+const searchTiming = await import('../../entry/src/main/ets/app/library/BookSearchTiming.ts');
+const acquisition = await import('../../entry/src/main/ets/app/library/BookAcquisitionPresentation.ts');
+const category = await import('../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
+const providerFamily = await import('../../entry/src/main/ets/features/source/application/SourceSwitchProviderFamily.ts');
 const scheduler = await import('../../entry/src/main/ets/app/BookRequestScheduler.ts');
 const { ReaderWriteEvidence } = await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const repo=fileURLToPath(new URL('../../',import.meta.url)),siblingCore=resolve(repo,'../Reader-Core');
@@ -39,7 +40,7 @@ const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ..
 const require = createRequire(import.meta.url);
 const etsLoader = resolveEtsLoaderRoot();
 const ts = require(`${etsLoader}/node_modules/typescript`);
-const searchTree = ts.createSourceFile('SearchGateway.ts', read('features/search/SearchGateway.ts'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const searchTree = ts.createSourceFile('SearchGateway.ts', read('features/search/application/SearchGateway.ts'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 assert.equal(searchTree.parseDiagnostics.length, 0, 'production SearchGateway parses');
 const searchFunctions = new Map(searchTree.statements.filter(ts.isFunctionDeclaration).map(node => [node.name?.text, node]));
 const decoderNode = searchFunctions.get('decodeBookSearchResult');
@@ -59,11 +60,11 @@ const captureDecoderFunction = name => {
 captureDecoderFunction('decodeBookSearchResult');
 common.decodeBookSearchResult = compile([...decoderFunctions.values()].map(node => node.getText(searchTree)).join('\n'), 'decodeBookSearchResult', common);
 export const ReaderCoreRequestError = sdk.ReaderCoreRequestError;
-export const Gateway = compile(read('features/source/SourceSwitchGateway.ts'), 'SourceSwitchGateway', common);
+export const Gateway = compile(read('features/source/application/SourceSwitchGateway.ts'), 'SourceSwitchGateway', common);
 export const Core = compile(read('app/ReaderCoreGateway.ts'), 'ReaderCoreGateway', common);
-export const gatewayExports = compile(read('features/source/SourceSwitchGateway.ts'),
+export const gatewayExports = compile(read('features/source/application/SourceSwitchGateway.ts'),
   '{buildSourceSwitchCommitParams,sourceSwitchCandidateKey,sourceSwitchIsAlternative,sourceSwitchSourceCount,readBookSearchTiming,readSourceSwitchSearchTiming}', common);
-export const hostSource = read('features/source/SourceSwitchHost.ts');
+export const hostSource = read('features/source/application/SourceSwitchHost.ts');
 export const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a;reject=b; });return{promise,resolve,reject}; };
 export const settle = async () => { for(let i=0;i<50;i++) await Promise.resolve(); };
 export const origin = {sourceId:'old',bookId:'book',title:'Book',author:'Writer',addedAt:1,sortIndex:0};
@@ -91,10 +92,34 @@ export function fixture(options={},productionSource=hostSource) {
       failWrite(){disk.failWrites++;}
     }};
   const replaceReaderAtomicSnapshot=compile(read('app/ReaderAtomicSnapshotFile.ts'),'replaceReaderAtomicSnapshot',{fileIo});
-  const intentClasses=compile(read('features/source/SourceSwitchIntentStore.ts'),'{SourceSwitchIntentStore,SourceSwitchIntentRecoveryError}',
+  const intentClasses=compile(read('features/source/application/SourceSwitchIntentStore.ts'),'{SourceSwitchIntentStore,SourceSwitchIntentRecoveryError}',
     {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo,replaceReaderAtomicSnapshot});
-  const ProductionHost=compile(productionSource,'SourceSwitchHost',{...common,...gatewayExports,SourceSwitchGateway:Gateway,
-    ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,MangaAdmissionGateway,...content,ReaderWriteEvidence,...intentClasses});
+  const mangaDisk={published:undefined,durable:undefined};
+  const mangaFileIo={OpenMode:fileIo.OpenMode,
+    async readText(){if(mangaDisk.published===undefined)throw {code:13900002};return mangaDisk.published;},
+    async open(path){return {fd:path};},async close(){},
+    async fsync(fd){if(fd!=='/private-files')return;
+      if(options.mangaSyncGate)await options.mangaSyncGate.promise;
+      if(options.mangaSyncFailure)throw Error('intent directory fsync failed');
+      mangaDisk.durable=mangaDisk.published;},
+    AtomicFile:class {
+      startWrite(){return{on(){},end:(raw,_encoding,callback)=>{this.raw=raw;queueMicrotask(callback);}};}
+      finishWrite(){mangaDisk.published=this.raw;}
+      failWrite(){}
+    }};
+  let MangaSwitchRecoveryError;
+  const compileHost=()=>{
+    const mangaReplace=compile(read('app/ReaderAtomicSnapshotFile.ts'),'replaceReaderAtomicSnapshot',{fileIo:mangaFileIo});
+    const mangaIntentModule=compile(read('features/manga/application/MangaSourceSwitchIntents.ts'),'{MangaSourceSwitchIntents,MangaSwitchRecoveryError}',
+      {...common,...mangaSwitch,fileIo:mangaFileIo,replaceReaderAtomicSnapshot:mangaReplace,
+        util:{generateRandomUUID:()=>`00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`}});
+    MangaSwitchRecoveryError=mangaIntentModule.MangaSwitchRecoveryError;
+    const {MangaSourceSwitchIntents}=mangaIntentModule;
+    return compile(productionSource,'SourceSwitchHost',{...common,...gatewayExports,SourceSwitchGateway:Gateway,
+      ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,MangaAdmissionGateway,...content,
+      ReaderWriteEvidence,...intentClasses,MangaSourceSwitchIntents});
+  };
+  const ProductionHost=compileHost();
   const runtime={closed:false,getUIAbilityContext:()=>({filesDir:'/private-files'}), bookAcquisitions:()=>({sourceRegistryRevision:()=>1,
     subscribe(callback){subscriptions.add(callback);return()=>subscriptions.delete(callback);},
     async acquireBook(seed,admission){calls.push(['acquire',seed]);if(options.acquireGate)await options.acquireGate.promise;
@@ -165,7 +190,8 @@ export function fixture(options={},productionSource=hostSource) {
       if(effect.kind==='restoredForNextChoice')identity={sourceId:effect.book.sourceId,bookId:effect.book.bookId};
       if(options.throwObserver)throw Error('observer threw');}};
   if(options.open!==false)assert.equal(host.open(context,lease),true);
-  return{host,runtime,context,lease,calls,changes,effects,options,subscriptions,Constructor:ProductionHost,intentClasses,
+  return{host,runtime,context,lease,calls,changes,effects,options,subscriptions,Constructor:ProductionHost,intentClasses,MangaSwitchRecoveryError,
+    mangaDisk,coldMangaHost:()=>{mangaDisk.published=mangaDisk.durable;return new (compileHost())(runtime);},
     disk,setPhase:phase=>{transaction={...transaction,phase,...(phase==='rolledBack'?{restoredBook:origin}:{})};},
     retire:()=>{live=false;host.retire();},setIdentity:value=>{identity=value;},setRows:value=>{rows=value;},
     publish:change=>{for(const subscriber of subscriptions)subscriber(change);},pending:()=>pending,

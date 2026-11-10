@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
 
-const file=name=>new URL(`../../entry/src/main/ets/features/common/${name}.ets`,import.meta.url);
+const file=name=>new URL(`../../entry/src/main/ets/ui/surfaces/${name}.ets`,import.meta.url);
 export const menuSource=readFileSync(file('ReaderActionMenuSurface'),'utf8');
 const specSource=readFileSync(file('ReaderSurfaceSpecs'),'utf8');
 export const {resolvePopupSpec,resolveActionSheetSpec}=new Function('TextAlign','SOURCE_SWITCH_VISUAL',stripTypeScriptTypes(specSource)

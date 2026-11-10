@@ -18,16 +18,16 @@ registerHooks({
 });
 
 const { ReadingOfflineGateway } = await import(
-  '../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts'
+  '../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts'
 );
 const { RemoteReadingFlowGateway } = await import(
-  '../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts'
+  '../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts'
 );
 const {
   assertReadingOfflineWriteCapacity,
   ReadingOfflineMaterializationError,
 } = await import(
-  '../entry/src/main/ets/features/reading/ReadingOfflineContract.ts'
+  '../entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts'
 );
 
 const SOURCE_ID = 'offline-source';
@@ -425,8 +425,8 @@ if(id==='reading-consumers'){
 {
   const { fileURLToPath } = await import('node:url');
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-  const path=fileURLToPath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
+  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
+  const path=fileURLToPath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
   const Reading=productionMotionMethods(path,['readingTocEntries','adjacentChapterIndex','isKnownControlChapter',
     'requireKnownChapter','loadNextTtsChapter','knownPageTurnBoundary','isUnknownCatalogEdge','ttsChapterRef']);
   const groupSession={...session,entries:[

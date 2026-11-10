@@ -4,10 +4,10 @@ async function run(id){
 const { readFileSync }=await import("node:fs");
 const { productionMotionMethods }=await import("./lib/reader-motion-method-probe.mjs");
 const { createReaderBuilderProbe }=await import("./lib/reader-control-builder-probe.mjs");
-const { ReaderTtsAudioSessionLease }=await import("../entry/src/main/ets/app/ReaderTtsAudioSessionLease.ts");
-const choices=await import("../entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts");
-const state=await import("../entry/src/main/ets/features/reading/ReaderTtsState.ts");
-const { readerControlUnit }=await import("../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts");
+const { ReaderTtsAudioSessionLease }=await import("../entry/src/main/ets/platform/tts/ReaderTtsAudioSessionLease.ts");
+const choices=await import("../entry/src/main/ets/features/reading/presentation/ReaderTtsConfigOptions.ts");
+const state=await import("../entry/src/main/ets/features/reading/application/ReaderTtsState.ts");
+const { readerControlUnit }=await import("../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts");
 const file = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const ttsFile = file('reading/ReaderControlTtsContent.ets');
 const SliderChangeMode = { Begin: 0, Moving: 1, End: 2, Click: 3 };

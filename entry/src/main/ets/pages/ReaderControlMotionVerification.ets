@@ -8,16 +8,16 @@ import {
   dismissReaderControlSession, enterReaderControlModule, openReaderControlSession,
   readerControlContentLocation, sampleReaderControlSession, setReaderControlDirectoryTab,
   type ReaderControlSessionState,
-} from '../features/reading/ReaderControlSessionState';
-import { ReaderControlMotionStage } from '../features/reading/ReaderControlMotionStage';
+} from '../features/reading/ui/ReaderControlSessionState';
+import { ReaderControlMotionStage } from '../features/reading/ui/ReaderControlMotionStage';
 import { createReaderControlBackdropTouchState, reduceReaderControlBackdropTouch,
   type ReaderControlBackdropTouchState, type ReaderControlBackdropTouchEvent,
-  type ReaderControlBackdropRect } from '../features/reading/ReaderControlBackdropTouch';
+  type ReaderControlBackdropRect } from '../features/reading/ui/ReaderControlBackdropTouch';
 import { readerControlMotionBounds, sampleReaderControlMotionComposition, sampleReaderControlWholeVisibility, type ReaderControlMotionFrame,
-  type ReaderControlVisibilityActor } from '../features/reading/ReaderControlMotionGeometry';
-import { FullDirectoryPanel } from '../features/reading/FullDirectoryPanel';
-import { ReaderControlAppearanceContent } from '../features/reading/ReaderControlAppearanceContent';
-import type { LocalReadingTocEntry } from '../features/reading/LocalReadingFlowGateway';
+  type ReaderControlVisibilityActor } from '../features/reading/ui/ReaderControlMotionGeometry';
+import { FullDirectoryPanel } from '../features/reading/ui/FullDirectoryPanel';
+import { ReaderControlAppearanceContent } from '../features/reading/ui/ReaderControlAppearanceContent';
+import type { LocalReadingTocEntry } from '../features/reading/application/LocalReadingFlowGateway';
 
 function probeEntries(): LocalReadingTocEntry[] {
   const entries: LocalReadingTocEntry[] = [];

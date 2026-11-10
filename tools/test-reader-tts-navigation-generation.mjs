@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-const Model=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts',import.meta.url),['seek','skipToAdjacent']);
+const Model=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts',import.meta.url),['seek','skipToAdjacent']);
 function fixture(){
  const queue=[],published=[],spoken=[],core=[];
  let index=2;

@@ -1,16 +1,16 @@
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from './ReaderWindowCoordinator';
-import { ReaderAppearanceStore } from '../features/reading/ReaderAppearanceStore';
+import { ReaderAppearanceStore } from '../features/reading/application/ReaderAppearanceStore';
 import {
   appearanceThemeSelection, applyAppearanceThemeSelection, changeAppearanceThemeSelection,
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
-} from '../features/reading/ReaderAppearanceState';
+} from '../features/reading/application/ReaderAppearanceState';
 import {
   effectiveAppScheme, encodeReaderThemeSelection, restoreReaderThemeSelection,
   type ReaderThemeSelectionBackup,
-} from '../features/common/ReaderThemeSelection';
-import { readerAppColor, readerThemeDefinition, type ReaderThemeScheme, type ReaderAppThemeMode } from '../features/common/ReaderThemeRegistry';
+} from './ReaderThemeSelection';
+import { readerAppColor, readerThemeDefinition, type ReaderThemeScheme, type ReaderAppThemeMode } from '../ui/foundation/ReaderThemeRegistry';
 
 /** One platform publisher. Rendering consumers never write a second theme preference. */
 export class ReaderThemeHost {

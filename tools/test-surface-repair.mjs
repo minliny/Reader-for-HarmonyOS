@@ -2,22 +2,21 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions={"mode-store": {"description": "实际本地mode键/迁移/flush失败与credential存取隔离及restore operationID", "resources": []}, "import-navigation": {"description": "实际Index+Bookshelf owner导入后导航失效不发布", "resources": []}, "import-picker": {"description": "实际Index picker mutex/旧选择释放/取消仍是fileSelection", "resources": []}, "import-reopen": {"description": "实际Index同路由close/reopen拒绝旧导入结果", "resources": []}, "import-runtime": {"description": "实际Index拒绝旧runtime导入完成", "resources": []}, "projections": {"description": "当前书架来源/分组/章节/进度业务投影", "resources": []}, "result-layout": {"description": "实际localImportResultLayout对给定host预算有界/compact", "resources": []}, "spinner": {"description": "实际SearchSpinner前台/active/reduceMotion动画接纳", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
-const {projectionIndexMethods} = await import('./lib/bookshelf-projection-owner-probe.mjs');
-const {actualBookshelfOperationTypes,actualBookshelfHostField,bookshelfOperationClass} = await import('./lib/bookshelf-operation-owner-probe.mjs');
+const {actualBookshelfOperationTypes,bookshelfOperationClass} = await import('./lib/bookshelf-operation-owner-probe.mjs');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {ReaderWriteEvidence} = await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const { randomUUID } = await import('node:crypto');
 const {actualModeHost,readerRecoveryView} = await import('./lib/bookshelf-view-mode-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
-const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
-const { localImportResultLayout } = await import('../entry/src/main/ets/features/bookshelf/LocalImportLayout.ts');
+const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+const { localImportResultLayout } = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportLayout.ts');
 
 const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
 const configIntentFixture=selectedCase==='mode-store'?(await import('./lib/sync-config-intent-fixture.mjs')).configIntentFixture:undefined;
-const Store=selectedProductionMethods(path('features/sync/WebDavCredentialStore.ts'),'WebDavCredentialStore',[
+const Store=selectedProductionMethods(path('features/sync/application/WebDavCredentialStore.ts'),'WebDavCredentialStore',[
  'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','validateRestoreJournal','validateSaveOperationId'],
  {util:{generateRandomUUID:()=>randomUUID()},LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 function fixture(initial={},legacy=null){
@@ -67,36 +66,34 @@ const owner={};let currentOwner=owner,picks=[],imports=[],released=[],applied=[]
 const Runtime=runtimeOwnerIdentityProbe(()=>currentOwner);
 class Gateway {selectLocalBookInputs(){const d=deferred();picks.push(d);return d.promise;} importPreparedSelections(){const d=deferred();imports.push(d);return d.promise;}async releaseUnusedSelections(x){released.push(x);}}
 const operationTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime,BookshelfFlowGateway:Gateway,projectPersistedReceipt,ReaderWriteEvidence});
-const Index=selectedProductionMethods(path('pages/Index.ets'),'Index',[...projectionIndexMethods,'beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite',
- 'hasVisibleImportDialog','visibleImportDialogState','visibleImportBatch','currentImportPresentation','reconcileImportPresentation'], {ReaderRuntimeOwner:Runtime});
+const {currentMutationFixture}=await import('./lib/bookshelf-mutation-current-owner-probe.mjs');
 async function index(){const actual=await removalFixture();roots.push(actual.root);currentOwner=actual.runtime;actual.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);
  const actualTypes=actualBookshelfOperationTypes({...actual,ReaderRuntimeOwner:Runtime,BookshelfManagementIntentStore:actual.Store,BookshelfRemovalGateway:actual.BookshelfRemovalGateway,BookshelfFlowGateway:Gateway,projectPersistedReceipt,ReaderWriteEvidence});
- let serialized='';const page=Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,shelfReceiptRetired:false,
- mountedRuntimeOwner:currentOwner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,bookshelfViewState:{anchorKey:'',anchorOffset:0},searchHost:{sources:()=>[],updateShelf(){}},sourceSources:[],sourceToolsSnapshot:{sources:[]},scheduleBookshelfBackgroundRefresh(){},preparePersistedShelfBooks(){},bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},storedImportPresentation:'',shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',
- applyBookshelfState:x=>applied.push(x)});
- page.bookshelfHost=actualBookshelfHostField(page,actualTypes.Host,{setOrCreate:(_k,value)=>{serialized=value;presented.push(value?JSON.parse(value):undefined);}});
- page.reconcileImportPresentation();await until(()=>!page.bookshelfHost.operations(currentOwner).current().reconcileBusy);page.openImportDialog();return page;}
+ const f=currentMutationFixture(currentOwner,{...actual,...actualTypes,ReaderRuntimeOwner:Runtime,BookshelfFlowGateway:Gateway});
+ const accept=f.index.shelfMutations.scope.apply;f.index.shelfMutations.scope.apply=value=>{applied.push(value);return accept(value);};
+ const publish=f.storage.setOrCreate;f.storage.setOrCreate=(key,value)=>{publish(key,value);if(key==='reader.bookshelf.import.presentation.v1')presented.push(value?JSON.parse(value):undefined);};
+ await until(()=>!f.operation().current().reconcileBusy);f.mutations.openImport();return f;}
 const outcome=(batch,shelf)=>{const projection=projectPersistedReceipt({confirmation:'confirmed',readback:'succeeded',value:shelf});return{batch,shelf,readback:projection.receipt,operation:projection.facts};};
 const batch={state:'completed',items:[{fileName:'a',state:'success'}],imported:1,failed:0};
 if(selectedCase==='import-navigation'){
- const i=await index();const before=picks.length,work=i.beginImport();await i.beginImport();await until(()=>picks.length===before+1);assert.equal(picks.length,1,'pickerOpening prevents duplicate picker');
- picks.at(-1).resolve([{state:'ready'}]);await settle();i.route='reading';i.navigationGeneration++;
- imports.at(-1).resolve(outcome(batch,'committed'));await work;
- assert.equal(applied.length,0,'navigation during import cannot use an old bool');assert.equal(i.bookshelfLoadGeneration,1);
+ const i=await index();const before=picks.length,work=i.selectImport();await i.selectImport();await until(()=>picks.length===before+1);assert.equal(picks.length,1,'pickerOpening prevents duplicate picker');
+ picks.at(-1).resolve([{state:'ready'}]);await settle();const readGeneration=i.read.snapshot.generation;i.show('reading');i.advance();
+ imports.at(-1).resolve(outcome(batch,{kind:'empty',shelf:{books:[],total:0}}));await work;
+ assert.equal(applied.length,0,'navigation during import cannot use an old bool');assert.equal(i.read.snapshot.generation,readGeneration+1,'accepted receipt invalidates exactly once without publishing stale content');
 }
 if(selectedCase==='import-picker'){
- const i=await index();const before=picks.length,old=i.beginImport();await until(()=>picks.length===before+1);i.closeImportDialog();i.openImportDialog();const count=picks.length;await i.beginImport();assert.equal(picks.length,count,'closing picker retains accepted mutex');
+ const i=await index();const before=picks.length,old=i.selectImport();await until(()=>picks.length===before+1);i.mutations.closeImport();i.mutations.openImport();const count=picks.length;await i.selectImport();assert.equal(picks.length,count,'closing picker retains accepted mutex');
  picks.at(-1).resolve([{state:'ready'}]);await old;assert.equal(released.length,1,'unused stale picker resources released');
- const countBefore=picks.length,fresh=i.beginImport();await until(()=>picks.length===countBefore+1);picks.at(-1).resolve([]);await fresh;assert.equal(presented.at(-1).state,'fileSelection','picker cancellation is not a result');
+ const countBefore=picks.length,fresh=i.selectImport();await until(()=>picks.length===countBefore+1);picks.at(-1).resolve([]);await fresh;assert.equal(presented.at(-1).state,'fileSelection','picker cancellation is not a result');
 }
 if(selectedCase==='import-reopen'){
- const i=await index();const before=picks.length,work=i.beginImport();await until(()=>picks.length===before+1);picks.at(-1).resolve([{state:'ready'}]);await settle();
- i.closeImportDialog();i.openImportDialog();imports.at(-1).resolve(outcome(batch,'old'));await work;
+ const i=await index();const before=picks.length,work=i.selectImport();await until(()=>picks.length===before+1);picks.at(-1).resolve([{state:'ready'}]);await settle();
+ i.mutations.closeImport();i.mutations.openImport();imports.at(-1).resolve(outcome(batch,{kind:'empty',shelf:{books:[],total:0}}));await work;
  assert.equal(applied.length,0,'same-route close/reopen revokes old result');assert.equal(presented.at(-1).state,'fileSelection');
 }
 if(selectedCase==='import-runtime'){
- const i=await index();const before=picks.length,work=i.beginImport();await until(()=>picks.length===before+1);picks.at(-1).resolve([{state:'ready'}]);await settle();
- currentOwner={};imports.at(-1).resolve(outcome(batch,'old-runtime'));await work;assert.equal(applied.length,0);currentOwner=owner;
+ const i=await index();const before=picks.length,work=i.selectImport();await until(()=>picks.length===before+1);picks.at(-1).resolve([{state:'ready'}]);await settle();
+ currentOwner={};imports.at(-1).resolve(outcome(batch,{kind:'empty',shelf:{books:[],total:0}}));await work;assert.equal(applied.length,0);currentOwner=owner;
 }
 completed=true;}finally{const {rm}=await import('node:fs/promises');if(completed){for(const root of roots)await rm(root,{recursive:true,force:true});}else console.error(JSON.stringify({kind:'retained-fixture-roots',roots}));}
 }
@@ -112,7 +109,7 @@ assert.equal(ShelfBookPresentation.progress(books[1]),'已读 <1%');
 if(selectedCase==='result-layout')for(const items of [0,61,122,427,3050]){const l=localImportResultLayout(500,62,68,76,items);assert.ok(l.height<=500&&l.listHeight>=0);}
 if(selectedCase==='result-layout'){assert.equal(localImportResultLayout(140,62,68,76,300).compact,true);assert.equal(localImportResultLayout(0,62,68,76,300).listHeight,0);}
 if(selectedCase==='spinner'){
-const Spinner=selectedProductionMethods(path('features/search/SearchSpinner.ets'),'SearchSpinner',['shouldAnimate']);
+const Spinner=selectedProductionMethods(path('features/search/ui/SearchSpinner.ets'),'SearchSpinner',['shouldAnimate']);
 const spin=Object.assign(new Spinner(),{active:true,foreground:true,reduceMotion:false});
 assert.equal(spin.shouldAnimate(),true,'the restored platform indicator animates only while needed');
 spin.foreground=false;assert.equal(spin.shouldAnimate(),false);

@@ -13,7 +13,7 @@
 |---|---|---|---|
 | 设计 token | 设计稿 | 颜色、圆角、24 图标、44 触控下限 | 可直接使用；不得直接充当会随内容/字号变化的高度 |
 | 环境推导 | 窗口事实 + resolver | 内容框、安全区、顶栏高度、弹窗最大高度 | 必须经 `ReaderPageGeometry` 或 `ReaderSurfaceResolvers` |
-| 内容实测 | 原生测量 | header/footer/dock/sheet 高度 | 只能经 `ReaderMeasurementStore` 写入，带 generation |
+| 内容实测 | 原生测量 | header/footer/dock/sheet 高度、组件 border box | 页面占位经 `ReaderMeasurementStore` 采纳，带 generation；组件局部外框由原 owner 保留一份带身份的已解析形状 |
 | 状态推导 | 页面状态机 | 展开/收起、管理态、选择态 | 状态 → 几何；不得为两个状态各写一套常量 |
 | 动效 | `MotionSpec` / `ReaderMotionPolicy` | 时长、曲线、actor 端点、reduceMotion | 时长/曲线必须登记；actor 端点随条目登记；控制栏端点由 `ReaderControlMotionGeometry` 空间采样拥有 |
 
@@ -63,8 +63,8 @@ key 采用 `<route>:<surface>`，例如 `search:header`、`download:dock`、`she
 - `readerScaledBarHeight(base, lineHeight, fontScale, paddingY)`：固定顶栏改为 `minHeight`；
 - `readerScaledControlHeight(baseHeight, lineHeight, fontScale)`：按钮、表单、选择行、弹窗动作行、菜单行共享同一高度增长公式；
 - `readerAvailableWindowHeight(metrics, pageHeight)`；
-- `readerSurfaceMaxHeight(available, reserved, minimum)`；
-- `readerDynamicSurfaceWidth(max, available, minimum)`。
+- `readerSurfaceMaxHeight(available, reserved)`，结果不得超过扣除保留空间后的可用高度；
+- `readerDynamicSurfaceWidth(max, available)`，结果不得超过设计上限和可用宽度。内容最小空间与硬边界冲突时，由该组件的既定重排、滚动或替代承载合同处理，不通过这些尺寸函数返回越界结果。
 
 `ReaderButton`、`ReaderFormField`、`ReaderChoiceRow`、`ReaderDialogSurface`、`ReaderActionMenuSurface`、`ReaderBoundedSurfaceActions` 全部消费 `readerScaledControlHeight`；`PopupSurfaceSpec.actionHeightFor/expandedHeightFor/collapsedHeightFor` 让书架更多菜单等派生面板随字体缩放。弹窗、面板、菜单、表单在内容或字体放大时使用最大高度 + 内部滚动，不裁剪整块内容。
 

@@ -1,24 +1,22 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
-import * as readerControlState from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import * as readerControlHost from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
-import * as readerControlKeyboard from '../entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts';
-import * as readerTiming from '../entry/src/main/ets/features/common/ProductMotionTiming.ts';
-import * as readerRapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-import * as readerAuto from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
+import { searchReadingJourneyFixture } from './lib/search-reading-journey-owner-probe.mjs';
+import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
+import * as readerControlState from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
+import * as readerControlHost from '../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
+import * as readerControlKeyboard from '../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts';
+import * as readerTiming from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import * as readerRapid from '../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
+import * as readerAuto from '../entry/src/main/ets/features/reading/ui/ReaderAutoPageState.ts';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
-const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
-const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const {captureRemotePositionContext}=await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
-const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+
+const { readerControlMotionMs } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts');
 
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
 const sdk = resolveEtsLoaderRoot();
@@ -36,18 +34,15 @@ function method(signature) {
   return member.getText(indexTree);
 }
 const methodNames = [
-  'installRemoteReadingSession(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
-  'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
-  'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
-  'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(', 'currentReaderPresentationIdentity(',
-  'getReadingEntryHost(', 'readingEntryLease(', 'applyReadingEntrySnapshot(', 'bindReadingEntryReader(', 'retireReadingEntryPresentation(', 'chooseCachedChapterRefresh(', 'showIndexAlert(',
-  'consumeSystemFileOpen(', 'retireSourceSwitchPresentation(', 'retireRssPresentation(', 'retireRssEditorPresentation(', 'retireBookshelfCatalogPresentation(',
-  'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
-  'openDetailSourceSwitch(',
-  'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
-  ...(source.includes('  private cancelReaderExitDestination(') ? ['cancelReaderExitDestination('] : []),
+  'onBackPress', 'dispatchBackDestination', 'cancelShelfReadingPreparation', 'requestReadingExit',
+  'registerReadingExitRequest', 'onReaderExited', 'cancelReaderExitDestination', 'requestReaderBookInfo',
+  'retainedReaderPorts', 'directoryNavigationPorts',
 ];
-for (const signature of [...methodNames, 'onBackPress(']) method(signature);
+for (const name of methodNames) method(name + '(');
+const IndexWiring = selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
+  'Index', methodNames);
+const ReaderReturn = selectedProductionMethods(new URL('../entry/src/main/ets/app/composition/ReaderDownloadJourney.ets', import.meta.url),
+  'ReaderDownloadJourney', ['restoreReaderReturn']);
 const deferred = () => {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -87,193 +82,185 @@ function create(remote = false) {
   };
   const Entry=compileHost(undefined,{ReaderRuntimeOwner:runtimeAuthority,LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,
     ReaderCoreGateway:class {loadShelfBook(){return Promise.resolve(book);}},SourceGateway:class {loadSources(){return Promise.resolve([{sourceId:'source',category:'novel'}]);}}});
-  const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
-  const Harness = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-    [...methodNames.map(signature => signature.replace(/^async /, '').replace(/\($/, '')), 'onBackPress'], {
-      resolveBookshelfBook, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: runtimeAuthority,
-      LocalReadingFlowGateway: LocalGateway, RemoteReadingFlowGateway: RemoteGateway,
-      ReadingOfflineGateway: class {}, ReaderCoreGateway: class { loadShelfBook() { return Promise.resolve(book); } },
-      SourceGateway: class { loadSources() { return Promise.resolve([{ sourceId: 'source', category: 'novel' }]); } },
-      RemoteDetailAdmission: class { constructor(value) { this.session = value; } },
-      hilog: { info() {}, warn() {}, error() {} }, DOMAIN: 0,
-      readerSourceCategoryIsText: () => true, readerSourceCategoryLabel: () => '小说',
-      ReadingEntryHost: Entry, EMPTY_READABLE_ADMISSION: emptyAdmission,
-      remoteReadingFailureKindOf: error => error.kind ?? 'NETWORK_FAILED', verdictForFailureKind: () => 'networkFailed',
-      isRemoteSourceFailureKind: kind => kind === 'NETWORK_FAILED', remoteSourceFailureSummary: () => '网络请求失败',
-      RemoteReadingGatewayError: class extends Error {}, remoteReadingFailureRecord: () => ({}), searchCandidateRank,
-      ...readingEvidence, captureRemotePositionContext, RemoteChapterCacheRefreshError,
-    });
-  const h = new Harness(), routes = [], alerts = [];
-  h.nativeAlertOwner = new ReaderNativeAlertOwner();
-  let route = 'bookshelf';
-  Object.defineProperty(h, 'route', { get: () => route, set: value => { routes.push(value); route = value; } });
-  Object.assign(h, {
-    mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
-    detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,
-    remoteSessionGeneration:0,remoteContentProbeGeneration:0,readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
-    readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
-    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] }, visibilityChanged() {}, close() {}, resume() {} }, searchPublicationRevision:0,
-    remoteCatalogRefreshAt: new Map(), offlineMutationGeneration: 0, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false},
-    bookshelfRemovalGeneration: 0, bookshelfLoadGeneration: 0,
-    sourceSwitchVisible: false, remoteContentVerdict: 'readable',
-    sourceDisplayName: () => 'Test source', readingDetailForShelf: value => ({ ...value }),
-    readingDetailForRemoteSeed: value => ({ ...value }), hasDeclaredCoverUrl: () => true,
-    loadRemoteDirectoryProjection: async () => entries,
-    refreshDetailAcquisitionProjection: async () => {},
-    refreshBookshelf() {}, resetSearchDetailWarmups() {}, hasVisibleImportDialog: () => false,
-    startSourceDiscovery() {}, showReadingFailure: (title, message) => alerts.push({ title, message }),
-    getUIContext: () => ({ showAlertDialog: dialog => alerts.push(dialog) }),
+  const routes = [], alerts = [];
+  const x = searchReadingJourneyFixture({runtime,ReadingHost:Entry,route:'bookshelf',shelfBooks:[book],
+    sourceName:()=> 'Test source',loadLocal:async()=>book,failure:(title,message)=>alerts.push({title,message})});
+  const returnOwner=Object.assign(new ReaderReturn(),{navigation:x.navigation,ports:{runtime:()=>runtime,
+    downloads:()=>assert.fail('download return view outside this shelf fixture')}});
+  x.actions.ports.restoreReaderReturn=context=>returnOwner.restoreReaderReturn(context);
+  const show = x.navigation.show.bind(x.navigation);
+  x.navigation.show = route => { routes.push(route); return show(route); };
+  const wiring = Object.assign(new IndexWiring(), {
+    currentReadingRuntime:()=>runtime,navigationOwner:x.navigation,readingEntry:x.entry,
+    readingEntryActions:x.actions,readingExitActions:x.exit,libraryJourney:x.journey,
+    mangaSourceSwitch:{selectionVisible:false},bookRemovalConfirmation:{isOpen:()=>false},
+    jsonImportPresentation:{opening:undefined},sourceSwitchPresentation:x.source,sourceSwitchActions:{},
+    shelfMutations:{snapshot:{}},shelfGroupPresentation:{back:()=>false},shelfMotion:{pendingExitId:-1},
+    directoryJourney:{operations:{},navigationPorts:()=>({})},
   });
-  return { h, book, session, toc, catalog, body, entries, probes, progressReads, routes, alerts };
+  Object.defineProperty(wiring,'route',{get:()=>x.navigation.snapshot().route});
+  const registerExit = request => {
+    const identity=x.entry.readerPresentationIdentity();
+    return x.exit.attach(request,identity,()=>x.entry.sessionActive&&x.entry.readerPresentationIdentity()===identity);
+  };
+  return { ...x, wiring, registerExit, runtime, book, session, toc, catalog, body, entries, probes, progressReads, routes, alerts };
 }
 
 // Exercise the actual shelf dispatcher and the original reading component.
-function resumeAcquisition(h, book) {
- h.openShelfBook(book);
+function resumeAcquisition(t, book) {
+ t.actions.resumeShelf(book);
+ // The ordinary native reader mounting boundary supplies an exit registration.
+ // The complete production LRE exit protocol is exercised below separately.
+ t.registerExit(()=>t.exit.accepted(t.entry.readerPresentationIdentity()));
 }
 for (const remote of [false, true]) {
-  const t = create(remote), { h } = t;
+  const t = create(remote), h = t;
   resumeAcquisition(h,t.book);
-  assert.equal(h.route, 'reading');
-  assert.equal(h.shelfReadingPreparation, false);
-  assert.equal(h.readingSessionActive, true, 'both local and remote books mount before acquisition');
+  assert.equal(h.navigation.snapshot().route, 'reading');
+  assert.equal(h.actions.shelfPreparing, false);
+  assert.equal(h.entry.sessionActive, true, 'both local and remote books mount before acquisition');
   if (remote) {
     t.catalog.resolve(t.session);
     await settle();
-    assert.equal(h.readingSessionActive, true, 'the reader can restore progress and load its body as soon as the catalog is admitted');
-    assert.equal(h.route, 'reading', 'catalog completion does not route through detail');
+    assert.equal(h.entry.sessionActive, true, 'the reader can restore progress and load its body as soon as the catalog is admitted');
+    assert.equal(h.navigation.snapshot().route, 'reading', 'catalog completion does not route through detail');
     assert.deepEqual(t.probes, [], 'the parent must not duplicate the reader progress/body read');
     assert.deepEqual(t.progressReads, [], 'Core progress restoration belongs to the reader, once');
   } else {
     t.toc.resolve({ entries: t.entries });
   }
   await settle();
-  assert.equal(h.readingSessionActive, true);
-  assert.equal(h.route, 'reading', 'loading and errors belong to the mounted reader');
-  assert.equal(h.requestedChapterIndex, undefined, 'preserve the persisted offset');
-  h.presentPreparedReading(7);
-  assert.equal(h.route, 'reading');
-  if (remote) assert.equal(h.remoteContentVerdict, 'readable', 'real first-page admission also updates the retained detail verdict');
-  h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));
-  assert.equal(h.route, 'bookshelf', 'reader back follows the shelf origin');
-  assert.equal(h.readingSessionActive, false);
+  assert.equal(h.entry.sessionActive, true);
+  assert.equal(h.navigation.snapshot().route, 'reading', 'loading and errors belong to the mounted reader');
+  assert.equal(h.entry.requestedChapterIndex, undefined, 'preserve the persisted offset');
+  h.actions.presentPreparedReading(7);
+  assert.equal(h.navigation.snapshot().route, 'reading');
+  if (remote) assert.equal(h.entry.verdict, 'readable', 'real first-page admission also updates the retained detail verdict');
+  h.exit.accepted(h.entry.readerPresentationIdentity());
+  assert.equal(h.navigation.snapshot().route, 'bookshelf', 'reader back follows the shelf origin');
+  assert.equal(h.entry.sessionActive, false);
   assert.ok(!t.routes.includes('detail'), 'no transient detail route anywhere in the shelf journey');
 }
 
 for (const remote of [false, true]) {
   const t = create(remote);
-  t.h.openShelfBookInfo(t.book);
+  t.actions.openShelfEntry(t.book,'info');
   t.toc.resolve({ entries: t.entries });
   t.catalog.resolve(t.session);
   t.body.resolve('body');
   await settle();
-  assert.equal(t.h.route, 'detail');
-  assert.equal(t.h.readingSessionActive, false, 'long-press info must not automatically read');
-  t.h.openReading(undefined);
-  t.h.presentPreparedReading(7);
-  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
-  assert.equal(t.h.route, 'detail', 'explicit detail entry returns to detail');
+  assert.equal(t.navigation.snapshot().route, 'detail');
+  assert.equal(t.entry.sessionActive, false, 'long-press info must not automatically read');
+  t.actions.openReading(undefined);
+  t.actions.presentPreparedReading(7);
+  t.exit.accepted(t.entry.readerPresentationIdentity());
+  assert.equal(t.navigation.snapshot().route, 'detail', 'explicit detail entry returns to detail');
 }
 
 {
   const t = create(true);
-  t.h.route = 'search';
+  t.navigation.show('search');
   // Exercise the actual search dispatcher: it supplies the exact durable shelf
   // snapshot. Calling its lower-level detail entry without that snapshot would
   // model a new-book trial instead of this persisted-book journey.
-  t.h.onSearchResultSelected({...t.book,sourceName:'Test source',variables:[]},
+  t.journey.selectResult({...t.book,sourceName:'Test source',variables:[]},
     [{...t.book,sourceId:'alternative',sourceName:'Another source',variables:[]}]);
   t.catalog.resolve(t.session); t.body.resolve('body');
   await settle();
-  assert.equal(t.h.route, 'detail');
-  assert.equal(t.h.detailReturnRoute, 'search');
-  assert.equal(t.h.readingSessionActive, false, 'search result remains a preview even for a shelf book');
+  assert.equal(t.navigation.snapshot().route, 'detail');
+  assert.equal(t.navigation.returns.snapshot().detailParent, 'search');
+  assert.equal(t.entry.sessionActive, false, 'search result remains a preview even for a shelf book');
 }
 
 for (const remote of [false, true]) {
   const t = create(remote);
-  resumeAcquisition(t.h,t.book);
-  assert.equal(t.h.onBackPress(), true);
+  resumeAcquisition(t,t.book);
+  assert.equal(t.wiring.onBackPress(), true);
   t.toc.resolve({ entries: t.entries }); t.catalog.resolve(t.session); t.body.resolve('body');
   await settle();
-  assert.equal(t.h.route, 'bookshelf');
-  assert.equal(t.h.readingSessionActive, false, 'late admission cannot revive a cancelled entry');
-  assert.equal(t.h.shelfReadingPreparation, false);
+  assert.equal(t.navigation.snapshot().route, 'bookshelf');
+  assert.equal(t.entry.sessionActive, false, 'late admission cannot revive a cancelled entry');
+  assert.equal(t.actions.shelfPreparing, false);
 }
 
 {
   const t = create();
-  resumeAcquisition(t.h,t.book); t.toc.resolve({ entries: t.entries }); await settle();
+  resumeAcquisition(t,t.book); t.toc.resolve({ entries: t.entries }); await settle();
   let exits = 0;
-  t.h.readingExitRequest = () => { exits++; };
-  assert.equal(t.h.onBackPress(), true);
-  t.h.presentPreparedReading(7);
-  assert.equal(t.h.route, 'reading', 'Back waits for the mounted reader exit transaction');
+  t.registerExit(() => { exits++; });
+  assert.equal(t.wiring.onBackPress(), true);
+  t.actions.presentPreparedReading(7);
+  assert.equal(t.navigation.snapshot().route, 'reading', 'Back waits for the mounted reader exit transaction');
   assert.equal(exits, 1);
-  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
-  assert.equal(t.h.readingSessionActive, false);
+  t.exit.accepted(t.entry.readerPresentationIdentity());
+  assert.equal(t.entry.sessionActive, false);
 }
 
 {
   const t = create();
-  resumeAcquisition(t.h,t.book);
-  t.h.nextNavigationGeneration(); t.h.route = 'search';
-  t.h.readingSessionActive = false;
+  resumeAcquisition(t,t.book);
+  t.entry.retire();t.actions.retirePreparation();t.navigation.advance(); t.navigation.show('search');
+  t.entry.endReading();
   t.toc.resolve({ entries: t.entries }); await settle();
-  assert.equal(t.h.route, 'search');
-  assert.equal(t.h.readingSessionActive, false, 'navigation invalidates delayed entry');
+  assert.equal(t.navigation.snapshot().route, 'search');
+  assert.equal(t.entry.sessionActive, false, 'navigation invalidates delayed entry');
 }
 
 for (const remote of [false, true]) {
   const t = create(remote);
-  resumeAcquisition(t.h,t.book);
-  t.h.onReadingFailure(t.book.sourceId, t.book.bookId, 'source acquisition failed', 'SOURCE_HTTP_FAILED');
+  resumeAcquisition(t,t.book);
+  t.entry.projectReaderFailure(t.book.sourceId, t.book.bookId, 'source acquisition failed', 'SOURCE_HTTP_FAILED');
   await settle();
-  assert.equal(t.h.route, 'reading');
-  assert.equal(t.h.shelfReadingPreparation, false);
-  assert.equal(t.h.readingSessionActive, true);
+  assert.equal(t.navigation.snapshot().route, 'reading');
+  assert.equal(t.actions.shelfPreparing, false);
+  assert.equal(t.entry.sessionActive, true);
   assert.equal(t.alerts.length, 0, 'the mounted reader owns the error and recovery actions');
 }
 
 {
-  const t = create(true), { h } = t;
+  const t = create(true), h = t;
   resumeAcquisition(h,t.book);
-  h.onReadingFailure('source', 'book', 'offline', 'SOURCE_HTTP_FAILED');
-  assert.equal(h.route, 'reading');
-  assert.equal(h.readingSessionActive, true);
+  h.entry.projectReaderFailure('source', 'book', 'offline', 'SOURCE_HTTP_FAILED');
+  assert.equal(h.navigation.snapshot().route, 'reading');
+  assert.equal(h.entry.sessionActive, true);
   assert.deepEqual(t.alerts, [], 'source errors stay in the reader; no old exit/dialog action may own navigation');
-  h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));
-  assert.equal(h.route, 'bookshelf');
-  assert.equal(h.readingSessionActive, false);
+  h.exit.accepted(h.entry.readerPresentationIdentity());
+  assert.equal(h.navigation.snapshot().route, 'bookshelf');
+  assert.equal(h.entry.sessionActive, false);
 }
 
-console.log('bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)');
+console.log('bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure)');
 
 // A reader mount never borrows a shelf projection's chapter index or performs
 // the old parent cache-refresh admission. Actual retry/migration callbacks are
 // exercised in test-reader-recoverable-entry and the position suites.
 for (const snapshot of [undefined, true]) {
-  const t = create(true), { h } = t;
-  h.openRemoteBookDetail(t.book, 'Test source', snapshot ? t.book : undefined, true);
-  assert.equal(h.route, 'reading');
-  assert.equal(h.readingSessionActive, true);
-  assert.equal(h.requestedChapterIndex, undefined, 'Core progress restores the saved offset inside the reader');
+  const t = create(true), h = t;
+  h.actions.openRemoteDetail({seed:t.book,sourceName:'Test source',shelfSnapshot:snapshot ? t.book : undefined,resumeImmediately:true});
+  assert.equal(h.navigation.snapshot().route, 'reading');
+  assert.equal(h.entry.sessionActive, true);
+  assert.equal(h.entry.requestedChapterIndex, undefined, 'Core progress restores the saved offset inside the reader');
   assert.deepEqual(t.probes, []);
   assert.deepEqual(t.progressReads, []);
 }
 
 {
- const t=create(true),h=t.h;resumeAcquisition(h,t.book);t.catalog.resolve(t.session);t.body.resolve('body');await settle();
- const session=h.remoteReadingSession,toc=h.detailToc;let exits=0;h.readingExitRequest=()=>{exits++;};
- h.requestReaderBookInfo();assert.equal(exits,1);assert.equal(h.readingSessionActive,true,'information waits for normal serialized exit');
- h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));assert.equal(h.route,'detail');assert.equal(h.detailReturnRoute,'bookshelf');
- assert.equal(h.remoteReadingSession,session);assert.equal(h.detailToc,toc,'information reuses exact admitted directory');
+ const t=create(true),h=t;resumeAcquisition(h,t.book);t.catalog.resolve(t.session);t.body.resolve('body');await settle();
+ const session=h.entry.session,toc=h.entry.toc,returnContext=h.navigation.returns.captureReaderReturn(h.runtime,()=>undefined);let exits=0;h.registerExit(()=>{exits++;});
+ h.exit.requestBookInfo();assert.equal(exits,1);assert.equal(h.entry.sessionActive,true,'information waits for normal serialized exit');
+ h.exit.accepted(h.entry.readerPresentationIdentity());assert.equal(h.navigation.snapshot().route,'detail');assert.equal(h.navigation.returns.snapshot().detailParent,'reader','current Info contract returns through the captured reader context');
+ assert.deepEqual(h.navigation.returns.snapshot().retainedReader,returnContext,'Info retains the original bookshelf origin instead of replacing it');
+ assert.equal(h.entry.session,session);assert.equal(h.entry.toc,toc,'information reuses exact admitted directory');
+ h.journey.returnFromDetail();
+ assert.equal(h.navigation.snapshot().route,'reading','reader parent re-admits through current EntryActions');
+ h.registerExit(()=>h.exit.accepted(h.entry.readerPresentationIdentity()));h.exit.requestExit();
+ assert.equal(h.navigation.snapshot().route,'bookshelf','the preserved origin still owns the next reader exit');
 }
 
-// Exercise the actual Panel -> LRE -> ReaderShell -> Index -> registered LRE exit closure ->
-// durable save -> Index route chain. The former stub above could not detect an
+// Exercise the actual Panel -> LRE -> RetainedReaderScene -> ReaderShell ->
+// current Index ports -> ExitActions -> registered LRE exit closure and handoff chain. The former stub above could not detect an
 // explicit Info action being consumed as one layered system Back operation.
-const readingFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const readingFile = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const readingSource = readFileSync(readingFile, 'utf8');
 const exitRegistration = readingSource.match(/this\.onExitRequestHandler\(([\s\S]*?)\);/);
 assert.ok(exitRegistration, 'production guarded exit registration');
@@ -281,12 +268,13 @@ const registerExit = new Function(`return function () { ${stripTypeScriptTypes(`
 const infoBinding = readingSource.match(/onOpenBookInfo: \(\): void => (this\.\w+\(\)),/);
 assert.ok(infoBinding, 'production More info callback');
 const invokeInfo = new Function(`return function () { ${infoBinding[1]}; };`)();
-const shellFile = new URL('../entry/src/main/ets/features/shell/ReaderShell.ets', import.meta.url);
+const retainedTree = parseComponent(readFileSync(new URL('../entry/src/main/ets/app/composition/RetainedReaderScene.ets', import.meta.url),'utf8'));
+const shellFile = new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets', import.meta.url);
 const shellSource = readFileSync(shellFile, 'utf8');
-const ShellIdentity = productionMotionMethods(shellFile, ['readingIdentityKey']);
+const ShellIdentity = productionMotionMethods(shellFile, ['readingIdentityKey','acceptsTextInput','readingContentIsForeground']);
 const shellTree = parseComponent(shellSource), readingTree = parseComponent(readingSource);
 const callbacks = ['onExitRequestHandler', 'onExit', 'onExitCancelled', 'onOpenBookInfo'];
-function exitCallbacksAt(tree, receiverTree, childName, owner) {
+function childAssembly(tree, receiverTree, childName) {
   let call;
   const visit = node => {
     if (ts.isCallExpression(node) && node.expression.getText(tree) === childName) call = node;
@@ -298,6 +286,10 @@ function exitCallbacksAt(tree, receiverTree, childName, owner) {
   const properties = call.arguments[0].properties;
   for (const property of properties) assert.ok(receiver.members.some(member => member.name?.getText(receiverTree) === property.name.getText(tree)),
     `${childName} must declare actual supplied parameter ${property.name.getText(tree)}`);
+  return properties;
+}
+function exitCallbacksAt(tree, receiverTree, childName, owner) {
+  const properties=childAssembly(tree,receiverTree,childName);
   return Object.fromEntries(callbacks.map(name => {
     const property = properties.find(node => node.name?.getText(tree) === name);
     assert.ok(property, `${childName} must forward ${name}`);
@@ -308,28 +300,40 @@ function exitCallbacksAt(tree, receiverTree, childName, owner) {
   }));
 }
 const Reading = productionMotionMethods(readingFile, ['requestExit', 'beginExit', 'finishExit', 'controlTiming'], {
-  ...readerControlState, ...readerControlHost, ...readerControlKeyboard, ...readerTiming, ...readerRapid, ...readerAuto,
+  ...readerControlState, ...readerControlHost, ...readerControlKeyboard, ...readerTiming, ...readerRapid, ...readerAuto, readerControlMotionMs,
   ReaderWindowCoordinator: { metrics: () => ({ ready: true, keyboardInsets: { bottom: 0 } }) },
 });
-const MorePanel = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url),
-  ['performMoreAction', 'dismissMoreMenu', 'setMoreMenuVisible']);
+const MorePanel = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
+  ['performMoreAction', 'dismissMoreMenu', 'setMoreMenuVisible', 'syncProgressInput', 'progressInputEnabled',
+    'invalidateProgressInput', 'contentLocation', 'contentInputEnabled', 'minimumInputReady', 'isExpanded',
+    'hasCurrentTemporaryInput', 'currentTemporaryInputScope']);
 const homeControl = () => readerControlState.openReaderControlSession(readerControlState.createReaderControlSessionState(), 0);
 const autoControl = () => readerControlState.enterReaderControlModule(homeControl(), 'autoPage', 0);
 
 async function infoExitHarness(state) {
-  const t = create(true), index = t.h;
+  const t = create(true), index = t;
   resumeAcquisition(index,t.book); t.catalog.resolve(t.session); t.body.resolve('body'); await settle();
-  index.onRemoteSessionReady(t.session);
-  assert.equal(index.remoteReadingSession.identity.bookId, t.book.bookId);
-  assert.equal(index.detailToc[1].index, 7, 'Info retains the actual reader-admitted catalog');
-  index.route = 'reading';
+  index.actions.acceptReaderSession(t.session);
+  assert.equal(index.entry.session.identity.bookId, t.book.bookId);
+  assert.equal(index.entry.toc[1].index, 7, 'Info retains the actual reader-admitted catalog');
+  index.navigation.show('reading');
   const calls = [], stop = deferred(), record = deferred(), progress = deferred();
-  const onExited = index.onReaderExited.bind(index), onCancelled = index.cancelReaderExitDestination.bind(index);
-  index.onReaderExited = identity => { calls.push('route'); onExited(identity); };
-  index.cancelReaderExitDestination = identity => { calls.push('exit-cancelled'); onCancelled(identity); };
-  const shell = exitCallbacksAt(indexTree, shellTree, 'ReaderShell', index);
-  Object.assign(shell, { sourceId: index.detailBook.sourceId, bookId: index.detailBook.bookId, readingReadyGeneration: index.readingReadyGeneration,
-    readingIdentityKey: ShellIdentity.prototype.readingIdentityKey });
+  const onExited = index.wiring.onReaderExited.bind(index.wiring), onCancelled = index.wiring.cancelReaderExitDestination.bind(index.wiring);
+  index.wiring.onReaderExited = identity => { calls.push('route'); onExited(identity); };
+  index.wiring.cancelReaderExitDestination = identity => { calls.push('exit-cancelled'); onCancelled(identity); };
+  const retainedProperties=childAssembly(indexTree,retainedTree,'RetainedReaderScene');
+  const retained=Object.fromEntries(['reading','ports'].map(name=>{
+    const property=retainedProperties.find(node=>node.name?.getText(indexTree)===name);
+    assert.ok(property,`actual retained scene forwards ${name}`);
+    return [name,new Function(`return (${stripTypeScriptTypes(property.initializer.getText(indexTree))});`).call(index.wiring)];
+  }));
+  const shell = exitCallbacksAt(retainedTree, shellTree, 'ReaderShell', retained);
+  Object.assign(shell, { sourceId: index.entry.book.sourceId, bookId: index.entry.book.bookId, readingReadyGeneration: index.entry.readyGeneration,
+    contentKind:'text',sourceSwitchVisible:false,sourceSwitchCovered:false,
+    readingIdentityKey: ShellIdentity.prototype.readingIdentityKey,acceptsTextInput:ShellIdentity.prototype.acceptsTextInput,
+    readingContentIsForeground:ShellIdentity.prototype.readingContentIsForeground });
+  Object.defineProperties(shell,{route:{get:()=>index.navigation.snapshot().route},
+    visible:{get:()=>index.entry.sessionActive},inputAllowed:{get:()=>index.controls.foreground}});
   const readingCallbacks = exitCallbacksAt(shellTree, readingTree, 'ReadingExperience', shell);
   const reading = Object.assign(new Reading(), {
     mounted: true, lifecycleToken: 9, exitRequested: false, exitDelivered: false, exitAttemptGeneration: 0, reduceMotion: false,
@@ -357,41 +361,44 @@ async function infoExitHarness(state) {
   });
   registerExit.call(reading);
   const panel = Object.assign(new MorePanel(), {
-    moreMenuVisible: true, inputEnabled: true, frame: () => ({ visibility: 1 }),
+    moreMenuVisible: true, moreMenuGeneration:0, inputEnabled: true, controlObscured:false, frame: () => ({ visibility: 1 }),
+    runtimeMounted:true,runtimeLifecycle:1,controlOpenRevision:0,progressInputScope:'',progressInputRevision:0,progressPreviewPercent:-1,
+    lastVisibleContentLocation:state.location,layout:{isExpanded:()=>state.location.form==='full'},minimumIdentity:'',
+    minimumReady:false,minimumKey:'',temporaryLayerActive:false,visualVisibilityProgress:1,visualTransitionKind:'',visualHeldPointerId:-1,
     onTemporaryLayerChange: visible => { reading.controlTemporaryLayer = visible; },
     onOpenBookInfo: () => invokeInfo.call(reading),
   });
-  return { ...t, index, reading, panel, calls, stop, record, progress };
+  return { ...t, index, reading, shell, panel, calls, stop, record, progress };
 }
 
 for (const state of [homeControl(), autoControl(), readerControlState.expandReaderControlSession(autoControl(), 0)]) {
   const t = await infoExitHarness(state);
-  const admittedSession = t.index.remoteReadingSession, admittedToc = t.index.detailToc;
+  const admittedSession = t.index.entry.session, admittedToc = t.index.entry.toc;
   t.panel.performMoreAction('info');
   assert.equal(t.panel.moreMenuVisible, false);
   assert.equal(t.reading.exitRequested, true, 'Info enters explicit navigation immediately instead of consuming a control layer');
-  assert.equal(t.index.route, 'detail', 'Info navigates before any storage or TTS RPC resolves');
-  assert.equal(t.index.readingSessionActive, false);
+  assert.equal(t.index.navigation.snapshot().route, 'detail', 'Info navigates before any storage or TTS RPC resolves');
+  assert.equal(t.index.entry.sessionActive, false);
   assert.deepEqual(t.calls, ['capsule-finished', 'record-handoff', 'capture-tts', 'progress-handoff', 'stop', 'route']);
   assert.equal(t.calls.filter(value => value === 'route').length, 1);
-  assert.equal(t.index.remoteReadingSession, admittedSession); assert.equal(t.index.detailToc, admittedToc);
+  assert.equal(t.index.entry.session, admittedSession); assert.equal(t.index.entry.toc, admittedToc);
   assert.equal(t.probes.length, 0, 'shelf entry and Info do not duplicate the reader chapter request');
   assert.equal(t.alerts.length, 0);
   t.reading.beginExit();
   assert.equal(t.calls.filter(value => value === 'route').length, 1, 'repeated exit never replays the destination');
   t.stop.resolve(); t.record.resolve(); t.progress.resolve(); await settle();
-  assert.equal(t.index.route, 'detail'); assert.equal(t.calls.filter(value => value === 'route').length, 1);
+  assert.equal(t.index.navigation.snapshot().route, 'detail'); assert.equal(t.calls.filter(value => value === 'route').length, 1);
 }
 
 for (const failedTail of ['stop', 'record', 'progress']) {
   const t = await infoExitHarness(autoControl());
   t.panel.performMoreAction('info');
-  assert.equal(t.index.route, 'detail');
+  assert.equal(t.index.navigation.snapshot().route, 'detail');
   t[failedTail].reject(new Error('background receipt pending'));
   for (const name of ['stop', 'record', 'progress']) if (name !== failedTail) t[name].resolve();
   await settle();
-  assert.equal(t.index.route, 'detail', 'late receipt failure cannot revoke the completed Info destination');
-  assert.equal(t.index.readingSessionActive, false);
+  assert.equal(t.index.navigation.snapshot().route, 'detail', 'late receipt failure cannot revoke the completed Info destination');
+  assert.equal(t.index.entry.sessionActive, false);
   assert.equal(t.alerts.length, 0, 'background receipt failure does not reopen a save/cancel modal');
   assert.equal(t.calls.filter(value => value === 'route').length, 1);
   assert.equal(t.calls.includes('exit-cancelled'), false);
@@ -400,9 +407,22 @@ for (const failedTail of ['stop', 'record', 'progress']) {
 
 for (const state of [homeControl(), autoControl(), readerControlState.expandReaderControlSession(autoControl(), 0)]) {
   const t = await infoExitHarness(state);
-  t.index.readingExitRequest();
+  t.index.entry.currentExitRequest()();
   assert.equal(t.reading.exitRequested, false, 'ordinary registered system Back retains layered semantics');
-  assert.equal(t.index.route, 'reading'); assert.equal(t.calls.length, 0);
+  assert.equal(t.index.navigation.snapshot().route, 'reading'); assert.equal(t.calls.length, 0);
   assert.notDeepEqual(t.reading.controlSession, state, 'Back changes one control layer');
 }
 console.log('Reader Info production chain: immediate once-only navigation before TTS/duration/progress RPC, late failure preserves destination without modal, and layered Back PASS');
+
+// Retained physical handlers must not borrow another foreground/generation.
+for(const covered of ['background','successor-reader']) {
+ const t=await infoExitHarness(homeControl());
+ if(covered==='background')t.index.controls.foreground=false;
+ else {t.index.entry.beginReaderPresentation();t.shell.readingReadyGeneration=t.index.entry.readyGeneration;}
+ t.panel.performMoreAction('info');
+ assert.equal(t.reading.exitRequested,false,'covered or old physical Info callback cannot start exit');
+ assert.equal(t.index.navigation.snapshot().route,'reading');
+ assert.deepEqual(t.calls,[],'foreground and reader identity both guard actual Shell callback');
+ t.stop.resolve();t.record.resolve();t.progress.resolve();
+}
+console.log('Retained Info callback foreground and successor identity rejection PASS');

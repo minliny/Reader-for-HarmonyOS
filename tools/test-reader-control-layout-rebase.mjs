@@ -4,16 +4,16 @@ import {
   enterReaderControlModule, expandReaderControlSession, openReaderControlSession,
   readerControlTargetLocation, rebaseReaderControlTransitionProgress,
   resumeReaderControlSessionTarget, sampleReaderControlSession,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 import {
   beginReaderControlGesture, cancelReaderControlGesture, createReaderControlGestureState,
   endReaderControlGesture, readerControlGrabberScreenY, updateReaderControlGesture,
-} from '../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts';
 import {
   advanceReaderControlLayoutCompensation, createReaderControlLayoutCompensation,
   pauseReaderControlLayoutCompensation, rebaseReaderControlLayout,
   settleReaderControlLayoutCompensation,
-} from '../entry/src/main/ets/features/reading/ReaderControlLayoutRebase.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts';
 
 const oldAxis = { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 };
 const newAxis = { quickGrabberScreenY: 900, fullGrabberScreenY: 400, hiddenGrabberScreenY: 918 };

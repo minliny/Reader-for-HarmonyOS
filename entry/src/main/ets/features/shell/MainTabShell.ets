@@ -1,15 +1,15 @@
-import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { ReaderStandardPage } from '../../ui/layout/ReaderStandardPage';
 import { readerMainRailLeading, readerMainRailBottomInset } from './MainNavigationSpec';
 import { publishReaderMainViewport, readerMainViewport } from './MainNavigationSpec';
-import { MainTabBar } from './MainTabBar';
+import { ReaderBottomNavigation } from '../../app/navigation/ReaderBottomNavigation';
 import { MainNavigationOverlay } from './MainNavigationOverlay';
 import { readerMainNavigationMode, type MainNavigationMode } from './MainNavigationSpec';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
-import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../common/ReaderPageGeometry';
-import { readerPresentedHeaderBottom, type ReaderStandardPageVariant } from '../common/ReaderPageShell';
-import { ReaderFrameStyle, readerFrameStyle } from '../common/ReaderFrameStyle';
-import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderPageScaffold } from '../../ui/layout/ReaderPageScaffold';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../ui/layout/ReaderPageGeometry';
+import { readerPresentedHeaderBottom, type ReaderStandardPageVariant } from '../../ui/layout/ReaderPageShell';
+import { ReaderFrameStyle, readerFrameStyle } from '../../ui/layout/ReaderFrameStyle';
+import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 
 export type MainTabHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';
 
@@ -37,9 +37,11 @@ export struct MainTabShell {
   @Prop headerVisible: boolean = true;
   @Prop headerTop: number = 0;
   @Prop headerMeasurementKey: number = 0;
+  @Prop footerMeasurementKey: number = 0;
   @Prop headerInsetLeft: number = 0;
   @Prop headerInsetRight: number = 0;
   onHeaderHeightChange: (height: number, presentedKey?: number) => void = (_height: number, _presentedKey?: number): void => {};
+  onFooterHeightChange: (height: number, presentedKey: number) => void = (_height: number, _presentedKey: number): void => {};
   @BuilderParam content: () => void;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam overlayContent: () => void = this.emptySlot;
@@ -58,6 +60,14 @@ export struct MainTabShell {
   private requestCurrentTab(key: string, presentedGeneration: number): void {
     if (!this.mounted || presentedGeneration !== this.navigationGeneration) return;
     this.onCurrentTabTap(key, presentedGeneration);
+  }
+
+  private footerHeightChangeHandler(navigation: number, measurementKey: number): (height: number, presentedKey: number) => void {
+    return (height: number, presentedKey: number): void => {
+      if (!this.mounted || navigation !== this.navigationGeneration ||
+        measurementKey !== this.footerMeasurementKey || presentedKey !== measurementKey) return;
+      this.onFooterHeightChange(height, presentedKey);
+    };
   }
 
   private navigationMode(): MainNavigationMode {
@@ -103,12 +113,14 @@ export struct MainTabShell {
     } else {
     ReaderPageScaffold({ frameStyle: this.frameStyle(), headerVisible: this.headerVisible,
       geometry: this.pageGeometry(), headerMeasurementKey: this.headerMeasurementKey,
+      footerMeasurementKey: this.footerMeasurementKey,
       content: (): void => { this.content(); },
       header: (): void => { this.header(); },
       footer: (): void => { this.bottomNavigation(); },
       overlayContent: (): void => { this.mainOverlays(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void =>
         this.onHeaderHeightChange(readerPresentedHeaderBottom(this.headerTop, height), presentedKey),
+      onFooterHeightChange: this.footerHeightChangeHandler(this.navigationGeneration, this.footerMeasurementKey),
     }).onAreaChange((_old: Area, area: Area): void => {
       if (this.mounted) publishReaderMainViewport(Number.parseFloat(`${area.width}`), Number.parseFloat(`${area.height}`));
     });
@@ -119,7 +131,7 @@ export struct MainTabShell {
   private bottomNavigation() {
     if (this.navigationMode() === 'bottom') {
       ForEach([this.navigationGeneration], (generation: number) => {
-        MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
+        ReaderBottomNavigation({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
           onCurrentTap: (key: string): void => this.requestCurrentTab(key, generation) });
       }, (generation: number): string => generation.toString());
     }

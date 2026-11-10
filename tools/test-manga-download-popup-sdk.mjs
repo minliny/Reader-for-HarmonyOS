@@ -1,17 +1,21 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {stripTypeScriptTypes} from 'node:module';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {READER_MANGA_DOWNLOAD_POPUP} from '../entry/src/main/ets/features/common/ReaderMangaDownloadPopupSpec.ts';
-import {READER_FONT_NOTO_SANS_SC_UI_REGULAR} from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import {selectedProductionValues} from './lib/selected-production-methods.mjs';
+import {READER_MANGA_DOWNLOAD_POPUP} from '../entry/src/main/ets/features/manga/ui/ReaderMangaDownloadPopupSpec.ts';
+import {READER_FONT_NOTO_SANS_SC_UI_MEDIUM,READER_FONT_NOTO_SANS_SC_UI_REGULAR} from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 
 const read=file=>readFileSync(new URL('../entry/src/main/ets/'+file,import.meta.url),'utf8');
-const popupSource=read('features/common/ReaderMangaDownloadPopup.ets');
-const panelSource=read('features/manga/MangaDownloadOperationsPanel.ets');
-const pageSource=read('features/bookshelf/BookDirectoryPage.ets');
+const popupSource=read('features/manga/ui/ReaderMangaDownloadPopup.ets');
+const panelSource=read('features/manga/ui/MangaDownloadOperationsPanel.ets');
+const pageSource=read('features/reading/ui/BookDirectoryPage.ets');
 const sdk=boundedSurfaceSdk();
 sdk.hooks.lifecycleChildren=true;
-const deps={...sdk.deps,READER_MANGA_DOWNLOAD_POPUP,READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+const iconSource=stripTypeScriptTypes(read('ui/foundation/ReaderActionIconResources.ets')).replace(/^export /gm,'');
+const readerActionIcon=new Function('$r',iconSource+';return readerActionIcon;')(name=>name);
+const deps={...sdk.deps,READER_MANGA_DOWNLOAD_POPUP,READER_FONT_NOTO_SANS_SC_UI_REGULAR,readerActionIcon,
   Placement:{BottomLeft:'Placement.BottomLeft'}};
 sdk.hooks.childSources.MangaDownloadOperationsPanel=panelSource;
 deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),deps,sdk.hooks).Component;
@@ -48,8 +52,8 @@ for(const availableWidth of [180,240,400]){
   assert.ok(button,'actual shared grouped action row is mounted inside the existing manga panel');
   assert.equal(button.constraintSize.minHeight,50,'the action exposes the shared minimum touch row while allowing larger text');
   const label=panelNodes(owner).find(n=>n.type==='Text'&&n.create===action.label);
-  assert.deepEqual([label.fontSize,label.fontFamily],[14,READER_FONT_NOTO_SANS_SC_UI_REGULAR]);
-  assert.ok(panelNodes(owner).some(n=>n.type==='Text'&&n.create==='下载任务'),'the download category is visible');
+  assert.deepEqual([label.fontSize,label.fontFamily],[14,READER_FONT_NOTO_SANS_SC_UI_MEDIUM]);
+  assert.equal(panel(owner).sheetActions()[0].section,'下载任务','the download category remains in the action model');
   button.onClick();native.onStateChange({isVisible:false});
   assert.deepEqual(calls,['open',['action',action.id,7],['closed',7]],'native popup callbacks retain their opening generation');
 }
@@ -71,7 +75,7 @@ assert.deepEqual(revokedCalls,[],'loading, failed and revoked rows cannot dispat
 const cleanup=popup({actions:[action,{id:'deleteDownloads',label:'删除下载'},{id:'clearCache',label:'清除普通阅读缓存'}]});
 cleanup.popupContent(7);
 const cleanupTexts=panelNodes(cleanup).filter(n=>n.type==='Text');
-assert.deepEqual(cleanupTexts.filter(n=>['下载任务','存储清理'].includes(n.create)).map(n=>n.create),['下载任务','存储清理']);
+assert.deepEqual(panel(cleanup).sheetActions().map(row=>row.section),['下载任务','存储清理','存储清理']);
 const deleteLabel=cleanupTexts.find(n=>n.create==='删除下载');
 assert.notEqual(deleteLabel.fontColor,cleanupTexts.find(n=>n.create===action.label).fontColor,'storage deletion has a distinct danger tone');
 assert.equal(panelNodes(loading).some(n=>n.type==='Row'&&n.accessibilityText===action.label),false,'loading does not expose stale actions');
@@ -80,9 +84,11 @@ assert.equal(panelNodes(failed).some(n=>n.type==='Row'&&n.accessibilityText===ac
 // Exercise original parent methods and captured native callbacks. The shared
 // chrome cannot bypass book identity, load generation, ready rows or teardown.
 const pending=[],downloads=[];
+const closeReceiptPolicy=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets',import.meta.url),
+  ['MANGA_DOWNLOAD_POPUP_CLOSE_RECEIPT_TIMEOUT_MS']);
 const page=createReaderBuilderProbe(pageSource,['mangaDownloadMenuButton','openDownloadActions','performDownloadAction','identity',
-  'downloadMenuVisible','downloadActions','downloadActionsLoading','downloadActionsFailure',
-  'downloadMenuChapterIndex','downloadMenuGeneration','downloadMenuIdentity'],deps,sdk.hooks).owner;
+  'closeDownloadMenu','retireDownloadMenu','downloadMenuVisible','downloadActions','downloadActionsLoading','downloadActionsFailure',
+  'downloadMenuChapterIndex','downloadMenuGeneration','downloadMenuIdentity','downloadMenuCloseTimer'],{...deps,...closeReceiptPolicy},sdk.hooks).owner;
 assert.equal(page.downloadMenuGeneration,0,'use the real production constructor rather than an undefined/NaN load clock');
 Object.assign(page,{mounted:true,sourceId:'source',bookId:'one',contentKind:'manga',mangaDownloadEnabled:true,
   contentFrame:()=>({width:180}),onLoadDownloadActions:index=>new Promise(resolve=>pending.push({index,resolve})),
@@ -108,6 +114,7 @@ assert.equal(page.downloadMenuVisible,true);assert.equal(pending.length,2);asser
 const active=await menu(4);active.native.builder();
 actionButton(active.child,action.label).onClick();
 assert.deepEqual(downloads,[[action.id,4]]);assert.equal(page.downloadMenuVisible,false);
+active.native.onStateChange({isVisible:false});
 page.mounted=false;active.child.onOpen();active.child.onRetry(page.downloadMenuGeneration);
 assert.equal(pending.length,3,'unmounted parent cannot reopen');
-console.log('PASS manga native popup: grouped shared download actions, danger hierarchy, loading/failure/revocation admission, finite popup geometry, native generation and parent identity/teardown fencing');
+console.log('PASS manga native popup: download action categories and danger hierarchy, loading/failure/revocation admission, finite popup geometry, native generation and parent identity/teardown fencing');

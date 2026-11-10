@@ -1,4 +1,4 @@
-import { ReaderRectVp } from '../features/common/ReaderWindowMetrics';
+import { ReaderRectVp } from '../ui/foundation/ReaderWindowMetrics';
 
 /** A hidden status bar reports zero avoid-area height. Retain only a measured
  * value for this exact window geometry and orientation, never a guessed inset. */

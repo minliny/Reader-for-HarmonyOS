@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 
 function timers() {
   let serial = 0; const pending = new Map(), issued = [];
@@ -51,7 +51,7 @@ async function preparationContextCase() {
   }
 }
 async function retryQueueCase() {
-  const { readerPageTransitionUsesPreparedPages } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+  const { readerPageTransitionUsesPreparedPages } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
   async function fixture(outcome = 'retry') {
     const clock = timers(), attempts = [], refreshes = [];
     const { Type, constants } = await actual(['drainPageTurnPreparationQueue', 'cancelPageTurnPreparationRetry'],

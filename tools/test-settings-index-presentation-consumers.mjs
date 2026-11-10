@@ -9,9 +9,8 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {productionReaderPressFeedback} from './lib/reader-press-feedback-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
-const indexSource=read('pages/Index.ets'),pageSource=read('features/settings/SettingsPage.ets'),shelfSource=read('features/bookshelf/BookshelfSettingsPage.ets');
+const indexSource=read('pages/Index.ets'),pageSource=read('features/settings/ui/SettingsPage.ets'),shelfSource=read('features/bookshelf/ui/BookshelfSettingsPage.ets');
 const require=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
-require(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
 let sequence=0,cases=0;
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 const names=['settingsContent','settingsSurface','bookshelfSettingsContent','bookshelfSettingsSurface','bindSettingsPresentation',
@@ -41,19 +40,19 @@ function index(f,route='settings',text=indexSource){
    return{o,p,params,toggle:()=>params.onAutoCheckUpdate(!params.autoCheckUpdate),native,refresh(){o.updateStateVars(props());p.properties.flush();}};
   }
   const ReaderPressFeedback=productionReaderPressFeedback();p.hooks.lifecycleChildren=true;
-  for(const [n,path]of [['CategoryRow','features/settings/CategoryRow.ets'],['ReaderToggle','features/common/ReaderToggle.ets']]){
+  for(const [n,path]of [['ReaderToggle','ui/controls/ReaderToggle.ets']]){
    p.hooks.childSources[n]=read(path);p.deps[n]=createReaderBuilderProbe(read(path),boundedMembers(read(path)),{...p.deps,ReaderPressFeedback,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},p.hooks).Component;
   }
   const properties=[...pageSource.matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1]);
   const callbacks=[...pageSource.matchAll(/^  (on\w+):/gm)].map(m=>m[1]);
   const o=p.consumer(pageSource,[...properties,...callbacks,'appThemeScheme','mounted','themeOwner','temporaryBackIdentity','resetMessage',
-   'autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged','applyCacheCleanup',
+   'autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged',
    'switchRow','toggleSetting','settingValue','settingCanToggle','settingToggleBusy','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
    'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction','onOperationChanged','operationFeedbackIdentity',
    'lastOperationFeedback','lastOperationToast','lastCacheFeedback','cacheFeedbackIdentity','showFeedbackToast','hasPendingSettings','hasPendingCleanup','pendingFeedback',
    'capturedPendingAction','recoveryIdentityFor'],{ReaderPressFeedback,ReaderRuntimeOwner:f.Runtime,readerRecoveryView},params);
   Object.assign(o,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'actual-settings:'+sequence,resetMessage:''});o.syncSnapshotValues();
-  const toggle=()=>{o.switchRow('减少动效',()=>({id:1}),'reduceMotion');const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderToggle);assert.ok(actor,'actual shared toggle mounted');return p.nodes(actor).find(n=>n.onClick).onClick;};
+  const toggle=()=>{o.switchRow('减少动效',()=>({id:1}),'reduceMotion');const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderToggle);assert.ok(actor,'actual shared toggle mounted');const node=p.nodes(actor).findLast(n=>n.type==='Toggle'&&n.onChange);const next=!actor.value;return()=>node.onChange(next);};
   const native=label=>{o.operationFeedback();o.pendingFeedback();const actual=label==='重试保存当前设置'?'继续保存':label==='刷新设置'&&o.hasPendingSettings()?'核对':label;const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===actual);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
   return{o,p,params,toggle,native,refresh(){o.updateStateVars(props());p.properties.flush();}};
  };

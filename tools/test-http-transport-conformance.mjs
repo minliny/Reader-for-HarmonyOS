@@ -20,12 +20,12 @@ const vectorSha = createHash('sha256').update(vectorBytes).digest('hex');
 
 
 const policySource = readFileSync(resolve(repo,
-  'entry/src/main/ets/app/HttpTransportPolicy.ts'), 'utf8');
+  'entry/src/main/ets/platform/network/HttpTransportPolicy.ts'), 'utf8');
 const executablePolicy = stripTypeScriptTypes(policySource);
 const policyUrl = `data:text/javascript;base64,${Buffer.from(executablePolicy).toString('base64')}`;
 const policy = await import(policyUrl);
 const hostSource = readFileSync(resolve(repo,
-  'entry/src/main/ets/app/HttpExecuteHost.ts'), 'utf8');
+  'entry/src/main/ets/platform/network/HttpExecuteHost.ts'), 'utf8');
 
 const fixture = JSON.parse(vectorBytes.toString('utf8'));
 assert.equal(fixture.schemaVersion, 1);
@@ -35,7 +35,7 @@ let delegatedCharsetCases = 0;
 let multipartHost;
 if(selectedCase==='multipart-host') {
  const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
- const file=new URL('../entry/src/main/ets/app/HttpExecuteHost.ts',import.meta.url),values=selectedProductionValues(file,['MAX_REQUEST_BODY_BYTES']);
+ const file=new URL('../entry/src/main/ets/platform/network/HttpExecuteHost.ts',import.meta.url),values=selectedProductionValues(file,['MAX_REQUEST_BODY_BYTES']);
  const Host=selectedProductionMethods(file,'HttpExecuteHost',['buildMultipart','assertNoCrLf','numberArrayToBytes'],{...values,encodeSharedText:(text,charset,limit)=>{assert.equal(charset,'utf-8');const bytes=new TextEncoder().encode(text);if(bytes.length>limit)throw Error('codec byte limit');return bytes;}});multipartHost=new Host();
  assert.throws(()=>multipartHost.buildMultipart([['bad\r\nname','value']],[]),/CR\/LF/);
  assert.throws(()=>multipartHost.buildMultipart([],[{fieldName:'f',filename:'x',contentType:'x',data:[256]}]),/integers/);

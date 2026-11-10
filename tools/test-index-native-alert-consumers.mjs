@@ -1,5 +1,5 @@
 import {RealRssOrchestrator,replaceRssRuntime} from './lib/rss-operation-fixture.mjs';
-import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
+import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts';
 import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
@@ -13,7 +13,7 @@ const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 let currentOwner, unavailable=false;
 const authority=runtimeOwnerIdentityProbe(()=>unavailable?undefined:currentOwner);
 const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:authority});
-const ActualTools=bookshelfOperationClass('features/source/SourceToolsOrchestrator.ets','SourceToolsOrchestrator',
+const ActualTools=bookshelfOperationClass('features/source/application/SourceToolsOrchestrator.ets','SourceToolsOrchestrator',
  {ReaderRuntimeOwner:authority,SourceGateway:sourceTypes.SourceGateway});
 const Entry=compileHost(undefined,{ReaderRuntimeOwner:authority,
  RemoteReadingFlowGateway:class {constructor(owner){this.owner=owner;}async loadChapter(session,index){this.owner.calls.push('chapter.content');this.owner.revision+=2;
@@ -22,7 +22,7 @@ const Entry=compileHost(undefined,{ReaderRuntimeOwner:authority,
 const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confirmation:'none'};
 const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResult','showSourceImportResultFromSearch',
  'requestSourceDelete','requestRssSubscriptionDelete','requestRssSourceImport','showRssOperationResult',
- 'readerOwnsWindowEdges','messageSafeTop','runIndexRecoveryAction','runSourceImportSearchAction','requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
+ 'readerOwnsWindowEdges','messageSafeTop','showIndexRecoveryNotice','runSourceImportSearchAction','requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
  'aboutToDisappear','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources','bindReadingEntryReader','isCurrentSourceToolsPresentation'],{
  ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION,LOCAL_SOURCE_ID:'local',
  RssPresentationProjection,ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
@@ -30,7 +30,7 @@ const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResu
  withPreparedRemoteChapter:(session,chapter,revision)=>({...session,preparedChapter:{...chapter,projectionRevision:revision}}),
  RemoteReadingFlowGateway:class {constructor(owner){this.owner=owner;}async loadChapter(){this.owner.calls.push('chapter.content');this.owner.revision+=2;return {chapterIndex:0};}}
 });
-const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost');
+const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/application/BookshelfHost.ets','BookshelfHost');
 function fixture(route='source'){
  unavailable=false;let shown,fail=false;const calls=[],toasts=[];
  const owner={calls,revision:3,supportsCoreCapability:()=>false,bookAcquisitions(){return{readingProjectionRevision:()=>owner.revision,endSearch(){},setPreparationVisible(){}};},readingEntryPreparations:()=>({setPaused(){}})};currentOwner=owner;
@@ -114,7 +114,7 @@ for(const exit of ['click','none','navigation','close','owner','session','curren
  if(exit==='owner')currentOwner={};
  if(exit==='session'){f.p.remoteReadingSession={identity:{sourceId:'new',bookId:'new'}};f.p.detailBook={sourceId:'new',bookId:'new',title:'new'};f.p.bindReadingEntryReader();}
  if(exit==='current')current=false;
- if(exit!=='none'){f.p.runIndexRecoveryAction(revision);f.p.runIndexRecoveryAction(revision);}
+ if(exit!=='none'){f.p.readingEntry.retryRecoveryNotice(revision);f.p.readingEntry.retryRecoveryNotice(revision);}
  await new Promise(resolve=>setImmediate(resolve));
  const accepted=exit==='click'||exit==='native-error';
  assert.equal(f.calls.filter(x=>x==='chapter.content').length,accepted?1:0,'only exact current inline refresh may fetch once');
@@ -122,7 +122,7 @@ for(const exit of ['click','none','navigation','close','owner','session','curren
  if(accepted)assert.equal(f.p.remoteReadingSession.preparedChapter!==undefined,true,'explicit refresh publishes the current chapter in place');
 }
 {const f=fixture('reading');f.p.showIndexRecoveryNotice('first pending','核对',()=>{});const stale=f.p.indexRecoveryNotice.generation;
- let runs=0;f.p.showIndexRecoveryNotice('second','Retry',()=>runs++);f.p.runIndexRecoveryAction(stale);assert.equal(runs,0);}
+ let runs=0;f.p.showIndexRecoveryNotice('second','Retry',()=>runs++);f.p.readingEntry.retryRecoveryNotice(stale);assert.equal(runs,0);}
 for(const timing of ['before-show','after-show','retired','confirmed-import']){
  const f=fixture(timing==='confirmed-import'?'rssSubscriptionManagement':'source');
  if(timing==='after-show'){const lease=f.p.showIndexAlert('notice',{title:'x',primaryButton:{value:'x',action:()=>f.calls.push('acted')}});unavailable=true;f.shown().primaryButton.action();assert.equal(await lease.decision,'retired');assert.deepEqual(f.calls,[]);}
@@ -133,16 +133,21 @@ const raw=readFileSync(file,'utf8');assert.equal((raw.match(/\.showAlertDialog\(
 assert.equal((raw.match(/this\.showIndexAlert\(/g)??[]).length,4,'only four explicit destructive/overwrite choices use native Alert');
 {
  const f=fixture('reading'),sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const p=sdk.consumer(raw,['detailPendingNoticeVisible','detailOperationNoticeContent','readerOwnsWindowEdges','messageSafeTop','indexRecoveryNoticeContent','showIndexRecoveryNotice','runIndexRecoveryAction','clearIndexRecoveryNotice','isCurrentRuntime'],
-  {ReaderRuntimeOwner:{isCurrent:owner=>owner===f.owner}},{});
- Object.assign(p,{route:'reading',navigationGeneration:1,shelfReceiptRetired:false,mountedRuntimeOwner:f.owner,detailShelfAdmissionMount:1,appThemeScheme:'day'});
- let actions=0;p.showIndexRecoveryNotice('后台核对中','重试',()=>actions++);p.indexRecoveryNoticeContent();
+ const composition=readFileSync(new URL('../entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets',import.meta.url),'utf8');
+ sdk.hooks.childSources.BookshelfDetailNotice=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfDetailNotice.ets',import.meta.url),'utf8');
+ let covered=false;
+ const p=sdk.consumer(composition,undefined,{BookshelfDetailNotice:class {},
+  SynchedPropertyNesedObjectPU:sdk.properties.sdk.SynchedPropertyNestedObjectPU},
+  {reading:f.p.readingEntry,detail:{addRecovery(){},removalRecovery(){}},interactive:true,canInteract:()=>!covered});
+ let actions=0;f.p.showIndexRecoveryNotice('后台核对中','重试',()=>actions++);p.initialRender();
  const action=()=>sdk.nodes(p).findLast(n=>n.accessibilityText==='重试'&&n.onClick).onClick;
  const old=action(),frame=sdk.nodes(p).find(n=>n.type==='Column'&&n.align==='Alignment.Top');
  assert.ok(frame);assert.equal(frame.height,undefined,'feedback frame never owns full screen height');assert.equal(frame.hitTestBehavior,'HitTestMode.Transparent');
  const title=sdk.nodes(p).find(n=>n.type==='Span'&&String(n.create).includes('后台核对中'));assert.ok(title,'original message remains the notice title');
- p.showIndexRecoveryNotice('下一项核对','重试',()=>actions++);sdk.properties.flush();p.replay();
+ f.p.showIndexRecoveryNotice('下一项核对','重试',()=>actions++);sdk.properties.flush();p.replay();
  old();assert.equal(actions,0,'old physical action cannot borrow successor recovery generation');
+ covered=true;action()();assert.equal(actions,0,'cover admission is checked even before the reactive props update');
+ covered=false;
  action()();action()();assert.equal(actions,1,'current real shared native action executes once');
 }
 console.log('PASS Index four explicit Alert confirmations plus five nonmodal feedback consumers: exact identity, once-only inline actions, unblocked cache probe, no silent content refresh/navigation and native failure independent from writes');

@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
-import { HarmonyTtsHostRouter } from '../entry/src/main/ets/app/HarmonyTtsHostRouter.ts';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
+import { HarmonyTtsHostRouter } from '../entry/src/main/ets/platform/tts/HarmonyTtsHostRouter.ts';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
 import { chapter, canonicalRemoteContent, FakeGateway, FakeHost } from './lib/reader-tts-fixtures.mjs';
 
 // Whole production platform adapter, with only unavailable Kit bindings supplied.
 // Invoking this real SpeakListener is code proof, never a device onStart receipt.
-const source = readFileSync(new URL('../entry/src/main/ets/app/HarmonySystemTtsHost.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts', import.meta.url), 'utf8');
 const engines = [];
 let createGate;
 const makeEngine = () => {

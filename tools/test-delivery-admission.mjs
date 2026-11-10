@@ -437,10 +437,11 @@ try {
   const physicalBootEpoch = Date.UTC(2026, 9, 16, 10, 29, 23), physicalCheckEpoch = physicalBootEpoch + 155_000;
   const physicalDenied = '/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied';
   const utcBootStamp = value => new Date(value).toISOString().slice(0, 19).replace('T', ' ');
+  const sampleBatchCommand = ['set -e', 'date -u +%s', 'TZ=UTC uptime -s',
+    ...Object.keys(physicalMilestones).map(name => `param get ohos.boot.time.${name}`), 'date -u +%s'].join('\n');
   function physicalReadiness(options = {}) {
     const commands = []; let elapsed = 0, wallElapsed = 0, second = false;
-    const guestQuery = command => {
-      commands.push(command);
+    const scalarQuery = command => {
       if (command === 'cat /proc/sys/kernel/random/boot_id') {
         if (options.throwProc) throw new Error(physicalDenied);
         return second ? options.finalBootId ?? options.bootId ?? physicalDenied : options.bootId ?? physicalDenied;
@@ -455,6 +456,10 @@ try {
       const name = command.replace('param get ohos.boot.time.', '');
       if (Object.hasOwn(physicalMilestones, name)) return String((second ? options.secondMilestones : options.milestones)?.[name] ?? physicalMilestones[name]);
       throw new Error(`Unexpected physical readiness query: ${command}`);
+    };
+    const guestQuery = command => {
+      commands.push(command);
+      return command === sampleBatchCommand ? command.split('\n').slice(1).map(scalarQuery).join('\n') : scalarQuery(command);
     };
     return { commands, run: () => targetReadiness({ targetKind: options.targetKind ?? 'physical', query: guestQuery,
       vmLog: options.vmLog, now: () => physicalCheckEpoch + wallElapsed, monotonicNow: () => elapsed,
@@ -521,14 +526,15 @@ try {
   const instanceLog = `${startLine}\n${resetLine}\n${markerLine}\n`;
   let restrictedCase = 0;
   function restricted(options = {}) {
-    const log = put(join(root, `restricted-${++restrictedCase}.log`), options.log ?? instanceLog), commands = [];
+    const log = put(join(root, `restricted-${++restrictedCase}`, 'Emulator.log'), options.log ?? instanceLog), commands = [];
+    const qemuLog = join(dirname(log), 'qemu.log');
+    if (options.qemuLog !== undefined) put(qemuLog, options.qemuLog);
     const sampleBootEpoch = options.bootEpoch ?? bootEpoch, sampleCheckEpoch = options.checkEpoch ?? checkEpoch;
     let elapsed = 0, second = false;
-    const guestQuery = command => {
-      commands.push(command);
+    const scalarQuery = command => {
       if (command === 'cat /proc/sys/kernel/random/boot_id') {
         if (options.throwProc) throw new Error('/proc/sys/kernel/random/boot_id: Permission denied');
-        return options.bootId ?? '/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied';
+        return (second ? options.finalBootId ?? options.bootId : options.bootId) ?? '/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied';
       }
       if (command === 'cat /proc/uptime') return options.procUptime ?? '/bin/sh: cat: /proc/uptime: Permission denied';
       if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
@@ -539,15 +545,31 @@ try {
       if (Object.hasOwn(milestoneValues, name)) return String((second ? options.secondMilestones ?? options.milestones : options.milestones)?.[name] ?? milestoneValues[name]);
       throw new Error(`Unexpected readiness query: ${command}`);
     };
-    return { log, commands, run: () => targetReadiness({ targetKind: options.targetKind ?? 'vm', query: guestQuery, vmLog: log,
+    const guestQuery = command => {
+      commands.push(command);
+      elapsed += options.queryCostMs ?? 0;
+      if (command !== sampleBatchCommand) return scalarQuery(command);
+      const rows = command.split('\n').slice(1).map(scalarQuery);
+      return (options.batchRows?.(rows) ?? rows).join('\n');
+    };
+    return { log, qemuLog, commands, run: () => targetReadiness({ targetKind: options.targetKind ?? 'vm', query: guestQuery, vmLog: log,
+      targetEndpoint: Object.hasOwn(options, 'targetEndpoint') ? options.targetEndpoint : '127.0.0.1:5555',
       now: () => sampleCheckEpoch + elapsed, monotonicNow: () => elapsed,
-      wait() { elapsed += options.waitMs ?? 2000; second = true; options.changeLog?.(log); } }) };
+      wait() { elapsed += options.waitMs ?? 2000; second = true; options.changeLog?.(log); options.changeQemuLog?.(qemuLog); } }) };
   }
   assert.equal(restricted({ targetKind: 'physical' }).run().bootIdentitySource, 'physical-boot-milestones-v1',
     'physical procfs denial retains its independently checked milestone fallback');
   const restrictedReady = restricted(), fallbackReady = restrictedReady.run();
   assert.equal(fallbackReady.status, 'PASS'); assert.equal(fallbackReady.bootIdentitySource, 'vm-startup-fingerprint-v1');
   assert.equal(fallbackReady.uptimeSource, 'toybox-sysinfo'); assert.equal(fallbackReady.observationMs, 2000);
+  assert.equal(restrictedReady.commands.filter(command => command === sampleBatchCommand).length, 2,
+    'the two checked VM samples each use one remote shell');
+  assert.equal(restrictedReady.commands.some(command => command === 'date -u +%s' || command.startsWith('param get ohos.boot.time.')), false,
+    'VM fallback does not launch separate HDC clients for sample fields');
+  const slowTransport = restricted({ queryCostMs: 1300 });
+  assert.equal(slowTransport.run().status, 'PASS',
+    'one 1.3s round trip fits the unchanged sample budget even when nine separate clients would exceed ten seconds');
+  assert.equal(slowTransport.commands.filter(command => command === sampleBatchCommand).length, 2);
   assert.match(fallbackReady.bootIdSha256, /^[a-f0-9]{64}$/); assert.equal(fallbackReady.emulatorLog.instanceSha256, fallbackReady.bootIdSha256);
   assert.equal(restricted({ throwProc: true }).run().status, 'PASS', 'a genuine procfs permission error can use the same VM-only evidence');
   const uuidWithRestrictedUptime = restricted({ bootId: '12345678-1234-1234-1234-123456789abc' }).run();
@@ -566,6 +588,11 @@ try {
       'appspawn.started': 22674576, 'wms.ready': 42897755, 'boot.completed': 53561651 } });
   assert.equal(delayed.run().status, 'PASS', 'a real host-initialization delay is not a guest boot identity mismatch');
   for (const [label, options, expected] of [
+    ['missing batch row', { batchRows: rows => rows.slice(0, -1) }, /exactly nine rows/],
+    ['extra batch row', { batchRows: rows => [...rows, 'unexpected'] }, /exactly nine rows/],
+    ['empty batch milestone', { batchRows: rows => rows.map((value, index) => index === 3 ? '' : value) }, /milestone identity is unavailable/],
+    ['malformed batch end clock', { batchRows: rows => [...rows.slice(0, -1), 'Permission denied'] }, /guest clock is unavailable/],
+    ['sampling transport exceeds budget', { queryCostMs: 10001 }, /sampling observation budget/],
     ['missing procfs identity', { bootId: '' }, /boot identity is unavailable/],
     ['malformed procfs identity', { bootId: 'not-a-uuid' }, /boot identity is unavailable/],
     ['missing procfs uptime', { procUptime: '' }, /uptime is unavailable/],
@@ -596,6 +623,73 @@ try {
   const appendResult = appended.run(); assert.equal(appendResult.emulatorLog.sha256, digest(readFileSync(appended.log)), 'receipt binds the fully observed append-only log');
   assert.equal(restrictedReady.commands.some(command => /\bbm\b|\baa\b|install|\bsu\b|chmod|param set/.test(command)), false,
     'readiness never invokes application operations, privilege changes or parameter writes');
+  // Existing Mate 90 Pro instance: the Nov 9 host loader restored a Nov 5
+  // guest. Keep those clocks distinct and require both exact host log events
+  // and the selected target's companion snapshot port within that startup.
+  const resumedBootEpoch = Date.UTC(2026, 10, 5, 7, 18, 15);
+  const resumedStartEpoch = Date.UTC(2026, 10, 9, 6, 27, 2, 720);
+  const resumedCheckEpoch = Date.UTC(2026, 10, 9, 9, 57, 9);
+  const resumedStart = `${localStamp(resumedStartEpoch)} 39976 [Info] [TraceTool.cpp(InitPipe:27)][TraceTool] trace pipe name is: "fixture-resumed"`;
+  const resumedWake = `${localStamp(resumedStartEpoch + 3009)} 45948 [Info] [QemuManager.cpp(OnBootCompleted:734)]Wake up screen after snapshot boot.`;
+  const resumedMarker = `${localStamp(resumedStartEpoch + 3010)} 45948 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:137)]Guest OS Boot Completed!!`;
+  const resumedPort = `${localStamp(resumedStartEpoch + 1491)} 45948 I [express_bridge.c(load_bridge_thread_context:692)] load port from snapshot: 5555`;
+  const resumedLog = `${resumedStart}\n${resumedWake}\n${resumedMarker}\n`, resumedQemu = `${resumedPort}\n`;
+  const resumedOptions = { bootEpoch: resumedBootEpoch, checkEpoch: resumedCheckEpoch, log: resumedLog,
+    qemuLog: resumedQemu, milestones: { 'boot.completed': 33659938 } };
+  const resumed = restricted(resumedOptions), resumedReady = resumed.run();
+  assert.equal(resumedReady.status, 'PASS'); assert.equal(resumedReady.bootIdentitySource, 'vm-snapshot-resume-fingerprint-v1');
+  assert.equal(resumedReady.emulatorLog.startupMode, 'snapshot-resume');
+  assert.equal(resumedReady.emulatorLog.snapshotLog.sha256, digest(readFileSync(resumed.qemuLog)));
+  assert.equal(resumedReady.emulatorLog.snapshotLog.restoredPort, 5555);
+  assert.equal(resumedReady.observationMs, 2000); assert.equal(resumedReady.sceneBoardStable, true);
+  assert.equal(resumed.commands.filter(command => command === sampleBatchCommand).length, 2);
+  assert.equal(restricted({ ...resumedOptions, bootId: '12345678-1234-1234-1234-123456789abc' }).run().bootIdentitySource,
+    'kernel-boot-id', 'an available kernel UUID remains authoritative for a restored guest');
+  assert.equal(restricted({ ...resumedOptions, targetEndpoint: '[::1]:5555' }).run().status, 'PASS');
+  const resumedDifferentMilestones = restricted({ ...resumedOptions, milestones: { kernel: 881434, 'boot.completed': 33659938 } }).run();
+  assert.notEqual(resumedDifferentMilestones.bootIdSha256, resumedReady.bootIdSha256,
+    'the resumed host event does not replace the independently sampled guest boot identity');
+  for (const [label, options, expected] of [
+    ['missing selected endpoint', { targetEndpoint: undefined }, /explicit selected loopback TCP/],
+    ['non-loopback selected endpoint', { targetEndpoint: '192.168.1.10:5555' }, /explicit selected loopback TCP/],
+    ['wrong selected endpoint port', { targetEndpoint: '127.0.0.1:5556' }, /companion port/],
+    ['out-of-range selected endpoint port', { targetEndpoint: '127.0.0.1:65536' }, /explicit selected loopback TCP/],
+    ['missing companion log', { qemuLog: undefined }, /sibling qemu.log|companion port/],
+    ['missing companion port', { qemuLog: '' }, /companion port/],
+    ['wrong companion port', { qemuLog: resumedQemu.replace('5555', '5556') }, /companion port/],
+    ['malformed companion port', { qemuLog: resumedQemu.replace('5555', '5555x') }, /companion port/],
+    ['ambiguous companion port', { qemuLog: `${resumedQemu}${resumedQemu}` }, /companion port/],
+    ['stale companion port', { qemuLog: resumedQemu.replace(localStamp(resumedStartEpoch + 1491), localStamp(resumedStartEpoch - 1000)) }, /companion port/],
+    ['companion port after snapshot wake', { qemuLog: resumedQemu.replace(localStamp(resumedStartEpoch + 1491), localStamp(resumedStartEpoch + 3010)) }, /companion port/],
+    ['later snapshot instance', { qemuLog: `${resumedQemu}${resumedQemu.replace(localStamp(resumedStartEpoch + 1491), localStamp(resumedStartEpoch + 4000))}` }, /later snapshot instance/],
+    ['no exact snapshot boot marker', { log: `${resumedStart}\n${resumedMarker}\n` }, /does not match/],
+    ['ambiguous snapshot wording', { log: resumedLog.replace('Wake up screen after snapshot boot.', 'snapshot load may resume') }, /does not match/],
+    ['ambiguous snapshot boot marker', { log: `${resumedStart}\n${resumedWake}\n${resumedWake}\n${resumedMarker}\n` }, /snapshot boot marker is ambiguous/],
+    ['snapshot marker outside current startup', { log: resumedLog.replace(localStamp(resumedStartEpoch + 3009), localStamp(resumedStartEpoch - 1000)) }, /does not match/],
+    ['old snapshot followed by incomplete new startup', { log: `${resumedLog}${resumedStart}\n` }, /no completed current-instance/],
+    ['guest original boot not complete before resume', { bootEpoch: resumedStartEpoch - 1000 }, /restored guest boot/],
+    ['guest boot identity changes', { secondBootOffset: 120_000 }, /changed during readiness/],
+    ['guest milestones change', { secondMilestones: { kernel: 881434, 'boot.completed': 33659938 } }, /changed during readiness/],
+    ['sampling transport exceeds original budget', { queryCostMs: 10001 }, /sampling observation budget/],
+    ['resume observation below two seconds', { waitMs: 1000 }, /observation interval/],
+    ['SceneBoard changes', { finalPid: '1644' }, /boot\/SceneBoard changed/],
+    ['boot completion lost', { finalComplete: 'false' }, /boot\/SceneBoard changed/],
+    ['procfs boot identity availability changes', { finalBootId: '12345678-1234-1234-1234-123456789abc' }, /boot\/SceneBoard changed/],
+    ['post-completion reset', { log: `${resumedLog}${resetLine}\n` }, /instability/],
+    ['companion prefix replaced during observation', { changeQemuLog: file => writeFileSync(file, `changed prefix\n${resumedQemu}`) }, /companion log changed during/],
+    ['companion truncated during observation', { changeQemuLog: file => writeFileSync(file, '') }, /companion port/],
+    ['emulator prefix replaced during observation', { changeLog: file => writeFileSync(file, `changed prefix\n${resumedLog}`) }, /changed during readiness/],
+    ['reset during observation', { changeLog: file => writeFileSync(file, `${resumedLog}${resetLine}\n`) }, /unstable/],
+  ]) assert.throws(() => restricted({ ...resumedOptions, ...options }).run(), expected, `snapshot resume: ${label}`);
+  const resumedAppend = restricted({ ...resumedOptions,
+    changeLog: file => writeFileSync(file, `${resumedLog}benign emulator observation\n`),
+    changeQemuLog: file => writeFileSync(file, `${resumedQemu}benign qemu observation\n`) });
+  const resumedAppendReady = resumedAppend.run();
+  assert.equal(resumedAppendReady.emulatorLog.sha256, digest(readFileSync(resumedAppend.log)));
+  assert.equal(resumedAppendReady.emulatorLog.snapshotLog.sha256, digest(readFileSync(resumedAppend.qemuLog)),
+    'the receipt binds both fully observed append-only logs');
+  assert.equal(resumed.commands.some(command => /\bbm\b|\baa\b|install|\bsu\b|chmod|param set/.test(command)), false,
+    'snapshot admission remains read-only and never touches application data or operations');
   const sdk = join(root, 'sdk'), normal = join(sdk, 'ets/build-tools/ets-loader'), overridden = join(root, 'override loader');
   mkdirSync(normal, { recursive: true }); mkdirSync(join(sdk, 'toolchains')); mkdirSync(overridden);
   assert.deepEqual(contractToolchainLoaders({ READER_HARMONY_SDK_HOME: sdk, READER_ETS_LOADER_ROOT: overridden, PATH: '' }), [normal, overridden]);

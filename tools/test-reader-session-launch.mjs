@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
-import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts';
-import { ReaderSessionMorphSourceMeasurement } from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
-import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
+import { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } from '../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts';
+import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts';
+import { ReaderSessionMorphSourceMeasurement } from '../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts';
+import { readerProbeCubicBezierProgress as bezier } from './lib/reader-motion-curve-fixture.mjs';
 
 const curves = { flight:p=>bezier(p,.4,0,.2,1), expand:p=>bezier(p,.2,0,0,1),
   easeIn:p=>bezier(p,.42,0,1,1), easeOut:p=>bezier(p,0,0,.58,1), easeInOut:p=>bezier(p,.42,0,.58,1) };

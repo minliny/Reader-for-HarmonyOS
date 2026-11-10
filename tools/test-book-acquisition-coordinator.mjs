@@ -8,13 +8,13 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const { BookRequestScheduler } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { withPreparedRemoteChapter, preparedRemoteChapterMatches } = await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { withPreparedRemoteChapter, preparedRemoteChapterMatches } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
 const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const {RemoteReadingGatewayError,isRemoteReadingCacheRecoveryEligible,isRemoteReadingCacheFallbackEligible}=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
-const {remoteReadingFailureKindOf}=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+const {RemoteReadingGatewayError,isRemoteReadingCacheRecoveryEligible,isRemoteReadingCacheFallbackEligible}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
+const {remoteReadingFailureKindOf}=await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
 const deferred = () => { let resolve; let reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 async function until(predicate) { for (let i=0;i<150;i++) { if (predicate()) return; await tick(); } assert.fail('fixture did not settle'); }
@@ -576,7 +576,7 @@ console.log('PASS actual cache handoff: ordinary prefetch preserves other/curren
 // Entry reuses a current Core catalog, but conversion, refresh and source
 // mutations must retain the canonical projection fallback.
 {
-  const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+  const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
   const f = fixture();
   const session = await f.runtime.acquireBook(seed('/catalog-reuse'));
   const gateway = new ReadingSessionFlowGateway('s1', '/catalog-reuse', { kind: 'remote', session }, {

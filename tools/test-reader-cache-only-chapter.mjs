@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const identity = { sourceId: 'source', bookId: 'book' };
 const session = { identity, acquisitionMode: 'offline', detailUrl: '/book', tocUrl: '/toc',
   book: { title: 'Book', author: 'Author' }, continuationVariables: [], hostRequirements: [],

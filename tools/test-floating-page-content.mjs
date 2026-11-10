@@ -11,13 +11,13 @@ const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createRequire } = await import('node:module');
+const { createRequire, registerHooks } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
-const { readerInteractiveSafeBottom, readerInteractiveSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerInteractiveSafeBottom, readerInteractiveSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 const { mangaGridProbeDependencies, mangaGridBuilderMembers, emptyMangaGridState } = await import('./lib/manga-directory-grid-probe.mjs');
-const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 
@@ -25,10 +25,10 @@ const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-r
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
 const sources = Object.fromEntries(Object.entries({
-  search: 'features/search/SearchPage.ets', source: 'features/source/SourceManagementPage.ets',
-  multi: 'features/bookshelf/BookshelfMultiSelectPage.ets', directory: 'features/bookshelf/BookDirectoryPage.ets',
-  flat: 'features/reading/ReaderDirectoryList.ets', surface: 'features/reading/ReaderDirectoryNavigationSurface.ets',
-  tree: 'features/reading/ReaderDirectoryNavigationList.ets',
+  search: 'features/search/ui/SearchPage.ets', source: 'features/source/ui/SourceManagementPage.ets',
+  multi: 'features/bookshelf/ui/BookshelfMultiSelectPage.ets', directory: 'features/reading/ui/BookDirectoryPage.ets',
+  flat: 'features/reading/ui/ReaderDirectoryList.ets', surface: 'features/reading/ui/ReaderDirectoryNavigationSurface.ets',
+  tree: 'features/reading/ui/ReaderDirectoryNavigationList.ets',
 }).map(([key, path]) => [key, read(path)]));
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -62,10 +62,10 @@ for (const [name, slots] of [['PageBackBar', ['trailing']], ['ReaderDirectoryLis
   ['ReaderDirectoryNavigationSurface', ['fallbackBuilder']]]) {
   syntax.builderParamObjectCollection.set(name, new Set(slots));
 }
-const tokens = Object.fromEntries([...read('features/common/ReaderTokens.ets')
+const tokens = Object.fromEntries([...read('ui/foundation/ReaderTokens.ets')
   .matchAll(/export const (TOK_\w+)(?:\s*:\s*\w+)?\s*=\s*([\d.]+);/g)].map(m => [m[1], Number(m[2])]));
 let metrics = {
-  systemFontScale: 1, windowRect: { width: 390, height: 844 },
+  revision: 1, systemFontScale: 1, windowRect: { width: 390, height: 844 },
   systemInsets: { left: 0, right: 0, bottom: 34 }, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {},
 };
 const lazy = { create(_id, _owner, data, generator) {
@@ -89,8 +89,8 @@ const deps = {
 };
 const properties = createArkUIPropertyRuntimeProbe();
 Object.assign(deps, properties.sdk);
-const footerSource = read('features/manga/MangaDirectoryCurrentFooter.ets');
-const popupSource = read('features/common/ReaderMangaDownloadPopup.ets');
+const footerSource = read('features/manga/ui/MangaDirectoryCurrentFooter.ets');
+const popupSource = read('features/manga/ui/ReaderMangaDownloadPopup.ets');
 deps.MangaDirectoryCurrentFooter = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), deps, properties.hooks).Component;
 deps.ReaderMangaDownloadPopup = Child;
 const hooks = { ...properties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
@@ -98,7 +98,7 @@ const hooks = { ...properties.hooks, childSources: { MangaDirectoryCurrentFooter
 const nodes = owner => [...owner.nodes.values()];
 const allNodes = owner => [...(owner.nodes?.values() ?? []), ...[...(owner.children?.values() ?? [])].flatMap(allNodes)];
 function fixture(key, names, values = {}) {
-  const selected = key === 'search' ? [...names, 'operation', 'retryOperation', 'filteredEmptyMessage', 'searchHeader', 'resultStats', 'searchActivity'] : key === 'source' ? [...names, 'recovery'] : key === 'directory' ? [...names, 'standardContent', 'standardHeader', 'standardToolbar'] : names;
+  const selected = key === 'search' ? [...names, 'operation', 'retryOperation', 'filteredEmptyMessage', 'searchHeader', 'resultStats', 'searchActivity'] : key === 'source' ? [...names, 'recovery'] : names;
   const { owner } = createReaderBuilderProbe(sources[key], selected, deps, hooks);
   for (const match of sources[key].matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) {
     if (typeof owner[match[1]] !== 'function') owner[match[1]] = () => {};
@@ -193,58 +193,146 @@ if(selectedCase==='source') for (const sourceCount of [0, 2]) {
 }
 
 if(selectedCase==='multi-select') {
-const multi = fixture('multi', ['build', 'selectionTopBar', 'removeBar', 'removeBarClearance', 'bottomInset'], {
-  selectedKeys: [], busy: false, ready: true, removeBarHeight: 0, bookRows: () => [],
+const pageGeometry = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
+const scrollGeometry = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
+const { readerFrameStyle } = await import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
+const { ReaderMeasurementStore } = await import('../entry/src/main/ets/ui/layout/ReaderMeasurements.ts');
+Object.assign(deps, pageGeometry, scrollGeometry, { readerFrameStyle, ReaderMeasurementStore, ButtonType: { Normal: 'ButtonType.Normal' } });
+let cancels = 0, selects = 0;
+const multi = fixture('multi', ['build', 'selectionTopBar', 'selectionAction', 'removeBar', 'removeBarClearance', 'bottomInset',
+  'geometry', 'measurementKey', 'measurementRevision', 'measurements', 'viewportWidth', 'viewportHeight', 'mounted',
+  'frameStyle', 'onGeometryInputsChanged', 'recordMeasurement', 'refreshGeometry', 'scrollLayout', 'liveWidth'], {
+  mounted: true, selectedKeys: [], busy: false, ready: true, bookRows: () => [],
+  onCancel: () => cancels++, toggleAll: () => selects++,
   allSelected: () => false, bookKey: () => '', isListMode: () => false,
   __Repeat() { return { each() { return this; }, key() { return this; }, virtualScroll() { return this; }, render() {} }; },
 });
+multi.onGeometryInputsChanged();
 multi.initialRender();
 const multiList = fullList(multi);
 assert.ok(multiList.contentStartOffset > 0);
-const remove = nodes(multi).find(n => typeof n.onAreaChange==='function' && n!==multiList && n.borderRadius);
 const removeHost = allNodes(multi).find(n => n.type === 'Column' && n.onAreaChange && n.padding?.left === 0 && n.padding?.right === 0);
 assert.ok(removeHost);
 assert.equal(removeHost.height, undefined, 'the footer can grow naturally with scaled or wrapped labels');
 assert.equal(allNodes(multi).find(n => n.type === 'Stack' && n.zIndex === 20).hitTestBehavior, 'HitTestMode.Transparent');
-remove.onAreaChange({}, { height: 116 });
+const footerKey = multi.measurementKey;
+removeHost.onAreaChange({}, { height: 116 });
 multi.replayOnly([multiList.id]);
 const firstMeasuredEnd=multiList.contentEndOffset;
-remove.onAreaChange({}, {height:173}); multi.replayOnly([multiList.id]);
+removeHost.onAreaChange({}, {height:173}); multi.replayOnly([multiList.id]);
 assert.equal(multiList.contentEndOffset-firstMeasuredEnd, 173-116, 'measured footer delta updates retained clearance without shrinking List');
+assert.equal(multiList.contentEndOffset, multi.geometry.content.endInset);
+const scaffold = nodes(multi).find(n => n.onAreaChange);
+assert.ok(scaffold, 'the root scaffold publishes its actual viewport');
+scaffold.onAreaChange({}, { width: 760, height: 390 });
+const newLayout = multi.geometry;
+assert.deepEqual([multi.viewportWidth, multi.viewportHeight], [760, 390]);
+assert.ok(Number.isFinite(newLayout.revision));
+multi.recordMeasurement('selection:footer', 200, footerKey);
+assert.equal(multi.geometry.revision, newLayout.revision, 'a retired footer receipt cannot change the new layout');
+const cancel = nodes(multi).find(n => n.type === 'Button' && n.accessibilityText === '取消');
+const select = nodes(multi).find(n => n.type === 'Button' && n.accessibilityText === '全选');
+assert.deepEqual([cancel.height, select.height], [44,44]);
+cancel.onClick(); select.onClick();
+multi.busy = true;
+cancel.onClick(); select.onClick();
+multi.busy = false;
+multi.mounted = false;
+cancel.onClick(); select.onClick();
+assert.deepEqual([cancels, selects], [1,1], 'native button callbacks still check the current owner and busy state');
 }
 
 if(selectedCase==='directory') {
-const directory = fixture('directory', ['build', 'standardPage', 'flatList'], {
-  sourceId: 'local', bookId: 'book', admittedIdentity: 'local\u0000book', rulesRevision: 0, toolsHeight: 51,
-  directoryRecovery: { offlineBlocked: false },
-  supportsDirectoryRules: () => false, projectedEntries: [{ index: 7 }], admittedEntries: [{ index: 7 }],
-  bottomInset: () => 34, searchDraft: '', searchQuery: '', ascending: true, navigationActive: false,
-});
-directory.initialRender();
-let tree = [...directory.children.values()].find(child => child.params.chapterEntries);
-assert.ok(tree);
-const initialTop=tree.params.contentStartInset, initialEnd=tree.params.contentEndInset;
-assert.ok(initialTop>0 && initialEnd>=34);
-tree.params.fallbackBuilder();
-const flat = [...directory.children.values()].find(child => child.params.entries);
-assert.equal(flat.params.contentStartInset, initialTop);
-assert.equal(flat.params.contentEndInset, initialEnd);
-const tools = nodes(directory).find(n => n.type === 'Column' && n.margin?.left === 42 && n.margin?.right === 18);
-assert.ok(tools, 'toolbar remains a real bounded business slot inside the common header');
-assert.equal(tools.position, undefined, 'toolbar flows after the title under the one shared header mask');
-assert.equal(tools.hitTestBehavior, 'HitTestMode.Transparent');
-const directoryHeader = allNodes(directory).find(n => n.type === 'Column' && n.zIndex === 10 && n.onAreaChange);
-assert.ok(directoryHeader);
-assert.match(directoryHeader.backgroundColor, /^#FF/, 'title and expanded tools share one opaque header mask');
-directoryHeader.onAreaChange({}, { height: '268vp' });
-directory.replayOnly([tree.id, flat.id]);
-assert.equal(flat.params.contentStartInset,tree.params.contentStartInset);
-const measuredTop=tree.params.contentStartInset;
-directoryHeader.onAreaChange({}, {height:321}); directory.replayOnly([tree.id,flat.id]);
-assert.equal(tree.params.contentStartInset-measuredTop,321-268);
-assert.equal(flat.params.contentStartInset,tree.params.contentStartInset,'both retained owners receive the same measured header delta');
-directoryHeader.onAreaChange({}, { height: 0 });
-assert.equal(directory.standardHeaderHeight, 321, 'transient zero layout cannot erase measured clearance');
+  registerHooks({resolve(specifier, context, next) {
+    try { return next(specifier, context); }
+    catch (error) {
+      if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(specifier+'.ts', context);
+      throw error;
+    }
+  }});
+  const [pageGeometry, frame, measurements, widthClass, metricsApi, positioning, snapshots, projection, recovery] =
+    await Promise.all([
+      import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts'),
+      import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts'),
+      import('../entry/src/main/ets/ui/layout/ReaderMeasurements.ts'),
+      import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts'),
+      import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts'),
+      import('../entry/src/main/ets/features/reading/ui/ReaderControlListPositioning.ts'),
+      import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts'),
+      import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts'),
+      import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts'),
+    ]);
+  const panelSource = read('features/reading/ui/FullDirectoryPanel.ets');
+  const fullSource = read('features/reading/ui/ReaderFullDirectory.ets');
+  const directoryDeps = {
+    ...deps, ...pageGeometry, ...frame, ...measurements, ...widthClass, ...metricsApi, ...positioning, ...snapshots, ...projection,
+    ...recovery, registerReaderFonts() {}, fullDirectoryBackGeneration: 0,
+    BOOKMARK_ROW_HEIGHT: Number(read('features/reading/ui/ReaderBookmarkRow.ets').match(/BOOKMARK_ROW_HEIGHT = (\d+)/)[1]),
+    ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
+    ReaderDirectoryRecoverySurface: Child, ReaderDirectoryChapterRow: Child,
+  };
+  const directoryHooks = { ...hooks, lifecycleChildren: true, childSources: {
+    ...hooks.childSources, FullDirectoryPanel: panelSource, ReaderDirectoryList: sources.flat,
+    ReaderDirectoryNavigationSurface: sources.surface,
+    ReaderDirectoryRecoverySurface: read('features/reading/ui/ReaderDirectoryRecoverySurface.ets'),
+    ReaderDirectoryToolbar: read('features/reading/ui/ReaderDirectoryToolbar.ets'),
+    ReaderDirectoryChapterRow: read('features/reading/ui/ReaderDirectoryChapterRow.ets'),
+    ReaderDirectoryRules: read('features/reading/ui/ReaderDirectoryRules.ets'),
+  } };
+  const Panel = createReaderBuilderProbe(panelSource, boundedMembers(panelSource), directoryDeps, directoryHooks).Component;
+  const { owner: directory } = createReaderBuilderProbe(fullSource, boundedMembers(fullSource), {
+    ...directoryDeps, FullDirectoryPanel: Panel,
+  }, { ...directoryHooks, initialParams: {
+    sourceId: 'source', bookId: 'book', bookTitle: '目录', catalogContext: 'detail', reduceMotion: true,
+    entries: [{ index: 7, title: '原始章节', navigable: true }], bookmarkIdentity: { sourceId: 'source', bookId: 'book' },
+  } });
+  directory.aboutToAppear();
+  directory.initialRender();
+  const viewport = nodes(directory).find(node => node.onAreaChange);
+  assert.ok(viewport, 'actual directory wrapper measures its available viewport');
+  viewport.onAreaChange({}, { width: '365vp', height: '650vp' });
+  properties.flush();
+  const walk = owner => [owner, ...[...owner.children.values()].filter(child => child.nodes).flatMap(walk)];
+  const panel = walk(directory).find(child => child instanceof Panel);
+  assert.ok(panel && panel.allowUnanchoredBrowse);
+  assert.ok([...panel.children.values()].some(child => child.params.showChapterTools),
+    'search and sort share the bounded panel with its lists');
+  const tree = [...panel.children.values()].find(child => child.params.chapterEntries);
+  assert.ok(tree, 'actual panel exposes the canonical tree boundary');
+  tree.params.fallbackBuilder();
+  const flat = [...panel.children.values()].find(child => child.params.entries);
+  assert.ok(flat, 'the same panel exposes its retained flat fallback');
+  const scroller = tree.params.scroller, treeEntries = tree.params.chapterEntries, flatEntries = flat.params.entries;
+  assert.equal(flat.params.scroller, scroller);
+  assert.deepEqual(flatEntries.map(entry => entry.index), [7]);
+  for (const child of [tree, flat]) {
+    assert.equal(child.params.scrollLayout?.startInset ?? 0, 0, 'external header clearance is applied at the panel boundary');
+    assert.equal(child.params.scrollLayout?.endInset ?? 0, 0, 'external safe bottom is already reserved by the panel host');
+  }
+  assert.equal(flat.params.listPaddingY, tree.params.listPaddingY);
+  const header = walk(directory).find(actor => actor.style !== undefined && typeof actor.onHeightChange === 'function');
+  assert.ok(header, 'one actual shared HeaderHost publishes measured title height');
+  const headerArea = nodes(header).find(node => node.onAreaChange);
+  assert.ok(headerArea);
+  const body = nodes(directory).find(node => node.type === 'Stack' && node.position?.y === directory.panelTop() &&
+    node.height === panel.panelHeightOverride);
+  assert.ok(body, 'a positioned and bounded panel owns both list branches below the header');
+  headerArea.onAreaChange({}, { height: '72vp' }); properties.flush();
+  const measuredTop = body.position.y, measuredHeight = panel.panelHeightOverride;
+  headerArea.onAreaChange({}, { height: 105 }); properties.flush();
+  assert.equal(body.position.y - measuredTop, 33);
+  assert.equal(measuredHeight - panel.panelHeightOverride, 33, 'measured title delta shrinks the same panel viewport exactly once');
+  assert.equal(body.position.y + panel.panelHeightOverride, 650 - 34, 'the same measured host reserves the safe bottom');
+  assert.equal(walk(directory).find(child => child instanceof Panel), panel);
+  assert.equal(panel.children.get(tree.id), tree);
+  assert.equal(panel.children.get(flat.id), flat);
+  assert.equal(tree.params.chapterEntries, treeEntries);
+  assert.equal(flat.params.entries, flatEntries);
+  assert.equal(flat.params.scroller, scroller);
+  headerArea.onAreaChange({}, { height: 0 }); properties.flush();
+  assert.equal(body.position.y, measuredTop + 33, 'transient zero layout cannot erase admitted title clearance');
+  panel.aboutToDisappear();
+  directory.aboutToDisappear();
 }
 
 function nativeDirectoryFixture(key, values = {}) {
@@ -313,8 +401,9 @@ if(selectedCase==='manga-catalog') for (const [safeTop, safeBottom] of [[0, 0], 
   let rawMangaOffset = 0;
   const nativeMangaScroller = { currentOffset: () => ({ xOffset: 0, yOffset: rawMangaOffset }) };
   const catalog = fixture('directory', ['build', 'mangaPage', 'mangaToolbar', 'mangaFlatList', 'mangaEmptyState', 'mangaDownloadMenuButton',
-    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon', 'headerFrame', 'onMangaScrollOffset', 'topInset', 'bottomInset'], {
+    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon', 'headerFrame', 'onMangaScrollOffset', 'directoryListIsCurrent', 'identity', 'topInset', 'bottomInset'], {
     contentKind: 'manga', sourceId: 'source', bookId: 'book', admittedIdentity: 'source\u0000book',
+    mounted: true, navigationActive: false,
     admittedEntries: entries, projectedEntries: entries, rulesRevision: 0, currentChapterIndex: 7,
     locateCurrentRevision: 0, navigationInteracted: false, mangaDownloadEnabled: false,
     bookTitle: '漫画', searchDraft: '', searchQuery: '', ascending: true,
@@ -385,7 +474,7 @@ if(selectedCase==='search-anchor') {
 // A previously saved positive first-row y is valid after adding internal
 // header clearance. The actual restore method must not force that row to y=0.
 const frames = [], moves = [];
-const Restore = selectedProductionMethods(new URL('features/search/SearchPage.ets', root), 'SearchPage',
+const Restore = selectedProductionMethods(new URL('features/search/ui/SearchPage.ets', root), 'SearchPage',
   ['scheduleScrollRestore', 'searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'selectGroup'], {
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) },
     SearchLayoutFrame: class { constructor(action) { this.action = action; } }, ScrollAlign: { START: 0 }, Edge: { Top: 'top' },

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ReaderScreenAwakeLease,
   readerScreenAwakeLeaseDurationMs,
-} from '../entry/src/main/ets/features/reading/ReaderScreenAwakeLease.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderScreenAwakeLease.ts';
 
 class FakeScheduler {
   nextHandle = 1;

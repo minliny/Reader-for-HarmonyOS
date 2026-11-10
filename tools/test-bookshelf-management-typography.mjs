@@ -13,7 +13,7 @@ const { readerMessageStyles, loadReaderTypographyRoles } = await import('./lib/r
 
 
 const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
-const typographySource = read('features/common/ReaderTypography.ets');
+const typographySource = read('ui/foundation/ReaderTypography.ets');
 const roles = [
   'TYPE_SHELF_MANAGEMENT_NOTE',
   'TYPE_SHELF_MANAGEMENT_STATUS',
@@ -29,7 +29,7 @@ const roles = [
 ];
 const allTypography = loadReaderTypographyRoles(typographySource);
 const typography = Object.fromEntries(roles.map(role => [role, allTypography[role]]));
-const page = read('features/bookshelf/BookshelfManagementPage.ets');
+const page = read('features/bookshelf/ui/BookshelfManagementPage.ets');
 
 // Actual Parent→SDK common component→native tuple, rather than allowing a
 // source-name registration to replace the former three control consumers.

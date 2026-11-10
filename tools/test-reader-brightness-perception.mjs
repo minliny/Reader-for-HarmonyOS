@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import * as curve from '../entry/src/main/ets/features/reading/ReaderBrightnessCurve.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlGeometry.ts';
+import * as curve from '../entry/src/main/ets/features/reading/ui/ReaderBrightnessCurve.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts';
 
 const {readerBrightnessWindowValue: windowValue, readerBrightnessControlPercent: controlPercent} = curve;
 assert.equal(windowValue(1), .01); assert.equal(windowValue(100), 1);
@@ -18,7 +18,7 @@ for (let i = 0; i <= 990; i++) {
 for (const invalid of ['', 'bad', '-1', '256', 'Infinity']) assert.equal(curve.readerBrightnessSystemValue(invalid), undefined);
 assert.equal(curve.readerBrightnessSystemValue('51'), .2);
 
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const deferred = () => {let resolve, reject; const promise = new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 let reads = [], writes = [], windowSetting = -1;
 const Host = productionMotionMethods(source, ['refreshReaderBrightness','readSystemBrightnessValue', 'refreshSystemBrightness', 'setReaderBrightness',
@@ -84,7 +84,7 @@ const flush = async()=>{for(let i=0;i<10;i++)await Promise.resolve();};
 // Real SDK paint calls: 24vp input surface surrounds one clipped 8vp track;
 // the low fill has no independent radius that can protrude beyond that track.
 const native=new Proxy({}, {get:()=>()=>{}});
-const {owner}=createReaderBuilderProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets',import.meta.url),'utf8'),
+const {owner}=createReaderBuilderProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),'utf8'),
   ['brightnessRail'],{...geometry,TOK_BORDER_W:1,Gesture:native,GestureGroup:native,PanGesture:native,TapGesture:native,
     GesturePriority:{Low:0},GestureMode:{Exclusive:1},PanDirection:{Vertical:1}});
 Object.assign(owner,{appScheme:'day',brightnessAutomatic:true,effectiveBrightnessPercent:()=>1});

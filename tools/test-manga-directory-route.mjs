@@ -6,7 +6,7 @@ import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 
 const indexUrl = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
-const shellUrl = new URL('../entry/src/main/ets/features/shell/ReaderShell.ets', import.meta.url);
+const shellUrl = new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets', import.meta.url);
 const Index = productionMotionMethods(indexUrl, ['onDirectoryNavigationTargetSelected', 'onDirectoryChapterSelected', 'readingReadyCallback',
   'presentPreparedReading', 'applyDirectoryChapter', 'isKnownDetailChapter', 'nextNavigationGeneration'],
   {LOCAL_SOURCE_ID: 'local'});
@@ -28,7 +28,7 @@ const index = Object.assign(new Index(), {
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const childSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const childSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('MangaReadingSurface');
 syntax.propCollection.set('MangaReadingSurface', new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
 class MangaReadingSurface {

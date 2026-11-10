@@ -17,14 +17,14 @@ const {
   readerControlContentLocation,
   readerControlTargetLocation,
   sampleReaderControlSession,
-}=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
 const {
   beginReaderControlGesture,
   cancelReaderControlGesture,
   createReaderControlGestureState,
   readerControlGrabberScreenY,
   updateReaderControlGesture,
-}=await import('../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts');
+}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts');
 
 const durationMs = 400;
 const pointerId = 11;

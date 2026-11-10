@@ -2,12 +2,12 @@ import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selec
 const selected=selectContractCases({'catalog-selection':{description:'Actual narrow entry catalog, last-intent selection and unknown/proven chapter edges',resources:[]},'window-expansion':{description:'Actual post-frame full-window atomic expansion with save/anchor/lifecycle ownership',resources:[]},'complete-text-consumers':{description:'Paged turn avoids full read; TTS/continuous explicitly require complete text and current intent',resources:[]}});
 async function run(id){
 const {default:assert}=await import('node:assert/strict');
-const { readingParagraphBoundaryMode, prepareReadingParagraphUtf16Ranges }=await import('../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts');
+const { readingParagraphBoundaryMode, prepareReadingParagraphUtf16Ranges }=await import('../entry/src/main/ets/features/reading/application/ReadingParagraphProjection.ts');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 
 
 
-const Entry = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Entry = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['tryInitialEntrySnapshot', 'selectChapterAnchor'], { readingParagraphBoundaryMode, LOCAL_READING_SOURCE_ID:'local', hilog:{warn(){}}, errorMessageOf:e=>e.message });
 
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};};
@@ -73,7 +73,7 @@ if(id==="catalog-selection"){
 
 
 
-const Edges = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Edges = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
  ['isUnknownCatalogEdge','knownPageTurnBoundary','turnNextPage','performContinuousPageTurn','hydrateEntryCatalog'],
  {LOCAL_READING_SOURCE_ID:'local',hilog:{warn(){}},errorMessageOf:e=>e.message});
 
@@ -123,7 +123,7 @@ for(const stale of [false,true]){
 
 
 
-const Steps = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Steps = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
  ['stepControlChapter'], {hilog:{warn(){}},errorMessageOf:e=>e.message});
 if(id==="catalog-selection"){
 
@@ -164,7 +164,7 @@ for (const hasNewIntent of [false,true]) {
 
 
 
-const Presentation=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const Presentation=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
  ['notifyReadingPresentationReady'],{hilog:{error(){}}});
 if(id==="window-expansion"){
 
@@ -183,11 +183,11 @@ if(id==="window-expansion"){
 
 
 
-const {readingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const {readingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
 
-const {retainReadingEntryImageHandles}=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+const {retainReadingEntryImageHandles}=await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
 
-const WindowOwner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const WindowOwner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
  ['hydrateEntryWindow','hasPartialEntryWindow','scheduleEntryWindowHydration','lastVisibleScalar','isChapterFirstPageStart'],
  {readingChapterLayoutMap,retainReadingEntryImageHandles,readingParagraphBoundaryMode,prepareReadingParagraphUtf16Ranges,ParagraphRange:class{constructor(id,startUtf16,endUtf16,startScalar,endScalar){Object.assign(this,{id,startUtf16,endUtf16,startScalar,endScalar});}},ReaderUIFrameCallback:class{constructor(callback){this.callback=callback;}},hilog:{warn(){}},errorMessageOf:e=>e.message});
 
@@ -238,7 +238,7 @@ if(id==="window-expansion"){
 
 
 
-const TurnWindow=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const TurnWindow=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
  ['performPageTurn','knownPageTurnBoundary','toggleTts'],{readerPageTransitionUsesPreparedPages:()=>true});
 if(id==="complete-text-consumers"){
 
@@ -315,7 +315,7 @@ if(id==="complete-text-consumers"){
 }
 }
 
-const ContinuousEdges=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const ContinuousEdges=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
  ['onContinuousReachStart','onContinuousReachEnd','onContinuousBoundaryDrag']);
 if(id==="complete-text-consumers"){
 

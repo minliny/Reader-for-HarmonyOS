@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingSurfaceLayoutMap, readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
-import { ReadingPaginationIndex, ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
-import { collectReadingParagraphUtf16Ranges, readingParagraphBoundaryMode } from '../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import { ReadingSurfaceLayoutMap, readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
+import { ReadingPaginationIndex, ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
+import { collectReadingParagraphUtf16Ranges, readingParagraphBoundaryMode } from '../entry/src/main/ets/features/reading/application/ReadingParagraphProjection.ts';
+import * as style from '../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 
 // Like local-reverse-page and measurement-prefix, run the real production
 // owner against explicit native line receipts. No shaping, first paint, Core
 // progress persistence or platform pixel success is claimed by this test.
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
   readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
@@ -24,7 +24,7 @@ const MeasuredReadingLine = declaration('MeasuredReadingLine', 'class PhysicalRe
 const PhysicalReadingPage = declaration('PhysicalReadingPage', 'interface DeferredReadingImagePixels');
 const PreviousChapterMeasurement = declaration('PreviousChapterMeasurement', 'class CoreReadingAnchor');
 const ArkUILineMetric = declaration('ArkUILineMetric', 'type ReadingPhase');
-const nativeText = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
+const nativeText = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
 const heightText = nativeText.slice(nativeText.indexOf('export function readerNativeParagraphHeight'), nativeText.indexOf('/** A viewport'));
 const readerNativeParagraphHeight = new Function('graphicsText', stripTypeScriptTypes(heightText).replace('export ', '') + ';return readerNativeParagraphHeight;')({ RectWidthStyle: { TIGHT: 0 }, RectHeightStyle: { TIGHT: 0 } });
 class TextController { getLayoutManager() { assert.ok(this.manager, 'only measured controllers expose geometry'); return this.manager; } }

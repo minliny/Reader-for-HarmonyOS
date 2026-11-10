@@ -41,52 +41,52 @@ const sourceFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((
 const appSources = sourceFiles(resolve(root, 'entry/src/main/ets'))
   .filter((path) => path.endsWith('.ets') || path.endsWith('.ts'));
 
-const metrics = file('entry/src/main/ets/features/common/ReaderHeaderMetrics.ts');
-const specs = file('entry/src/main/ets/features/common/ReaderHeaderSpecs.ets');
-const appTopBar = file('entry/src/main/ets/features/common/AppTopBar.ets');
-const pageBackBar = file('entry/src/main/ets/features/common/PageBackBar.ets');
-const pageShell = file('entry/src/main/ets/features/common/ReaderPageShell.ts');
-const scaffold = file('entry/src/main/ets/features/common/ReaderPageScaffold.ets');
-const standardPage = file('entry/src/main/ets/features/common/ReaderStandardPage.ets');
-const motionSpec = file('entry/src/main/ets/features/common/MotionSpec.ets');
-const motionPolicy = file('entry/src/main/ets/features/common/ReaderMotionPolicy.ets');
-const launchTimeline = file('entry/src/main/ets/features/reading/ReaderSessionLaunchTimeline.ts');
-const launchPresentation = file('entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const ttsWaveform = file('entry/src/main/ets/features/reading/ReaderTtsWaveformModel.ts');
-const productTiming = file('entry/src/main/ets/features/common/ProductMotionTiming.ts');
-const pageSettlement = file('entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts');
-const widthClass = file('entry/src/main/ets/features/common/ReaderWidthClass.ts');
-const surfaceResolvers = file('entry/src/main/ets/features/common/ReaderSurfaceResolvers.ts');
-const surfaceSpecs = file('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
+const metrics = file('entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+const specs = file('entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets');
+const appTopBar = file('entry/src/main/ets/ui/chrome/AppTopBar.ets');
+const pageBackBar = file('entry/src/main/ets/ui/chrome/PageBackBar.ets');
+const pageShell = file('entry/src/main/ets/ui/layout/ReaderPageShell.ts');
+const scaffold = file('entry/src/main/ets/ui/layout/ReaderPageScaffold.ets');
+const standardPage = file('entry/src/main/ets/ui/layout/ReaderStandardPage.ets');
+const motionSpec = file('entry/src/main/ets/ui/foundation/MotionSpec.ets');
+const motionPolicy = file('entry/src/main/ets/ui/foundation/ReaderMotionPolicy.ets');
+const launchTimeline = file('entry/src/main/ets/features/reading/ui/ReaderSessionLaunchTimeline.ts');
+const launchPresentation = file('entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const ttsWaveform = file('entry/src/main/ets/features/reading/ui/ReaderTtsWaveformModel.ts');
+const productTiming = file('entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const pageSettlement = file('entry/src/main/ets/features/reading/ui/ReaderPageSettlementTimeline.ts');
+const widthClass = file('entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
+const surfaceResolvers = file('entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
+const surfaceSpecs = file('entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets');
 const index = file('entry/src/main/ets/pages/Index.ets');
 const entryAbility = file('entry/src/main/ets/entryability/EntryAbility.ets');
-const shelfShell = file('entry/src/main/ets/features/bookshelf/BookshelfShell.ets');
-const shelfPage = file('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
-const fullDirectory = file('entry/src/main/ets/features/reading/ReaderFullDirectory.ets');
-const downloadPage = file('entry/src/main/ets/features/downloads/SharedDownloadPage.ets');
-const sourceManagement = file('entry/src/main/ets/features/source/SourceManagementPage.ets');
-const multiSelect = file('entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets');
-const directoryList = file('entry/src/main/ets/features/reading/ReaderDirectoryList.ets');
-const directoryNavList = file('entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets');
-const frameStyle = file('entry/src/main/ets/features/common/ReaderFrameStyle.ts');
-const panelMotion = file('entry/src/main/ets/features/reading/ReaderPanelMotionContract.ts');
-const importMotion = file('entry/src/main/ets/features/bookshelf/LocalImportMotion.ts');
-const scrollLayout = file('entry/src/main/ets/features/common/ReaderScrollLayout.ts');
-const scrollHost = file('entry/src/main/ets/features/common/ReaderPageScrollHost.ets');
+const shelfShell = file('entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets');
+const shelfPage = file('entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets');
+const fullDirectory = file('entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets');
+const downloadPage = file('entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets');
+const sourceManagement = file('entry/src/main/ets/features/source/ui/SourceManagementPage.ets');
+const multiSelect = file('entry/src/main/ets/features/bookshelf/ui/BookshelfMultiSelectPage.ets');
+const directoryList = file('entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets');
+const directoryNavList = file('entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets');
+const frameStyle = file('entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
+const importMotion = file('entry/src/main/ets/features/bookshelf/ui/LocalImportMotion.ts');
+const scrollLayout = file('entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
+const scrollHost = file('entry/src/main/ets/ui/layout/ReaderPageScrollHost.ets');
 const mainTabShell = file('entry/src/main/ets/features/shell/MainTabShell.ets');
-const readerShell = file('entry/src/main/ets/features/shell/ReaderShell.ets');
-const bookDetail = file('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
-const bookDirectoryPage = file('entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets');
-const directoryToolbar = file('entry/src/main/ets/features/reading/ReaderDirectoryToolbar.ets');
-const searchPage = file('entry/src/main/ets/features/search/SearchPage.ets');
-const importDialog = file('entry/src/main/ets/features/bookshelf/LocalImportDialog.ets');
-const mangaSurface = file('entry/src/main/ets/features/manga/MangaReadingSurface.ets');
-const mangaEntryRow = file('entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets');
-const sourceWindow = file('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
-const controlSearch = file('entry/src/main/ets/features/reading/ReaderControlSearchContent.ets');
-const toast = file('entry/src/main/ets/features/common/ReaderTransientToast.ets');
-const appearancePanel = file('entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets');
-const mangaLayout = file('entry/src/main/ets/features/manga/MangaLayoutPolicy.ts');
+const readerShell = file('entry/src/main/ets/features/reading/ui/ReaderShell.ets');
+const bookDetail = file('entry/src/main/ets/features/reading/ui/LocalBookDetail.ets');
+const bookDirectoryPage = file('entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets');
+const directoryToolbar = file('entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets');
+const searchPage = file('entry/src/main/ets/features/search/ui/SearchPage.ets');
+const importDialog = file('entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets');
+const mangaSurface = file('entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets');
+const mangaEntryRow = file('entry/src/main/ets/features/manga/ui/MangaDirectoryEntryRow.ets');
+const sourceWindow = file('entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets');
+const controlSearch = file('entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets');
+const toast = file('entry/src/main/ets/ui/feedback/ReaderTransientToast.ets');
+const controlPanel = file('entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets');
+const appearanceContent = file('entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets');
+const mangaLayout = file('entry/src/main/ets/features/manga/ui/MangaLayoutPolicy.ts');
 
 const results = [];
 function check(id, fn) {
@@ -107,17 +107,17 @@ check('single-app-bar-constant-owner', () => {
     assert.doesNotMatch(source, /(?:const|let|var)\s+APP_(?:FLOATING_)?HEADER_BAR_HEIGHT\s*=/, `${name}: duplicate app bar constant`);
     assert.doesNotMatch(source, /(?:const|let|var)\s+APP_FLOATING_HEADER_TOP_GAP\s*=/, `${name}: duplicate header top gap constant`);
   }
-  assert.ok(has(appTopBar, "from './ReaderHeaderMetrics'"));
+  assert.ok(has(appTopBar, "from '../../ui/foundation/ReaderHeaderMetrics'"));
   assert.ok(has(appTopBar, 'readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, scale, 0)'));
   assert.ok(has(appTopBar, 'readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_APP_HOME_TITLE.lineHeightFp as number, scale, 6)'));
   assert.doesNotMatch(appTopBar, /\.height\(\s*(?:52|58)\s*\)/);
-  assert.ok(has(pageShell, "from './ReaderHeaderMetrics'"));
+  assert.ok(has(pageShell, "from '../foundation/ReaderHeaderMetrics'"));
   assert.ok(has(pageShell, 'headerHeight: number = APP_HEADER_BAR_HEIGHT'));
   assert.doesNotMatch(pageShell, /headerHeight: number = 58/);
 });
 
 check('page-back-bar-consumes-app-bar-metrics', () => {
-  assert.ok(has(pageBackBar, "import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from './ReaderHeaderMetrics';"));
+  assert.ok(has(pageBackBar, "import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from '../../ui/foundation/ReaderHeaderMetrics';"));
   const source = compact(pageBackBar);
   assert.ok(source.includes(compact('readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, this.fontScale(), 0)')));
   assert.ok(source.includes(compact('readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)')));
@@ -147,7 +147,7 @@ check('bookshelf-header-single-measured-owner', () => {
 
 check('scaffold-geometry-only', () => {
   assert.ok(has(scaffold, '@Prop geometry: ReaderPageGeometry;'));
-  assert.ok(has(file('entry/src/main/ets/features/common/ReaderPageGeometry.ts'),
+  assert.ok(has(file('entry/src/main/ets/ui/layout/ReaderPageGeometry.ts'),
     'export function readerEmptyPageGeometry(): ReaderPageGeometry'));
   for (const scalar of ['headerTop', 'headerInsetLeft', 'headerInsetRight', 'footerInsetLeft',
     'footerInsetRight', 'footerBottom', 'contentEndInset', 'frameInsetLeft', 'frameInsetRight']) {
@@ -159,7 +159,7 @@ check('scaffold-geometry-only', () => {
     assert.ok(has(scaffold, field), `scaffold must read ${field}`);
   }
   assert.ok(has(mainTabShell, 'geometry: this.pageGeometry(), headerMeasurementKey:'));
-  assert.doesNotMatch(file('entry/src/main/ets/features/common/ReaderPageGeometry.ts'), /variant:\s*ReaderPageShellKind/);
+  assert.doesNotMatch(file('entry/src/main/ets/ui/layout/ReaderPageGeometry.ts'), /variant:\s*ReaderPageShellKind/);
   assert.ok(has(bookDetail, 'geometry: this.pageGeometry(),'));
   assert.ok(has(bookDirectoryPage, 'geometry: this.mangaPageGeometry(),'));
 });
@@ -180,9 +180,9 @@ check('scaffold-call-site-geometry', () => {
   assert.equal(empty.length, 4, 'zero-geometry exceptions must use the named factory');
   for (const suffix of [
     'pages/Index.ets',
-    'features/shell/ReaderShell.ets',
-    'features/bookshelf/LocalBookDetail.ets',
-    'features/bookshelf/BookDirectoryPage.ets',
+    'features/reading/ui/ReaderShell.ets',
+    'features/reading/ui/LocalBookDetail.ets',
+    'features/reading/ui/BookDirectoryPage.ets',
   ]) {
     assert.ok(empty.some((call) => call.path.endsWith(suffix)), `missing zero-geometry exception: ${suffix}`);
   }
@@ -206,13 +206,15 @@ check('detail-header-spec-consumed', () => {
   assert.ok(has(specs, 'readonly barHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;'));
   assert.equal(numericField(specs, 'contentGap'), 16);
   assert.ok(has(specs, 'return Math.max(0, topInset) + this.topGap;'));
-  assert.ok(has(specs, 'return this.headerTop(topInset) + Math.max(0, measuredBarHeight) + this.contentGap;'));
-  assert.ok(has(bookDetail, "import { DetailHeaderSpec, detailHeaderSpec } from '../common/ReaderHeaderSpecs';"));
+  assert.ok(has(bookDetail, "import { DetailHeaderSpec, detailHeaderSpec } from '../../ui/foundation/ReaderHeaderSpecs';"));
   assert.ok(has(bookDetail, 'private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();'));
-  assert.ok(has(bookDetail, 'private readonly headerMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();'));
-  assert.ok(has(bookDetail, 'input.headerTop = this.headerSpec.headerTop(this.topInset());'));
-  assert.equal(count(bookDetail, 'this.headerMeasurements.read(\'detail:header\', this.headerSpec.barHeight)'), 1);
-  assert.equal(count(bookDetail, 'this.headerMeasurements.record(\'detail:header\', height, presentedKey, 0.1)'), 1);
+  assert.ok(has(bookDetail, 'private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();'));
+  assert.ok(has(bookDetail, "this.recordFrameHeight('detail:header', height, presentedKey);"));
+  assert.ok(has(bookDetail, 'input.headerTop = this.headerSpec.headerTop(readerInteractiveSafeTop(metrics));'));
+  assert.ok(has(bookDetail, "this.measurements.read('detail:header', minimumHeaderHeight)"));
+  assert.ok(has(bookDetail, 'const geometry = resolveReaderPageGeometry(input);'));
+  assert.ok(has(bookDetail, '.padding({ top: this.geometry.content.startInset, bottom: this.geometry.content.endInset });'));
+  assert.doesNotMatch(specs, /contentStart\(topInset: number, measuredBarHeight: number\)/);
   assert.equal(count(bookDetail, 'topInset() + 76'), 0, 'standard detail content must not re-compose the header height');
 });
 
@@ -241,35 +243,34 @@ check('book-directory-page-header-spec-consumed', () => {
 
 check('standard-page-content-start-single-owner', () => {
   assert.equal(count(pageShell, 'export const READER_STANDARD_PAGE_CONTENT_GAP = 8;'), 1);
-  assert.ok(has(pageShell, 'return readerPageContentStartInset(headerHeight, 0, READER_STANDARD_PAGE_CONTENT_GAP);'));
-  assert.ok(has(standardPage, "import { readerPageInitialHeaderHeight } from './ReaderHeaderSpecs';"));
+  assert.ok(has(standardPage, "import { APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';"));
   assert.ok(has(standardPage, 'private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();'));
-  assert.ok(has(standardPage, "this.measurements.read('standard:header', readerPageInitialHeaderHeight('standard'))"));
-  assert.ok(has(standardPage, "this.measurements.record('standard:header', height, presentedKey)"));
-  assert.ok(has(standardPage, 'overlayContent: (): void => { this.overlayContent(this.pageGeometry().content.startInset); },'));
-  assert.doesNotMatch(standardPage, /readerPageContentStartInset\([^)]*,\s*8\s*\)/);
+  assert.ok(has(standardPage, "this.measurements.read('standard:header', APP_HEADER_BAR_HEIGHT)"));
+  assert.ok(has(standardPage, "this.recordMeasurement('standard:header', height, key)"));
+  assert.ok(has(standardPage, 'this.measurements.record(slot, height, presentedKey)'));
+  assert.ok(has(standardPage, 'input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;'));
+  assert.ok(has(standardPage, 'this.geometry = resolveReaderPageGeometry(input);'));
+  assert.ok(has(standardPage, 'overlayContent: (): void => { this.overlayContent(this.geometry.content.startInset); },'));
+  assert.doesNotMatch(standardPage, /readerPageContentStartInset/);
 });
 
 check('directory-header-spec-consumed', () => {
-  assert.equal(numericField(specs, 'barHeight'), 54);
-  assert.equal(numericField(specs, 'radius'), 24);
-  assert.equal(numericField(specs, 'topGap'), 18);
-  assert.equal(numericField(specs, 'panelGap'), 16);
-  assert.equal(numericField(specs, 'controlHeight'), 42);
-  assert.equal(numericField(specs, 'menuGap'), 2);
-  assert.equal(numericField(specs, 'menuRowHeight'), 42);
-  assert.ok(has(specs, 'return topInset + this.barHeight + this.panelGap;'));
-  assert.ok(has(specs, 'return topInset + this.barHeight + this.menuGap;'));
-  assert.ok(has(fullDirectory, "import { DirectoryHeaderSpec, directoryHeaderSpec } from '../common/ReaderHeaderSpecs';"));
-  assert.ok(has(fullDirectory, 'private readonly headerSpec: DirectoryHeaderSpec = directoryHeaderSpec();'));
-  assert.equal(count(fullDirectory, '.height(this.headerSpec.barHeight)'), 2);
+  assert.doesNotMatch(specs, /\b(?:DirectoryHeaderSpec|directoryHeaderSpec)\b/);
+  const localMetrics = block(fullDirectory, 'private readonly headerSpec: FullDirectoryHeaderMetrics = {', '};');
+  for (const entry of ['barHeight: 54', 'topGap: 18', 'panelGap: 16', 'controlHeight: 42', 'menuGap: 2', 'menuRowHeight: 42']) {
+    assert.ok(has(localMetrics, entry));
+  }
+  assert.equal(count(fullDirectory, '.height(this.headerSpec.barHeight)'), 1);
   assert.equal(count(fullDirectory, '.height(this.headerSpec.controlHeight)'), 3);
-  assert.equal(count(fullDirectory, '.borderRadius(this.headerSpec.radius)'), 1);
+  assert.equal(count(fullDirectory, '.height(this.headerSpec.menuRowHeight)'), 2);
+  assert.ok(has(fullDirectory, "new ReaderPanelFrame('reader', this.appThemeScheme)"));
+  assert.ok(has(fullDirectory, "new ReaderPanelFrame('reader-menu', this.appThemeScheme)"));
   assert.equal(count(fullDirectory, 'this.headerSpec.topGap'), 3);
-  assert.ok(has(fullDirectory, 'this.headerSpec.panelGap'));
   assert.ok(has(fullDirectory, 'input.contentGap = this.headerSpec.panelGap;'));
-  assert.ok(has(fullDirectory, 'this.headerSpec.menuTop(this.topBarTop())'));
-  assert.ok(has(fullDirectory, 'this.headerMeasurements.read(this.headerMeasurementKey(), this.headerSpec.barHeight)'));
+  assert.ok(has(fullDirectory, 'return this.geometry.content.startInset;'));
+  assert.ok(has(fullDirectory, 'y: this.geometry.header.bottom + this.headerSpec.menuGap'));
+  assert.ok(has(compact(fullDirectory),
+    "this.headerMeasurements.readForGeneration('fullDirectory:header', this.measurementKey, this.headerSpec.barHeight)"));
   for (const duplicate of ['.height(54)', '.height(42)', '.borderRadius(24)', 'topBarTop() + 56', 'top + 70']) {
     assert.equal(count(fullDirectory, duplicate), 0, `duplicate directory header literal returned: ${duplicate}`);
   }
@@ -313,7 +314,7 @@ check('search-spec-values', () => {
     statsPaddingBottom: 4,
   };
   for (const [name, value] of Object.entries(expected)) assert.equal(numericField(specs, name), value, name);
-  const token = file('entry/src/main/ets/features/common/ReaderTokens.ets').match(/export const TOK_BORDER_W = (\d+);/);
+  const token = file('entry/src/main/ets/ui/foundation/ReaderTokens.ets').match(/export const TOK_BORDER_W = (\d+);/);
   assert.ok(token, 'TOK_BORDER_W: shared token declaration is missing');
   assert.equal(Number(token[1]), 1);
   assert.ok(has(specs, 'readonly borderWidth: number = TOK_BORDER_W;'));
@@ -322,19 +323,17 @@ check('search-spec-values', () => {
   assert.ok(has(specs, 'this.statsVerticalPadding = this.statsPaddingTop + this.statsPaddingBottom;'));
 });
 
-check('search-pure-fallback-formula', () => {
-  const source = compact(specs);
-  assert.ok(source.includes(compact(`const panel = barHeight + spec.panelBottomGap + 2 * spec.borderWidth;`)));
-  assert.ok(source.includes(compact('if (!hasSession) return panel;')));
-  assert.ok(source.includes(compact(`const filters = filtersExpanded ? Math.min(2 * filterHeight + spec.filterGroupBottomPadding, filterMaxHeight) : 0;`)));
-  assert.ok(source.includes(compact('return panel + statsHeight + filters + spec.borderWidth;')));
-  assert.equal(count(searchPage, 'readerSearchHeaderHeight('), 4, 'lazy fallback branches and filter cap share the pure formula');
-  assert.ok(has(searchPage, "import { SearchHeaderSpec, readerSearchHeaderHeight, searchHeaderSpec } from '../common/ReaderHeaderSpecs';"));
-  assert.ok(has(searchPage, 'private readonly headerSpec: SearchHeaderSpec = searchHeaderSpec();'));
-  const fallback = block(searchPage, 'private searchHeaderHeight(): number {', '\n  private hasSearchSession');
-  assert.ok(has(fallback, 'if (!this.hasSearchSession())'));
-  assert.ok(has(fallback, 'if (!this.filtersExpanded)'));
-  assert.equal(count(fallback, 'readerSearchHeaderHeight('), 3);
+check('search-header-measurement-handoff', () => {
+  const libraryHeader = file('entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets');
+  const libraryResults = file('entry/src/main/ets/features/search/ui/LibrarySearchResults.ets');
+  assert.doesNotMatch(specs, /\breaderSearchHeaderHeight\b/);
+  assert.ok(has(specs, "readerPageInitialHeaderHeight(kind: 'bookshelf')"));
+  assert.ok(has(libraryHeader, 'this.captureHeader(height, key)'));
+  assert.ok(has(libraryHeader, 'this.onHeaderBottom(bottom, this.identity, key, this.navigationGeneration, this.mounting)'));
+  assert.ok(has(index, 'this.librarySearch.headerBottom = bottom'));
+  assert.ok(has(libraryResults, 'externalHeaderHeight: this.presentation.headerBottom'));
+  assert.ok(has(searchPage, 'input.headerHeight = this.resolvedHeaderHeight();'));
+  assert.ok(has(searchPage, 'return resolveReaderPageGeometry(input);'));
 });
 
 check('search-builder-consumes-spec', () => {
@@ -387,17 +386,17 @@ check('motion-registry-single-policy', () => {
 
 check('control-motion-shares-reduce-motion-policy', () => {
   assert.ok(has(motionPolicy, 'export function readerMotionValueDurationMs(durationMs: number, reduceMotion: boolean): number'));
-  assert.ok(has(file('entry/src/main/ets/features/reading/ReaderControlMotionPolicy.ts'),
+  assert.ok(has(file('entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts'),
     'return readerMotionValueDurationMs(durationMs, reduceMotion);'));
-  assert.ok(has(file('entry/src/main/ets/features/reading/ReaderControlGeometry.ts'),
+  assert.ok(has(file('entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts'),
     'export const READER_CONTROL_TOP_BAR_HEIGHT = 54;'));
-  assert.ok(has(file('entry/src/main/ets/features/reading/ReaderControlPanel.ets'),
+  assert.ok(has(file('entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets'),
     'this.layout.topBarTop + READER_CONTROL_TOP_BAR_HEIGHT'));
-  assert.doesNotMatch(file('entry/src/main/ets/features/reading/ReaderControlPanel.ets'), /\.height\(54\)/);
+  assert.doesNotMatch(file('entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets'), /\.height\(54\)/);
 });
 
 check('control-motion-endpoint-constants-have-one-owner', () => {
-  const motionGeometry = file('entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+  const motionGeometry = file('entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
   assert.ok(has(motionGeometry, 'READER_CONTROL_BRIGHTNESS_RAIL_WIDTH'));
   assert.ok(has(motionGeometry, 'READER_CONTROL_CONTENT_PADDING_RIGHT'));
   assert.ok(has(motionGeometry, 'READER_CONTROL_HOME_TOP_ROW_HEIGHT'));
@@ -407,7 +406,7 @@ check('control-motion-endpoint-constants-have-one-owner', () => {
 });
 
 check('control-motion-coefficients-named', () => {
-  const motionGeometry = file('entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+  const motionGeometry = file('entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
   for (const name of [
     'READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE',
     'READER_CONTROL_MOTION_FULL_CONTENT_VERTICAL_RESERVE',
@@ -466,18 +465,16 @@ check('motion-registry-consumers', () => {
 });
 
 check('motion-actors-registry-owned', () => {
-  assert.ok(has(panelMotion, "'reader.panel.appearance.header.in': { fromY: -12, delayMs: 146 }"));
-  assert.ok(has(motionSpec, 'readerPanelActorPose(id)'));
+  assert.doesNotMatch(motionSpec, /reader\.panel\.appearance\./);
   assert.doesNotMatch(motionSpec, /fromY\?:|delayMs\?:/);
   assert.doesNotMatch(motionSpec, /^\s*(fromY|delayMs):/m);
   assert.ok(has(importMotion, 'READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS = 80'));
   assert.ok(has(importDialog, 'READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS'));
-  assert.ok(has(motionSpec, 'return TransitionEffect.OPACITY'));
-  assert.ok(has(motionSpec, '.animation(anim);'));
   assert.doesNotMatch(motionSpec, /export function fadeSlideTransition/);
   assert.doesNotMatch(motionSpec, /export function motionRemainingDistanceAnimateParam/);
-  assert.equal(count(appearancePanel, 'panelActorTransition('), 6);
-  assert.doesNotMatch(appearancePanel, /panelActorTransition\('[^']+',\s*-?\d/);
+  const appearance = block(controlPanel, 'ReaderControlAppearanceContent({', 'motionProgress: this.contentMotionProgress,');
+  assert.ok(has(appearance, 'availableWidth: this.contentMotionWidth'));
+  assert.ok(has(appearanceContent, 'sampleReaderControlAppearance(this.motionProgress, this.availableWidth,'));
   assert.ok(has(shelfPage, 'this.viewMotion.contentCurve'));
   assert.ok(has(shelfPage, 'this.viewMotion.coverFadeCurve'));
   assert.ok(has(shelfPage, 'this.viewMotion.coverMoveCurve'));
@@ -553,7 +550,7 @@ check('page-settlement-timing-single-owner', () => {
 });
 
 check('message-display-durations', () => {
-  const feedback = file('entry/src/main/ets/features/common/ReaderTransientFeedback.ts');
+  const feedback = file('entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts');
   assert.equal(count(feedback, 'export const READER_FEEDBACK_BRIEF_MS: 2000 = 2000;'), 1);
   assert.equal(count(feedback, 'export const READER_FEEDBACK_EXTENDED_MS: 2200 = 2200;'), 1);
   assert.equal(count(feedback, 'export const READER_FEEDBACK_DEDUPE_MS: 2000 = 2000;'), 1);
@@ -579,7 +576,7 @@ check('frame-style-split', () => {
   }
   assert.doesNotMatch(pageShell, /ReaderPageShellKind|ReaderHeaderKind|ReaderHeaderSurface/);
   assert.doesNotMatch(pageShell, /TOK_DOWNLOAD_PAPER|mangaDirectoryColor|readerAppColor/);
-  assert.doesNotMatch(file('entry/src/main/ets/features/common/ReaderPageGeometry.ts'), /variant:\s*ReaderPageShellKind/);
+  assert.doesNotMatch(file('entry/src/main/ets/ui/layout/ReaderPageGeometry.ts'), /variant:\s*ReaderPageShellKind/);
   for (const source of [mainTabShell, standardPage, searchPage, downloadPage, fullDirectory,
     bookDetail, bookDirectoryPage, multiSelect, sourceManagement, readerShell, index]) {
     assert.ok(has(source, 'frameStyle:'), 'feature host must resolve its frame style');
@@ -612,7 +609,7 @@ check('scroll-layout-contract', () => {
     assert.doesNotMatch(source, /@Prop contentStartInset/, `${name}: numeric start inset returned`);
     assert.doesNotMatch(source, /@Prop contentEndInset/, `${name}: numeric end inset returned`);
   }
-  const navSurface = file('entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets');
+  const navSurface = file('entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets');
   assert.ok(has(navSurface, '@Prop scrollLayout: ReaderScrollLayout'));
   assert.ok(has(navSurface, 'scrollLayout: this.scrollLayout,'));
   assert.ok(has(bookDirectoryPage, 'scrollLayout: this.standardDirectoryScrollLayout()'));
@@ -677,7 +674,7 @@ check('fixed-size-classification', () => {
   assert.ok(has(tts, 'constraintSize({ minHeight: 16 })'));
   assert.ok(has(tts, 'constraintSize({ minHeight: 13 })'));
   assert.ok(has(tts, 'constraintSize({ minHeight: 31 })'));
-  const ttsControl = file('entry/src/main/ets/features/reading/ReaderControlTtsContent.ets');
+  const ttsControl = file('entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets');
   assert.ok(has(ttsControl, 'constraintSize({ minHeight: 17 })'));
   assert.ok(has(ttsControl, 'constraintSize({ minHeight: 14 })'));
   assert.ok(has(ttsControl, 'constraintSize({ minHeight: 87 })'));
@@ -697,16 +694,16 @@ check('dynamic-control-heights', () => {
   assert.ok(has(surfaceResolvers, 'export function readerReadableFontScale'));
   assert.ok(has(surfaceResolvers, 'export function readerScaledControlHeight'));
   for (const [name, source] of [
-    ['button', file('entry/src/main/ets/features/common/ReaderButton.ets')],
-    ['formField', file('entry/src/main/ets/features/common/ReaderFormField.ets')],
-    ['choiceRow', file('entry/src/main/ets/features/common/ReaderChoiceRow.ets')],
-    ['dialog', file('entry/src/main/ets/features/common/ReaderDialogSurface.ets')],
-    ['actionMenu', file('entry/src/main/ets/features/common/ReaderActionMenuSurface.ets')],
-    ['boundedActions', file('entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets')],
+    ['button', file('entry/src/main/ets/ui/controls/ReaderButton.ets')],
+    ['formField', file('entry/src/main/ets/ui/controls/ReaderFormField.ets')],
+    ['choiceRow', file('entry/src/main/ets/ui/controls/ReaderChoiceRow.ets')],
+    ['dialog', file('entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets')],
+    ['actionMenu', file('entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets')],
+    ['boundedActions', file('entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceActions.ets')],
   ]) {
     assert.ok(has(source, 'readerScaledControlHeight'), `${name}: control height must use the shared resolver`);
   }
-  assert.doesNotMatch(file('entry/src/main/ets/features/common/ReaderButton.ets'), /const growth =/);
+  assert.doesNotMatch(file('entry/src/main/ets/ui/controls/ReaderButton.ets'), /const growth =/);
   assert.ok(has(surfaceSpecs, 'actionHeightFor(fontScale: number): number'));
   assert.ok(has(surfaceSpecs, 'expandedHeightFor(fontScale: number): number'));
   assert.ok(has(surfaceSpecs, 'collapsedHeightFor(fontScale: number): number'));

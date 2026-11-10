@@ -7,9 +7,9 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 // This exact platform module contains only type imports; execute its real body.
 const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
-  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
+  readFileSync(new URL('../entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts';
+import * as scroll from '../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts';
 import { searchListDependencies, searchListMethods } from './lib/reader-content-search-list-probe.mjs';
 
 const require=createRequire(import.meta.url);

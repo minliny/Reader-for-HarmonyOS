@@ -2,7 +2,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 const selected = selectContractCases({
   'measured-shadow': {
-    description: 'Actual SDK header binds its painted panel measurement to shadow geometry without guessing fractional-density border extents; stale and missing bindings are rejected',
+    description: 'Actual SDK header owns one rounded Native material/shadow and measured fractional-density radius; stale or missing bindings and a second phone painter are rejected',
     resources: [],
   },
   'common-hit-test': {
@@ -31,20 +31,15 @@ for (const id of selected) {
   const parse = source => ts.createSourceFile(virtualFilePath('SearchSurfaceBindingProbe.ets'), source,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   if (id === 'measured-shadow') {
-    const surfaceTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
+    const surfaceTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
     const surface = surfaceTree.statements.find(node => node.name?.text === 'ReaderLibrarySearchSurface');
     const method = name => surface.members.find(node => node.name?.getText(surfaceTree) === name).getText(surfaceTree);
     const header = method('header');
-    const raisedTree = parse(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRaisedSurface.ets', import.meta.url), 'utf8'));
-    const raised = raisedTree.statements.find(node => node.name?.text === 'ReaderRaisedSurface');
-    const raisedFields = raised.members.filter(ts.isPropertyDeclaration);
-    syntax.componentCollection.customComponents.add('ReaderRaisedSurface');
-    syntax.propertyCollection.set('ReaderRaisedSurface', new Set(raisedFields.map(node => node.name.getText(raisedTree))));
-    syntax.regularCollection.set('ReaderRaisedSurface', new Set(raisedFields.filter(node => ts.getAllDecorators(node).length === 0)
-      .map(node => node.name.getText(raisedTree))));
-    syntax.propCollection.set('ReaderRaisedSurface', new Set(raisedFields.filter(node => ts.getAllDecorators(node).some(tag =>
-      tag.expression.getText(raisedTree) === 'Prop')).map(node => node.name.getText(raisedTree))));
-    const historyTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ReaderSearchHistoryPanel.ets', import.meta.url), 'utf8'));
+    const { resolveReaderRaisedShape } = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
+    const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+    assert.equal(surfaceTree.getFullText().includes("from '../../../ui/surfaces/ReaderRaisedSurface'"), false,
+      'the real search header does not import a second phone painter');
+    const historyTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets', import.meta.url), 'utf8'));
     const history = historyTree.statements.find(node => node.name?.text === 'ReaderSearchHistoryPanel');
     const historyFields = history.members.filter(ts.isPropertyDeclaration);
     syntax.componentCollection.customComponents.add('ReaderSearchHistoryPanel');
@@ -56,7 +51,7 @@ for (const id of selected) {
     componentMap.CUSTOM_BUILDER_METHOD.add('header');
     componentMap.CUSTOM_BUILDER_METHOD.add('bar');
     main.partialUpdateConfig.partialUpdateMode = true;
-    const areaTree = parse(readFileSync(new URL('../entry/src/main/ets/features/common/ReaderPageShell.ts', import.meta.url), 'utf8'));
+    const areaTree = parse(readFileSync(new URL('../entry/src/main/ets/ui/layout/ReaderPageShell.ts', import.meta.url), 'utf8'));
     const areaNode = areaTree.statements.find(node => node.name?.text === 'readerPageAreaLength');
     const areaLength = new Function(`${stripTypeScriptTypes(areaNode.getText(areaTree).replace(/^export\s+/, ''))}; return readerPageAreaLength;`)();
     function compileHeader(builder) {
@@ -66,6 +61,9 @@ for (const id of selected) {
         ${method('headerSurfaceGeometryKey')}
         ${method('headerSurfaceCollapsed')}
         ${method('hasHeaderSurfaceMeasurement')}
+        ${method('headerRaisedShapeIdentity')}
+        ${method('currentHeaderRaisedShape')}
+        ${method('headerMaterialRadius')}
         ${method('aboutToAppear')}
         ${method('aboutToDisappear')}
         @Builder private bar() {}
@@ -95,26 +93,28 @@ for (const id of selected) {
         updateStateVarsOfChildByElmtId(element, params) { Object.assign(this.children.get(element).params, params); }
         static create() {}
       }
-      class Shadow {
-        constructor(parent, params, _storage, element) { this.params = params; parent.children.set(element, this); }
-      }
       const attributes = extra => new Proxy(extra, { get(target, property) { return target[property] ?? (() => {}); } });
-      const Column = attributes({ create() { panels.push({}); }, onAreaChange(callback) { panels.at(-1).onAreaChange = callback; } });
+      const Column = attributes({ create() { panels.push({}); },
+        onAreaChange(callback) { panels.at(-1).onAreaChange = callback; },
+        borderRadius(value) { panels.at(-1).borderRadius=value; }, clip(value) { panels.at(-1).clip=value; },
+        shadow(value) { panels.at(-1).shadow=value; } });
       const empty = attributes({});
       const metrics = { windowRect: { width: 1280 / 3.5 }, densityPixels: 3.5 };
-      const Owner = new Function('ViewPU', 'ReaderRaisedSurface', 'Stack', 'Column', 'If', '__Common__',
+      const elevation=readerSurfaceSpecsForProbe(metrics).readerSurfaceElevation;
+      const Owner = new Function('ViewPU', 'Stack', 'Column', 'If', '__Common__',
         'Alignment', 'HitTestMode', 'Color', 'readerSurfaceElevation', 'readerHeaderVeilMaterial',
-        'readerHeaderVeilBorder', 'readerAppColor', 'readerPageAreaLength', 'ReaderWindowCoordinator',
-        `${stripTypeScriptTypes(emitted)}; return MeasuredHeaderProbe;`)(ProbeView, Shadow, empty, Column, empty, empty,
-        { TopStart: 0 }, { Default: 0 }, { Transparent: 0 }, () => ({}), () => ({}), () => '', () => '', areaLength,
-        { metrics: () => metrics });
-      return { Owner, panels, metrics };
+        'readerHeaderVeilBorder', 'readerAppColor', 'readerPageAreaLength', 'ReaderWindowCoordinator', 'resolveReaderRaisedShape',
+        `${stripTypeScriptTypes(emitted)}; return MeasuredHeaderProbe;`)(ProbeView, empty, Column, empty, empty,
+        { TopStart: 0 }, { Default: 0 }, { Transparent: 0 }, elevation, () => ({}), () => '', () => '', areaLength,
+        { metrics: () => metrics }, resolveReaderRaisedShape);
+      return { Owner, panels, metrics, elevation };
     }
     function checkMeasured(builder) {
-      const { Owner, panels, metrics } = compileHeader(builder);
+      const { Owner, panels, metrics, elevation } = compileHeader(builder);
       const owner = Object.assign(new Owner(undefined, {}), {
-        mounted: false, measurementKey: 8, mode: 'idle', animateOnAppear: false, searchMounted: false,
-        headerSurfaceWidth: 111, headerSurfaceHeight: 222, headerSurfaceInputKey: 'old-mount',
+        mounted: false, measurementKey: 8, raisedAppearanceEpoch:0, identity:1, navigationGeneration:2, mounting:3,
+        mode: 'idle', animateOnAppear: false, searchMounted: false, headerRaisedShape:undefined,
+        model:{bindInputBack:()=>()=>{}},
         scheme: 'night', spec: { panelRadius: 18, borderWidth: 1 },
         headerVeil: () => true, historyFraction: 0, historyProgress() { return this.historyFraction; },
         historyViewportHeight: () => 100, horizontalInset: () => 16,
@@ -123,78 +123,144 @@ for (const id of selected) {
       });
       const render = () => {
         panels.length = 0; owner.observers.length = 0; owner.children.clear(); owner.header();
-        return { shadow: [...owner.children.values()][0]?.params, measure: panels.at(-1)?.onAreaChange };
+        const material=panels.find(panel=>panel.onAreaChange);
+        return { material, measure: material?.onAreaChange, children:[...owner.children.values()] };
       };
       owner.aboutToAppear();
-      assert.deepEqual([owner.headerSurfaceWidth, owner.headerSurfaceHeight], [0, 0], 'mount clears prior measured geometry');
+      assert.equal(owner.headerRaisedShape,undefined,'mount clears prior measured geometry');
       const first = render();
-      assert.equal(first.shadow, undefined, 'first layout must not guess a shadow border box');
       assert.equal(typeof first.measure, 'function', 'painted panel must expose its measurement callback');
+      assert.equal(first.children.length,0,'header material does not mount an independent phone shadow painter');
       first.measure({}, { width: 1168 / 3.5, height: 188 / 3.5 });
       const measured = render();
-      assert.deepEqual([measured.shadow?.surfaceWidth, measured.shadow?.surfaceHeight], [1168 / 3.5, 188 / 3.5],
-        'shadow receives the actual fractional-density native border box, including snapped borders');
-      assert.notEqual(measured.shadow.surfaceHeight, owner.barHeight() + 2 * owner.spec.borderWidth,
-        'native 188px must not be replaced with the 189px logical-border estimate');
-      owner.searchMounted = true; owner.historyFraction = .5;
-      const expandedMeasure = owner.headerSurfaceAreaChange();
-      expandedMeasure({}, { width: 1168 / 3.5, height: 300 });
-      assert.deepEqual([owner.headerSurfaceWidth, owner.headerSurfaceHeight], [1168 / 3.5, 188 / 3.5],
-        'expanded history cannot replace the confirmed collapsed border box');
-      assert.equal(owner.hasHeaderSurfaceMeasurement(), false, 'expanded history cannot mount a collapsed shadow');
-      owner.historyFraction = .005;
-      assert.equal(owner.hasHeaderSurfaceMeasurement(), false, 'veil threshold does not mount a shadow while any history height remains');
-      owner.historyFraction = 0;
-      assert.equal(owner.hasHeaderSurfaceMeasurement(), true, 'strictly collapsed history reuses the confirmed border box');
-      expandedMeasure({}, { width: 1168 / 3.5, height: 300 });
-      assert.equal(owner.headerSurfaceHeight, 188 / 3.5, 'queued expanded receipt remains rejected after collapse');
-      owner.searchMounted = false;
-      assert.equal(render().shadow?.surfaceHeight, 188 / 3.5, 'retained panel returns to shelf without a changed-size event');
-      metrics.windowRect.width = 600;
-      assert.equal(render().shadow, undefined, 'real available-width change invalidates the cached box');
-      measured.measure({}, { width: 568, height: 188 / 3.5 });
-      assert.equal(render().shadow, undefined, 'old geometry input callback cannot validate the new width');
-      render().measure({}, { width: 568, height: 188 / 3.5 });
-      assert.equal(render().shadow?.surfaceWidth, 568, 'fresh width measurement restores the shadow');
-      owner.barHeight = () => 70;
-      assert.equal(render().shadow, undefined, 'real bar-height change invalidates the cached box');
-      render().measure({}, { width: 568, height: 72 });
-      assert.equal(render().shadow?.surfaceHeight, 72, 'fresh height measurement restores the shadow');
-      metrics.densityPixels = 2;
-      assert.equal(render().shadow, undefined, 'density change invalidates native border snapping');
-      render().measure({}, { width: 568, height: 72 });
-      owner.measurementKey++;
-      const oldKeyMeasure = render().measure;
-      owner.measurementKey++;
-      oldKeyMeasure({}, { width: 600, height: 300 });
-      assert.deepEqual([owner.headerSurfaceWidth, owner.headerSurfaceHeight], [568, 72], 'old layout callback is rejected');
-      const current = render();
-      current.measure({}, { width: '568vp', height: '71vp' });
-      assert.deepEqual([render().shadow?.surfaceWidth, render().shadow?.surfaceHeight], [568, 71], 'current layout measurement updates both axes');
-      current.measure({}, { width: NaN, height: 71 });
-      assert.equal(render().shadow, undefined, 'invalid collapsed geometry clears the shadow');
-      current.measure({}, { width: 568, height: 71 });
-      owner.aboutToDisappear();
-      current.measure({}, { width: 20, height: 20 });
-      assert.deepEqual([owner.headerSurfaceWidth, owner.headerSurfaceHeight], [568, 71], 'unmounted callback cannot mutate geometry');
+      assert.deepEqual([owner.headerRaisedShape.width,owner.headerRaisedShape.height], [1168 / 3.5,188 / 3.5],
+        'accepted shape uses the actual fractional-density Native border box');
+      assert.notEqual(owner.headerRaisedShape.height,owner.barHeight()+2*owner.spec.borderWidth,'snapped Native border is not guessed from logical border widths');
+      assert.equal(measured.material.borderRadius,owner.headerRaisedShape.radius,'Native material uses the measured effective radius');
+      assert.equal(measured.material.clip,true,'Native material owns its rounded clip');
+      assert.deepEqual(measured.material.shadow,elevation('raised','night'),'Native material owns the shared raised elevation');
+      assert.equal(measured.material.shadow.fill,false,'Native shadow does not fill the material interior');
+      owner.searchMounted=true;owner.historyFraction=.5;
+      const expandedMeasure=owner.headerSurfaceAreaChange();expandedMeasure({}, {width:1168/3.5,height:300});
+      assert.equal(owner.headerRaisedShape.height,188/3.5,'expanded history cannot overwrite the accepted collapsed box');
+      assert.equal(owner.hasHeaderSurfaceMeasurement(),false,'expanded history cannot claim a collapsed measurement');
+      owner.historyFraction=.005;assert.equal(owner.hasHeaderSurfaceMeasurement(),false,'partial history is not strictly collapsed');
+      owner.historyFraction=0;assert.equal(owner.hasHeaderSurfaceMeasurement(),true,'strict collapse retains its confirmed box');
+      expandedMeasure({}, {width:1168/3.5,height:300});assert.equal(owner.headerRaisedShape.height,188/3.5,'queued expanded sample stays rejected after collapse');
+      owner.searchMounted=false;metrics.windowRect.width=390;
+      assert.equal(render().material.borderRadius,owner.headerRaisedShape.radius,'same-box input changes retain adopted geometry until a new Native sample');
+      measured.measure({}, {width:358,height:20});assert.equal(owner.headerRaisedShape.width,1168/3.5,'old width callback cannot replace adopted geometry');
+      render().measure({}, {width:358,height:20});
+      assert.deepEqual([owner.headerRaisedShape.width,owner.headerRaisedShape.height],[358,20],'fresh available-width measurement replaces both axes');
+      assert.equal(render().material.borderRadius,10,'measured short border-box clamps the actual Native radius');
+      owner.barHeight=()=>70;const retained=owner.headerRaisedShape;
+      const beforeDensity=render().measure;metrics.densityPixels=2;
+      beforeDensity({}, {width:358,height:72});assert.equal(owner.headerRaisedShape,retained,'old density sample cannot overwrite current adopted box');
+      render().measure({}, {width:'358vp',height:'71vp'});
+      assert.deepEqual([owner.headerRaisedShape.width,owner.headerRaisedShape.height],[358,71],'current numeric/vp sample updates both axes');
+      const oldKeyMeasure=render().measure;owner.measurementKey++;oldKeyMeasure({}, {width:300,height:10});
+      assert.equal(owner.headerRaisedShape.height,71,'old layout callback is rejected');
+      const current=render();current.measure({}, {width:NaN,height:71});assert.equal(owner.headerRaisedShape,undefined,'invalid current geometry clears the accepted shape');
+      current.measure({}, {width:358,height:71});const last=owner.headerRaisedShape;owner.aboutToDisappear();
+      current.measure({}, {width:20,height:20});assert.equal(owner.headerRaisedShape,last,'unmounted callback cannot mutate geometry');
     }
     checkMeasured(header);
-    const missing = header.replace(/\s*\.onAreaChange\(this\.headerSurfaceAreaChange\(\)\)/, '');
-    assert.notEqual(missing, header, 'negative control removes the painted panel binding');
-    assert.throws(() => checkMeasured(missing), /painted panel must expose/, 'missing measurement is rejected');
-    const formula = header.replace('surfaceWidth: this.headerSurfaceWidth', 'surfaceWidth: this.cardContentWidth() + 2 * this.spec.borderWidth')
-      .replace('surfaceHeight: this.headerSurfaceHeight', 'surfaceHeight: this.barHeight() + 2 * this.spec.borderWidth');
-    assert.notEqual(formula, header, 'negative control reinstates the approximate geometry');
-    assert.throws(() => checkMeasured(formula), /actual fractional-density/, 'the installed one-pixel mismatch is rejected');
+    for(const[name,before,after,expected]of [
+      ['missing measurement','.onAreaChange(this.headerSurfaceAreaChange())','',/painted panel must expose/],
+      ['unclamped radius','.borderRadius(this.headerMaterialRadius())','.borderRadius(this.spec.panelRadius)',/short border-box clamps/],
+      ['disabled clip','.clip(true).hitTestBehavior(HitTestMode.Default)','.clip(false).hitTestBehavior(HitTestMode.Default)',/owns its rounded clip/],
+      ['detached Native shadow',".shadow(readerSurfaceElevation(this.headerVeil() ? 'raised' : 'fixed', this.scheme))",'',/owns the shared raised elevation/],
+    ]){
+      assert.equal(header.split(before).length-1,1,`${name}: exact negative injection`);
+      assert.throws(()=>checkMeasured(header.replace(before,after)),expected,`${name} is rejected`);
+    }
+    const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+    const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+    const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+    const { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP } = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+    const headerSpecSource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets', import.meta.url), 'utf8');
+    const { bookshelfHeaderSpec } = pureModuleProbe(headerSpecSource, 'ReaderHeaderSpecs.ets', {
+      TOK_BORDER_W: readerFoundationTokens.TOK_BORDER_W, APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP,
+    }, ['bookshelfHeaderSpec']);
+    const searchModelSource = readFileSync(new URL('../entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets', import.meta.url), 'utf8');
+    const { READER_LIBRARY_SEARCH_BACK_FOCUS_ID } = pureModuleProbe(searchModelSource, 'ReaderLibrarySearchModel.ets',
+      { Observed: value => value }, ['READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
+    const searchField = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
+    class SearchField {}
+    const bar = createReaderBuilderProbe(surfaceTree.getFullText(), ['bar', 'headerActionGlyph', 'headerActionFrame',
+      'headerActionTop', 'moreInteractive', 'leadingAction', 'moreAction', 'presentedSearch', 'blend'],
+      { bookshelfHeaderSpec, READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
+        ReaderSearchField: SearchField, READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold' },
+      { childSources: { ReaderSearchField: searchField } }).owner;
+    const actions = [];
+    Object.assign(bar, { mounted: true, mode: 'idle', transitionKind: 'none', scheme: 'day', identity: 7, navigationGeneration: 9, mounting: 11,
+      searchMounted: false, model: {panelOwnsInput: false},
+      moreIdentity: 'shelf', cardContentWidth: () => 280, barHeight: () => 52, titleOpacity: () => 1,
+      surfaceValue() { return this.mode === 'idle' ? 0 : .5; },
+      onOpen: (...args) => actions.push(['open', ...args]), onBack: (...args) => actions.push(['back', ...args]),
+      onMore: (...args) => actions.push(['more', ...args]) });
+    bar.bar();
+    const physical = [...bar.nodes.values()];
+    const more = physical.find(node => node.accessibilityText === '更多');
+    const leading = physical.find(node => node.accessibilityText === '搜索书籍');
+    const observerKey = actor => {
+      const entries = [...bar.nodes].filter(([, node]) => node === actor);
+      assert.equal(entries.length, 1, 'each actual native actor has one physical observer key');
+      return entries[0][0];
+    };
+    const moreElement = observerKey(more);
+    const leadingElement = observerKey(leading);
+    assert.deepEqual([more.id, leading.id], ['shelf', 'reader-bookshelf-search-entry'],
+      'Native focus IDs stay separate from physical observer identity');
+    assert.deepEqual([more.type, leading.type], ['Button', 'Button']);
+    for (const actor of [more, leading]) {
+      assert.deepEqual(actor.createWithChild, {type:'ButtonType.Normal', stateEffect:false},
+        'the retained header actor is an explicit Normal Native Button');
+      assert.equal(actor.focusable, undefined, 'Native Button keeps its platform focus default without an application override');
+      assert.equal(actor.enabled, true, 'admitted header action keeps native enabled semantics');
+    }
+    assert.deepEqual([more.accessibilityRole, leading.accessibilityRole], Array(2).fill('AccessibilityRoleType.BUTTON'));
+    assert.deepEqual([more.width, more.height, more.borderRadius, more.position, more.focusable, more.hitTestBehavior],
+      [44, 44, 14, { x: 231, y: 4 }, undefined, 'HitTestMode.Default']);
+    assert.deepEqual([leading.width, leading.height, leading.borderRadius, leading.position, leading.focusable],
+      [44, 44, 14, { x: 4, y: 4 }, undefined]);
+    const icons = physical.filter(node => node.type === 'Image');
+    const iconElements = icons.map(observerKey);
+    assert.deepEqual(icons.map(node => [node.create, node.width, node.height]),
+      [['app.media.rc_dots', 22, 22], ['app.media.bookshelf_search', 22, 22]]);
+    more.onClick(); leading.onClick();
+    bar.mode = 'input'; bar.scheme = 'night'; bar.identity = 8;
+    bar.replayOnly([moreElement, leadingElement, ...iconElements]);
+    assert.equal(bar.nodes.get(moreElement), more, 'the original More actor stays mounted through the transition');
+    assert.deepEqual(iconElements.map(element => bar.nodes.get(element)), icons,
+      'the same physical icon actors receive the retained native attribute updates');
+    assert.equal(more.id, 'shelf', 'More keeps the actual production Native focus ID');
+    assert.equal(bar.nodes.get(leadingElement), leading, 'Search becomes Back on the same native actor');
+    assert.equal(leading.id, READER_LIBRARY_SEARCH_BACK_FOCUS_ID);
+    assert.deepEqual([more.enabled, more.focusable, more.hitTestBehavior, more.opacity, more.accessibilityLevel],
+      [false, undefined, 'HitTestMode.None', .5, 'no-hide-descendants']);
+    assert.deepEqual([leading.accessibilityText, leading.enabled, leading.focusable, icons[1].create],
+      ['返回', true, undefined, 'app.media.book_detail_back_theme_night']);
+    leading.onClick();
+    bar.transitionKind = 'back'; leading.onClick();
+    bar.transitionKind = 'none'; bar.model.panelOwnsInput = true;
+    bar.replayOnly([leadingElement]);
+    assert.deepEqual([leading.enabled, leading.focusable, leading.accessibilityLevel], [false, undefined, 'no-hide-descendants']);
+    leading.onClick();
+    assert.deepEqual(actions, [['more', 7, 9, 11, 'shelf'], ['open', 7, 9, 11], ['back', 8, 9, 11]]);
     recordContractCasePass(id);
     continue;
   }
   const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
   const tree = parse(source);
   const index = tree.statements.find(node => node.name?.text === 'Index');
-  const names = ['librarySearchSurface', 'isCurrentSearchPresentation', 'isCurrentBookshelfPresentation'];
+  const { createLibraryShelfChromeProbe } = await import('./lib/bookshelf-projection-owner-probe.mjs');
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const LibraryJourney = bookshelfOperationClass('app/composition/ReaderLibraryJourney.ts', 'ReaderLibraryJourney');
+  const ReaderNavigation = bookshelfOperationClass('app/navigation/ReaderNavigation.ts', 'ReaderNavigation');
+  const names = ['librarySearchSurface', 'libraryJourneyPorts', 'bookshelfContentAcceptsInput', 'bookshelfModalVisible'];
   const methods = names.map(name => index.members.find(node => node.name?.getText(tree) === name).getText(tree)).join('\n');
-  const childTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
+  const childTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
   const child = childTree.statements.find(node => node.name?.text === 'ReaderLibrarySearchSurface');
   const fields = child.members.filter(ts.isPropertyDeclaration);
   const childName = child.name.text;
@@ -243,50 +309,70 @@ for (const id of selected) {
     const Owner = new Function('ViewPU', 'ReaderLibrarySearchSurface', '__Common__', 'HitTestMode',
       `${stripTypeScriptTypes(emitted)}; return SearchSurfaceBindingProbe;`)(View, Surface,
       { create() { commonCalls.push({}); }, enabled(value) { commonCalls.at(-1).enabled=value; },
-        hitTestBehavior(value) { commonCalls.at(-1).hitTestBehavior=value; }, pop() {} },
-      { Transparent: 'HitTestMode.Transparent' });
+        hitTestBehavior(value) { commonCalls.at(-1).hitTestBehavior=value; }, accessibilityLevel() {}, pop() {} },
+      { Transparent: 'HitTestMode.Transparent', None: 'HitTestMode.None' });
     Owner.commonCalls = commonCalls;
     return Owner;
   }
   function fixture(Owner, oldParameters = false) {
-    const runtime = {}, host = {};
+    const runtime = {}, librarySearch = createLibraryShelfChromeProbe(), host = librarySearch.host;
+    const more = [];
+    librarySearch.identity = 5;
+    librarySearch.bindShelfMore('more-a', 8, 4, () => more.push('more-a'));
     const owner = Object.assign(new Owner(undefined, {}), {
-      route: 'bookshelf', mountedRuntimeOwner: runtime, searchHost: host,
-      navigationGeneration: 8, detailShelfAdmissionMount: 4, librarySearchIdentity: 5,
-      shelfMoreIdentity: 'more-a', librarySearchMode: 'idle', librarySearchModel: { currentOwner: () => 1 },
-      shelfReceiptRetired: false, settingsSnapshot: { reduceMotion: false },
+      navigationOwner: new ReaderNavigation(), route: 'bookshelf', mountedRuntimeOwner: runtime, rssInstanceIdentity: 1,
+      navigationGeneration: 8, detailShelfAdmissionMount: 4, librarySearch,
+      searchAppForeground: true, readingEntry: { sessionActive: false },
+      shelfMutations: { snapshot: {} }, shelfGroupPresentation: { identity: '' },
+      shelfReceiptRetired: false, settingsPresentation: { snapshot: { reduceMotion: false } },
+      shelfRead: { snapshot: { visualAdmitted: true } },
       isCurrentRuntime: candidate => candidate === runtime, expandedLayout: () => false,
-      backCount: 0, backLibrarySearch() { this.backCount++; }, librarySearchResults() {},
+      backCount: 0, onBackPress() { this.backCount++; }, librarySearchResults() {},
     });
+    owner.libraryAcquisition = { currentOwner: () => owner.mountedRuntimeOwner };
+    owner.libraryJourney = new LibraryJourney(owner.navigationOwner, owner.libraryJourneyPorts());
+    move(owner, 'bookshelf', 8, 4);
     if (oldParameters) owner.librarySearchSurface(8, runtime, 4, host, 5, 'more-a');
     else owner.librarySearchSurface(runtime, host);
     const child = [...owner.children.values()][0];
-    return { owner, child, runtime, host };
+    return { owner, child, runtime, host, more };
+  }
+  function move(owner, route, generation = owner.navigationGeneration, mounting = owner.detailShelfAdmissionMount) {
+    while (owner.navigationOwner.snapshot().generation < generation) owner.navigationOwner.advance();
+    const snapshot = owner.navigationOwner.show(route);
+    Object.assign(owner, { route: snapshot.route, navigationGeneration: snapshot.generation, detailShelfAdmissionMount: mounting });
   }
   if (id === 'common-hit-test') {
     function checkCommon(Owner) {
       const value = fixture(Owner);
       assert.equal(Owner.commonCalls.at(-1).enabled, true);
       for (const route of ['bookshelf','search','settings']) {
-        value.owner.route=route; value.owner.replay();
+        move(value.owner, route); value.owner.replay();
         assert.equal(Owner.commonCalls.at(-1).enabled, route==='bookshelf'||route==='search');
-        assert.equal(Owner.commonCalls.at(-1).hitTestBehavior, 'HitTestMode.Transparent',
-          'the generated enabled Common host must not turn the transparent full-window actor into a blocking sibling');
+        assert.equal(Owner.commonCalls.at(-1).hitTestBehavior, route === 'settings' ? 'HitTestMode.None' : 'HitTestMode.Transparent',
+          'the generated Common host must stay transparent when active and ignore input when inactive');
       }
       assert.equal(value.owner.children.size, 1, 'route updates retain the same search actor');
     }
     checkCommon(compile(methods));
-    const withoutHitTest=methods.replace(/\s*\.hitTestBehavior\(HitTestMode\.Transparent\)/, '');
+    const withoutHitTest=methods.replace(/^\s*\.hitTestBehavior\([^\n]+\)/m, '');
     assert.notEqual(withoutHitTest,methods,'negative control removes only the explicit Common hit-test policy');
-    assert.throws(()=>checkCommon(compile(withoutHitTest)),/generated enabled Common host/,
+    assert.throws(()=>checkCommon(compile(withoutHitTest)),/generated Common host/,
       'the installed regression has an implicit Default Common host and is rejected');
     recordContractCasePass(id);
     continue;
   }
   const live = fixture(compile(methods));
   const callbacks = live.child.params;
-  Object.assign(live.owner, { route: 'search', navigationGeneration: 9, detailShelfAdmissionMount: 5,
-    librarySearchIdentity: 6, shelfMoreIdentity: 'more-b', librarySearchMode: 'input' });
+  callbacks.onMore(5, 8, 4, 'more-a');
+  assert.deepEqual(live.more, ['more-a']);
+  live.owner.shelfMutations.snapshot.importPresentation = {};
+  callbacks.onMore(5, 8, 4, 'more-a');
+  assert.deepEqual(live.more, ['more-a'], 'a foreground import rejects the retained shelf trigger');
+  live.owner.shelfMutations.snapshot.importPresentation = undefined;
+  move(live.owner, 'search', 9, 5);
+  Object.assign(live.owner.librarySearch, { identity: 6, mode: 'input' });
+  live.owner.librarySearch.bindShelfMore('more-b', 9, 5, () => live.more.push('more-b'));
   live.owner.replay();
   assert.deepEqual([callbacks.identity, callbacks.navigationGeneration, callbacks.mounting, callbacks.moreIdentity],
     [6, 9, 5, 'more-b'], 'one mounted child receives the current primitive identities');
@@ -294,25 +380,36 @@ for (const id of selected) {
   assert.equal(live.owner.backCount, 0, 'old presented event cannot act');
   callbacks.onBack(6, 9, 5);
   assert.equal(live.owner.backCount, 1, 'retained callback accepts current event with original runtime/host');
+  callbacks.onHistoryCoverageChanged(true, 6, 9, 5);
+  assert.equal(live.owner.librarySearch.continueCardSuppressed(9, 5), true);
+  assert.equal(live.owner.librarySearch.continueCardSuppressed(10, 5), false);
+  assert.equal(live.owner.librarySearch.continueCardSuppressed(9, 6), false);
+  live.owner.librarySearch.identity = 7;
+  callbacks.onHistoryCoverageChanged(true, 6, 9, 5);
+  assert.equal(live.owner.librarySearch.continueCardSuppressed(9, 5), false, 'old search coverage cannot survive a new identity');
+  callbacks.onHistoryCoverageChanged(true, 7, 9, 5);
+  assert.equal(live.owner.librarySearch.continueCardSuppressed(9, 5), true, 'current coverage can be admitted on the retained actor');
+  live.owner.librarySearch.identity = 6;
   live.owner.mountedRuntimeOwner = {};
   callbacks.onBack(6, 9, 5);
   assert.equal(live.owner.backCount, 1, 'old callback cannot switch to a replacement runtime');
   live.owner.mountedRuntimeOwner = live.runtime;
-  live.owner.searchHost = {};
+  live.owner.librarySearch.host = {};
   callbacks.onBack(6, 9, 5);
   assert.equal(live.owner.backCount, 1, 'old callback cannot switch to a replacement search host');
 
   const previous = methods
-    .replace('librarySearchSurface(owner: ReaderRuntimeOwner | undefined, host: SearchHost)',
-      'librarySearchSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number, host: SearchHost, identity: number, moreIdentity: string)')
-    .replace('identity: this.librarySearchIdentity,', 'identity,')
+    .replace('librarySearchSurface(owner: ReaderRuntimeOwner | undefined, host: SearchHost,',
+      'librarySearchSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number, host: SearchHost, identity: number, moreIdentity: string,')
+    .replace('identity: this.librarySearch.identity,', 'identity,')
     .replace('navigationGeneration: this.navigationGeneration, mounting: this.detailShelfAdmissionMount,',
       'navigationGeneration: generation, mounting,')
-    .replace('moreIdentity: this.shelfMoreIdentity,', 'moreIdentity,');
+    .replace('moreIdentity: this.librarySearch.shelfMoreIdentity(this.navigationGeneration, this.detailShelfAdmissionMount),', 'moreIdentity,');
   assert.notEqual(previous, methods, 'negative control reinstates the old captured parameters');
   const old = fixture(compile(previous), true);
-  Object.assign(old.owner, { navigationGeneration: 9, detailShelfAdmissionMount: 5,
-    librarySearchIdentity: 6, shelfMoreIdentity: 'more-b' });
+  move(old.owner, 'bookshelf', 9, 5);
+  old.owner.librarySearch.bindShelfMore('more-b', 9, 5, () => old.more.push('more-b'));
+  old.owner.librarySearch.identity = 6;
   old.owner.replay();
   assert.deepEqual([old.child.params.identity, old.child.params.navigationGeneration,
     old.child.params.mounting, old.child.params.moreIdentity], [5, 8, 4, 'more-a'],

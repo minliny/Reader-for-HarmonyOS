@@ -3,7 +3,7 @@ import {
   readerSessionMorphActorId,
   readerSessionMorphSourceKindForPage,
   ReaderSessionMorphSourceMeasurement,
-} from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts';
 
 assert.equal(readerSessionMorphSourceKindForPage('quickAutoPage'), 'quickAutoPage');
 assert.equal(readerSessionMorphSourceKindForPage('moduleTts'), 'quickTts');

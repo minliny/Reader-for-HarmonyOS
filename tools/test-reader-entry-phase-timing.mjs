@@ -1,13 +1,20 @@
+import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
+import { bookshelfOperationClass } from './lib/bookshelf-operation-owner-probe.mjs';
+import { fixture as entryFixture } from './lib/reading-entry-index-fixture.mjs';
+import { ReaderEntryStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import { readingEntryInputForSearchContext } from '../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
+import { actualReadingEntryPresentation } from './lib/reading-entry-presentation-probe.mjs';
+import { ReaderNavigation } from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
+import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 
 // Run the production barriers with independently controlled settings, body,
 // progress and commit completion. Logging must not admit a page early.
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; };
@@ -120,23 +127,57 @@ for (const throwingSink of [false, true]) {
 
 failLogging = false;
 logs.length = 0;
-const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-  ['openShelfBook', 'traceShelfEntryPhase', 'openReading', 'presentPreparedReading'], { hilog, DOMAIN: 0x5244, LOCAL_SOURCE_ID: 'local',
-    ReaderRuntimeOwner: { current: () => ({ noteReadingPreparationIntent() {} }) } });
-const index = Object.assign(new Index(), {
-  route: 'bookshelf', currentSourceSwitchTransactionId: () => 'recovering-transaction', navigationGeneration: 4, shelfEntryTraceAttempt: 0, shelfEntryTraceStartedAt: -1,
-  shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, isKnownDetailChapter: () => true, sourceDisplayName: () => 'private-source-name',
-  openRemoteBookDetail() { this.shelfReadingPreparation = true; this.remoteReadingSession = {}; },
-  nextNavigationGeneration() { return ++this.navigationGeneration; }, detailBook: { sourceId: 'remote', bookId: 'private-book' },
+const f = entryFixture();
+const ReadingEntry = actualReadingEntryPresentation({ ReadingEntryHost: f.host.constructor });
+const entry = new ReadingEntry();
+const navigationOwner = new ReaderNavigation();
+for (let step = 0; step < 4; step++) navigationOwner.advance();
+// Preserve the actual root's diagnostic field initializer, including its
+// privacy-safe argument positions, instead of recreating an old entry method.
+const indexFile = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
+const { ts, options } = installedEtsCompiler();
+const indexText = readFileSync(indexFile, 'utf8');
+const indexTree = ts.createSourceFile(String(indexFile), indexText, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+assert.deepEqual(indexTree.parseDiagnostics, []);
+const indexType = indexTree.statements.find(node => node.name?.text === 'Index');
+const declarations = indexType.members.filter(node => node.name?.getText(indexTree) === 'entryStartupTrace');
+assert.equal(declarations.length, 1, 'exact current startup field');
+const emitted = ts.transpileModule('const value=' + declarations[0].initializer.getText(indexTree) + ';',
+  { compilerOptions: { target: ts.ScriptTarget.ES2022 }, reportDiagnostics: true });
+assert.deepEqual(emitted.diagnostics, []);
+const startup = new Function('ReaderEntryStartupTrace', 'hilog', 'DOMAIN', emitted.outputText + ';return value;')(
+  ReaderEntryStartupTrace, hilog, 0x5244);
+const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions', {
+  Observed: value => value, readingEntryInputForSearchContext,
 });
-index.openShelfBook({ sourceId: 'remote', bookId: 'private-book', title: 'private-title' });
-index.openReading(undefined);
-assert.equal(index.route, 'reading', 'mount request immediately opens the normal reader; body-ready remains a separate barrier');
-index.presentPreparedReading(0);
-assert.equal(index.route, 'reading');
-assert.deepEqual(logs.map(args => args[3]), ['tap', 'reader-mount-request']);
-assert.equal(new Set(logs.map(args => args[4])).size, 1, 'one anonymous attempt survives the mount navigation generation');
-assert.equal(JSON.stringify(logs).includes('private-'), false);
-index.traceShelfEntryPhase('present');
-assert.equal(logs.length, 2, 'completed entry cannot log again');
+const sourceSwitch = { visible: false, failureMessage: '' };
+const entryPorts = owner => {
+  const generation = navigationOwner.snapshot().generation;
+  return { current: () => owner === f.runtime && !f.runtime.closed && generation === navigationOwner.snapshot().generation,
+    projectionVisible: () => navigationOwner.snapshot().route === 'detail' && !entry.sessionActive,
+    membership: f.lease.membership, cacheDecision: f.lease.cacheDecision,
+    notice: () => assert.fail('unexpected entry failure'), refreshShelf() {},
+  };
+};
+const actions = new Actions(navigationOwner, startup, {
+  runtime: () => f.runtime.closed ? undefined : f.runtime, mounting: () => 1, entry: () => entry,
+  search: () => ({ host: { visibilityChanged() {} }, admissionCandidates: () => [] }), sourceSwitch: () => sourceSwitch,
+  shelfBooks: () => [], removalPending: () => false, readerExitPending: () => false,
+  advance: () => { entry.retire(); actions.retirePreparation(); return navigationOwner.advance().generation; },
+  show: route => navigationOwner.show(route), bindReader: () => entry.bindReader(f.runtime, entryPorts(f.runtime)),
+  restoreReaderReturn: () => false, entryPorts, sourceName: () => 'private-source-name',
+  failure: () => assert.fail('unexpected reading admission failure'), afterOpening: action => action(),
+  postFrame: action => action(), refreshNearEnd() {},
+});
+try {
+  actions.resumeShelf({ sourceId: 'remote', bookId: 'private-book', title: 'private-title' });
+  assert.equal(navigationOwner.snapshot().route, 'reading', 'mount request immediately opens the normal reader; body-ready remains a separate barrier');
+  actions.presentPreparedReading(0);
+  assert.equal(navigationOwner.snapshot().route, 'reading');
+  assert.deepEqual(logs.map(args => args[3]), ['tap', 'reader-mount-request']);
+  assert.equal(new Set(logs.map(args => args[4])).size, 1, 'one anonymous attempt survives the mount navigation generation');
+  assert.equal(JSON.stringify(logs).includes('private-'), false);
+  startup.shelfPhase('present', navigationOwner.snapshot().generation);
+  assert.equal(logs.length, 2, 'completed entry cannot log again');
+} finally { entry.retire(); f.close(); }
 console.log('production entry milestones: independent barriers, durable ready delivery, quiet later pages and throwing diagnostic sink PASS');

@@ -1,5 +1,7 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"text-projection": {"description": "实际Gateway exact text cache selector/部分未知/正文bytes与过滤/读目标/失效", "resources": []}, "storage-admission": {"description": "实际storage bytes格式与已证cleanable<=automatic准入", "resources": []}, "manga-projection": {"description": "实际Manga entry解码与Host image证明/元数据不可冒充diskbytes", "resources": []}, "manga-proof-batch": {"description": "实际Gateway9章图片证明并发预算与缺页降级，受控microtask", "resources": []}, "page-actions": {"description": "实际SDK书/章节意图范围、精确reading target与最新Scroll保存", "resources": []}, "storage-policy": {"description": "实际SDK non-preset/fractional容量策略与dirty draft保护", "resources": []}, "storage-actions": {"description": "实际SDK清理确认/取消/最新证明/retired generation且不伪造删除", "resources": []}, "live-theme": {"description": "实际SDK业务控件语义色/当前资源scheme更新", "resources": []}, "host-single-flight": {"description": "完整实际Host同书single-flight与retired拒绝", "resources": []}, "host-index": {"description": "完整实际Host下载revision索引跨页面复用与重复burst单书刷新", "resources": []}, "host-intents": {"description": "完整实际Host Runtime accepted job burst仅变更书刷新/注销observer", "resources": []}};
+const definitions={"text-projection": {"description": "实际Gateway exact text cache selector/部分未知/正文bytes与过滤/读目标/失效", "resources": []}, "storage-admission": {"description": "实际storage bytes格式与已证cleanable<=automatic准入", "resources": []}, "manga-projection": {"description": "实际Manga entry解码与Host image证明/元数据不可冒充diskbytes", "resources": []}, "manga-proof-batch": {"description": "实际Gateway9章图片证明并发预算与缺页降级，受控microtask", "resources": []}, "page-actions": {"description": "实际SDK书/章节意图范围、精确reading target与最新Scroll保存", "resources": []}, "storage-policy": {"description": "实际SDK non-preset/fractional容量策略与dirty draft保护", "resources": []}, "storage-actions": {"description": "实际SDK清理确认/取消/最新证明/retired generation且不伪造删除", "resources": []}, "live-theme": {"description": "实际SDK业务控件语义色/当前资源scheme更新", "resources": []}, "host-single-flight": {"description": "完整实际Host同书single-flight与retired拒绝", "resources": []}, "host-index": {"description": "完整实际Host下载revision索引跨页面复用与重复burst单书刷新", "resources": []}, "host-intents": {"description": "实际Host Runtime任务变更刷新、注销observer及批量确认/未决/跳过回执", "resources": []}};
+definitions['sheet-choice'] = { description: '实际下载选项单一点击、稳定 identity、过期面板回调拒绝', resources: [] };
+definitions['overlay-lifecycle'] = { description: '下载面板退场连续返回、嵌套确认焦点和同页陈旧确认', resources: [] };
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
@@ -15,10 +17,13 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const projection = await import('../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts');
-const { SharedDownloadGateway } = await import('../entry/src/main/ets/features/downloads/SharedDownloadGateway.ts');
+const projection = await import('../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts');
+const { SharedDownloadGateway } = await import('../entry/src/main/ets/features/downloads/application/SharedDownloadGateway.ts');
 
-const visual = await import('../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts');
+const visual = await import('../entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts');
+const { consumeReaderControlKeyboardBack } = await import('../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts');
+const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const backDependencies = { consumeReaderControlKeyboardBack, ReaderWindowCoordinator: { metrics: createDefaultReaderWindowMetrics } };
 const { DOWNLOAD_VISUAL, downloadVisualColor } = visual;
 const { createDownloadBookView, projectDownloadBookAvailability, filterDownloadBooks, describeDownloadReadingTarget } = projection;
 const shelf = (sourceId, bookId, kind = 'text') => ({ sourceId, bookId, contentKind: kind,
@@ -188,13 +193,13 @@ if(selectedCase==='manga-proof-batch'){
   assert.equal(batchCalls.filter(method => method === 'manga.entry.get').length, 9);
 }
 }
-if(['page-actions','storage-policy','storage-actions','live-theme'].includes(selectedCase)){
+if(['page-actions','storage-policy','storage-actions','live-theme','sheet-choice','overlay-lifecycle'].includes(selectedCase)){
 // Run the actual SDK-emitted page callbacks. Native paint is a separate gate.
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const fixtureChapter=(book,index,complete)=>({key:JSON.stringify([book.sourceId,book.bookId,index]),sourceId:book.sourceId,bookId:book.bookId,index,title:`第${index+1}章`,chapterId:`chapter:${index}`,navigable:true,localComplete:complete,stateLabel:complete?'已下载':'未下载',queueState:'missing'});
 const view=projectDownloadBookAvailability(createDownloadBookView(novel),[fixtureChapter(novel,0,true),fixtureChapter(novel,1,false)],2,12);
 const mangaView=projectDownloadBookAvailability(createDownloadBookView(comic),[fixtureChapter(comic,0,false),fixtureChapter(comic,1,true),fixtureChapter(comic,2,true)],3);
-const source = readFileSync('entry/src/main/ets/features/downloads/SharedDownloadPage.ets', 'utf8');
+const source = readFileSync('entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets', 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript');
@@ -212,12 +217,16 @@ const mixed = projectDownloadBookAvailability(mangaView, [
 
 const events=[],saved=[];
 if(selectedCase==='page-actions'||selectedCase==='storage-policy'){
-const { owner } = createReaderBuilderProbe(source, names, { ...projection, ...visual });
-Object.assign(owner, { books: [view, mixed], detailKey: '', actionBookKeys: [mixed.key], actionChapterIndices: [],
-  sheet: 'book-actions', confirmation: '', managing: false, mounted: true,
+const { owner } = createReaderBuilderProbe(source, names, { ...projection, ...visual, ...backDependencies });
+Object.assign(owner, { books: [view, mixed], detailKey: '', actionBookKeys: [mixed.key], actionChapters: [],
+  selectedChapters: new Map(), sheet: 'book-actions', confirmation: '', managing: false, mounted: true,
+  appForeground: true, covered: false,
   mountedIdentity: 'download-business-test', presentationIdentity: 'download-business-test', presentationGeneration: 0,
   listScroller: { currentOffset: () => ({ yOffset: 87 }) }, listOffset: 0,
-  onIntent: value => events.push(value), onReadTarget: value => events.push(value),
+  onIntent: value => events.push(value), onReadTarget: (value, current) => {
+    assert.equal(current(), true);
+    events.push(value);
+  },
   onViewStateChanged: value => saved.push(value), query: 'same', bookType: 'all', stateFilter: 'all',
   sourceFilter: 'all', sortField: 'recent', sortDirection: 'desc' });
 if(selectedCase==='page-actions'){
@@ -226,16 +235,20 @@ assert.equal(owner.bookIsRunning(mixed), true, 'pause decision must use queue fa
 owner.sendAction('cancel');
 assert.equal(events[0].scope, 'books');
 assert.equal(events[0].books[0].chapterIndices, undefined);
-owner.actionChapterIndices = [1]; owner.sendAction('deleteLocal');
+owner.books = [view, mangaView];
+owner.actionChapters = [owner.chapterProof(chapter)]; owner.sendAction('deleteLocal');
 assert.equal(events[1].scope, 'chapters');
 assert.deepEqual(events[1].books[0].chapterIndices, [1]);
 assert.equal(mangaView.downloadedChapters, 2, 'presentation intent cannot fake deletion success');
+owner.appForeground = true;
+owner.readingHandoffRevision = 0;
+owner.detailKey = mangaView.key;
 owner.showReadTarget(mangaView, chapter);
 assert.equal(events[2].wired, true);
-assert.equal(owner.readingBookTitle, mangaView.title);
-assert.equal(owner.readingChapterTitle, chapter.title);
+assert.equal(events[2].bookId, mangaView.bookId);
+assert.equal(events[2].chapterTitle, chapter.title);
 assert.equal(events[2].chapterId, chapter.chapterId, 'identity stays in the real reading target, not implementation copy');
-assert.equal(owner.consumeBack(), true); // Close target sheet.
+owner.detailKey = '';
 assert.equal(owner.consumeBack(), false);
 assert.equal(saved.at(-1).listScroll, 87, 'save latest offset before the root retires identity');
 
@@ -243,35 +256,55 @@ assert.equal(saved.at(-1).listScroll, 87, 'save latest offset before the root re
 // Read the committed device-sized policy, including a non-preset and fractional
 // MiB value; opening the settings sheet must not select a fabricated preset.
 owner.storagePolicy = { capacityBytes: 777 * storageMiB + 123, expiryDays: 19 };
-owner.sheet = ''; owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
-assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
 assert.equal(owner.limitChoices()[owner.limitIndex()] * storageMiB, owner.storagePolicy.capacityBytes);
 assert.equal(owner.dayChoices()[owner.daysIndex()], 19);
-owner.sheet = 'settings'; owner.storagePolicyDraftChanged = true;
-owner.cacheLimitMb = 1024; owner.cleanupAfterDays = 3; owner.syncStoragePolicy();
-assert.equal(owner.cacheLimitMb, 1024); assert.equal(owner.cleanupAfterDays, 3, 'background policy read cannot overwrite an open dirty draft');
-owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
-assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
+owner.sheet = 'settings'; owner.sheetOpeningGeneration = 3;
+owner.changeStoragePolicy(3,'expiry','3 天');
+assert.deepEqual(events.at(-1),{action:'configureStorage',scope:'storage',books:[],cleanupAfterDays:3});
+assert.equal(owner.sheet,'settings','immediate save keeps the storage sheet open');
+assert.equal(owner.dayChoices()[owner.daysIndex()],19,'the original projected policy stays visible until readback');
+const before=events.length;
+owner.storagePolicyBusy=true;
+owner.changeStoragePolicy(3,'expiry','14 天');
+owner.storagePolicyBusy=false;
+owner.changeStoragePolicy(2,'expiry','14 天');
+assert.equal(events.length,before,'a pending write or retired sheet cannot dispatch another selection');
+owner.storagePolicy={capacityBytes:1024*storageMiB+1,expiryDays:3};
+assert.equal(new Set(owner.limitLabels()).size,owner.limitLabels().length,'a fractional current value does not alias a preset');
+assert.equal(owner.limitChoices()[owner.limitIndex()]*storageMiB,owner.storagePolicy.capacityBytes);
 
 
 }
 if(selectedCase==='storage-actions'){
 // Exercise the production cleanup button and confirmation callbacks. There
 // is deliberately no RPC/filesystem port or invented successful publication.
-const storageMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const storageMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const surfaceGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const storageProperties = createArkUIPropertyRuntimeProbe();
+class DialogFrame {
+  constructor(owner, params, _storage, id) { Object.assign(this, { owner, id }); params.body(); }
+}
 const cleanupProbe = createReaderBuilderProbe(source, [...new Set([
-  'clearStorageButton', 'confirmationOverlay', 'confirmationContent', 'confirmationBody', 'confirmationButton', ...helpers])], {
-  ...projection, ...visual, ...storageMetrics, ButtonType: { Normal: 'normal' },
+  'clearStorageButton', 'confirmationOverlay', 'confirmationSurfaceBody', 'confirmationContent', 'confirmationBody',
+  'confirmationButton', 'confirmation', 'confirmationGeneration', 'previousConfirmation', 'storageCleanupBusy',
+  'transientFeedback', ...helpers])], {
+  ...storageProperties.sdk, ...projection, ...visual, ...storageMetrics, ...surfaceGeometry,
+  ButtonType: { Normal: 'normal' }, ReaderDialogSurface: DialogFrame,
   ReaderWindowCoordinator: { metrics: () => ({ ...storageMetrics.createDefaultReaderWindowMetrics(),
     windowRect: { left: 0, top: 0, width: 366, height: 809 }, systemFontScale: 1 }), requestAppChrome() {} },
-});
+}, { ...storageProperties.hooks, childSources: {
+  ReaderDialogSurface: readFileSync('entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets', 'utf8'),
+} });
 function storageOwner(summary = { ...storageFixture }) {
   const intents = [];
   const result = new cleanupProbe.Component(undefined, {});
+  result.syncOverlayChrome = () => {};
   Object.assign(result, { books: [view, mixed], storageSummary: summary, appThemeScheme: 'day',
-    sheet: 'settings', confirmation: '', mounted: true, mountedIdentity: 'storage-test', presentationIdentity: 'storage-test',
+    sheet: 'settings', confirmation: '', mounted: true, appForeground: true, covered: false,
+    mountedIdentity: 'storage-test', presentationIdentity: 'storage-test',
     presentationGeneration: 0, fontPreparationGeneration: 0, overlayChromeRequestGeneration: 0, overlayChromeClaimed: false,
-    actionBookKeys: [], actionChapterIndices: [], cacheLimitMb: 2048, cleanupAfterDays: 7,
+    actionBookKeys: [], actionChapters: [], selectedChapters: new Map(),
     pageHeight: 800, dialogActionsMeasuredHeight: 44, detailKey: '', listOffset: 0,
     query: '', bookType: 'all', stateFilter: 'all', sourceFilter: 'all', sortField: 'recent', sortDirection: 'desc',
     listScroller: { currentOffset: () => ({ yOffset: 0 }) }, onTemporaryBackBridge() {}, onViewStateChanged() {},
@@ -295,10 +328,13 @@ cleanupDialogButtons[0].onClick();
 assert.equal(cleanup.result.confirmation, ''); assert.equal(cleanup.result.sheet, 'settings');
 assert.deepEqual(cleanup.intents, [], 'cancel cannot request a mutation');
 cleanup.button.onClick(); cleanupDialogButtons[1].onClick();
+assert.deepEqual(cleanup.intents, [], 'the closed confirmation cannot accept a different opening');
+cleanup.result.confirmationOverlay();
+[...cleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1).onClick();
 assert.equal(cleanup.intents.length, 1);
 assert.equal(cleanup.intents[0].action, 'cleanup'); assert.equal(cleanup.intents[0].scope, 'storage');
 assert.deepEqual(cleanup.intents[0].books, []);
-assert.equal(cleanup.intents[0].cacheLimitMb, 2048); assert.equal(cleanup.intents[0].cleanupAfterDays, 7);
+assert.equal(cleanup.intents[0].cacheLimitMb, undefined); assert.equal(cleanup.intents[0].cleanupAfterDays, undefined);
 assert.deepEqual(cleanup.result.storageSummary, cleanupDataBefore, 'an unwired intent cannot claim bytes were deleted');
 assert.deepEqual(cleanup.result.books, [view, mixed], 'cleanup presentation cannot mutate shelf/download projection');
 for (const summary of [{}, { automaticBytes: storageGiB, cleanableBytes: 0 },
@@ -312,6 +348,13 @@ const refreshedCleanup = storageOwner(); refreshedCleanup.button.onClick(); refr
 const refreshedConfirm = [...refreshedCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1).onClick;
 refreshedCleanup.result.storageSummary = { ...storageFixture, cleanableBytes: 0 }; refreshedConfirm();
 assert.deepEqual(refreshedCleanup.intents, [], 'confirmation rechecks the latest executable candidates');
+const busyCleanup = storageOwner(); busyCleanup.button.onClick(); busyCleanup.result.confirmationOverlay();
+const busyConfirm = [...busyCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1);
+busyCleanup.result.storageCleanupBusy = true; storageProperties.flush();
+assert.equal(busyCleanup.button.enabled, false);
+assert.equal(busyCleanup.button.accessibilityText, '正在清理自动保存…');
+assert.equal(busyConfirm.enabled, false); busyConfirm.onClick();
+assert.deepEqual(busyCleanup.intents, [], 'an open confirmation cannot duplicate a pending Runtime cleanup');
 const retiredCleanup = storageOwner(); retiredCleanup.button.onClick(); retiredCleanup.result.confirmationOverlay();
 const retiredConfirm = [...retiredCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1).onClick;
 retiredCleanup.result.aboutToDisappear(); retiredCleanup.button.onClick(); retiredConfirm();
@@ -320,32 +363,252 @@ retiredCleanup.result.mounted = true; retiredCleanup.result.confirmation = 'clea
 assert.deepEqual(retiredCleanup.intents, [], 'a same-identity remount cannot reactivate the previous dialog callback');
 
 }
+if(selectedCase==='sheet-choice'){
+const { choiceRowProbe } = await import('./lib/reader-choice-row-probe.mjs');
+const sharedChoice = choiceRowProbe();
+const { owner } = createReaderBuilderProbe(source, ['choiceRow', 'presentationIsCurrent', 'uiInputIsCurrent', 'sheetOpeningIsCurrent'], {
+  ...sharedChoice.properties.sdk, ...sharedChoice.dependencies,
+}, { ...sharedChoice.properties.hooks, ...sharedChoice.hooks });
+Object.assign(owner, { appThemeScheme: 'day', mounted: true, appForeground: true, covered: false, presentationGeneration: 1,
+  presentationIdentity: 'downloads', mountedIdentity: 'downloads', sheet: 'sort', confirmation: '', sheetOpeningGeneration: 2 });
+let choices = 0;
+owner.choiceRow('sort-option', '筛选内容', () => true, () => choices++);
+const indicator = sharedChoice.nodes(owner).find(node => node.type === 'Radio');
+const choice = sharedChoice.nodes(owner).find(node => node.accessibilityRole === 'AccessibilityRoleType.RADIO');
+assert.ok(indicator && choice);
+assert.equal(indicator.onChange, undefined);
+assert.equal(indicator.focusable, false);
+assert.equal(indicator.hitTestBehavior, 'HitTestMode.None');
+assert.equal(choice.accessibilitySelected, true);
+choice.onClick(); assert.equal(choices, 1);
+owner.sheet = 'range'; choice.onClick(); assert.equal(choices, 1);
+owner.sheet = 'sort'; owner.sheetOpeningGeneration++; choice.onClick(); assert.equal(choices, 1);
+}
+if(selectedCase==='overlay-lifecycle'){
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const properties = createArkUIPropertyRuntimeProbe();
+const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const bounded = boundedSurfaceSdk({ properties });
+const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const frames = [], timers = [], focus = [], intents = [];
+class IdleFrame {
+  constructor(action) { this.action = action; }
+  onIdle() { this.action(); }
+}
+const { owner } = createReaderBuilderProbe(source, [...new Set([...helpers, 'sheet', 'confirmation', 'reduceMotion',
+  'sheetExitPending', 'sheetOpeningGeneration', 'confirmationGeneration', 'previousConfirmation', 'sheetTriggerKey', 'focusGeneration', 'managementGeneration',
+  'sheetWasVisible', 'sheetMaskReady', 'pageContent', 'pageOverlays',
+  'confirmationContent', 'confirmationButton', 'confirmationBody', 'sheetOverlay', 'operationsSurface',
+  ...pageMembers.filter(member => ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors', 'sheetSurface'].includes(member.name?.getText(pageTree))).map(member => member.name.getText(pageTree))])], {
+  ...bounded.deps, ...properties.sdk, ...metricsApi, ...projection, ...visual, ...backDependencies, SharedDownloadIdleFrame: IdleFrame,
+  ButtonType: { Normal: 'normal' }, HitTestMode: { None: 'none', Default: 'default' },
+  motionAnimateParam: () => ({ duration: 15 }), setTimeout: action => { timers.push(action); },
+  readerSurfaceElevation: () => ({}),
+  TransitionEffect: { IDENTITY: { kind: 'identity' }, OPACITY: { animation: params => ({ kind: 'opacity', params }) },
+    move: edge => ({ animation: params => ({ kind: 'move', edge, params }) }),
+    asymmetric: (enter, exit) => ({ enter, exit }) }, TransitionEdge: { BOTTOM: 'bottom' },
+}, bounded.hooks);
+Object.assign(owner, {
+  mounted: true, appForeground: true, covered: false,
+  presentationIdentity: 'route-downloads', mountedIdentity: 'route-downloads', presentationGeneration: 1,
+  books: [mixed], storageSummary: storageFixture, batchRecovery: { visible: false }, appThemeScheme: 'day', detailKey: mixed.key, managing: true,
+  fontsReady: true, listScroller: {}, chapterScroller: {}, actionBookKeys: [mixed.key], actionChapters: [], selectedChapters: new Map(),
+  chapterScrollRestorePending: false, onViewStateChanged() {}, onIntent: intent => intents.push(intent),
+  getUIContext: () => ({ postFrameCallback: frame => frames.push(frame),
+    getFocusController: () => ({ requestFocus: key => focus.push(key) }) }),
+  syncOverlayChrome() {}, pageBody() {}, restoreListOffset() {},
+  sheetContent() {}, sheetChromeOverflow: () => false, sheetMaxHeight: () => 300, sheetScrimColor: () => '#00000040',
+  operationsHeader() {}, operationsBody() {}, operationsSurfaceWidth: () => 390, operationsBottomInset: () => 0,
+});
+const idle = () => { while (frames.length > 0) frames.shift().onIdle(); };
+const focusName = name => 'reader-download:' + name;
+const mountActors = render => {
+ const before = owner.observers.length;
+ render();
+ const actors = [...owner.nodes.values()].filter(node => node.id >= before && node.transition !== undefined);
+ for (const actor of actors) actor.onAppear?.();
+ return { scrim: actors.find(actor => actor.type === 'Rect'), panel: actors.find(actor => actor.type === 'Column') };
+};
+const mountSheet = () => {
+ const actors = mountActors(() => owner.pageOverlays());
+ assert.ok(actors.scrim && actors.panel, 'actual SDK emits both scrim and panel actors');
+ return actors;
+};
+const finish = (actor, transitionIn = false) => {
+ assert.ok(Array.isArray(actor.transition) && typeof actor.transition[1] === 'function', 'actual production actor supplies its Native finish callback');
+ actor.transition[1](transitionIn);
+};
+owner.openSheet('settings', 'storage'); idle();
+const mountedActors = mountSheet();
+assert.equal(focus.at(-1), focusName('sheet'));
+owner.pageContent();
+const background = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.enabled === false);
+assert.equal(background.accessibilityLevel, 'no-hide-descendants');
+assert.equal(background.hitTestBehavior, 'none');
+owner.openStorageCleanup(); idle();
+assert.equal(focus.at(-1), focusName('confirm-cancel'));
+owner.confirmationContent(true);
+const old = [...owner.nodes.values()].find(node => node.idValue === focusName('confirm') || node.id === focusName('confirm'));
+const buttons = () => [...owner.nodes.values()].filter(node => node.type === 'Button' && typeof node.onClick === 'function');
+const oldConfirm = old?.onClick ?? buttons().at(-1).onClick;
+assert.equal(owner.consumeBack(), true);
+assert.equal(owner.sheet, 'settings');
+idle(); assert.equal(focus.at(-1), focusName('storage-clean'));
+owner.openStorageCleanup();
+owner.confirmationContent(true);
+oldConfirm(); assert.equal(owner.confirmation, 'cleanup'); assert.deepEqual(intents, []);
+assert.equal(owner.consumeBack(), true);
+const closing = owner.sheetActorAttachment;
+assert.equal(owner.consumeBack(), true);
+assert.equal(owner.sheetExitPending, true);
+assert.equal(timers.length, 0, 'a mounted panel is never certified closed by an elapsed-time fallback');
+const beforeCarrier = owner.observers.length; owner.pageOverlays();
+const closingCarrier = [...owner.nodes.values()].filter(node => node.id >= beforeCarrier);
+assert.ok(closingCarrier.some(node => node.type === 'Stack'), 'the actual SDK keeps an empty carrier while old Native actors exit');
+assert.equal(closingCarrier.some(node => node.transition !== undefined), false, 'closing does not re-mount a replacement scrim or panel');
+assert.equal(owner.consumeBack(), true);
+assert.equal(owner.managing, true);
+assert.equal(owner.detailKey, mixed.key);
+owner.onSheetExitFinished(closing - 2, owner.presentationGeneration); assert.equal(owner.sheetExitPending, true);
+const beforeScrimExitFocus = focus.length;
+finish(mountedActors.scrim); idle();
+assert.equal(owner.sheetExitPending, true, 'scrim completion alone cannot release an actually mounted panel');
+assert.equal(owner.consumeBack(), true); assert.equal(owner.managing, true); assert.equal(owner.detailKey, mixed.key);
+assert.equal(focus.length, beforeScrimExitFocus, 'incomplete panel exit cannot restore background focus');
+finish(mountedActors.panel, true); assert.equal(owner.sheetExitPending, true, 'entry completion is not an exit receipt');
+finish(mountedActors.panel); idle();
+assert.equal(owner.sheetExitPending, false);
+assert.equal(focus.at(-1), focusName('storage'));
+const completedFocus = focus.length; finish(mountedActors.scrim); finish(mountedActors.panel); idle();
+assert.equal(focus.length, completedFocus, 'duplicate Native exit receipts restore focus only once');
+assert.equal(owner.consumeBack(), true); assert.equal(owner.managing, false);
+assert.equal(owner.consumeBack(), true); assert.equal(owner.detailKey, '');
+assert.equal(owner.consumeBack(), false);
+owner.openSheet('book-actions', 'book-menu:' + mixed.key);
+const oldOpening = owner.sheetOpeningGeneration;
+owner.reduceMotion = true; assert.equal(owner.consumeBack(), true);
+owner.openSheet('book-actions', 'book-menu:' + mixed.key);
+owner.performOperationsAction('cancel', owner.presentationGeneration, oldOpening);
+assert.equal(owner.sheet, 'book-actions');
+assert.equal(owner.confirmation, '');
+assert.deepEqual(intents, []);
+assert.equal(owner.consumeBack(), true); idle();
+
+owner.detailKey = mixed.key;
+const originalChapter = mixed.chapters[0];
+const originalMenu = owner.chapterMenuFocusKey(originalChapter);
+assert.equal(originalMenu, 'chapter-menu:' + JSON.stringify([originalChapter.key, originalChapter.chapterId]));
+owner.openSheet('chapter-actions', originalMenu); idle();
+assert.equal(owner.consumeBack(), true); idle();
+assert.equal(focus.at(-1), focusName(originalMenu), 'closing restores the exact chapter menu');
+
+owner.openSheet('chapter-actions', originalMenu); idle();
+const replacementChapter = { ...originalChapter, chapterId: 'replacement-chapter-url' };
+owner.books = [{ ...mixed, chapters: [replacementChapter, ...mixed.chapters.slice(1)] }];
+assert.notEqual(owner.chapterMenuFocusKey(replacementChapter), originalMenu, 'a reused chapter index gets a distinct focus ID');
+const beforeReplacementClose = focus.length;
+assert.equal(owner.consumeBack(), true); idle();
+assert.deepEqual(focus.slice(beforeReplacementClose), [focusName('manage')], 'an obsolete chapter menu skips both chapter nodes and falls back in the current scene');
+// A close before either Native actor appeared has no transition to wait for.
+owner.reduceMotion = false;
+owner.openSheet('sort', 'sort');
+assert.deepEqual(owner.sheetActors, []);
+assert.equal(owner.consumeBack(), true); idle();
+assert.equal(owner.sheetExitPending, false); assert.equal(timers.length, 0);
+
+// Operations and ordinary surfaces carry different immutable actor IDs, even
+// when the same opening changes from book actions to its range surface.
+owner.openSheet('book-actions', 'book-menu:' + mixed.key);
+const operations = mountSheet();
+assert.equal(owner.sheetActors.length, 2, 'operations registers its actual scrim and panel');
+owner.sheet = 'range';
+const replacementSurface = mountActors(() => owner.sheetSurface(owner.sheetOpeningGeneration, owner.sheetActorAttachment, owner.presentationGeneration));
+assert.ok(replacementSurface.panel);
+assert.equal(owner.sheetActors.length, 3, 'the replacement panel cannot borrow the outgoing operations actor');
+finish(operations.panel); operations.panel.onAppear();
+assert.equal(owner.sheetActors.length, 2, 'late appearance from an obsolete variant cannot register a new actor');
+assert.equal(owner.consumeBack(), true);
+finish(operations.scrim); finish(operations.panel); idle();
+assert.equal(owner.sheetExitPending, true, 'an old operations receipt cannot stand in for the new ordinary surface');
+finish(replacementSurface.panel, true); assert.equal(owner.sheetExitPending, true);
+finish(replacementSurface.panel); idle(); assert.equal(owner.sheetExitPending, false);
+
+// Reduced-motion closure retires a real opening immediately. Its remaining
+// physical callbacks must not release a later operations opening.
+owner.openSheet('sort', 'sort'); const oldActors = mountSheet();
+const oldAttachment = owner.sheetActorAttachment;
+owner.reduceMotion = true; assert.equal(owner.consumeBack(), true); idle();
+assert.equal(owner.sheetExitPending, false);
+owner.reduceMotion = false; owner.openSheet('book-actions', 'book-menu:' + mixed.key);
+const nextActors = mountSheet(); assert.notEqual(owner.sheetActorAttachment, oldAttachment);
+assert.equal(owner.consumeBack(), true);
+finish(oldActors.scrim); finish(oldActors.panel); idle(); assert.equal(owner.sheetExitPending, true);
+finish(nextActors.panel, true); assert.equal(owner.sheetExitPending, true);
+finish(nextActors.panel); assert.equal(owner.sheetExitPending, true, 'operations completion still waits for its actual scrim');
+finish(nextActors.scrim); idle(); assert.equal(owner.sheetExitPending, false);
+
+// Changing motion policy during an actual exit is the explicit immediate
+// path, while an ordinary mounted exit has no timeout/disappearance shortcut.
+owner.openSheet('sort', 'sort'); const motionActors = mountSheet();
+assert.equal(owner.consumeBack(), true); assert.equal(owner.sheetExitPending, true);
+assert.ok([motionActors.scrim, motionActors.panel].every(actor => actor.onDisappear === undefined));
+owner.reduceMotion = true; idle(); assert.equal(owner.sheetExitPending, false);
+
+// Retiring a physical owner invalidates all its callbacks before a successor
+// presentation on the same receiver can acquire new Native actor tickets.
+owner.reduceMotion = false; owner.openSheet('sort', 'sort'); const retiredActors = mountSheet();
+assert.equal(owner.consumeBack(), true); assert.equal(owner.sheetExitPending, true);
+owner.presentationIdentity = 'replacement-downloads'; owner.onPresentationIdentityChanged();
+owner.mountedIdentity = 'replacement-downloads';
+owner.openSheet('sort', 'sort'); const successorActors = mountSheet();
+assert.equal(owner.consumeBack(), true);
+const beforeRetiredCallbacks = focus.length;
+finish(retiredActors.scrim); finish(retiredActors.panel); idle();
+assert.equal(owner.sheetExitPending, true); assert.equal(focus.length, beforeRetiredCallbacks);
+finish(successorActors.scrim); assert.equal(owner.sheetExitPending, true);
+finish(successorActors.panel); idle(); assert.equal(owner.sheetExitPending, false);
+assert.equal(timers.length, 0); assert.deepEqual(intents, [], 'presentation completion never submits or cancels a download operation');
+
+}
 if(selectedCase==='live-theme'){
-// New business controls carry their own retained Day/Night proof. The
-// historical theme gate keeps all its original foreground sites unchanged.
-const colorMethods = [...new Set(['typeTab', 'statusButton', 'menuAction', 'actionButton', 'choiceRow', ...helpers])];
-const colorProbe = createReaderBuilderProbe(source, colorMethods, {
+const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { choiceRowProbe } = await import('./lib/reader-choice-row-probe.mjs');
+const colorProbe = boundedSurfaceSdk();
+const sharedChoice = choiceRowProbe(undefined, undefined, colorProbe.properties);
+Object.assign(colorProbe.deps, sharedChoice.dependencies);
+Object.assign(colorProbe.hooks.childSources, sharedChoice.hooks.childSources);
+const colorMethods = [...new Set(['typeTab', 'statusButton', 'operationsSheet', 'actionButton', 'choiceRow', ...helpers])];
+const controls = colorProbe.consumer(source, colorMethods, {
   ButtonType: { Normal: 'normal' }, TextAlign: { Start: 'start', Center: 'center' },
+  HitTestMode: { None: 'none' }, AccessibilityRoleType: { RADIO: 'radio' },
+  readerActionIcon: id => id,
   DOWNLOAD_VISUAL, downloadVisualColor, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) },
 });
-const controls = colorProbe.owner;
-Object.assign(controls, { appThemeScheme: 'day', bookType: 'manga', selectedBookKeys: [], managing: false });
+Object.assign(controls, { appThemeScheme: 'day', bookType: 'manga', selectedBookKeys: [], selectedChapters: new Map(), managing: false,
+  mounted: true, appForeground: true, covered: false, presentationGeneration: 0,
+  presentationIdentity: 'download-theme-test', mountedIdentity: 'download-theme-test',
+  sheet: 'book-actions', confirmation: '', sheetOpeningGeneration: 1,
+  books: [mixed], actionBookKeys: [mixed.key], actionChapters: [] });
 controls.typeTab('manga', '漫画');
 controls.statusButton(() => mixed);
-controls.menuAction(() => '删除本地内容', true, () => true, () => {});
+controls.operationsSheet(controls.presentationGeneration, controls.sheetOpeningGeneration);
 controls.actionButton(() => '主操作', true, () => true, () => {});
 controls.actionButton(() => '次操作', false, () => true, () => {});
-controls.choiceRow('筛选内容', () => true, () => {});
+controls.choiceRow('sort-option', '筛选内容', () => true, () => {});
 for (const scheme of ['day', 'night', 'day']) {
-  controls.appThemeScheme = scheme; controls.replay();
-  const actual = [...controls.nodes.values()];
+  controls.appThemeScheme = scheme; controls.replay(); colorProbe.properties.flush();
+  const actual = colorProbe.nodes(controls);
   const primary = downloadVisualColor('green', scheme);
   assert.equal(controls.tabInk('manga'), primary);
   assert.equal(controls.actionInk(false), downloadVisualColor('ink', scheme));
   assert.equal(controls.statusInk(mixed), downloadVisualColor('danger', scheme));
   assert.ok(actual.some(node => node.fontColor === primary), 'real native callback applies selected/secondary emphasis');
   assert.ok(actual.some(node => node.fontColor === downloadVisualColor('greenInk', scheme)), 'solid action keeps demo on-primary foreground');
-  assert.ok(actual.some(node => node.fontColor === downloadVisualColor('danger', scheme)), 'failure/delete callbacks retain demo danger foreground');
+  assert.ok(actual.some(node => node.create === '重试' && node.fontColor === downloadVisualColor('danger', scheme)), 'failure retains demo danger foreground');
+  const danger = colorProbe.deps.resolveActionSheetSpec('grouped').dangerRole;
+  assert.ok(actual.some(node => node.create === '删除本地内容' && node.fontColor === colorProbe.deps.readerAppColor(danger, scheme)),
+    'shared sheet renders the destructive row with the live theme');
+  assert.ok(actual.some(node => node.type === 'Radio' && node.radioStyle.checkedBackgroundColor === primary), 'native choice indicates the live theme');
   assert.equal(controls.statusIcon({ ...mixed, stateLabel: '下载中' }),
     `app.media.download_visual_pause${scheme === 'night' ? '_theme_night' : ''}`, 'pause uses the demo Lucide asset and a fixed theme variant');
 }
@@ -357,7 +620,7 @@ if(selectedCase.startsWith('host-')){
 const {createRequire}=await import('node:module');const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),ts=req(sdk+'/node_modules/typescript');
 // Host probes isolate only existing bookshelf/runtime ports, retaining the
 // unchanged production Host body and its generation/single-flight logic.
-const hostSource = readFileSync('entry/src/main/ets/features/downloads/SharedDownloadHost.ts', 'utf8')
+const hostSource = readFileSync('entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts', 'utf8')
   .replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '');
 const hostBody = ts.transpileModule(hostSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2021 } }).outputText;
 const novelKey=JSON.stringify(['s1','same']),comicKey=JSON.stringify(['comic-source','same']);
@@ -458,6 +721,105 @@ if(selectedCase==='host-intents'){
   assert.equal(intentLoads - beforeIntentLoads, 1);
   assert.equal(snapshots.at(-1).books.find(book => book.key === comicKey), unchanged);
   intentHost.retire(); assert.equal(subscriber, undefined, 'retiring a page releases its observer, not the Runtime accepted job');
+}
+{
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const { errorMessageOf } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+  const RefreshError = bookshelfOperationClass('features/downloads/application/SharedDownloadCoordinator.ts', 'SharedDownloadProjectionRefreshError');
+  const { Host, withoutDownloadStorageSummary } = bookshelfOperationClass('features/downloads/application/SharedDownloadHost.ts',
+    '({Host: SharedDownloadHost, withoutDownloadStorageSummary})',
+    { SharedDownloadGateway: StatusPort, ReaderCoreGateway: CoreReadPort, SharedDownloadProjectionRefreshError: RefreshError });
+  let storageReloads = 0, storageRechecks = 0;
+  class StorageHost extends Host {
+    resume(snapshot) { this.snapshot = snapshot; this.publish(snapshot); }
+    async reload(current) { if (current()) storageReloads++; }
+    async refreshStorageSummary(current) { if (current()) storageRechecks++; }
+  }
+  const Presentation = bookshelfOperationClass('features/downloads/presentation/SharedDownloadPresentation.ets', 'SharedDownloadPresentation',
+    { Observed: value => value, SharedDownloadHost: StorageHost, withoutDownloadStorageSummary, ...projection, errorMessageOf,
+      hilog: { warn() {} } });
+  const extra = shelf('source-three', 'third');
+  const bookRows = [novel, comic, extra].map(book => ({ ...createDownloadBookView(book), projectionStatus: 'ready',
+    chapters: [{ index: 0, chapterId: 'current', navigable: true }] }));
+  async function submit(action, { rows = bookRows, books = bookRows, stop, scope = 'books' } = {}) {
+    let current = true, reads = 0;
+    const calls = [], feedback = [], snapshot = { books: rows, loading: false, error: '', storageSummary: {} };
+    const runtime = { getDownloadCoordinator: () => ({ async operate(operation, target) {
+      calls.push([operation, target.book.sourceId]);
+      if (stop === 'unknown' && calls.length === 2) throw Error('lost acknowledgement');
+      if (stop === 'readback') throw new RefreshError('pause', Error('read failed'));
+      if (stop === 'retired') current = false;
+      return operation === 'download' ? { accepted: true } : undefined;
+    } }) };
+    const host = new Host(runtime, () => {});
+    host.snapshot = snapshot;
+    host.reload = async () => { reads++; };
+    const presentation = Object.assign(new Presentation(), {
+      opening: { owner: runtime, identity: 'download-batch', isRouteCurrent: () => current }, host, snapshot,
+    });
+    await presentation.applyIntent('download-batch', { action, scope, books }, message => feedback.push(message));
+    return { calls, feedback, get reads() { return reads; }, presentation };
+  }
+  const unavailable = await submit('download', { rows: [bookRows[0], { ...bookRows[1], projectionStatus: 'unavailable' }, bookRows[2]] });
+  assert.deepEqual(unavailable.calls, [['download', 's1'], ['download', 'source-three']]);
+  assert.match(unavailable.feedback[0], /已确认 2 本.*目标不可用 1 本/);
+  assert.equal(unavailable.reads, 1);
+  const missing = await submit('deleteLocal', { rows: bookRows.slice(0, 2) });
+  assert.deepEqual(missing.calls, [], 'a book missing before admission cannot shrink the original intent');
+  assert.match(missing.feedback[0], /目标不可用 1 本.*2 本未处理/);
+  const unknown = await submit('cancel', { stop: 'unknown' });
+  assert.deepEqual(unknown.calls, [['cancel', 's1'], ['cancel', 'comic-source']]);
+  assert.deepEqual(unknown.feedback, []);
+  const pending = unknown.presentation.batchRecovery;
+  assert.match(pending.message, /已确认 1 本.*1 本结果未确认.*1 本未处理/);
+  assert.equal(unknown.reads, 1, 'accepted prefix is read back without replaying mutations');
+  await unknown.presentation.applyIntent('download-batch', { action: 'cancel', scope: 'books', books: [bookRows[1]] }, assert.fail);
+  unknown.presentation.refreshBatchRecovery('download-batch', pending.generation);
+  assert.equal(unknown.reads, 2);
+  assert.equal(unknown.presentation.batchRecovery, pending, 'a list read cannot settle the original result');
+  assert.equal(unknown.calls.length, 2, 'an overlapping cancel cannot dispatch twice');
+  const readback = await submit('pause', { stop: 'readback' });
+  assert.deepEqual(readback.calls, [['pause', 's1']]);
+  assert.match(readback.feedback[0], /已确认 1 本.*2 本未处理.*已保存的状态未能读回/);
+  const oldChapter = { ...bookRows[0], chapterIndices: [0], expectedChapters: [{ chapterIndex: 0, chapterId: 'replaced' }] };
+  const scoped = await submit('deleteLocal', { books: [oldChapter], scope: 'chapters' });
+  assert.deepEqual(scoped.calls, []);
+  assert.match(scoped.feedback[0], /目录已变化，章节操作未执行/);
+  const retired = await submit('download', { stop: 'retired' });
+  assert.deepEqual(retired.calls, [['download', 's1']]);
+  assert.deepEqual(retired.feedback, []);
+  assert.equal(retired.reads, 0);
+  const single = await submit('pause', { books: [bookRows[0]] });
+  assert.deepEqual(single.feedback, ['下载已暂停']);
+
+  let completeCleanup, cleanupCalls = 0;
+  const cleanupOwner = { clearDownloadRebuildableCache() {
+    cleanupCalls++;
+    return new Promise(resolve => { completeCleanup = resolve; });
+  } };
+  const cleanupIntent = { action: 'cleanup', scope: 'storage', books: [] };
+  const page = new Presentation(), messages = [];
+  const retainedSnapshot = { books: bookRows, loading: false, error: '', storageSummary: storageFixture };
+  Object.assign(page, { retainedOwner: cleanupOwner, retainedSnapshot });
+  page.open(cleanupOwner, 'before-cleanup', () => true, { kind: 'resume' }, undefined, value => messages.push(value));
+  const work = page.applyIntent('before-cleanup', cleanupIntent, value => messages.push(value));
+  const captured = page.captureReturn(cleanupOwner);
+  page.retire(); page.restoreReturn(cleanupOwner, captured);
+  page.open(cleanupOwner, 'while-cleaning', () => true, { kind: 'resume' }, undefined, value => messages.push(value));
+  assert.equal(page.storageCleanupBusy, true);
+  await page.applyIntent('while-cleaning', cleanupIntent, value => messages.push(value));
+  assert.equal(cleanupCalls, 1);
+  completeCleanup({ removedContentBytes: 1, deletedBytes: 0, deletedFiles: 0 }); await work;
+  assert.equal(page.storageCleanupBusy, false);
+  assert.deepEqual(page.snapshot.storageSummary, {}, 'old storage estimate is retired before the next read');
+  assert.equal(storageReloads, 1, 'only the current same-runtime Host is refreshed');
+  assert.deepEqual(messages, [], 'the retired opening cannot deliver its completion toast');
+  await page.applyIntent('while-cleaning', cleanupIntent, value => messages.push(value));
+  assert.equal(cleanupCalls, 1, 'a stale UI intent cannot act on the invalidated estimate');
+  page.retire(); page.restoreReturn(cleanupOwner, captured);
+  page.open(cleanupOwner, 'after-cleanup', () => true, { kind: 'resume' }, undefined, value => messages.push(value));
+  assert.deepEqual(page.snapshot.storageSummary, {}, 'reader return cannot restore the pre-cleanup estimate');
+  assert.equal(storageRechecks, 1, 'retained return starts a read-only refresh of missing storage facts');
 }
 }
 }

@@ -6,15 +6,15 @@ import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
-import {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 const componentMap=require(`${sdk}/lib/component_map.js`);
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
-const source=read('../entry/src/main/ets/features/manga/MangaReadingSurface.ets');
+const source=read('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets');
 const indexSource=read('../entry/src/main/ets/pages/Index.ets');
-const shellSource=read('../entry/src/main/ets/features/shell/ReaderShell.ets');
+const shellSource=read('../entry/src/main/ets/features/reading/ui/ReaderShell.ets');
 const baseline=read('./fixtures/manga-viewport-r6/MangaReadingSurface.ets');
 const indexBaseline=read('./fixtures/manga-viewport-r6/Index.ets');
 const sha=text=>createHash('sha256').update(text).digest('hex');
@@ -40,7 +40,7 @@ function mangaFixture(text=source,values={}){
  // duplicate warning when the exact baseline has different member positions.
  componentMap.resetComponentMap();
  const {tree,names}=parse(text,'MangaReadingSurface');
- const projection=read('../entry/src/main/ets/features/manga/MangaStripProjection.ts').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+ const projection=read('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
  const Projection=new Function(`${stripTypeScriptTypes(projection)};return MangaStripProjection`)();
  const dataText=tree.statements.find(n=>n.name?.getText(tree)==='MangaStripDataSource').getText(tree);
  const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataText)};return MangaStripDataSource`)(Projection);

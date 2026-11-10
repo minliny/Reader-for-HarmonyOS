@@ -1,14 +1,15 @@
-import { loadReaderFontChecked } from './ReaderFontLoadHost';
+import { loadReaderFontChecked } from '../ui/platform/ReaderFontLoadHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import picker from '@ohos.file.picker';
+import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
 import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import { Font } from '@ohos.arkui.UIContext';
 import {
   ReaderCustomFontDescriptor,
   normalizeReaderCustomFontDescriptor,
-} from '../features/reading/ReaderAppearanceState';
+} from '../features/reading/application/ReaderAppearanceState';
 
 /** App-private, validated custom-font import boundary. */
 export class ReaderCustomFontHost {
@@ -25,7 +26,10 @@ export class ReaderCustomFontHost {
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = ['字体文件|.ttf,.otf'];
     options.maxSelectNumber = 1;
-    const uris = await new picker.DocumentViewPicker(this.context).select(options);
+    const pickerActivity = ReaderDocumentPickerActivity.begin();
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
+    finally { pickerActivity.finish(); }
     if (uris.length === 0) {
       return undefined;
     }

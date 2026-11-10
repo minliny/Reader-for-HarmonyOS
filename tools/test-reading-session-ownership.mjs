@@ -3,8 +3,8 @@ import {registerHooks} from 'node:module';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});
 async function run(id){
- const {ReadingSessionFlowGateway}=id==='measurement-token'?{}:await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
- const {ReadingPaginationIndex}=id==='measurement-token'?await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts'):{};
+ const {ReadingSessionFlowGateway}=id==='measurement-token'?{}:await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+ const {ReadingPaginationIndex}=id==='measurement-token'?await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts'):{};
  const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
  const remote={identity:{sourceId:'source',bookId:'book'},acquisitionMode:'offline'},seed={sourceId:'source',bookId:'book',detailUrl:'/book'};
  const cases={

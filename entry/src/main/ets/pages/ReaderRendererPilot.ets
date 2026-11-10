@@ -3,7 +3,7 @@
 import webview from '@ohos.web.webview';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { router } from '@kit.ArkUI';
-import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
+import { ArkWebExecutionHost } from '../ui/platform/ArkWebExecutionHost';
 import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
 import { ReaderParagraphDiagnostic } from './ReaderParagraphDiagnostic';
 import { ReaderTextNodeDiagnostic } from './ReaderTextNodeDiagnostic';

@@ -6,11 +6,11 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
-import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
+import * as settings from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 
 const base = new URL('../entry/src/main/ets/', import.meta.url);
 const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture({});
-const source = readFileSync(new URL('features/reading/ReaderSettingsGateway.ts', base), 'utf8');
+const source = readFileSync(new URL('features/reading/application/ReaderSettingsGateway.ts', base), 'utf8');
 const stores = new WeakMap();
 let barrierCalls = 0;
 const dependencies = { preferences: { getPreferences: async owner => stores.get(owner) },

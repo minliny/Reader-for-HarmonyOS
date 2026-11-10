@@ -77,7 +77,7 @@ if(key==='main-read'){
   f.runtime.readFailures.set('rss-source.list',Error('offline'));f.owner.loadFeed(v=>values.push(v),r=>reads.push(r),()=>true);await settleRss(f.owner);
   assert.equal(reads.at(-1).fact,'refreshFailed');assert.equal(reads.at(-1).value.length,1);assert.equal(values.length,1);
   const sdk=rssRecoverySurfaceSdk({foundation:false});
-  const ui=sdk.consumer(rssSource('features/rss/RssPage.ets'),['readFacts','readFeedback'],{readerRecoveryView:rssRecoveryView,projectOperationFacts:rssFacts.projectOperationFacts});
+  const ui=sdk.consumer(rssSource('features/rss/ui/RssPage.ets'),['readFacts','readFeedback'],{readerRecoveryView:rssRecoveryView,projectOperationFacts:rssFacts.projectOperationFacts});
   const failed=reads.at(-1);Object.assign(ui,{onRetryRead:expected=>f.owner.loadFeed(v=>values.push(v),r=>reads.push(r),()=>true,expected.generation)});ui.updateStateVars({readFacts:failed});ui.readFeedback();
   const notice=sdk.walk(ui).find(c=>c instanceof sdk.deps.ReaderRecoveryNotice);assert.ok(notice);const action=sdk.walk(notice).find(c=>c instanceof sdk.deps.ReaderRecoveryAction),click=sdk.nodes(action).find(n=>n.onClick).onClick;
   click();await settleRss(f.owner);assert.equal(reads.at(-1).fact,'current');

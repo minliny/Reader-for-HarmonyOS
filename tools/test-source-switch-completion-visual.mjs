@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"historical-definition": {"description": "仅显式历史message carrier witness；不作为runtime completion前置", "resources": []}, "ack-boundary": {"description": "实际Index finalized精确target/transaction接纳、小说与漫画分界及navigation退休", "resources": []}, "visual-clock": {"description": "实际reader已呈现receipt动效/notice/重复DTO/guard/取消/selection/reducedMotion", "resources": []}, "stage-order": {"description": "实际resident/continuous回调必须匹配本selection/lifecycle/body当前revision", "resources": []}, "canonical-stage": {"description": "实际completeFirstPage等待canonical progress ACK→revision→SDK resident stage→视觉准入", "resources": []}, "actor-clock-isolation": {"description": "两真实SDK actor独立property/watch/timer/animator且迟到旧clock不动新actor", "resources": []}};
+const definitions={"historical-definition": {"description": "仅显式历史message carrier witness；不作为runtime completion前置", "resources": []}, "ack-boundary": {"description": "实际Index finalized精确target/transaction接纳、小说与漫画分界及navigation退休", "resources": []}, "visual-clock": {"description": "实际reader已呈现receipt动效/notice/重复DTO/guard/取消/selection/reducedMotion", "resources": []}, "stage-order": {"description": "实际resident/continuous回调必须匹配本selection/lifecycle/body当前revision", "resources": []}, "canonical-stage": {"description": "实际completeFirstPage等待canonical progress ACK→revision→SDK resident stage→视觉准入", "resources": []}, "actor-clock-isolation": {"description": "两真实SDK actor独立动画与共享提示代次，旧回调不影响后继", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -7,36 +7,40 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { AsyncLocalStorage } = await import('node:async_hooks');
-const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { sourceSwitchLiveSdk } = await import('./lib/source-switch-sdk-consumer.mjs');
-const { SourceSwitchCompletionPresentation } = await import('../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts');
-const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
-const { bookshelfSourceDisplayName, readableBookshelfSourceName } = await import('../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts');
-const { ReaderPhysicalPaginationOwner } = await import('../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts');
-const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const { ReaderPageChromeSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const {readerMessageStyles} = await import('./lib/reader-typography-probe.mjs');
+const { SourceSwitchCompletionPresentation } = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchCompletionPresentation.ts');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
+const { bookshelfSourceDisplayName } = await import('../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts');
+const { ReaderPhysicalPaginationOwner } = await import('../entry/src/main/ets/features/reading/ui/ReaderPhysicalPaginationOwner.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const { ReaderPageChromeSnapshot } = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const {bookshelfOperationClass} = await import('./lib/bookshelf-operation-owner-probe.mjs');
 
 
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
-const localSource = read('features/reading/LocalReadingExperience.ets');
-if(selectedCase==='historical-definition'){const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');assert.equal(approvedTypographyContract(read('features/source/SourceSwitchCompletionOverlay.ets'),'features/source/SourceSwitchCompletionOverlay.ets').registered,true);return;}
-const indexSource = read('pages/Index.ets');
+const localSource = read('features/reading/ui/LocalReadingExperience.ets');
+if(selectedCase==='historical-definition'){const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');assert.equal(approvedTypographyContract(read('features/source/ui/SourceSwitchCompletionOverlay.ets'),'features/source/ui/SourceSwitchCompletionOverlay.ets').registered,true);return;}
 const members = ['sourceSwitchCompletion', 'readingReadyGeneration', 'sourceSwitchCompletionVisible',
-  'sourceSwitchRevealOpacity', 'sourceSwitchToastText', 'sourceSwitchVisualSelectionToken', 'sourceSwitchCompletionEpoch',
-  'sourceSwitchRevealAnimator', 'sourceSwitchToastTimer', 'consumedSourceSwitchCompletions', 'phase',
+  'sourceSwitchRevealOpacity', 'sourceSwitchVisualSelectionToken', 'sourceSwitchCompletionEpoch',
+  'sourceSwitchRevealAnimator', 'consumedSourceSwitchCompletions', 'phase',
   'sourceSwitchPresentedRevision', 'sourceSwitchPresentedSelectionToken', 'sourceSwitchPresentedContinuous',
   'sourceSwitchPendingCompletionKey', 'sourceSwitchPendingCompletionSelectionToken', 'sourceSwitchPendingCompletionLifecycleToken',
   'sourceSwitchCanonicalPageCurrent', 'sourceSwitchContinuousRangeObserver', 'onSourceSwitchPagePresented', 'hasContinuousRenderContent',
   'sourceSwitchCompletionKey', 'sourceSwitchCompletionCurrent', 'sourceSwitchCompletionDisplayCurrent',
   'finishSourceSwitchReveal', 'cancelSourceSwitchCompletion', 'sourceSwitchCompletionVisibleChanged',
-  'sourceSwitchCompletionChanged', 'sourceSwitchCompletionWash', 'sourceSwitchCompletionToast'];
+  'sourceSwitchCompletionChanged', 'sourceSwitchCompletionWash'];
 const visualScope = new AsyncLocalStorage();
+const {ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, READER_TRANSIENT_TOAST_STORAGE_KEY, retireReaderTransientToast} =
+  bookshelfOperationClass('ui/feedback/ReaderTransientFeedback.ts',
+    '({ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, READER_TRANSIENT_TOAST_STORAGE_KEY, retireReaderTransientToast})',
+    {AppStorage: {get: key=>visualScope.getStore().feedbackStore.get(key),
+      setOrCreate: (key,value)=>visualScope.getStore().feedbackStore.set(key,value)}});
 let visualTemplate, visualEmissions = 0;
 const visualActors = [];
 
-function fixture({ reduced = false, phase = 'ready', presented = true, extraMembers = [], extraDeps = {} } = {}) {
+function fixture({ reduced = false, phase = 'ready', presented = true, extraMembers = [], extraDeps = {}, feedbackStore = new Map() } = {}) {
   let nextTimer = 0;
   const timers = new Map(), animators = [];
   const uiContext = { getFont: () => ({}), createAnimator(options) {
@@ -46,7 +50,7 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
     animators.push(port);
     return port;
   } };
-  const ports = { uiContext,
+  const ports = { uiContext, feedbackStore,
     setTimeout(callback, delay) { const id = ++nextTimer; timers.set(id, { callback, delay }); return id; },
     clearTimeout(id) { timers.delete(id); } };
   const reusable = extraMembers.length === 0 && Object.keys(extraDeps).length === 0;
@@ -58,6 +62,7 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
     base = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
     const scoped = () => { const value = visualScope.getStore(); assert.ok(value, 'each native callback owns its independent visual ports'); return value; };
     deps = sourceSwitchLiveSdk(base, {
+      READER_FEEDBACK_EXTENDED_MS,
       uiContext: new Proxy({}, { get: (_target, key) => (...args) => scoped().uiContext[key](...args) }),
       setTimeout(callback, delay) { const owner = scoped(); return owner.setTimeout(() => visualScope.run(owner, callback), delay); },
       clearTimeout(id) { scoped().clearTimeout(id); }, ...extraDeps });
@@ -90,6 +95,7 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   }
   visualActors.push(reader);
   Object.assign(reader, { mounted: true, exitRequested: false, appForeground: true, reduceMotion: reduced,
+    sourceSwitchFeedback: new ReaderTransientFeedback(),
     isReaderIdentityCurrent: () => true, sourceId: 'target', bookId: 'book', readingReadyGeneration: 7,
     sourceSwitchFailureMessage: '', sourceSwitchCompletionVisible: true, phase,
     visiblePage: { startScalar: 0 }, visibleFragments: [{ text: '真实正文', imageHeight: 0 }],
@@ -103,78 +109,150 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   if (presented) reader.onSourceSwitchPagePresented(reader.pageTurnRenderRevision);
   const event = id => new SourceSwitchCompletionPresentation(id, 'target', 'book', 7, '目标书源', 2, 0);
   const accept = value => { reader.sourceSwitchCompletion = value; p.properties.flush(); };
-  return { p, reader, deps, event, accept, timers, animators };
+  const notice = () => {const state=feedbackStore.get(READER_TRANSIENT_TOAST_STORAGE_KEY);return state?.visible?state:undefined;};
+  const retireNotice = () => visualScope.run(ports, () => retireReaderTransientToast(notice()?.generation ?? 0));
+  return { p, reader, deps, event, accept, timers, animators, notice, retireNotice };
 }
 
 if(selectedCase==='ack-boundary'){
-// Exercise the actual Index member, including its exact returned-finalized
-// boundary. The unchanged canonical owner is a controlled port here; this
-// test does not invent a Core ACK or prove native/compositor timing.
-{
+  // Deliver the canonical producer's receipt at the retained scene boundary.
+  // The Runtime's pending-list and the cache IO are controlled fixture ports.
+  const {fixture: ownerFixture, Runtime, settle, setCurrentRuntime} = await import('./lib/source-switch-owner-probe.mjs');
+  const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+  const {ReaderNavigation} = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+  const {readerSourceSwitchActions} = await import('../entry/src/main/ets/app/composition/ReaderSourceSwitchActions.ts');
+  const {ReaderSourceSwitchJourney} = await import('../entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ts');
+  const {readerDirectoryActions} = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ts');
+  const ReaderReadingEntryActions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
+    'ReaderReadingEntryActions', {Observed: value => value});
+  const ReadingCommitPresentation = bookshelfOperationClass('features/reading/presentation/ReadingCommitPresentation.ets',
+    'ReadingCommitPresentation', {Observed: value => value, SourceSwitchCompletionPresentation});
   const p = boundedSurfaceSdk();
-  const page = p.consumer(indexSource, ['sourceSwitchCompletion', 'readingContentKind', 'sourceSwitchNamedCandidate', 'sourceDisplayName',
-    'readingDetailForShelf', 'onPickSource', 'applyReadingCommit', 'nextNavigationGeneration'],
-    { ...sourceSwitchLiveSdk(p), SourceSwitchCompletionPresentation, bookshelfSourceDisplayName, readableBookshelfSourceName });
-  let acknowledged = false, cleanup = 0, finalizedCalls = 0;
-  const finalized = { transactionId: 'confirmed', targetSourceId: 'target', targetBookId: 'book' };
-  const selected = { sourceId: 'target', bookUrl: 'book', sourceName: '目标书源' };
-  const pickKeys = [];
-  Object.assign(page, { detailBook: { sourceId: 'target', bookId: 'book', sourceName: '书源名称暂不可用', contentKind: 'text' },
-    sourceSwitchScopeId: 5, sourceSwitchVisible: true, sourceSwitchState: { kind: 'candidates', candidates: [selected] },
-    sourceSwitchHost: { pick(candidate, scope) { pickKeys.push([candidate.sourceId, candidate.bookUrl, scope]); } },
-    searchHost: { sources: () => [] }, sourceSources: [], sourceToolsSnapshot: { sources: [] },
-    readingReadyGeneration: 7, readingContentKind: 'text', readingSessionActive: true, remoteReadingSession: undefined,
-    getSourceSwitchHost: () => ({ targetCommitted(identity, id) {
-      finalizedCalls += 1;
-      assert.deepEqual(identity, { sourceId: 'target', bookId: 'book' });
-      assert.equal(id, 'confirmed');
-      return acknowledged ? finalized : undefined;
-    } }), cleanupRetiredSourceCache() { cleanup += 1; }, consumeSystemFileOpen() {} });
-  page.onPickSource({ ...selected, bookUrl: 'not-admitted', sourceName: '未准入名称' }, 5);
-  assert.equal(page.sourceSwitchNamedCandidate, undefined, 'unpublished row metadata cannot enrich the reader');
-  page.onPickSource(selected, 4);
-  assert.equal(page.sourceSwitchNamedCandidate, undefined, 'stale picker scope cannot capture metadata');
-  page.onPickSource(selected, 5);
-  assert.equal(page.sourceDisplayName('target', '书源名称暂不可用'), '目标书源', 'exact selected-source metadata replaces the shelf placeholder');
-  assert.equal(page.sourceDisplayName('other', '书源名称暂不可用'), '书源名称暂不可用', 'a different source cannot borrow its name');
-  const detail = page.readingDetailForShelf({ sourceId: 'target', bookId: 'book', title: '目标书', sourceName: '书源名称暂不可用', contentKind: 'text' });
-  assert.equal(detail.sourceName, '目标书源', 'control bar and reopened drawer share the same reader detail projection');
-  const commit = { sourceId: 'target', bookId: 'book', sourceSwitchTransactionId: 'confirmed', chapterIndex: 2, chapterOffset: 0 };
-  page.applyReadingCommit({ ...commit, sourceId: 'retired' });
-  assert.equal(finalizedCalls, 0);
-  page.applyReadingCommit(commit);
-  assert.equal(page.sourceSwitchCompletion, undefined, 'an unaccepted receipt cannot display success');
-  acknowledged = true;
-  page.applyReadingCommit(commit);
-  assert.equal(cleanup, 1);
-  assert.deepEqual({ ...page.sourceSwitchCompletion }, { ...new SourceSwitchCompletionPresentation('confirmed', 'target', 'book', 7, '目标书源', 2, 0) });
-  page.readingContentKind = 'manga';
-  page.sourceSwitchCompletion = undefined;
-  page.applyReadingCommit(commit);
-  assert.equal(page.sourceSwitchCompletion, undefined, 'canonical manga fact never emits the novel view receipt');
-  for (const name of ['retireSettingsPresentation', 'retireSourceManagementPresentation', 'retireSourceSwitchPresentation',
-    'retireRssEditorPresentation', 'retireRssPresentation', 'retireReadingEntryPresentation', 'retireBookshelfCatalogPresentation']) page[name] = () => {};
-  Object.assign(page, { bookshelfHost: { detachManagementPresentation() {} }, nativeAlertOwner: { retire() {} }, navigationGeneration: 1 });
-  page.sourceSwitchCompletion = new SourceSwitchCompletionPresentation('confirmed', 'target', 'book', 7, '目标书源', 2, 0);
-  page.nextNavigationGeneration();
-  assert.equal(page.sourceSwitchCompletion, undefined, 'navigation retires the view event without replay');
-}
+  const identity = {sourceId: 'target', bookId: 'book'};
+  const origin = {sourceId: 'old', bookId: 'old-book'};
+  const pending = {transactionId: 'confirmed', fromSourceId: origin.sourceId, fromBookId: origin.bookId,
+    targetSourceId: identity.sourceId, targetBookId: identity.bookId};
+  const owner = ownerFixture({open: false, shared: true, pending: [pending]});
+  owner.runtime.supportsCoreCapability = () => false;
+  const cleanup = [];
+  const offline = {snapshot: () => undefined, busy: () => false,
+    async cleanupRetiredSource(book) { cleanup.push(book); }};
+  const page = p.consumer(read('pages/Index.ets'), ['navigationOwner', 'publishNavigation', 'nextNavigationGeneration',
+    'isCurrentRuntime', 'jsonImportPresentation', 'readingCommits', 'readingCommitPorts', 'sourceSwitchActions',
+    'retainedReaderPorts', 'directoryNavigationPorts', 'currentReadingRuntime', 'resolveReaderSourceSwitchTransaction',
+    'getSourceSwitchHost', 'retireSourceSwitchPresentation', 'sourceDisplayName',
+    'readingEntryActions', 'readingEntryActionPorts', 'sourceSwitchJourney', 'sourceSwitchJourneyPorts'],
+    {ReaderNavigation, ReadingCommitPresentation, readerSourceSwitchActions, ReaderSourceSwitchJourney, ReaderReadingEntryActions, ReaderRuntimeOwner: Runtime,
+      SourceSwitchHost: owner.Constructor, ReadingOfflineHost: {forRuntime: () => offline}});
+  const lifetime = {retire() {}};
+  const manga = {retire() {}, canCancelPreparation: () => false};
+  Object.assign(page, {mountedRuntimeOwner: owner.runtime, shelfReceiptRetired: false, detailShelfAdmissionMount: 1,
+    searchAppForeground: true, libraryAcquisition: {currentOwner: () => owner.runtime},
+    shelfMotion: {clear() {}}, transientFeedback: {reset() {}}, downloadPresentation: lifetime,
+    settingsPresentation: lifetime, sourceJourney: lifetime, rssJourney: lifetime, shelfCatalog: lifetime,
+    shelfMutations: {retireSelection() {}}, shelfManagement: lifetime, shelfGroupPresentation: lifetime,
+    discoverPresentation: lifetime, rulesPresentation: lifetime, syncPresentation: lifetime, nativeAlertOwner: lifetime,
+    mangaSourceSwitch: manga, consumeSystemFileOpen() {},
+    shelfRead: {snapshot: {books: []},
+      sourceDisplayName: (sourceId, name, candidate) => bookshelfSourceDisplayName(sourceId, name, [], candidate)}});
+  page.publishNavigation(page.navigationOwner.show('reading'));
+  const book = {...identity, title: '目标书', author: '作者', sourceName: '书源名称暂不可用', contentKind: 'text'};
+  const entry = page.readingEntry, source = page.sourceSwitchPresentation;
+  Object.assign(entry, {book, sessionActive: true, readyGeneration: 7});
+  assert.equal(page.getSourceSwitchHost(), owner.host);
 
+  class ReaderShellPort {
+    constructor(parent, params, _storage, id) { Object.assign(this, {owner: parent, params, id}); }
+  }
+  const sceneSource = read('app/composition/RetainedReaderScene.ets');
+  const sceneParams = () => ({reading: entry, commits: page.readingCommits, source, manga,
+    visibleRoute: 'reading', ports: page.retainedReaderPorts()});
+  const {Component: RetainedReaderScene} = createReaderBuilderProbe(sceneSource, boundedMembers(sceneSource),
+    {...p.deps, ReaderShell: ReaderShellPort, readerDirectoryActions}, {...p.hooks, initialParams: sceneParams(),
+      childSources: {...p.childSources, ReaderShell: read('features/reading/ui/ReaderShell.ets')}});
+  const render = () => {
+    const scene = new RetainedReaderScene(undefined, sceneParams());
+    scene.initialRender();
+    return [...scene.children.values()].find(child => child instanceof ReaderShellPort).params;
+  };
+  try {
+    const previewShell = render();
+    const selected = {sourceId: identity.sourceId, bookUrl: identity.bookId, sourceName: '目标书源', sourceVersion: 'v1'};
+    Object.assign(source, {scopeId: 5, visible: true, state: {kind: 'candidates', candidates: [selected]}});
+    previewShell.onPickSource({...selected, bookUrl: 'not-admitted', sourceName: '未准入名称'}, 5);
+    assert.equal(source.namedCandidate, undefined, 'unpublished row metadata cannot enrich the reader');
+    previewShell.onPickSource(selected, 4);
+    assert.equal(source.namedCandidate, undefined, 'stale picker scope cannot capture metadata');
+    previewShell.onPickSource(selected, 5);
+    assert.equal(page.sourceDisplayName('target', book.sourceName), '目标书源');
+    assert.equal(page.sourceDisplayName('other', book.sourceName), book.sourceName, 'other sources cannot borrow the label');
+    assert.equal(page.sourceSwitchJourney.workflow().detailForShelf(book).sourceName, '目标书源', 'reopened detail shares the source-name projection');
 
+    const previewCommit = {...identity, chapterIndex: 2, chapterOffset: 0};
+    const commit = {...previewCommit, sourceSwitchTransactionId: pending.transactionId};
+    assert.equal(previewShell.sourceSwitchTransactionId, undefined);
+    previewShell.onReadingCommitted(previewCommit);
+    previewShell.onReadingCommitted(commit);
+    assert.equal(render().sourceSwitchCompletion, undefined, 'preview and a receipt without a bound transaction stay silent');
+    assert.deepEqual(cleanup, []);
+
+    assert.equal(await previewShell.resolveSourceSwitchTransactionId(identity.sourceId, identity.bookId), pending.transactionId);
+    const confirmedShell = render();
+    assert.equal(confirmedShell.sourceSwitchTransactionId, pending.transactionId);
+    confirmedShell.onReadingCommitted({...commit, sourceId: 'retired'});
+    confirmedShell.onReadingCommitted({...commit, bookId: 'another-book'});
+    confirmedShell.onReadingCommitted({...commit, sourceSwitchTransactionId: 'older'});
+    entry.book = {...book, bookId: 'another-book'};
+    render().onReadingCommitted({...commit, bookId: 'another-book'});
+    entry.book = book;
+    assert.equal(render().sourceSwitchCompletion, undefined, 'stale target or transaction cannot display completion');
+    assert.equal(owner.host.currentTransactionId(identity), pending.transactionId, 'the current transaction remains pending');
+    assert.deepEqual(cleanup, []);
+
+    confirmedShell.onReadingCommitted(commit);
+    assert.deepEqual(cleanup, [origin]);
+    assert.deepEqual({...render().sourceSwitchCompletion}, {...new SourceSwitchCompletionPresentation(
+      pending.transactionId, identity.sourceId, identity.bookId, 7, '目标书源', 2, 0)});
+    assert.equal(owner.host.currentTransactionId(identity), undefined);
+
+    page.nextNavigationGeneration();
+    assert.equal(render().sourceSwitchCompletion, undefined, 'navigation retires the view event');
+    confirmedShell.onReadingCommitted(commit);
+    assert.equal(render().sourceSwitchCompletion, undefined, 'an old retained callback cannot replay a finalized receipt');
+    assert.deepEqual(cleanup, [origin]);
+
+    const mangaTarget = {...identity, bookId: 'manga-book'};
+    const mangaPending = {...pending, transactionId: 'manga-confirmed', targetBookId: mangaTarget.bookId};
+    owner.pending().push(mangaPending);
+    Object.assign(entry, {contentKind: 'manga', book: {...book, ...mangaTarget, contentKind: 'manga'}});
+    assert.equal(await render().resolveSourceSwitchTransactionId(mangaTarget.sourceId, mangaTarget.bookId), mangaPending.transactionId);
+    const mangaShell = render();
+    assert.equal(mangaShell.sourceSwitchTransactionId, mangaPending.transactionId);
+    mangaShell.onReadingCommitted({...previewCommit, ...mangaTarget, sourceSwitchTransactionId: mangaPending.transactionId});
+    assert.equal(owner.host.currentTransactionId(mangaTarget), undefined, 'the manga receipt still reaches its transaction owner');
+    assert.deepEqual(cleanup, [origin, origin]);
+    assert.equal(render().sourceSwitchCompletion, undefined, 'canonical manga never emits the novel view receipt');
+    await settle();
+  } finally {
+    owner.host.retire();
+    setCurrentRuntime(undefined);
+  }
 }
 if(selectedCase==='visual-clock'){
 {
   const x = fixture();
   x.accept(x.event('ready'));
   assert.equal(x.reader.phase, 'ready');
-  assert.equal(x.reader.sourceSwitchToastText, '已切换至 目标书源');
+  assert.equal(x.notice()?.message, '已切换至 目标书源');
+  assert.equal(x.notice()?.title, '书源已切换');
+  assert.equal(x.notice()?.tone, 'success');
   assert.equal(x.reader.sourceSwitchRevealOpacity, 1 - SOURCE_SWITCH_VISUAL.readerEnterFromOpacity);
   assert.equal(x.animators.length, 1);
   const animator = x.animators[0];
   assert.equal(animator.options.duration, SOURCE_SWITCH_VISUAL.readerEnterDurationMs);
   assert.equal(animator.options.end, 0);
   assert.equal(animator.options.iterations, 1);
-  assert.equal([...x.timers.values()][0].delay, SOURCE_SWITCH_VISUAL.toastDurationMs);
+  assert.equal(x.notice()?.duration, READER_FEEDBACK_EXTENDED_MS);
   animator.onFrame(.25);
   assert.equal(x.reader.sourceSwitchRevealOpacity, .25);
   x.accept(x.event('ready')); // a fresh ArkUI DTO copy is the same event
@@ -182,19 +260,15 @@ if(selectedCase==='visual-clock'){
   animator.onFrame(.1);
   assert.equal(x.reader.sourceSwitchRevealOpacity, .1, 'retained animation survives copied equal props');
   x.reader.sourceSwitchCompletionWash();
-  x.reader.sourceSwitchCompletionToast();
   x.p.properties.flush();
   const overlays = x.p.walk(x.reader).filter(child => child instanceof x.deps.SourceSwitchCompletionOverlay);
-  assert.equal(overlays.length, 2, 'actual wash and toast children are emitted');
-  const toast = x.p.nodes(x.reader).find(node => node.type === 'Text' && node.create === '已切换至 目标书源');
-  assert.equal(toast.fontSize, readerMessageStyles.MESSAGE_META.fontSizeFp);
-  assert.equal(toast.lineHeight, readerMessageStyles.MESSAGE_META.lineHeightFp);
+  assert.equal(overlays.length, 1, 'the reading subtree owns only the paper wash');
   const paper = x.p.walk(x.reader).find(child => child instanceof x.deps.ReaderPaperBackground);
   assert.equal(paper.theme, 'warm', 'wash uses the actual visible reading paper');
   animator.onFinish();
   assert.equal(x.reader.sourceSwitchRevealOpacity, 0);
-  [...x.timers.values()][0].callback();
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  x.retireNotice();
+  assert.equal(x.notice(), undefined);
   assert.equal(x.reader.phase, 'ready', 'visual clocks do not change business readiness');
 }
 
@@ -203,7 +277,7 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   reader => { reader.appForeground = false; }, reader => { reader.sourceSwitchCompletionVisible = false; }]) {
   const x = fixture(); mutation(x.reader); x.p.properties.flush(); x.accept(x.event('guarded'));
   assert.equal(x.animators.length, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.equal(x.notice(), undefined);
 }
 
 {
@@ -224,7 +298,7 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   assert.equal(x.timers.size, 0);
   lateFrame(.55); lateFinish();
   assert.equal(x.reader.sourceSwitchRevealOpacity, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.equal(x.notice(), undefined);
   x.reader.sourceSwitchCompletionVisible = true; x.p.properties.flush();
   assert.equal(x.animators.length, 1, 'retired event is consumed and cannot replay on return');
 }
@@ -235,7 +309,7 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   x.reader.visiblePageSelectionToken = x.reader.chapterSelectionToken;
   assert.equal(x.reader.sourceSwitchCompletionDisplayCurrent(), false, 'same-anchor successor selection immediately rejects the old view');
   x.animators[0].onFrame(.3);
-  assert.equal(x.reader.sourceSwitchToastText, '');
+  assert.equal(x.notice(), undefined);
   assert.equal(x.timers.size, 0);
 }
 
@@ -243,8 +317,8 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   const x = fixture({ reduced: true }); x.accept(x.event('reduced'));
   assert.equal(x.animators.length, 0);
   assert.equal(x.reader.sourceSwitchRevealOpacity, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '已切换至 目标书源');
-  assert.equal(x.timers.size, 1);
+  assert.equal(x.notice()?.message, '已切换至 目标书源');
+  assert.equal(x.timers.size, 0, 'the reader has no local notice timer');
 }
 
 
@@ -256,7 +330,7 @@ for (const mutation of [reader => { reader.chapterSelectionToken += 1; reader.vi
   mutation(x.reader); x.reader.phase = 'ready'; x.p.properties.flush();
   x.reader.onSourceSwitchPagePresented(x.reader.pageTurnRenderRevision);
   assert.equal(x.animators.length, 0); assert.equal(x.timers.size, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '', 'same-anchor manual refresh/successor lifecycle cannot replay a pending old receipt');
+  assert.equal(x.notice(), undefined, 'same-anchor manual refresh/successor lifecycle cannot replay a pending old receipt');
 }
 
 // Reproduce the VM's early success independently from visual clocks: a true
@@ -288,7 +362,7 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   const x = fixture({ presented: false }); mutation(x.reader); x.accept(x.event('unverified'));
   x.reader.onSourceSwitchPagePresented(x.reader.pageTurnRenderRevision);
   assert.equal(x.animators.length, 0); assert.equal(x.timers.size, 0);
-  assert.equal(x.reader.sourceSwitchToastText, '', 'legacy/empty/obsolete model cannot emit a success notice');
+  assert.equal(x.notice(), undefined, 'legacy/empty/obsolete model cannot emit a success notice');
 }
 
 {
@@ -323,12 +397,12 @@ if(selectedCase==='canonical-stage'){
     assert.ok(declaration, `actual production class ${name}`);
     return new Function(...Object.keys(deps), stripTypeScriptTypes(declaration.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(deps));
   };
-  const stageSource = read('features/reading/ReaderPageTurnStage.ets');
+  const stageSource = read('features/reading/ui/ReaderPageTurnStage.ets');
   const ReaderPageTurnRenderPage = actualClass(stageSource, 'ReaderPageTurnRenderPage', { ReaderPageChromeSnapshot });
   const CoreReadingAnchor = actualClass(localSource, 'CoreReadingAnchor');
-  const ReadingCommit = actualClass(localSource, 'ReadingCommit');
-  const PhysicalReadingPage = actualClass(read('features/reading/ReadingMeasurementModels.ets'), 'PhysicalReadingPage');
-  const ReadingSurfacePageFragment = actualClass(read('features/reading/ReadingSurface.ets'), 'ReadingSurfacePageFragment');
+  const ReadingCommit = actualClass(read('features/reading/application/ReadingCommit.ts'), 'ReadingCommit');
+  const PhysicalReadingPage = actualClass(read('features/reading/ui/ReadingMeasurementModels.ets'), 'PhysicalReadingPage');
+  const ReadingSurfacePageFragment = actualClass(read('features/reading/ui/ReadingSurface.ets'), 'ReadingSurfacePageFragment');
   const x = fixture({ phase: 'measuring', presented: false,
     extraDeps: { CoreReadingAnchor, ReadingCommit, ReaderPageTurnRenderPage },
     extraMembers: ['completeFirstPage', 'persistMeasuredCanonicalProgress', 'activeGateway', 'requireChapter', 'requireChapterLayoutMap',
@@ -405,15 +479,17 @@ if(selectedCase==='canonical-stage'){
 }
 if(selectedCase==='actor-clock-isolation'){
 {
-  const first = fixture(), second = fixture();
-  first.accept(first.event('independent-first')); second.accept(second.event('independent-second'));
-  assert.equal(first.timers.size, 1); assert.equal(second.timers.size, 1);
+  const feedbackStore = new Map();
+  const first = fixture({feedbackStore}), second = fixture({feedbackStore});
+  first.accept(first.event('independent-first'));
+  const firstGeneration = first.notice()?.generation;
+  second.accept(second.event('independent-second'));
+  const successor = second.notice();
+  assert.ok(successor.generation > firstGeneration);
   const lateFirst = first.animators[0].onFinish;
   first.reader.sourceSwitchCompletionVisible = false; first.p.properties.flush();
-  assert.equal(first.timers.size, 0); assert.equal(second.timers.size, 1,
-    'retiring the old actor cannot clear a successor clock with the same numeric timer id');
   lateFirst();
-  assert.equal(second.reader.sourceSwitchToastText, '已切换至 目标书源');
+  assert.equal(second.notice(), successor, 'retiring the old actor cannot clear the successor shared notice generation');
   assert.equal(second.animators[0].cancels, 0, 'native animator ports remain actor-local');
 }
 

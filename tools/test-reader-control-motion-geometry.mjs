@@ -9,8 +9,8 @@ async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { existsSync, readFileSync }=await import('node:fs');
 const { readerControlMotionBounds, readerControlMotionAxis, sampleReaderControlMotion,
-  sampleReaderControlMotionComposition, sampleReaderControlWholeVisibility }=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const { readerControlGrabberScreenY }=await import('../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts');
+  sampleReaderControlMotionComposition, sampleReaderControlWholeVisibility }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const { readerControlGrabberScreenY }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts');
 
 if(selectedCase==='spatial'){
 const bounds = readerControlMotionBounds(364, 736, 19);
@@ -115,7 +115,7 @@ for (const [width, height] of [[0, 0], [320, 0], [320, 28], [320, 65]]) {
 }else if(selectedCase==='frame-cache'){
 // Production cache: preserve the exact authored geometry, share an object only
 // while all its dependencies remain equal, never accumulate the drag offset.
-const { ReaderControlMotionFrameCache } = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+const { ReaderControlMotionFrameCache } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
 const cache = new ReaderControlMotionFrameCache();
 const cached = cache.sample(.7, .4, 364, 736, 8, 330, 12);
 for (let i = 0; i < 100; i++) assert.equal(cache.sample(.7, .4, 364, 736, 8, 330, 12), cached);

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
 import { ReaderBrightnessWriter } from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
-import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { findReaderTheme, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { downloadOverlayChromeStyle } from '../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts';
+import * as metrics from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { findReaderTheme, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { downloadOverlayChromeStyle } from '../entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts';
 
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
@@ -48,11 +48,12 @@ function fixture() {
       },
       display: { getDefaultDisplaySync: () => ({ id: 0, rotation: 0, densityPixels: 2, scaledDensity: 2 }), on() {}, off() {} },
     },
+    '@kit.BasicServicesKit': { deviceInfo: { deviceType: 'phone' } },
     '@kit.PerformanceAnalysisKit': { hilog: { info: (...args) => log('info', ...args), warn: (...args) => log('warn', ...args) } },
     './ReaderBrightnessWriter': { ReaderBrightnessWriter },
     './ReaderStatusBarMeasurement': { ReaderStatusBarMeasurement },
-    '../features/common/ReaderWindowMetrics': metrics,
-    '../features/common/ReaderThemeRegistry': { findReaderTheme },
+    '../ui/foundation/ReaderWindowMetrics': metrics,
+    '../ui/foundation/ReaderThemeRegistry': { findReaderTheme },
   };
   const module = { exports: {} };
   new Function('require', 'module', 'exports', output)(id => {

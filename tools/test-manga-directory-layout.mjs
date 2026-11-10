@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { mangaDirectoryLabel, mangaDirectoryGridColumns, mangaDirectoryEntryRows, mangaDirectoryNearbyEntries,
   mangaDirectoryNodeRows, mangaDirectoryNodePlacement, mangaDirectoryNodePlacements, mangaDirectorySameNodeRun,
   mangaDirectoryNearbyNodes,
-} from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+} from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
 import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup,
-} from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+} from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
 
 // Reviewed demo labels affect presentation only, including literal zeroes.
 assert.deepEqual(mangaDirectoryLabel(' 003 '), { kind: 'numeric', numberText: '003', part: '' });

@@ -5,8 +5,8 @@ import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const sourcePage = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
-const bookshelfPage = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
+const sourcePage = read('entry/src/main/ets/features/source/ui/SourceManagementPage.ets');
+const bookshelfPage = read('entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets');
 
 assert.match(sourcePage,
   /@Prop @Watch\('onSourcesChanged'\) sources: BookSource\[\];/,
@@ -35,7 +35,7 @@ assert.match(bookshelfPage,
 
 console.log('dynamic ArkUI list refresh contracts: PASS');
 
-const Page = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url)), ['bookRowRenderKey']);
+const Page = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url)), ['bookRowRenderKey']);
 const page = new Page();
 const classSource=bookshelfPage.slice(bookshelfPage.indexOf('class BookshelfRowDataSource'),bookshelfPage.indexOf('/**',bookshelfPage.indexOf('class BookshelfRowDataSource')));
 const DS=new Function('DataOperationType',stripTypeScriptTypes(classSource)+';return BookshelfRowDataSource;')({ADD:'add',DELETE:'delete'});

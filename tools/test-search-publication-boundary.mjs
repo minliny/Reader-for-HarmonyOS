@@ -28,25 +28,25 @@ const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 // Supporting gateway declarations are type-only test boundaries; the page's
 // negative-control declaration keeps the actual SDK-resolved .ets extension.
 const checker = require(`${sdkRoot}/lib/ets_checker.js`);
-const publicationPath = fileURLToPath(new URL('features/search/SearchPublication.ts', prefix));
-const viewStatePath = fileURLToPath(new URL('features/search/SearchViewState.ts', prefix));
-const presentationPath = fileURLToPath(new URL('features/search/SearchPresentation.ts', prefix));
-const pagePath = fileURLToPath(new URL('features/search/SearchPage.ets', prefix));
+const publicationPath = fileURLToPath(new URL('features/search/presentation/SearchPublication.ts', prefix));
+const viewStatePath = fileURLToPath(new URL('features/search/presentation/SearchViewState.ts', prefix));
+const presentationPath = fileURLToPath(new URL('features/search/presentation/SearchPresentation.ts', prefix));
+const pagePath = fileURLToPath(new URL('features/search/ui/SearchPage.ets', prefix));
 const boundaryDiagnostics = previousImport => {
   const options = { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS,
     moduleResolution: ts.ModuleResolutionKind.NodeJs, strict: true, noEmit: true,
     allowNonTsExtensions: true, needDoArkTsLinter: true, isCompatibleVersion: false };
   const sources = new Map([
-    [publicationPath, previousImport ? read('features/search/SearchPublication.ts')
-      .replace("from './SearchPresentation'", "from './SearchPage'") : read('features/search/SearchPublication.ts')],
-    [presentationPath, read('features/search/SearchPresentation.ts')],
-    [viewStatePath, read('features/search/SearchViewState.ts')],
-    [fileURLToPath(new URL('features/search/SearchGateway.ts', prefix)),
+    [publicationPath, previousImport ? read('features/search/presentation/SearchPublication.ts')
+      .replace("from './SearchPresentation'", "from '../ui/SearchPage'") : read('features/search/presentation/SearchPublication.ts')],
+    [presentationPath, read('features/search/presentation/SearchPresentation.ts')],
+    [viewStatePath, read('features/search/presentation/SearchViewState.ts')],
+    [fileURLToPath(new URL('features/search/application/SearchGateway.ts', prefix)),
       'export interface SearchBook {} export interface SearchResultDelta {} export interface SearchSource {}'],
     [fileURLToPath(new URL('app/ReaderOperationFacts.ts', prefix)),
       'export interface OperationFacts<T> {}'],
     [fileURLToPath(new URL('app/ReaderCoreGateway.ts', prefix)), 'export interface ShelfBook {}'],
-    [pagePath, 'export type { SearchPresentation } from "./SearchPresentation";'],
+    [pagePath, 'export type { SearchPresentation } from "../presentation/SearchPresentation";'],
   ]);
   const host = ts.createCompilerHost(options);
   const getSourceFile = host.getSourceFile;
@@ -70,7 +70,7 @@ assert.deepEqual(boundaryDiagnostics(false), [], 'SDK accepts actual pure-TS pub
 return;}
 const parse = source => ts.createSourceFile(virtualFilePath('SearchPublicationBoundary.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, compilerOptions);
-const pageSource = read('features/search/SearchPage.ets'), indexSource = read('pages/Index.ets');
+const pageSource = read('features/search/ui/SearchPage.ets'), indexSource = read('pages/Index.ets');
 const pageTree = parse(pageSource), indexTree = parse(indexSource);
 const pageStruct = pageTree.statements.find(node => node.name?.getText(pageTree) === 'SearchPage');
 const indexStruct = indexTree.statements.find(node => node.name?.getText(indexTree) === 'Index');
@@ -87,18 +87,18 @@ const nativeRuntime = { setReadingPreparationContext() {}, request: async method
 globalThis.ReaderRuntimeOwner = { current: () => nativeRuntime };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
 const { SearchOrchestrator, SearchQueryRun } = await evaluate([
-  'features/common/BookAuthorMetadata.ts',
+  'app/library/BookAuthorMetadata.ts',
   'app/BookRequestScheduler.ts', 'app/ReaderOperationFacts.ts',
-  'features/source/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/SearchBookProjection.ts',
-  'features/search/SearchGateway.ts', 'features/search/SearchOrchestrator.ets',
+  'features/source/application/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/application/SearchBookProjection.ts',
+  'features/search/application/SearchGateway.ts', 'features/search/application/SearchOrchestrator.ets',
 ].map(name => clean(read(name))).join('\n') + '\nexport { SearchQueryRun };');
 // Pure TypeScript modules retain their real dependency graph. Only the
 // Harmony-specific orchestrator and ArkUI boundary above need extraction.
-const { SearchPublication } = await import('../entry/src/main/ets/features/search/SearchPublication.ts');
-const { SearchViewState } = await import('../entry/src/main/ets/features/search/SearchViewState.ts');
-const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
-const {selectedProductionClasses}=await import('./lib/selected-production-methods.mjs');const author=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts'),media=await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
-const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL('features/search/SearchPage.ets',prefix),['SearchBookGroup','SearchResultDataSource'],{...author,...media,DataOperationType:{ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'}});
+const { SearchPublication } = await import('../entry/src/main/ets/features/search/presentation/SearchPublication.ts');
+const { SearchViewState } = await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
+const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
+const {selectedProductionClasses}=await import('./lib/selected-production-methods.mjs');const author=await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts'),media=await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
+const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL('features/search/ui/SearchPage.ets',prefix),['SearchBookGroup','SearchResultDataSource'],{...author,...media,DataOperationType:{ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'}});
 let constructedGroups = 0;
 class CountedGroup extends SearchBookGroup {
   constructor(...args) { super(...args); constructedGroups++; }
@@ -112,7 +112,7 @@ const childMembers = ['publicationRevision', 'publication', 'presentation', 'she
   'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent',
   'operation', 'retryOperation', 'isSweeping', 'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight',
   'build', 'stateContent', 'searchHeader', 'searchActivity', 'resultStats'];
-const spinnerSource = read('features/search/SearchSpinner.ets');
+const spinnerSource = read('features/search/ui/SearchSpinner.ets');
 class SpinnerBoundary { constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); } }
 const childProbe = createReaderBuilderProbe(pageSource, childMembers, {
   ...runtime.sdk, SearchPublication, SearchViewState, SearchResultProjection,

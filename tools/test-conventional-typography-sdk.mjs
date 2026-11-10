@@ -11,7 +11,7 @@ const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-pr
 const {foundationControls} = await import('./lib/reader-foundation-control-probe.mjs');
 const {readerTypographyRoles} = await import('./lib/reader-typography-probe.mjs');
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfManagementPage.ets',import.meta.url),'utf8');
 const render=roles=>{const shared=foundationControls({roles});const {owner}=createReaderBuilderProbe(source,['actionButton'],shared.dependencies,shared.hooks);Object.assign(owner,{appThemeScheme:'day'});owner.actionButton('实际操作',true,()=>{});return shared.nodes(owner).find(n=>n.type==='Text');};
 // foundationControls consumes role data through foundationSpecs; inject that finite resolver explicitly.
 const {foundationSpecs}=await import('./lib/reader-foundation-control-probe.mjs');

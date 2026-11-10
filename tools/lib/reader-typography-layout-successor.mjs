@@ -59,9 +59,9 @@ export function validateTypographyLayoutSuccessor(value = typographyLayoutSucces
   ], 'layout successor binds only the exact historical typography witnesses');
   for (const witness of value.previousFixtures) assert.equal(digest(readSource(witness.path)), witness.sha256, 'layout successor keeps historical typography witness byte immutable');
   assert.deepEqual(value.approvedRelocations.map(entry => entry.path), [
-    'entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets',
-    'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets',
-    'entry/src/main/ets/features/search/SearchPage.ets',
+    'entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets',
+    'entry/src/main/ets/features/reading/ui/LocalBookDetail.ets',
+    'entry/src/main/ets/features/search/ui/SearchPage.ets',
   ], 'only the three exact same-file approved layout relocations');
   let styles = 0, native = 0;
   for (const entry of value.approvedRelocations) {
@@ -82,18 +82,18 @@ export function validateTypographyLayoutSuccessor(value = typographyLayoutSucces
   }
   assert.deepEqual([styles, native], [11, 4], 'exact retained same-file style and AUTO occurrence counts');
   assert.deepEqual(value.baselineOwners.map(entry => [entry.path, entry.previousMethod, entry.currentMethod]), [
-    ['entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets', 'build', 'pageContent'],
-    ['entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets', 'build', 'pageContent'],
+    ['entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets', 'build', 'pageContent'],
+    ['entry/src/main/ets/features/rss/ui/RssSubscriptionEditorPage.ets', 'build', 'pageContent'],
   ], 'only the two finite standard-page baseline owners relocate');
   const rail = value.sharedRail;
-  assert.equal(rail.path, 'entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
+  assert.equal(rail.path, 'entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets');
   assert.equal(rail.previousFixture, value.previousFixtures[0].path);
   const previous = JSON.parse(readSource(rail.previousFixture)).files.find(file => file.path === rail.path);
   assert.equal(digest(previous), rail.previousEntrySha256, 'shared rail retains its exact previous consumer approval');
   assert.deepEqual([rail.carrierIndex, rail.carrierCount, rail.nativeCount], [17, 18, 0], 'one exact original bookshelf rail label, no lost logical occurrence');
   assert.equal(digest(previous.carriers[rail.carrierIndex]), rail.previousCarrierSha256, 'shared rail preserves original label witness');
   assert.deepEqual([rail.ownerPath, rail.shellPath, rail.producerPath, rail.producerOwner, rail.producerMethod, rail.producerText, rail.variant], [
-    'entry/src/main/ets/features/bookshelf/BookshelfShell.ets', 'entry/src/main/ets/features/shell/MainTabShell.ets',
+    'entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets', 'entry/src/main/ets/features/shell/MainTabShell.ets',
     'entry/src/main/ets/features/shell/MainTabBar.ets', 'MainTabBar', 'railTabItem', 'tab.label', 'bookshelf',
   ], 'only the exact bookshelf shared rail producer');
   assert.deepEqual(rail.fontTuple, { fontFamily: 'ReaderNotoSansSCUIBold', fontWeight: 700, fontSize: 11, lineHeight: 18 });
