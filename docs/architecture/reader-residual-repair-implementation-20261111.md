@@ -4,7 +4,7 @@
 
 ## 当前结果
 
-代码和必要本地检查已分批实施；诊断25个实际用例和独立源码复核通过，统一签名候选待冻结源码后构建。原VM仍为a443，尚无本轮设备安装、取证、下载恢复、原库SQL／FFI或UNKNOWN内容读取。当前真实回执入口为[本轮私有执行计划](/home/administrator/Reader/.local/framework-residual-repair-20261111/execution-plan.json)。
+代码和必要本地检查已实施并提交`93c5b4e0`，诊断25个实际用例和独立源码复核通过；统一签名候选`0.2.0.DEV.973076b464f9`构建／验签通过，2153有效输入全部一致。设备、数据恢复和最终验收仍开放。原VM仍为a443，尚无本轮设备安装、取证、下载恢复、原库SQL／FFI或UNKNOWN内容读取。当前真实回执入口为[本轮私有执行计划](/home/administrator/Reader/.local/framework-residual-repair-20261111/execution-plan.json)。
 
 | 遗留 | 已实施内容 | 已有证据／仍开放层 |
 | --- | --- | --- |
@@ -41,8 +41,20 @@
 
 ## 数据恢复与最终设备闭环
 
-新停态数据无有效manga head／receipt，0/2与复制事实一致；Host旧文件完整不会自动重建Core候选。源码修复也不会恢复旧evicted。真实离线恢复应使用[正常下载恢复方案](/home/administrator/Reader/.local/framework-residual-repair-20261111/manga-recovery-plan.json)：只针对既有两章，经原下载intent／Coordinator／Core grant／Host materialization流程；可能重新请求同源章节／图片，并受原存储／进度映射／未决操作合同约束。不补SQL头、不改count／tombstone、不重放UNKNOWN。
+上一轮停态克隆无有效manga head／receipt，0/2与该复制事实一致；Host旧文件完整不会自动重建Core候选。源码修复也不会恢复旧evicted。真实离线恢复应使用[正常下载恢复方案](/home/administrator/Reader/.local/framework-residual-repair-20261111/manga-recovery-plan.json)：只针对既有两章，经原下载intent／Coordinator／Core grant／Host materialization流程；可能重新请求同源章节／图片，并受原存储／进度映射／未决操作合同约束。不补SQL头、不改count／tombstone、不重放UNKNOWN。
 
 新设备范围必须绑定本轮最终候选并明确原VM、停态窗口、复制／证明／安装／正常启动／图像总额及失败恢复规则。成功复制后保持停态直到替换前最终重验；恢复启动会失效该proof，且与正常启动共享额度。部署本身仍由canonical inspect/install执行，私有额度工具不提供同意或安装authority。
 
 正式签名包、合法安装、当前候选原生阅读图、漫画业务恢复、历史因果、原UNKNOWN结果、完整回归／物理机／用户验收各自记账。本记录不把代码层关闭写成所有层完成。
+
+## 最终本地候选
+
+- 源码提交：`93c5b4e0c381869087e396a584636b3f194885fb`；构建捕获Host工作树干净。Core原有治理／私有WIP保留；有效Native输入及嵌入release二进制没有改变。
+- 候选：`0.2.0.DEV.973076b464f9`，run `20261111T132748Z-93c5b4e0-3c8ec955`，x86_64。指定minliny证书验签`verified:true`。
+- signed HAP SHA256：`ec197e95193499b7c8f198c0d80b1e8c265b8ed7da88bda264407bce21c1732e`；manifest SHA256：`f3ebf7385fa50f7fa095c7b74ec047b6eeceb5cc9647c65f15abaf91958970ca`。
+- 2153有效源文件逐一重算：0缺失／0不匹配。实际编译322警告＝313 throws＋7后台能力提示＋2 NAPI SDK提示，missing/deprecated未回退；未为清零吞异常或压制能力提示。
+- [候选实际回执](/home/administrator/Reader/.local/framework-residual-repair-20261111/candidate-result.json)与[源字节复核](/home/administrator/Reader/.local/framework-residual-repair-20261111/candidate-source-identity.json)。构建明确contracts-scope none，未执行完整套件或设备。
+
+正式clone工具已预编译两个准确Linux测试target，尚非实际数据测试PASS。交付准备继续要求完整Core git/content校验和真实testbinary启动边界的clone/env绑定；合成模式、list或只有exit0不能转成现场证明。
+
+[当前候选受控执行提案](/home/administrator/Reader/.local/framework-residual-repair-20261111/candidate-execution-proposal.json)把保数据交付／文字像素与可选两章恢复／冷续读分阶段列明，并写出总停启、截图、命令、等待和失败恢复边界。该文件为PREPARED_NOT_AUTHORIZED，旧有限额度不复用；本记录和新候选都不授予设备操作。
