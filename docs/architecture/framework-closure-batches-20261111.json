@@ -2,8 +2,8 @@
   "schema": "reader.framework-closure.batches.v1",
   "date": "2026-11-11",
   "sourceHead": "14444eac0feb182d38f16ef8ffb40c43cb749434",
-  "status": "CODE_LOCAL_BATCHES_COMPLETE_CURRENT_CLONE_OBSERVED_FINAL_BUILD_BINDING_PENDING",
-  "scope": "用户后续明确全量完成，已实施本计划可独立代码/本地批次，P2采用REFERENCE_ONLY。新授权停态pair及独立Linuxdebug克隆观察完成：两章无candidate，与当前0/2一致；旧38/new47内容差分和历史0/2因果未建立。无压力capacity合同缺口已修，17行为+2SDK通过；最终构建待绑定本地交付记录。正式发布全量及用户验收不自动触发。",
+  "status": "CODE_LOCAL_CURRENT_CLONE_COMPLETE_FINAL_SIGNED_ARTIFACT_BOUND_NOT_INSTALLED",
+  "scope": "用户后续明确全量完成，已实施本计划可独立代码/本地批次，P2采用REFERENCE_ONLY。新授权停态pair及独立Linuxdebug克隆观察完成：两章无candidate，与当前0/2一致；旧38/new47内容差分和历史0/2因果未建立。无压力capacity合同缺口已修，17行为+2SDK通过；最终规范构建与指定签名通过，见本地交付记录。正式发布全量及用户验收不自动触发。",
   "executionOwner": "主代理协调；P1/P3/P4按独占文件授权子代理实施，每个生产文件只有一个当前修改者。",
   "invariants": [
     "用户消息复用既有类别组件；语义/业务写入authority不转交视觉壳。",
@@ -457,12 +457,12 @@
         "P5.0",
         "P5.2"
       ],
-      "status": "COMPLETE_CAPACITY_CODE_17_BEHAVIOR_2_SDK_FINAL_BUILD_PENDING",
+      "status": "COMPLETE_CAPACITY_CODE_17_BEHAVIOR_2_SDK_CANONICAL_BUILD_SIGNED",
       "actions": [
         "只在reason=capacity且没有显式enough时，复用既有inventory/buckets/capacity给出默认总预算/系统余量谓词；Gateway不增加第二owner",
         "ordinaryBytes+ordinaryReservedBytes<=cacheBudgetBytes且freeBytes>=systemReserveBytes+allReservedBytes时停止新回收；分区、新bytes和headroom继续由reserveExternalWrite自定义enough拥有",
         "pending grant先恢复，每候选后及derived阶段复用停止条件；不改Core候选/LRU/优先级、expiry/clear、保护栅栏、schema或迁移，不新增队列/actor",
-        "旧生产无压力claim已实际失败复现；当前17组行为及2组SDK通过，SDK工具解析失败保留，最终规范HAP语义编译待绑定"
+        "旧生产无压力claim已实际失败复现；当前17组行为及2组SDK通过，SDK工具解析失败保留，最终规范HAP语义编译及指定签名已通过，单独绑定实际候选"
       ],
       "exitCriteria": [
         "固定Disk源码SHA256 552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f；17行为+2SDK及旧失败回执分别登记，不写成设备或规范构建PASS",
@@ -473,7 +473,12 @@
       "productChecksExecuted": [],
       "implementationEvidence": ".local/framework-closure-implementation-20261111/p5-capacity-eviction-result.json",
       "productionSourceSha256": "552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
-      "finalArtifact": "最终构建待绑定本地交付记录"
+      "finalArtifact": {
+        "appBuildId": "0.2.0.DEV.0511f567914d",
+        "runId": "20261111T034526Z-def50fbc-02199dc7",
+        "manifest": "/home/administrator/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20261111T034526Z-def50fbc-02199dc7/manifest.json",
+        "install": "NOT_RUN"
+      }
     },
     {
       "id": "P6",
@@ -511,7 +516,7 @@
   "currentExecution": {
     "productionModified": true,
     "sourceOwnersFrozen": true,
-    "signedCandidate": "最终构建待绑定本地交付记录；不得用旧68、3f或更早候选代填",
+    "signedCandidate": "0.2.0.DEV.0511f567914d",
     "warningTotal": 322,
     "warningClasses": {
       "throws": 313,
@@ -554,19 +559,20 @@
       "scopeBoundary": "Current stopped data in fixed Linuxdebug clone; not installed release/current-process query"
     },
     "candidateBinding": {
-      "status": "FINAL_BUILD_PENDING_LOCAL_DELIVERY_RECORD_BINDING",
-      "record": ".local/framework-closure-implementation-20261111/candidate.json",
-      "manifest": "待最终规范构建成功后绑定对应不可变HAPmanifest",
-      "installed": "NOT_RUN_FOR_FINAL_CAPACITY_SOURCE"
+      "status": "PASS_FINAL_CANONICAL_BUILD_AND_SPECIFIED_SIGNATURE",
+      "record": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/candidate.json",
+      "manifest": "/home/administrator/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20261111T034526Z-def50fbc-02199dc7/manifest.json",
+      "buildCommit": "def50fbc5c1d53252b103441420ef9e4fb55c18a",
+      "installed": "NOT_RUN"
     },
-    "warningBoundary": "322及类别计数来自既有成功ArkTS构建；最后capacity源码的构建/警告结果待最终回执，不自动沿用",
+    "warningBoundary": "最后capacity源码实际规范ArkTS构建322：313throws、7capability、2native，missing/deprecated0；不替代设备或整体验收。",
     "previousIndependentRecoveryFix": "迟到R1负结果不能删除R2完整索引；独立恢复性17组/旧生产失败/负对照回执保留",
     "capacityFix": {
       "result": ".local/framework-closure-implementation-20261111/p5-capacity-eviction-result.json",
       "sourceSha256": "552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
       "behaviorGroups": 17,
       "sdkGroups": 2,
-      "canonicalHap": "PENDING_FINAL_BINDING",
+      "canonicalHap": "PASS_FINAL_CANDIDATE_SIGNED_NOT_INSTALLED",
       "historicalOwner": "NOT_ESTABLISHED",
       "historicalTime": "NOT_ESTABLISHED",
       "historicalZeroCause": "NOT_ESTABLISHED",
