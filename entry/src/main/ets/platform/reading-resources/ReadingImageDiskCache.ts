@@ -1033,9 +1033,21 @@ export class ReadingImageDiskCache {
     return `${this.context.filesDir}:${stat.ino}`;
   }
 
+  /** Automatic maintenance shares the public total cache budget. Per-kind
+   * partitions and incoming bytes stay with the write reservation's predicate.
+   * Read directly inside the policy lane; re-enqueuing it would await itself. */
+  private async mangaMaintenanceHasCapacity(): Promise<boolean> {
+    const buckets = await this.mangaStorageBuckets(await this.mangaInventory());
+    const capacity = await this.mangaStorageCapacityForPath(this.context.filesDir);
+    return buckets.ordinaryBytes + this.mangaOrdinaryReservedBytes <= capacity.cacheBudgetBytes &&
+      capacity.freeBytes >= capacity.systemReserveBytes + this.mangaReservedBytes;
+  }
+
   private async evictMangaCandidates(reason: MangaStorageReason, scope?: MangaStorageScope, enough?: () => Promise<boolean>, batched: boolean = false): Promise<void> {
     const authority = this.mangaAuthority;
     if (authority === undefined || this.closed) return;
+    const hasCapacity = enough ?? (reason === 'capacity' ?
+      (): Promise<boolean> => this.mangaMaintenanceHasCapacity() : undefined);
     const epoch = this.mangaStorageEpoch;
     const current = (): boolean => !this.closed && epoch === this.mangaStorageEpoch && this.mangaRestoreRequests === 0 && !this.mangaRestoreBlocked;
     const pending = await authority.pending();
@@ -1050,7 +1062,7 @@ export class ReadingImageDiskCache {
       });
       if (batched) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
     }
-    if (enough !== undefined && await enough()) return;
+    if (hasCapacity !== undefined && await hasCapacity()) return;
     const candidates = await authority.candidates(reason, scope);
     const classSnapshot = new Map(candidates.map((candidate, index) => [this.mangaChapterKey(candidate), index]));
     const policySnapshot = candidates.length > 0 && reason === 'expiry' && authority.policyBatch !== undefined ?
@@ -1086,11 +1098,11 @@ export class ReadingImageDiskCache {
         this.mangaEvicting.set(key, grant);
         await this.removeMangaGrant(grant, current);
       });
-      if (enough !== undefined && await enough()) return;
+      if (hasCapacity !== undefined && await hasCapacity()) return;
       if (batched) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
     }
     if (!current()) return;
-    await this.trimMangaDownloadDerived(reason, scope, enough, batched);
+    await this.trimMangaDownloadDerived(reason, scope, hasCapacity, batched);
   }
 
   private mangaDerivedPolicyEligible(policy: MangaStoragePolicy, reason: MangaStorageReason): boolean {

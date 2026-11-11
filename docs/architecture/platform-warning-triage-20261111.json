@@ -1194,8 +1194,8 @@
     "No original UNKNOWN payload, database, device, build/sign/install or prior evidence mutation."
   ],
   "actualSuccessfulBuild": {
-    "runId": "20261111T023206Z-14444eac-956a7683",
-    "appBuildId": "0.2.0.DEV.3f720615f0c6",
+    "runId": "20261111T030020Z-5b6edd87-3db4e1e0",
+    "appBuildId": "0.2.0.DEV.68b66757ec30",
     "warningTotal": 322,
     "categories": {
       "throws": 313,
@@ -1228,8 +1228,10 @@
         "after": 2
       }
     },
-    "receipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/warnings-current.json",
+    "receipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/warnings-68b667-before-capacity-admission-fix.json",
     "signature": "verified minliny_HarmonyOS3A563778...676DC4",
-    "boundary": "ArkTS/SDK and package success, not device/user behavior"
-  }
+    "boundary": "Historical successful build before the later capacity-admission repair. Actual ArkTS/SDK warning result, not final candidate, device or user acceptance."
+  },
+  "finalCandidateReceipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/final-results.json",
+  "finalCandidateWarningReceipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/warnings-current.json"
 }

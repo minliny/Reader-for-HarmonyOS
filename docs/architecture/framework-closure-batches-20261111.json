@@ -2,8 +2,8 @@
   "schema": "reader.framework-closure.batches.v1",
   "date": "2026-11-11",
   "sourceHead": "14444eac0feb182d38f16ef8ffb40c43cb749434",
-  "status": "CODE_AND_LOCAL_BATCHES_COMPLETE_CURRENT_ZERO_EXPLAINED_FINAL_ARTIFACT_BINDING",
-  "scope": "用户后续明确全量完成，已实施本计划全部可独立代码/本地批次；P5现有输入不能证明当前0/2原因，保留当前Core/Host实际IO缺口并准备受控新快照范围。正式发布全量及用户验收不自动触发。",
+  "status": "CODE_LOCAL_BATCHES_COMPLETE_CURRENT_CLONE_OBSERVED_FINAL_BUILD_BINDING_PENDING",
+  "scope": "用户后续明确全量完成，已实施本计划可独立代码/本地批次，P2采用REFERENCE_ONLY。新授权停态pair及独立Linuxdebug克隆观察完成：两章无candidate，与当前0/2一致；旧38/new47内容差分和历史0/2因果未建立。无压力capacity合同缺口已修，17行为+2SDK通过；最终构建待绑定本地交付记录。正式发布全量及用户验收不自动触发。",
   "executionOwner": "主代理协调；P1/P3/P4按独占文件授权子代理实施，每个生产文件只有一个当前修改者。",
   "invariants": [
     "用户消息复用既有类别组件；语义/业务写入authority不转交视觉壳。",
@@ -28,11 +28,11 @@
       "status": "COMPLETE_SOURCE_INVENTORY_AND_DECISION",
       "actions": [
         "固定生产装配、状态/测量/翻页准备职责与19项行为矩阵",
-        "采用B先抽seam，最终Stage采用留到P1证据后决定"
+        "已采用B先抽seam，P1后P2最终选择REFERENCE_ONLY，不采用Stage生产接管"
       ],
       "exitCriteria": [
         "一页决策、函数/源摘要、矩阵及后续子批次均已记录",
-        "明确生产只有一个控制时钟，Stage仅验证用途"
+        "明确生产只有一个控制时钟；Stage为REFERENCE_ONLY参考用途，原验证入口已处理"
       ],
       "stopIf": [],
       "productChecksExecuted": []
@@ -140,12 +140,12 @@
       ],
       "status": "NOT_APPLICABLE_REFERENCE_ONLY_BRANCH",
       "actions": [
-        "先在Stage复用既有Runtime和P1端口；逐项审闭矩阵差异",
-        "端点、反向、seek、重定向、0时长、中断、卸载、reduce-motion热切换、IME/临时层/真实minimum/播放交接形成等价证据"
+        "本轮未选择ADOPT，不执行Stage生产等价接管；生产继续由Panel/ReaderControlRuntime拥有",
+        "未来重开ADOPT时才先复用既有Runtime/P1端口并逐项补齐矩阵及真实模块装配等价证据"
       ],
       "exitCriteria": [
-        "同trace的语义endpoint和所有权等价，真实模块装配有当前证据",
-        "最终Stage采用按用户约定在P0/P1证据后决定"
+        "本轮按REFERENCE_ONLY分支退出，不把未执行的ADOPT等价验证记PASS",
+        "未来ADOPT的必要条件保留为重开条件；本轮参考用途/入口处理实际结果见P2.2"
       ],
       "stopIf": [],
       "productChecksExecuted": []
@@ -153,7 +153,7 @@
     {
       "id": "P2.2",
       "executionOwner": "Codex主代理",
-      "productionOwner": "选定的唯一生产clock/gesture owner",
+      "productionOwner": "ReaderControlRuntime（REFERENCE_ONLY已选分支的唯一生产clock/gesture owner）",
       "singleRisk": "两个完整时钟长期并存",
       "dependsOn": [
         "P1.2",
@@ -362,20 +362,21 @@
       "productionOwner": "cache.book.status正式读取owner",
       "singleRisk": "不同输入/启动写入造成伪回归",
       "dependsOn": [
-        "P5.1"
+        "P5.0"
       ],
-      "status": "COMPLETE_CURRENT_DATA_EXPLANATION_OLD38_NEW47_DIFF_INADMISSIBLE",
+      "status": "COMPLETE_CURRENT_CLONE_OBSERVATION_OLD_NEW_CONTENT_DIFF_INADMISSIBLE",
       "actions": [
-        "必须有两个能正式准入同一固定baseline的artifact；需要原始历史因果时baseline还必须是有回执的pre-change快照",
-        "从同一consistent字节各建独立fresh branch；相同命令次序和source/book/TOC身份",
-        "每支仅rc_abi_version → rc_runtime_create → core.info → bookshelf.list → cache.book.status → destroy；只输出布尔/状态/摘要",
-        "记录每支打开前后字节/投影变化和Host请求0，baseline保持不变"
+        "当前数据分支已完成：经新一次明确授权取得停态DB/WAL，主库仅在SHA匹配当前源时复用字节，WAL来自当前源；原pair复制前后不变，应用恢复书架、租约与操作额度结束",
+        "captured只作字节校验/复制；stage→一致性backup→immutable SQL，独立writable ffi运行后销毁，再作postbackup/SQL；captured和前后SQL快照各自不变",
+        "当前分支仅core.info→bookshelf.list→cache.book.status三方法；两章missing、无version/candidate，按条件不调用manga.entry.get，无Host或网络dispatch",
+        "SQL在Runtime打开前已见目标书heads/retention/receipts全0，manifest3与evicted3身份集合相同；目标投影pre/post相同，数据库字节可因bootstrap变化，不能声称全库不变",
+        "旧新内容差分是未准入的独立分支：须先有两个可正式打开同一固定baseline的可追溯artifact；历史因果另需有回执的pre-change快照，不以本次当前数据观察替代"
       ],
       "exitCriteria": [
-        "两支结果齐全、销毁完成、身份/时间边界一致方可比较",
-        "差异只在满足先决时归为版本相关现象，进一步定位启动/迁移/读层",
-        "同一后继baseline都missing不能排除之前迁移/历史TOC/2/2时点差异",
-        "当前2a301653与可用47baseline不具内容差分准入，因此本批未完成"
+        "当前克隆观察退出：精确copy回执及源/捕获SHA绑定、固定Linuxdebug身份、三方法结果、销毁和Host请求0均有实际回执",
+        "当前两章无candidate与当前0/2一致；不把旧clone cached、Host文件存在或此诊断推成当前应1/2",
+        "历史撤销者/时间与旧0/2因果未建立；不是安装中release或当前进程直接查询，既有evicted数据未恢复",
+        "旧2a301653 max38与可用47baseline不具内容差分准入，旧新分支记FORMAT_INADMISSIBLE/NOT_RUN，不阻断已完成的当前数据观察，也不标内容差分PASS"
       ],
       "stopIf": [
         "格式不兼容或baseline谱系/哈希不可信",
@@ -383,7 +384,13 @@
         "意外Host请求、超时、身份/TOC漂移、结果缺失；不重试扩域"
       ],
       "productChecksExecuted": [],
-      "implementationEvidence": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/current-core-observation/interpretation.json"
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/current-core-observation/interpretation.json",
+      "additionalImplementationEvidence": ".local/framework-closure-implementation-20261111/current-core-observation/result.json",
+      "branchStatus": {
+        "CURRENT_DATA": "COMPLETE_BOUNDED_CLONE_OBSERVATION",
+        "OLD_NEW_CONTENT_DIFF": "FORMAT_INADMISSIBLE_NOT_RUN",
+        "HISTORICAL_CAUSE": "NOT_ESTABLISHED"
+      }
     },
     {
       "id": "P5.3",
@@ -395,20 +402,22 @@
       ],
       "status": "COMPLETE_HOST_FILE_FACTS_AND_INDEPENDENT_RECOVERY_REVISION_FIX",
       "actions": [
-        "只使用有同scope/version/profile/时间谱系回执的克隆元资料和登记.bin文件",
-        "限定路径、文件类型、大小与digest，输出boolean/branch code；不遍历无关资料",
-        "不实例化实际ReadingImageDiskCache.isChapterComplete，因为它会finishPendingClear；pending-clear直接停止",
-        "manga.entry窗口3/总6不是资源缺失证据"
+        "已在单独明确授权的原VM只读范围核对旧chapter1 scope/version/profile的Host manifest及6个登记文件；只限定路径/stat/size/digest，未取回资源payload，不遍历无关资料",
+        "Host文件事实与当前Core有效版本分开：当前克隆无candidate，旧scope文件完整不能重建Core准入或证明localComplete",
+        "未实例化会finishPendingClear的实际isChapterComplete读取；不写清理标记、不删除资源、不下载、不迁移",
+        "独立实际Host/Gateway/Disk方法复现并修复负结果长期复用及迟到R1删除R2完整索引的竞态；恢复性17组与旧source/mutant有单独回执",
+        "manga.entry窗口3/总6本身不是资源缺失证据，本轮当前数据无candidate时未直接绕过调用entry"
       ],
       "exitCriteria": [
-        "能明确区分无Host输入、身份/profile不匹配、manifest错误和登记文件校验失败",
-        "不写清理标记、不删除损坏资源、不下载、不迁移",
-        "当前仅DB/WAL克隆，缺Host资源回执，本批未完成"
+        "有授权旧scope的manifest身份与6个登记文件存在/长度/digest实际回执，Host文件事实观察完成；不再沿用仅DB/WAL而缺Host回执的旧判断",
+        "文件观察与实际Host SDK完整性调用、当前Core准入、历史0/2因果分别记账；未把任一局部事实当业务确认",
+        "独立恢复性缺陷的旧源码失败、当前17组及R1/R2负对照通过，未证明它是历史VM0/2原因",
+        "本轮Host只读与两次分别授权停启范围均已结束；不自动继续设备、资源恢复或漫画冷续读"
       ],
       "stopIf": [
-        "无授权且可验证的Host资源克隆",
+        "拟追加Host资源或live sandbox读取而没有新的准确授权/计划",
         "symlink/path escape/登记集不一致/pending-clear",
-        "需要live sandbox、原库或设备"
+        "拟从旧Host文件事实推定当前Core可读、自动修复或恢复既有evicted记录"
       ],
       "productChecksExecuted": [],
       "implementationEvidence": ".local/framework-closure-implementation-20261111/p5-host-readonly-bound/result.json",
@@ -425,19 +434,46 @@
       ],
       "status": "NOT_RUN_REQUIRED_OFFLINE_ADMISSION_UNMET_NO_BYPASS",
       "actions": [
-        "P5代码/本地证据先解释剩余问题，再列设备必须回答的单个未决点",
+        "当前克隆无有效candidate已按代码/本地证据记录；历史0/2原因未建立，不以额外设备操作追查或绕过准入",
         "只有localComplete正式准入且有新的有界设备计划时才冷续读；不使用标题入口绕过",
         "现有受控执行已结束，不能沿用其操作额度"
       ],
       "exitCriteria": [
         "代码/本地/VM/物理机/用户验收分层",
-        "0/2正确显示或缺陷必须有同scope/时点证据；无法回答则保留OPEN"
+        "冷续读仅在同scope/时点localComplete正式准入及新计划/授权下可执行；本轮无candidate保持NOT_RUN，不把历史0/2或evicted恢复写成已完成"
       ],
       "stopIf": [
         "原因尚能由代码或克隆定位",
         "localComplete不满足或无有效设备计划/授权"
       ],
       "productChecksExecuted": []
+    },
+    {
+      "id": "P5.5",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "ReadingImageDiskCache公共预算owner与原Core grant owner",
+      "singleRisk": "无压力capacity维护无条件claim普通缓存",
+      "dependsOn": [
+        "P5.0",
+        "P5.2"
+      ],
+      "status": "COMPLETE_CAPACITY_CODE_17_BEHAVIOR_2_SDK_FINAL_BUILD_PENDING",
+      "actions": [
+        "只在reason=capacity且没有显式enough时，复用既有inventory/buckets/capacity给出默认总预算/系统余量谓词；Gateway不增加第二owner",
+        "ordinaryBytes+ordinaryReservedBytes<=cacheBudgetBytes且freeBytes>=systemReserveBytes+allReservedBytes时停止新回收；分区、新bytes和headroom继续由reserveExternalWrite自定义enough拥有",
+        "pending grant先恢复，每候选后及derived阶段复用停止条件；不改Core候选/LRU/优先级、expiry/clear、保护栅栏、schema或迁移，不新增队列/actor",
+        "旧生产无压力claim已实际失败复现；当前17组行为及2组SDK通过，SDK工具解析失败保留，最终规范HAP语义编译待绑定"
+      ],
+      "exitCriteria": [
+        "固定Disk源码SHA256 552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f；17行为+2SDK及旧失败回执分别登记，不写成设备或规范构建PASS",
+        "正常startup可达旧错误路径只证明当前合同缺口，历史撤销者/时间和旧0/2因果未建立",
+        "既有evicted数据没有恢复；不新增原库/clone SQL、FFI、设备或文件恢复动作"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p5-capacity-eviction-result.json",
+      "productionSourceSha256": "552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
+      "finalArtifact": "最终构建待绑定本地交付记录"
     },
     {
       "id": "P6",
@@ -455,7 +491,8 @@
         "P3.3",
         "P3.4",
         "P4.2",
-        "P5.4"
+        "P5.4",
+        "P5.5"
       ],
       "status": "NOT_TRIGGERED_NO_FORMAL_RELEASE_SCOPE",
       "actions": [
@@ -474,7 +511,7 @@
   "currentExecution": {
     "productionModified": true,
     "sourceOwnersFrozen": true,
-    "signedCandidate": "Previous3f720615f0c6 predateslastrevisionfence;newcanonicalcandidatepending",
+    "signedCandidate": "最终构建待绑定本地交付记录；不得用旧68、3f或更早候选代填",
     "warningTotal": 322,
     "warningClasses": {
       "throws": 313,
@@ -483,7 +520,7 @@
       "deprecated": 0,
       "missing-type-or-member": 0
     },
-    "device": "One newly scoped readonlyHost fact observation on originalVM, no app lifecycle/UI/DB/UNKNOWN",
+    "device": "已结束的单独授权Host只读事实观察，以及两次分别明确授权的停态复制；首轮失败后恢复、第二轮成功后恢复；不含本次capacity修复的设备复验",
     "P5CoreDifference": "Inadmissible old38/new47; not executed or declaredPASS",
     "fullProductRegression": "NOT_RUN",
     "physicalDevice": "NOT_RUN",
@@ -493,7 +530,7 @@
       "retry": "Successundernewexplicitcap;sourcepairunchanged,mainexacthashreuse+currentWAL;intentstat/hashsame,Shelfrestored,leaseReleased",
       "scope": "Bothconsumed;nodeviceactionsremain"
     },
-    "latestProductionFix": "LateR1negativecannotdeleteR2positiveindex;oldproductionfailure+17currentcases/mutantPASS",
+    "latestProductionFix": "无压力capacity维护默认总预算/物理余量gate；旧生产失败+17行为+2SDK通过，DiskSHA=552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
     "currentCoreObservation": {
       "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/current-core-observation/result.json",
       "states": [
@@ -506,7 +543,34 @@
       "targetFactsPrePostEqual": true,
       "runtime": "PinnedLinuxdebugclonenotinstalledrelease",
       "entry": "NOT_RUN_NOCANDIDATE",
-      "historicalRevocationCause": "NOT_ESTABLISHED"
+      "historicalRevocationCause": "NOT_ESTABLISHED",
+      "versionPresent": [
+        false,
+        false
+      ],
+      "targetMetadataAlreadyAbsentBeforeRuntime": true,
+      "historicalZeroCause": "NOT_ESTABLISHED",
+      "evictedDataRestored": false,
+      "scopeBoundary": "Current stopped data in fixed Linuxdebug clone; not installed release/current-process query"
+    },
+    "candidateBinding": {
+      "status": "FINAL_BUILD_PENDING_LOCAL_DELIVERY_RECORD_BINDING",
+      "record": ".local/framework-closure-implementation-20261111/candidate.json",
+      "manifest": "待最终规范构建成功后绑定对应不可变HAPmanifest",
+      "installed": "NOT_RUN_FOR_FINAL_CAPACITY_SOURCE"
+    },
+    "warningBoundary": "322及类别计数来自既有成功ArkTS构建；最后capacity源码的构建/警告结果待最终回执，不自动沿用",
+    "previousIndependentRecoveryFix": "迟到R1负结果不能删除R2完整索引；独立恢复性17组/旧生产失败/负对照回执保留",
+    "capacityFix": {
+      "result": ".local/framework-closure-implementation-20261111/p5-capacity-eviction-result.json",
+      "sourceSha256": "552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
+      "behaviorGroups": 17,
+      "sdkGroups": 2,
+      "canonicalHap": "PENDING_FINAL_BINDING",
+      "historicalOwner": "NOT_ESTABLISHED",
+      "historicalTime": "NOT_ESTABLISHED",
+      "historicalZeroCause": "NOT_ESTABLISHED",
+      "evictedDataRestored": false
     }
   }
 }
