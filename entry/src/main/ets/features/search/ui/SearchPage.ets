@@ -1343,7 +1343,7 @@ export struct SearchPage {
         .onScrollStart((): void => { if (this.ownsList() && this.userInteracting) this.userScrolling = true; })
         .onScrollStop((): void => this.onListScrollStop())
         .onScrollIndex((start: number, end: number): void => this.onResultScrollIndex(start, end))
-        .onScroll((): void => { if (this.ownsList() && this.scrollRestored) this.saveScrollAnchor(); })
+        .onDidScroll((): void => { if (this.ownsList() && this.scrollRestored) this.saveScrollAnchor(); })
         .onAppear((): void => {
           if (!this.ownsPageQuery()) return;
           this.listMounted = true;

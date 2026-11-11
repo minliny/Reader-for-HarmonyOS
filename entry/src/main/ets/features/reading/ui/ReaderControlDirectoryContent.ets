@@ -53,7 +53,7 @@ class ControlDirectoryDataSource implements IDataSource {
     } else {
       for (let index = 0; index < rows.length; index += 1) {
         if (signatures[index] === previous[index]) continue;
-        for (const listener of this.listeners) listener.onDataChanged(index);
+        for (const listener of this.listeners) listener.onDataChange(index);
       }
     }
   }

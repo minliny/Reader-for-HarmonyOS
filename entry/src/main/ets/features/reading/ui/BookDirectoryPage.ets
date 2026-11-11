@@ -846,7 +846,7 @@ export struct BookDirectoryPage {
     const header = this.headerFrame();
     const footer = this.mangaFooterFrame();
     input.headerTop = this.topInset() + visual.headerSafeGap;
-    input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.read('bookDirectory:mangaHeader', minimumHeaderHeight));
+    input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('bookDirectory:mangaHeader', this.measurementKey, minimumHeaderHeight));
     input.headerInsetLeft = header.left;
     input.headerInsetRight = header.right;
     input.footerInsetLeft = footer.left;

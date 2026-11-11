@@ -245,7 +245,7 @@ export struct LocalBookDetail {
     }.width('100%').height('100%').scrollBar(this.book.contentKind === 'manga' ? BarState.Auto : BarState.Off)
       .scrollBarWidth(this.book.contentKind === 'manga' ? visual.scrollbarWidth : undefined)
       .scrollBarColor(this.book.contentKind === 'manga' ? mangaDirectoryColor('scrollbar', this.appThemeScheme) : undefined)
-      .onScroll((): void => this.onDetailScroll(scrollIdentity));
+      .onDidScroll((): void => this.onDetailScroll(scrollIdentity));
   }
 
   private detailScrollIdentity(): string {
@@ -876,11 +876,11 @@ export struct LocalBookDetail {
     input.measurementRevision = this.measurementKey;
     input.headerTop = this.headerSpec.headerTop(readerInteractiveSafeTop(metrics));
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
-    input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.read('detail:header', minimumHeaderHeight));
+    input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
     input.headerInsetLeft = Math.max(8, this.safeLeft());
     input.headerInsetRight = Math.max(8, this.safeRight());
     input.footerBottom = readerInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);
-    input.footerHeight = Math.max(minimumDockHeight, this.measurements.read('detail:dock', minimumDockHeight));
+    input.footerHeight = Math.max(minimumDockHeight, this.measurements.readForGeneration('detail:dock', this.measurementKey, minimumDockHeight));
     input.contentGap = manga ? visual.contentTop - visual.headerHeight - this.headerSpec.topGap : this.headerSpec.contentGap;
     input.contentUnderlap = manga ? 0 : this.headerSpec.contentUnderlap;
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;

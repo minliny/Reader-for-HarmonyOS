@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
  'internal-reflow':{description:'Automatic TTS/reflow internal -1 owner, delayed commit and two negative mutations',resources:[]},
@@ -13,7 +14,7 @@ const { wholeBookAnchorForPercent }=await import('../entry/src/main/ets/features
 const { ReaderTtsPageFollow, readerTtsFollowActive }=await import('../entry/src/main/ets/features/reading/ui/ReaderTtsPageFollow.ts');
 const { installReaderLayoutOwners }=await import('./lib/reader-measurement-owner-fixture.mjs');
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',
+const source = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 function balanced(start) {
   assert.ok(start >= 0);

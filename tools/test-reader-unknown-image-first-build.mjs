@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -11,8 +12,8 @@ import * as style from '../entry/src/main/ets/features/reading/ui/ReaderAppearan
 // owner against explicit native line receipts. No shaping, first paint, Core
 // progress persistence or platform pixel success is claimed by this test.
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
-  readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
+const text = readReaderExperienceFixture(source, 'utf8').replace('interface DeferredReadingImagePixels {',
+  readReaderExperienceFixture(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
   const start = text.indexOf(`class ${name} `);
   assert.ok(start >= 0, name);
@@ -24,7 +25,7 @@ const MeasuredReadingLine = declaration('MeasuredReadingLine', 'class PhysicalRe
 const PhysicalReadingPage = declaration('PhysicalReadingPage', 'interface DeferredReadingImagePixels');
 const PreviousChapterMeasurement = declaration('PreviousChapterMeasurement', 'class CoreReadingAnchor');
 const ArkUILineMetric = declaration('ArkUILineMetric', 'type ReadingPhase');
-const nativeText = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
+const nativeText = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
 const heightText = nativeText.slice(nativeText.indexOf('export function readerNativeParagraphHeight'), nativeText.indexOf('/** A viewport'));
 const readerNativeParagraphHeight = new Function('graphicsText', stripTypeScriptTypes(heightText).replace('export ', '') + ';return readerNativeParagraphHeight;')({ RectWidthStyle: { TIGHT: 0 }, RectHeightStyle: { TIGHT: 0 } });
 class TextController { getLayoutManager() { assert.ok(this.manager, 'only measured controllers expose geometry'); return this.manager; } }

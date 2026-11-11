@@ -14,7 +14,7 @@ function header(headers: Record<string, string>, name: string): string {
 
 function signedRequest(requestUrl: string): boolean {
   try {
-    const query = new url.URL(requestUrl).searchParams;
+    const query = url.URL.parseURL(requestUrl).params;
     return (query.has('X-Amz-Signature') && query.has('X-Amz-Credential')) ||
       (query.has('X-Goog-Signature') && query.has('X-Goog-Credential')) ||
       (query.has('Signature') && query.has('Expires') && (query.has('Key-Pair-Id') || query.has('AWSAccessKeyId')));
@@ -30,7 +30,7 @@ function expiredEnvelope(headers: Record<string, string>, bytes: Uint8Array): bo
   let code = ''; let message = ''; let codes = 0; let messages = 0;
   try {
     const parser = new xml.XmlPullParser(bytes.slice().buffer, 'UTF-8');
-    parser.parse({ supportDoctype: false, ignoreNameSpace: false,
+    parser.parseXml({ supportDoctype: false, ignoreNameSpace: false,
       tagValueCallbackFunction: (name: string, value: string): boolean => {
         if (name === 'Code') { code = value.trim(); codes++; }
         if (name === 'Message') { message = value.trim(); messages++; }

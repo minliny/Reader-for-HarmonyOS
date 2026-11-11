@@ -109,7 +109,7 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
   private notifyCoreChanged(index: number): void {
     const displayIndex = this.displayIndex(index);
     if (displayIndex === undefined) return;
-    for (const listener of this.listeners) listener.onDataChanged(displayIndex);
+    for (const listener of this.listeners) listener.onDataChange(displayIndex);
   }
   currentView(): ReaderDirectoryNavigationReady | undefined { return this.view; }
   loadedNode(index: number): ReaderDirectoryNavigationNode | undefined {
@@ -1348,7 +1348,7 @@ export struct ReaderDirectoryNavigationList {
           this.firstVisibleIndex = this.dataSource.coreIndex(start);
           if (!this.initialPositionPending) this.captureViewportAnchor();
         })
-        .onScroll((): void => this.publishMangaScrollOffset())
+        .onDidScroll((): void => this.publishMangaScrollOffset())
         .onScrollStop((): void => { this.publishMangaScrollOffset(); this.settleMangaScroll(); })
         .onAreaChange((_oldArea: Area, newArea: Area): void => {
           const width = Number(newArea.width);
@@ -1392,7 +1392,7 @@ export struct ReaderDirectoryNavigationList {
       this.firstVisibleIndex = start;
       if (!this.initialPositionPending) this.captureViewportAnchor();
     })
-    .onScroll((): void => this.publishMangaScrollOffset())
+    .onDidScroll((): void => this.publishMangaScrollOffset())
     .onScrollStop((): void => { this.publishMangaScrollOffset(); this.captureViewportAnchor(); this.onScrollSettled(); })
     .onAreaChange((_oldArea: Area, newArea: Area): void => {
       if (!this.layoutReady && Number(newArea.height) > 0) {

@@ -893,7 +893,7 @@ export class SyncGateway {
     if (config.user.length === 0) {
       return undefined;
     }
-    const bytes = new util.TextEncoder('utf-8').encode(`${config.user}:${config.password}`);
+    const bytes = new util.TextEncoder('utf-8').encodeInto(`${config.user}:${config.password}`);
     return 'Basic ' + new util.Base64Helper().encodeToStringSync(bytes);
   }
 

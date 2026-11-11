@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -16,8 +17,8 @@ import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.m
 // concern publication inputs and async ownership, not native paint timing.
 const lreFile = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const stageFile = new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets', import.meta.url);
-const lreSource = readFileSync(lreFile, 'utf8'), stageSource = readFileSync(stageFile, 'utf8');
-const measurementModelsSource = readFileSync(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
+const lreSource = readReaderExperienceFixture(lreFile, 'utf8'), stageSource = readReaderExperienceFixture(stageFile, 'utf8');
+const measurementModelsSource = readReaderExperienceFixture(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -215,7 +216,7 @@ for (const mode of ['paged', 'continuous']) {
 }
 
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets', import.meta.url), 'utf8');
+const surfaceSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets', import.meta.url), 'utf8');
 for (const [name, source] of [['ReaderPageTurnSurface', stageSource], ['ReadingSurface', surfaceSource]]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));

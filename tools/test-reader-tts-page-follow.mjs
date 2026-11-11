@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -7,7 +8,7 @@ import { createReaderTtsState } from '../entry/src/main/ets/features/reading/app
 import { readerRapidPageTurnHasWork, createReaderRapidPageTurnState } from '../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const source = readFileSync(file, 'utf8');
+const source = readReaderExperienceFixture(file, 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);

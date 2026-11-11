@@ -1,10 +1,11 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as selection from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 const file = process.env.READER_LRE_SOURCE ?? new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const source = readFileSync(file, 'utf8');
+const source = readReaderExperienceFixture(file, 'utf8');
 const declaration = source.match(/class ReaderDeferredChapterSelection[\s\S]*?\n}/)[0];
 const ReaderDeferredChapterSelection = new Function(`${stripTypeScriptTypes(declaration)};return ReaderDeferredChapterSelection;`)();
 const methods = ['reconcileFailedControlSelection', 'selectionDisplayAnchor',

@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -67,9 +68,9 @@ const readerFile = new URL('../entry/src/main/ets/features/reading/ui/LocalReadi
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree = ts.createSourceFile(virtualFilePath('ReaderRetainedProgress.ets'), readFileSync(readerFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderRetainedProgress.ets'), readReaderExperienceFixture(readerFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const commitTree = ts.createSourceFile(virtualFilePath('ReadingCommit.ts'),
-  readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts', import.meta.url), 'utf8'),
+  readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts', import.meta.url), 'utf8'),
   ts.ScriptTarget.Latest, true, ts.ScriptKind.TS, options);
 const dto = Object.fromEntries(['CoreReadingAnchor', 'ReadingCommit'].map(name => {
   const classTree = name === 'ReadingCommit' ? commitTree : tree;

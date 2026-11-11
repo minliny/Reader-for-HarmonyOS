@@ -295,7 +295,7 @@ export class MangaDisplayRetention {
       const cached = this.records.get(key);
       if (fingerprint !== undefined && fingerprint === this.recordFingerprints.get(key) && cached !== undefined) return cached;
       const bytes = await readMangaAtomicPayload(path, stat.size, 65536, (): boolean => !this.removals.has(path), true);
-      const record = JSON.parse(new util.TextDecoder().decodeWithStream(bytes)) as MangaDisplayRecord;
+      const record = JSON.parse(new util.TextDecoder().decodeToString(bytes)) as MangaDisplayRecord;
       const p = record.payload;
       if (record.format !== 1 || record.key !== key || !/^[0-9a-f]{64}$/.test(record.fileHash) ||
         !Number.isSafeInteger(record.fileBytes) || record.fileBytes <= 0 || record.fileBytes > 32 * 1024 * 1024 ||

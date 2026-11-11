@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -173,7 +174,7 @@ for (const callback of ['admitCommittedProgress', 'onDirectoryProjectionChanged'
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree = ts.createSourceFile(virtualFilePath('ReaderEntryRetain.ets'), readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderEntryRetain.ets'), readReaderExperienceFixture(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const classes = Object.fromEntries(['ReaderRetainedPresentation', 'ReaderMaterializedChapterContext'].map(name => {
   const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
   assert.ok(node, name);

@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -11,12 +12,12 @@ import { readerTextSelectionEnabled } from '../entry/src/main/ets/features/readi
 import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 const sourceFile=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
-const source=readFileSync(sourceFile,'utf8');
+const source=readReaderExperienceFixture(sourceFile,'utf8');
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const tree=ts.createSourceFile(virtualFilePath('ReaderReadyClasses.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const commitTree=ts.createSourceFile(virtualFilePath('ReadingCommit.ts'),
-  readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts',import.meta.url),'utf8'),
+  readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts',import.meta.url),'utf8'),
   ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const classNames=['ReadingCommit','CoreReadingAnchor','PreparedReaderPageTurn','ReaderControlSelectionCandidate'];
 const classes=Object.fromEntries(classNames.map(name=>{

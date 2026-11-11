@@ -56,11 +56,12 @@ export struct DiscoverPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
   @State private measurementRevision: number = 0;
+  @State private measurementKey: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @Prop @Watch('onPresentationChanged') presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
-  @Prop expandedLayout: boolean;
+  @Prop @Watch('onGeometryInputsChanged') expandedLayout: boolean;
   onBack: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
@@ -75,12 +76,26 @@ export struct DiscoverPage {
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.onGeometryInputsChanged();
     this.lastReadFeedback = this.readFeedbackIdentity();
     registerReaderFonts(this.getUIContext().getFont());
   }
 
   aboutToDisappear(): void {
-    this.transientFeedback.reset(); this.mounted = false; }
+    this.transientFeedback.reset();
+    this.mounted = false;
+    this.measurementKey += 1;
+    this.measurements.clear();
+  }
+
+  private onGeometryInputsChanged(): void {
+    if (this.mounted) this.measurementKey += 1;
+  }
+
+  private recordHeaderHeight(height: number, presentedKey: number): void {
+    if (!this.mounted || presentedKey !== this.measurementKey || height <= 0) return;
+    if (this.measurements.record('discover:header', height, presentedKey)) this.measurementRevision += 1;
+  }
 
   private readFeedbackIdentity(): string {
     return `${this.presentation.operation?.generation ?? 0}:${this.presentation.operation?.fact ?? ''}:${this.presentation.loading ? 1 : 0}`;
@@ -99,13 +114,12 @@ export struct DiscoverPage {
   build() {
     MainTabShell({
       activeTab: 'discover', headerKind: 'home',
+      headerMeasurementKey: this.measurementKey,
       onMainTab: (key: string): void => this.onMainTab(key),
       header: (): void => { this.homeTopBar(); },
       content: (): void => { this.discoverContent(); },
-      onHeaderHeightChange: (height: number): void => {
-        if (height > 0 && this.measurements.record('discover:header', height,
-          Math.max(0, this.readerWindowMetricsRevision))) this.measurementRevision += 1;
-      },
+      onHeaderHeightChange: (height: number, presentedKey?: number): void =>
+        this.recordHeaderHeight(height, presentedKey ?? -1),
     });
   }
 
@@ -169,7 +183,7 @@ export struct DiscoverPage {
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = metrics.windowRect.width;
     input.measurementRevision = this.measurementRevision;
-    input.headerHeight = this.measurements.read('discover:header', readerPageContentStartInset());
+    input.headerHeight = this.measurements.readForGeneration('discover:header', this.measurementKey, readerPageContentStartInset());
     input.contentGap = TOK_SPACE_XS;
     input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
     input.contentHorizontalPadding = TOK_SCREEN_INSET;

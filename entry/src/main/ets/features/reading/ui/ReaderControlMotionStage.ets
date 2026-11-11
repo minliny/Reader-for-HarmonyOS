@@ -44,8 +44,10 @@ interface ReaderControlTopBarFrame {
  * semantic snapshots and receives only endpoint commits; VSync samples stay
  * inside this control subtree so the native reading surface is not rebuilt.
  *
- * This component is staged for representative-module integration/verification;
- * its presence alone does not claim that the existing reader routes use it.
+ * REFERENCE_ONLY: no registered page or production route mounts this adapter.
+ * The former representative page is archived outside entry source. Production
+ * control input/clock ownership remains ReaderControlPanel -> ReaderControlRuntime.
+ * Reuse requires a new audited consumer; source presence is not production coverage.
  */
 @Component
 export struct ReaderControlMotionStage {

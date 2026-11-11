@@ -5,9 +5,10 @@ async function run(id){
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
  const base=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
  if(id==='preparation'){
-  const names=['onReaderPageGestureStateChanged','updateBookTurnGesturePresentation','queuePageTurnPreparation','drainPageTurnPreparationQueue','drainRapidPageTurn'];
+  const { drainReaderPagePreparation } = await import('../entry/src/main/ets/features/reading/ui/ReaderPagePreparationCoordinator.ts');
+  const names=['retryPageTurnPreparation','onReaderPageGestureStateChanged','updateBookTurnGesturePresentation','queuePageTurnPreparation','drainPageTurnPreparationQueue','drainRapidPageTurn'];
   const Owner=selectedProductionMethods(new URL('LocalReadingExperience.ets',base),'ReadingExperience',names,{
-   readerPageTransitionUsesPreparedPages:()=>true,readerRapidPageTurnDirection:()=> 'next',hilog:{info(){}}});
+   drainReaderPagePreparation, readerPageTransitionUsesPreparedPages:()=>true,readerRapidPageTurnDirection:()=> 'next',hilog:{info(){}}});
   for(const bookTurn of [false,true]){
    const begun=[];
    const owner=Object.assign(new Owner(),{pageTurnGestureState:{phase:'idle'},pageTurnFrozenRevision:1,pageTurnRenderRevision:1,pageTurnSessionCapsuleFrozen:true,

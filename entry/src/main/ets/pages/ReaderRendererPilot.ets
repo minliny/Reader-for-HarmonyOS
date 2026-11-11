@@ -2,7 +2,6 @@
 // never imports a user book, persists a position, or replaces the native reader.
 import webview from '@ohos.web.webview';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router } from '@kit.ArkUI';
 import { ArkWebExecutionHost } from '../ui/platform/ArkWebExecutionHost';
 import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
 import { ReaderParagraphDiagnostic } from './ReaderParagraphDiagnostic';
@@ -18,11 +17,19 @@ struct ReaderRendererPilot {
   @State private textNodeMode: boolean = false;
   @State private mangaMode: boolean = false;
   @State private resourceBusy: boolean = false;
-  private resourceDiagnostic: ArkWebResourceDiagnostic = new ArkWebResourceDiagnostic();
+  private resourceDiagnostic: ArkWebResourceDiagnostic<WebResourceResponse> =
+    new ArkWebResourceDiagnostic((): WebResourceResponse => new WebResourceResponse());
   private readonly controller: webview.WebviewController = new webview.WebviewController('reader-oss-pilot');
 
   aboutToDisappear(): void {
     this.resourceDiagnostic.dispose();
+  }
+
+  private async returnToBookshelf(): Promise<void> {
+    try { await this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' }); }
+    catch (error) {
+      hilog.error(0x5244, 'ReaderOssPilot', 'pilot return failed: %{private}s', (error as Error).message);
+    }
   }
 
   private async runResourceDiagnostic(scenario: 'early' | 'cancel'): Promise<void> {
@@ -41,7 +48,7 @@ struct ReaderRendererPilot {
   build() {
     Column() {
       Row({ space: 12 }) {
-        Button('返回书架').onClick((): void => { router.replaceUrl({ url: 'pages/Index' }); });
+        Button('返回书架').onClick((): void => { void this.returnToBookshelf(); });
         Text(this.result).fontSize(12).layoutWeight(1).id('reader-oss-pilot-status');
       }.width('100%').padding(12)
       if (this.mangaMode) {
@@ -75,7 +82,7 @@ struct ReaderRendererPilot {
         this.paragraphMode = true;
       });
       Button('PH76 资源验证').id('reader-ph76-open').onClick((): void => {
-        this.resourceDiagnostic = new ArkWebResourceDiagnostic();
+        this.resourceDiagnostic = new ArkWebResourceDiagnostic((): WebResourceResponse => new WebResourceResponse());
         this.result = '选择一项 PH76 受控验证';
         this.resourceMode = true;
       });

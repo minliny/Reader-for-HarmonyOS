@@ -407,13 +407,27 @@ export class SharedDownloadHost {
     const indexed = this.statusIndex?.get(fresh.key);
     if (indexed === undefined || indexed.statusRevision !== revision || indexed.view.contentKind !== fresh.contentKind) return undefined;
     const cached = indexed.view;
+    if (this.requiresMangaHostRecheck(cached)) return undefined;
     if (JSON.stringify(cached.shelfBook) === JSON.stringify(fresh.shelfBook)) return cached;
     return this.withShelfMetadata(cached, fresh.shelfBook);
+  }
+
+  /** Core's download revision cannot certify a negative Host/entry check.
+   * A transient manifest read failure is projected as incomplete too; let the
+   * next ordinary page read revalidate those candidates without polling. */
+  private requiresMangaHostRecheck(view: DownloadBookView): boolean {
+    return view.contentKind === 'manga' && view.chapters.some(chapter => chapter.navigable &&
+      chapter.mangaManifestVersion !== undefined &&
+      (chapter.queueState === 'cached' || chapter.queueState === 'completed') && !chapter.localComplete);
   }
 
   private indexLoadedRow(view: DownloadBookView, revision: string | undefined): void {
     if (revision === undefined || view.projectionStatus !== 'ready' || view.contentKind === undefined ||
       this.currentStatusRevision(view) !== revision) return;
+    if (this.requiresMangaHostRecheck(view)) {
+      this.statusIndex?.delete(view.key);
+      return;
+    }
     this.statusIndex?.set(view.key, { statusRevision: revision, view });
   }
 

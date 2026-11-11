@@ -244,7 +244,7 @@ export class MangaPlatformProbeRunner {
     const expected = await this.bytes(f.expectedFile, f.expectedSha256);
     const expectedBgra = await this.bytes(f.preEncodedFile, f.preEncodedSha256);
     const planBytes = await this.bytes(f.planFile, f.planSha256);
-    const plan = JSON.parse(new util.TextDecoder().decodeWithStream(planBytes)) as JsonObject;
+    const plan = JSON.parse(new util.TextDecoder().decodeToString(planBytes)) as JsonObject;
     await this.body.validateBytes(encoded, this.current, 0);
     this.assertProfile('png', 8, 103);
     this.preEncoded = undefined;
@@ -277,7 +277,7 @@ export class MangaPlatformProbeRunner {
       if (graphics) {
         const g = MANGA_PLATFORM_GRAPHICS;
         const encoded = await this.bytes(g.file, g.sha256);
-        const plan = JSON.parse(new util.TextDecoder().decodeWithStream(await this.bytes(g.planFile, g.planSha256))) as JsonObject;
+        const plan = JSON.parse(new util.TextDecoder().decodeToString(await this.bytes(g.planFile, g.planSha256))) as JsonObject;
         await this.graphics.transform(encoded, plan, this.current);
       } else {
         const bytes = await this.bytes(f.file, f.sha256);

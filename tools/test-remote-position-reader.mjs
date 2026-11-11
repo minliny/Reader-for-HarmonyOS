@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
@@ -10,12 +11,12 @@ const { compileHost, ReaderDirectoryHost }=await import('./lib/reading-entry-own
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
-const mapSource=readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts',import.meta.url),'utf8')
+const mapSource=readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts',import.meta.url),'utf8')
   .replace('constructor(private readonly content: string) {','constructor(content: string) { this.content = content;');
 const {ReadingSurfaceLayoutMap}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const file=fileURLToPath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
-const anchorSource=readFileSync(file,'utf8').match(/class CoreReadingAnchor[\s\S]*?\n}/)[0];
+const anchorSource=readReaderExperienceFixture(file,'utf8').match(/class CoreReadingAnchor[\s\S]*?\n}/)[0];
 const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; return CoreReadingAnchor;`)();
 let captureContentEpoch=()=>()=>true;
 let waitContentIdle=async()=>{};

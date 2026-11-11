@@ -107,9 +107,12 @@ export async function probeReaderCoreCopy(debug: boolean, buildMode: string,
       await replaceReaderAtomicSnapshot(`${scratch}/query-results.json`, scratch, JSON.stringify({ results }));
     }
   } catch (error) {
-    if (mode !== 'prepare' && safeScratch && current() && !fileIo.accessSync(`${scratch}/query-error.json`)) {
-      try { await replaceReaderAtomicSnapshot(`${scratch}/query-error.json`, scratch,
-        JSON.stringify(privateError(error))); } catch (_) { /* Private IO failure has no main-runtime effect. */ }
+    if (mode !== 'prepare' && safeScratch && current()) {
+      try {
+        if (!fileIo.accessSync(`${scratch}/query-error.json`)) {
+          await replaceReaderAtomicSnapshot(`${scratch}/query-error.json`, scratch, JSON.stringify(privateError(error)));
+        }
+      } catch (_) { /* Secondary private IO failure must not suppress PROBE_ERROR. */ }
     }
     if (current()) report({ phase: mode === 'prepare' ? 'prepare' : 'query', code: 'PROBE_ERROR', count }, record);
   } finally {

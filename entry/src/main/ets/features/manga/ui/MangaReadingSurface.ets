@@ -2308,7 +2308,7 @@ export struct MangaReadingSurface {
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None)
         .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.boundaryBusy && !this.rollbackPainting)
-        .onScroll((): void => { this.queueViewportObservation(); })
+        .onDidScroll((): void => { this.queueViewportObservation(); })
         .onScrollIndex((first: number, last: number): void => {
           // A reload can report the preceding viewport before native consumes
           // the jump. That range cannot select or retire the landing page.
@@ -2335,7 +2335,7 @@ export struct MangaReadingSurface {
     }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
       .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.boundaryBusy && !this.rollbackPainting)
       .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
-      .onScroll((): void => { this.queueViewportObservation(); })
+      .onDidScroll((): void => { this.queueViewportObservation(); })
       .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
       .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
         .onActionStart((): void => {

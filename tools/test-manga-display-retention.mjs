@@ -22,7 +22,7 @@ const fs = {
   AtomicFile: class { constructor(path) { this.path = path; } readFully() { const bytes = nfs.readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); } },
 };
 class LRUCache { constructor(capacity) { this.capacity = capacity; this.data = new Map(); } get(key) { return this.data.get(key); } put(key, value) { this.data.set(key, value); } remove(key) { this.data.delete(key); } clear() { this.data.clear(); } }
-const util = { LRUCache, TextEncoder: class { encodeInto(text) { return new TextEncoder().encode(text); } }, TextDecoder: class { decodeWithStream(bytes) { return new TextDecoder().decode(bytes); } } };
+const util = { LRUCache, TextEncoder: class { encodeInto(text) { return new TextEncoder().encode(text); } }, TextDecoder: class { decodeToString(bytes) { return new TextDecoder().decode(bytes); } } };
 const cryptoFramework = { createMd() { const hash = createHash('sha256'); return { async update({ data }) { hash.update(data); }, async digest() { return { data: new Uint8Array(hash.digest()) }; } }; } };
 function load(name, dependencies) {
   const text = nfs.readFileSync(new URL(`../entry/src/main/ets/app/${name}.ts`, import.meta.url), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, '');

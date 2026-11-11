@@ -5,7 +5,7 @@ const { ProductionHost, setRuntime }=await import('./lib/reading-entry-owner-pro
 const { readingPrefetchOwnerProbe }=await import('./lib/reading-prefetch-owner-probe.mjs');
 
 const { registerHooks }=await import('node:module');
-const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-p1-motion-method-probe.mjs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');

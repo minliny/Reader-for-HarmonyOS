@@ -9,13 +9,13 @@
   "tree": "2732346e51963d8f97005ecebd2c51a41b425434",
   "license": "Apache-2.0",
   "licenseSha256": "a07179393d3b144bd73650a75c36e2061c8cb7682dc34525b39b3b83fe76d7d0",
-  "patchSha256": "f9a3cbb296cd272fd12dcf4dd93b2dc5d8db03428ad1879bbafdf2b0f75e559a",
+  "patchSha256": "950b6faa07b5e622bae26a6fc389bf079373d2d9bbb928cc3f17ea37359a4a03",
   "files": [
     {
       "path": "PullToRefresh.ets",
       "upstreamPath": "library/src/main/ets/components/PullToRefresh/PullToRefresh.ets",
       "upstreamSha256": "6b542f92c67baf0a3ef0d551afe255add539d9f56da78be0752b9b7b35220212",
-      "vendoredSha256": "be1d9a80f788f0c506cb034edd6e6321cd82ca7187d1925d28d7282cca219f5a"
+      "vendoredSha256": "7fa20579bc637ec562995c10f2e6aa2ad60db315881606d7837a33f87ce711fd"
     },
     {
       "path": "PullToRefreshConfigurator.ets",

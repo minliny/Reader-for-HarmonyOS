@@ -13,12 +13,16 @@ const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
 const { actualReaderFloatingBarMetrics, actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const { actualReaderMainTabs, actualReaderPhoneNavigationGeometry } = await import('./lib/reader-phone-navigation-source.mjs');
 const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { READER_EXPANDED_MIN_WIDTH } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
+const { effectiveReaderWideNavigationRail } = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
+const raisedShape = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
+const horizontalGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerContentSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
   readerInteractiveSafeRight, readerVisualSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
@@ -52,8 +56,9 @@ const metrics = () => ({ windowRect: { width: windowWidth, height: 844 },
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const properties = createArkUIPropertyRuntimeProbe();
 const hooks = { ...properties.hooks, mountChildren: true };
-const deps = { ...properties.sdk, ...floating, ...fontFamilies, readerVisualSafeTop, readerInteractiveSafeBottom, TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
-  BOOKSHELF_WIDE_BREAKPOINT: Number(read('bookshelf/BookshelfShell.ets').match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]),
+const deps = { ...properties.sdk, ...readerFoundationTokens, ...actualReaderPageLayout(), ...raisedShape,
+  ...horizontalGeometry, ...readerSurfaceSpecsForProbe({ densityPixels: 1 }), ...floating, ...fontFamilies,
+  readerVisualSafeTop, readerInteractiveSafeBottom,
   ReaderWindowCoordinator: { metrics }, readerContentSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   MAIN_TABS: [], RSS_FLOATING_HEADER_HEIGHT: 148, RSS_TABLET_RAIL_WIDTH: 100,
   LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
@@ -114,7 +119,8 @@ if(selectedCase==='navigation') {
   const phoneWindow = { metrics: () => ({ ...metrics(), revision: 0, systemFontScale: 1 }) };
   const policyPorts = { ...currentMainTabs, ...currentFloating, ReaderWindowCoordinator: phoneWindow,
     AppStorage: { get: key => storage.get(key), setOrCreate: (key, value) => storage.set(key, value) },
-    readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerVisualSafeTop, READER_EXPANDED_MIN_WIDTH };
+    readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerVisualSafeTop, READER_EXPANDED_MIN_WIDTH,
+    effectiveReaderWideNavigationRail };
   // Execute the current policy module; no fixture decides rail/bottom placement
   // or duplicates the viewport/width math. This case supplies phone metrics only.
   const policyText = stripTypeScriptTypes(read('shell/MainNavigationSpec.ts')

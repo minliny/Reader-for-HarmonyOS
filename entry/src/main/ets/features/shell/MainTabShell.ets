@@ -1,12 +1,11 @@
 import { ReaderStandardPage } from '../../ui/layout/ReaderStandardPage';
 import { readerMainRailLeading, readerMainRailBottomInset } from './MainNavigationSpec';
-import { publishReaderMainViewport, readerMainViewport } from './MainNavigationSpec';
+import { publishReaderMainViewport } from './MainNavigationSpec';
 import { ReaderBottomNavigation } from '../../app/navigation/ReaderBottomNavigation';
 import { MainNavigationOverlay } from './MainNavigationOverlay';
 import { readerMainNavigationMode, type MainNavigationMode } from './MainNavigationSpec';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderPageScaffold } from '../../ui/layout/ReaderPageScaffold';
-import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../ui/layout/ReaderPageGeometry';
+import { ReaderPageGeometry, readerChromePageGeometry } from '../../ui/layout/ReaderPageGeometry';
 import { readerPresentedHeaderBottom, type ReaderStandardPageVariant } from '../../ui/layout/ReaderPageShell';
 import { ReaderFrameStyle, readerFrameStyle } from '../../ui/layout/ReaderFrameStyle';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
@@ -75,14 +74,7 @@ export struct MainTabShell {
   }
 
   private pageGeometry(): ReaderPageGeometry {
-    const metrics = ReaderWindowCoordinator.metrics();
-    const input = new ReaderPageGeometryInput(metrics);
-    input.viewportWidth = readerMainViewport(this.mainViewportRevision).width;
-    input.viewportHeight = readerMainViewport(this.mainViewportRevision).height;
-    input.headerTop = this.headerTop;
-    input.headerInsetLeft = this.headerInsetLeft;
-    input.headerInsetRight = this.headerInsetRight;
-    return resolveReaderPageGeometry(input);
+    return readerChromePageGeometry(this.headerTop, this.headerInsetLeft, this.headerInsetRight);
   }
 
   private frameStyle(): ReaderFrameStyle {

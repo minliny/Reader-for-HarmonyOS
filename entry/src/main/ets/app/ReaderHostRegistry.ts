@@ -415,7 +415,7 @@ export class ReaderHostRegistry {
       throw new Error('在线 JSON 响应为空');
     }
     let text = typeof body === 'string' ? body : '';
-    let bytes: Uint8Array = new util.TextEncoder('utf-8').encode(text);
+    let bytes: Uint8Array = new util.TextEncoder('utf-8').encodeInto(text);
     if (text.length === 0 && typeof bodyBase64 === 'string') {
       try {
         bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
@@ -481,7 +481,7 @@ export class ReaderHostRegistry {
     label: string,
     subject: string,
   ): Promise<string | undefined> {
-    const bytes = new util.TextEncoder('utf-8').encode(text);
+    const bytes = new util.TextEncoder('utf-8').encodeInto(text);
     if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
       throw new Error(
         `${subject} export must contain 1-${ReaderHostRegistry.JsonDocumentLimitBytes} UTF-8 bytes`,

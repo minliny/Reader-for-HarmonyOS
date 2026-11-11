@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
@@ -41,7 +42,7 @@ const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('.
 const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const mapSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
@@ -261,7 +262,7 @@ const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingEx
 // SDK-transformed production Builder: render actual actions and invoke their captured callbacks.
 for(const local of [false,true])for(const switchFailure of [false,true]) {
   const actions=[];
-  const p=boundedSurfaceSdk(),owner=p.consumer(readFileSync(source,'utf8'),['readingFailureContent'],{
+  const p=boundedSurfaceSdk(),owner=p.consumer(readReaderExperienceFixture(source,'utf8'),['readingFailureContent'],{
     LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle:()=>({ink:'#123456',paperStart:'#eeeeee'})});
   Object.assign(owner,{sourceId:local?'local':'remote',sourceSwitchFailureMessage:switchFailure?'目标源目录失败':'',
     failureCode:'private raw error /path?token=secret',failureHint:readingFailureHint('private raw error /path?token=secret'),appearanceSnapshot:{activeTheme:'day'},
@@ -280,7 +281,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
 // Compile the unmodified production arena statement: failed-paper buttons sit
 // below this retained node, so its actual child input prop must become inert.
 {
-  const raw=readFileSync(source,'utf8');
+  const raw=readReaderExperienceFixture(source,'utf8');
   const start=raw.indexOf('      ReaderPageInteractionLayer({');
   const end=raw.indexOf('      this.bookmarkCornerFeedback();',start);
   assert.ok(start>=0&&end>start);
@@ -289,7 +290,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderPageInteractionLayer');
-  const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets',import.meta.url),'utf8');
+  const childSource=readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets',import.meta.url),'utf8');
   syntax.propCollection.set('ReaderPageInteractionLayer',new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   for(const phase of ['loading','measuring','ready','failed'])for(const sourceError of ['', '目标目录失败']) {
@@ -328,7 +329,7 @@ const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('.
 const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const mapSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
@@ -459,7 +460,7 @@ function fixture(options={}) {
 // an old child must not unregister or publish chapter/catalog state for a new one.
 {
   const shellPath=new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url);
-  const raw=readFileSync(shellPath,'utf8');
+  const raw=readReaderExperienceFixture(shellPath,'utf8');
   const start=raw.indexOf('        ForEach([this.readingIdentityKey()]');
   const tail='        }, (identity: string): string => identity);';
   const end=raw.indexOf(tail,start)+tail.length;assert.ok(start>=0&&end>start);
@@ -467,7 +468,7 @@ function fixture(options={}) {
   const require=createRequire(import.meta.url);
   const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);syntax.componentCollection.customComponents.add('ReadingExperience');
-  syntax.propCollection.set('ReadingExperience',new Set([...readFileSync(source,'utf8').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+  syntax.propCollection.set('ReadingExperience',new Set([...readReaderExperienceFixture(source,'utf8').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   const {owner}=createReaderBuilderProbe(wrapper,['readingOwner'],{ReadingExperience:Child});
   const Shell=productionMotionMethods(shellPath,['readingIdentityKey','readingContentIsForeground','acceptsTextInput']);
@@ -544,7 +545,7 @@ const { remoteReadingFailureKindOf, RemoteReadingSourceError } = await import('.
 const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
+const mapSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
@@ -627,7 +628,7 @@ function fixture(options={}) {
 // Chapter navigation feedback is the actual SDK-emitted production loading
 // host/component. Native rasterization and asynchronous IO stay explicit seams.
 {
-  const raw=readFileSync(source,'utf8'),require=createRequire(import.meta.url);
+  const raw=readReaderExperienceFixture(source,'utf8'),require=createRequire(import.meta.url);
   const sdk=resolveEtsLoaderRoot();
   const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
   const tree=ts.createSourceFile(virtualFilePath('RecoverableLoading.ets'),raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
@@ -638,8 +639,8 @@ function fixture(options={}) {
     assert.ok(node,`real loading member ${name}`);return node.getText(tree);});
   const call='      this.chapterLoadingContent();';
   const scene='@Component struct ReadingExperience {\n'+members.join('\n')+'\nbuild(){Stack(){'+call+'}}\n}';
-  const loadingSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderChapterLoadingState.ets',import.meta.url),'utf8');
-  const paperSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPaperBackground.ets',import.meta.url),'utf8');
+  const loadingSource=readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReaderChapterLoadingState.ets',import.meta.url),'utf8');
+  const paperSource=readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReaderPaperBackground.ets',import.meta.url),'utf8');
   const metrics={systemInsets:new ReaderInsetsVp(22,0,0,0),cutoutInsets:new ReaderInsetsVp(30,7,0,0),
     gestureInsets:new ReaderInsetsVp(),navigationInsets:new ReaderInsetsVp(),keyboardInsets:new ReaderInsetsVp()};
   function loadingFixture(fields={},definition=scene) {

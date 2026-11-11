@@ -73,6 +73,9 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
         this.phase = 'denied'; this.reason = `prior-retirement:${(error as Error).message}`; return;
       }
       if (this.closed || generation !== this.generation) return;
+      if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core')) {
+        this.phase = 'unavailable'; this.reason = 'background-task-manager-unavailable'; return;
+      }
       if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
         this.phase = 'unavailable'; this.reason = 'continuous-task-unavailable'; return;
       }
@@ -88,24 +91,36 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
           actionFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG],
         });
         if (this.closed || generation !== this.generation) return;
+        if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+          !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+          this.phase = 'unavailable'; this.reason = 'continuous-task-unavailable-before-dispatch'; return;
+        }
         // The normal SDK ACK provides its ID. A before/after native readback
         // can identify a missing-ID ACK without stopping somebody else's task.
         let before: number[] | undefined = undefined;
         try { before = (await backgroundTaskManager.getAllContinuousTasks(this.context)).map((item): number => item.continuousTaskId); }
         catch (_) { /* The ID-bearing start ACK remains authoritative. */ }
         if (this.closed || generation !== this.generation) return;
+        if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+          !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+          this.phase = 'unavailable'; this.reason = 'continuous-task-unavailable-before-dispatch'; return;
+        }
         // Once dispatched, a rejected/lost ACK cannot prove that no native task exists.
         this.unverifiedTask = true;
         const receipt = await backgroundTaskManager.startBackgroundRunning(this.context, ['audioPlayback'], agent);
         let id = receipt.continuousTaskId;
         if (id === undefined) this.unverifiedTask = true;
         if (id === undefined && before !== undefined) {
+          if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+            !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+            this.phase = 'unverified'; this.reason = 'native-task-identity-capability-unavailable'; return;
+          }
           const current = await backgroundTaskManager.getAllContinuousTasks(this.context);
           const candidates = current.filter((item): boolean => before!.indexOf(item.continuousTaskId) < 0 &&
             item.abilityName === this.context.abilityInfo.name && !item.isFromWebView && item.backgroundModes.indexOf('audioPlayback') >= 0);
           if (candidates.length === 1) id = candidates[0].continuousTaskId;
         }
-        if (id === undefined || !Number.isFinite(id) || id < 0) {
+        if (id === undefined || !Number.isSafeInteger(id) || id < 0) {
           this.unverifiedTask = true; this.phase = 'unverified'; this.reason = 'native-task-identity-unverified'; return;
         }
         this.unverifiedTask = false;
@@ -115,12 +130,20 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
         }
         if (this.pendingCancelOverflow) {
           try {
+            if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+              !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+              throw new Error('Continuous task observation capability is unavailable');
+            }
             const observed = await backgroundTaskManager.getAllContinuousTasks(this.context);
             if (!observed.some((item): boolean => item.continuousTaskId === id)) {
               this.taskId = undefined; this.phase = 'revoked'; this.reason = 'native-task-not-active'; return;
             }
           } catch (_) { await this.stopOwnedTask(); return; }
           if (this.taskId !== id) return;
+        }
+        if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+          !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+          await this.stopOwnedTask(); return;
         }
         if (this.closed || generation !== this.generation) { await this.stopOwnedTask(); return; }
         this.phase = 'admitted'; this.active = true; admitted = true;
@@ -154,8 +177,15 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
     let failure: Error | undefined = undefined;
     try { await task; } catch (error) { failure = error as Error; }
     if (this.observing) {
-      try { backgroundTaskManager.off('continuousTaskCancel', this.onCancelled); this.observing = false; }
+      try {
+        if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+          !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+          throw new Error('Continuous task listener release capability is unavailable');
+        }
+        backgroundTaskManager.off('continuousTaskCancel', this.onCancelled); this.observing = false;
+      }
       catch (error) {
+        this.phase = 'release-failed'; this.reason = (error as Error).message;
         hilog.warn(LOG_DOMAIN, 'Reader', 'TTS background listener release failed: %{private}s', (error as Error).message);
         if (failure === undefined) failure = error as Error;
       }
@@ -173,6 +203,10 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
     }
     this.phase = 'releasing'; this.active = false;
     try {
+      if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
+        !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
+        throw new Error('Continuous task release capability is unavailable');
+      }
       await backgroundTaskManager.stopBackgroundRunning(this.context, id);
       if (this.taskId === id) this.taskId = undefined;
       this.phase = 'released'; this.reason = '';

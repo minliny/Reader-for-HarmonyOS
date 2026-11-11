@@ -105,6 +105,17 @@ export function readerEmptyPageGeometry(): ReaderPageGeometry {
   return new ReaderPageGeometry();
 }
 
+/** Chrome-only composition never resolves a second content viewport. The
+ * active page branch remains the sole owner of its body frame and insets. */
+export function readerChromePageGeometry(headerTop: number, headerInsetLeft: number,
+  headerInsetRight: number): ReaderPageGeometry {
+  const geometry = readerEmptyPageGeometry();
+  geometry.header.top = finiteNonNegative(headerTop);
+  geometry.header.insetLeft = finiteNonNegative(headerInsetLeft);
+  geometry.header.insetRight = finiteNonNegative(headerInsetRight);
+  return geometry;
+}
+
 export function resolveReaderPageGeometry(input: ReaderPageGeometryInput): ReaderPageGeometry {
   const geometry = new ReaderPageGeometry();
   const metrics = input.metrics;

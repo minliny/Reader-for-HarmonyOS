@@ -727,7 +727,7 @@ export struct BookshelfPage {
     .onScrollIndex(this.shelfScrollHandler())
     .onReachStart(this.shelfPageHandler(true))
     .onReachEnd(this.shelfPageHandler(false))
-    .onScroll(this.shelfViewportScrollHandler())
+    .onDidScroll(this.shelfViewportScrollHandler())
     .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.cancelBookActionFocus(); })
     .onKeyEvent((): void => this.cancelBookActionFocus())
     .onAppear((): void => this.restoreShelfViewport());

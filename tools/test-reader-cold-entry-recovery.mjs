@@ -15,7 +15,9 @@ async function actual(names, dependencies = {}) {
   const constants = selectedProductionValues(file, ['FIRST_PAGE_COMPLETION_DEADLINE_MS', 'FIRST_PAGE_COMPLETION_MAX_RETRIES',
     'PAGE_TURN_PREPARATION_RETRY_BASE_MS', 'PAGE_TURN_PREPARATION_RETRY_MAX_MS', 'PAGE_TURN_PREPARATION_RETRY_LIMIT']);
   for (const [name, value] of Object.entries(constants)) assert.ok(Number.isSafeInteger(value) && value > 0, `valid actual policy ${name}`);
-  return { Type: selectedProductionMethods(file, 'ReadingExperience', names, { ...constants, ...dependencies }), constants };
+  const { drainReaderPagePreparation } = await import('../entry/src/main/ets/features/reading/ui/ReaderPagePreparationCoordinator.ts');
+  if (names.includes('drainPageTurnPreparationQueue') && !names.includes('retryPageTurnPreparation')) names = [...names, 'retryPageTurnPreparation'];
+  return { Type: selectedProductionMethods(file, 'ReadingExperience', names, { ...constants, drainReaderPagePreparation, ...dependencies }), constants };
 }
 async function preparationContextCase() {
   class Preparation { constructor(...args) { this.args = args; } }

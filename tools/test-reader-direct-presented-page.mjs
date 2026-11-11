@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -7,7 +8,7 @@ import * as rapid from '../entry/src/main/ets/features/reading/ui/ReaderRapidPag
 // Production presentation and receipt code; RPC completion is explicitly
 // controlled. This proves model/input ownership, never compositor timing.
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const text = readFileSync(source, 'utf8');
+const text = readReaderExperienceFixture(source, 'utf8');
 const anchorStart = text.indexOf('class CoreReadingAnchor implements');
 const anchorEnd = text.indexOf('\nclass ', anchorStart + 1);
 const CoreReadingAnchor = new Function(stripTypeScriptTypes(text.slice(anchorStart, anchorEnd)) + ';return CoreReadingAnchor;')();

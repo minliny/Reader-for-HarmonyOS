@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"historical-definition": {"description": "仅显式历史message carrier witness；不作为runtime completion前置", "resources": []}, "ack-boundary": {"description": "实际Index finalized精确target/transaction接纳、小说与漫画分界及navigation退休", "resources": []}, "visual-clock": {"description": "实际reader已呈现receipt动效/notice/重复DTO/guard/取消/selection/reducedMotion", "resources": []}, "stage-order": {"description": "实际resident/continuous回调必须匹配本selection/lifecycle/body当前revision", "resources": []}, "canonical-stage": {"description": "实际completeFirstPage等待canonical progress ACK→revision→SDK resident stage→视觉准入", "resources": []}, "actor-clock-isolation": {"description": "两真实SDK actor独立动画与共享提示代次，旧回调不影响后继", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
@@ -19,7 +20,7 @@ const {bookshelfOperationClass} = await import('./lib/bookshelf-operation-owner-
 
 
 
-const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
+const read = path => readReaderExperienceFixture(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const localSource = read('features/reading/ui/LocalReadingExperience.ets');
 if(selectedCase==='historical-definition'){const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');assert.equal(approvedTypographyContract(read('features/source/ui/SourceSwitchCompletionOverlay.ets'),'features/source/ui/SourceSwitchCompletionOverlay.ets').registered,true);return;}
 const members = ['sourceSwitchCompletion', 'readingReadyGeneration', 'sourceSwitchCompletionVisible',

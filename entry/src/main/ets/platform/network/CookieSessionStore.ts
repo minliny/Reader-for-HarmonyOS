@@ -1001,7 +1001,7 @@ export class CookieSessionStore {
   }
 
   private utf8(value: string): Uint8Array {
-    return new util.TextEncoder('utf-8').encode(value);
+    return new util.TextEncoder('utf-8').encodeInto(value);
   }
 
   private errorCode(error: unknown): number | null {

@@ -1,3 +1,10 @@
+import { drainReaderPagePreparation, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
+import { measureReaderControlMinimumCandidates } from './ReaderControlMinimumReceipt';
+import { admitReaderControlVisualSnapshot } from './ReaderControlVisualHostPort';
+import { CoreReadingAnchor, InitialReadingToc, CoreReadingLayout } from '../application/ReadingMeasurementFacts';
+import { ArkUILineMetric } from './ReaderArkUILineMetric';
+import { ReaderMaterializedChapterContext, ReaderRetainedPresentation, ReaderControlPlaybackPresentation, ReaderTtsPlayIntent, ReaderControlSelectionDisplay, ReaderControlSelectionOrigin, ReaderControlSelectionCandidate, PreparedReaderPageTurn, ReaderPageTurnPreparation, ReaderPageTurnTarget, ReaderDeferredChapterSelection, ReaderAutomaticPageStart, KnownReadingContentVersion, PreviousChapterMeasurement } from '../presentation/ReaderPagePresentationModels';
+import { readingEntryHandoff } from '../presentation/ReaderRetainedPresentationHost';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderExitRequest } from '../presentation/ReadingEntryPresentation';
 import { ReadingCommit } from '../application/ReadingCommit';
@@ -274,8 +281,7 @@ import {
   ReaderSessionMorphSourceMeasurement,
 } from './ReaderSessionMorphState';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
-import { ReadingEntryHandoff, registerReadingEntryMemoryRelease,
-  estimateRetainedRemoteSessionBytes } from '../application/ReadingEntryHandoff';
+import { estimateRetainedRemoteSessionBytes } from '../application/ReadingEntryHandoff';
 import { ReaderTtsCredentialStore } from '../../../platform/tts/ReaderTtsCredentialStore';
 import { ReaderReadingSystemEventHost } from '../../../app/ReaderReadingSystemEventHost';
 import {
@@ -384,6 +390,9 @@ import {
   type ReaderSettingsSnapshot,
   type ReaderSettingsToggleKey,
 } from '../application/ReaderSettingsState';
+export { ReaderRetainedPresentation } from '../presentation/ReaderPagePresentationModels';
+export { readerEntryPresentation } from '../presentation/ReaderRetainedPresentationHost';
+
 
 /**
  * Chapter-level paragraph boundaries.  These remain deliberately tiny: a
@@ -407,374 +416,6 @@ interface DeferredReadingImagePixels {
 interface ReaderPreparedMeasurementProjection {
   map: ReadingSurfaceLayoutMap;
   ranges: ParagraphRange[];
-}
-
-/** Immutable display inputs, also used as an isolated adjacent measurement context. */
-class ReaderMaterializedChapterContext {
-  chapter: ReadingSessionChapter;
-  layoutMap: ReadingSurfaceLayoutMap;
-  contentVersion: string;
-  paragraphRanges: ParagraphRange[];
-  paginationDraft: ReadingPaginationPrefix | undefined;
-  desiredChapterOffset: number;
-  desiredChapterProgress: number;
-  measurementRequestedAnchorScalar: number;
-
-  constructor(
-    chapter: ReadingSessionChapter,
-    layoutMap: ReadingSurfaceLayoutMap,
-    contentVersion: string,
-    paragraphRanges: ParagraphRange[],
-    paginationDraft: ReadingPaginationPrefix | undefined,
-    desiredChapterOffset: number,
-    desiredChapterProgress: number,
-    measurementRequestedAnchorScalar: number,
-  ) {
-    this.chapter = chapter;
-    this.layoutMap = layoutMap;
-    this.contentVersion = contentVersion;
-    this.paragraphRanges = paragraphRanges;
-    this.paginationDraft = paginationDraft;
-    this.desiredChapterOffset = desiredChapterOffset;
-    this.desiredChapterProgress = desiredChapterProgress;
-    this.measurementRequestedAnchorScalar = measurementRequestedAnchorScalar;
-  }
-}
-
-/** Confirmed, text-only presentation retained across one normal exit. Images
- * and custom fonts use normal acquisition until their cross-view leases are
- * proven; this optional handoff is never a navigation prerequisite. */
-export class ReaderRetainedPresentation {
-  sourceId: string;
-  bookId: string;
-  gateway: ReadingSessionFlowGateway;
-  context: ReaderMaterializedChapterContext;
-  page: PhysicalReadingPage;
-  toc: LocalReadingTocEntry[];
-  progress: LocalReadingProgress;
-  appearanceKey: string;
-  settingsKey: string;
-  layoutKey: string;
-  densityPixels: number;
-  navigation?: ReadingEntryNavigation;
-  catalogPending: boolean;
-  isCurrent: () => boolean;
-
-  constructor(sourceId: string, bookId: string, gateway: ReadingSessionFlowGateway,
-    context: ReaderMaterializedChapterContext, page: PhysicalReadingPage,
-    toc: LocalReadingTocEntry[], progress: LocalReadingProgress, appearanceKey: string,
-    settingsKey: string, layoutKey: string, densityPixels: number, isCurrent: () => boolean, navigation?: ReadingEntryNavigation, catalogPending: boolean = navigation !== undefined) {
-    this.sourceId = sourceId; this.bookId = bookId; this.gateway = gateway;
-    this.context = context; this.page = page; this.toc = toc; this.progress = progress;
-    this.appearanceKey = appearanceKey; this.settingsKey = settingsKey;
-    this.layoutKey = layoutKey; this.densityPixels = densityPixels; this.isCurrent = isCurrent; this.navigation = navigation; this.catalogPending = catalogPending;
-  }
-}
-
-const readingEntryHandoffs: WeakMap<ReaderRuntimeOwner, ReadingEntryHandoff<ReaderRetainedPresentation>> = new WeakMap();
-
-function readingEntryHandoff(owner: ReaderRuntimeOwner): ReadingEntryHandoff<ReaderRetainedPresentation> {
-  let handoff = readingEntryHandoffs.get(owner);
-  if (handoff === undefined) {
-    handoff = new ReadingEntryHandoff<ReaderRetainedPresentation>();
-    readingEntryHandoffs.set(owner, handoff);
-    const retained = handoff;
-    registerReadingEntryMemoryRelease(owner, (): void => retained.clear());
-  }
-  return handoff;
-}
-
-export function readerEntryPresentation(sourceId: string, bookId: string): ReaderRetainedPresentation | undefined {
-  const owner = ReaderRuntimeOwner.current();
-  if (!owner.optionalReadingEntryMemoryEnabled()) return undefined;
-  return readingEntryHandoff(owner).current(sourceId, bookId);
-}
-
-interface ReaderControlPlaybackPresentation {
-  lifecycleToken: number;
-  sourceId: string;
-  bookId: string;
-  openRevision: number;
-  moduleVisitRevision: number;
-  module: string;
-}
-
-interface ReaderTtsPlayIntent {
-  generation: number;
-  lifecycleToken: number;
-  selectionToken: number;
-  sourceId: string;
-  bookId: string;
-  presentation: ReaderControlPlaybackPresentation;
-}
-
-interface ReaderControlSelectionDisplay {
-  context: ReaderMaterializedChapterContext;
-  page: PhysicalReadingPage;
-  visibleScalar: number;
-  continuous: boolean;
-  layoutSignature: string;
-}
-
-/** Last actually committed display retained only until a control selection resolves. */
-class ReaderControlSelectionOrigin implements ReaderControlSelectionDisplay {
-  context: ReaderMaterializedChapterContext;
-  page: PhysicalReadingPage;
-  committedProgress: ReadingCommit;
-  visibleScalar: number;
-  continuous: boolean;
-  layoutSignature: string;
-
-  constructor(context: ReaderMaterializedChapterContext, page: PhysicalReadingPage,
-    committedProgress: ReadingCommit, visibleScalar: number, continuous: boolean, layoutSignature: string) {
-    this.context = context;
-    this.page = page;
-    this.committedProgress = committedProgress;
-    this.visibleScalar = visibleScalar;
-    this.continuous = continuous;
-    this.layoutSignature = layoutSignature;
-  }
-}
-
-/** Measured target kept until an uncertain Core write has been reconciled. */
-class ReaderControlSelectionCandidate implements ReaderControlSelectionDisplay {
-  context: ReaderMaterializedChapterContext;
-  page: PhysicalReadingPage;
-  visibleScalar: number;
-  continuous: boolean;
-  layoutSignature: string;
-  constructor(context: ReaderMaterializedChapterContext, page: PhysicalReadingPage,
-    continuous: boolean, layoutSignature: string) {
-    this.context = context;
-    this.page = page;
-    this.visibleScalar = page.startScalar;
-    this.continuous = continuous;
-    this.layoutSignature = layoutSignature;
-  }
-}
-
-/** One measured adjacent page whose Core progress has not been changed yet. */
-class PreparedReaderPageTurn {
-  direction: ReaderPageTurnDirection;
-  page: PhysicalReadingPage;
-  context: ReaderMaterializedChapterContext;
-  key: ReadingPaginationKey;
-  originChapterIndex: number;
-  originPageStartScalar: number;
-  generation: number;
-
-  constructor(
-    direction: ReaderPageTurnDirection,
-    page: PhysicalReadingPage,
-    context: ReaderMaterializedChapterContext,
-    key: ReadingPaginationKey,
-    originChapterIndex: number,
-    originPageStartScalar: number,
-    generation: number,
-  ) {
-    this.direction = direction;
-    this.page = page;
-    this.context = context;
-    this.key = key;
-    this.originChapterIndex = originChapterIndex;
-    this.originPageStartScalar = originPageStartScalar;
-    this.generation = generation;
-  }
-}
-
-class ReaderPageTurnPreparation {
-  direction: ReaderPageTurnDirection;
-  origin: ReaderMaterializedChapterContext;
-  originChapterIndex: number;
-  originPageStartScalar: number;
-  generation: number;
-
-  constructor(
-    direction: ReaderPageTurnDirection,
-    origin: ReaderMaterializedChapterContext,
-    originChapterIndex: number,
-    originPageStartScalar: number,
-    generation: number,
-  ) {
-    this.direction = direction;
-    this.origin = origin;
-    this.originChapterIndex = originChapterIndex;
-    this.originPageStartScalar = originPageStartScalar;
-    this.generation = generation;
-  }
-}
-
-class ReaderPageTurnTarget {
-  chapterIndex: number;
-  chapterOffset: number;
-
-  constructor(chapterIndex: number, chapterOffset: number) {
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-  }
-}
-
-class ReaderDeferredChapterSelection {
-  chapterIndex: number;
-  chapterOffset: number;
-  requireChapterStart: boolean;
-  stopTts: boolean;
-  requestedProgress: number | undefined;
-  controlOwnerRevision: number;
-  closeControlOnCommit: boolean;
-  refreshContent: boolean;
-  positionContext?: RemoteReadingPositionContext;
-  ttsOwner?: ReaderTtsFollowLease;
-
-  constructor(
-    chapterIndex: number,
-    chapterOffset: number,
-    requireChapterStart: boolean,
-    stopTts: boolean,
-    requestedProgress: number | undefined,
-    controlOwnerRevision: number,
-    closeControlOnCommit: boolean = true,
-    refreshContent: boolean = false,
-    positionContext?: RemoteReadingPositionContext,
-    ttsOwner?: ReaderTtsFollowLease,
-  ) {
-    this.ttsOwner = ttsOwner;
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-    this.requireChapterStart = requireChapterStart;
-    this.stopTts = stopTts;
-    this.requestedProgress = requestedProgress;
-    this.controlOwnerRevision = controlOwnerRevision;
-    this.closeControlOnCommit = closeControlOnCommit;
-    this.refreshContent = refreshContent;
-    this.positionContext = positionContext;
-  }
-}
-
-interface ReaderAutomaticPageStart {
-  generation: number;
-  lifecycleToken: number;
-  origin: ReaderPageTurnOrigin;
-  autoGeneration: number;
-  ttsOwner?: ReaderTtsFollowLease;
-  surfaceToken: number;
-  scheduled: boolean;
-  started: boolean;
-  bufferEventReceivedAtMs: number;
-  showRequestedAtMs: number;
-  startedAtMs: number;
-}
-
-class KnownReadingContentVersion {
-  chapterIndex: number;
-  contentVersion: string;
-
-  constructor(chapterIndex: number, contentVersion: string) {
-    this.chapterIndex = chapterIndex;
-    this.contentVersion = contentVersion;
-  }
-}
-
-class PreviousChapterMeasurement {
-  originalChapterIndex: number;
-  originalChapterOffset: number;
-  targetChapterIndex: number;
-  /** True when discovering a texture-ready predecessor without turning yet. */
-  prepareOnly: boolean;
-  origin: ReaderMaterializedChapterContext | undefined;
-  pageTurnGeneration: number;
-  /** Exclusive original-text boundary; immutable during one reverse page. */
-  endScalar: number = -1;
-  nextRangeIndex: number = -1;
-
-  constructor(
-    originalChapterIndex: number,
-    originalChapterOffset: number,
-    targetChapterIndex: number,
-    prepareOnly: boolean = false,
-    origin?: ReaderMaterializedChapterContext,
-    pageTurnGeneration: number = 0,
-  ) {
-    this.originalChapterIndex = originalChapterIndex;
-    this.originalChapterOffset = originalChapterOffset;
-    this.targetChapterIndex = targetChapterIndex;
-    this.prepareOnly = prepareOnly;
-    this.origin = origin;
-    this.pageTurnGeneration = pageTurnGeneration;
-  }
-}
-
-class CoreReadingAnchor implements LocalReadingAnchor {
-  deviceId?: string;
-  retainedProgressReceipt?: LocalReadingRetainedProgressReceipt;
-  directoryTargetProof?: ReaderDirectoryTargetProof;
-  chapterIndex: number;
-  chapterOffset: number;
-  chapterProgress: number;
-
-  bodyVersion?: string;
-  processingVersion?: string;
-
-  constructor(chapterIndex: number, chapterOffset: number, chapterProgress: number, bodyVersion?: string, processingVersion?: string, directoryTargetProof?: ReaderDirectoryTargetProof) {
-    this.directoryTargetProof = directoryTargetProof;
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-    this.chapterProgress = chapterProgress;
-    this.bodyVersion = bodyVersion; this.processingVersion = processingVersion;
-  }
-}
-
-class InitialReadingToc implements LocalReadingToc {
-  bookId: string;
-  entries: LocalReadingTocEntry[];
-
-  constructor(bookId: string, entries: LocalReadingTocEntry[]) {
-    this.bookId = bookId;
-    this.entries = entries;
-  }
-}
-
-class CoreReadingLayout implements LocalReadingLayout {
-  viewportWidth: number;
-  viewportHeight: number;
-  fontScale: number;
-  lineHeight: number;
-
-  constructor(
-    viewportWidth: number,
-    viewportHeight: number,
-    fontScale: number,
-    lineHeight: number,
-  ) {
-    this.viewportWidth = viewportWidth;
-    this.viewportHeight = viewportHeight;
-    this.fontScale = fontScale;
-    this.lineHeight = lineHeight;
-  }
-}
-
-class ArkUILineMetric implements ReadingSurfaceLineMetric {
-  startIndex: number;
-  endIndex: number;
-  height: number;
-  topHeight: number;
-  width: number;
-  baseline: number;
-
-  constructor(
-    metric: LineMetrics,
-    heightVp: number,
-    topHeightVp: number,
-    widthVp: number,
-    baselineVp: number,
-  ) {
-    this.startIndex = metric.startIndex;
-    this.endIndex = metric.endIndex;
-    this.height = heightVp;
-    this.topHeight = topHeightVp;
-    this.width = widthVp;
-    this.baseline = baselineVp;
-  }
 }
 
 type ReadingPhase = 'loading' | 'measuring' | 'ready' | 'failed';
@@ -1120,7 +761,7 @@ export struct ReadingExperience {
   @State @Watch('onControlSessionChanged') private controlSession: ReaderControlSessionState =
     createReaderControlSessionState();
   /**
-   * Latest presentation sample from ReaderControlMotionStage.  This is a
+   * Latest presentation sample from the production ReaderControlPanel.  This is a
    * plain host field on purpose: it lets Back/close retarget from the image
    * currently under the finger without making every VSync sample reactive in
    * the reading page.
@@ -2276,10 +1917,12 @@ export struct ReadingExperience {
         onVisualSessionChange: (state: ReaderControlSessionState): void => {
           // This assignment is deliberately non-reactive.  It is a decision
           // snapshot for Back/close only; the Panel owns the visual @State.
-          const wasPresented = this.controlsPresentedForWindow();
-          this.latestControlVisualSession = copyReaderControlSessionState(state);
-          this.admitSessionControlClosing(readerControlHostClosing(state));
-          if (wasPresented !== this.controlsPresentedForWindow()) this.applyWindowPolicyForChromeOwner();
+          admitReaderControlVisualSnapshot(state, {
+            presentedForWindow: (): boolean => this.controlsPresentedForWindow(),
+            capture: (snapshot: ReaderControlSessionState): void => { this.latestControlVisualSession = snapshot; },
+            closing: (closing: boolean): void => this.admitSessionControlClosing(closing),
+            chromeOwnerChanged: (): void => this.applyWindowPolicyForChromeOwner(),
+          });
         },
         onTemporaryLayerChange: (active: boolean): void => { this.controlTemporaryLayer = active; },
         onTtsConfigurationOpen: (): void => this.retryTtsConfigurationMetadataOnOpen(),
@@ -8117,22 +7760,10 @@ export struct ReadingExperience {
         !this.controlMinimumCurrent(identity)) return;
       const widths = readerControlCandidateWidths(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
         this.expandedLayout, ReaderWindowCoordinator.metrics());
-      const measured: ReaderControlCandidateMinimum[] = [];
-      for (const width of widths) {
-        const key = `${identity}|${generation}|${width.panelWidthVp}`;
-        const candidate = measure(width, key);
-        if (candidate !== undefined && candidate.key === key &&
-          candidate.widths.panelWidthVp === width.panelWidthVp &&
-          candidate.widths.quickContentWidthVp === width.quickContentWidthVp &&
-          candidate.widths.fullContentWidthVp === width.fullContentWidthVp) {
-          measured.push(candidate);
-          // Widths are nearest-preferred first. The first real fit already
-          // wins the pure solver; only constrained states need the remainder.
-          const resolved = resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-            this.expandedLayout, ReaderWindowCoordinator.metrics(), this.readerRecoveryBottom, [candidate]);
-          if (resolved.minimumStatus === 'preferred') break;
-        }
-      }
+      const measured = measureReaderControlMinimumCandidates(widths, identity, generation, measure,
+        (candidate: ReaderControlCandidateMinimum): boolean =>
+          resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
+            this.expandedLayout, ReaderWindowCoordinator.metrics(), this.readerRecoveryBottom, [candidate]).minimumStatus === 'preferred');
       if (generation !== this.controlMinimumGeneration || measure !== this.controlMinimumProvider ||
         !this.controlMinimumCurrent(identity)) return;
       this.admitControlMinimum(measured, identity);
@@ -12693,74 +12324,58 @@ export struct ReadingExperience {
   }
 
   private drainPageTurnPreparationQueue(): void {
-    if (this.sessionLaunchRenderWorkBlocked()) return;
-    for (;;) {
-      if (this.pageTurnPreparation !== undefined || this.pageTurnSettlingPrepared !== undefined ||
+    drainReaderPagePreparation({
+      renderWorkBlocked: (): boolean => this.sessionLaunchRenderWorkBlocked(),
+      laneBlocked: (): boolean => this.pageTurnPreparation !== undefined || this.pageTurnSettlingPrepared !== undefined ||
         this.pageTurnGestureState.phase !== 'idle' ||
-        !readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) || !this.canTurnPage()) {
-        return;
-      }
-      const direction = this.pageTurnPreparationQueue.shift();
-      if (direction === undefined) {
-        this.scheduleBookTurnTextureRefresh();
-        return;
-      }
-      if (this.preparedPageTurn(direction) !== undefined) {
-        continue;
-      }
-      const target = this.adjacentPageTurnTarget(direction);
-      if (target === undefined && this.chapter !== undefined && this.isUnknownCatalogEdge(this.chapter.chapterIndex, direction)) {
-        this.requestCatalogForTurn();
-        return;
-      }
-      if (target === undefined && direction === 'previous' &&
-        this.knownPageTurnBoundary(direction) === undefined &&
-        this.startPreviousPagePreparationDiscovery()) {
-        return;
-      }
-      if (target === undefined) {
-        continue;
-      }
-      const outcome = this.beginPageTurnPreparation(direction, target);
-      if (outcome === 'begun') {
-        this.cancelPageTurnPreparationRetry();
-        return;
-      }
-      if (outcome === 'abandon') {
-        continue;
-      }
-      // Transiently rejected (measurement lane busy or lane not ready yet).
-      // Re-queue at the head so this direction is retried on a backoff timer
-      // instead of being silently dropped — cold entry can pop a direction
-      // while the initial restore still owns the measurement lane.
-      this.pageTurnPreparationQueue.unshift(direction);
-      if (this.pageTurnPreparationRetryTimer >= 0) {
-        return;
-      }
-      const count = this.pageTurnPreparationRetryCount;
-      if (count >= PAGE_TURN_PREPARATION_RETRY_LIMIT) {
+        !readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) || !this.canTurnPage(),
+      take: (): ReaderPageTurnDirection | undefined => this.pageTurnPreparationQueue.shift(),
+      ready: (direction: ReaderPageTurnDirection): boolean => this.preparedPageTurn(direction) !== undefined,
+      prepare: (direction: ReaderPageTurnDirection): ReaderPagePreparationAttempt => {
+        const target = this.adjacentPageTurnTarget(direction);
+        if (target === undefined && this.chapter !== undefined && this.isUnknownCatalogEdge(this.chapter.chapterIndex, direction)) {
+          this.requestCatalogForTurn(); return 'wait';
+        }
+        if (target === undefined && direction === 'previous' &&
+          this.knownPageTurnBoundary(direction) === undefined && this.startPreviousPagePreparationDiscovery()) return 'wait';
+        return target === undefined ? 'abandon' : this.beginPageTurnPreparation(direction, target);
+      },
+      idle: (): void => this.scheduleBookTurnTextureRefresh(),
+      begun: (): void => this.cancelPageTurnPreparationRetry(),
+      retry: (direction: ReaderPageTurnDirection): void => this.retryPageTurnPreparation(direction),
+    });
+  }
+
+  private retryPageTurnPreparation(direction: ReaderPageTurnDirection): void {
+    // Re-queue at the head so this direction is retried on a backoff timer
+    // instead of being silently dropped — cold entry can pop a direction
+    // while the initial restore still owns the measurement lane.
+    this.pageTurnPreparationQueue.unshift(direction);
+    if (this.pageTurnPreparationRetryTimer >= 0) {
+      return;
+    }
+    const count = this.pageTurnPreparationRetryCount;
+    if (count >= PAGE_TURN_PREPARATION_RETRY_LIMIT) {
+      this.pageTurnPreparationQueue = [];
+      this.pageTurnPreparationRetryCount = 0;
+      return;
+    }
+    const delay = Math.min(
+      PAGE_TURN_PREPARATION_RETRY_MAX_MS,
+      PAGE_TURN_PREPARATION_RETRY_BASE_MS * Math.pow(2, count),
+    );
+    this.pageTurnPreparationRetryCount = count + 1;
+    const generation = this.pageTurnGeneration;
+    const token = this.chapterSelectionToken;
+    this.pageTurnPreparationRetryTimer = setTimeout((): void => {
+      this.pageTurnPreparationRetryTimer = -1;
+      if (this.pageTurnGeneration !== generation || this.chapterSelectionToken !== token) {
         this.pageTurnPreparationQueue = [];
         this.pageTurnPreparationRetryCount = 0;
         return;
       }
-      const delay = Math.min(
-        PAGE_TURN_PREPARATION_RETRY_MAX_MS,
-        PAGE_TURN_PREPARATION_RETRY_BASE_MS * Math.pow(2, count),
-      );
-      this.pageTurnPreparationRetryCount = count + 1;
-      const generation = this.pageTurnGeneration;
-      const token = this.chapterSelectionToken;
-      this.pageTurnPreparationRetryTimer = setTimeout((): void => {
-        this.pageTurnPreparationRetryTimer = -1;
-        if (this.pageTurnGeneration !== generation || this.chapterSelectionToken !== token) {
-          this.pageTurnPreparationQueue = [];
-          this.pageTurnPreparationRetryCount = 0;
-          return;
-        }
-        this.drainPageTurnPreparationQueue();
-      }, delay);
-      return;
-    }
+      this.drainPageTurnPreparationQueue();
+    }, delay);
   }
 
   private cancelPageTurnPreparationRetry(): void {

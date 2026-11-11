@@ -1,3 +1,4 @@
+import { measureReaderControlMinimum, type ReaderControlHomeFormProfile, type ReaderControlMeasuredProfile } from './ReaderControlMinimumMeasurement';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
@@ -152,35 +153,6 @@ import { readerControlThemeStyle, type ReaderControlThemeStyle } from './ReaderC
 
 export type { ReaderControlPage } from './ReaderControlRouting';
 type ReaderQuickAction = 'search' | 'autoPage' | 'replace';
-
-interface ReaderControlHomeFormProfile {
-  chapterTitleHeight: number;
-  chapterRowHeight: number;
-  progressHeight: number;
-  percentWidth: number;
-  countWidth: number;
-  actionLabelHeight: number;
-  actionHeight: number;
-  minimumHeight: number;
-  minWidth: number;
-  fits: boolean;
-}
-
-interface ReaderControlMeasuredProfile {
-  module: ReaderControlContentModule;
-  identity: string;
-  metricsRevision: number;
-  widths: ReaderControlCandidateWidths;
-  playbackData: ReaderControlPlaybackProfileData | undefined;
-  quick: ReaderControlHomeFormProfile | undefined;
-  full: ReaderControlHomeFormProfile | undefined;
-  navigationLabelHeight: number;
-  navigationHeight: number;
-  titleHeight: number;
-  collapseLabelHeight: number;
-  collapseWidth: number;
-  headerHeight: number;
-}
 
 class ReaderControlFrameCallback extends FrameCallback {
   private callback: (time: number) => void;
@@ -805,60 +777,11 @@ export struct ReaderControlPanel {
   private measureControlMinimum(module: ReaderControlContentModule, widths: ReaderControlCandidateWidths,
     key: string, delegate: ReaderControlModuleMeasurer | undefined,
     profileReader?: ReaderControlPlaybackProfileReader): ReaderControlCandidateMinimum | undefined {
-    const context = this.getUIContext();
-    const navigationCellWidth = Math.max(1, (widths.panelWidthVp - 24 - 9 - TOK_BORDER_W * 2 - 12) / 4);
-    let navigationLabelHeight = 15;
-    for (const label of ['目录', '朗读', '界面', '设置']) {
-      const extent = measureReaderControlText(context, label,
-        TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, navigationCellWidth, 'wrap');
-      if (extent === undefined) return undefined;
-      navigationLabelHeight = Math.max(navigationLabelHeight, extent.heightVp);
-    }
-    const collapseStyle = this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER : TYPE_READER_CONTROL_COLLAPSE_UI;
-    const titleStyle = this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER : TYPE_READER_CONTROL_HEADER_UI;
-    const collapse = measureReaderControlText(context, '收起', collapseStyle, widths.fullContentWidthVp);
-    if (collapse === undefined) return undefined;
-    const collapseWidth = Math.max(40, collapse.singleLineWidthVp + 20);
-    const title = measureReaderControlText(context, this.contentTitle(), titleStyle,
-      Math.max(1, widths.fullContentWidthVp - collapseWidth - 34));
-    if (title === undefined) return undefined;
-    const titleHeight = Math.max(this.headerInter() ? 17 : 20, title.heightVp);
-    const collapseHeight = Math.max(this.headerInter() ? 12 : 14, collapse.heightVp);
-    const headerHeight = Math.max(30, titleHeight + (this.headerInter() ? 13 : 10),
-      collapseHeight + (this.headerInter() ? 14 : 12) + 4);
-    const navigationHeight = 80 + navigationLabelHeight - 15;
-    const automatic = measureReaderControlText(context, 'A', TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL,
-      READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2);
-    if (automatic === undefined) return undefined;
-    const automaticHeight = Math.max(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE, automatic.heightVp);
-    const automaticWidth = Math.max(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE, automatic.singleLineWidthVp);
-    const quick = module === 'home' ? this.measureHomeForm(widths.quickContentWidthVp) : undefined;
-    const full = module === 'home' ? this.measureHomeForm(widths.fullContentWidthVp) : undefined;
-    let minimum: ReaderControlModuleMinimum | undefined;
-    if (module === 'home') {
-      if (quick === undefined || full === undefined) return undefined;
-      minimum = { module: 'home', quick: { heightVp: quick.minimumHeight, minWidthVp: quick.minWidth, fits: quick.fits },
-        full: { heightVp: full.minimumHeight, minWidthVp: full.minWidth, fits: full.fits } };
-    } else {
-      minimum = delegate?.(widths, key);
-      if (minimum === undefined || minimum.module !== module) return undefined;
-    }
-    // The brightness rail shares the same Quick vertical budget. Its real
-    // cap label must fit without shortening the original actionable track.
-    const brightnessMinimum = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH + READER_CONTROL_BRIGHTNESS_ICON_SIZE / 2 +
-      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE / 2 + 2 * READER_CONTROL_BRIGHTNESS_CONTROL_GAP +
-      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE + automaticHeight - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE;
-    minimum = { module: minimum.module,
-      quick: { heightVp: Math.max(minimum.quick.heightVp, brightnessMinimum),
-        minWidthVp: minimum.quick.minWidthVp, fits: minimum.quick.fits && automaticWidth <= READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - 2 },
-      full: minimum.full };
-    const profile: ReaderControlMeasuredProfile = { module: module, identity: this.minimumIdentity,
-      metricsRevision: this.minimumMetricsRevision, widths: widths,
-      playbackData: module === 'tts' || module === 'autoPage' ? profileReader?.(key) : undefined,
-      quick: quick, full: full,
-      navigationLabelHeight: navigationLabelHeight, navigationHeight: navigationHeight,
-      titleHeight: titleHeight, collapseLabelHeight: collapseHeight,
-      collapseWidth: collapseWidth, headerHeight: headerHeight };
+    const measured = measureReaderControlMinimum({ context: this.getUIContext(), headerInter: this.headerInter(),
+      title: this.contentTitle(), identity: this.minimumIdentity, metricsRevision: this.minimumMetricsRevision,
+      measureHomeForm: (width: number): ReaderControlHomeFormProfile | undefined => this.measureHomeForm(width) },
+      module, widths, key, delegate, profileReader);
+    if (measured === undefined) return undefined;
     const ticket = key.slice(0, key.lastIndexOf('|'));
     if (ticket !== this.minimumProfileTicket) {
       const selected = this.minimumProfiles.get(this.minimumKey);
@@ -866,13 +789,8 @@ export struct ReaderControlPanel {
       if (selected !== undefined) this.minimumProfiles.set(this.minimumKey, selected);
       this.minimumProfileTicket = ticket;
     }
-    this.minimumProfiles.set(key, profile);
-    const result: ReaderControlCandidateMinimum = { key: key, widths: widths, minimum: minimum,
-      chrome: { quickReserveVp: 29 + 18 + navigationHeight + 13,
-        fullReserveVp: 19 + headerHeight + 8 + 13, navigationHeightVp: navigationHeight,
-        headerHeightVp: headerHeight, brightnessAutoHeightVp: automaticHeight,
-        brightnessAutoWidthVp: automaticWidth } };
-    return result;
+    this.minimumProfiles.set(key, measured.profile);
+    return measured.candidate;
   }
 
   private selectedMinimumProfile(): ReaderControlMeasuredProfile | undefined {

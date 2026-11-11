@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
@@ -52,7 +53,7 @@ const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
-const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const runtimeSource=readReaderExperienceFixture(runtimeFile,'utf8'), abilitySource=readReaderExperienceFixture(abilityFile,'utf8');
 const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
@@ -159,7 +160,7 @@ const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
-const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const runtimeSource=readReaderExperienceFixture(runtimeFile,'utf8'), abilitySource=readReaderExperienceFixture(abilityFile,'utf8');
 const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
@@ -275,7 +276,7 @@ const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
-const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const runtimeSource=readReaderExperienceFixture(runtimeFile,'utf8'), abilitySource=readReaderExperienceFixture(abilityFile,'utf8');
 const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
@@ -303,7 +304,7 @@ const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({
 // Execute all three production guards; the disabled reader cannot even query a
 // provider, and its producer must discard an old RAM handoff before returning.
 const readingFile=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
-const readingTree=ts.createSourceFile(virtualFilePath('ReaderOptionalRetained.ets'),readFileSync(readingFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const readingTree=ts.createSourceFile(virtualFilePath('ReaderOptionalRetained.ets'),readReaderExperienceFixture(readingFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const dto=Object.fromEntries(['ReaderRetainedPresentation','ReaderMaterializedChapterContext'].map(name=>{
   const node=readingTree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(readingTree)===name);
   assert.ok(node,name);

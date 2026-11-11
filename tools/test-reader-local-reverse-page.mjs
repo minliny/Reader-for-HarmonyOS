@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
 const selected=selectContractCases({'reverse-assembly':{description:'Actual bounded reverse page metrics, Unicode, exact adjacency, partial edges and stale measurement',resources:[]},'native-title-ownership':{description:'Actual measurement clear/take ownership for title/body plus old-call disposal negative',resources:[]},'retained-lifecycle':{description:'Actual retain/restore and both queued neighbours preserve original request and committed progress',resources:[]}});
 async function run(id){
@@ -15,8 +16,8 @@ const style=await import('../entry/src/main/ets/features/reading/ui/ReaderAppear
 // Execute production page assembly against explicit native metric receipts.
 // These fixtures prove admission/ownership, not platform shaping or pixels.
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
-  readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
+const text = readReaderExperienceFixture(source, 'utf8').replace('interface DeferredReadingImagePixels {',
+  readReaderExperienceFixture(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
   return new Function('ReadingSurfaceLayoutMap', stripTypeScriptTypes(text.slice(text.indexOf(`class ${name} {`), text.indexOf(next, text.indexOf(`class ${name} {`)))) + `; return ${name};`)(ReadingSurfaceLayoutMap);
 }
@@ -25,7 +26,7 @@ const MeasuredReadingLine = declaration('MeasuredReadingLine', 'class PhysicalRe
 const PhysicalReadingPage = declaration('PhysicalReadingPage', '/** Immutable display inputs');
 const PreviousChapterMeasurement = declaration('PreviousChapterMeasurement', 'class CoreReadingAnchor');
 const ParagraphRange = declaration('ParagraphRange', 'class MeasurementParagraph');
-const nativeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
+const nativeSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets', import.meta.url), 'utf8');
 const heightSource = nativeSource.slice(nativeSource.indexOf('export function readerNativeParagraphHeight'), nativeSource.indexOf('/** A viewport'));
 const height = new Function('graphicsText', stripTypeScriptTypes(heightSource).replace('export ', '') + ';return readerNativeParagraphHeight;')({ RectWidthStyle: { TIGHT: 0 }, RectHeightStyle: { TIGHT: 0 } });
 class Controller { getLayoutManager() { return this.manager; } }
@@ -264,7 +265,7 @@ if(id==='reverse-assembly'){
 }else if(id==='native-title-ownership'){
 // Native node allocation is the platform boundary; measure/clear/take below
 // execute the complete production owner with its actual node/controller lists.
-const ownershipSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
+const ownershipSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
 const ownershipClass = stripTypeScriptTypes(ownershipSource.replace(/^import.*$/gm, '').replace(/^export /gm, ''));
 function nativeOwnershipFixture(paragraphs, endScalar, options = {}) {
   const o = create(paragraphs, endScalar, options);

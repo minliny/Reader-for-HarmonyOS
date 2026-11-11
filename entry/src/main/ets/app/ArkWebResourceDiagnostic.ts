@@ -25,13 +25,24 @@ const ORIGIN = 'https://93.184.216.34';
 const FIRST_ID = 7600001;
 const SECOND_ID = 7600002;
 
+/** The native WebResourceResponse is constructed by the ETS host. This TS
+ * diagnostic only needs the response-writing port, never an ArkUI global. */
+export interface ArkWebDiagnosticResponse {
+  setResponseCode(code: number): void;
+  setReasonMessage(message: string): void;
+  setResponseMimeType(mimeType: string): void;
+  setResponseData(data: string): void;
+  setResponseIsReady(ready: boolean): void;
+}
+
 /** Fixed in-memory fixtures for the existing DEBUG pilot. Requests still go
  * through the real ArkWeb kernel and production executor. The provider never
  * forwards network traffic, accepts a user URL, or writes a source/book. */
-export class ArkWebResourceDiagnostic {
+export class ArkWebResourceDiagnostic<Response extends ArkWebDiagnosticResponse> {
+  private readonly createResponse: () => Response;
   private prefix: string = '';
   private records: DiagnosticRecord[] = [];
-  private delayed: Map<number, WebResourceResponse> = new Map<number, WebResourceResponse>();
+  private delayed: Map<number, Response> = new Map<number, Response>();
   private intercepted: Set<string> = new Set<string>();
   private interceptionWaiter: (() => void) | undefined = undefined;
   private waitTimer: number | undefined = undefined;
@@ -40,6 +51,7 @@ export class ArkWebResourceDiagnostic {
   private runNumber: number = 0;
   private documentBody: string = '';
   private documentBodyBase64: string = '';
+  constructor(createResponse: () => Response) { this.createResponse = createResponse; }
   private readonly observer = (event: ArkWebDiagnosticEvent): void => {
     const admittedJob = event.requestId === FIRST_ID || event.requestId === SECOND_ID;
     const controlledResource = event.url !== undefined && this.prefix.length > 0 && event.url.startsWith(this.prefix);
@@ -56,9 +68,9 @@ export class ArkWebResourceDiagnostic {
       (event.url === undefined ? undefined : this.documentLabel(event.url)), event.at, undefined, currentDocument);
   };
 
-  readonly provide = (url: string): WebResourceResponse => {
+  readonly provide = (url: string): Response => {
     if (url === 'about:blank') return null!;
-    const response = new WebResourceResponse();
+    const response = this.createResponse();
     response.setResponseCode(403);
     response.setReasonMessage('Diagnostic fixture only');
     response.setResponseMimeType('text/plain');
@@ -181,7 +193,7 @@ export class ArkWebResourceDiagnostic {
 
   private params(body: string, pattern: string): JsonObject {
     this.documentBody = body;
-    this.documentBodyBase64 = new util.Base64Helper().encodeToStringSync(new util.TextEncoder('utf-8').encode(body));
+    this.documentBodyBase64 = new util.Base64Helper().encodeToStringSync(new util.TextEncoder('utf-8').encodeInto(body));
     const encoded = JSON.stringify(pattern);
     return {
       document: { kind: 'html', body, baseUrl: `${this.prefix}page` },
@@ -333,7 +345,7 @@ export class ArkWebResourceDiagnostic {
     if (this.waitTimer !== undefined) clearTimeout(this.waitTimer);
     this.waitTimer = undefined;
     this.interceptionWaiter = undefined;
-    this.delayed.forEach((response: WebResourceResponse, timer: number): void => {
+    this.delayed.forEach((response: Response, timer: number): void => {
       clearTimeout(timer);
       try { response.setResponseIsReady(true); } catch (_) {}
     });

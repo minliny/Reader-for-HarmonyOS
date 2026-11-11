@@ -154,7 +154,7 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
       this.current(current);
       packer = image.createImagePacker();
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'open', resource: 'packer' });
-      const encoded = await packer.packing(output, { format: 'image/jpeg', quality: 90, bufferSize: MAX_BYTES });
+      const encoded = await packer.packToData(output, { format: 'image/jpeg', quality: 90, bufferSize: MAX_BYTES });
       this.current(current);
       const result = new Uint8Array(encoded);
       if (result.length < 1 || result.length > MAX_BYTES) throw new Error('MANGA_GRAPHICS_OUTPUT_BUDGET');

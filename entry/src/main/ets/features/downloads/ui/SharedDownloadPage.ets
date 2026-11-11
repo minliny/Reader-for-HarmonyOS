@@ -181,6 +181,7 @@ export struct SharedDownloadPage {
 
   aboutToAppear(): void {
     this.presentationGeneration += 1;
+    this.measurements.clear();
     this.storageDockShape = undefined;
     this.selectionDockShape = undefined;
     this.mountedIdentity = this.presentationIdentity;
@@ -223,6 +224,7 @@ export struct SharedDownloadPage {
     this.chapterScrollRestorePending = false;
     this.chapterScrollRestoreScheduled = false;
     this.mounted = false;
+    this.measurements.clear();
     this.cancelManagingScroll();
     this.overlayChromeClaimed = false;
     if (restoreChrome) ReaderWindowCoordinator.requestAppChrome();
@@ -354,7 +356,7 @@ export struct SharedDownloadPage {
     PageBackBar({ variant: 'download', title: this.detail() === undefined ? '下载管理' : '章节下载',
       backFocusId: this.focusKey('page-back'),
       backLabel: this.managing ? '退出管理' : this.detailKey.length > 0 ? '返回书籍列表' : '返回',
-      onBack: (): void => this.back(), onHeightChange: (height: number): void => this.recordHeaderHeight(height),
+      onBack: (): void => this.back(), onHeightChange: this.headerHeightChangeHandler(),
       trailing: (): void => { this.manageHeaderAction(); },
     });
   }
@@ -2554,10 +2556,10 @@ export struct SharedDownloadPage {
     return DOWNLOAD_VISUAL.headerTopGap;
   }
   private resolvedHeaderHeight(): number {
-    return this.measurements.read('download:header', DOWNLOAD_HEADER_HEIGHT);
+    return this.measurements.readForGeneration('download:header', this.measurementGeneration(), DOWNLOAD_HEADER_HEIGHT);
   }
   private resolvedDockHeight(): number {
-    return this.measurements.read('download:dock',
+    return this.measurements.readForGeneration('download:dock', this.measurementGeneration(),
       DOWNLOAD_VISUAL.dockPaddingY * 2 + DOWNLOAD_VISUAL.headerIconHeight + DOWNLOAD_VISUAL.borderWidth * 2);
   }
   private headerContentGap(): number {
@@ -2670,6 +2672,17 @@ export struct SharedDownloadPage {
   }
   private measurementGeneration(): number {
     return Math.max(0, this.readerWindowMetricsRevision);
+  }
+  private headerHeightChangeHandler(): (height: number) => void {
+    const presentation = this.presentationGeneration;
+    const layout = this.measurementGeneration();
+    const detail = this.detailKey;
+    const managing = this.managing;
+    return (height: number): void => {
+      if (!this.presentationIsCurrent(presentation) || layout !== this.measurementGeneration() ||
+        detail !== this.detailKey || managing !== this.managing) return;
+      this.recordHeaderHeight(height);
+    };
   }
   private recordHeaderHeight(height: number): void {
     if (!Number.isFinite(height) || height <= 0) return;
