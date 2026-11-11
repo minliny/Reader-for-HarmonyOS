@@ -50,6 +50,8 @@ Stage 若进入生产，优先改成现有 `ReaderControlRuntime` 的窄适配�
 
 ## 实际交付状态
 
+当前补充：最终0511的正式inspect实际FAIL（exit3，target-sqlite-version-unresolved），新包未安装、原VM仍a443。后续新范围只读诊断定位当前lineage日志输入为空，不构成正式准入。新包原生像素仍未执行；19项矩阵保持逐项证据边界。最新结论和可执行退出条件见[全量审计报告](/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-full-audit-20261111.md)与[分批修复方案](/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-remediation-plan-20261111.md)。
+
 P1四个职责seam已抽取；LocalReadingExperience从15131行降至14746行，Panel从2561行降至2479行。六个必要局部case通过，其中两个原case独立叶子重审后经索引通过；未执行的旧case不追认为通过。Stage入口三个索引case、TTS单项和页面navigation索引也通过。
 
 20missing及32deprecated已在成功ArkTS构建中归零，警告374→322；313throws按边界登记，7模块能力及2native提示保留。包含最后capacity修复的最终规范候选`0.2.0.DEV.0511f567914d`已通过编译和指定证书验签，2153应用输入零不匹配，实际警告仍322。代码构建提交为`def50fbc`；后续文档绑定不改变应用输入。最后源码/规范签名身份由工作区`.local/framework-closure-implementation-20261111/candidate.json`及对应不可变HAPmanifest登记。新包未安装，物理机、完整产品回归和用户验收不由这些分项PASS替代。

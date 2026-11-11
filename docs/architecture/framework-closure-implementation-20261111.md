@@ -2,6 +2,8 @@
 
 2026-11-11。范围是阅读职责减法、Stage取舍、平台警告与页面宿主合同，不重开视觉设计或改写分页/手势算法。
 
+当前交付状态：最终 `0511` 的唯一正式安装前 inspect 实际 `FAIL / exit 3 / target-sqlite-version-unresolved`；安装、启动、UI取证均未执行，原VM仍为a443。随后另一次只读诊断取得 `lineage-log-empty`：按PID及宽Reader日志均返回0字节，header无版本；较后marker见WAL非空，不能追认前一命令或旧inspect的具体原因。HDC客户端exit0不证明远端hilog退出成功，空日志机制仍未建立。两次范围均已关闭，不自动续期。详见[全量审计报告](/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-full-audit-20261111.md)及[分批修复方案](/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-remediation-plan-20261111.md)。
+
 | 批次 | 实际结果 | 证据边界 |
 | --- | --- | --- |
 | P0 | 生产/参考职责及19项行为矩阵已记录 | 后续采用参考分支 |
@@ -10,7 +12,7 @@
 | P3 | 20missing和32deprecated清零；TTS降级/精确释放、诊断失败边界修复 | 成功编译374→322 warnings；313throws按边界登记，7capability和2native提示保留 |
 | P4 | 宿主/geometry owner/测量代次/预算合同与旧代回调修复 | 10directScaffold、14Standard调用/13文件、13resolver消费者；16layout文件逐项保留理由；方法/清单/navigation索引通过 |
 | P5 | 新停态数据两章均missing、无version/candidate，与当前0/2一致；旧scope的Host6个登记文件完整；负缓存恢复、R1/R2竞态及无压力capacity回收已修 | 克隆Linuxdebug三方法观察，目标事实pre/post不变；恢复性17组与capacity17组分别有回执，capacity另有2组SDK通过；历史撤销者/时间未建立 |
-| P6 | 正式发布/整体验收未触发；本轮最终签名构建已绑定 | 最后capacity修复已进入规范候选；安装、完整产品回归、物理机和用户验收未执行 |
+| P6 | 正式发布/整体验收未触发；本轮最终签名构建已绑定；选中inspect实际FAIL | 最后capacity修复已进入规范候选；准入失败后安装/启动/新包像素均未执行；完整产品回归、物理机和用户验收未执行 |
 
 新停态数据在独立Linuxdebug Runtime打开前，目标书的head/retention/receipt已均为0，3个manifest与3个evicted身份集合相同；本次bootstrap及三方法观察前后的目标事实未变，不能据此声明全库字节未变，也不等同安装中release或当前进程的直接查询。这些事实与当前0/2一致；既有Host文件不能替代Core有效版本准入。历史0/2的原因、撤销者与撤销时间仍未建立。漫画冷续读因无有效candidate保持NOT_RUN，不以标题入口、清理或重新下载绕过。旧38/new47不具公平内容差分条件，本轮未虚构两包对照PASS，也未改Core计数/迁移。
 

@@ -21,8 +21,8 @@ const regular = path => {
 export function parseDiagnosticArgs(argv) {
   if (argv.length === 0 || (argv.length === 1 && argv[0] === '--list')) return { list: true };
   const names = new Set(['--run', '--target', '--hdc', '--server-key', '--vm-log', '--manifest',
-    '--authorization', '--output-dir', '--include-fallbacks']);
-  const flags = new Set(['--run', '--include-fallbacks']);
+    '--authorization', '--output-dir', '--include-fallbacks', '--lineage-only']);
+  const flags = new Set(['--run', '--include-fallbacks', '--lineage-only']);
   const result = {};
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
@@ -50,7 +50,7 @@ export function parseDiagnosticArgs(argv) {
 export function validateDiagnosticAuthorization(auth, options, binding, now = Date.now()) {
   const require = (condition, code) => { if (!condition) throw fixedError(code); };
   const reference = value => digest(value).slice(0, 12);
-  require(auth?.schema === 'reader.storage-admission-diagnostic-authorization.v1' &&
+  require(auth?.schema === 'reader.storage-admission-diagnostic-authorization.v2' &&
     auth.status === 'AUTHORIZED' && auth.action === 'READ_ONLY_STORAGE_ADMISSION_DIAGNOSTIC_ONCE' &&
     auth.scopeClosed === false && typeof auth.approvalReference === 'string' && auth.approvalReference.length >= 8,
   'new-explicit-readonly-authorization-required');
@@ -58,7 +58,7 @@ export function validateDiagnosticAuthorization(auth, options, binding, now = Da
     auth.serverRef === reference(options['--server-key'].replace(/^::ffff:/, '').replace(/^\[|\]$/g, '')),
   'authorization-target-mismatch');
   require(auth.manifestSha256 === binding.manifestSha256 && auth.hapSha256 === binding.hapSha256 &&
-    auth.hdcSha256 === binding.hdcSha256,
+    auth.hdcSha256 === binding.hdcSha256 && auth.ledgerNamespaceRef === binding.ledgerNamespaceRef,
     'authorization-candidate-mismatch');
   require(Number.isSafeInteger(auth.incumbent?.uid) && auth.incumbent.uid > 0 &&
     /^\d+\.\d+\.\d+\.(?:DEV|RC|REL)\.[0-9a-f]{12}$/.test(auth.incumbent.appBuildId ?? '') &&
@@ -69,7 +69,9 @@ export function validateDiagnosticAuthorization(auth, options, binding, now = Da
   require(limits?.businessQueries === 9 && limits.preflightQueries === 10 && limits.appStarts === 0 &&
     limits.appStops === 0 && limits.installs === 0 && limits.databaseCopies === 0 && limits.sql === 0 &&
     limits.intentReads === 0, 'authorization-limits-mismatch');
-  require(auth.includeFallbacks === (options['--include-fallbacks'] === true), 'authorization-fallback-mismatch');
+  require(auth.observation?.includeFallbacks === (options['--include-fallbacks'] === true) &&
+    auth.observation?.lineageOnly === (options['--lineage-only'] === true) && auth.observation?.headerBytes === false,
+    'authorization-observation-scope-mismatch');
   const vm = auth.vmConfirmation, time = Date.parse(vm?.confirmedAt);
   require(vm?.vmName && /^[0-9a-f]{64}$/.test(vm.instanceRef ?? '') && vm.targetRef === auth.targetRef &&
     vm.vmLog === options['--vm-log'] && Number.isFinite(time) && time <= now && now - time <= 120_000,
@@ -77,13 +79,13 @@ export function validateDiagnosticAuthorization(auth, options, binding, now = Da
 }
 
 async function runtimePorts() {
-  const [transport, lease, evidence, pipeline, diagnostic] = await Promise.all([
+  const [transport, lease, evidence, pipeline, diagnostic, boundary] = await Promise.all([
     import('../scripts/lib/harmony-toolchain.mjs'), import('./reader-hdc-lease.mjs'),
     import('../scripts/lib/hap-delivery-evidence.mjs'), import('../scripts/hap-pipeline.mjs'),
-    import('../scripts/lib/hap-storage-admission-diagnostics.mjs'),
+    import('../scripts/lib/hap-storage-admission-diagnostics.mjs'), import('../scripts/lib/hap-diagnostic-transport.mjs'),
   ]);
   return { spawn: transport.portableSpawnSync, ...lease, targetReadiness: evidence.targetReadiness,
-    parseBundleMetadata: pipeline.parseBundleMetadata, ...diagnostic };
+    parseBundleMetadata: pipeline.parseBundleMetadata, ...diagnostic, ...boundary };
 }
 
 // A receipt is a one-use operator guard, not an independent grant of permission.
@@ -96,10 +98,19 @@ export async function runDiagnosticCli(argv, injected = {}) {
   if (options.list) {
     stdout(JSON.stringify({ status: 'NOT_RUN', action: 'read-only-storage-admission-diagnostic',
       deviceQueries: 0, requiresNewAuthorization: true, businessQueryMaximum: 9,
-      preflightQueryMaximum: 10, installAuthority: false }));
+      preflightQueryMaximum: 10, installAuthority: false, formalAuthority: 'RETIRED',
+      scopes: ['explicit --lineage-only'], retiredScopes: ['header bytes and old default header selection'] }));
     return 0;
   }
-  let claimed = false, outputCreated = false, ports, lease, owner, leaseRoot;
+  // A selected header check has no supported safe reader. Fail before tool
+  // discovery, consent consumption, leases or even read-only device queries.
+  if (options['--lineage-only'] !== true) {
+    stdout(JSON.stringify({ status: 'FAIL_INCOMPLETE_HEADER', reason: 'header-safety-boundary-unavailable',
+      headerAction: 'NOT_RUN_SAFETY_BOUNDARY', authorizationConsumed: false, scopeClosed: false,
+      preflightQueries: 0, businessQueries: 0, installAuthority: false }));
+    return 1;
+  }
+  let claimed = false, outputCreated = false, ports, lease, owner, leaseRoot, signalScope;
   let preflightQueries = 0, businessQueries = 0;
   const preflight = [];
   const output = resolve(options['--output-dir']);
@@ -123,12 +134,13 @@ export async function runDiagnosticCli(argv, injected = {}) {
     }
     const hapPath = resolve(dirname(options['--manifest']), artifact.path); regular(hapPath);
     if (digest(readFileSync(hapPath)) !== artifact.sha256) throw fixedError('candidate-hap-content-mismatch');
-    const binding = { manifestSha256: digest(manifestBytes), hapSha256: artifact.sha256, hdcSha256: digest(hdcBytes) };
+    const boundary = await import('../scripts/lib/hap-diagnostic-transport.mjs');
+    const ledgerRoot = resolve(injected.claimLedgerRoot ?? boundary.diagnosticLedgerRoot());
+    const binding = { manifestSha256: digest(manifestBytes), hapSha256: artifact.sha256, hdcSha256: digest(hdcBytes),
+      ledgerNamespaceRef: boundary.diagnosticNamespaceRef(ledgerRoot) };
     const auth = JSON.parse(readFileSync(options['--authorization'], 'utf8'));
     validateDiagnosticAuthorization(auth, options, binding, injected.now?.() ?? Date.now());
     if (existsSync(output)) throw fixedError('fresh-output-directory-required');
-    const ledgerRoot = resolve(injected.claimLedgerRoot ?? resolve(process.env.READER_LOCK_DIR || tmpdir(),
-      'reader-storage-admission-diagnostic-claims'));
     mkdirSync(ledgerRoot, { recursive: true, mode: 0o700 });
     const ledgerStat = lstatSync(ledgerRoot);
     if (!ledgerStat.isDirectory() || ledgerStat.isSymbolicLink() || (ledgerStat.mode & 0o077) !== 0) {
@@ -136,7 +148,7 @@ export async function runDiagnosticCli(argv, injected = {}) {
     }
     // The grant identity is independent of filename, JSON whitespace, output
     // directory and refreshed VM confirmation. Copying a receipt is no grant.
-    const grantDigest = digest(JSON.stringify([auth.approvalReference, auth.targetRef, auth.serverRef,
+    const grantDigest = digest(JSON.stringify([binding.ledgerNamespaceRef, auth.approvalReference, auth.targetRef, auth.serverRef,
       auth.manifestSha256, auth.hapSha256]));
     // Exclusive persistent claim precedes SDK imports, lock discovery and all device IO.
     const claim = { status: 'CONSUMED', startedAt: new Date().toISOString(), grantDigest, ...binding };
@@ -145,22 +157,42 @@ export async function runDiagnosticCli(argv, injected = {}) {
     mkdirSync(output, { mode: 0o700 }); outputCreated = true;
     ports = { ...await runtimePorts(), ...injected };
     const server = ports.canonicalServerKey(options['--server-key']), target = options['--target'];
+    const tool = ports.createNativeToolGuard(options['--hdc'], binding.hdcSha256);
+    signalScope = injected.signalScope ?? ports.createDiagnosticSignalScope();
+    const assertActive = () => { if (signalScope.signal.aborted) throw fixedError('diagnostic-cancelled'); };
     leaseRoot = resolve(process.env.READER_HDC_LEASE_ROOT ?? resolve(process.env.READER_LOCK_DIR || tmpdir(), 'reader-hdc-target-leases'));
     owner = { token: randomUUID(), pid: process.pid, ppid: process.ppid, agentId: 'storage-admission-diagnostic',
       serverKey: server, serverRef: ports.targetRef(server), target, targetRef: ports.targetRef(target),
       command: ['read-only-storage-admission-diagnostic'], startedAt: new Date().toISOString() };
     lease = await ports.acquireLease({ root: leaseRoot, target, targetRefValue: ports.targetRef(target),
       lockRefValue: ports.targetRef(server), waitMs: 0, owner });
-    const execute = args => {
-      try { return ports.spawn(options['--hdc'], ['-s', server, ...args], {
+    // The real readiness helper is synchronous. Its current bounded read-only
+    // observation finishes before pending JS signals are drained; no BMS or
+    // business query starts after that cancellation is processed.
+    const executeSync = args => {
+      assertActive();
+      try { return ports.spawnCheckedSync(tool, ['-s', server, ...args], {
         encoding: null, timeout: 10_000, maxBuffer: 1024 * 1024, killSignal: 'SIGKILL', cwd: repo,
-      }); } catch (error) { return { status: null, error, stdout: '', stderr: '' }; }
+      }); } catch (error) { return { status: null, error, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }; }
     };
     const before = (category, args) => {
       if (++preflightQueries > 10) throw fixedError('preflight-query-budget-exceeded');
-      const result = execute(args), meta = ports.summarizeProbeResult(result); preflight.push({ category, ...meta });
+      const remote = args.includes('shell'), nonce = remote ? ports.diagnosticNonce() : null;
+      const actualArgs = remote ? [...args.slice(0, -1), ports.frameRemoteCommand(args.at(-1), nonce)] : args;
+      const raw = executeSync(actualArgs), result = remote ? ports.decodeRemoteResult(raw, nonce) : raw;
+      const meta = ports.summarizeProbeResult(result); preflight.push({ category, ...meta });
       if (!['ok', 'empty'].includes(meta.outcome)) throw fixedError('preflight-command-failed');
-      return String(result.stdout ?? '').trim();
+      return Buffer.from(result.stdout ?? '').toString('utf8').trim();
+    };
+    const executeRemote = async (command, sandbox = false) => {
+      await signalScope.settleSignals(); assertActive();
+      if (++businessQueries > 9) throw fixedError('business-query-budget-exceeded');
+      const nonce = ports.diagnosticNonce();
+      let raw;
+      try { raw = await ports.spawnChecked(tool, ['-s', server, '-t', target, 'shell', ...(sandbox ? ['-b', bundle] : []),
+        ports.frameRemoteCommand(command, nonce)], { timeout: 10_000, maxBuffer: 1024 * 1024, cwd: repo, signal: signalScope.signal }); }
+      catch (error) { raw = { status: null, error, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }; }
+      return ports.decodeRemoteResult(raw, nonce);
     };
     const connected = before('target-discovery', ['list', 'targets', '-v']).split(/\r?\n/)
       .filter(line => line.includes('Connected') && line.split(/\s+/)[0] === target);
@@ -170,7 +202,8 @@ export async function runDiagnosticCli(argv, injected = {}) {
       query: command => before('target-readiness', ['-t', target, 'shell', command]) }); }
     catch { throw fixedError('target-readiness-failed'); }
     if (readiness.status !== 'PASS') throw fixedError('target-readiness-failed');
-    const bm = execute(['-t', target, 'shell', `bm dump -n ${bundle}`]); businessQueries++;
+    await signalScope.settleSignals(); assertActive();
+    const bm = await executeRemote(`bm dump -n ${bundle}`);
     const bmSummary = ports.summarizeProbeResult(bm);
     preflight.push({ category: 'bundle-metadata', ...bmSummary });
     if (bmSummary.outcome !== 'ok') throw fixedError('bundle-metadata-query-failed');
@@ -184,19 +217,25 @@ export async function runDiagnosticCli(argv, injected = {}) {
         installed.appIdSha256 !== auth.incumbent.appIdSha256 || installed.updateTime !== auth.incumbent.updateTime) {
       throw fixedError('installed-bundle-identity-changed');
     }
-    const report = ports.diagnoseStorageAdmission({ bundleName: bundle, uid: installed.uid,
+    const report = await ports.diagnoseStorageAdmission({ bundleName: bundle, uid: installed.uid,
       candidateStorage: artifact.embeddedCoreNapi.storageCompatibility, includeFallbacks: options['--include-fallbacks'] === true,
-      probeQuery: ({ command, sandbox }) => {
-        if (++businessQueries > 9) throw fixedError('business-query-budget-exceeded');
-        return execute(['-t', target, 'shell', ...(sandbox ? ['-b', bundle] : []), command]);
-      } });
+      lineageOnly: options['--lineage-only'] === true,
+      probeQuery: ({ command, sandbox }) => executeRemote(command, sandbox) });
+    await signalScope.settleSignals();
     const queryRows = Object.values(report.query).flatMap(group => Object.values(group)).filter(Boolean);
-    finalStatus = [...preflight, ...queryRows].some(row => !['ok', 'empty'].includes(row.outcome)) ? 'FAIL_QUERY' : 'DIAGNOSTIC_COMPLETE';
-    finalReason = finalStatus === 'FAIL_QUERY' ? 'query-failure-classified' : 'diagnosis-only-not-install-authority';
+    finalStatus = signalScope.signal.aborted ? 'FAIL_CANCELLED' :
+      [...preflight, ...queryRows].some(row => !['ok', 'empty'].includes(row.outcome)) ? 'FAIL_QUERY' :
+        report.selectedHeader.status === 'FAIL' ? 'FAIL_INCOMPLETE_HEADER' : 'DIAGNOSTIC_COMPLETE';
+    finalReason = finalStatus === 'DIAGNOSTIC_COMPLETE' ? 'observation-only-authority-retired' :
+      finalStatus === 'FAIL_CANCELLED' ? 'diagnostic-cancelled' : finalStatus === 'FAIL_INCOMPLETE_HEADER' ? 'header-safety-boundary-unavailable' : 'query-failure-classified';
     save(resolve(output, 'report.json'), { ...report, executionStatus: finalStatus, preflight,
       preflightQueries, businessQueries, candidate: binding, targetRef: ports.targetRef(target),
       readiness: { status: readiness.status, bootIdSha256: readiness.bootIdSha256, sceneBoardPidSha256: readiness.sceneBoardPidSha256 },
-      canonicalInspect: 'NOT_RUN', revalidation: 'NOT_RUN', routePredictionScope: 'initial-storage-route-only',
+      canonicalInspect: 'NOT_RUN', revalidation: 'NOT_RUN', routePredictionScope: 'transition-only-policy-preview',
+      authority: 'RETIRED_DIAGNOSTIC_ONLY', observationScope: auth.observation, ledgerNamespaceRef: binding.ledgerNamespaceRef,
+      toolBinding: { mode: tool.binding, atomicExecIdentity: false, requiresNoConcurrentLocalToolWrites: true },
+      cancellation: { readiness: 'deferred-until-current-bounded-synchronous-observation-returns', signal: signalScope.reason,
+        normalChildCloseBeforeLeaseRelease: true, sigkillOrHostCrashGuaranteed: false },
       installAuthority: false, installation: 'NOT_RUN', appStops: 0, appStarts: 0, originalSql: false,
       databaseCopies: 0, intentReads: 0, rawDeviceOutputSaved: false });
   } catch (error) { finalStatus = 'FAIL'; finalReason = error?.[safeCode] ?? 'diagnostic-execution-failed'; }
@@ -205,6 +244,7 @@ export async function runDiagnosticCli(argv, injected = {}) {
       try { ports.releaseLease(leaseRoot, lease.lockDir, owner); }
       catch { finalStatus = 'FAIL'; finalReason = 'lease-release-failed'; }
     }
+    signalScope?.dispose();
     if (outputCreated) {
       try { save(resolve(output, 'execution.json'), { status: finalStatus, reason: finalReason,
         authorizationConsumed: claimed, scopeClosed: true, preflightQueries, businessQueries,

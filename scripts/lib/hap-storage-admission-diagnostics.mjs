@@ -1,136 +1,73 @@
-import {
-  readInstalledSqliteVersion,
-  readInstalledStorageLineage,
-  storageUpdateRoute,
-} from './hap-storage-admission.mjs';
+import { readInstalledStorageLineage, storageUpdateRoute } from './hap-storage-admission.mjs';
 
-// No subprocess, filesystem, device discovery or default invocation lives here.
-// Only the supplied synchronous query port may observe an already-bound target.
+// Observation only. Formal upgrade authority is a bound transition proof.
 const MAX_QUERIES = 8;
-const CATEGORIES = new Set([
-  'header-cwd', 'header-read', 'header-markers',
-  'lineage-pid-before', 'lineage-log', 'lineage-pid-after',
-  'fallback-ps', 'fallback-log',
-]);
+const CATEGORIES = new Set(['header-cwd', 'header-markers', 'lineage-pid-before', 'lineage-log',
+  'lineage-pid-after', 'fallback-ps', 'fallback-log']);
 const bundleValid = value => typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_.]+$/.test(value);
 const uidValid = value => Number.isSafeInteger(value) && value > 0;
-const stageEnum = value => value === 'startup.native-open' ? 'native-open' :
-  value === 'startup.runtime-published' ? 'runtime-published' : 'other';
+const stageEnum = value => value === 'startup.native-open' ? 'native-open' : value === 'startup.runtime-published' ? 'runtime-published' : 'other';
 const statusEnum = value => ['start', 'ready', 'failed'].includes(value) ? value : 'other';
-const bytes = value => typeof value === 'string' ? Buffer.from(value, 'utf8') :
-  Buffer.isBuffer(value) || value instanceof Uint8Array ? Buffer.from(value) : Buffer.alloc(0);
-const text = value => bytes(value).toString('utf8');
+const bytes = value => Buffer.isBuffer(value) ? value : value instanceof Uint8Array ? Buffer.from(value) : Buffer.from(typeof value === 'string' ? value : '');
+const observedBytes = (value, fallback) => Number.isSafeInteger(value) && value >= 0 ? value : fallback;
+const READER_PREFIX = /^(?:\d{4}-)?(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])[ \t]+(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3,9}[ \t]+([1-9]\d{0,9})[ \t]+[1-9]\d{0,9}[ \t]+[DIWEF][ \t]+[A-Za-z][A-Fa-f0-9]{3,15}\/Reader:[ \t]+/;
 
-/** Explicit precedence: timeout, output limit, spawn/termination error,
- * nonzero exit, empty trimmed stdout, success. stderr is only counted: the
- * canonical capture accepts status0 stdout even when stderr is nonempty. */
 export function summarizeProbeResult(result) {
   const value = result && typeof result === 'object' ? result : {};
   const code = value.error?.code;
   const timedOut = code === 'ETIMEDOUT' || code === 'ERR_CHILD_PROCESS_TIMEOUT';
   const outputLimit = code === 'ENOBUFS' || code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER';
-  const exitCode = Number.isInteger(value.status) ? value.status : null;
+  const clientExitCode = Number.isInteger(value.status) ? value.status : null;
   const stdout = bytes(value.stdout), stderr = bytes(value.stderr);
-  const spawnError = Boolean(value.error) || exitCode === null ||
-    (typeof value.signal === 'string' && value.signal.length > 0);
-  const outcome = timedOut ? 'timeout' : outputLimit ? 'output-limit' :
-    spawnError ? 'spawn-error' : exitCode !== 0 ? 'exit-nonzero' :
-      stdout.toString('utf8').trim().length === 0 ? 'empty' : 'ok';
-  return { outcome, exitCode, timedOut, stdoutBytes: stdout.length, stderrBytes: stderr.length };
+  const clientOutcome = timedOut ? 'timeout' : outputLimit ? 'output-limit' :
+    code === 'DIAGNOSTIC_CANCELLED' ? 'cancelled' : value.error || clientExitCode === null || value.signal ? 'spawn-error' :
+      clientExitCode !== 0 ? 'exit-nonzero' : stdout.toString('utf8').trim() ? 'ok' : 'empty';
+  const remoteState = value.frameRequired ? value.remoteState === 'success' ? 'success' : value.remoteState === 'failure' ? 'failure' : 'unknown' : 'not-observed';
+  const outcome = !['ok', 'empty'].includes(clientOutcome) ? clientOutcome : value.frameRequired && remoteState !== 'success' ?
+    remoteState === 'failure' ? 'remote-nonzero' : 'remote-unknown' : clientOutcome;
+  return { outcome, clientOutcome, clientExitCode, remoteExitCode: value.frameRequired && Number.isInteger(value.remoteExitCode) ? value.remoteExitCode : null,
+    remoteState, frameState: value.frameRequired ? value.frameState === 'valid' ? 'valid' : value.frameState === 'client-failed' ? 'client-failed' : 'invalid' : 'not-requested', timedOut,
+    stdoutBytes: observedBytes(value.rawStdoutBytes, stdout.length), stderrBytes: observedBytes(value.rawStderrBytes, stderr.length),
+    payloadStdoutBytes: observedBytes(value.payloadStdoutBytes, stdout.length) };
 }
+const usable = summary => ['ok', 'empty'].includes(summary?.outcome) && summary.remoteState === 'success';
 
-const usable = summary => summary?.outcome === 'ok' || summary?.outcome === 'empty';
-
+// Synthetic metadata parser only. No query API invokes a byte reader.
+export function parseSyntheticSqliteHeader(value) {
+  if (!Buffer.isBuffer(value) || value.length !== 100 || value.subarray(0, 16).toString('latin1') !== 'SQLite format 3\0') return null;
+  const version = value.readUInt32BE(60); return version > 0 && version <= 0x7fffffff ? version : null;
+}
 function sandboxContext(value, bundleName) {
   const match = /^\/mnt\/debug\/(0|[1-9]\d*)\/debug_hap\/([A-Za-z][A-Za-z0-9_.]+)$/.exec(value);
   return match?.[2] === bundleName ? match[1] : null;
 }
-
-function classifyHeaderOutput(value, uid, version) {
-  if (version !== null) return 'header-valid';
-  const lines = value.split(/\r?\n/);
-  const metadata = /^(\d+):(\d+):(\d+):(\d+)$/.exec(lines[0] ?? '');
-  if (metadata === null) return 'header-output-malformed';
-  if (Number(metadata[1]) !== uid) return 'header-uid-mismatch';
-  if (Number(metadata[3]) < 100) return 'header-too-small';
-  if (lines.length < 2 || lines[0] !== lines.at(-1)) return 'header-stat-unstable';
-  const fields = lines.slice(1, -1).join(' ').trim().split(/\s+/);
-  if (fields.length !== 100 || fields.some(field => !/^\d{1,3}$/.test(field) || Number(field) > 255))
-    return 'header-output-malformed';
-  const header = Buffer.from(fields.map(Number));
-  if (header.subarray(0, 16).toString('latin1') !== 'SQLite format 3\0') return 'header-magic-invalid';
-  const observedVersion = header.readUInt32BE(60);
-  return observedVersion <= 0 || observedVersion > 0x7fffffff ?
-    'header-version-invalid' : 'header-output-malformed';
-}
-
-/** One fixed, SQL-free supplemental observation. Never hash/read a whole DB,
- * follow a DB symlink, inspect an intent, or read header bytes with a live WAL.
- * Marker output stays only in this invocation's memory. */
 function headerMarkerCommand(user, bundleName) {
-  const directory = `/data/app/el2/${user}/base/${bundleName}/haps/entry/files/reader-core`;
-  const db = `${directory}/reader-core.sqlite3`;
+  const directory = `/data/app/el2/${user}/base/${bundleName}/haps/entry/files/reader-core`, db = `${directory}/reader-core.sqlite3`;
   const flag = (name, condition) => `if ${condition}; then echo ${name}=1; else echo ${name}=0; fi`;
-  return [
-    'echo HSD_HEADER_MARKERS_V1',
-    flag('directory-present', `test -d ${directory}`),
-    flag('directory-readable', `test -r ${directory}`),
-    flag('directory-searchable', `test -x ${directory}`),
-    flag('db-present', `test -f ${db}`),
-    flag('db-symlink', `test -L ${db}`),
-    flag('wal-present', `test -s ${db}-wal`),
-    flag('journal-present', `test -s ${db}-journal`),
-    `if test -r ${directory} && test -x ${directory} && test -f ${db} && test ! -L ${db} && ` +
-      `test ! -s ${db}-wal && test ! -s ${db}-journal; then ` +
-      `echo STAT_BEFORE; stat -c '%u:%i:%s:%Y' ${db}; echo HEADER_100; ` +
-      `od -An -v -N 100 -t u1 ${db}; echo STAT_AFTER; stat -c '%u:%i:%s:%Y' ${db}; ` +
-      'else echo STAT_BEFORE; echo HEADER_100; echo STAT_AFTER; fi',
-    'echo END',
-  ].join('; ');
+  return ['echo RSD_HEADER_FLAGS_V2', flag('directory-present', `test -d ${directory}`),
+    flag('directory-readable', `test -r ${directory}`), flag('directory-searchable', `test -x ${directory}`),
+    flag('db-symlink', `test -L ${db}`), flag('db-present', `test ! -L ${db} && test -f ${db}`),
+    flag('wal-symlink', `test -L ${db}-wal`), flag('journal-symlink', `test -L ${db}-journal`),
+    flag('wal-nonempty', `test ! -L ${db}-wal && test -s ${db}-wal`),
+    flag('journal-nonempty', `test ! -L ${db}-journal && test -s ${db}-journal`), 'echo END'].join('; ');
 }
-
-function classifyMarkers(value, summary, uid) {
-  const result = { reason: 'header-markers-failed', walPresent: null, journalPresent: null };
-  if (!usable(summary) || value.length === 0) return result;
-  const lines = value.split(/\r?\n/);
-  const keys = ['directory-present', 'directory-readable', 'directory-searchable', 'db-present',
-    'db-symlink', 'wal-present', 'journal-present'];
-  if (lines[0] !== 'HSD_HEADER_MARKERS_V1' || lines.at(-1) !== 'END') return result;
+function classifyMarkers(value, summary) {
+  const result = { reason: 'header-markers-unavailable', walPresent: null, journalPresent: null, dbSymlink: null,
+    timeSeparated: true, byteRead: 'NOT_RUN_SAFETY_BOUNDARY' };
+  if (!usable(summary)) return result;
+  const lines = value.split(/\r?\n/), keys = ['directory-present', 'directory-readable', 'directory-searchable', 'db-symlink',
+    'db-present', 'wal-symlink', 'journal-symlink', 'wal-nonempty', 'journal-nonempty'];
+  if (lines.length !== keys.length + 2 || lines[0] !== 'RSD_HEADER_FLAGS_V2' || lines.at(-1) !== 'END') return result;
   const flags = {};
-  for (let index = 0; index < keys.length; index++) {
-    const match = new RegExp(`^${keys[index]}=([01])$`).exec(lines[index + 1] ?? '');
-    if (match === null) return result;
-    flags[keys[index]] = match[1] === '1';
-  }
-  // A failed test -s below an inaccessible directory says nothing about the
-  // companion file. Preserve unknown rather than serializing a false absence.
-  if (!flags['directory-present'] || !flags['directory-readable'] || !flags['directory-searchable']) {
-    result.reason = 'header-sandbox-unresolved';
-    return result;
-  }
-  result.walPresent = flags['wal-present'];
-  result.journalPresent = flags['journal-present'];
-  if (!flags['db-present']) result.reason = 'header-db-missing';
-  else if (flags['db-symlink']) result.reason = 'header-path-unsafe';
-  else if (flags['wal-present']) result.reason = 'header-wal-present';
-  else if (flags['journal-present']) result.reason = 'header-journal-present';
-  else {
-    const before = lines.indexOf('STAT_BEFORE', 8), body = lines.indexOf('HEADER_100', before + 1);
-    const after = lines.indexOf('STAT_AFTER', body + 1);
-    if (before !== 8 || body <= before || after <= body) return { ...result, reason: 'header-markers-failed' };
-    const first = lines.slice(before + 1, body), header = lines.slice(body + 1, after);
-    const last = lines.slice(after + 1, -1);
-    if (first.length !== 1 || last.length !== 1) return { ...result, reason: 'header-output-malformed' };
-    // The supplemental version is deliberately never returned. It cannot fill
-    // the canonical null or change the route established before this query.
-    const joined = [...first, ...header, ...last].join('\n');
-    const observed = readInstalledSqliteVersion({ bundleName: 'io.reader.diagnostic', uid,
-      querySandbox: command => command === 'pwd' ? '/mnt/debug/0/debug_hap/io.reader.diagnostic' : joined });
-    result.reason = classifyHeaderOutput(joined, uid, observed);
-  }
+  for (let i = 0; i < keys.length; i++) { const m = new RegExp(`^${keys[i]}=([01])$`).exec(lines[i + 1]); if (!m) return result; flags[keys[i]] = m[1] === '1'; }
+  if (!flags['directory-present'] || !flags['directory-readable'] || !flags['directory-searchable']) return { ...result, reason: 'header-sandbox-unresolved' };
+  result.dbSymlink = flags['db-symlink'];
+  if (flags['db-symlink'] || flags['wal-symlink'] || flags['journal-symlink']) return { ...result, reason: 'header-path-unsafe' };
+  result.walPresent = flags['wal-nonempty']; result.journalPresent = flags['journal-nonempty'];
+  result.reason = !flags['db-present'] ? 'header-db-missing' : flags['wal-nonempty'] ? 'header-wal-present' :
+    flags['journal-nonempty'] ? 'header-journal-present' : 'header-flags-observed';
   return result;
 }
-
 function validIdentity(value) {
   const storage = value?.storageCompatibility;
   return value?.schemaVersion === 1 && typeof value?.buildId === 'string' && /^[0-9a-f]{64}$/.test(value.buildId) &&
@@ -148,7 +85,7 @@ function pidState(value) {
 /** Count/describe observed records, but never replay them into admission.
  * In particular a historical matching bad JSON remains fatal in the real
  * reader even when this diagnostic can see a later good session. */
-function scanLineage(value) {
+function scanLineage(value, requestedPid) {
   const result = { identityCount: 0, readyCount: 0, lastStage: null, lastStatus: null,
     malformedCount: 0, historicalMalformedBeforeLatestOpen: false, warningReasons: [] };
   let firstFatal = null, firstFatalKind = null, latestOpen = -1, latestIdentity = -1;
@@ -156,8 +93,11 @@ function scanLineage(value) {
   const lines = value.split(/\r?\n/);
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
-    const identity = /\/Reader: Core build identity: (\{.+\})$/.exec(line);
-    const event = /\/Reader: READER_STARTUP (\{.+\})$/.exec(line);
+    const metadata = READER_PREFIX.exec(line);
+    if (requestedPid !== undefined && metadata?.[1] !== requestedPid) continue;
+    const body = metadata === null ? '' : line.slice(metadata[0].length);
+    const identity = /^Core build identity: (\{.+\})$/.exec(body);
+    const event = /^READER_STARTUP (\{.+\})$/.exec(body);
     if (identity === null && event === null) {
       if (line.includes('/Reader: Core build identity:') || line.includes('/Reader: READER_STARTUP')) {
         result.malformedCount++;
@@ -211,10 +151,9 @@ function attributeWideLog(value, requestedPid) {
   const result = { requestedPidIdentityCount: null, requestedPidReadyCount: null,
     unattributedRecordCount: 0, attribution: 'not-requested',
     timeSeparated: true, pidReuseExcluded: false };
-  const prefix = /^(?:\d{4}-)?(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])[ \t]+(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3,9}[ \t]+([1-9]\d{0,9})[ \t]+[1-9]\d{0,9}[ \t]+[DIWEF][ \t]+[A-Za-z][A-Fa-f0-9]{3,15}\/Reader:[ \t]+/;
   let reliablePrefixes = 0, identities = 0, ready = 0;
   for (const line of value.split(/\r?\n/)) {
-    const owner = prefix.exec(line);
+    const owner = READER_PREFIX.exec(line);
     if (owner !== null) reliablePrefixes++;
     if (!line.includes('/Reader: Core build identity:') && !line.includes('/Reader: READER_STARTUP')) continue;
     if (owner === null) { result.unattributedRecordCount++; continue; }
@@ -247,8 +186,8 @@ function classifyLineage(records, installedStorage) {
   result.pidState = pidState(before.value);
   const log = records.get('lineage-log'), after = records.get('lineage-pid-after');
   if (log !== undefined) {
-    result.logBytes = log.summary.stdoutBytes;
-    Object.assign(result, scanLineage(log.value).facts);
+    result.logBytes = log.summary.payloadStdoutBytes;
+    Object.assign(result, scanLineage(log.value, before.value).facts);
   }
   if (!usable(before.summary)) {
     result.pidState = 'unavailable'; result.reason = 'lineage-pid-query-failed';
@@ -263,7 +202,7 @@ function classifyLineage(records, installedStorage) {
   else if (log.value.length === 0) result.reason = 'lineage-log-empty';
   else if (installedStorage !== null) {
     result.reason = installedStorage.sqliteUserVersion === null ? 'lineage-version-unresolved' : 'lineage-valid';
-  } else result.reason = scanLineage(log.value).rejection;
+  } else result.reason = scanLineage(log.value, before.value).rejection;
   result.canonicalRejected = installedStorage === null;
   return result;
 }
@@ -272,96 +211,80 @@ function classifyPs(record, uid) {
   const result = { reason: 'fallback-query-failed', matchingUidCount: null };
   if (!usable(record.summary)) return result;
   const lines = record.value.split(/\r?\n/);
-  if (!/^\s*UID\s+PID\s*$/.test(lines.shift() ?? '') || lines.some(line => !/^\s*\d+\s+\d+\s*$/.test(line)))
+  if (!/^\s*UID\s+PID\s*$/.test(lines.shift() ?? '') || lines.length === 0 || lines.some(line => !/^\s*\d+\s+\d+\s*$/.test(line)))
     return { ...result, reason: 'fallback-output-malformed' };
   result.reason = 'fallback-observed';
   result.matchingUidCount = lines.filter(line => Number(line.trim().split(/\s+/)[0]) === uid).length;
   return result;
 }
 
-/** Predict the unmodified same-source route using exactly the values returned
- * by the real legacy readers. Additional observations are time-separated and
- * diagnostic-only: they never replace a value, PID, log or refusal. */
-export function diagnoseStorageAdmission({ bundleName, uid, candidateStorage, probeQuery, includeFallbacks = false } = {}) {
-  if (typeof probeQuery !== 'function') throw new TypeError('DIAGNOSTIC_QUERY_REQUIRED');
+
+// Replay only the pure synchronous lineage reader's already-observed values.
+// Each missing ordinal becomes one async query; PID before/after stay distinct.
+async function observeLineage(bundleName, observe) {
+  const values = [], need = Symbol('next-finite-query');
+  for (let step = 0; step <= 3; step++) {
+    let cursor = 0;
+    try {
+      return readInstalledStorageLineage({ bundleName, query: command => {
+        const index = cursor++;
+        if (index < values.length) { if (values[index].command !== command) throw Error('LINEAGE_QUERY_CHANGED'); return values[index].value; }
+        throw { token: need, command, index };
+      } });
+    } catch (request) {
+      if (request?.token !== need || request.index !== values.length || request.index >= 3) throw Error('LINEAGE_OBSERVATION_FAILED');
+      const category = ['lineage-pid-before', 'lineage-log', 'lineage-pid-after'][request.index];
+      values.push({ command: request.command, value: await observe(category, request.command, false) });
+    }
+  }
+  throw Error('LINEAGE_OBSERVATION_FAILED');
+}
+
+export async function diagnoseStorageAdmission({ bundleName, uid, candidateStorage, probeQuery, includeFallbacks = false, lineageOnly = false } = {}) {
+  if (typeof probeQuery !== 'function') throw Error('DIAGNOSTIC_QUERY_REQUIRED');
   const records = new Map();
-  const report = {
-    schema: 'reader.hap-storage-admission-diagnostic.v1',
-    query: { header: { cwd: null, read: null },
-      lineage: { pidBefore: null, log: null, pidAfter: null },
-      extra: { headerMarkers: null, fallbackPs: null, fallbackLog: null } },
-    header: { reason: 'header-input-invalid', canonicalReason: 'header-input-invalid', version: null,
-      walPresent: null, journalPresent: null, markerReason: null, markerTimeSeparated: false },
-    lineage: emptyLineage(),
-    canonical: null, routePrediction: null,
-    extra: { fallbackPs: null, fallbackLog: null, admissionUse: 'diagnostic-only' },
-    queryCount: 0, queryLimit: MAX_QUERIES,
-  };
-  const slots = {
-    'header-cwd': ['header', 'cwd'], 'header-read': ['header', 'read'],
-    'lineage-pid-before': ['lineage', 'pidBefore'], 'lineage-log': ['lineage', 'log'],
-    'lineage-pid-after': ['lineage', 'pidAfter'], 'header-markers': ['extra', 'headerMarkers'],
-    'fallback-ps': ['extra', 'fallbackPs'], 'fallback-log': ['extra', 'fallbackLog'],
-  };
-  const observe = (category, command, sandbox) => {
-    if (!CATEGORIES.has(category) || records.has(category) || report.queryCount >= MAX_QUERIES)
-      throw new Error('DIAGNOSTIC_QUERY_SCOPE_VIOLATION');
+  const report = { schema: 'reader.hap-storage-admission-diagnostic.v2', query: { header: { cwd: null, read: null },
+    lineage: { pidBefore: null, log: null, pidAfter: null }, extra: { headerMarkers: null, fallbackPs: null, fallbackLog: null } },
+    header: { selected: !lineageOnly, action: 'NOT_RUN_SAFETY_BOUNDARY', status: lineageOnly ? 'NOT_SELECTED' : 'FAIL',
+      reason: 'HEADER_READ_AUTHORITY_RETIRED', version: null, markers: null },
+    selectedHeader: { status: lineageOnly ? 'NOT_SELECTED' : 'FAIL', action: 'NOT_RUN_SAFETY_BOUNDARY' },
+    lineage: emptyLineage(), canonical: { status: 'NOT_RUN', reason: 'LOG_AND_HEADER_AUTHORITY_RETIRED' },
+    routePrediction: null, routePredictionScope: 'transition-only-policy-preview', installAuthority: false,
+    extra: { fallbackPs: null, fallbackLog: null, admissionUse: 'diagnostic-only' }, queryCount: 0, queryLimit: MAX_QUERIES };
+  const slots = { 'header-cwd': ['header', 'cwd'], 'header-markers': ['extra', 'headerMarkers'],
+    'lineage-pid-before': ['lineage', 'pidBefore'], 'lineage-log': ['lineage', 'log'], 'lineage-pid-after': ['lineage', 'pidAfter'],
+    'fallback-ps': ['extra', 'fallbackPs'], 'fallback-log': ['extra', 'fallbackLog'] };
+  const observe = async (category, command, sandbox) => {
+    if (!CATEGORIES.has(category) || records.has(category) || report.queryCount >= MAX_QUERIES) throw Error('DIAGNOSTIC_QUERY_SCOPE_VIOLATION');
     report.queryCount++;
-    let result;
-    try { result = probeQuery({ category, command, sandbox }); }
-    catch { result = { status: null, error: { code: 'DIAGNOSTIC_QUERY_EXCEPTION' }, stdout: '', stderr: '' }; }
+    let result; try { result = await probeQuery({ category, command, sandbox }); }
+    catch { result = { status: null, error: { code: 'DIAGNOSTIC_QUERY_EXCEPTION' }, frameRequired: true }; }
     const summary = summarizeProbeResult(result);
-    const value = usable(summary) ? text(result?.stdout).trim() : '';
-    const record = { summary, value };
-    records.set(category, record);
-    const [group, name] = slots[category]; report.query[group][name] = summary;
+    const value = usable(summary) ? bytes(result?.stdout).toString('utf8').trim() : '';
+    records.set(category, { summary, value }); const [group, name] = slots[category]; report.query[group][name] = summary;
     return value;
   };
-  let headerCall = 0, lineageCall = 0;
-  const headerVersion = readInstalledSqliteVersion({ bundleName, uid, querySandbox: command =>
-    observe(headerCall++ === 0 ? 'header-cwd' : 'header-read', command, true) });
-  const installedStorage = candidateStorage && (headerVersion === null ||
-    headerVersion <= candidateStorage.sqliteMaxUserVersion) ?
-    readInstalledStorageLineage({ bundleName, query: command => observe(
-      ['lineage-pid-before', 'lineage-log', 'lineage-pid-after'][lineageCall++], command, false) }) : null;
-  const liveVersion = installedStorage?.sqliteUserVersion ?? null;
-  const targetSqliteVersion = headerVersion ?? liveVersion;
-  const route = storageUpdateRoute({ targetSqliteVersion, installedStorage, candidateStorage });
-  report.canonical = { headerVersion, installedStoragePresent: installedStorage !== null,
-    targetSqliteVersion, versionSource: headerVersion !== null ? 'stable-sqlite-header' :
-      liveVersion !== null ? 'installed-core' : null, route: { ...route } };
-  report.routePrediction = { ...route };
-  report.lineage = classifyLineage(records, installedStorage);
-  const cwd = records.get('header-cwd'), read = records.get('header-read');
-  const user = sandboxContext(cwd?.value ?? '', bundleName);
-  report.header.version = headerVersion;
-  report.header.reason = headerVersion !== null ? 'header-valid' :
-    !bundleValid(bundleName) || !uidValid(uid) ? 'header-input-invalid' :
-      user === null ? 'header-sandbox-unresolved' :
-        !usable(read?.summary) ? 'header-command-failed' : classifyHeaderOutput(read.value, uid, headerVersion);
-  report.header.canonicalReason = report.header.reason;
-  if (headerVersion === null && user !== null && bundleValid(bundleName) && uidValid(uid)) {
-    const value = observe('header-markers', headerMarkerCommand(user, bundleName), true);
-    const observed = classifyMarkers(value, records.get('header-markers').summary, uid);
-    report.header.markerReason = observed.reason;
-    report.header.walPresent = observed.walPresent;
-    report.header.journalPresent = observed.journalPresent;
-    report.header.markerTimeSeparated = true;
+  if (!lineageOnly && bundleValid(bundleName) && uidValid(uid)) {
+    const cwd = await observe('header-cwd', 'pwd', true), user = sandboxContext(cwd, bundleName);
+    if (user !== null) { const value = await observe('header-markers', headerMarkerCommand(user, bundleName), true);
+      report.header.markers = classifyMarkers(value, records.get('header-markers').summary); }
   }
-  if (includeFallbacks === true && !route.allowed) {
-    const initialPid = records.get('lineage-pid-before');
-    if (usable(initialPid?.summary) && pidState(initialPid.value) !== 'single' && uidValid(uid)) {
-      observe('fallback-ps', 'ps -A -o UID,PID', false);
-      report.extra.fallbackPs = classifyPs(records.get('fallback-ps'), uid);
+  const installedStorage = await observeLineage(bundleName, observe);
+  report.lineage = classifyLineage(records, installedStorage);
+  report.lineage.observationOnly = true;
+  report.lineage.observedVersion = installedStorage?.sqliteUserVersion ?? null;
+  const policy = storageUpdateRoute({ targetSqliteVersion: installedStorage?.sqliteUserVersion ?? null, candidateStorage });
+  if (policy.allowed) throw Error('DIAGNOSTIC_AUTHORITY_VIOLATION');
+  report.routePrediction = { allowed: false, reason: policy.reason };
+  if (includeFallbacks) {
+    const initial = records.get('lineage-pid-before');
+    if (usable(initial?.summary) && pidState(initial.value) !== 'single' && uidValid(uid)) {
+      await observe('fallback-ps', 'ps -A -o UID,PID', false); report.extra.fallbackPs = classifyPs(records.get('fallback-ps'), uid);
     }
     if (records.get('lineage-log')?.summary.outcome === 'empty') {
-      const value = observe('fallback-log', 'hilog -x -T Reader', false);
-      const summary = records.get('fallback-log').summary;
-      const reason = summary.outcome === 'output-limit' ? 'fallback-log-over-limit' :
-        !usable(summary) ? 'fallback-query-failed' : value.length === 0 ? 'fallback-log-empty' : 'fallback-observed';
-      const requestedPid = records.get('lineage-pid-before')?.value;
-      report.extra.fallbackLog = { reason, ...scanLineage(value).facts,
-        ...attributeWideLog(value, requestedPid), pidBound: false };
+      const value = await observe('fallback-log', 'hilog -x -T Reader', false), summary = records.get('fallback-log').summary;
+      report.extra.fallbackLog = { reason: !usable(summary) ? 'fallback-query-failed' : value ? 'fallback-observed' : 'fallback-log-empty',
+        ...scanLineage(value).facts, ...attributeWideLog(value, initial?.value), pidBound: false };
     }
   }
   return report;

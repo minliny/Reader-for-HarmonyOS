@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
-import { deploymentRoute } from '../hap-pipeline.mjs';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { deploymentRoute, assertInstalledDeploymentIdentity } from '../hap-pipeline.mjs';
 import { embeddedStorageCompatibility, readInstalledSqliteVersion, readInstalledStorageLineage, storageUpdateRoute, validateStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState, STORAGE_TRANSITION_CONTRACT, STORAGE_TRANSITION_CASES, LIBRARY47_OBJECT_SET_SHA256 } from './hap-storage-admission.mjs';
 
 const bundleName = 'io.reader.minliny';
 const uid = 20020064;
 const hash = 'a'.repeat(64);
 const compatible = { sqliteMaxUserVersion: 47, sqliteStorageSourceSha256: hash };
+const pipelineSource = readFileSync(new URL('../hap-pipeline.mjs', import.meta.url), 'utf8');
+const legacyPipelineSource = readFileSync(new URL('./fixtures/hap-install-before-uid-fence.mjs.txt', import.meta.url), 'utf8');
 
 test('only one complete compiled marker establishes candidate storage compatibility', () => {
   const marker = Buffer.from(`READER_SQLITE_COMPAT_V1:47:${hash}\0`);
@@ -17,29 +21,21 @@ test('only one complete compiled marker establishes candidate storage compatibil
   assert.equal(embeddedStorageCompatibility(Buffer.from(`READER_SQLITE_COMPAT_V1:0:${hash}\0`)), null);
 });
 
-test('target schema header is read without opening the live DB or ignoring a WAL', () => {
-  const commands = [];
-  const read = (path, output, expectedUid = uid) => readInstalledSqliteVersion({ bundleName, uid: expectedUid,
-    querySandbox: command => { commands.push(command); return command === 'pwd' ? path : output; } });
-  const cwd = `/mnt/debug/100/debug_hap/${bundleName}`;
-  const header = Buffer.alloc(100);
-  header.write('SQLite format 3\0', 'latin1');
-  header.writeUInt32BE(47, 60);
-  const stat = `${uid}:1234:1048576:1793836352`;
-  const sample = `${stat}\n${[...header].join(' ')}\n${stat}\n`;
-  assert.equal(read(cwd, sample), 47);
-  const command = commands.at(-1);
-  assert.match(command, /od -An -v -N 100 -t u1 \/data\/app\/el2\/100\/base\/io\.reader\.minliny\/haps\/entry\/files\/reader-core\/reader-core\.sqlite3/);
-  assert.match(command, /test ! -s [^ ]+\.sqlite3-wal/);
-  assert.doesNotMatch(command, /\bsqlite3\s+-(?:readonly|batch)|\bPRAGMA\b/);
-  assert.equal(read(cwd, ''), null);
-  assert.equal(read(cwd, sample.replaceAll(String(uid), '20020065')), null);
-  assert.equal(read(cwd, sample.replace(/1793836352\n$/, '1793836353\n')), null);
-  assert.equal(read('/mnt/debug/100/debug_hap/other.bundle', sample), null);
-  assert.equal(read(cwd, sample, null), null);
+test('retired live header reader performs no path or byte query without an atomic safe boundary', () => {
+  let queries = 0;
+  assert.equal(readInstalledSqliteVersion({ bundleName, uid,
+    querySandbox: () => { queries++; throw new Error('retired header must not reach even pwd'); } }), null);
+  assert.equal(queries, 0); // A swallowed query error must also fail this assertion.
+  assert.equal(readInstalledSqliteVersion(), null);
+  const legacy = productionFunction(legacyPipelineSource, 'readInstalledSqliteVersion', 'installDeployment', {});
+  assert.equal(legacy({ bundleName, uid, querySandbox: command => {
+    queries++;
+    return command === 'pwd' ? `/mnt/debug/100/debug_hap/${bundleName}` : 'not-a-header';
+  } }), null);
+  assert.equal(queries, 2); // Original code reaches the read even though parsing rejects it.
 });
 
-test('installed lineage requires the current process to publish a usable runtime', () => {
+test('diagnostic lineage requires an exact OS prefix and body while remaining non-authoritative', () => {
   const prefix = '11-05 15:18:22.000 123 123 I A05244/Reader: ';
   const identity = `${prefix}Core build identity: ${JSON.stringify({ schemaVersion: 1, buildId: hash,
     storageCompatibility: compatible, sqliteUserVersion: 47 })}`;
@@ -57,6 +53,12 @@ test('installed lineage requires the current process to publish a usable runtime
   assert.equal(read([identity]), null);
   assert.equal(read([identity, ready, trace('startup.native-open', 'failed')]), null);
   assert.equal(read([identity, ready], '234'), null);
+  assert.equal(read([`${prefix}Copied /Reader: ${identity.split('/Reader: ')[1]}`, ready]), null);
+  assert.equal(read([identity, `${prefix}Copied /Reader: ${ready.split('/Reader: ')[1]}`]), null);
+  assert.equal(read([identity.replace('123 123 I', '456 456 I'), ready]), null);
+  assert.equal(read([identity, ready.replace('123 123 I', '456 456 I')]), null);
+  assert.equal(storageUpdateRoute({ targetSqliteVersion: 47, installedStorage: read([identity, ready]),
+    candidateStorage: compatible }).allowed, false);
 });
 
 test('rejects the observed 47-to-38 replacement, unknown input and a different storage lineage', () => {
@@ -64,18 +66,18 @@ test('rejects the observed 47-to-38 replacement, unknown input and a different s
     storageUpdateRoute({ targetSqliteVersion, installedStorage, candidateStorage });
   assert.equal(route({ ...compatible, sqliteMaxUserVersion: 38 }).reason, 'candidate-core-cannot-open-target-sqlite');
   assert.equal(route(null).reason, 'candidate-native-storage-identity-unresolved');
-  assert.equal(route(compatible, compatible, null).reason, 'target-sqlite-version-unresolved');
-  assert.equal(route(compatible, null).reason, 'installed-core-storage-lineage-unresolved');
-  assert.equal(route({ ...compatible, sqliteStorageSourceSha256: 'b'.repeat(64) }).reason, 'core-storage-lineage-changed');
-  assert.equal(route(compatible).allowed, true);
+  assert.equal(route(compatible, compatible, null).reason, 'verified-storage-transition-required');
+  assert.equal(route(compatible, null).reason, 'verified-storage-transition-required');
+  assert.equal(route({ ...compatible, sqliteStorageSourceSha256: 'b'.repeat(64) }).allowed, false);
+  assert.equal(route(compatible).allowed, false);
 });
 
 test('a matching signature is insufficient for preserve-data deployment', () => {
-  const installed = { bundlePresent: true, appProvisionType: 'debug', appIdSha256: hash };
+  const installed = { bundlePresent: true, appProvisionType: 'debug', appIdSha256: hash, uid, cpuAbi: 'x86_64' };
   const artifact = { signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
-  const route = storageEvidence => deploymentRoute({ targetKind: 'vm', installed, artifact, storageEvidence });
+  const route = storageEvidence => deploymentRoute({ targetKind: 'vm', installed, artifact, storageEvidence, candidateAbi: 'x86_64' });
   assert.equal(route().allowed, false);
-  assert.equal(route({ targetSqliteVersion: 47, candidateStorage: compatible, installedStorage: compatible }).allowed, true);
+  assert.equal(route({ targetSqliteVersion: 47, candidateStorage: compatible, installedStorage: compatible }).allowed, false);
   assert.equal(route({ targetSqliteVersion: 47, candidateStorage: { ...compatible, sqliteMaxUserVersion: 38 },
     installedStorage: compatible }).allowed, false);
 });
@@ -138,14 +140,32 @@ test('directed transition needs all compiled definitions and actual selected Rus
   assert.equal(route(bound).reason, 'verified-directed-storage-transition');
   const retained = storageTransitionResources(bound);
   assert.equal(retained.length, f.resources.size);
-  const installed = { bundlePresent: true, appProvisionType: 'debug', appIdSha256: hash };
+  const installed = { bundlePresent: true, appProvisionType: 'debug', appIdSha256: hash, uid, cpuAbi: 'x86_64' };
   const artifact = { sha256: f.expected.hapSha256, embeddedCoreNapi: { sha256: f.expected.nativeSha256 },
     signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
-  const args = { targetKind: 'vm', installed, artifact, storageEvidence: {
+  const args = { targetKind: 'vm', installed, artifact, candidateAbi: 'x86_64', storageEvidence: {
     targetSqliteVersion: 47, installedStorage: null, candidateStorage: f.expected.storageCompatibility, transition: bound } };
   assert.equal(deploymentRoute(args).allowed, true);
   assert.equal(deploymentRoute({ ...args, artifact: { ...artifact, sha256: '9'.repeat(64) } }).allowed, false);
   assert.equal(deploymentRoute({ ...args, artifact: { ...artifact, embeddedCoreNapi: { sha256: '9'.repeat(64) } } }).allowed, false);
+  assert.equal(deploymentRoute({ ...args, candidateAbi: 'arm64-v8a' }).allowed, false);
+  assert.equal(deploymentRoute({ ...args, candidateAbi: undefined }).allowed, false);
+  assert.equal(deploymentRoute({ ...args, installed: { ...installed, uid: undefined } }).allowed, false);
+});
+
+test('post-install UID and ABI must be established before any launch', () => {
+  const before = { bundlePresent: true, uid, cpuAbi: 'x86_64' };
+  const after = { ...before, appProvisionType: 'debug', appIdSha256: hash };
+  const artifact = { signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
+  const args = { before, after, artifact, candidateAbi: 'x86_64', targetKind: 'vm' };
+  assert.doesNotThrow(() => assertInstalledDeploymentIdentity(args));
+  for (const badUid of [undefined, null, uid + 1, 0]) {
+    assert.throws(() => assertInstalledDeploymentIdentity({ ...args, after: { ...after, uid: badUid } }), /UID/);
+  }
+  assert.throws(() => assertInstalledDeploymentIdentity({ ...args, before: { ...before, uid: undefined } }), /UID/);
+  assert.throws(() => assertInstalledDeploymentIdentity({ ...args, after: { ...after, cpuAbi: 'arm64-v8a' } }), /ABI/);
+  assert.throws(() => assertInstalledDeploymentIdentity({ ...args, after: { ...after, appIdSha256: 'b'.repeat(64) } }), /signing identity/);
+  assert.throws(() => assertInstalledDeploymentIdentity({ ...args, expectedVersion: { versionName: '0.2.0', versionCode: 1000000 } }), /system version/);
 });
 
 test('directed proof rejects a different candidate, source layout, scope, input snapshot, definition or missing execution', () => {
@@ -226,5 +246,101 @@ test('stopped target capture hashes app-owned DB/WAL without reading source Nati
   assert.throws(() => readStoppedStorageTransitionState({ bundleName, installed, abi: 'x86_64',
     targetRef: f.observed.targetRef, targetKind: 'vm', query,
     querySandbox: command => command === 'pwd' ? `/mnt/debug/100/debug_hap/${bundleName}` : sample.replaceAll(`F:${uid}:`, 'F:1:') }), /app-owned/);
+});
+
+function productionFunction(source, name, next, ports) {
+  const start = source.indexOf(`function ${name}(`), end = source.indexOf(`\nfunction ${next}(`, start);
+  assert.ok(start >= 0 && end > start, `actual production ${name} boundary`);
+  return new Function(...Object.keys(ports), `return (${source.slice(start, end)});`)(...Object.values(ports));
+}
+const requiredOption = (options, key) => { assert.ok(options.has(key)); return options.get(key); };
+const fail = message => { throw new Error(message); };
+
+test('actual deployment resolution never reads live headers or logs and revalidates the bound source', () => {
+  const f = transitionFixture();
+  const artifact = { kind: 'signed', sha256: f.expected.hapSha256, path: 'signed.hap',
+    embeddedCoreNapi: { sha256: f.expected.nativeSha256, storageCompatibility: f.expected.storageCompatibility },
+    signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
+  let installed = { bundlePresent: true, uid, cpuAbi: 'x86_64', updateTime: f.observed.updateTime,
+    appProvisionType: 'debug', appIdSha256: hash };
+  let observed = structuredClone(f.observed), snapshots = 0, metadataReads = 0, transportQueries = 0, manifestAbi = 'x86_64';
+  const options = new Map([['--manifest', '/synthetic/manifest.json'], ['--artifact', 'signed'],
+    ['--target', 'synthetic-target'], ['--target-kind', 'vm']]);
+  const ports = { requiredOption, fail, verifyManifest: () => ({ artifacts: [artifact], directory: '/synthetic',
+    manifest: { abi: manifestAbi } }), resolve, hdcBinary: () => '/synthetic/hdc', assertTargetConnected: () => {},
+    capture: () => { transportQueries++; throw new Error('no header, log, or live data query may be dispatched'); },
+    HDC_LEASE_SCRIPT: '/synthetic/lease', HDC_SERVER: 'synthetic-server', BUNDLE_NAME: bundleName,
+    targetReadiness: () => ({ status: 'PASS' }), option: (o, key) => o.get(key),
+    installedMetadata: () => { metadataReads++; return structuredClone(installed); },
+    deploymentSigningRoute: () => ({ allowed: true }), deploymentRoute,
+    targetReference: () => f.observed.targetRef, storageTransitionCandidate: () => f.expected,
+    loadStorageTransitionProof: () => f.validate(), bindStorageTransitionTarget,
+    readStoppedStorageTransitionState: () => { snapshots++; return structuredClone(observed); } };
+  const resolveActual = productionFunction(pipelineSource, 'resolveDeployment', 'inspectDeployment', ports);
+  assert.equal(resolveActual(options).route.reason, 'verified-storage-transition-required');
+  assert.equal(snapshots, 0);
+  assert.equal(metadataReads, 1);
+  assert.equal(transportQueries, 0);
+  options.set('--storage-transition', '/synthetic/proof.json');
+  const admitted = resolveActual(options);
+  assert.equal(admitted.route.reason, 'verified-directed-storage-transition');
+  assert.equal(snapshots, 2); // initial capture and initial complete revalidation
+  assert.equal(transportQueries, 0);
+  admitted.revalidateDeployment();
+  assert.equal(snapshots, 3);
+  observed.snapshot[0].sha256 = '9'.repeat(64);
+  assert.throws(admitted.revalidateDeployment, /current target\/snapshot/);
+  observed = structuredClone(f.observed);
+  installed = { ...installed, uid: uid + 1 };
+  assert.throws(admitted.revalidateDeployment, /identity changed/);
+  assert.equal(transportQueries, 0); // Catch-and-empty cannot hide a dispatched read.
+  options.delete('--storage-transition');
+  installed = { bundlePresent: false };
+  manifestAbi = undefined;
+  assert.equal(resolveActual(options).candidateAbi, 'arm64-v8a');
+  assert.equal(transportQueries, 0); // Legacy fresh install stays in its frozen ABI contract.
+});
+
+test('actual install checks UID before start and rejects the old missing-UID-fence implementation', () => {
+  function invoke(source, changedUid, noLaunch = false, staleBeforeReplacement = false) {
+    const calls = [], before = { bundlePresent: true, uid, cpuAbi: 'x86_64' };
+    const artifact = { signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
+    const options = new Map([['--target', 'synthetic-target'], ['--target-kind', 'vm']]);
+    if (noLaunch) options.set('--no-launch', true);
+    const revalidate = () => { calls.push('revalidate'); if (staleBeforeReplacement) throw new Error('stale source'); };
+    const resolved = { route: { allowed: true }, artifact, installed: before, targetKind: 'vm', targetRef: 'fake',
+      artifactPath: '/synthetic/signed.hap', candidateAbi: 'x86_64', hdc: '/synthetic/hdc', target: 'synthetic-target',
+      storageEvidence: null, readiness: { status: 'PASS' },
+      verified: { directory: '/synthetic', manifest: { abi: 'x86_64', runId: 'synthetic' } },
+      revalidateDeployment: revalidate, revalidateStorageTransition: revalidate };
+    const ports = { requiredOption, fail, targetReference: () => 'fake', LOCK_ROOT: '/synthetic', join, resolve,
+      acquireLock: () => calls.push('lock'), resolveDeployment: () => resolved,
+      writeJson: () => calls.push('write-receipt'), archiveStorageTransition: () => {},
+      runTargetHdc: (_hdc, _target, argv) => { calls.push(argv.includes('install') ? 'install' : 'start');
+        return { status: 0, stdout: argv.includes('install') ? 'install bundle successfully' : 'start ability successfully' }; },
+      installedMetadata: () => ({ ...before, uid: changedUid ? uid + 1 : uid, appProvisionType: 'debug', appIdSha256: hash }),
+      deploymentSigningRoute: () => ({ allowed: true }), assertInstalledAppVersion: () => {}, assertInstalledDeploymentIdentity,
+      BUNDLE_NAME: bundleName, timestampId: () => 'synthetic', rmSync: () => calls.push('cleanup'),
+      console: { log: () => {} } };
+    const install = productionFunction(source, 'installDeployment', 'usage', ports);
+    let error;
+    try { install(options); } catch (caught) { error = caught; }
+    return { calls, error };
+  }
+  const changed = invoke(pipelineSource, true);
+  assert.match(changed.error?.message ?? '', /UID/);
+  assert.ok(changed.calls.includes('install'));
+  assert.ok(!changed.calls.includes('start'));
+  const legacy = invoke(legacyPipelineSource, true);
+  assert.equal(legacy.error, undefined);
+  assert.ok(legacy.calls.includes('start')); // actual prior source fails the safety assertion
+  const ok = invoke(pipelineSource, false);
+  assert.equal(ok.error, undefined);
+  assert.ok(ok.calls.indexOf('revalidate') < ok.calls.indexOf('install'));
+  assert.ok(ok.calls.indexOf('install') < ok.calls.indexOf('start'));
+  assert.ok(!invoke(pipelineSource, false, true).calls.includes('start'));
+  const stale = invoke(pipelineSource, false, false, true);
+  assert.match(stale.error?.message ?? '', /stale source/);
+  assert.ok(!stale.calls.includes('install'));
 });
 

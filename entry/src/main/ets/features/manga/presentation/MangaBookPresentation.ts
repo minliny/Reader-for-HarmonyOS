@@ -7,11 +7,14 @@ export interface MangaBookPosition {
   totalPages?: number;
 }
 
+export type MangaPositionOutcome = 'unknown' | 'loading' | 'confirmed-none' | 'confirmed-position' | 'retryable-failure';
+
 /** Session display facts only. Core owns the durable location and manifest. */
 export class MangaBookPresentation {
   private static owner: object | undefined = undefined;
   private static tokens: Map<string, { epoch: number; revision: number }> = new Map();
   private static positions: Map<string, MangaBookPosition> = new Map<string, MangaBookPosition>();
+  private static outcomes: Map<string, MangaPositionOutcome> = new Map<string, MangaPositionOutcome>();
   /** Platform owners publish this into readerMangaPresentationRevision. */
   static revision: number = 0;
 
@@ -21,7 +24,7 @@ export class MangaBookPresentation {
 
   static useOwner(owner: object): void {
     if (this.owner === owner) return;
-    this.owner = owner; this.positions.clear(); this.tokens.clear(); this.revision += 1;
+    this.owner = owner; this.positions.clear(); this.tokens.clear(); this.outcomes.clear(); this.revision += 1;
   }
 
   /** Retain the bounded admitted shelf window and current reader/detail. This
@@ -32,6 +35,25 @@ export class MangaBookPresentation {
       if (!keys.has(key)) { this.positions.delete(key); this.tokens.delete(key); this.revision += 1; }
     }
     for (const key of this.tokens.keys()) if (!keys.has(key)) this.tokens.delete(key);
+    for (const key of this.outcomes.keys()) {
+      if (!keys.has(key)) { this.outcomes.delete(key); this.revision += 1; }
+    }
+  }
+
+  static outcome(sourceId: string, bookId: string): MangaPositionOutcome {
+    return this.outcomes.get(this.key(sourceId, bookId)) ?? 'unknown';
+  }
+
+  static beginHydration(sourceId: string, bookId: string): void {
+    const key = this.key(sourceId, bookId), previous = this.outcomes.get(key);
+    if (previous === 'confirmed-position' || previous === 'confirmed-none' || previous === 'loading') return;
+    this.outcomes.set(key, 'loading'); this.revision += 1;
+  }
+
+  static hydrationFailed(sourceId: string, bookId: string): void {
+    const key = this.key(sourceId, bookId), previous = this.outcomes.get(key);
+    if (previous === 'confirmed-position' || previous === 'confirmed-none' || previous === 'retryable-failure') return;
+    this.outcomes.set(key, 'retryable-failure'); this.revision += 1;
   }
 
   private static acceptToken(key: string, token: { epoch: number; revision: number } | undefined): boolean {
@@ -49,7 +71,7 @@ export class MangaBookPresentation {
     if (previous !== undefined && previous.chapterIndex === position.chapterIndex &&
       previous.chapterTitle === position.chapterTitle && previous.pageOrdinal === position.pageOrdinal &&
       previous.totalPages === position.totalPages) return;
-    this.positions.set(key, position); this.revision += 1;
+    this.positions.set(key, position); this.outcomes.set(key, 'confirmed-position'); this.revision += 1;
   }
 
   static get(sourceId: string, bookId: string): MangaBookPosition | undefined {
@@ -115,11 +137,14 @@ export class MangaBookPresentation {
   }
 
   static clear(sourceId: string, bookId: string): void {
-    if (this.positions.delete(this.key(sourceId, bookId))) this.revision += 1;
+    const key = this.key(sourceId, bookId), changed = this.positions.delete(key);
+    if (changed || this.outcomes.get(key) !== 'confirmed-none') {
+      this.outcomes.set(key, 'confirmed-none'); this.revision += 1;
+    }
   }
 
   static label(position: MangaBookPosition | undefined): string {
-    if (position === undefined) return '尚未阅读';
+    if (position === undefined) return '';
     const page = `第 ${position.pageOrdinal + 1} 页`;
     const total = position.totalPages !== undefined && position.totalPages > position.pageOrdinal ?
       ` / ${position.totalPages} 页` : '';

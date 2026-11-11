@@ -31,7 +31,7 @@ import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/bu
 import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
-import { embeddedStorageCompatibility, readInstalledSqliteVersion, readInstalledStorageLineage, storageUpdateRoute, loadStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState } from './lib/hap-storage-admission.mjs';
+import { embeddedStorageCompatibility, storageUpdateRoute, loadStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState } from './lib/hap-storage-admission.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
 import { APP_IDENTITY_SCHEMA, APP_RELEASE_LEDGER, createAppBuildIdentity, packagedAppVersion, assertAppVersion, installedAppIdentity } from './lib/app-build-identity.mjs';
 import { prepareAppIdentity, assertAppIdentityUnchanged, verifyAppContentEvidence } from './lib/app-build-context.mjs';
@@ -1936,9 +1936,12 @@ export function deploymentSigningRoute({ targetKind, installed, artifact }) {
   return { allowed: true, reason: 'matching-identity-signed-update-candidate', preservesData: true };
 }
 
-export function deploymentRoute({ targetKind, installed, artifact, storageEvidence }) {
+export function deploymentRoute({ targetKind, installed, artifact, storageEvidence, candidateAbi }) {
   const signature = deploymentSigningRoute({ targetKind, installed, artifact });
   if (!signature.allowed || !installed.bundlePresent) return signature;
+  if (!['x86_64', 'arm64-v8a'].includes(candidateAbi)) return { allowed: false, reason: 'candidate-abi-unresolved' };
+  if (installed.cpuAbi !== candidateAbi) return { allowed: false, reason: 'target-candidate-abi-unresolved-or-mismatched' };
+  if (!Number.isSafeInteger(installed.uid) || installed.uid <= 0) return { allowed: false, reason: 'installed-uid-unresolved' };
   const storage = storageUpdateRoute({ ...(storageEvidence ?? {}),
     candidateNativeSha256: artifact.embeddedCoreNapi?.sha256, candidateHapSha256: artifact.sha256 });
   return storage.allowed ? { ...signature, reason: storage.reason } : storage;
@@ -2029,6 +2032,7 @@ function resolveDeployment(options) {
   const targetKind = requiredOption(options, '--target-kind');
   if (!['vm', 'physical'].includes(targetKind)) fail('--target-kind must be vm or physical', 2);
   const verified = verifyManifest(manifestPath);
+  const candidateAbi = verified.manifest.abi ?? 'arm64-v8a'; // Frozen legacy manifests used the original arm64 contract.
   const artifact = verified.artifacts.find((candidate) => candidate.kind === artifactKind);
   if (artifact === undefined) fail(`manifest does not contain a ${artifactKind} artifact`);
   const artifactPath = resolve(verified.directory, artifact.path);
@@ -2047,50 +2051,43 @@ function resolveDeployment(options) {
   }
   if (options.has('--storage-transition') && !installed.bundlePresent) fail('storage transition requires an existing installed bundle');
   let storageEvidence = null;
-  let revalidateStorageTransition = null;
+  const revalidateInstalledIdentity = () => {
+    if (JSON.stringify(installedMetadata(hdc, target)) !== JSON.stringify(installed)) {
+      fail('installed identity changed before replacement');
+    }
+  };
+  let revalidateDeployment = revalidateInstalledIdentity;
   if (route.allowed && installed.bundlePresent && options.has('--storage-transition')) {
     const localProof = loadStorageTransitionProof(requiredOption(options, '--storage-transition'), storageTransitionCandidate(verified, artifact));
     const querySandbox = command => deviceQuery('shell', '-b', BUNDLE_NAME, command);
     const observe = () => readStoppedStorageTransitionState({ bundleName: BUNDLE_NAME, installed,
-      abi: verified.manifest.abi, targetRef: targetReference(target), targetKind, query, querySandbox });
+      abi: candidateAbi, targetRef: targetReference(target), targetKind, query, querySandbox });
     const observedStorage = observe();
     const transition = bindStorageTransitionTarget(localProof, observedStorage);
     storageEvidence = { targetSqliteVersion: transition.sourceSqliteUserVersion,
       candidateStorage: artifact.embeddedCoreNapi.storageCompatibility, installedStorage: null,
       versionSource: 'verified-stopped-snapshot-and-formal-runtime-clone', transition };
-    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence });
-    revalidateStorageTransition = () => {
-      if (JSON.stringify(installedMetadata(hdc, target)) !== JSON.stringify(installed)) fail('installed identity changed before storage transition');
+    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence, candidateAbi });
+    revalidateDeployment = () => {
+      revalidateInstalledIdentity();
       bindStorageTransitionTarget(localProof, observe());
     };
-    if (route.allowed) revalidateStorageTransition();
+    if (route.allowed) revalidateDeployment();
   } else if (route.allowed && installed.bundlePresent) {
-    const optionalQuery = (...command) => {
-      try { return deviceQuery(...command); } catch { return ''; }
-    };
-    const querySandbox = command => optionalQuery('shell', '-b', BUNDLE_NAME, command);
-    const readVersion = () => readInstalledSqliteVersion({ bundleName: BUNDLE_NAME, uid: installed.uid, querySandbox });
-    const readLineage = () => readInstalledStorageLineage({ bundleName: BUNDLE_NAME, query: command => optionalQuery('shell', command) });
-    const headerVersion = readVersion();
-    const candidateStorage = artifact.embeddedCoreNapi.storageCompatibility;
-    const installedStorage = candidateStorage && (headerVersion === null ||
-      headerVersion <= candidateStorage.sqliteMaxUserVersion) ? readLineage() : null;
-    const liveVersion = installedStorage?.sqliteUserVersion ?? null;
-    const targetSqliteVersion = headerVersion ?? liveVersion;
-    storageEvidence = { targetSqliteVersion, candidateStorage, installedStorage,
-      versionSource: headerVersion !== null ? 'stable-sqlite-header' : liveVersion !== null ? 'installed-core' : null };
-    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence });
-    if (route.allowed && (!installed.updateTime || JSON.stringify(installedMetadata(hdc, target)) !== JSON.stringify(installed) ||
-      (headerVersion !== null && liveVersion !== null && headerVersion !== liveVersion) ||
-      (headerVersion === null ? JSON.stringify(readLineage()) !== JSON.stringify(installedStorage) :
-        readVersion() !== targetSqliteVersion))) {
-      route = { allowed: false, reason: 'target-storage-evidence-changed' };
-    }
+    // There is no authenticated passive current-owner port in the incumbent.
+    // Do not start it, read its live DB header, or accept retained logs/source
+    // equality as authority. A new, candidate-bound formal proof is required.
+    storageEvidence = { targetSqliteVersion: null, installedStorage: null,
+      candidateStorage: artifact.embeddedCoreNapi.storageCompatibility,
+      versionSource: null, policy: 'formal-stopped-transition-required',
+      headerRead: 'NOT_RUN_UNSAFE_READ_BOUNDARY', lineageAuthority: 'RETIRED' };
+    route = deploymentRoute({ targetKind, installed, artifact, storageEvidence, candidateAbi });
   }
   return {
     verified,
     artifact,
     artifactPath,
+    candidateAbi,
     hdc,
     target,
     targetKind,
@@ -2099,7 +2096,7 @@ function resolveDeployment(options) {
     route,
     readiness,
     storageEvidence,
-    revalidateStorageTransition,
+    revalidateDeployment,
   };
 }
 
@@ -2130,6 +2127,20 @@ export function assertInstalledAppVersion(expected, installed) {
   assertAppVersion(expected, installed.appVersion, 'Installed bundle');
 }
 
+/** Run after replacement and before any launch, including --no-launch installs. */
+export function assertInstalledDeploymentIdentity({ before, after, artifact, candidateAbi, expectedVersion, targetKind }) {
+  const signature = deploymentSigningRoute({ targetKind, installed: after, artifact });
+  if (!after.bundlePresent || !signature.allowed) fail('installed signing identity mismatch; stopped before launch without uninstalling', 3);
+  if (!Number.isSafeInteger(after.uid) || after.uid <= 0 || (before.bundlePresent &&
+      (!Number.isSafeInteger(before.uid) || before.uid <= 0 || after.uid !== before.uid))) {
+    fail('installed UID is unavailable or was not preserved; stopped before launch without uninstalling', 3);
+  }
+  if (!['x86_64', 'arm64-v8a'].includes(candidateAbi) || after.cpuAbi !== candidateAbi) {
+    fail('installed ABI is unavailable or mismatched; stopped before launch without uninstalling', 3);
+  }
+  if (expectedVersion) assertInstalledAppVersion(expectedVersion, after);
+}
+
 function installDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
@@ -2154,7 +2165,7 @@ function installDeployment(options) {
       archiveStorageTransition(resolved.verified, resolved.storageEvidence.transition) : null;
     // This runs while the same immutable run and target locks are held, after
     // archiving exact consumed proof bytes and immediately before replacement.
-    resolved.revalidateStorageTransition?.();
+    resolved.revalidateDeployment();
     const install = runTargetHdc(resolved.hdc, resolved.target, [
       '-t', resolved.target, 'install', '-r', resolved.artifactPath,
     ], { allowFailure: true });
@@ -2165,14 +2176,9 @@ function installDeployment(options) {
       fail(`HAP install failed while preserving data: ${installOutput.trim()}`, 3);
     }
     const postInstall = installedMetadata(resolved.hdc, resolved.target);
-    const installedRoute = deploymentSigningRoute({ targetKind: resolved.targetKind,
-      installed: postInstall, artifact: resolved.artifact });
-    if (!postInstall.bundlePresent || !installedRoute.allowed) {
-      fail('HAP was installed but its reported signing identity does not match; stopped before launch without uninstalling', 3);
-    }
-    if (resolved.verified.manifest.expectedVersion) {
-      assertInstalledAppVersion(resolved.verified.manifest.expectedVersion, postInstall);
-    }
+    assertInstalledDeploymentIdentity({ before: resolved.installed, after: postInstall,
+      artifact: resolved.artifact, candidateAbi: resolved.candidateAbi,
+      expectedVersion: resolved.verified.manifest.expectedVersion, targetKind: resolved.targetKind });
     let launch = 'NOT_RUN';
     if (options.get('--no-launch') !== true) {
       const start = runTargetHdc(resolved.hdc, resolved.target, [

@@ -5,7 +5,23 @@ import * as nfs from 'node:fs';
 import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createMangaAtomicPayloadReaderFixture } from './lib/manga-atomic-payload-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  'retention-baseline': { description: 'Actual Body retention, exact-version/live protection, corruption and budget cleanup', resources: [] },
+  'worker-wait': { description: 'Actual retention read pin, cancelled AtomicFile worker and lease continuity', resources: [] },
+  'files-dir-leases': { description: 'Actual durable filesDir display lease and cold ownership', resources: [] },
+  'same-key-store': { description: 'Actual same-key proof serialization and failed publication cleanup', resources: [] },
+  'temp-recovery': { description: 'Actual Body/Disk cold temporary recovery, budget and cleanup/write interlock', resources: [] },
+  'temporary-inventory': { description: 'Actual temporary byte accounting, live write and unknown-file preservation', resources: [] },
+};
+for (const focus of selectContractCases(CONTRACT_CASES)) {
+  await runSelectedCase(focus);
+  recordContractCasePass(focus);
+}
+
+async function runSelectedCase(focus) {
+const { createMangaAtomicPayloadReaderFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
 
 const directory = await mkdtemp(join(tmpdir(), 'reader-manga-display-regression-'));
 const fs = {
@@ -22,10 +38,14 @@ const fs = {
   AtomicFile: class { constructor(path) { this.path = path; } readFully() { const bytes = nfs.readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); } },
 };
 class LRUCache { constructor(capacity) { this.capacity = capacity; this.data = new Map(); } get(key) { return this.data.get(key); } put(key, value) { this.data.set(key, value); } remove(key) { this.data.delete(key); } clear() { this.data.clear(); } }
-const util = { LRUCache, TextEncoder: class { encodeInto(text) { return new TextEncoder().encode(text); } }, TextDecoder: class { decodeToString(bytes) { return new TextDecoder().decode(bytes); } } };
+const util = { LRUCache, TextEncoder: class { encodeInto(text) { return new TextEncoder().encode(text); } }, TextDecoder: class {
+  constructor(label = 'utf-8', options) { this.decoder = new TextDecoder(label, options); }
+  static create(label, options) { return new this(label, options); }
+  decodeToString(bytes, options) { return this.decoder.decode(bytes, options); }
+} };
 const cryptoFramework = { createMd() { const hash = createHash('sha256'); return { async update({ data }) { hash.update(data); }, async digest() { return { data: new Uint8Array(hash.digest()) }; } }; } };
 function load(name, dependencies) {
-  const text = nfs.readFileSync(new URL(`../entry/src/main/ets/app/${name}.ts`, import.meta.url), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, '');
+  const text = nfs.readFileSync(new URL(`../entry/src/main/ets/platform/reading-resources/${name}.ts`, import.meta.url), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(text)}\nreturn ${name}`)(...Object.values(dependencies));
 }
 const atomicReadHooks = {};
@@ -53,9 +73,8 @@ function body() {
   };
   return result;
 }
-const focus = process.argv[2];
 async function regressions() {
-  if (focus === undefined || focus === 'worker-wait') {
+  if (focus === 'worker-wait') {
     const dir = `${directory}/worker-wait`; await mkdir(dir, { recursive:true });
     const live = new Set(), chapter = owner('worker-wait');
     const retention = new MangaDisplayRetention(dir, async value => createHash('sha256').update(value).digest('hex'), path => live.has(path));
@@ -87,7 +106,7 @@ async function regressions() {
     live.clear(); assert.equal(await reader.remove(chapter, await reader.inventory()), true);
     console.log('PASS actual display worker-wait pin, cancellation cleanup and acquire-before-unpin lease continuity');
   }
-  if (focus === undefined || focus === 'files-dir-leases') {
+  if (focus === 'files-dir-leases') {
     const fresh = body(); fresh.configureMangaDisplayCache(`${directory}/lease-files`);
     const durable = await fresh.loadMangaBytes(source, owner('durable-lease'), () => true);
     const path = durable.fileUri.slice(7);
@@ -114,7 +133,7 @@ async function regressions() {
     fresh.releaseAllDisplayFiles(); cold.releaseAllDisplayFiles();
     console.log('PASS distinct filesDir live references: initial release, cold lease, safe removal and unchanged novel namespace');
   }
-  if (focus === undefined || focus === 'same-key-store') {
+  if (focus === 'same-key-store') {
     const dir = `${directory}/parallel-records`; await mkdir(dir, { recursive: true });
     const retention = new MangaDisplayRetention(dir, async bytes => createHash('sha256').update(bytes).digest('hex'), () => false);
     const chapter = owner('parallel'), key = await retention.key(chapter, 'source-hash');
@@ -144,7 +163,7 @@ async function regressions() {
       'an owned metadata temporary file is reclaimed even when publication fails');
     console.log('PASS same-key display proof serialization, live write fencing and owned temporary-file failure cleanup');
   }
-  if (focus === undefined || focus === 'temp-recovery') {
+  if (focus === 'temp-recovery') {
     const host = body(), filesDir = `${directory}/recover-files`;
     host.configureMangaDisplayCache(filesDir); await mkdir(host.mangaDisplayDir, { recursive: true });
     const digest = createHash('sha256').update(source).digest('hex');
@@ -215,7 +234,7 @@ async function regressions() {
     assert.deepEqual(new Uint8Array(nfs.readFileSync(collisionFinal)), source, 'late old unlink cannot remove the new payload');
     console.log('PASS cold exact Body temporary recovery, resumed capacity, active temporary protection and cleanup/write interlock');
   }
-  if (focus === undefined || focus === 'temporary-inventory') {
+  if (focus === 'temporary-inventory') {
     const host = body(); host.configureMangaDisplayCache(`${directory}/temporary-files`);
     await mkdir(host.mangaDisplayDir, { recursive: true });
     const stale = `${host.mangaDisplayDir}/.reading-body-tmp-crash-1`, original = `${host.mangaDisplayDir}/unowned-original.png`;
@@ -252,7 +271,7 @@ async function regressions() {
   }
 }
 try {
-  if (focus === undefined) {
+  if (focus === 'retention-baseline') {
   const first = body(); await new Promise(resolve => setImmediate(resolve));
   const a = await first.loadMangaBytes(source, owner('A'), () => true);
   first.release(a.fileUri);
@@ -333,3 +352,4 @@ try {
   }
   await regressions();
 } finally { await rm(directory, { recursive: true, force: true }); }
+}

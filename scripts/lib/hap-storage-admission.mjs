@@ -22,29 +22,16 @@ export function embeddedStorageCompatibility(bytes) {
   return validStorageCompatibility(compatibility) ? compatibility : null;
 }
 
-export function readInstalledSqliteVersion({ bundleName, uid, querySandbox }) {
-  if (!/^[A-Za-z][A-Za-z0-9_.]+$/.test(bundleName) || !Number.isSafeInteger(uid) || uid <= 0) return null;
-  const cwd = /^\/mnt\/debug\/(0|[1-9]\d*)\/debug_hap\/([A-Za-z][A-Za-z0-9_.]+)$/.exec(querySandbox('pwd').trim());
-  if (!cwd || cwd[2] !== bundleName) return null;
-  const directory = `/data/app/el2/${cwd[1]}/base/${bundleName}/haps/entry/files/reader-core`;
-  const db = `${directory}/reader-core.sqlite3`;
-  // A shell-owned read-only SQLite connection can still create WAL/SHM files
-  // beside an app's DB. Read only the header and reject an active WAL or journal.
-  const noJournal = `test ! -s ${db}-wal && test ! -s ${db}-journal`;
-  const stat = `stat -c '%u:%i:%s:%Y' ${db}`;
-  const output = querySandbox(`test -r ${directory} && test -x ${directory} && ${noJournal} && ${stat} && ` +
-    `od -An -v -N 100 -t u1 ${db} && ${noJournal} && ${stat}`);
-  const lines = output.trim().split(/\r?\n/);
-  const metadata = /^(\d+):\d+:([1-9]\d*):\d+$/.exec(lines[0]);
-  if (!metadata || Number(metadata[1]) !== uid || Number(metadata[2]) < 100 || lines[0] !== lines.at(-1)) return null;
-  const fields = lines.slice(1, -1).join(' ').trim().split(/\s+/);
-  if (fields.length !== 100 || fields.some(field => !/^\d{1,3}$/.test(field) || Number(field) > 255)) return null;
-  const header = Buffer.from(fields.map(Number));
-  if (header.subarray(0, 16).toString('latin1') !== 'SQLite format 3\0') return null;
-  const version = header.readUInt32BE(60);
-  return Number.isSafeInteger(version) && version > 0 && version <= 0x7fffffff ? version : null;
+// The former shell header reader followed the DB path before validating it.
+// There is no supported atomic no-follow read port on this control path.
+// Keep the legacy observation export inert for callers that have not migrated;
+// it must not query even pwd, read bytes, or become installation evidence.
+export function readInstalledSqliteVersion() {
+  return null;
 }
 
+// Diagnostic observation only. PID-filtered logs do not establish a process
+// lifetime/current owner, and never authorize deployment (see storageUpdateRoute).
 export function readInstalledStorageLineage({ bundleName, query }) {
   if (!/^[A-Za-z][A-Za-z0-9_.]+$/.test(bundleName)) return null;
   const pidCommand = `pidof ${bundleName}`;
@@ -54,9 +41,13 @@ export function readInstalledStorageLineage({ bundleName, query }) {
   if (query(pidCommand).trim() !== pid) return null;
   let storage = null;
   let published = false;
+  const prefix = /^(?:\d{4}-)?(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])[ \t]+(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3,9}[ \t]+([1-9]\d{0,9})[ \t]+[1-9]\d{0,9}[ \t]+[DIWEF][ \t]+[A-Za-z][A-Fa-f0-9]{3,15}\/Reader:[ \t]+/;
   for (const line of log.split(/\r?\n/)) {
-    const identity = /\/Reader: Core build identity: (\{.+\})$/.exec(line);
-    const event = /\/Reader: READER_STARTUP (\{.+\})$/.exec(line);
+    const metadata = prefix.exec(line);
+    if (metadata === null || metadata[1] !== pid) continue;
+    const body = line.slice(metadata[0].length);
+    const identity = /^Core build identity: (\{.+\})$/.exec(body);
+    const event = /^READER_STARTUP (\{.+\})$/.exec(body);
     try {
       if (identity) {
         const data = JSON.parse(identity[1]);
@@ -81,14 +72,11 @@ export function readInstalledStorageLineage({ bundleName, query }) {
   return published ? storage : null;
 }
 
-export function storageUpdateRoute({ targetSqliteVersion, installedStorage, candidateStorage, transition, candidateNativeSha256, candidateHapSha256 }) {
-  if (!Number.isSafeInteger(targetSqliteVersion) || targetSqliteVersion <= 0) {
-    return { allowed: false, reason: 'target-sqlite-version-unresolved' };
-  }
+export function storageUpdateRoute({ targetSqliteVersion, candidateStorage, transition, candidateNativeSha256, candidateHapSha256 }) {
   if (!validStorageCompatibility(candidateStorage)) {
     return { allowed: false, reason: 'candidate-native-storage-identity-unresolved' };
   }
-  if (targetSqliteVersion > candidateStorage.sqliteMaxUserVersion) {
+  if (Number.isSafeInteger(targetSqliteVersion) && targetSqliteVersion > candidateStorage.sqliteMaxUserVersion) {
     return { allowed: false, reason: 'candidate-core-cannot-open-target-sqlite' };
   }
   const verifiedTransition = transitionBindings.get(transition);
@@ -98,14 +86,13 @@ export function storageUpdateRoute({ targetSqliteVersion, installedStorage, cand
       equalJson(verifiedTransition.expected.storageCompatibility, candidateStorage)) {
     return { allowed: true, reason: 'verified-directed-storage-transition' };
   }
-  if (!validStorageCompatibility(installedStorage) || targetSqliteVersion > installedStorage.sqliteMaxUserVersion) {
-    return { allowed: false, reason: 'installed-core-storage-lineage-unresolved' };
-  }
-  if (installedStorage.sqliteStorageSourceSha256 !== candidateStorage.sqliteStorageSourceSha256 ||
-      installedStorage.sqliteMaxUserVersion !== candidateStorage.sqliteMaxUserVersion) {
-    return { allowed: false, reason: 'core-storage-lineage-changed' };
-  }
-  return { allowed: true, reason: 'verified-same-storage-lineage' };
+  // Source text equality, retained startup logs and a one-shot optional
+  // sqliteUserVersion are not a compatibility/current-owner proof. The formal
+  // edge binds the candidate Native AND its full Core input snapshot (including
+  // Cargo.lock), real execution and current stopped source pair. Never restore
+  // the old source-only fast path by passing a caller-written object here.
+  return { allowed: false, reason: verifiedTransition?.bound ?
+    'storage-transition-candidate-mismatch' : 'verified-storage-transition-required' };
 }
 
 // This is one reviewed compatibility edge, not a numeric schema allowlist.

@@ -44,6 +44,7 @@ export struct BookshelfMultiSelectPage {
   @StorageLink('readerBookshelfSelectedGroup') @Watch('reconcileSelection') private storedSelectedGroup: string = '';
   @StorageLink('readerBookshelfReadingFilter') @Watch('reconcileSelection') private readingFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') @Watch('reconcileSelection') private sourceFilter: string = 'all';
+  @StorageLink('readerMangaPresentationRevision') @Watch('onMangaPresentationChanged') private mangaRevision: number = 0;
   @Prop @Watch('reconcileSelection') books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;
@@ -64,7 +65,7 @@ export struct BookshelfMultiSelectPage {
     this.mounted = true;
     this.onGeometryInputsChanged();
     registerReaderFonts(this.getUIContext().getFont());
-    if (this.initialSelectedKey.length > 0 && this.hasBookKey(this.initialSelectedKey)) {
+    if (this.initialSelectedKey.length > 0 && this.canRetainSelectedKey(this.initialSelectedKey)) {
       this.selectedKeys = [this.initialSelectedKey];
     }
   }
@@ -300,12 +301,24 @@ export struct BookshelfMultiSelectPage {
   }
 
   private reconcileSelection(): void {
-    const visibleKeys = new Set(this.visibleBooks().map((book: ShelfBook): string => this.bookKey(book)));
-    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => visibleKeys.has(key));
+    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => this.canRetainSelectedKey(key));
+  }
+
+  private onMangaPresentationChanged(): void {
+    if (this.mounted) this.reconcileSelection();
+  }
+
+  private canRetainSelectedKey(key: string): boolean {
+    if (this.hasBookKey(key)) return true;
+    // A missing optional display receipt is not evidence that an explicitly
+    // selected book became unread/read. Keep that identity pending, while the
+    // submit fence below still requires the current confirmed filter match.
+    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, 'all', this.sourceFilter)
+      .some((book: ShelfBook): boolean => this.bookKey(book) === key && ShelfBookPresentation.readingStatePending(book));
   }
 
   private canRemoveSelection(): boolean {
-    return this.selectionInputEnabled() && this.selectedKeys.length > 0;
+    return this.selectionInputEnabled() && this.selectedKeys.some((key: string): boolean => this.hasBookKey(key));
   }
 
   private removeVisibleSelection(): void {
@@ -313,7 +326,8 @@ export struct BookshelfMultiSelectPage {
     // Protect a click delivered before the Prop watcher has reconciled a
     // book whose progress/group changed underneath an active filter.
     this.reconcileSelection();
-    if (this.selectedKeys.length > 0) this.onRemoveSelected(this.selectedKeys.slice());
+    const keys = this.selectedKeys.filter((key: string): boolean => this.hasBookKey(key));
+    if (keys.length > 0) this.onRemoveSelected(keys);
   }
 
   private toggleBook(book: ShelfBook): void {
@@ -334,7 +348,8 @@ export struct BookshelfMultiSelectPage {
       this.selectedKeys = [];
       return;
     }
-    this.selectedKeys = visible.map((book: ShelfBook): string => this.bookKey(book));
+    const pending = this.selectedKeys.filter((key: string): boolean => !this.hasBookKey(key) && this.canRetainSelectedKey(key));
+    this.selectedKeys = [...pending, ...visible.map((book: ShelfBook): string => this.bookKey(book))];
   }
 
   private allSelected(): boolean {
@@ -361,6 +376,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private visibleBooks(): ShelfBook[] {
+    if (this.mangaRevision < 0) return [];
     return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, this.readingFilter, this.sourceFilter);
   }
 

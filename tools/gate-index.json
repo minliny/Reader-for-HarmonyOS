@@ -6,8 +6,8 @@
   "reviewedFiles": 703,
   "inventoryFiles": 665,
   "qualificationCounts": {
-    "NAVIGATION": 321,
-    "QUALIFIED": 344
+    "NAVIGATION": 322,
+    "QUALIFIED": 343
   },
   "defaultPolicy": "No full gate for ordinary feature work, vulnerability fixes, builds or installs.",
   "entries": [
@@ -18045,7 +18045,7 @@
       "file": "tools/test-manga-display-retention.mjs",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
-      "qualification": "QUALIFIED",
+      "qualification": "NAVIGATION",
       "protectedBehavior": "漫画显示衍生图冷/热返回复用、版本精确清理且活跃读/写/显示lease不可删，崩溃临时文件保守计账，旧unlink不能删新同名写。",
       "mechanism": "27-53加载真实Retention/Body/Disk class，Node真实临时fs与fake decode；58-145 worker等待pin、filesDir lease、同key sidecar串行/failure；147-251 crash temp recovery与cleanup/write interlock；255-330冷热复用/同size损坏/版本删除/读pin和sidecar失败恢复。",
       "productionBinding": "app/MangaDisplayRetention.ts lookup/store/inventory/remove；ReadingBodyImageHost.loadMangaBytes/mangaDisplayInventory；ReadingImageDiskCache reserveExternalWrite真实实现。",
@@ -18053,7 +18053,7 @@
       "overlap": "retained-tile-cache是Controller内存lease；本项真实物理衍生文件/sidecar和跨冷owner复用；chapter-preparation只Set字节模型。",
       "minimumTrigger": "显示衍生图复用、文件lease、临时清理或derived quota相关改动时按需。",
       "necessityReason": "真实Node IO配实际生产owner能验证所声明物理文件协议；fake decoder只写确定字节，不冒充真实图片解码。",
-      "limitations": "不是Harmony文件系统durability/像素；需支持2/10GiB稀疏truncate；20ms后台checksum等待可能需调度信号改进。未识别focus值会跳大部case，规范runner无额外argv。",
+      "limitations": "Reference navigation to exact selected display retention cases. Other4 cases remain review-needed; no parent/whole-file or native pixel acceptance.",
       "needs": [
         "display retention",
         "cold reuse",
@@ -18066,7 +18066,7 @@
         "官方ETS SDK用于atomic worker fixture顶层转换",
         "受控decode/AtomicFile/sequence runner"
       ],
-      "repair": null,
+      "repair": "Choose only an independently reviewed exact leaf; this parent never expands to all display cases.",
       "reviewedSourceSha256": "3e23f607147c0607ac89f3b809713cde966d10c7885457f3654dc3987c0f7c5d",
       "releaseUse": "candidate-scope-only",
       "estimatedCostType": "sdk-transpile",
@@ -18102,8 +18102,13 @@
       "tests": [
         "test-manga-display-retention.mjs"
       ],
-      "repairAction": null,
-      "resourceDefinitionSha256": "402100edea8f9d288aa294ccfe413aed0fdb1e83518cc7c45682f70a1d8f3ee7"
+      "repairAction": "SELECT_EXACT_CASE",
+      "resourceDefinitionSha256": "402100edea8f9d288aa294ccfe413aed0fdb1e83518cc7c45682f70a1d8f3ee7",
+      "focusedEntries": [
+        "H-manga-display-retention#worker-wait",
+        "H-manga-display-retention#temp-recovery"
+      ],
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified."
     },
     {
       "id": "H-manga-display-session-sdk",
@@ -92699,10 +92704,10 @@
         "Settingspopuporigin",
         "legacyRSS"
       ],
-      "productionBinding": "MainTabShell/MainTabBar/BookshelfPage/EmptyPage/StatusContent/SettingsShell/DiscoverPage/RssPage selectedSDK；ReaderFloatingBarMetrics真实函数。",
+      "productionBinding": "Actual MainTabShell/ReaderPageScaffold/FixedHeaderHost and current Discover measurement owner; SDK-lowered ordinary methods with controlled window/IO.",
       "overlap": "floating-page-content是Search/Source/Directory相同视口原则；bounded-typography wideRail覆盖label；本项书架index/Settingsglobalorigin独有；RSS当前明确关闭(scope:63)不能因此加入合格发行。",
       "minimumTrigger": "Main共享scaffold/floatingsafeoffset或书架index稳定变更时先抽当前shipping部分；RSS仅显式维护该停用模块时另选。; exact case: navigation",
-      "necessityReason": "共同壳参数层有充分样本，不能当native全页证据；混停用RSS和旧66/118/148等source定义快照，不能把历史allstates当现行发行范围。",
+      "necessityReason": "Common preamble identity changed for Discover mapping. Revalidate only the previously reviewed navigation leaf so the repair does not silently invalidate its current/stale-generation checks.",
       "limitations": "Actual selected scope only; no device/product-wide acceptance.",
       "id": "H-main-floating-shell-layout#navigation",
       "parentId": "H-main-floating-shell-layout",
@@ -92728,7 +92733,7 @@
       "mechanism": "实际MainTabShell current generation/retirement和native tab width; owner implementation record: [\"当前shell/Settings/Discover分5case；去RSS未声明变量残段和disabled旧profile；旧66/118/68/34视觉快照改live current metric relation与测量delta，保native viewport/索引/retired callback/origin。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "d61213d7fbcde3cd199a3aa92fe8a6209539ed03d6803685645efa58aed17c7c",
+      "reviewedSourceSha256": "9c7778e6b1e2aba952c94a60beb5aa67578419426043d2dabc7284657e2d1537",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -92860,7 +92865,7 @@
         },
         {
           "path": "tools/test-main-floating-shell-layout.mjs",
-          "sha256": "d61213d7fbcde3cd199a3aa92fe8a6209539ed03d6803685645efa58aed17c7c"
+          "sha256": "9c7778e6b1e2aba952c94a60beb5aa67578419426043d2dabc7284657e2d1537"
         }
       ],
       "definitionInputProblems": [],
@@ -92869,23 +92874,20 @@
       "repair": null,
       "implementation": "IMPLEMENTED",
       "validationEvidence": {
-        "syntax": "PASS",
-        "case": "PARTIAL_EXECUTION",
-        "selectedExecutedCases": [
-          {
-            "id": "shelf-list",
-            "status": "PASS",
-            "evidence": "foundation-focused-results.json",
-            "at": null,
-            "sourceIdentity": "recorded command/output; early executions did not all capture a source SHA"
-          }
-        ]
+        "status": "PASS_INDEXED_EXACT_CASE",
+        "result": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json",
+        "sourceReview": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json",
+        "case": "navigation",
+        "fullSuite": "NOT_RUN",
+        "nativeOrDevice": "NOT_RUN"
       },
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "3e16a49ba222709e6d39ed351254063778e0ca670d21feaada8a5fccac037afa",
-      "frameworkClosureReview": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p4-navigation-definition-review.json"
+      "resourceDefinitionSha256": "2c18e0f44ae8c9bc67e53b55a7ba51c0ff6020521e7d7d940cb8c00726c3f80e",
+      "frameworkClosureReview": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p4-navigation-definition-review.json",
+      "definitionIdentityState": "REVIEWED",
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified."
     },
     {
       "file": "tools/test-main-floating-shell-layout.mjs",
@@ -92904,7 +92906,7 @@
       "id": "H-main-floating-shell-layout#shelf-list",
       "parentId": "H-main-floating-shell-layout",
       "caseId": "shelf-list",
-      "qualification": "QUALIFIED",
+      "qualification": "REVIEW_NEEDED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -93013,9 +93015,9 @@
         }
       ],
       "definitionInputProblems": [],
-      "releaseEligible": null,
-      "repairAction": null,
-      "repair": null,
+      "releaseEligible": false,
+      "repairAction": "REVIEW_EXACT_CASE",
+      "repair": "Current same-file preamble changed. This sibling was not independently reviewed or executed; retain old definition identity until separately selected.",
       "implementation": "IMPLEMENTED",
       "validationEvidence": {
         "syntax": "PASS",
@@ -93052,7 +93054,7 @@
       "id": "H-main-floating-shell-layout#empty-status",
       "parentId": "H-main-floating-shell-layout",
       "caseId": "empty-status",
-      "qualification": "QUALIFIED",
+      "qualification": "REVIEW_NEEDED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -93161,9 +93163,9 @@
         }
       ],
       "definitionInputProblems": [],
-      "releaseEligible": null,
-      "repairAction": null,
-      "repair": null,
+      "releaseEligible": false,
+      "repairAction": "REVIEW_EXACT_CASE",
+      "repair": "Current same-file preamble changed. This sibling was not independently reviewed or executed; retain old definition identity until separately selected.",
       "implementation": "IMPLEMENTED",
       "validationEvidence": {
         "syntax": "PASS",
@@ -93200,7 +93202,7 @@
       "id": "H-main-floating-shell-layout#settings-origin",
       "parentId": "H-main-floating-shell-layout",
       "caseId": "settings-origin",
-      "qualification": "QUALIFIED",
+      "qualification": "REVIEW_NEEDED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -93309,9 +93311,9 @@
         }
       ],
       "definitionInputProblems": [],
-      "releaseEligible": null,
-      "repairAction": null,
-      "repair": null,
+      "releaseEligible": false,
+      "repairAction": "REVIEW_EXACT_CASE",
+      "repair": "Current same-file preamble changed. This sibling was not independently reviewed or executed; retain old definition identity until separately selected.",
       "implementation": "IMPLEMENTED",
       "validationEvidence": {
         "syntax": "PASS",
@@ -93340,10 +93342,10 @@
         "Settingspopuporigin",
         "legacyRSS"
       ],
-      "productionBinding": "MainTabShell/MainTabBar/BookshelfPage/EmptyPage/StatusContent/SettingsShell/DiscoverPage/RssPage selectedSDK；ReaderFloatingBarMetrics真实函数。",
+      "productionBinding": "Actual MainTabShell/ReaderPageScaffold/FixedHeaderHost and current Discover measurement owner; SDK-lowered ordinary methods with controlled window/IO.",
       "overlap": "floating-page-content是Search/Source/Directory相同视口原则；bounded-typography wideRail覆盖label；本项书架index/Settingsglobalorigin独有；RSS当前明确关闭(scope:63)不能因此加入合格发行。",
       "minimumTrigger": "Main共享scaffold/floatingsafeoffset或书架index稳定变更时先抽当前shipping部分；RSS仅显式维护该停用模块时另选。; exact case: discover-header",
-      "necessityReason": "共同壳参数层有充分样本，不能当native全页证据；混停用RSS和旧66/118/148等source定义快照，不能把历史allstates当现行发行范围。",
+      "necessityReason": "Repair the moved Discover source and its real shared header/navigation binding; preserve current/stale/retired measurement ownership without broad sibling checks.",
       "limitations": "Actual selected scope only; no device/product-wide acceptance.",
       "id": "H-main-floating-shell-layout#discover-header",
       "parentId": "H-main-floating-shell-layout",
@@ -93369,19 +93371,31 @@
       "mechanism": "实际Discover shared fixed header mount; owner implementation record: [\"当前shell/Settings/Discover分5case；去RSS未声明变量残段和disabled旧profile；旧66/118/68/34视觉快照改live current metric relation与测量delta，保native viewport/索引/retired callback/origin。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "8ab6a97aa837d42f84cc7130a1ecb26a7e1ecb9b59c331003555db3047d6a05d",
+      "reviewedSourceSha256": "9c7778e6b1e2aba952c94a60beb5aa67578419426043d2dabc7284657e2d1537",
       "definitionInputs": [
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -93396,28 +93410,40 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-floating-bar-metrics-probe.mjs",
+          "sha256": "71f174fe5d440ecffafc6cf27624ca63696762aead94d37decfe7530eccf9c92"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "a429521e0909b97b28162b0dd76456fe3a635919937789236bd2f1a72e3dd41b"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "5ceec3d314c0acc6f08b432a5e8a89a0cb69bfa5f89c2a738fe7f92280e98d48"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -93425,19 +93451,43 @@
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-phone-navigation-source.mjs",
+          "sha256": "11859c57ab3ca17f61871a1395a26f564c5329c9717f7abb584d759fd6900d98"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "ceff22891d23daab0e0e9924712325c04762328c9ed0d8e32e099fa388fbb72b"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "2ab61ffd56f993012ac3c190c487de9e3b4ad4268b0cb5676ba9b89ae6751798"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -93449,11 +93499,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-main-floating-shell-layout.mjs",
-          "sha256": "8ab6a97aa837d42f84cc7130a1ecb26a7e1ecb9b59c331003555db3047d6a05d"
+          "sha256": "9c7778e6b1e2aba952c94a60beb5aa67578419426043d2dabc7284657e2d1537"
         }
       ],
       "definitionInputProblems": [],
@@ -93462,22 +93512,19 @@
       "repair": null,
       "implementation": "IMPLEMENTED",
       "validationEvidence": {
-        "syntax": "PASS",
-        "case": "PARTIAL_EXECUTION",
-        "selectedExecutedCases": [
-          {
-            "id": "shelf-list",
-            "status": "PASS",
-            "evidence": "foundation-focused-results.json",
-            "at": null,
-            "sourceIdentity": "recorded command/output; early executions did not all capture a source SHA"
-          }
-        ]
+        "status": "PASS_INDEXED_EXACT_CASE",
+        "result": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json",
+        "sourceReview": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json",
+        "case": "discover-header",
+        "fullSuite": "NOT_RUN",
+        "nativeOrDevice": "NOT_RUN"
       },
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "09127a753842857a1292f5fbe0c209d940750402c3ef3a029a7724424af5ab32"
+      "resourceDefinitionSha256": "2c18e0f44ae8c9bc67e53b55a7ba51c0ff6020521e7d7d940cb8c00726c3f80e",
+      "definitionIdentityState": "REVIEWED",
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified."
     },
     {
       "file": "tools/test-manga-book-directory-chrome.mjs",
@@ -133614,10 +133661,10 @@
         "readiness held位移",
         "preparation queue"
       ],
-      "productionBinding": "LRE onReaderPageGestureStateChanged/updateBookTurnGesturePresentation/drain等和Interaction onReadinessChanged仅源码字形。",
+      "productionBinding": "Current features/reading/ui LocalReadingExperience actual preparation queue methods and ReaderPageInteractionLayer.onReadinessChanged with real drain/gesture helpers.",
       "overlap": "page-input-runtime/page-preparation-runtime执行相同owner边界（父后续索引交叉）；本项只做历史补丁字形保存，应由实际方法替代。",
       "minimumTrigger": "只有确需排查历史DRAGFOLLOW queue丢失可显式参考，不能当行为通过。; exact case: preparation",
-      "necessityReason": "具体风险合理但当前证据仅语法，91行连日志文案也锁定；不能充分支持所宣称replay行为。",
+      "necessityReason": "Repairing the moved UI source binding must preserve actual missing-preparation dedup, idle drain and held displacement readiness behavior; this exact method leaf is required, not source spelling.",
       "limitations": "SDK ordinary production methods and actual gesture-state module; preparation target/measurement boundary controlled, no rendered native frames.",
       "id": "H-reader-drag-follow-gate#preparation",
       "parentId": "H-reader-drag-follow-gate",
@@ -133642,8 +133689,16 @@
       "mechanism": "Actual drag/tap missing-preparation queue, dedup and idle drain; owner implementation record: [\"Replace source/log spelling locks with actual preparation queue/dedup, active-drag drain refusal and idle handoff.\", \"Execute actual gesture readiness with stopped finger displacement and no second MOVE; duplicate readiness callback cannot republish.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "b012c611f95508234c6f94b44061387b596b0accdfef9993574559d2272e9bc6",
+      "reviewedSourceSha256": "2729082db1e73b753ece7e1443cf85f27a15a181ef7f7c89618396edb118004d",
       "definitionInputs": [
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
@@ -133657,8 +133712,12 @@
           "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
         },
         {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
           "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a"
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -133670,11 +133729,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-drag-follow-gate.mjs",
-          "sha256": "b012c611f95508234c6f94b44061387b596b0accdfef9993574559d2272e9bc6"
+          "sha256": "2729082db1e73b753ece7e1443cf85f27a15a181ef7f7c89618396edb118004d"
         }
       ],
       "definitionInputProblems": [],
@@ -133683,18 +133742,19 @@
       "repair": null,
       "implementation": "COMPLETE",
       "validationEvidence": {
-        "plan": "READING-040",
-        "status": "PASS",
-        "passedCases": [
-          "preparation",
-          "readiness"
-        ],
-        "notRun": []
+        "status": "PASS_INDEXED_EXACT_CASE",
+        "result": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json",
+        "sourceReview": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json",
+        "case": "preparation",
+        "fullSuite": "NOT_RUN",
+        "nativeOrDevice": "NOT_RUN"
       },
       "evidenceBoundary": "SDK ordinary production methods and actual gesture-state module; preparation target/measurement boundary controlled, no rendered native frames.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "61e9a4e04c1ea26449fede0fb547d0ebce8e3bca84948b2fe2ddb524345fa6aa"
+      "resourceDefinitionSha256": "916fda03c8f4e17be2d8608a2dab8863aaec266bfacc1b1b8cf05013e8083005",
+      "definitionIdentityState": "REVIEWED",
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified."
     },
     {
       "file": "tools/test-reader-drag-follow-gate.mjs",
@@ -133704,10 +133764,10 @@
         "readiness held位移",
         "preparation queue"
       ],
-      "productionBinding": "LRE onReaderPageGestureStateChanged/updateBookTurnGesturePresentation/drain等和Interaction onReadinessChanged仅源码字形。",
+      "productionBinding": "Current features/reading/ui LocalReadingExperience actual preparation queue methods and ReaderPageInteractionLayer.onReadinessChanged with real drain/gesture helpers.",
       "overlap": "page-input-runtime/page-preparation-runtime执行相同owner边界（父后续索引交叉）；本项只做历史补丁字形保存，应由实际方法替代。",
       "minimumTrigger": "只有确需排查历史DRAGFOLLOW queue丢失可显式参考，不能当行为通过。; exact case: readiness",
-      "necessityReason": "具体风险合理但当前证据仅语法，91行连日志文案也锁定；不能充分支持所宣称replay行为。",
+      "necessityReason": "Repairing the moved UI source binding must preserve actual missing-preparation dedup, idle drain and held displacement readiness behavior; this exact method leaf is required, not source spelling.",
       "limitations": "SDK ordinary production methods and actual gesture-state module; preparation target/measurement boundary controlled, no rendered native frames.",
       "id": "H-reader-drag-follow-gate#readiness",
       "parentId": "H-reader-drag-follow-gate",
@@ -133732,8 +133792,16 @@
       "mechanism": "Actual readiness handoff retains held DOWN displacement without another MOVE; owner implementation record: [\"Replace source/log spelling locks with actual preparation queue/dedup, active-drag drain refusal and idle handoff.\", \"Execute actual gesture readiness with stopped finger displacement and no second MOVE; duplicate readiness callback cannot republish.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "b012c611f95508234c6f94b44061387b596b0accdfef9993574559d2272e9bc6",
+      "reviewedSourceSha256": "2729082db1e73b753ece7e1443cf85f27a15a181ef7f7c89618396edb118004d",
       "definitionInputs": [
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
@@ -133747,8 +133815,12 @@
           "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
         },
         {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
           "path": "tools/lib/selected-production-methods.mjs",
-          "sha256": "5367cda415c89d4a806daa347bdc95df3de37bb0084a3f970fa7402e12b0142a"
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -133760,11 +133832,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/test-reader-drag-follow-gate.mjs",
-          "sha256": "b012c611f95508234c6f94b44061387b596b0accdfef9993574559d2272e9bc6"
+          "sha256": "2729082db1e73b753ece7e1443cf85f27a15a181ef7f7c89618396edb118004d"
         }
       ],
       "definitionInputProblems": [],
@@ -133773,18 +133845,19 @@
       "repair": null,
       "implementation": "COMPLETE",
       "validationEvidence": {
-        "plan": "READING-040",
-        "status": "PASS",
-        "passedCases": [
-          "preparation",
-          "readiness"
-        ],
-        "notRun": []
+        "status": "PASS_INDEXED_EXACT_CASE",
+        "result": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json",
+        "sourceReview": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json",
+        "case": "readiness",
+        "fullSuite": "NOT_RUN",
+        "nativeOrDevice": "NOT_RUN"
       },
       "evidenceBoundary": "SDK ordinary production methods and actual gesture-state module; preparation target/measurement boundary controlled, no rendered native frames.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "61e9a4e04c1ea26449fede0fb547d0ebce8e3bca84948b2fe2ddb524345fa6aa"
+      "resourceDefinitionSha256": "916fda03c8f4e17be2d8608a2dab8863aaec266bfacc1b1b8cf05013e8083005",
+      "definitionIdentityState": "REVIEWED",
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified."
     },
     {
       "file": "tools/test-reader-dynamic-chrome-typography.mjs",
@@ -369267,6 +369340,202 @@
       "limitations": "只证明受控测量输入的真实传播/消费及状态身份，不证明设备最终轮廓/滚动触达/实际area派发。",
       "nestedActions": [],
       "nestedCalls": []
+    },
+    {
+      "id": "H-manga-display-retention#worker-wait",
+      "file": "tools/test-manga-display-retention.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "qualification": "QUALIFIED",
+      "protectedBehavior": "Actual display worker read-pin/cancellation and acquire-before-unpin lease continuity",
+      "mechanism": "Original assertions retained in exact selected branch; current module loader and TextDecoder.create factory, bounded AtomicFile worker fixture; no new algorithm/model.",
+      "productionBinding": "platform/reading-resources MangaDisplayRetention, ReadingBodyImageHost and ReadingImageDiskCache real methods; real private Node filesystem, controlled native decode/worker ports.",
+      "failureExample": "static：worker等待读pin提前清除会79可删除；旧cleanup与新write不互斥会213提前open；payload unlink失败删sidecar会314失冷恢复归属。",
+      "overlap": "retained-tile-cache是Controller内存lease；本项真实物理衍生文件/sidecar和跨冷owner复用；chapter-preparation只Set字节模型。",
+      "minimumTrigger": "Only when this exact retention/cleanup boundary or its current source binding changes.",
+      "necessityReason": "The loader moved to current real production modules and SDK codec factory; this selected branch verifies the real physical file/lease protocol and its failure/late-input controls.",
+      "limitations": "Local Node filesystem/SDK-lowered fixture only; no Harmony IO durability, image raster, Core database, original data or device proof. Other4 cases not selected.",
+      "needs": [
+        "display retention",
+        "cold reuse",
+        "worker read pin",
+        "derived cleanup",
+        "temporary interlock"
+      ],
+      "prerequisites": [
+        "Node真实临时fs/rename/truncate",
+        "官方ETS SDK用于atomic worker fixture顶层转换",
+        "受控decode/AtomicFile/sequence runner"
+      ],
+      "repair": null,
+      "reviewedSourceSha256": "143955d2a90ef9d2ec131726d78a6cbc8339093c5e667dc8a03d0c5f7499ddc8",
+      "releaseUse": "candidate-scope-only",
+      "estimatedCostType": "sdk-transpile",
+      "definitionInputProblems": [],
+      "definitionInputs": [
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/manga-atomic-payload-probe.mjs",
+          "sha256": "ea2083352bbacb79de3f1456286c579eac0e53f9b57692bbbadca3befb76016e"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/test-manga-display-retention.mjs",
+          "sha256": "143955d2a90ef9d2ec131726d78a6cbc8339093c5e667dc8a03d0c5f7499ddc8"
+        }
+      ],
+      "definitionIdentityState": "REVIEWED",
+      "definitionIdentityPurpose": "Change-detection snapshot only; semantic evidence is in mechanism/productionBinding, not inferred from these hashes. Dynamic fixture paths may require further explicit identity entries.",
+      "tests": [
+        "test-manga-display-retention.mjs"
+      ],
+      "repairAction": null,
+      "resourceDefinitionSha256": "b3506417f416187648d8fd53f05c6a628f0730e0ddec9605976ba532bf37c164",
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified.",
+      "parentId": "H-manga-display-retention",
+      "caseId": "worker-wait",
+      "caseSelection": {
+        "test-manga-display-retention.mjs": [
+          "worker-wait"
+        ]
+      },
+      "resourceNeeds": [],
+      "nestedActions": [
+        "Private temporary filesystem/controlled worker promises",
+        "Read/lower existing official ETS SDK Concurrent fixture, no es2abc/native compilation"
+      ],
+      "validationEvidence": {
+        "status": "PASS_INDEXED_EXACT_CASE",
+        "result": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json",
+        "sourceReview": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json",
+        "case": "worker-wait",
+        "fullSuite": "NOT_RUN",
+        "nativeOrDevice": "NOT_RUN"
+      }
+    },
+    {
+      "id": "H-manga-display-retention#temp-recovery",
+      "file": "tools/test-manga-display-retention.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "qualification": "QUALIFIED",
+      "protectedBehavior": "Actual Body/Disk cold temporary cleanup, budget admission and cleanup/write interlock",
+      "mechanism": "Original assertions retained in exact selected branch; current module loader and TextDecoder.create factory, bounded AtomicFile worker fixture; no new algorithm/model.",
+      "productionBinding": "platform/reading-resources MangaDisplayRetention, ReadingBodyImageHost and ReadingImageDiskCache real methods; real private Node filesystem, controlled native decode/worker ports.",
+      "failureExample": "static：worker等待读pin提前清除会79可删除；旧cleanup与新write不互斥会213提前open；payload unlink失败删sidecar会314失冷恢复归属。",
+      "overlap": "retained-tile-cache是Controller内存lease；本项真实物理衍生文件/sidecar和跨冷owner复用；chapter-preparation只Set字节模型。",
+      "minimumTrigger": "Only when this exact retention/cleanup boundary or its current source binding changes.",
+      "necessityReason": "The loader moved to current real production modules and SDK codec factory; this selected branch verifies the real physical file/lease protocol and its failure/late-input controls.",
+      "limitations": "Local Node filesystem/SDK-lowered fixture only; no Harmony IO durability, image raster, Core database, original data or device proof. Other4 cases not selected.",
+      "needs": [
+        "display retention",
+        "cold reuse",
+        "worker read pin",
+        "derived cleanup",
+        "temporary interlock"
+      ],
+      "prerequisites": [
+        "Node真实临时fs/rename/truncate",
+        "官方ETS SDK用于atomic worker fixture顶层转换",
+        "受控decode/AtomicFile/sequence runner"
+      ],
+      "repair": null,
+      "reviewedSourceSha256": "143955d2a90ef9d2ec131726d78a6cbc8339093c5e667dc8a03d0c5f7499ddc8",
+      "releaseUse": "candidate-scope-only",
+      "estimatedCostType": "sdk-transpile",
+      "definitionInputProblems": [],
+      "definitionInputs": [
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "ff637e92ac19c0ddcf43638e2b3a1a49591d8359741265e9f28b5c02c60a1b31"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "53fcf8d25f275c1081860281f1bd211d346bdb0916e02bcdb0248e7ca7bdfc64"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/manga-atomic-payload-probe.mjs",
+          "sha256": "ea2083352bbacb79de3f1456286c579eac0e53f9b57692bbbadca3befb76016e"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/test-manga-display-retention.mjs",
+          "sha256": "143955d2a90ef9d2ec131726d78a6cbc8339093c5e667dc8a03d0c5f7499ddc8"
+        }
+      ],
+      "definitionIdentityState": "REVIEWED",
+      "definitionIdentityPurpose": "Change-detection snapshot only; semantic evidence is in mechanism/productionBinding, not inferred from these hashes. Dynamic fixture paths may require further explicit identity entries.",
+      "tests": [
+        "test-manga-display-retention.mjs"
+      ],
+      "repairAction": null,
+      "resourceDefinitionSha256": "b3506417f416187648d8fd53f05c6a628f0730e0ddec9605976ba532bf37c164",
+      "reviewNote": "2026-11-11 root independent source review: actual current loaders, exact production/SDK methods and negative input/failure interlocks; prior index refusal retained. Only named selected leaves qualified.",
+      "parentId": "H-manga-display-retention",
+      "caseId": "temp-recovery",
+      "caseSelection": {
+        "test-manga-display-retention.mjs": [
+          "temp-recovery"
+        ]
+      },
+      "resourceNeeds": [],
+      "nestedActions": [
+        "Private temporary filesystem/controlled worker promises",
+        "Read/lower existing official ETS SDK Concurrent fixture, no es2abc/native compilation"
+      ],
+      "validationEvidence": {
+        "status": "PASS_INDEXED_EXACT_CASE",
+        "result": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json",
+        "sourceReview": "/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json",
+        "case": "temp-recovery",
+        "fullSuite": "NOT_RUN",
+        "nativeOrDevice": "NOT_RUN"
+      }
     }
   ],
   "externalEntries": [
@@ -370143,9 +370412,9 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 2322,
+    "QUALIFIED": 2321,
+    "REVIEW_NEEDED": 7,
     "DIAGNOSTIC_ONLY": 22,
-    "REVIEW_NEEDED": 4,
     "NEEDS_EVIDENCE": 1
   },
   "commitDefinitionVariants": {

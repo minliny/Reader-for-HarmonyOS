@@ -35,6 +35,7 @@ const liveSourcePaths = new Map([
   ['bookshelf/BookshelfEmptyPage.ets', 'bookshelf/ui/BookshelfEmptyPage.ets'],
   ['bookshelf/BookshelfStatusContent.ets', 'bookshelf/ui/BookshelfStatusContent.ets'],
   ['shell/SettingsShell.ets', 'settings/ui/SettingsShell.ets'],
+  ['discover/DiscoverPage.ets', 'discover/ui/DiscoverPage.ets'],
 ]);
 const read = file => readFileSync(new URL(liveSourcePaths.get(file) ?? file, root), 'utf8');
 const require = createRequire(import.meta.url);
@@ -296,15 +297,61 @@ if(selectedCase==='settings-origin') for (const section of ['home', 'general']) 
 
 if(selectedCase==='discover-header') {
 safeBottom = 34;
-const discover = probe('discover/DiscoverPage.ets', ['build', 'homeTopBar', 'discoverContent', 'bottomContentInset'], {
+// The current AppTopBar consumes the actual shared font-scale resolver.
+// Keep this dependency local to the Discover leaf; navigation's reviewed
+// constructor/semantic scope does not mount this title/header body.
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const surface = pureModuleProbe(read('../ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts',
+  { readerVisualSafeTop }, ['readerScaledBarHeight']);
+const topBarSource = read('../ui/chrome/AppTopBar.ets');
+deps.AppTopBar = createReaderBuilderProbe(topBarSource, boundedMembers(topBarSource), { ...deps, ...surface }, hooks).Component;
+const discoverStorage = new Map(), discoverWindow = { metrics: () => ({ ...metrics(), revision: 0, systemFontScale: 1 }) };
+const discoverPolicyPorts = { ...actualReaderMainTabs(), ...actualReaderFloatingBarMetrics(),
+  ReaderWindowCoordinator: discoverWindow,
+  AppStorage: { get: key => discoverStorage.get(key), setOrCreate: (key, value) => discoverStorage.set(key, value) },
+  readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerVisualSafeTop, READER_EXPANDED_MIN_WIDTH,
+  effectiveReaderWideNavigationRail };
+const discoverPolicyText = stripTypeScriptTypes(read('shell/MainNavigationSpec.ts')
+  .replace(/^import[\s\S]*?;\s*/gm, '')
+  .replace(/^export\s+(?:type\s+)?\{[^}]*\}\s+from\s+['"][^'"]+['"];?\s*/gm, '')
+  .replace(/^export /gm, ''));
+const discoverPolicy = new Function(...Object.keys(discoverPolicyPorts), `${discoverPolicyText};
+  return { readerMainNavigationMode, readerMainViewport, publishReaderMainViewport, mainTabBottomWidth };`)(...Object.values(discoverPolicyPorts));
+const shellSource = read('shell/MainTabShell.ets');
+deps.MainTabShell = createReaderBuilderProbe(shellSource, boundedMembers(shellSource), {
+  ...deps, ...discoverPolicyPorts, ...discoverPolicy,
+}, hooks).Component;
+const discover = probe('discover/DiscoverPage.ets', ['build', 'homeTopBar', 'discoverContent', 'bottomContentInset',
+  'pageGeometry', 'recordHeaderHeight', 'measurements', 'measurementRevision', 'measurementKey', 'mounted'], {
   presentation: { loading: false }, onMainTab() {}, onRefresh() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {}, operationFeedback() {},
   contentFrame: () => ({ left: 19, right: 19, width: 352 }),
+  mounted: true, measurementKey: 7,
 });
 discover.initialRender();
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-const discoverHeaderHost = descendants(discover).find(child => child.params?.kind === 'home');
+const discoverScaffold = descendants(discover).find(child => child.geometry?.content && child.frameStyle?.header);
+assert.ok(discoverScaffold, 'Discover uses the actual public scaffold through MainTabShell');
+const discoverHeaderHost = descendants(discoverScaffold).find(child =>
+  typeof child.areaChangeHandler === 'function' && child.style?.backgroundColor === discoverScaffold.frameStyle.header.backgroundColor &&
+  child.style?.transparent === discoverScaffold.frameStyle.header.transparent);
 assert.ok(discoverHeaderHost, 'Discover title uses the actual shared fixed-header host');
 assert.equal(nodes(discoverHeaderHost, 'Column')[0].hitTestBehavior, 'HitTestMode.Transparent');
+const presented = discoverHeaderHost.areaChangeHandler(discoverHeaderHost.measurementKey);
+presented({}, { height: 68 });
+assert.equal(discover.measurements.readForGeneration('discover:header', 7, 0), 68,
+  'actual shared header callback reaches the current Discover measurement owner');
+discover.measurementKey = 8; replayTree(discover);
+const before = discover.measurementRevision;
+presented({}, { height: 99 });
+assert.equal(discover.measurementRevision, before, 'old header callback cannot publish into the new measurement key');
+const currentHeader = descendants(discover).find(child => typeof child.areaChangeHandler === 'function' && child.measurementKey === 8);
+assert.ok(currentHeader);
+currentHeader.areaChangeHandler(8)({}, { height: 75 });
+assert.equal(discover.measurements.readForGeneration('discover:header', 8, 0), 75);
+discover.mounted = false;
+const retired = discover.measurementRevision;
+currentHeader.areaChangeHandler(8)({}, { height: 80 });
+assert.equal(discover.measurementRevision, retired, 'retired Discover rejects a late shared measurement');
 
 }
 console.log('selected current shell case PASS: '+selectedCase);

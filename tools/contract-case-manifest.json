@@ -738,7 +738,7 @@
       }
     },
     "test-main-floating-shell-layout.mjs": {
-      "sourceSha256": "d61213d7fbcde3cd199a3aa92fe8a6209539ed03d6803685645efa58aed17c7c",
+      "sourceSha256": "9c7778e6b1e2aba952c94a60beb5aa67578419426043d2dabc7284657e2d1537",
       "cases": {
         "navigation": {
           "resources": [],
@@ -746,15 +746,15 @@
         },
         "shelf-list": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "empty-status": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-origin": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "discover-header": {
           "resources": [],
@@ -2488,7 +2488,7 @@
       }
     },
     "test-reader-drag-follow-gate.mjs": {
-      "sourceSha256": "b012c611f95508234c6f94b44061387b596b0accdfef9993574559d2272e9bc6",
+      "sourceSha256": "2729082db1e73b753ece7e1443cf85f27a15a181ef7f7c89618396edb118004d",
       "cases": {
         "preparation": {
           "resources": [],
@@ -11080,6 +11080,35 @@
           "qualification": "QUALIFIED"
         }
       }
+    },
+    "test-manga-display-retention.mjs": {
+      "sourceSha256": "143955d2a90ef9d2ec131726d78a6cbc8339093c5e667dc8a03d0c5f7499ddc8",
+      "cases": {
+        "retention-baseline": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "worker-wait": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "files-dir-leases": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "same-key-store": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "temp-recovery": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "temporary-inventory": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        }
+      }
     }
   },
   "legacy": {
@@ -12413,19 +12442,6 @@
           "fake controller/settings"
         ],
         "scope": "仅相关fit/登录epoch/refreshImages recovery逻辑变更且本次需要覆盖这些反例时选择。"
-      },
-      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
-    },
-    "test-manga-display-retention.mjs": {
-      "resources": [],
-      "basis": {
-        "reviewedCostType": "sdk-transpile",
-        "prerequisites": [
-          "Node真实临时fs/rename/truncate",
-          "官方ETS SDK用于atomic worker fixture顶层转换",
-          "受控decode/AtomicFile/sequence runner"
-        ],
-        "scope": "显示衍生图复用、文件lease、临时清理或derived quota相关改动时按需。"
       },
       "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
     },

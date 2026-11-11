@@ -44,11 +44,14 @@ export class MangaPositionHydrator {
   private generation: number = 0;
   private workers: number = 0;
   private queue: MangaPositionJob[] = [];
+  private pending: Set<string> = new Set<string>();
+  private confirmed: Set<string> = new Set<string>();
 
   retire(): void {
     this.generation += 1;
     this.signature = '';
     this.queue = [];
+    this.pending.clear(); this.confirmed.clear();
   }
 
   hydrateVisible(books: MangaPositionCandidate[], read: () => MangaPositionScene, project: () => void): void {
@@ -82,11 +85,28 @@ export class MangaPositionHydrator {
     const candidates = books.filter((book: MangaPositionCandidate): boolean => book.contentKind === 'manga').slice(0, 24)
       .map((book: MangaPositionCandidate): MangaBookIdentity => ({ sourceId: book.sourceId, bookId: book.bookId }));
     const signature = JSON.stringify([opening.identity, candidates.map((book: MangaBookIdentity): string[] => [book.sourceId, book.bookId])]);
-    if (this.signature === signature) return;
-    this.signature = signature;
-    const generation = ++this.generation;
-    this.queue = candidates.map((book: MangaBookIdentity): MangaPositionJob => ({ book, opening, generation }));
+    if (this.signature !== signature) {
+      this.signature = signature;
+      this.generation += 1;
+      this.queue = [];
+      this.pending.clear(); this.confirmed.clear();
+    }
+    const generation = this.generation;
+    for (const book of candidates) {
+      const key = this.key(book);
+      if (this.pending.has(key) || this.confirmed.has(key)) continue;
+      this.pending.add(key);
+      this.queue.push({ book, opening, generation });
+    }
     this.pump();
+  }
+
+  private key(book: MangaBookIdentity): string { return JSON.stringify([book.sourceId, book.bookId]); }
+
+  private publishRevision(before: number): void {
+    if (before === MangaBookPresentation.revision) return;
+    try { AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision); }
+    catch (_) { /* Optional presentation delivery cannot change confirmed Core facts. */ }
   }
 
   private current(job: MangaPositionJob): boolean {
@@ -96,32 +116,54 @@ export class MangaPositionHydrator {
   private pump(): void {
     while (this.workers < 2 && this.queue.length > 0) {
       const job = this.queue.shift();
-      if (job === undefined || !this.current(job)) continue;
+      if (job === undefined) continue;
+      if (!this.current(job)) {
+        if (job.generation === this.generation) this.pending.delete(this.key(job.book));
+        continue;
+      }
       this.workers += 1;
-      void this.project(job).finally((): void => {
+      void this.project(job).then((confirmed: boolean): void => {
+        if (confirmed && this.current(job)) this.confirmed.add(this.key(job.book));
+      }).finally((): void => {
+        if (job.generation === this.generation) this.pending.delete(this.key(job.book));
         this.workers -= 1;
         this.pump();
       });
     }
   }
 
-  private async project(job: MangaPositionJob): Promise<void> {
+  private async project(job: MangaPositionJob): Promise<boolean> {
     const current = (): boolean => this.current(job);
     const book = job.book;
     const gateway = new MangaSessionGateway(job.opening.owner);
     try {
+      const loadingRevision = MangaBookPresentation.revision;
+      MangaBookPresentation.beginHydration(book.sourceId, book.bookId);
+      this.publishRevision(loadingRevision);
       const entry = await gateway.entry(book.sourceId, book.bookId, undefined, current);
-      if (!current()) return;
+      if (!current()) return false;
       const before = MangaBookPresentation.revision;
       if (!MangaBookPresentation.admitEntry(book.sourceId, book.bookId, entry)) {
         const progress = await gateway.progress(book.sourceId, book.bookId, current);
-        if (!current()) return;
+        if (!current()) return false;
         MangaBookPresentation.admitProgress(book.sourceId, book.bookId, progress);
       }
-      if (!current()) return;
-      if (before !== MangaBookPresentation.revision)
-        AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
+      if (!current()) return false;
+      const outcome = MangaBookPresentation.outcome(book.sourceId, book.bookId);
+      const confirmed = outcome === 'confirmed-position' || outcome === 'confirmed-none';
+      if (!confirmed) MangaBookPresentation.hydrationFailed(book.sourceId, book.bookId);
+      this.publishRevision(before);
       job.opening.project();
-    } catch (_) { /* Optional display projection keeps the last admitted value. */ }
+      return confirmed;
+    } catch (_) {
+      // Optional read failure is not authoritative absence. A later ordinary
+      // visible callback may retry this identity; there is no retry timer.
+      if (current()) {
+        const before = MangaBookPresentation.revision;
+        MangaBookPresentation.hydrationFailed(book.sourceId, book.bookId);
+        this.publishRevision(before);
+      }
+      return false;
+    }
   }
 }

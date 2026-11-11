@@ -44,6 +44,7 @@ export class ShelfBookPresentation {
 
   static readingPosition(book: ShelfBook): string {
     if (book.contentKind === 'manga') {
+      if (MangaBookPresentation.outcome(book.sourceId, book.bookId) === 'confirmed-none') return '尚未阅读';
       return MangaBookPresentation.label(MangaBookPresentation.get(book.sourceId, book.bookId));
     }
     return book.currentChapterTitle?.trim() || '尚未阅读';
@@ -57,16 +58,21 @@ export class ShelfBookPresentation {
     return book.sourceId === 'local' ? '本地' : '在线';
   }
 
+  static readingStatePending(book: ShelfBook): boolean {
+    if (book.contentKind !== 'manga') return false;
+    const outcome = MangaBookPresentation.outcome(book.sourceId, book.bookId);
+    return outcome !== 'confirmed-position' && outcome !== 'confirmed-none';
+  }
+
   static visible(books: ShelfBook[], selectedGroup: string,
     readingState: string = 'all', sourceKind: string = 'all'): ShelfBook[] {
     return books.filter((book: ShelfBook): boolean => {
       const group = book.group?.trim() ?? '';
       const inGroup = selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
       const progress = this.progressPercent(book);
-      const mangaHasPosition = book.contentKind === 'manga' &&
-        MangaBookPresentation.get(book.sourceId, book.bookId) !== undefined;
-      const inState = book.contentKind === 'manga' ? (readingState === 'unread' ? !mangaHasPosition :
-        readingState === 'reading' ? mangaHasPosition : readingState === 'finished' ? false : true) :
+      const mangaOutcome = book.contentKind === 'manga' ? MangaBookPresentation.outcome(book.sourceId, book.bookId) : 'unknown';
+      const inState = book.contentKind === 'manga' ? (readingState === 'unread' ? mangaOutcome === 'confirmed-none' :
+        readingState === 'reading' ? mangaOutcome === 'confirmed-position' : readingState === 'finished' ? false : true) :
         readingState === 'unread' ? progress === 0 :
         readingState === 'reading' ? progress > 0 && progress < 100 :
         readingState === 'finished' ? progress === 100 : true;

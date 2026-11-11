@@ -563,7 +563,7 @@
       "record": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/candidate.json",
       "manifest": "/home/administrator/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20261111T034526Z-def50fbc-02199dc7/manifest.json",
       "buildCommit": "def50fbc5c1d53252b103441420ef9e4fb55c18a",
-      "installed": "NOT_RUN"
+      "installed": "NOT_RUN_BLOCKED_BY_FAILED_REQUIRED_INSPECT"
     },
     "warningBoundary": "最后capacity源码实际规范ArkTS构建322：313throws、7capability、2native，missing/deprecated0；不替代设备或整体验收。",
     "previousIndependentRecoveryFix": "迟到R1负结果不能删除R2完整索引；独立恢复性17组/旧生产失败/负对照回执保留",
@@ -577,6 +577,35 @@
       "historicalTime": "NOT_ESTABLISHED",
       "historicalZeroCause": "NOT_ESTABLISHED",
       "evictedDataRestored": false
+    },
+    "latestAdmission": {
+      "canonicalInspect": "FAIL",
+      "exitCode": 3,
+      "reason": "target-sqlite-version-unresolved",
+      "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/final-vm-0511/result.json",
+      "installs": 0,
+      "starts": 0,
+      "uiActions": 0,
+      "scopeClosed": true,
+      "laterReadonlyDiagnostic": "CURRENT_DIRECT_BLOCKER_LINEAGE_LOG_EMPTY_NOT_CANONICAL_RECHECK",
+      "diagnosticObservation": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/storage-admission-live-20261111/observation.json",
+      "remoteHilogExit": "NOT_SEPARATELY_OBSERVED",
+      "loggingEmptyMechanism": "NOT_ESTABLISHED",
+      "diagnosticScopeClosed": true
+    },
+    "fullAudit": {
+      "report": "/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-full-audit-20261111.md",
+      "plan": "/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-remediation-plan-20261111.md",
+      "mode": "READ_ONLY_SOURCE_AND_EXISTING_EVIDENCE_NO_NEW_PRODUCT_OR_DEVICE_EXECUTION",
+      "productionRemediation": "PLAN_ONLY_EXCEPT_CURRENT_SUMMARY_DOCUMENT_CORRECTIONS"
+    },
+    "residualAnalysis": {
+      "report": "/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-open-issues-analysis-and-resolution-20261111.md",
+      "status": "PLAN_ONLY_NO_NEW_PRODUCT_OR_DEVICE_EXECUTION",
+      "fingerprintUpgrade": "DECOUPLED_FROM_COMMON_CRITICAL_PATH",
+      "passiveOwnerTransport": "NOT_ESTABLISHED_DESIGN_PREREQUISITE",
+      "mangaHydration": "SOURCE_GAP_LOCALIZED_NOT_HISTORICAL_ZERO_CAUSE_NOT_IMPLEMENTED",
+      "originalFindings": "F01_F11_OPEN_F12_DOCUMENT_ONLY_CLOSED"
     }
   }
 }

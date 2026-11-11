@@ -176,7 +176,10 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
     this.operationTail = task.catch((): void => {});
     let failure: Error | undefined = undefined;
     try { await task; } catch (error) { failure = error as Error; }
-    if (this.observing) {
+    // A failed exact stop still owns its task. Keep the cancellation listener
+    // until that ID settles, so a late native cancel can release the retirement
+    // barrier without treating the failed stop as a successful release.
+    if (this.observing && this.taskId === undefined) {
       try {
         if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.Core') ||
           !canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
