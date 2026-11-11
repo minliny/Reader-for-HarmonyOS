@@ -4,7 +4,7 @@
 
 ## 当前结果
 
-代码和必要本地检查已实施并提交`93c5b4e0`，诊断25个实际用例和独立源码复核通过；统一签名候选`0.2.0.DEV.973076b464f9`构建／验签通过，2153有效输入全部一致。设备、数据恢复和最终验收仍开放。原VM仍为a443，尚无本轮设备安装、取证、下载恢复、原库SQL／FFI或UNKNOWN内容读取。当前真实回执入口为[本轮私有执行计划](/home/administrator/Reader/.local/framework-residual-repair-20261111/execution-plan.json)。
+代码和必要本地检查已实施并提交`93c5b4e0`，诊断27个实际用例和独立源码复核通过；统一签名候选`0.2.0.DEV.973076b464f9`构建／验签通过，2153有效输入全部一致。设备、数据恢复和最终验收仍开放。原VM仍为a443，尚无本轮设备安装、取证、下载恢复、原库SQL／FFI或UNKNOWN内容读取。当前真实回执入口为[本轮私有执行计划](/home/administrator/Reader/.local/framework-residual-repair-20261111/execution-plan.json)。
 
 | 遗留 | 已实施内容 | 已有证据／仍开放层 |
 | --- | --- | --- |
@@ -12,7 +12,7 @@
 | F04/F08 | 移除一次可选版本／V1 source相等作为放行依据；正式proof绑定完整Core输入快照／Native／候选／实际执行 | 关闭错误authority风险；未升级Core None语义或指纹域，不声称完整依赖由V1覆盖 |
 | F05/F06/F07 | 正式optionalQuery吞空路径退役；替换前BMS与正式源pair重验；ABI、UID及post-install签名／版本fence在start之前 | 真实resolve/install方法与旧安装函数负fixture；新代码阻止UID变化后启动，旧代码实际会越过 |
 | F09 | 原live header export不再查询／读字节，正式resolver不调用；无伪造safeRead能力 | 新零查询计数断言；原header即使最终parse拒绝仍读前查询的反例保留；诊断首读／marker也不得读header |
-| F10及工具边界 | client/remote状态、nonce framing、固定grant namespace和子进程／lease生命周期独立修复 | 10模块＋7真实本地子进程传输＋8 CLI实际case PASS；独立源码复核无阻塞，不以status0／空输出充当PASS |
+| F10及工具边界 | client/remote状态、nonce framing、固定grant namespace和子进程／lease生命周期独立修复 | 10模块＋8真实本地子进程传输＋9 CLI实际case PASS；独立源码复核无阻塞，不以status0／空输出充当PASS |
 | F11/TTS | 精确stop失败时保留取消监听；准确task结算后才off；保留原失败／ID／退休屏障 | 真实旧source FAIL；4个新准确case及既有capability叶共5项PASS；不冒充设备音频结果 |
 | L09页码水合 | 区分unknown/loading/confirmed-none/position/retryable-failure；同signature后续普通visible可恢复；多选revision和提交资格fence | 同signature旧源码FAIL；修后恢复、14组实际outcome/selection和SDK watcher PASS；未写Core进度或计数 |
 | L13三处装配 | 修display实际源路径和TextDecoder factory、Discover真实共享header接线、drag两处ui路径；显式case选择 | 6准确索引case PASS；display父NAV；未审3 shell／4 display和其他19 P1、4 P1 sibling不续期 |
@@ -34,7 +34,7 @@
 - [漫画水合](/home/administrator/Reader/.local/framework-residual-repair-20261111/hydration/result.json)：真实旧owner反例、同身份恢复、部分批次只重试失败书、token/旧代/cover/限额、多选和SDK消费。
 - [TTS](/home/administrator/Reader/.local/framework-residual-repair-20261111/tts/result.json)：任务／监听退休、迟到ACK／cancel、失败传播及能力降级。其新手动工具仅同目录改名为[diagnose-harmony-tts-background-retirement.mjs](/home/administrator/Reader/Reader-for-HarmonyOS/tools/diagnose-harmony-tts-background-retirement.mjs)，字节和相对依赖一致，不混入test发现／full；原执行路径及日志保留历史。
 - [三fixture根重审](/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-assembly-root-review.json)与[六个索引唯一回执](/home/administrator/Reader/.local/framework-residual-repair-20261111/fixture-indexed/results.json)：仅3文件6case、worker1、无全量；原索引拒绝和后续装配失败保留。
-- [诊断v2的25case回执](/home/administrator/Reader/.local/framework-residual-repair-20261111/diagnostics/result.json)：工具默认／list不执行，非显式lineage-only在工具／授权前拒绝；nonce尾帧分离client／remote，原生工具路径重验、固定授权namespace、超时／取消关闭自有子进程后才释放租约。旧live header不读字节，lineage不拥有安装权。
+- [诊断v2的27case回执](/home/administrator/Reader/.local/framework-residual-repair-20261111/diagnostics/result.json)：工具默认／list不执行，非显式lineage-only在工具／授权前拒绝；nonce尾帧分离client／remote，原生工具路径重验、固定授权namespace、超时／取消关闭自有子进程后才释放租约。旧live header不读字节，lineage不拥有安装权。
 - [交付额度本地检查](/home/administrator/Reader/.local/framework-residual-repair-20261111/delivery/cap-result.json)：8个合成状态／授权／阶段／额度情景PASS，没有真实授权、设备或原数据。
 
 沙箱中曾出现spawn `error=EPERM`却同时有status0；没有把该退出码／file-level结果当作内部case通过。首次失败保留，必要的本地合成子进程检查经环境权限核准后取实际唯一回执。此观察不被追认为旧远端hilog空输出原因。诊断首次实际传输6/7：测试夹具对第二输出块再次发送SIGTERM，在scope清理后误杀parent；修为严格一次信号，原取消／禁止BMS断言全部保留，复跑7/7。根driver曾误填CLI入口，未执行用例；更正后8/8，两个失败日志均保留。
@@ -58,3 +58,9 @@
 正式clone工具已预编译两个准确Linux测试target，尚非实际数据测试PASS。交付准备继续要求完整Core git/content校验和真实testbinary启动边界的clone/env绑定；合成模式、list或只有exit0不能转成现场证明。
 
 [当前候选受控执行提案](/home/administrator/Reader/.local/framework-residual-repair-20261111/candidate-execution-proposal.json)把保数据交付／文字像素与可选两章恢复／冷续读分阶段列明，并写出总停启、截图、命令、等待和失败恢复边界。该文件为PREPARED_NOT_AUTHORIZED，旧有限额度不复用；本记录和新候选都不授予设备操作。
+
+## 收尾发现的 readiness 兼容补正
+
+本地审读发现新frame适配器折叠了两条OS proc的精确Permission denied，导致正式readiness的既有VM备用路径无法进入。共享适配已修，严格限定原两命令和同次有效远端失败帧；readiness PASS后仅标handled，remote1事实保留。10模块／8传输／9 CLI实际case PASS，复制入口另以真实canonical readiness的合成VM事实验证该fallback。两个新正夹具装配失败保留，其他错误及原header边界未放宽。
+
+上述controller输入变化要求重新冻结并构建最终run。前述`93c5b4e0`候选run保留为真实历史，不能从当前controller冒用安装；AppContent仍为973、Native有效输入不变。当前尚无本轮设备操作，最终run与绑定将在新构建完成后补记。

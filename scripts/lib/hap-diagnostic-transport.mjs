@@ -36,6 +36,23 @@ export function decodeRemoteResult(result, nonce) {
   return output;
 }
 
+// Preserve only the canonical readiness observer's two exact permission
+// denials. The failed payload never becomes successful query text. Returning
+// the fixed error lets procRead select its existing VM boot-evidence fallback.
+export function readinessProcDeniedError(command, raw, nonce) {
+  const path = command === 'cat /proc/sys/kernel/random/boot_id' ? '/proc/sys/kernel/random/boot_id' :
+    command === 'cat /proc/uptime' ? '/proc/uptime' : null;
+  if (path === null || !/^[a-f0-9]{32}$/.test(nonce ?? '')) return null;
+  const decoded = decodeRemoteResult(raw, nonce);
+  if (decoded.frameState !== 'valid' || decoded.remoteState !== 'failure' ||
+      decoded.remoteExitCode <= 0) return null;
+  const messages = [asBuffer(raw.stdout).subarray(0, decoded.payloadStdoutBytes), asBuffer(raw.stderr)]
+    .map(bytes => bytes.toString('utf8').trim()).filter(Boolean);
+  if (messages.length !== 1) return null;
+  const denied = /^(?:(?:\/bin\/sh|sh):\s*)?(?:cat:\s*)?(\/proc\/(?:sys\/kernel\/random\/boot_id|uptime)):\s*Permission denied$/i.exec(messages[0]);
+  return denied?.[1] === path ? new Error(`cat: ${path}: Permission denied`) : null;
+}
+
 function readNative(path) {
   if (/\.(?:[cm]?js|cmd|bat)$/i.test(path)) throw Error('NATIVE_TOOL_REQUIRED');
   const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));

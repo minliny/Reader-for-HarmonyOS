@@ -180,7 +180,11 @@ export async function runDiagnosticCli(argv, injected = {}) {
       const remote = args.includes('shell'), nonce = remote ? ports.diagnosticNonce() : null;
       const actualArgs = remote ? [...args.slice(0, -1), ports.frameRemoteCommand(args.at(-1), nonce)] : args;
       const raw = executeSync(actualArgs), result = remote ? ports.decodeRemoteResult(raw, nonce) : raw;
-      const meta = ports.summarizeProbeResult(result); preflight.push({ category, ...meta });
+      const meta = ports.summarizeProbeResult(result), record = { category, ...meta }; preflight.push(record);
+      if (category === 'target-readiness' && remote) {
+        const denied = ports.readinessProcDeniedError(args.at(-1), raw, nonce);
+        if (denied) { record.canonicalReadinessExpectedDenial = true; throw denied; }
+      }
       if (!['ok', 'empty'].includes(meta.outcome)) throw fixedError('preflight-command-failed');
       return Buffer.from(result.stdout ?? '').toString('utf8').trim();
     };
@@ -202,6 +206,9 @@ export async function runDiagnosticCli(argv, injected = {}) {
       query: command => before('target-readiness', ['-t', target, 'shell', command]) }); }
     catch { throw fixedError('target-readiness-failed'); }
     if (readiness.status !== 'PASS') throw fixedError('target-readiness-failed');
+    for (const record of preflight) {
+      if (record.canonicalReadinessExpectedDenial === true) record.handledByCanonicalReadiness = true;
+    }
     await signalScope.settleSignals(); assertActive();
     const bm = await executeRemote(`bm dump -n ${bundle}`);
     const bmSummary = ports.summarizeProbeResult(bm);
@@ -224,7 +231,8 @@ export async function runDiagnosticCli(argv, injected = {}) {
     await signalScope.settleSignals();
     const queryRows = Object.values(report.query).flatMap(group => Object.values(group)).filter(Boolean);
     finalStatus = signalScope.signal.aborted ? 'FAIL_CANCELLED' :
-      [...preflight, ...queryRows].some(row => !['ok', 'empty'].includes(row.outcome)) ? 'FAIL_QUERY' :
+      [...preflight, ...queryRows].some(row => !['ok', 'empty'].includes(row.outcome) &&
+        !(row.category === 'target-readiness' && row.handledByCanonicalReadiness === true)) ? 'FAIL_QUERY' :
         report.selectedHeader.status === 'FAIL' ? 'FAIL_INCOMPLETE_HEADER' : 'DIAGNOSTIC_COMPLETE';
     finalReason = finalStatus === 'DIAGNOSTIC_COMPLETE' ? 'observation-only-authority-retired' :
       finalStatus === 'FAIL_CANCELLED' ? 'diagnostic-cancelled' : finalStatus === 'FAIL_INCOMPLETE_HEADER' ? 'header-safety-boundary-unavailable' : 'query-failure-classified';

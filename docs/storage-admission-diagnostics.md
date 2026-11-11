@@ -58,6 +58,8 @@ PID 前后查询失败只记 `lineage-pid-query-failed / unavailable`；仅后�
 | `payloadStdoutBytes` | 有效帧之前的 payload 字节数；无有效帧时为 0 |
 | `lineage.logBytes` | payload 字节数，不把 nonce 帧计作日志正文 |
 
+正式 readiness 已有的 VM 备用路径保持原样：只对 `cat /proc/sys/kernel/random/boot_id` 和 `cat /proc/uptime` 的客户端成功、有效唯一帧、远端非零且单一通道整串匹配的权限拒绝，转回固定 Error 供原 `procRead` 处理。readiness 真正通过后才标记 `handledByCanonicalReadiness`；仍保留 `remoteExitCode=1 / remote-nonzero`，不把失败正文变成成功 payload。错误路径、额外文本、双通道、坏帧和其他命令不获得此适配。
+
 原始 stdout/stderr、nonce、PID、完整日志、身份 DTO、路径和任意错误 message/stack 只在内存使用，不写进诊断报告。报告、执行回执和 grant 记录只保存约定的枚举、计数、布尔值及绑定摘要。输出为空时可以确认相应计数，不能据此猜测日志轮转、远端权限或历史失败机制。
 
 ## 一次性 v2 回执与工具身份
@@ -88,12 +90,14 @@ limits 精确要求：业务查询 9、前置查询 10，应用 start/stop、ins
 
 ## 本地证据与历史观察
 
-本轮实际本地证据为 module 10、transport 7、CLI 8，共 25 个唯一 case。module 后续把旧字节/错误优先级、PID 失败、归属、缺字段、隐私、可选版本与 warning 负例补进原 case；它们不是增加设备执行。范围只包括内存查询 fixture 与私有原生 Node 子进程，没有 HDC、设备、实际 SQL/FFI 或 UNKNOWN 读取。具体 source/test SHA、逐 case 日志与失败记录见 [诊断结果](/home/administrator/Reader/.local/framework-residual-repair-20261111/diagnostics/result.json)。
+本轮实际本地证据为 module 10、transport 8、CLI 9，共 27 个唯一 case。module 后续把旧字节/错误优先级、PID 失败、归属、缺字段、隐私、可选版本与 warning 负例补进原 case；它们不是增加设备执行。范围只包括内存查询 fixture 与私有原生 Node 子进程，没有 HDC、设备、实际 SQL/FFI 或 UNKNOWN 读取。具体 source/test SHA、逐 case 日志与失败记录见 [诊断结果](/home/administrator/Reader/.local/framework-residual-repair-20261111/diagnostics/result.json)。
 
 初轮 EPERM 或 file-level wrapper 失败、未取得结果而中断的旧执行、transport 重复 SIGTERM 的夹具失败，以及 CLI driver 写错路径导致 0 case 执行的失败全部保留。单次 signal 修正没有删去 `CANCEL_BEFORE_BMS` 和禁止 `BAD_BMS` 的断言。不能把 file-level exit 或未完成调用当成逐 case 通过。
 
-旧 24 个标题与新入口的逐项迁移见 [迁移记录](/home/administrator/Reader/.local/framework-residual-repair-20261111/diagnostics/legacy-case-migration.json)。旧 header 字节读取、同 source 日志放行和旧 source-only revalidation 分支属于明确退役能力；不能为让旧用例变绿重新开放。25 项通过也不自动表示旧 24 项的每个子断言均等价重放，迁移记录分别列出保留、替代、退役和未单独重放的子例。
+旧24个标题与最初25项入口的逐项迁移见 [迁移记录](/home/administrator/Reader/.local/framework-residual-repair-20261111/diagnostics/legacy-case-migration.json)。旧 header 字节读取、同 source 日志放行和旧 source-only revalidation 分支属于明确退役能力；不能为让旧用例变绿重新开放。最初25项映射和后续新增2项回归，也不自动表示旧24项的每个子断言均等价重放，迁移记录分别列出保留、替代、退役和未单独重放的子例。
 
 此前 `0511` 候选 canonical inspect 的 `FAIL / exit 3 / target-sqlite-version-unresolved` 保持原结论，新包没有因此安装，原 VM 仍是此前 a443。旧一次授权诊断中，按 PID 及宽 Reader 日志的 HDC 客户端 exit 0、stdout/stderr 0 字节，只证明当时客户端观察；该轮没有 v2 远端 nonce 帧，不能追认为远端成功空日志。较后 marker 见非空 WAL，也不能追认前一命令或旧 inspect 的原因。原安装和旧诊断 scope 均已关闭。见[原实际观察](/home/administrator/Reader/.local/framework-closure-implementation-20261111/storage-admission-live-20261111/observation.json)。
 
 v2 本地修复没有重新占用设备，也没有证明旧空日志的具体原因或取得当前安装准入。未来任何设备诊断、正式 inspect 或安装仍须另按当前源码、产物和授权范围处理。
+
+后续补正两处正夹具装配失败（混入通用PRIVATE_STDERR、旧fake端口禁止所有cat）亦保留；只允许两条精确OS proc命令，原header零动作和其他SQL/cat禁用断言均在。最新27项source/test SHA与实际逐项日志以当前诊断结果为准，旧25项冻结记录保留为历史。

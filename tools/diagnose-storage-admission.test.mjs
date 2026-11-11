@@ -10,7 +10,7 @@ import { diagnosticNamespaceRef, createDiagnosticSignalScope } from '../scripts/
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const target='127.0.0.1:5555',server='127.0.0.1:8710',uid=20020064,now=Date.parse('2026-11-11T06:00:00Z');
 const argv=opts=>Object.entries(opts).flatMap(([key,value])=>value===true?[key]:[key,value]);
-function setup(dir,{lineageOnly=true,remoteFailure=false,signalAtReadiness=false}={}) {
+function setup(dir,{lineageOnly=true,remoteFailure=false,signalAtReadiness=false,procDenied=false}={}) {
   const opts={'--run':true,'--target':target,'--server-key':server,'--hdc':join(dir,'native-fixture'),
     '--vm-log':join(dir,'vm.log'),'--manifest':join(dir,'manifest.json'),'--authorization':join(dir,'auth.json'),'--output-dir':join(dir,'report')};
   if(lineageOnly)opts['--lineage-only']=true;
@@ -31,11 +31,17 @@ function setup(dir,{lineageOnly=true,remoteFailure=false,signalAtReadiness=false
   const calls=[],messages=[],emitter=new EventEmitter(),scope=createDiagnosticSignalScope(emitter);let releases=0;
   const encode=(payload,nonce,code=0)=>({status:0,stdout:Buffer.concat([Buffer.from(payload),Buffer.from(`\nRSD_REMOTE_V2:${nonce}:${code}\n`)]),stderr:Buffer.from('PRIVATE_STDERR')});
   const fake=(tool,args,config)=>{
-    tool.check();calls.push(args);assert.doesNotMatch(args.join(' '),/(?:^|[;(\n])\s*(?:od|dd|cat|sqlite3|PRAGMA|install|force-stop)\b/);
+    tool.check();calls.push(args);
     if(args.includes('list'))return{status:0,stdout:Buffer.from(`${target}\tTCP\tConnected\n`),stderr:Buffer.alloc(0)};
     const frame=args.at(-1),nonce=/RSD_REMOTE_V2:([a-f0-9]{32}):/.exec(frame)?.[1];assert.ok(nonce,'all shell queries use the actual framed command');
     const command=frame.slice(2,frame.indexOf('\n)\nreader_diag_remote_status='));
+    if(!['cat /proc/sys/kernel/random/boot_id','cat /proc/uptime'].includes(command))
+      assert.doesNotMatch(args.join(' '),/(?:^|[;(\n])\s*(?:od|dd|cat|sqlite3|PRAGMA|install|force-stop)\b/);
     if(command==='param get bootevent.boot.completed')return encode('true\n',nonce);
+    if(command==='cat /proc/sys/kernel/random/boot_id'||command==='cat /proc/uptime') {
+      const path=procDenied==='foreign'?'/proc/private':command.slice(4);
+      return {...encode(`cat: ${path}: Permission denied\n`,nonce,1),stderr:Buffer.alloc(0)};
+    }
     if(command==='bm dump -n io.reader.minliny')return encode('synthetic BMS',nonce);
     if(command==='pwd')return encode('/mnt/debug/100/debug_hap/io.reader.minliny',nonce);
     if(command.startsWith('echo RSD_HEADER_FLAGS_V2'))return encode('RSD_HEADER_FLAGS_V2\ndirectory-present=1\ndirectory-readable=1\ndirectory-searchable=1\ndb-symlink=0\ndb-present=1\nwal-symlink=0\njournal-symlink=0\nwal-nonempty=1\njournal-nonempty=0\nEND',nonce);
@@ -46,7 +52,12 @@ function setup(dir,{lineageOnly=true,remoteFailure=false,signalAtReadiness=false
   const ports={claimLedgerRoot:ledger,signalScope:scope,now:()=>now,stdout:line=>messages.push(JSON.parse(line)),
     acquireLease:async()=>({lockDir:'/synthetic-private-lease'}),releaseLease:()=>{releases++;assert.equal(scope.signal.aborted,signalAtReadiness);},
     spawnCheckedSync:fake,spawnChecked:async(...args)=>fake(...args),
-    targetReadiness:({query})=>{assert.equal(query('param get bootevent.boot.completed'),'true');if(signalAtReadiness)emitter.emit('SIGTERM');return{status:'PASS',bootIdSha256:'a'.repeat(64),sceneBoardPidSha256:'b'.repeat(64)};},
+    targetReadiness:({query})=>{
+      assert.equal(query('param get bootevent.boot.completed'),'true');
+      if(procDenied)for(const path of ['/proc/sys/kernel/random/boot_id','/proc/uptime'])
+        assert.throws(()=>query(`cat ${path}`),{message:`cat: ${path}: Permission denied`});
+      if(signalAtReadiness)emitter.emit('SIGTERM');return{status:'PASS',bootIdSha256:'a'.repeat(64),sceneBoardPidSha256:'b'.repeat(64)};
+    },
     parseBundleMetadata:()=>({bundlePresent:true,cpuAbi:'x86_64',...incumbent,appVersion:{appBuildId:incumbent.appBuildId}})};
   return{opts,auth,binding,ports,calls,messages,releases:()=>releases,scope};
 }
@@ -71,6 +82,19 @@ test('explicit lineage-only completes metadata while formal upgrade authority st
   assert.equal(report.businessQueries,4);assert.equal(report.preflightQueries,2);assert.equal(report.installAuthority,false);
   assert.ok(!JSON.stringify(report).includes('7654'));assert.ok(!JSON.stringify(report).includes('PRIVATE_'));
 }));
+test('only readiness-handled exact proc denials preserve failed remote facts without failing completed diagnosis',async()=>{
+  await withFixture({procDenied:true},async(f,dir)=>{
+    assert.equal(await runDiagnosticCli(argv(f.opts),f.ports),0);
+    const report=JSON.parse(readFileSync(join(dir,'report/report.json'),'utf8'));
+    const denials=report.preflight.filter(row=>row.handledByCanonicalReadiness===true);
+    assert.equal(denials.length,2);assert.ok(denials.every(row=>row.remoteExitCode===1&&row.outcome==='remote-nonzero'));
+    assert.equal(report.executionStatus,'DIAGNOSTIC_COMPLETE');assert.equal(report.preflightQueries,4);assert.equal(report.installAuthority,false);
+  });
+  await withFixture({procDenied:'foreign'},async f=>{
+    assert.equal(await runDiagnosticCli(argv(f.opts),f.ports),1);
+    assert.equal(f.messages.at(-1).reason,'target-readiness-failed');assert.equal(f.messages.at(-1).businessQueries,0);
+  });
+});
 test('unsupported selected header fails before any tool, grant, lease or device action',async()=>withFixture({lineageOnly:false},async(f,dir)=>{
   assert.equal(await runDiagnosticCli(argv(f.opts),f.ports),1);
   const report=f.messages.at(-1);
