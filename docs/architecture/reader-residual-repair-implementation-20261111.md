@@ -4,7 +4,7 @@
 
 ## 当前结果
 
-代码和必要本地检查已实施并提交`93c5b4e0`，诊断27个实际用例和独立源码复核通过；统一签名候选`0.2.0.DEV.973076b464f9`构建／验签通过，2153有效输入全部一致。设备、数据恢复和最终验收仍开放。原VM仍为a443，尚无本轮设备安装、取证、下载恢复、原库SQL／FFI或UNKNOWN内容读取。当前真实回执入口为[本轮私有执行计划](/home/administrator/Reader/.local/framework-residual-repair-20261111/execution-plan.json)。
+功能修复提交`93c5b4e0`，readiness补正提交`ad9e9263`，必要本地检查已通过，诊断27个实际用例和独立源码复核通过；统一签名候选`0.2.0.DEV.973076b464f9`构建／验签通过，2153有效输入全部一致。设备、数据恢复和最终验收仍开放。原VM仍为a443，尚无本轮设备安装、取证、下载恢复、原库SQL／FFI或UNKNOWN内容读取。当前真实回执入口为[本轮私有执行计划](/home/administrator/Reader/.local/framework-residual-repair-20261111/execution-plan.json)。
 
 | 遗留 | 已实施内容 | 已有证据／仍开放层 |
 | --- | --- | --- |
@@ -47,7 +47,7 @@
 
 正式签名包、合法安装、当前候选原生阅读图、漫画业务恢复、历史因果、原UNKNOWN结果、完整回归／物理机／用户验收各自记账。本记录不把代码层关闭写成所有层完成。
 
-## 最终本地候选
+## 首次本地候选（已由后续run替代）
 
 - 源码提交：`93c5b4e0c381869087e396a584636b3f194885fb`；构建捕获Host工作树干净。Core原有治理／私有WIP保留；有效Native输入及嵌入release二进制没有改变。
 - 候选：`0.2.0.DEV.973076b464f9`，run `20261111T132748Z-93c5b4e0-3c8ec955`，x86_64。指定minliny证书验签`verified:true`。
@@ -63,4 +63,18 @@
 
 本地审读发现新frame适配器折叠了两条OS proc的精确Permission denied，导致正式readiness的既有VM备用路径无法进入。共享适配已修，严格限定原两命令和同次有效远端失败帧；readiness PASS后仅标handled，remote1事实保留。10模块／8传输／9 CLI实际case PASS，复制入口另以真实canonical readiness的合成VM事实验证该fallback。两个新正夹具装配失败保留，其他错误及原header边界未放宽。
 
-上述controller输入变化要求重新冻结并构建最终run。前述`93c5b4e0`候选run保留为真实历史，不能从当前controller冒用安装；AppContent仍为973、Native有效输入不变。当前尚无本轮设备操作，最终run与绑定将在新构建完成后补记。
+上述controller输入变化要求重新冻结并构建最终run。前述`93c5b4e0`候选run保留为真实历史，不能从当前controller冒用安装；AppContent仍为973、Native有效输入不变。当前尚无本轮设备操作；最终run与本地绑定见下节。
+
+## 当前最终候选及准备层
+
+最终run：`20261111T141549Z-ad9e9263-3c8ec955`，Host干净源码提交`ad9e9263809a9e00c7090600ba1bd91c6d3f0da5`。AppBuildId仍为`0.2.0.DEV.973076b464f9`；后续只修控制器适配，应用内容和Native均未再变。指定minliny证书验签通过；2153源文件及1155控制器文件逐一一致，实际编译仍322警告（313／7／2）。
+
+- 最终HAP SHA256：`109196b0fdad8f9fe1ab56709ef4f8dd4d5e23d35d24f0578aa9de3fc75c2166`。
+- 最终manifest SHA256：`f4ac0ea9d2b936a5772cd3468641ed258d452008455693d6783f428c8597d368`。
+- 最终本地binding SHA256：`8675464b5e9bd7ec387132c5e71c53bf706f01c11ef83643f70d93b17bea067f`。首run／首binding和原始日志均保留历史，不冒用旧controller。
+
+正式工具的三个真实Cargo选择器均完成`--list`执行路由资格：实际走固定FD runner、唯一non-synthetic DISPATCHED、原预编译二进制和完整Core源码／Git前后校验。该结果是`QUALIFIED_NOT_TEST_EXECUTION`，Rust测试体、SQL、FFI、实际数据和设备均为0；绝不写成兼容性通过。[资格复核](/home/administrator/Reader/.local/framework-residual-repair-20261111/delivery/qualification-root-review.json)。
+
+复制入口10组合成检查通过，新增复制时操作／VM／授权摘要供动态scope guard匹配；额度工具当前120条HDC上界的8个合成case通过，显式停1／启1／装1／图2不变。真实clone-body仍须新鲜已批准复制，当前scope为OPEN/CAPTURED且未启动／安装，关闭或恢复后不能沿用旧静态copy回执。其完整适配器增量结果以本轮私有active记录为准。
+
+受控提案把文字交付与可选两章正常下载／一次漫画冷续读分开；全部批准时最多2停／2启／1次保数据安装／1组DB-WAL复制／4图。未进行原库SQL／FFI或原UNKNOWN内容读取；新范围仍待明确批准。历史因果、UNKNOWN业务结果、完整／物理机／用户验收继续开放。
