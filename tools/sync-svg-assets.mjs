@@ -56,11 +56,11 @@ function renderIcon(recipe, source) {
   }
   if (recipe.fillInterior) {
     assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
-    result = result.replaceAll('<path d=', `<path fill="${recipe.color}" d=`);
+    result = result.replace(/<path\b/g, `<path fill="${recipe.color}"`);
   }
   if (recipe.fillNone) {
     assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
-    result = result.replaceAll('<path d=', '<path fill="none" d=');
+    result = result.replace(/<path\b/g, '<path fill="none"');
   }
   return `${result.trim()}\n`;
 }
