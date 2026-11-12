@@ -45,7 +45,7 @@ export function runSourceLayoutControlProbe(width, scale) {
     statusCompact: button('source-management-status-compact', '全部'),
     statusWide: button('source-management-status-wide', '未检测'),
     category: button('source-management-category', '全部类型'),
-    manage: button('source-management-manage', '批量管理', 'equal'),
+    manage: button('source-management-manage', '批量管理', 'full'),
     add: icon('source-management-add', '新增书源'),
   }, unchanged: {
     compact: button('source-compact', '普通操作'),

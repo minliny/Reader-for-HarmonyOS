@@ -20,6 +20,21 @@
       "fixture": "fixture-instance-identity.ets.txt",
       "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494",
       "sourceBoundary": "Exact before-fix DEBUG fixture source with per-component presentation-only identities. Finite synthetic source, without user data or device artifacts. Demonstrates real retained viewport-anchor reuse across new actors."
+    },
+    {
+      "fixture": "keyboard-transfer-content.ets.txt",
+      "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+      "sourceBoundary": "Exact pre-fix shipping source for native-directory IME transfer negative. Finite source only, without device records or user data."
+    },
+    {
+      "fixture": "keyboard-transfer-field.ets.txt",
+      "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+      "sourceBoundary": "Exact pre-fix shipping source for native-directory IME transfer negative. Finite source only, without device records or user data."
+    },
+    {
+      "fixture": "keyboard-ack-delay-field.ets.txt",
+      "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62",
+      "sourceBoundary": "Exact24fe Field before actual-Native-focus-ACK scheduling fix. Finite source only, without device records or user data."
     }
   ]
 }

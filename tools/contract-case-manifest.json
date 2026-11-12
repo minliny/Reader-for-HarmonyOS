@@ -68,7 +68,7 @@
       }
     },
     "test-book-directory-page.mjs": {
-      "sourceSha256": "3c93be23f77d9f52f86d38457eefed8f68805ab233234dba2574fc512a75d975",
+      "sourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "cases": {
         "projection": {
           "resources": [],
@@ -2587,7 +2587,7 @@
       }
     },
     "test-reader-font-demand.mjs": {
-      "sourceSha256": "6a4d396304bd8c1da10cb673d714799c633edd7a8730e035099526d98d28d732",
+      "sourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
       "cases": {
         "load": {
           "resources": [],
@@ -2598,6 +2598,10 @@
           "qualification": "QUALIFIED"
         },
         "assets": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-progress": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

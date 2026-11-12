@@ -44,7 +44,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+        "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
       },
       "layers": {
         "route": {
@@ -1067,7 +1067,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -1095,11 +1095,11 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
+          "sha256": "3be13b5f1bc3b8f4f1f37c3f76b07ac20b86c181bac26a07c048405c300be896"
         },
         {
           "path": "tools/lib/source-layout-control-probe.mjs",
-          "sha256": "1645eae4c9eda583632931f68f58ce496e4a645f770376ea8e017b1da93d9e1a"
+          "sha256": "bf9dac6ce085b9bbfdd617d83c0d8f363abd30330bf84ec73cd4082a684fcc8a"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
@@ -1143,7 +1143,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -1183,7 +1183,7 @@
         },
         {
           "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-          "sha256": "7e5708fe4cafd8e692ebf1a1e095b4f320149ef085058d9e244c4c8dffe56b54"
+          "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
         },
         {
           "path": "tools/fixtures/reader-control-native-tree.mjs",
@@ -1435,16 +1435,16 @@
         },
         {
           "path": "tools/page-structure/evidence/source-layout-matrix.json",
-          "sha256": "a2b971e74a78b6253ea2df41b9afbffdacf71d7100ac7a435a77f6d63d29c001"
+          "sha256": "65f8dff0dda9940ecd0599c32cd79cd0d9a69c54d286bed6227c709a5d650956"
         },
         {
           "path": "tools/page-structure/evidence/source-interaction.json",
-          "sha256": "ac4598fa9dc25898de5b178b2a17f6de7c36a977e25ff54d198219a179f6f6ef"
+          "sha256": "85ce5ec0094b72efcacb77a9d97c06e11c9b6d92502b592a198c92e27719f466"
         }
       ],
       "layoutEvidence": {
         "path": "tools/page-structure/source-layout-evidence.json",
-        "sha256": "171c8e8fc89c1dd21d097c6600dd9c469bc6235c3787de7ac5eed32d235cc16a"
+        "sha256": "697f6d2bd88f3d5b0b3e3505962e5e55ce7200948d049d1fd39841afc235563a"
       }
     },
     {
@@ -2351,7 +2351,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+          "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
           "symbol": "mangaPage"
         },
         {
@@ -2366,7 +2366,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
           "symbol": "build"
         },
         {
@@ -2376,7 +2376,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-          "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
           "symbol": "build"
         },
         {
@@ -2441,7 +2441,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
           "symbol": "build"
         },
         {
@@ -2555,7 +2555,7 @@
         },
         {
           "path": "tools/test-control-directory-short-content.mjs",
-          "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
         },
         {
           "path": "tools/test-directory-native-row-target.mjs",
@@ -2729,7 +2729,7 @@
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-          "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
         },
         {
           "path": "tools/test-directory-native-fixture.mjs",
@@ -2742,6 +2742,30 @@
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
           "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+          "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/test-reader-font-demand.mjs",
+          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+        },
+        {
+          "path": "tools/test-book-directory-page.mjs",
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
         }
       ],
       "variants": [
@@ -2800,7 +2824,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -3602,7 +3626,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -3617,7 +3641,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -3627,7 +3651,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -3692,7 +3716,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -3806,7 +3830,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -3980,7 +4004,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -3993,6 +4017,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -4881,7 +4921,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -4896,7 +4936,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -4906,7 +4946,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -4971,7 +5011,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -5085,7 +5125,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -5259,7 +5299,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -5272,6 +5312,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -5331,7 +5387,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -6133,7 +6189,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -6148,7 +6204,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -6158,7 +6214,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -6223,7 +6279,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -6337,7 +6393,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -6511,7 +6567,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -6524,6 +6580,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -6583,7 +6655,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
             },
             "layers": {
               "route": {
@@ -7373,7 +7445,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -7388,7 +7460,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -7398,7 +7470,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -7463,7 +7535,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -7577,7 +7649,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -7751,7 +7823,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -7764,6 +7836,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -7820,7 +7908,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -8535,7 +8623,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -8550,7 +8638,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -8560,7 +8648,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -8625,7 +8713,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -8739,7 +8827,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -8913,7 +9001,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -8926,6 +9014,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -8982,7 +9086,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -9700,7 +9804,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -9715,7 +9819,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -9725,7 +9829,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -9790,7 +9894,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -9904,7 +10008,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -10078,7 +10182,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -10091,6 +10195,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -10150,7 +10270,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -10952,7 +11072,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -10967,7 +11087,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -10977,7 +11097,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -11042,7 +11162,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -11156,7 +11276,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -11330,7 +11450,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -11343,6 +11463,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -11402,7 +11538,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -12204,7 +12340,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -12219,7 +12355,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -12229,7 +12365,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -12294,7 +12430,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -12408,7 +12544,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -12582,7 +12718,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -12595,6 +12731,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -12651,7 +12803,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -13366,7 +13518,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -13381,7 +13533,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -13391,7 +13543,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -13456,7 +13608,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -13570,7 +13722,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -13744,7 +13896,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -13757,6 +13909,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -13813,7 +13981,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80"
+              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
             },
             "layers": {
               "route": {
@@ -14531,7 +14699,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -14546,7 +14714,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -14556,7 +14724,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -14621,7 +14789,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -14735,7 +14903,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -14909,7 +15077,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -14922,6 +15090,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -14988,7 +15172,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
             },
             "layers": {
               "route": {
@@ -15795,7 +15979,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -15810,7 +15994,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -15820,7 +16004,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -15885,7 +16069,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -15999,7 +16183,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -16173,7 +16357,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -16186,6 +16370,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -16252,7 +16452,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
             },
             "layers": {
               "route": {
@@ -17054,7 +17254,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "38bc342964a521feaf7c615480b4f57c693ff2bbe874e6d5c6a376b9409c3e80",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
                 "symbol": "mangaPage"
               },
               {
@@ -17069,7 +17269,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84",
+                "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4",
                 "symbol": "build"
               },
               {
@@ -17079,7 +17279,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "5742675a4c7721244cdf8545016dd311792f9665425b03ff2bd8c2e1dbcb2cd8",
+                "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71",
                 "symbol": "build"
               },
               {
@@ -17144,7 +17344,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be",
+                "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0",
                 "symbol": "build"
               },
               {
@@ -17258,7 +17458,7 @@
               },
               {
                 "path": "tools/test-control-directory-short-content.mjs",
-                "sha256": "d715b8473cbaa7bc1ced814d215bf24b222c515dae976f72e508549367d8df1e"
+                "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
               },
               {
                 "path": "tools/test-directory-native-row-target.mjs",
@@ -17432,7 +17632,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
+                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -17445,6 +17645,22 @@
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
                 "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
+              },
+              {
+                "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+                "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+                "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+                "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
               }
             ]
           }
@@ -17603,7 +17819,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
-          "sha256": "4be6afd034c698c7ed748296745220d62bdd48160f19fd50283afc595722778f"
+          "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
         },
         {
           "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
@@ -18973,7 +19189,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
-                "sha256": "4be6afd034c698c7ed748296745220d62bdd48160f19fd50283afc595722778f"
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
@@ -20350,7 +20566,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
-                "sha256": "4be6afd034c698c7ed748296745220d62bdd48160f19fd50283afc595722778f"
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
@@ -21727,7 +21943,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
-                "sha256": "4be6afd034c698c7ed748296745220d62bdd48160f19fd50283afc595722778f"
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
@@ -23057,7 +23273,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
-                "sha256": "4be6afd034c698c7ed748296745220d62bdd48160f19fd50283afc595722778f"
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
@@ -24387,7 +24603,7 @@
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
-                "sha256": "4be6afd034c698c7ed748296745220d62bdd48160f19fd50283afc595722778f"
+                "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
               },
               {
                 "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
@@ -26761,7 +26977,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -26769,7 +26985,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
@@ -26817,11 +27033,11 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
+          "sha256": "3be13b5f1bc3b8f4f1f37c3f76b07ac20b86c181bac26a07c048405c300be896"
         },
         {
           "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-          "sha256": "7e5708fe4cafd8e692ebf1a1e095b4f320149ef085058d9e244c4c8dffe56b54"
+          "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
         },
         {
           "path": "tools/lib/source-management-owner-probe.mjs",
@@ -26829,7 +27045,7 @@
         },
         {
           "path": "tools/lib/source-layout-control-probe.mjs",
-          "sha256": "1645eae4c9eda583632931f68f58ce496e4a645f770376ea8e017b1da93d9e1a"
+          "sha256": "bf9dac6ce085b9bbfdd617d83c0d8f363abd30330bf84ec73cd4082a684fcc8a"
         },
         {
           "path": "tools/fixtures/reader-control-native-tree.mjs",

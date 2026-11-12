@@ -81,7 +81,7 @@ async function runSelectedCase(selectedCase) {
     visual: mangaVisual.MANGA_DIRECTORY_VISUAL, Edge, Scroller,
     ReaderWindowCoordinator: {metrics: () => metrics},
     ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => testRuntime),
-    registerReaderFonts() {}, prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true,
+    DEBUG: false, registerReaderFonts() {}, prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true,
     LengthMetrics: {vp: value => ({value})}, ScrollAlign: {START: 'start'},
     BOOKMARK_ROW_HEIGHT: Number(read('features/reading/ui/ReaderBookmarkRow.ets').match(/BOOKMARK_ROW_HEIGHT = (\d+)/)[1]),
     readerDirectorySignalScrollIntent: identity => scrollIntents.push(identity),

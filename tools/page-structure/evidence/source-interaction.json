@@ -16,7 +16,7 @@
     },
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+      "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
     },
     {
       "path": "entry/src/main/ets/ui/chrome/PageBackBar.ets",
@@ -28,7 +28,7 @@
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-      "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+      "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -96,7 +96,7 @@
     },
     {
       "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-      "sha256": "7e5708fe4cafd8e692ebf1a1e095b4f320149ef085058d9e244c4c8dffe56b54"
+      "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
     },
     {
       "path": "tools/fixtures/reader-control-native-tree.mjs",
@@ -401,7 +401,7 @@
       "fontScaleContext": 1,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 44,
         "minimum": null
       },
@@ -833,7 +833,7 @@
       "fontScaleContext": 1.3,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 50,
         "minimum": null
       },
@@ -1265,7 +1265,7 @@
       "fontScaleContext": 1.6,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 56,
         "minimum": null
       },
@@ -1697,7 +1697,7 @@
       "fontScaleContext": 2,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 64,
         "minimum": null
       },
@@ -2129,7 +2129,7 @@
       "fontScaleContext": 1,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 44,
         "minimum": null
       },
@@ -2561,7 +2561,7 @@
       "fontScaleContext": 1.3,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 50,
         "minimum": null
       },
@@ -2993,7 +2993,7 @@
       "fontScaleContext": 1.6,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 56,
         "minimum": null
       },
@@ -3425,7 +3425,7 @@
       "fontScaleContext": 2,
       "fontEvidence": "explicit-window-scale-property",
       "visual": {
-        "width": null,
+        "width": "100%",
         "height": 64,
         "minimum": null
       },

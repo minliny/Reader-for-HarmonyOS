@@ -1196,7 +1196,7 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88",
+      "reviewedSourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "estimatedCostType": "sdk-transpile",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -1310,7 +1310,7 @@
         },
         {
           "path": "tools/test-book-directory-page.mjs",
-          "sha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88"
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -41203,7 +41203,7 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e",
+      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
       "estimatedCostType": "sdk-transpile",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -41237,7 +41237,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e"
+          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -41249,7 +41249,8 @@
       "focusedEntries": [
         "H-reader-font-demand#load",
         "H-reader-font-demand#preview",
-        "H-reader-font-demand#assets"
+        "H-reader-font-demand#assets",
+        "H-reader-font-demand#manga-progress"
       ],
       "coverageAdoption": [],
       "implementationEvidence": {
@@ -78088,11 +78089,11 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
         }
       ],
       "definitionInputProblems": [],
@@ -79174,7 +79175,7 @@
       "mechanism": "实际3000 canonical目录过滤/排序/identity/scroll意图; owner implementation record: [\"原目录compound拆5case；删除普通40/10/720视觉快照，以正finite row input/safe bounds和真实header delta为准；保3000 canonical indices、retained row/old source、实际规则format matrix和取消scroll。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88",
+      "reviewedSourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -79286,7 +79287,7 @@
         },
         {
           "path": "tools/test-book-directory-page.mjs",
-          "sha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88"
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
         }
       ],
       "definitionInputProblems": [],
@@ -79302,7 +79303,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "18dd07b6e503261aa8cda8e2f9f4338cd155c87c62cc760a1968140ea22634b6"
+      "resourceDefinitionSha256": "8bfd6e8b10c52829ad12a99b093d2d668e41701212959d8ce3ec925af9bc14a0"
     },
     {
       "file": "tools/test-book-directory-page.mjs",
@@ -79342,7 +79343,7 @@
       "mechanism": "实际目录Builder→tree/flat→row current/retired业务回调; owner implementation record: [\"原目录compound拆5case；删除普通40/10/720视觉快照，以正finite row input/safe bounds和真实header delta为准；保3000 canonical indices、retained row/old source、实际规则format matrix和取消scroll。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88",
+      "reviewedSourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -79454,7 +79455,7 @@
         },
         {
           "path": "tools/test-book-directory-page.mjs",
-          "sha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88"
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
         }
       ],
       "definitionInputProblems": [],
@@ -79470,7 +79471,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "18dd07b6e503261aa8cda8e2f9f4338cd155c87c62cc760a1968140ea22634b6"
+      "resourceDefinitionSha256": "8bfd6e8b10c52829ad12a99b093d2d668e41701212959d8ce3ec925af9bc14a0"
     },
     {
       "file": "tools/test-book-directory-page.mjs",
@@ -79510,7 +79511,7 @@
       "mechanism": "实际public host vp-string面积与header delta保目录actor; owner implementation record: [\"原目录compound拆5case；删除普通40/10/720视觉快照，以正finite row input/safe bounds和真实header delta为准；保3000 canonical indices、retained row/old source、实际规则format matrix和取消scroll。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88",
+      "reviewedSourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -79622,7 +79623,7 @@
         },
         {
           "path": "tools/test-book-directory-page.mjs",
-          "sha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88"
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
         }
       ],
       "definitionInputProblems": [],
@@ -79638,7 +79639,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "18dd07b6e503261aa8cda8e2f9f4338cd155c87c62cc760a1968140ea22634b6"
+      "resourceDefinitionSha256": "8bfd6e8b10c52829ad12a99b093d2d668e41701212959d8ce3ec925af9bc14a0"
     },
     {
       "file": "tools/test-book-directory-page.mjs",
@@ -79678,7 +79679,7 @@
       "mechanism": "实际漫画目录header asymmetric safe-frame; owner implementation record: [\"原目录compound拆5case；删除普通40/10/720视觉快照，以正finite row input/safe bounds和真实header delta为准；保3000 canonical indices、retained row/old source、实际规则format matrix和取消scroll。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88",
+      "reviewedSourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -79790,7 +79791,7 @@
         },
         {
           "path": "tools/test-book-directory-page.mjs",
-          "sha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88"
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
         }
       ],
       "definitionInputProblems": [],
@@ -79806,7 +79807,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "18dd07b6e503261aa8cda8e2f9f4338cd155c87c62cc760a1968140ea22634b6"
+      "resourceDefinitionSha256": "8bfd6e8b10c52829ad12a99b093d2d668e41701212959d8ce3ec925af9bc14a0"
     },
     {
       "file": "tools/test-book-directory-page.mjs",
@@ -79846,7 +79847,7 @@
       "mechanism": "实际持久format/capability准入及identity撤销; owner implementation record: [\"原目录compound拆5case；删除普通40/10/720视觉快照，以正finite row input/safe bounds和真实header delta为准；保3000 canonical indices、retained row/old source、实际规则format matrix和取消scroll。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88",
+      "reviewedSourceSha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -79958,7 +79959,7 @@
         },
         {
           "path": "tools/test-book-directory-page.mjs",
-          "sha256": "aa9d7d4b48cc1ca2a258d35aa34f9838630e4e8cb16205fbb148e98513879f88"
+          "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
         }
       ],
       "definitionInputProblems": [],
@@ -79974,7 +79975,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "18dd07b6e503261aa8cda8e2f9f4338cd155c87c62cc760a1968140ea22634b6"
+      "resourceDefinitionSha256": "8bfd6e8b10c52829ad12a99b093d2d668e41701212959d8ce3ec925af9bc14a0"
     },
     {
       "file": "tools/test-book-removal-dialog.mjs",
@@ -135894,7 +135895,7 @@
       "mechanism": "Actual checked font-load readiness, lazy faces and failed receipt retry; owner implementation record: [\"Separate checked load receipts, actual serialized visible preview and asset validity.\", \"Asset case uses upstream fontTools real cmap, static weight, outlines and name tables plus provenance hash; JSON counters alone do not qualify.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e",
+      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -135926,7 +135927,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e"
+          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
         }
       ],
       "definitionInputProblems": [],
@@ -135978,7 +135979,7 @@
       "evidenceBoundary": "Controlled platform font-load receipts and actual preview methods; asset case parses real cmap/static weight/outline/name and hashes, without generation or native raster/coverage acceptance.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "65f546273ac2d2b2188140ad155c4b9c72cbe7722c7bc009641955b901020979"
+      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf"
     },
     {
       "file": "tools/test-reader-font-demand.mjs",
@@ -136017,7 +136018,7 @@
       "mechanism": "Actual visible preview serialized loading and fallback admission; owner implementation record: [\"Separate checked load receipts, actual serialized visible preview and asset validity.\", \"Asset case uses upstream fontTools real cmap, static weight, outlines and name tables plus provenance hash; JSON counters alone do not qualify.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e",
+      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -136049,7 +136050,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e"
+          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
         }
       ],
       "definitionInputProblems": [],
@@ -136101,7 +136102,7 @@
       "evidenceBoundary": "Controlled platform font-load receipts and actual preview methods; asset case parses real cmap/static weight/outline/name and hashes, without generation or native raster/coverage acceptance.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "65f546273ac2d2b2188140ad155c4b9c72cbe7722c7bc009641955b901020979"
+      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf"
     },
     {
       "file": "tools/test-reader-font-demand.mjs",
@@ -136141,7 +136142,7 @@
       "mechanism": "Manifest hashes and actual upstream fontTools tables/cmap/static weights; owner implementation record: [\"Separate checked load receipts, actual serialized visible preview and asset validity.\", \"Asset case uses upstream fontTools real cmap, static weight, outlines and name tables plus provenance hash; JSON counters alone do not qualify.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e",
+      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -136173,7 +136174,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "ddc3fd5d3fa3a9aa953092878f929bbd23d903a77e08170c7a4f28f28e03258e"
+          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
         }
       ],
       "definitionInputProblems": [],
@@ -136233,7 +136234,7 @@
         }
       ],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "65f546273ac2d2b2188140ad155c4b9c72cbe7722c7bc009641955b901020979"
+      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf"
     },
     {
       "file": "tools/test-reader-fragment-authority.mjs",
@@ -369901,11 +369902,11 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
         }
       ],
       "definitionInputProblems": [],
@@ -370018,11 +370019,11 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
         }
       ],
       "definitionInputProblems": [],
@@ -370135,11 +370136,11 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
         }
       ],
       "definitionInputProblems": [],
@@ -370171,6 +370172,105 @@
         "case": "REUSED_PASS",
         "boundary": "Existing exact execution is reused. Metadata validation executes no business fixtures."
       }
+    },
+    {
+      "id": "H-reader-font-demand#manga-progress",
+      "parentId": "H-reader-font-demand",
+      "caseId": "manga-progress",
+      "file": "tools/test-reader-font-demand.mjs",
+      "qualification": "QUALIFIED",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-reader-font-demand.mjs"
+      ],
+      "caseSelection": {
+        "test-reader-font-demand.mjs": [
+          "manga-progress"
+        ]
+      },
+      "protectedBehavior": "DEBUG manga font stages distinguish pending Serif, one of seven pending faces, checked failure and generation/unmount discard, while release remains silent.",
+      "mechanism": "Actual selected BookDirectoryPage font methods and actual ReaderFonts registrar functions with deferred checked-receipt ports. Exercises all7faces, pending Serif/oneface, false/reject,4late completions, release/default consumers.",
+      "productionBinding": "BookDirectoryPage prepareMangaPageFonts/traceMangaFontPreparation and ReaderFonts prepareMangaSheetFonts/prepareReaderFontFamily.",
+      "failureExample": "A pending Serif must not emit batch begin; a single unresolved face must not emit batch resolve. Old generation or unmounted resolve/reject may only discard.",
+      "minimumTrigger": "Only DEBUG manga preparation stage diagnostics or progress callback changes. Select this one leaf explicitly.",
+      "necessityReason": "Exact diagnostic case avoids executing font asset parsing, optional font loads or other directory business cases.",
+      "needs": [
+        "Manga font preparation diagnosis",
+        "DEBUG-only stages",
+        "checked receipt publication"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "bounded checked-receipt ports"
+      ],
+      "limitations": "Method/registrar evidence. Native pending stage still needs one controlled scene on the new candidate.",
+      "estimatedCostType": "sdk-transpile",
+      "resourceNeeds": [],
+      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-reader-font-demand.mjs",
+          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
+          "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
+          "sha256": "edb591ba7c67c59159ca46a427c0e9844a3bd64aa6be578f782c49bd36ef70ea"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts",
+          "sha256": "da256271159a8bb1a1688c52fe70bb1f053eb48c287f610706dd2b74883160b1"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "validationEvidence": {
+        "case": "PASS",
+        "selectedExecutedCases": [
+          "manga-progress"
+        ],
+        "otherFontCases": "NOT_RUN",
+        "bookDirectoryBusiness": "NOT_RUN"
+      },
+      "nestedActions": [],
+      "nestedCalls": [],
+      "repair": null,
+      "repairAction": null
     }
   ],
   "externalEntries": [
@@ -371047,7 +371147,7 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 2326,
+    "QUALIFIED": 2327,
     "REVIEW_NEEDED": 7,
     "DIAGNOSTIC_ONLY": 22,
     "NEEDS_EVIDENCE": 1

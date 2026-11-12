@@ -1163,7 +1163,7 @@ export struct SourceManagementPage {
   @Builder
   private bottomActionBar(identity: string = this.temporaryBackIdentity) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'equal',
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'full',
         focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
         onAction: (): void => this.requestOpenTools('footer') })
         .layoutWeight(1)

@@ -1,5 +1,6 @@
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import hilog from '@ohos.hilog';
+import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
 import inputMethod from '@ohos.inputMethod';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -406,15 +407,37 @@ export struct BookDirectoryPage {
   private prepareMangaPageFonts(): void {
     const generation = ++this.mangaFontGeneration;
     this.mangaFontsFailed = false;
-    void prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).then((): Promise<boolean> => prepareMangaSheetFonts())
+    let stage: string = 'serif';
+    this.traceMangaFontPreparation(generation, 'prepare.begin');
+    this.traceMangaFontPreparation(generation, 'serif.begin', READER_FONT_NOTO_SERIF_SC_BOLD);
+    void prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).then((): Promise<boolean> => {
+      this.traceMangaFontPreparation(generation, 'serif.resolve', READER_FONT_NOTO_SERIF_SC_BOLD);
+      stage = 'batch';
+      this.traceMangaFontPreparation(generation, 'batch.begin');
+      return prepareMangaSheetFonts(DEBUG ? (family: string, phase: string): void => {
+        this.traceMangaFontPreparation(generation, `face.${phase}`, family);
+      } : undefined);
+    })
       .then((ready: boolean): void => {
+        this.traceMangaFontPreparation(generation, 'batch.resolve', '', ready);
+        this.traceMangaFontPreparation(generation,
+          this.mounted && generation === this.mangaFontGeneration ? 'prepare.accept' : 'prepare.discard', '', ready);
         if (this.mounted && generation === this.mangaFontGeneration) {
           this.mangaFontsReady = ready;
           this.mangaFontsFailed = !ready;
         }
       }).catch((): void => {
+        this.traceMangaFontPreparation(generation, `${stage}.reject`, stage === 'serif' ? READER_FONT_NOTO_SERIF_SC_BOLD : '');
+        this.traceMangaFontPreparation(generation,
+          this.mounted && generation === this.mangaFontGeneration ? 'prepare.failed' : 'prepare.discard');
         if (this.mounted && generation === this.mangaFontGeneration) this.mangaFontsFailed = true;
       });
+  }
+
+  private traceMangaFontPreparation(generation: number, phase: string, family: string = '', ready: boolean = false): void {
+    if (!DEBUG) return;
+    hilog.info(0x5244, 'Reader', 'Manga directory font phase=%{public}s generation=%{public}d current=%{public}d mounted=%{public}s family=%{public}s ready=%{public}s',
+      phase, generation, this.mangaFontGeneration, String(this.mounted), family, String(ready));
   }
 
   @Builder

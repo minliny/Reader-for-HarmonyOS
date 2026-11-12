@@ -34,6 +34,7 @@ export struct ReaderDirectoryToolbar {
   @Prop directoryKeyboardOnFocus: boolean = true;
   directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
   onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
+  onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean) => void = (_id: string, _requested: boolean): void => {};
   onTextChange: (value: string) => void = (_value: string): void => {};
   onSearch: () => void = (): void => {};
   onTop: () => void = (): void => {};
@@ -151,6 +152,9 @@ export struct ReaderDirectoryToolbar {
           directoryFocusCurrent: (id: string): boolean => this.currentDirectoryInput(id),
           onDirectoryFocusChanged: (id: string, focused: boolean): void => {
             if (this.currentDirectoryInput(inputFocusId)) this.onDirectoryFocusChanged(id, focused);
+          },
+          onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => {
+            if (this.currentDirectoryInput(inputFocusId)) this.onDirectoryKeyboardRestoreSettled(id, requested);
           },
           onTextChange: (value: string): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTextChange(value); },
           onSubmit: (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); } });

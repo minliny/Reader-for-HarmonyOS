@@ -45,6 +45,9 @@ if (selected.length) {
     const wrappers = nodes.filter(node => node.type === '__Common__' && typeof node.onAreaChange === 'function');
     assert.equal(wrappers.length, 1, 'actual footer has one measured custom-component wrapper');
     assert.equal(wrappers[0].layoutWeight, 1, 'the native Row sibling __Common__ must own its equal allocation');
+    const buttons = nodes.filter(node => node.type === 'Button' && node.accessibilityText === '批量管理');
+    assert.equal(buttons.length, 1, 'actual footer has one batch NativeButton');
+    assert.equal(buttons[0].width, '100%', 'the inner native Button must fill its allocated __Common__');
   }
   for (const width of widths) for (scale of fontScales) {
     const contentWidth = width - 38;
@@ -105,7 +108,8 @@ if (selected.length) {
     assert.equal(scrolls.length, 2);
     assert.ok(scrolls.every(n => n.height === budget.filterHeight && n.scrollable === 'horizontal'), 'both real filter viewports grow with their child controls');
     assert.ok(parentNodes.some(n => n.type === 'Row' && n.width === contentWidth && n.constraintSize?.minHeight === budget.footerHeight), 'actual footer parent uses the control growth budget');
-    for (const name of ['manage', 'add']) assert.equal(controls.targets[name].layoutWeight, 1, 'both actual footer children share the measured parent equally');
+    assert.equal(controls.targets.manage.width, '100%', 'actual full modifier fills the paid batch slot');
+    assert.equal(controls.targets.add.layoutWeight, 1, 'direct add carrier shares the measured Row allocation');
     if (width === 320 && scale === 1) {
       const before = source.replace("        .layoutWeight(1)\n        .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));",
         "        .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));");
@@ -115,11 +119,21 @@ if (selected.length) {
         actionBottomInset: () => 16, toolsFocusId: () => '', importFocusId: () => '' });
       old.bottomActionBar();
       assert.throws(() => assertFooterWrapper(shared.nodes(old)), /native Row sibling/,
-        'native-wrapped old footer must fail while both inner leaf weights remain one');
+        'native-wrapped footer must reject a missing outer allocation even when the inner leaf fills');
+      const innerIntrinsic = source.replace("specId: 'source-management-manage', label: '批量管理', layout: 'full'",
+        "specId: 'source-management-manage', label: '批量管理', layout: 'equal'");
+      assert.notEqual(innerIntrinsic, source, 'controlled regression restores only the old inner equal mode');
+      const intrinsic = createReaderBuilderProbe(innerIntrinsic, ['bottomActionBar'], shared.dependencies, shared.hooks).owner;
+      Object.assign(intrinsic, { appThemeScheme: 'day', contentFrame: page.contentFrame, layoutBudget: page.layoutBudget.bind(page),
+        actionBottomInset: () => 16, toolsFocusId: () => '', importFocusId: () => '' });
+      intrinsic.bottomActionBar();
+      assert.throws(() => assertFooterWrapper(shared.nodes(intrinsic)), /inner native Button must fill/,
+        'equal parent slots cannot hide an intrinsic inner native Button');
     }
     for (const [name, controlRef] of [['detect', 'source-detect'], ['login', 'source-login'], ['statusWide', 'source-filter-chip'], ['manage', 'footer-batch'], ['add', 'footer-add']]) {
       const t = controls.targets[name];
-      targets.push({ controlRef, width, fontScale: scale, visual: { width: t.width ?? (contentWidth - readerFoundationTokens.TOK_SPACE_CONTROL_INLINE) / 2, height: t.height }, response: null });
+      const targetWidth = typeof t.width === 'number' ? t.width : (contentWidth - readerFoundationTokens.TOK_SPACE_CONTROL_INLINE) / 2;
+      targets.push({ controlRef, width, fontScale: scale, visual: { width: targetWidth, height: t.height }, response: null });
     }
     const rowWidth = budget.rowForm === 'inline' ? 36 + 16 + budget.textMinWidth + budget.trailingWidth + 8 :
       Math.max(budget.trailingWidth, budget.textMinWidth + (budget.rowForm === 'stacked-actions' ? 44 : 0)) + 8;

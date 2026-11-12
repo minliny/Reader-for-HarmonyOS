@@ -163,7 +163,7 @@ if (selected.includes('sdk-targets')) {
         ['未检测', '自定义'].includes(t.label) ? 'source-management-status-wide' : 'source-management-status-compact', t.label, 'intrinsic', t.id, t.id !== 'status-custom']),
       ['row-login', 'source-management-login', '登录', 'intrinsic'],
       ['row-detect', 'source-management-detect', '检测', 'intrinsic'],
-      ['footer-manage', 'source-management-manage', '批量管理', 'equal'],
+      ['footer-manage', 'source-management-manage', '批量管理', 'full'],
     ]) {
       let actions = 0;
       const actor = new controls.button.Component(undefined, { specId, label, layout, availableWidth: width - 38,

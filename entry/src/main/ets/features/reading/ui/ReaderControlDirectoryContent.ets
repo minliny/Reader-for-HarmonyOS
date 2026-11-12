@@ -153,6 +153,8 @@ export struct ReaderControlDirectoryContent {
   @State private directoryFocusRevision: number = 0;
   @State private directoryRestoreKeyboard: boolean = true;
   private directoryKeyboardWasVisible: boolean = false;
+  private directoryKeyboardVisible: boolean | undefined = undefined;
+  private directoryKeyboardTransferPending: boolean = false;
   private layoutKey: string = '';
   private presentationKey: string = '';
   @State private directoryInputFocused: boolean = false;
@@ -174,6 +176,7 @@ export struct ReaderControlDirectoryContent {
     this.layoutRestoreTicket += 1;
     this.directoryInputFocused = false;
     this.directoryKeyboardWasVisible = false; this.directoryRestoreKeyboard = true;
+    this.directoryKeyboardVisible = undefined; this.directoryKeyboardTransferPending = false;
   }
 
   private minimumFacts(): ReaderDirectoryMinimumFacts {
@@ -261,6 +264,7 @@ export struct ReaderControlDirectoryContent {
     this.layoutRestorePending = false; this.layoutRestoreQueued = false;
     this.leadingPrefixOffset = undefined; this.directoryInputFocused = false;
     this.directoryKeyboardWasVisible = false; this.directoryRestoreKeyboard = true;
+    this.directoryKeyboardVisible = undefined; this.directoryKeyboardTransferPending = false;
     this.syncContentLayout();
     this.pendingCatalogAction = '';
     this.placement.open(`${this.sessionKey}:${this.tab}`);
@@ -405,6 +409,7 @@ export struct ReaderControlDirectoryContent {
     this.syncContentLayout();
     if (!this.interactionEnabled) {
       this.directoryInputFocused = false; this.layoutRestoreTicket += 1;
+      this.directoryKeyboardTransferPending = false;
       this.layoutRestorePending = false; this.layoutRestoreQueued = false;
     }
     if (!this.mounted || this.snapshot.rows.length === 0) return;
@@ -477,11 +482,15 @@ export struct ReaderControlDirectoryContent {
     if (!this.mounted || !this.interactionEnabled || (this.progress !== 0 && this.progress !== 1)) return;
     if (this.directoryInputFocused) {
       const keyboardVisible = readerWindowMetrics().keyboardInsets.bottom > 0;
-      if (keyboardVisible) {
-        this.directoryKeyboardWasVisible = true; this.directoryRestoreKeyboard = true;
-      } else if (this.directoryKeyboardWasVisible) {
-        // Before the first visible inset, zero is unknown rather than a user dismissal.
-        this.directoryRestoreKeyboard = false;
+      if (keyboardVisible !== this.directoryKeyboardVisible) {
+        if (keyboardVisible) {
+          this.directoryKeyboardWasVisible = true; this.directoryRestoreKeyboard = true;
+        } else if (this.directoryKeyboardWasVisible && !this.directoryKeyboardTransferPending) {
+          // A same-input hidden edge preserves Back. A retiring input's
+          // detach belongs to its pending layout transfer, not that intent.
+          this.directoryRestoreKeyboard = false;
+        }
+        this.directoryKeyboardVisible = keyboardVisible;
       }
     }
     const short = this.progress === 1 && (this.contentGeometry().shortContentRequired ||
@@ -493,6 +502,7 @@ export struct ReaderControlDirectoryContent {
     this.layoutKey = key;
     this.lifecycle += 1;
     if (presentationKey !== this.presentationKey) {
+      this.directoryKeyboardTransferPending = this.directoryInputFocused && this.directoryRestoreKeyboard;
       this.presentationKey = presentationKey; this.layoutPresentation += 1;
     }
     this.layoutRestoreTicket += 1;
@@ -531,6 +541,13 @@ export struct ReaderControlDirectoryContent {
   private onDirectoryFocus(presentation: number, id: string, focused: boolean): void {
     if (!this.currentContent(presentation) || id !== this.directoryFocusId()) return;
     this.directoryInputFocused = focused;
+    if (!focused) this.directoryKeyboardTransferPending = false;
+  }
+  private onDirectoryKeyboardRestoreSettled(presentation: number, id: string, requested: boolean): void {
+    if (!this.currentContent(presentation) || id !== this.directoryFocusId()) return;
+    this.directoryKeyboardTransferPending = false;
+    this.directoryKeyboardVisible = readerWindowMetrics().keyboardInsets.bottom > 0;
+    if (!requested) this.directoryRestoreKeyboard = false;
   }
   private onListLayout(): void {
     if (this.layoutRestorePending) { this.queueLayoutRestore(); return; }
@@ -648,6 +665,7 @@ export struct ReaderControlDirectoryContent {
         directoryKeyboardOnFocus: this.directoryRestoreKeyboard,
         directoryFocusCurrent: (id: string): boolean => this.mounted && this.toolbarInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(this.layoutPresentation, id, focused),
+        onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(this.layoutPresentation, id, requested),
         onTextChange: (value: string): void => { if (this.mounted && this.toolbarInteractive()) this.draft = value; },
         onSearch: (): void => { if (this.mounted && this.toolbarInteractive()) this.search(); },
         onTop: (): void => { if (this.mounted && this.toolbarInteractive()) this.scrollCatalogEdge(false); },
@@ -710,6 +728,7 @@ export struct ReaderControlDirectoryContent {
         directoryKeyboardOnFocus: this.directoryRestoreKeyboard,
         directoryFocusCurrent: (id: string): boolean => this.mounted && this.toolbarInteractive() && id === this.directoryFocusId(),
         onDirectoryFocusChanged: (id: string, focused: boolean): void => this.onDirectoryFocus(presentation, id, focused),
+        onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(presentation, id, requested),
         onTextChange: (value: string): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.draft = value; },
         onSubmit: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.search(); } });
       Flex({ wrap: FlexWrap.Wrap }) {

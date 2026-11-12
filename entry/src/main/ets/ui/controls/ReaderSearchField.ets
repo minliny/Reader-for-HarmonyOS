@@ -2,6 +2,9 @@ import { readerActionTouchRegion } from './ReaderActionAccessibility';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { FrameCallback } from '@kit.ArkUI';
+import inputMethod from '@ohos.inputMethod';
+import hilog from '@ohos.hilog';
+import { KeyCode } from '@kit.InputKit';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import {
@@ -103,11 +106,15 @@ export struct ReaderSearchField {
   @Prop directoryKeyboardOnFocus: boolean = true;
   directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
   onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
+  onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean) => void = (_id: string, _requested: boolean): void => {};
   private directoryLayoutId: string = '';
   private directoryInputLoaded: boolean = false;
+  private directoryNativeFocused: boolean = false;
   private directoryFocusTicket: number = 0;
   private directoryFocusScheduledRevision: number = -1;
   private directoryFocusAppliedRevision: number = -1;
+  private directoryKeyboardRestorePendingRevision: number = -1;
+  private directoryKeyboardRestorePendingTicket: number = -1;
   private mounted: boolean = false;
   private focusGeneration: number = 0;
   private readonly bookInputController: TextInputController = new TextInputController();
@@ -137,8 +144,11 @@ export struct ReaderSearchField {
     this.bookInputScrollGeneration += 1;
     this.directoryFocusTicket += 1;
     this.directoryInputLoaded = false;
+    this.directoryNativeFocused = false;
     this.directoryLayoutId = '';
     this.directoryFocusScheduledRevision = -1;
+    this.directoryKeyboardRestorePendingRevision = -1;
+    this.directoryKeyboardRestorePendingTicket = -1;
   }
 
 
@@ -150,6 +160,9 @@ export struct ReaderSearchField {
   private onDirectoryFocusRequest(): void {
     this.directoryFocusTicket += 1;
     this.directoryFocusScheduledRevision = -1;
+    this.directoryKeyboardRestorePendingRevision = -1;
+    this.directoryKeyboardRestorePendingTicket = -1;
+    if (this.directoryLayoutId !== this.directoryFocusId) this.directoryNativeFocused = false;
     if (this.mounted && this.variant === 'readerDirectory' && !this.directoryFocusAllowed &&
       this.directoryFocusId.length > 0 && this.directoryLayoutId === this.directoryFocusId) {
       this.onDirectoryFocusChanged(this.directoryFocusId, false);
@@ -166,8 +179,64 @@ export struct ReaderSearchField {
   }
 
   private onDirectoryInputFocus(id: string, focused: boolean): void {
-    if (!this.directoryFocusEnabled(id) || !this.directoryInputLoaded || this.directoryLayoutId !== id) return;
+    if (!this.directoryFocusEnabled(id)) return;
+    this.directoryNativeFocused = focused;
+    if (!this.directoryInputLoaded || this.directoryLayoutId !== id) return;
     this.onDirectoryFocusChanged(id, focused);
+    if (focused) this.queueAcknowledgedDirectoryKeyboardRestore(id);
+    else {
+      this.directoryFocusTicket += 1;
+      this.directoryKeyboardRestorePendingRevision = -1;
+      this.directoryKeyboardRestorePendingTicket = -1;
+    }
+  }
+
+  private onDirectoryInputKey(id: string, event: KeyEvent): boolean {
+    if (this.directoryFocusEnabled(id) && this.directoryNativeFocused &&
+      event.type === KeyType.Down && event.keyCode === KeyCode.KEYCODE_BACK) {
+      this.directoryFocusTicket += 1;
+      this.directoryKeyboardRestorePendingRevision = -1;
+      this.directoryKeyboardRestorePendingTicket = -1;
+      this.onDirectoryKeyboardRestoreSettled(id, false);
+    }
+    return false;
+  }
+
+  private directoryKeyboardRestoreCurrent(id: string, revision: number, ticket: number): boolean {
+    return this.directoryFocusEnabled(id) && this.directoryNativeFocused && this.directoryInputLoaded &&
+      this.directoryLayoutId === id && revision === this.directoryFocusRevision && ticket === this.directoryFocusTicket;
+  }
+
+  private queueDirectoryKeyboardRestore(id: string, revision: number, ticket: number): void {
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (!this.directoryKeyboardRestoreCurrent(id, revision, ticket) || !this.directoryKeyboardOnFocus) return;
+      try {
+        // Focus ACK precedes this single editing request. Its Promise does
+        // not prove that TYPE_KEYBOARD geometry has become visible.
+        void inputMethod.getController().showTextInput().then((): void => {
+          if (this.directoryKeyboardRestoreCurrent(id, revision, ticket)) this.onDirectoryKeyboardRestoreSettled(id, true);
+        }).catch((error: Error): void => {
+          if (!this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
+          this.onDirectoryKeyboardRestoreSettled(id, false);
+          hilog.warn(0x5244, 'Reader', 'Directory keyboard restore: %{private}s', error.message);
+        });
+      } catch (error) {
+        if (!this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
+        this.onDirectoryKeyboardRestoreSettled(id, false);
+        hilog.warn(0x5244, 'Reader', 'Directory keyboard restore: %{private}s', (error as Error).message);
+      }
+    }));
+  }
+
+  private queueAcknowledgedDirectoryKeyboardRestore(id: string): void {
+    const revision = this.directoryKeyboardRestorePendingRevision;
+    const ticket = this.directoryKeyboardRestorePendingTicket;
+    if (revision <= 0 || !this.directoryKeyboardRestoreCurrent(id, revision, ticket)) return;
+    // Consume the request when its current native focus ACK owns it. A late
+    // ACK can schedule this once without polling or losing its revision.
+    this.directoryKeyboardRestorePendingRevision = -1;
+    this.directoryKeyboardRestorePendingTicket = -1;
+    this.queueDirectoryKeyboardRestore(id, revision, ticket);
   }
 
   private queueDirectoryFocus(): void {
@@ -181,8 +250,13 @@ export struct ReaderSearchField {
         !this.directoryInputLoaded || this.directoryLayoutId !== id) return;
       this.directoryFocusScheduledRevision = -1;
       this.directoryFocusAppliedRevision = revision;
+      if (this.directoryKeyboardOnFocus) {
+        this.directoryKeyboardRestorePendingRevision = revision;
+        this.directoryKeyboardRestorePendingTicket = ticket;
+      }
       // One request after the real native input layout. No polling or retry.
       this.getUIContext().getFocusController().requestFocus(id);
+      this.queueAcknowledgedDirectoryKeyboardRestore(id);
     }));
   }
 
@@ -330,6 +404,7 @@ export struct ReaderSearchField {
         .width(this.iconSize())
         .height(this.iconSize());
       TextInput({ placeholder: this.placeholder, text: this.text })
+        .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
         .layoutWeight(1)
         .height(this.inputHeight())
         .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' ? this.directoryFontScale() : 1,

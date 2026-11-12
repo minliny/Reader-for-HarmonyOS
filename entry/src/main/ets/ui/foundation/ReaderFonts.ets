@@ -54,15 +54,23 @@ export function readerFontFamilyReady(family: string): boolean {
 
 /** Manga panels own these extra faces. No shelf startup load; admission waits
  * for every checked receipt, including dynamic current/group text roles. */
-export function prepareMangaSheetFonts(): Promise<boolean> {
+export function prepareMangaSheetFonts(progress?: (family: string, phase: string) => void): Promise<boolean> {
   const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
     READER_FONT_NOTO_SANS_SC_UI_BOLD,
     READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
     READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600,
     READER_FONT_NOTO_SANS_SC_UI_650,
     READER_FONT_NOTO_SANS_SC_UI_900];
-  return Promise.all(families.map((family: string): Promise<void> =>
-    prepareReaderFontFamily(family))).then((): boolean =>
+  return Promise.all(families.map((family: string): Promise<void> => {
+    if (progress === undefined) return prepareReaderFontFamily(family);
+    progress(family, 'begin');
+    return prepareReaderFontFamily(family).then((): void => {
+      progress(family, 'resolve');
+    }, (error: Error): void => {
+      progress(family, 'reject');
+      throw error;
+    });
+  })).then((): boolean =>
     families.every((family: string): boolean => readerFontFamilyReady(family)));
 }
 

@@ -10,7 +10,7 @@
   "inputs": [
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+      "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
     },
     {
       "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
@@ -42,11 +42,11 @@
     },
     {
       "path": "tools/test-source-management-layout.mjs",
-      "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
+      "sha256": "3be13b5f1bc3b8f4f1f37c3f76b07ac20b86c181bac26a07c048405c300be896"
     },
     {
       "path": "tools/lib/source-layout-control-probe.mjs",
-      "sha256": "1645eae4c9eda583632931f68f58ce496e4a645f770376ea8e017b1da93d9e1a"
+      "sha256": "bf9dac6ce085b9bbfdd617d83c0d8f363abd30330bf84ec73cd4082a684fcc8a"
     },
     {
       "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
@@ -90,7 +90,7 @@
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
-      "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+      "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
@@ -134,7 +134,7 @@
     },
     {
       "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-      "sha256": "7e5708fe4cafd8e692ebf1a1e095b4f320149ef085058d9e244c4c8dffe56b54"
+      "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
     },
     {
       "path": "tools/fixtures/reader-control-native-tree.mjs",
@@ -158,11 +158,11 @@
     },
     {
       "path": "tools/page-structure/evidence/source-layout-matrix.json",
-      "sha256": "a2b971e74a78b6253ea2df41b9afbffdacf71d7100ac7a435a77f6d63d29c001"
+      "sha256": "65f8dff0dda9940ecd0599c32cd79cd0d9a69c54d286bed6227c709a5d650956"
     },
     {
       "path": "tools/page-structure/evidence/source-interaction.json",
-      "sha256": "ac4598fa9dc25898de5b178b2a17f6de7c36a977e25ff54d198219a179f6f6ef"
+      "sha256": "85ce5ec0094b72efcacb77a9d97c06e11c9b6d92502b592a198c92e27719f466"
     },
     {
       "path": "tools/page-structure/source-e2-evidence.mjs",
