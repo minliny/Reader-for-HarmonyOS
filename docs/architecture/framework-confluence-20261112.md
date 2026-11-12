@@ -109,3 +109,13 @@ UI 配套提交为 `9bfc916`，在主题 PR 原提交上支付目录 clear/downl
 现场只读发现远程HDC `192.168.1.10:8710` 持有在线x86_64实例，已安装Reader0.2.0／versionCode1000000。本机现有Mate90Pro配置为arm64。两者按不同server／target分别记录。远程SSH22超时与HDC8710可达各自保留，尚无远程当前实例宿主日志与新鲜正式storage-transition证明。已请求用户裁定是否将原生验收移至该远程实例，期间继续完成源码和签名候选；没有安装、停启App、复制用户数据库或改变字号。
 
 早期Stage5作者准备JSON已随本批私有history保存，原工作区冻结输入保持原位。当前仓库只有register.json作为active页面登记，迁移后的checker／测试均读取该唯一登记。
+
+### 首次候选编译与修复
+
+首次canonical构建在CompileNative的bookturn桥接发生14处严格浮点转整数诊断，尚未进入ArkTS，没有发布成功HAP。按实际当前OHOS clang的-Werror要求改为经安全整数校验后的NAPI整数读取，保持原gesture七字段与有限代次、token、profile准入。Percentile维持原floor(product+0.5F)结果。定向number-boundaries与ohos-compile两个case通过，含1536个Percentile等价组合、两个真实翻译单元和旧转换EXPECTED_FAIL负例。Core Native及storage身份没有变化。
+
+工作区环境模块按Core受控源重新投影，统一生成文件行尾。配套模块与当前Core保持一致。后续构建继续使用contracts-scope none和同一Cargo缓存。
+
+用户已选择远程现有x86_64实例，随后指定通过HDC无线调试。当前HDC TCP链路已能发现该实例并读取ABI和安装元数据。UU远程的工具访问被拒绝，现场取证沿HDC入口执行。原生更新仍需当前实例日志和实际正式storage-transition事实。
+
+无线交付入口合入既有HDC租约的准确server/target准入、命令时限、当前child清理及只清除代理变量的直连环境。保留现有acquire/release接口与HAP安装参数。9个具名离线case和真实临时loopback所有权检查通过，未执行HDC服务维护或设备动作。首次沙箱socket失败保留，受审执行权限下的实际回执单独归档。页面登记220项输入未受这些工具变化影响。
