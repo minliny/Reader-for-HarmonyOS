@@ -187,7 +187,8 @@ function physicalBootSample(query, now, monotonicNow) {
 }
 
 // Only minimal read-only system queries are allowed until this succeeds.
-// The caller binds the current confirmed VM's emulator log explicitly.
+// An explicitly provided emulator log adds host-instance evidence. Guest
+// readiness can also be established from the selected HDC target alone.
 export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now = Date.now, monotonicNow = () => performance.now(), wait = () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000) }) {
   if (!['vm', 'physical'].includes(targetKind)) throw new Error('Invalid target kind');
   const boot = query('param get bootevent.boot.completed').trim();
@@ -198,22 +199,27 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
   const sceneBoard = query('pidof com.ohos.sceneboard').trim();
   if (!/^\d+$/.test(sceneBoard)) throw new Error('SceneBoard is not running as one stable process');
   const physicalSample = physicalFallback ? physicalBootSample(query, now, monotonicNow) : undefined;
+  const guestOnly = targetKind === 'vm' && !vmLog;
   let logRecord, firstBytes, firstStat, fallback, firstSample, instance;
   if (targetKind === 'vm') {
-    if (!vmLog || !lstatSync(vmLog).isFile()) throw new Error('VM readiness requires --vm-log for the currently confirmed emulator instance');
     const uptimeResult = procRead(query, '/proc/uptime'), uptime = Number(uptimeResult.text.split(/\s+/)[0]);
     const validUptime = /^\d+(?:\.\d+)?(?:\s+\d+(?:\.\d+)?)?$/.test(uptimeResult.text) && Number.isFinite(uptime) && uptime >= 0;
     if (!validUptime && !uptimeResult.denied) throw new Error('VM uptime is unavailable');
     fallback = bootId.denied || uptimeResult.denied;
-    firstStat = lstatSync(vmLog); firstBytes = readFileSync(vmLog);
-    if (fallback) { firstSample = vmBootSample(query, now, monotonicNow); instance = vmInstance(firstBytes, firstSample, { vmLog, targetEndpoint }); }
-    else if (firstStat.mtimeMs < now() - uptime * 1000 - 60_000) throw new Error('VM emulator log predates the current guest boot');
-    const text = firstBytes.toString('utf8');
-    const marker = text.lastIndexOf('Guest OS Boot Completed!!');
-    if (marker < 0) throw new Error('VM emulator log has no Guest OS Boot Completed marker');
-    const tail = text.slice(marker);
-    if (SYSTEM_INSTABILITY.test(tail)) throw new Error('VM system instability detected; stop app operations and preserve system evidence');
-    logRecord = { sha256: digest(firstBytes), bytes: firstBytes.length, bootMarker: true, instabilityAfterMarker: false };
+    if (fallback) firstSample = vmBootSample(query, now, monotonicNow);
+    if (guestOnly) logRecord = { status: 'NOT_PROVIDED' };
+    else {
+      if (!lstatSync(vmLog).isFile()) throw new Error('VM emulator log is not a regular file');
+      firstStat = lstatSync(vmLog); firstBytes = readFileSync(vmLog);
+      if (fallback) instance = vmInstance(firstBytes, firstSample, { vmLog, targetEndpoint });
+      else if (firstStat.mtimeMs < now() - uptime * 1000 - 60_000) throw new Error('VM emulator log predates the current guest boot');
+      const text = firstBytes.toString('utf8');
+      const marker = text.lastIndexOf('Guest OS Boot Completed!!');
+      if (marker < 0) throw new Error('VM emulator log has no Guest OS Boot Completed marker');
+      const tail = text.slice(marker);
+      if (SYSTEM_INSTABILITY.test(tail)) throw new Error('VM system instability detected; stop app operations and preserve system evidence');
+      logRecord = { sha256: digest(firstBytes), bytes: firstBytes.length, bootMarker: true, instabilityAfterMarker: false };
+    }
   }
   const observationStart = monotonicNow(), wallStart = now();
   wait();
@@ -227,8 +233,17 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
       second.guestStart - physicalSample.guestEnd < observationMs - 2000 ||
       second.guestEnd - physicalSample.guestStart > second.monotonicEnd - physicalSample.monotonicStart + 2000) throw new Error('Physical boot identity or uptime changed during readiness observation');
   }
-  if (fallback && (observationMs < (instance.snapshotLog ? 2000 : 1000) || observationMs > 10_000 || Math.abs(now() - wallStart - observationMs) > 1000)) throw new Error('VM readiness observation interval or clock is invalid');
-  if (targetKind === 'vm') {
+  if ((guestOnly || fallback) && (observationMs < (guestOnly || instance.snapshotLog ? 2000 : 1000) || observationMs > 10_000 || Math.abs(now() - wallStart - observationMs) > 1000)) throw new Error('VM readiness observation interval or clock is invalid');
+  if (guestOnly && fallback) {
+    const second = vmBootSample(query, now, monotonicNow);
+    if (JSON.stringify(second.milestones) !== JSON.stringify(firstSample.milestones) ||
+      Math.abs(second.bootStart - firstSample.bootStart) > 1000 ||
+      second.guestStart <= firstSample.guestEnd ||
+      second.guestStart - firstSample.guestEnd < observationMs - 2000 ||
+      second.guestEnd - firstSample.guestStart > second.monotonicEnd - firstSample.monotonicStart + 2000)
+      throw new Error('VM guest boot identity, milestones or uptime changed during readiness observation');
+  }
+  if (targetKind === 'vm' && !guestOnly) {
     const bytes = readFileSync(vmLog), current = bytes.toString('utf8');
     const marker = current.lastIndexOf('Guest OS Boot Completed!!');
     if (marker < 0) throw new Error('VM boot marker disappeared during readiness observation');
@@ -253,8 +268,9 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
   const finalBootId = procRead(query, '/proc/sys/kernel/random/boot_id', targetKind === 'physical');
   if (query('param get bootevent.boot.completed').trim() !== 'true' || finalBootId.text !== bootId.text || finalBootId.denied !== bootId.denied || query('pidof com.ohos.sceneboard').trim() !== sceneBoard) throw new Error('Target boot/SceneBoard changed during readiness observation');
   return { status: 'PASS', checkedAt: new Date().toISOString(), bootIdSha256: physicalFallback ? digest(JSON.stringify([physicalSample.bootStart, physicalSample.milestones])) :
-      bootId.denied ? instance.identity : digest(bootId.text),
-    bootIdentitySource: physicalFallback ? 'physical-boot-milestones-v1' : bootId.denied ? (instance.snapshotLog ? 'vm-snapshot-resume-fingerprint-v1' : 'vm-startup-fingerprint-v1') : 'kernel-boot-id',
-    ...(physicalFallback || fallback ? { uptimeSource: 'toybox-sysinfo', observationMs } : {}),
+      bootId.denied ? (guestOnly ? digest(JSON.stringify([firstSample.bootStart, firstSample.milestones])) : instance.identity) : digest(bootId.text),
+    bootIdentitySource: physicalFallback ? 'physical-boot-milestones-v1' : bootId.denied ? (guestOnly ? 'vm-guest-boot-milestones-v1' : instance.snapshotLog ? 'vm-snapshot-resume-fingerprint-v1' : 'vm-startup-fingerprint-v1') : 'kernel-boot-id',
+    ...(physicalFallback || fallback || guestOnly ? { uptimeSource: physicalFallback || fallback ? 'toybox-sysinfo' : 'procfs', observationMs } : {}),
+    ...(targetKind === 'vm' ? { evidenceScope: guestOnly ? 'guest-only' : 'guest-and-emulator-log' } : {}),
     sceneBoardPidSha256: digest(sceneBoard), bootCompleted: true, sceneBoardStable: true, emulatorLog: logRecord };
 }

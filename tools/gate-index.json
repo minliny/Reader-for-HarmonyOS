@@ -6,8 +6,8 @@
   "reviewedFiles": 703,
   "inventoryFiles": 665,
   "qualificationCounts": {
-    "NAVIGATION": 322,
-    "QUALIFIED": 343
+    "NAVIGATION": 323,
+    "QUALIFIED": 342
   },
   "defaultPolicy": "No full gate for ordinary feature work, vulnerability fixes, builds or installs.",
   "entries": [
@@ -9053,15 +9053,15 @@
       "file": "tools/test-delivery-admission.mjs",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
-      "qualification": "QUALIFIED",
+      "qualification": "NAVIGATION",
       "protectedBehavior": "交付admission工具不得越界清理生成缓存/借错buildlease；目标readiness只能凭同次真实identity证据，不可把permission denied当bootID。",
-      "mechanism": "完整604行后root修首段为607行：L22-25默认iteration/acceptance均none；缓存真实tmpfile/hardlink/FIFO/symlink拒且无副作用；实际IDElease父子拒token/清理；HAPresources字节和receipt篡改；readiness query/time/log controlled数十负例，无设备。",
-      "productionBinding": "scripts/lib/ide-native-cache.mjs:13 reconcileIdeNativeCache；hap-pipeline.mjs:897/930/1048/1452；hvigor/reader-hap-guard.cjs真实；hap-delivery-evidence.mjs:148 targetReadiness真实函数，queryport假。",
-      "failureExample": "static inference: 允许scanparent symlink会L164外部树不变断言失败；permission错误直接hash会L467失败；旧implicitfullassert已由root改为none，不能继续据旧预期作STALE。",
+      "mechanism": "两个显式case。readiness独立调用真实targetReadiness，有限read-only query/log/time ports覆盖guest-only、已提供VM日志/snapshot和physical。delivery-admission保留其余既有Native cache/IDE lease/resources/receipts/loader/failure-log fixture。父入口只导航。",
+      "productionBinding": "scripts/lib/hap-delivery-evidence.mjs targetReadiness/vmBootSample/physicalBootSample；其余controller生产绑定保留在delivery-admission准确case。",
+      "failureExample": "实际readiness fixture拒绝把permission denied当bootID，拒绝无日志下的重启/SceneBoard变化/未完成/坏milestone/时钟或观察窗口异常；提供VM日志时原已知错误与snapshot反例保留。父项选择会在派发前以NAVIGATION拒绝。",
       "overlap": "hap-pipeline-contract测签名/manifest/runnerreceipt更深；本项独有nativecache可恢复清理、IDEparentlease和physical/VMrestrictedboot判定，不把两份都当每次build刚需。",
-      "minimumTrigger": "交付admission/controller、Nativecache修复、IDElease/工具env、bootreadiness或resource/receiptvalidator变更需回归时手选；实际build仅核动作所需输入。",
-      "necessityReason": "真实tmpFS/git/subprocess加多反例给出工具层充分证据，readinessfakeport模型明确；root已修唯一旧全量预期，整文件现在保护默认none不授权隐藏Host全量。",
-      "limitations": "Node小进程模拟Corestage回执不是Core测试；无HAP/build/device/realNative；readiness2000ms为受控协议窗口非实测。本次hash绑定root修正后的607行测试定义，机制首段L22-25已重新核对。",
+      "minimumTrigger": "仅按本次变更点手动选择对应case，readiness变更只点readiness。父项不执行、不补跑另一个case。",
+      "necessityReason": "两个准确手动case对应独立变更范围，父导航与runner focused-case guard共同防止无case空跑当PASS或自动补跑兄弟套件。",
+      "limitations": "readiness为fixture协议证据，未操作HDC/设备。其余delivery-admission抽出后未运行，保持NOT_RUN。默认列表输出不可作为PASS。",
       "needs": [
         "交付admission",
         "Nativecache恢复",
@@ -9077,8 +9077,8 @@
         "tinyNode子进程",
         "实际controller模块"
       ],
-      "repair": null,
-      "reviewedSourceSha256": "1559a31c7130d2fcd1075eb0beb20f09debe6e25432a262486c3f5b21fea2986",
+      "repair": "Choose H-delivery-admission#readiness or H-delivery-admission#delivery-admission explicitly. Parent and unqualified file selection never expand cases.",
+      "reviewedSourceSha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725",
       "estimatedCostType": "plain-js",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -9088,15 +9088,23 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
-        },
-        {
-          "path": "tools/test-delivery-admission.mjs",
-          "sha256": "1559a31c7130d2fcd1075eb0beb20f09debe6e25432a262486c3f5b21fea2986"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-delivery-admission.mjs",
+          "sha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725"
+        },
+        {
+          "path": "scripts/lib/hap-delivery-evidence.mjs",
+          "sha256": "b63e09774ee698938606c7490fd0dd19386be4cf5cb613377563940ef548847b"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -9104,8 +9112,17 @@
       "tests": [
         "test-delivery-admission.mjs"
       ],
-      "repairAction": null,
-      "resourceDefinitionSha256": "97db014a5b06f532c5e4d10f895200a0be648f71c74689034d36c3866e6a9f9c"
+      "repairAction": "Select an exact manual case",
+      "focusedEntries": [
+        "H-delivery-admission#readiness",
+        "H-delivery-admission#delivery-admission"
+      ],
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "validationEvidence": {
+        "readiness": "REUSED_PASS",
+        "deliveryAdmission": "NOT_RUN",
+        "source": "Current split definitions reviewed, no sibling execution implied."
+      }
     },
     {
       "id": "H-demo-async-recovery",
@@ -369536,6 +369553,162 @@
         "fullSuite": "NOT_RUN",
         "nativeOrDevice": "NOT_RUN"
       }
+    },
+    {
+      "id": "H-delivery-admission#readiness",
+      "parentId": "H-delivery-admission",
+      "caseId": "readiness",
+      "file": "tools/test-delivery-admission.mjs",
+      "qualification": "QUALIFIED",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-delivery-admission.mjs"
+      ],
+      "caseSelection": {
+        "test-delivery-admission.mjs": [
+          "readiness"
+        ]
+      },
+      "protectedBehavior": "HDC guest现场boot/PID/观察窗口与已提供日志分层；用户允许无emulator.log时复用现有Toybox/milestone fallback",
+      "mechanism": "真实targetReadiness与原VM/physical正反fixture，加guest-only正常/明确权限拒绝及25个新负例。",
+      "productionBinding": "scripts/lib/hap-delivery-evidence.mjs targetReadiness/vmBootSample/physicalBootSample",
+      "needs": [
+        "bootreadiness",
+        "VM guest-only",
+        "physical boot",
+        "可选emulator.log"
+      ],
+      "minimumTrigger": "仅目标就绪协议/可选VM宿主日志或严格读回解析变化时手动点此case。",
+      "necessityReason": "准确case选择避免旧整文件入口空跑或隐式扩张。",
+      "limitations": "受控query/time/log port，不证明现场目标或宿主历史。",
+      "prerequisites": [
+        "Node",
+        "可写tmp",
+        "真实模块导入，有限只读query/file/time fixture ports"
+      ],
+      "resourceNeeds": [],
+      "reviewedSourceSha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725",
+      "definitionInputs": [
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-delivery-admission.mjs",
+          "sha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725"
+        },
+        {
+          "path": "scripts/lib/hap-delivery-evidence.mjs",
+          "sha256": "b63e09774ee698938606c7490fd0dd19386be4cf5cb613377563940ef548847b"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "resourceDefinitionSha256": "08849219c3cf292de45ee9ff5b28a837ede7c53f8d60f46d73239d520d56f92e",
+      "repair": null,
+      "repairAction": null,
+      "estimatedCostType": "plain-js",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "selectedExecutedCases": [
+          "readiness"
+        ],
+        "boundary": "Prior exact readiness execution reused. This metadata step executes no fixtures."
+      },
+      "nestedActions": [],
+      "nestedCalls": []
+    },
+    {
+      "id": "H-delivery-admission#delivery-admission",
+      "parentId": "H-delivery-admission",
+      "caseId": "delivery-admission",
+      "file": "tools/test-delivery-admission.mjs",
+      "qualification": "QUALIFIED",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-delivery-admission.mjs"
+      ],
+      "caseSelection": {
+        "test-delivery-admission.mjs": [
+          "delivery-admission"
+        ]
+      },
+      "protectedBehavior": "保留既有Native cache、IDE lease、resources/receipts、loader与失败日志fixture，按此准确case手动选择",
+      "mechanism": "原单体readiness以外的fixture代码保持，当前只审选择定义，未执行这些套件。",
+      "productionBinding": "scripts/lib/ide-native-cache.mjs, scripts/hap-pipeline.mjs, hvigor/reader-hap-guard.cjs and existing resource/gate receipt helpers",
+      "needs": [
+        "交付admission",
+        "Nativecache恢复",
+        "IDEbuildlease",
+        "resources/receipt"
+      ],
+      "minimumTrigger": "仅其既有交付controller/cache/lease/resource/receipt行为变化需复验时显式选择；不随readiness运行。",
+      "necessityReason": "准确case选择避免旧整文件入口空跑或隐式扩张。",
+      "limitations": "本轮NOT_RUN，无新的业务/构建/设备结论。",
+      "prerequisites": [
+        "Node",
+        "git",
+        "mkfifo/POSIX symlink hardlink",
+        "可写tmp",
+        "tinyNode子进程",
+        "实际controller模块"
+      ],
+      "resourceNeeds": [],
+      "reviewedSourceSha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725",
+      "definitionInputs": [
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-delivery-admission.mjs",
+          "sha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725"
+        },
+        {
+          "path": "scripts/lib/hap-delivery-evidence.mjs",
+          "sha256": "b63e09774ee698938606c7490fd0dd19386be4cf5cb613377563940ef548847b"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "resourceDefinitionSha256": "08849219c3cf292de45ee9ff5b28a837ede7c53f8d60f46d73239d520d56f92e",
+      "repair": null,
+      "repairAction": null,
+      "estimatedCostType": "plain-js",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "validationEvidence": {
+        "case": "NOT_RUN",
+        "selectedExecutedCases": []
+      },
+      "nestedActions": [],
+      "nestedCalls": []
     }
   ],
   "externalEntries": [
@@ -370407,12 +370580,12 @@
   "implementationCounts": {
     "IMPLEMENTED": 236,
     "MIGRATED_TO_EXISTING": 4,
-    "IMPLEMENTED_WITH_EXPLICIT_SCOPE": 1,
+    "IMPLEMENTED_WITH_EXPLICIT_SCOPE": 2,
     "COMPLETE": 78,
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 2321,
+    "QUALIFIED": 2323,
     "REVIEW_NEEDED": 7,
     "DIAGNOSTIC_ONLY": 22,
     "NEEDS_EVIDENCE": 1

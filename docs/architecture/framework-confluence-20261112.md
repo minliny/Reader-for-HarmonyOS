@@ -121,3 +121,11 @@ UI 配套提交为 `9bfc916`，在主题 PR 原提交上支付目录 clear/downl
 无线交付入口合入既有HDC租约的准确server/target准入、命令时限、当前child清理及只清除代理变量的直连环境。保留现有acquire/release接口与HAP安装参数。9个具名离线case和真实临时loopback所有权检查通过，未执行HDC服务维护或设备动作。首次沙箱socket失败保留，受审执行权限下的实际回执单独归档。页面登记220项输入未受这些工具变化影响。
 
 第二次canonical构建已成功发布签名候选09596，指定证书验签通过，contracts-scope none。编译发现新增DEBUG根夹具仍使用旧全局router的两处deprecated API，已改为当前UIContext的Router；admission、source-callbacks、fixture-scenes三个受影响case重新执行通过，其他夹具逻辑按影响范围复用。该改动进入下一固定候选，09596保留原时点manifest。
+
+### 用户裁决与最后部署配套
+
+用户明确裁定宿主emulator.log为可选证据，实际readiness及Core受控交付文档已同步。Core配套提交更新为 `e689f2ae65bb77e23c15f7f054d8917463d1f5dc`，1180个有效源码输入与原1cff逐字节一致，Git身份单独更新并重新执行规范Native构建、sync-native。当前Native SHA为 `a1f13fb4df1a083196afa3ba307d7c8e13a91e7ea4892c327f3b689bfb4b9f76`。
+
+无宿主日志的readiness精确case通过，原有日志、snapshot和physical检查继续保留，新增25项拒绝样本。对应父门禁改为导航入口，准确readiness叶独立选择，其他历史fixture保持NOT_RUN。现场随后在同一规范server会话实际取得guest boot milestones、完成启动与稳定SceneBoard，2秒观察通过，回执明确guest-only和emulatorLog NOT_PROVIDED。
+
+部署层合入已有连续server会话及显式local/remote路由，4个精确case通过，12个现有签名、storage-transition、ABI、UID、verify和provenance guard保持原体，3个移除guard负例拒绝。安装继续调用canonical实现，停态复制、正式Core副本验证、最终源pair重验和覆盖更新由同一有界会话编排。全部新配套进入下一不可变候选，前09596及5f2be6候选保留原字节和原时点结果。

@@ -18,7 +18,7 @@
  * involved, so arguments cannot be interpreted as shell syntax.  Set
  * READER_HDC_LEASE_ROOT to use a project-specific temporary directory.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   appendFileSync, mkdirSync, readFileSync, renameSync,
@@ -198,6 +198,46 @@ function releaseLease(root, lockDir, owner) {
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
   }
+}
+
+// A bounded synchronous batch can retain the exact same server lease across
+// observation, a real application write barrier, final recheck and install.
+// The HDC binary is only invoked here, with the same command admission rules.
+export async function withHdcCommandSession({ hdc, target, serverKey, waitMs = DEFAULT_WAIT_MS }, action) {
+  const parsed = parseArgs(['--hdc', hdc, '--target', target, '--server-key', serverKey,
+    '--wait-ms', String(waitMs), '--', 'list', 'targets', '-v']);
+  const ref = targetRef(target), serverRef = targetRef(parsed.serverKey);
+  const owner = { token: randomUUID(), pid: process.pid, ppid: process.ppid, agentId: parsed.agentId,
+    serverKey: parsed.serverKey, serverRef, target, targetRef: ref, hdc, startedAt: now(), purpose: 'bounded-storage-deployment' };
+  const lease = await acquireLease({ ...parsed, targetRefValue: ref, lockRefValue: serverRef, owner });
+  const started = Date.now();
+  let live = true;
+  const saveOwner = () => {
+    const pending = resolve(lease.lockDir, 'owner.pending.json');
+    writeFileSync(pending, JSON.stringify(owner), { mode: 0o600 });
+    renameSync(pending, resolve(lease.lockDir, 'owner.json'));
+  };
+  const session = Object.freeze({ hdc, target, serverKey: parsed.serverKey,
+    runSync(args, options = {}) {
+      if (!live || Date.now() - started > 600000) fail('HDC deployment session expired');
+      const admitted = admitCommand(args, parsed.serverKey, target);
+      if (admitted.serviceMaintenance) fail('HDC deployment session cannot maintain shared service');
+      const timeoutMs = options.timeoutMs ?? admitted.timeoutMs;
+      if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > admitted.timeoutMs) fail('HDC command exceeds its bounded budget');
+      // A parent crash during spawnSync cannot expose the child PID. Retain the
+      // uncertain lock for explicit reconciliation rather than reclaiming it.
+      owner.commandStartPending = true; owner.command = admitted.command; saveOwner();
+      const result = spawnSync(hdc, admitted.command, { encoding: options.encoding ?? 'utf8',
+        maxBuffer: options.maxBuffer ?? 16 * 1024 * 1024, env: hdcDirectEnvironment(options.env),
+        timeout: timeoutMs, killSignal: 'SIGKILL', stdio: 'pipe' });
+      owner.commandStartPending = false; saveOwner();
+      if (result.error) throw result.error;
+      if (result.status !== 0 && !options.allowFailure) fail(`HDC command failed (${result.status}): ${result.stderr || result.stdout}`);
+      return result;
+    },
+  });
+  try { return await action(session); }
+  finally { live = false; if (!owner.commandStartPending) releaseLease(parsed.root, lease.lockDir, owner); }
 }
 
 function runChild(hdc, command, owner, root, lockDir, timeoutMs) {

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, realpathSync, lstatSync, symlinkSync, readlinkSync, linkSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter, relative, resolve, isAbsolute, sep } from 'node:path';
@@ -16,9 +17,14 @@ import { createGateReceipt, gateInputs, digest } from '../../Reader-Core/scripts
 import { CORE_GATE_STAGES } from '../../Reader-Core/scripts/lib/core-gate-stages.mjs';
 import { verifyBuildLease } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 
-const root = realpathSync(mkdtempSync(join(tmpdir(), 'reader-delivery-admission-')));
+const selected = selectContractCases({
+  readiness: 'Actual targetReadiness with guest-only, logged VM/snapshot and physical read-only fixture ports. Boot/PID/clock identities, malformed evidence and changed instances reject without device calls.',
+  'delivery-admission': 'Existing Native-cache, IDE lease, resource/gate-receipt, loader and failure-log fixtures. Readiness is separately selected.',
+});
+const root = selected.length ? realpathSync(mkdtempSync(join(tmpdir(), 'reader-delivery-admission-'))) : undefined;
 const put = (path, value = '') => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, value); return path; };
 try {
+  if (selected.includes('delivery-admission')) {
   for (const buildClass of ['iteration', 'acceptance']) {
     assert.equal(buildContractScope(new Map([['--class', buildClass], ['--core-gate-receipt', 'fixture-receipt.json']])), 'none',
       'build class and an existing Core receipt never implicitly authorize full Host checks');
@@ -416,6 +422,20 @@ try {
   put(join(checkout, 'tracked.txt'), 'changed'); assert.throws(() => currentCoreGate(current.file, checkout), /current inputs/);
   put(join(checkout, 'tracked.txt'), 'before'); put(join(checkout, 'untracked.txt'), 'new input');
   assert.throws(() => currentCoreGate(current.file, checkout), /current inputs/);
+  const sdk = join(root, 'sdk'), normal = join(sdk, 'ets/build-tools/ets-loader'), overridden = join(root, 'override loader');
+  mkdirSync(normal, { recursive: true }); mkdirSync(join(sdk, 'toolchains')); mkdirSync(overridden);
+  assert.deepEqual(contractToolchainLoaders({ READER_HARMONY_SDK_HOME: sdk, READER_ETS_LOADER_ROOT: overridden, PATH: '' }), [normal, overridden]);
+  const attempt = hapStageReceipt(join(root, 'attempts'), { source: 'fixture' }); attempt.protect({ password: 'private-test-value' });
+  const row = attempt.begin('hvigor', ['assembleHap']); attempt.end(row, { status: 7, stderr: 'storePassword=private-test-value\ncompile failed' }, 2); attempt.finish(new Error('compile failed'));
+  const log = readFileSync(join(dirname(attempt.file), '1.log'), 'utf8'); assert.doesNotMatch(log, /private-test-value/); assert.match(log, /compile failed/);
+  assert.equal(JSON.parse(readFileSync(attempt.file)).status, 'FAIL');
+  console.log('Delivery admission fixtures PASS: generated Native copy recovery/receipts/idempotence and unsafe inventory rejection, real Native/SDK file types before missing classification, bounded Native repair callbacks, GUI environment, nested IDE lease ownership/rejection/cleanup, resources, complete receipt, readiness, loader inputs and failure logs; no device/build run.');
+    recordContractCasePass('delivery-admission');
+  }
+  if (selected.includes('readiness')) { readinessFixtures(); recordContractCasePass('readiness'); }
+} finally { if (root !== undefined) rmSync(root, { recursive: true, force: true }); }
+
+function readinessFixtures() {
   let pid = '123', boot = 'true', calls = [];
   const query = command => { calls.push(command); return command.includes('completed') ? boot : command.includes('boot_id') ? '12345678-1234-1234-1234-123456789abc' : command.includes('uptime') ? '100 200' : pid; };
   const vmLog = put(join(root, 'emulator.log'), 'Guest OS Boot Completed!!\n');
@@ -424,7 +444,7 @@ try {
   boot = 'false'; calls = [];
   assert.throws(() => targetReadiness({ targetKind: 'vm', query, vmLog, wait() {} }), /boot is not complete/); assert.equal(calls.length, 1);
   boot = 'true';
-  assert.throws(() => targetReadiness({ targetKind: 'vm', query, wait() {} }), /vm-log/);
+  assert.throws(() => targetReadiness({ targetKind: 'vm', query, wait() {} }), /observation interval/);
   put(vmLog, 'Guest OS Boot Completed!!\nLIFECYCLE_TIMEOUT\n');
   assert.throws(() => targetReadiness({ targetKind: 'vm', query, vmLog, wait() {} }), /instability/);
   put(vmLog, 'Guest OS Boot Completed!!\n');
@@ -446,8 +466,8 @@ try {
         if (options.throwProc) throw new Error(physicalDenied);
         return second ? options.finalBootId ?? options.bootId ?? physicalDenied : options.bootId ?? physicalDenied;
       }
-      if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
-      if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : '1643';
+      if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : options.initialComplete ?? 'true';
+      if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : options.initialPid ?? '1643';
       if (command === 'date -u +%s') return options.guestDate ?? String(Math.floor((physicalCheckEpoch + elapsed +
         (options.clockOffset ?? 0) + (second ? options.secondClockOffset ?? 0 : 0)) / 1000));
       if (command === 'TZ=UTC uptime -s') return options.bootTimestamp ?? utcBootStamp(physicalBootEpoch +
@@ -508,7 +528,6 @@ try {
     ['boot becomes incomplete', { finalComplete: 'false' }, /boot\/SceneBoard changed/],
     ['procfs result changes', { finalBootId: '12345678-1234-1234-1234-123456789abc' }, /boot\/SceneBoard changed/],
     ['VM procfs denial without current-instance log', { targetKind: 'vm', vmLog }, /no completed current-instance/],
-    ['VM missing log', { targetKind: 'vm', bootId: '12345678-1234-1234-1234-123456789abc' }, /vm-log/],
   ]) assert.throws(() => physicalReadiness(options).run(), expected, label);
   assert.equal(physicalFixture.commands.some(command => /\bbm\b|\baa\b|install|\bsu\b|chmod|param set/.test(command)), false,
     'physical readiness invokes only minimal read-only probes');
@@ -530,15 +549,15 @@ try {
     const qemuLog = join(dirname(log), 'qemu.log');
     if (options.qemuLog !== undefined) put(qemuLog, options.qemuLog);
     const sampleBootEpoch = options.bootEpoch ?? bootEpoch, sampleCheckEpoch = options.checkEpoch ?? checkEpoch;
-    let elapsed = 0, second = false;
+    let elapsed = 0, wallOffset = 0, second = false;
     const scalarQuery = command => {
       if (command === 'cat /proc/sys/kernel/random/boot_id') {
         if (options.throwProc) throw new Error('/proc/sys/kernel/random/boot_id: Permission denied');
         return (second ? options.finalBootId ?? options.bootId : options.bootId) ?? '/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied';
       }
       if (command === 'cat /proc/uptime') return options.procUptime ?? '/bin/sh: cat: /proc/uptime: Permission denied';
-      if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
-      if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : '1643';
+      if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : options.initialComplete ?? 'true';
+      if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : options.initialPid ?? '1643';
       if (command === 'date -u +%s') return options.guestDate ?? String(Math.floor((sampleCheckEpoch + elapsed + (second ? options.secondClockOffset ?? 0 : 0)) / 1000));
       if (command === 'TZ=UTC uptime -s') return options.bootTimestamp ?? utcStamp(sampleBootEpoch + (second ? options.secondBootOffset ?? 1000 : 0));
       const name = command.replace('param get ohos.boot.time.', '');
@@ -552,10 +571,10 @@ try {
       const rows = command.split('\n').slice(1).map(scalarQuery);
       return (options.batchRows?.(rows) ?? rows).join('\n');
     };
-    return { log, qemuLog, commands, run: () => targetReadiness({ targetKind: options.targetKind ?? 'vm', query: guestQuery, vmLog: log,
+    return { log, qemuLog, commands, run: () => targetReadiness({ targetKind: options.targetKind ?? 'vm', query: guestQuery, vmLog: options.withLog === false ? undefined : log,
       targetEndpoint: Object.hasOwn(options, 'targetEndpoint') ? options.targetEndpoint : '127.0.0.1:5555',
-      now: () => sampleCheckEpoch + elapsed, monotonicNow: () => elapsed,
-      wait() { elapsed += options.waitMs ?? 2000; second = true; options.changeLog?.(log); options.changeQemuLog?.(qemuLog); } }) };
+      now: () => sampleCheckEpoch + elapsed + wallOffset, monotonicNow: () => elapsed,
+      wait() { elapsed += options.waitMs ?? 2000; wallOffset = options.hostWaitOffset ?? 0; second = true; options.changeLog?.(log); options.changeQemuLog?.(qemuLog); } }) };
   }
   assert.equal(restricted({ targetKind: 'physical' }).run().bootIdentitySource, 'physical-boot-milestones-v1',
     'physical procfs denial retains its independently checked milestone fallback');
@@ -690,12 +709,61 @@ try {
     'the receipt binds both fully observed append-only logs');
   assert.equal(resumed.commands.some(command => /\bbm\b|\baa\b|install|\bsu\b|chmod|param set/.test(command)), false,
     'snapshot admission remains read-only and never touches application data or operations');
-  const sdk = join(root, 'sdk'), normal = join(sdk, 'ets/build-tools/ets-loader'), overridden = join(root, 'override loader');
-  mkdirSync(normal, { recursive: true }); mkdirSync(join(sdk, 'toolchains')); mkdirSync(overridden);
-  assert.deepEqual(contractToolchainLoaders({ READER_HARMONY_SDK_HOME: sdk, READER_ETS_LOADER_ROOT: overridden, PATH: '' }), [normal, overridden]);
-  const attempt = hapStageReceipt(join(root, 'attempts'), { source: 'fixture' }); attempt.protect({ password: 'private-test-value' });
-  const row = attempt.begin('hvigor', ['assembleHap']); attempt.end(row, { status: 7, stderr: 'storePassword=private-test-value\ncompile failed' }, 2); attempt.finish(new Error('compile failed'));
-  const log = readFileSync(join(dirname(attempt.file), '1.log'), 'utf8'); assert.doesNotMatch(log, /private-test-value/); assert.match(log, /compile failed/);
-  assert.equal(JSON.parse(readFileSync(attempt.file)).status, 'FAIL');
-  console.log('Delivery admission fixtures PASS: generated Native copy recovery/receipts/idempotence and unsafe inventory rejection, real Native/SDK file types before missing classification, bounded Native repair callbacks, GUI environment, nested IDE lease ownership/rejection/cleanup, resources, complete receipt, readiness, loader inputs and failure logs; no device/build run.');
-} finally { rmSync(root, { recursive: true, force: true }); }
+
+  // User override. The selected guest's observed readiness is independently
+  // sufficient. No host log was supplied, so the receipt has no host-history
+  // or instability-scan conclusion.
+  const guestUuid = restricted({ withLog: false,
+    bootId: '12345678-1234-1234-1234-123456789abc', procUptime: '155 155' });
+  const guestUuidReady = guestUuid.run();
+  assert.equal(guestUuidReady.status, 'PASS');
+  assert.equal(guestUuidReady.bootIdentitySource, 'kernel-boot-id');
+  assert.equal(guestUuidReady.observationMs, 2000);
+  assert.equal(guestUuidReady.evidenceScope, 'guest-only');
+  assert.deepEqual(guestUuidReady.emulatorLog, { status: 'NOT_PROVIDED' });
+  assert.equal(guestUuid.commands.filter(command => command === 'cat /proc/sys/kernel/random/boot_id').length, 2);
+  assert.equal(guestUuid.commands.filter(command => command === sampleBatchCommand).length, 0,
+    'available kernel identity and uptime do not require a milestone fallback');
+  const guestDenied = restricted({ withLog: false }), guestDeniedReady = guestDenied.run();
+  assert.equal(guestDeniedReady.status, 'PASS');
+  assert.equal(guestDeniedReady.bootIdentitySource, 'vm-guest-boot-milestones-v1');
+  assert.equal(guestDeniedReady.uptimeSource, 'toybox-sysinfo');
+  assert.equal(guestDeniedReady.evidenceScope, 'guest-only');
+  assert.deepEqual(guestDeniedReady.emulatorLog, { status: 'NOT_PROVIDED' });
+  assert.notEqual(guestDeniedReady.bootIdSha256, digest('/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied'));
+  assert.equal(guestDenied.commands.filter(command => command === sampleBatchCommand).length, 2);
+  assert.equal(restricted({ withLog: false, throwProc: true }).run().status, 'PASS');
+  const guestUuidDeniedUptime = restricted({ withLog: false, bootId: '12345678-1234-1234-1234-123456789abc' }).run();
+  assert.equal(guestUuidDeniedUptime.bootIdentitySource, 'kernel-boot-id');
+  assert.equal(guestUuidDeniedUptime.uptimeSource, 'toybox-sysinfo');
+  for (const [label, options, expected] of [
+    ['not booted', { initialComplete: 'false' }, /boot is not complete/],
+    ['no SceneBoard', { initialPid: '' }, /SceneBoard is not running/],
+    ['ambiguous SceneBoard', { initialPid: '1643 1644' }, /SceneBoard is not running/],
+    ['reboot UUID', { bootId: '12345678-1234-1234-1234-123456789abc', procUptime: '155 155', finalBootId: '22345678-1234-1234-1234-123456789abc' }, /boot\/SceneBoard changed/],
+    ['reboot milestones', { secondMilestones: { kernel: 881434 } }, /changed during readiness/],
+    ['reboot uptime start', { secondBootOffset: 120_000 }, /changed during readiness/],
+    ['SceneBoard changes', { finalPid: '1644' }, /boot\/SceneBoard changed/],
+    ['boot completion lost', { finalComplete: 'false' }, /boot\/SceneBoard changed/],
+    ['bare permission wording', { bootId: 'Permission denied' }, /boot identity is unavailable/],
+    ['unrelated permission path', { bootId: '/proc/uptime: Permission denied' }, /boot identity is unavailable/],
+    ['unknown boot identity', { bootId: 'not-a-uuid' }, /boot identity is unavailable/],
+    ['unknown uptime', { procUptime: 'Permission denied' }, /uptime is unavailable/],
+    ['missing sample row', { batchRows: rows => rows.slice(0, -1) }, /exactly nine rows/],
+    ['invalid milestone', { milestones: { init: 'Permission denied' } }, /milestone identity is unavailable/],
+    ['zero milestone', { milestones: { init: 0 } }, /milestone identity is unavailable/],
+    ['unsafe milestone', { milestones: { init: '9007199254740992' } }, /milestone identity is unavailable/],
+    ['future milestone', { milestones: { kernel: 99_000_000 } }, /milestone timing is inconsistent/],
+    ['malformed boot timestamp', { bootTimestamp: '2026-02-30 10:29:23' }, /timestamp is invalid/],
+    ['frozen guest clock', { guestDate: String(checkEpoch / 1000) }, /changed during readiness|clock or observation is inconsistent/],
+    ['guest clock jump', { secondClockOffset: 5000 }, /clock or observation is inconsistent/],
+    ['host clock jump', { hostWaitOffset: 5000 }, /observation interval or clock/],
+    ['short observation', { waitMs: 1000 }, /observation interval/],
+    ['unbounded observation', { waitMs: 11000 }, /observation interval/],
+    ['sampling exceeds budget', { queryCostMs: 10001 }, /sampling observation budget/],
+    ['proc availability changes', { finalBootId: '12345678-1234-1234-1234-123456789abc' }, /boot\/SceneBoard changed/],
+  ]) assert.throws(() => restricted({ withLog: false, ...options }).run(), expected, 'guest-only: ' + label);
+  assert.equal(guestDenied.commands.some(command => /\bbm\b|\baa\b|install|\bsu\b|chmod|param set/.test(command)), false,
+    'guest-only readiness uses the existing read-only system probes');
+
+}

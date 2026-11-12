@@ -37,6 +37,7 @@ import { APP_IDENTITY_SCHEMA, APP_RELEASE_LEDGER, createAppBuildIdentity, packag
 import { prepareAppIdentity, assertAppIdentityUnchanged, verifyAppContentEvidence } from './lib/app-build-context.mjs';
 import { selectBundledSources } from '../tools/verify-bundled-test-book-sources-live.mjs';
 import { contractTests, contractSelection, explicitContractTests, contractCaseSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
+import { canonicalServerKey, withHdcCommandSession, hdcDirectEnvironment } from '../tools/reader-hdc-lease.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -47,7 +48,8 @@ const DEFAULT_RETAIN_RUNS = 10;
 const LOCK_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir());
 const DEFAULT_SIGNING_PROFILE = resolve(REPO_ROOT, '.reader-local/signing/build-profile.json5');
 const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
-const HDC_SERVER = process.env.READER_HDC_SERVER_KEY ?? '::ffff:127.0.0.1:8710';
+const LOCAL_HDC_SERVER = '127.0.0.1:8710';
+const REMOTE_VM_HDC_SERVER = '192.168.1.10:8710';
 const BUNDLE_NAME = 'io.reader.minliny';
 const EXPECTED_NATIVE_ENTRIES = [
   'libs/arm64-v8a/libc++_shared.so',
@@ -161,11 +163,55 @@ function capture(binary, args, options = {}) {
 // the command boundary covers inspect/install/launch without changing the
 // existing signing and preserve-data gates.  The lease wrapper never starts,
 // kills, or rediscovers HDC; it only serializes the already-authorized argv.
-function runTargetHdc(hdc, target, args, options = {}) {
+let activeHdcSession;
+export function runTargetHdc(hdc, target, serverKey, args, options = {}, runner = run) {
+  if (activeHdcSession) {
+    if (activeHdcSession.hdc !== hdc || activeHdcSession.target !== target || activeHdcSession.serverKey !== serverKey) fail('HDC deployment session identity mismatch');
+    return activeHdcSession.runSync(['-s', serverKey, ...args], options);
+  }
   const leaseArgs = [HDC_LEASE_SCRIPT, '--target', target, '--hdc', hdc,
-    '--server-key', HDC_SERVER,
-    ...(options.waitMs === undefined ? [] : ['--wait-ms', String(options.waitMs)]), '--', '-s', HDC_SERVER, ...args];
-  return run(process.execPath, leaseArgs, options);
+    '--server-key', serverKey,
+    ...(options.waitMs === undefined ? [] : ['--wait-ms', String(options.waitMs)]),
+    ...(options.timeoutMs === undefined ? [] : ['--timeout-ms', String(options.timeoutMs)]), '--', '-s', serverKey, ...args];
+  return runner(process.execPath, leaseArgs, { ...options, env: hdcDirectEnvironment(options.env),
+    timeoutMs: options.timeoutMs === undefined ? undefined : (options.waitMs ?? 30000) + options.timeoutMs + 2000 });
+}
+
+export async function withDeploymentHdcSession(options, action) {
+  if (activeHdcSession) fail('nested HDC deployment session');
+  const targetKind = requiredOption(options, '--target-kind');
+  const route = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'), configuredServer: process.env.READER_HDC_SERVER_KEY });
+  return withHdcCommandSession({ hdc: hdcBinary(), target: requiredOption(options, '--target'), serverKey: route.serverKey }, async session => {
+    if (activeHdcSession) fail('nested HDC deployment session');
+    activeHdcSession = session;
+    try { return await action(session); } finally { activeHdcSession = undefined; }
+  });
+}
+
+/** The location is explicit; an exact device target alone cannot identify its server. */
+export function resolveHdcServer({ targetKind, vmLocation, configuredServer }) {
+  if (!['vm', 'physical'].includes(targetKind)) throw new Error('invalid target kind for HDC routing');
+  if (vmLocation !== undefined && (targetKind !== 'vm' || !['local', 'remote'].includes(vmLocation))) {
+    throw new Error('--vm-location must be local or remote and applies only to a VM');
+  }
+  let configured;
+  if (configuredServer !== undefined) {
+    configured = canonicalServerKey(configuredServer);
+    if (![LOCAL_HDC_SERVER, REMOTE_VM_HDC_SERVER].includes(configured)) {
+      throw new Error('unsupported HDC server for the selected device location');
+    }
+  }
+  const location = targetKind === 'physical' ? undefined :
+    (vmLocation ?? (configured === REMOTE_VM_HDC_SERVER ? 'remote' : 'local'));
+  const serverKey = location === 'remote' ? REMOTE_VM_HDC_SERVER : LOCAL_HDC_SERVER;
+  if (configured !== undefined && configured !== serverKey) {
+    throw new Error('configured HDC server conflicts with the selected device location');
+  }
+  return { serverKey, ...(location === undefined ? {} : { vmLocation: location }) };
+}
+
+export function hdcRouteEvidence(route) {
+  return { hdcServer: route.serverKey, ...(route.vmLocation === undefined ? {} : { vmLocation: route.vmLocation }) };
 }
 
 function parseOptions(argv) {
@@ -1799,7 +1845,7 @@ export function verifyAppIdentityEvidence(directory, manifest) {
   return 'PASS';
 }
 
-function verifyManifest(path) {
+export function verifyManifest(path) {
   const loaded = loadManifest(path);
   // Historical runs omitted ABI and were exclusively arm64. Never infer it
   // from mutable environment or choose another architecture after publishing.
@@ -1955,19 +2001,19 @@ function targetReference(target) {
   return sha256Bytes(target).slice(0, 12);
 }
 
-function assertTargetConnected(hdc, target) {
-  const output = runTargetHdc(hdc, target, ['list', 'targets', '-v']).stdout?.trim() ?? '';
+function assertTargetConnected(hdc, target, serverKey) {
+  const output = runTargetHdc(hdc, target, serverKey, ['list', 'targets', '-v']).stdout?.trim() ?? '';
   const match = output.split('\n').find((line) => line.split(/\s+/)[0] === target);
   if (match === undefined || !/Connected/i.test(match)) fail('the exact HDC target is not connected');
 }
 
-function installedMetadata(hdc, target) {
-  const result = runTargetHdc(hdc, target, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
+function installedMetadata(hdc, target, serverKey) {
+  const result = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
   const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
   // Harmony's generic lookup error also covers missing bundles. Require a
   // successful, structurally valid inventory before admitting a new install.
   if (result.status === 0 && output.trim() === BUNDLE_LOOKUP_UNAVAILABLE) {
-    const listing = runTargetHdc(hdc, target, ['-t', target, 'shell', 'bm dump -a'], { allowFailure: true });
+    const listing = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', 'bm dump -a'], { allowFailure: true });
     if (listing.status === 0 && !listing.stderr?.trim()) {
       return parseBundleMetadata(output, listing.stdout ?? '');
     }
@@ -1975,7 +2021,7 @@ function installedMetadata(hdc, target) {
   return parseBundleMetadata(output);
 }
 
-function storageTransitionCandidate(verified, artifact) {
+export function storageTransitionCandidate(verified, artifact) {
   const matches = [];
   for (const record of verified.manifest.nativeProvenanceInputs ?? []) {
     const path = resolve(verified.directory, record.path), current = fileRecord(path, record.path);
@@ -2031,19 +2077,24 @@ function resolveDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
   if (!['vm', 'physical'].includes(targetKind)) fail('--target-kind must be vm or physical', 2);
+  const hdcRoute = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'),
+    configuredServer: process.env.READER_HDC_SERVER_KEY });
   const verified = verifyManifest(manifestPath);
   const candidateAbi = verified.manifest.abi ?? 'arm64-v8a'; // Frozen legacy manifests used the original arm64 contract.
   const artifact = verified.artifacts.find((candidate) => candidate.kind === artifactKind);
   if (artifact === undefined) fail(`manifest does not contain a ${artifactKind} artifact`);
   const artifactPath = resolve(verified.directory, artifact.path);
   const hdc = hdcBinary();
-  assertTargetConnected(hdc, target);
-  const deviceQuery = (...command) => capture(process.execPath, [HDC_LEASE_SCRIPT, '--target', target, '--hdc', hdc,
-    '--server-key', HDC_SERVER, '--', '-s', HDC_SERVER, '-t', target, ...command], { timeoutMs: 10_000, maxBuffer: 1024 * 1024 });
+  assertTargetConnected(hdc, target, hdcRoute.serverKey);
+  const deviceQuery = (...command) => {
+    const result = runTargetHdc(hdc, target, hdcRoute.serverKey, ['-t', target, ...command],
+      { timeoutMs: 10_000, maxBuffer: 1024 * 1024 });
+    return typeof result.stdout === 'string' ? result.stdout.trim() : result.stdout;
+  };
   const query = command => deviceQuery('shell', command);
   const readiness = targetReadiness({ targetKind, targetEndpoint: target, vmLog: option(options, '--vm-log'),
     query });
-  const installed = installedMetadata(hdc, target);
+  const installed = installedMetadata(hdc, target, hdcRoute.serverKey);
   let route = deploymentSigningRoute({ targetKind, installed, artifact });
   if (verified.manifest.expectedVersion && installed.bundlePresent &&
       (!Number.isSafeInteger(installed.versionCode) || installed.versionCode > verified.manifest.expectedVersion.versionCode)) {
@@ -2052,7 +2103,7 @@ function resolveDeployment(options) {
   if (options.has('--storage-transition') && !installed.bundlePresent) fail('storage transition requires an existing installed bundle');
   let storageEvidence = null;
   const revalidateInstalledIdentity = () => {
-    if (JSON.stringify(installedMetadata(hdc, target)) !== JSON.stringify(installed)) {
+    if (JSON.stringify(installedMetadata(hdc, target, hdcRoute.serverKey)) !== JSON.stringify(installed)) {
       fail('installed identity changed before replacement');
     }
   };
@@ -2089,6 +2140,7 @@ function resolveDeployment(options) {
     artifactPath,
     candidateAbi,
     hdc,
+    hdcRoute,
     target,
     targetKind,
     targetRef: targetReference(target),
@@ -2106,6 +2158,7 @@ function inspectDeployment(options) {
     status: resolved.route.allowed ? 'PASS' : 'STOP',
     runId: resolved.verified.manifest.runId,
     targetKind: resolved.targetKind,
+    ...hdcRouteEvidence(resolved.hdcRoute),
     targetRef: resolved.targetRef,
     artifact: {
       kind: resolved.artifact.kind,
@@ -2141,7 +2194,7 @@ export function assertInstalledDeploymentIdentity({ before, after, artifact, can
   if (expectedVersion) assertInstalledAppVersion(expectedVersion, after);
 }
 
-function installDeployment(options) {
+export function installDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
   const targetRef = targetReference(target);
@@ -2166,7 +2219,7 @@ function installDeployment(options) {
     // This runs while the same immutable run and target locks are held, after
     // archiving exact consumed proof bytes and immediately before replacement.
     resolved.revalidateDeployment();
-    const install = runTargetHdc(resolved.hdc, resolved.target, [
+    const install = runTargetHdc(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey, [
       '-t', resolved.target, 'install', '-r', resolved.artifactPath,
     ], { allowFailure: true });
     const installOutput = `${install.stdout ?? ''}\n${install.stderr ?? ''}`;
@@ -2175,13 +2228,13 @@ function installDeployment(options) {
       if (installOutput.includes('9568320')) fail('9568320 no signature file; data was preserved', 3);
       fail(`HAP install failed while preserving data: ${installOutput.trim()}`, 3);
     }
-    const postInstall = installedMetadata(resolved.hdc, resolved.target);
+    const postInstall = installedMetadata(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey);
     assertInstalledDeploymentIdentity({ before: resolved.installed, after: postInstall,
       artifact: resolved.artifact, candidateAbi: resolved.candidateAbi,
       expectedVersion: resolved.verified.manifest.expectedVersion, targetKind: resolved.targetKind });
     let launch = 'NOT_RUN';
     if (options.get('--no-launch') !== true) {
-      const start = runTargetHdc(resolved.hdc, resolved.target, [
+      const start = runTargetHdc(resolved.hdc, resolved.target, resolved.hdcRoute.serverKey, [
         '-t', resolved.target, 'shell',
         `aa start -a EntryAbility -b ${BUNDLE_NAME} -m entry`,
       ], { allowFailure: true });
@@ -2197,6 +2250,7 @@ function installDeployment(options) {
       runId: resolved.verified.manifest.runId,
       ...(resolved.verified.manifest.expectedVersion ? { expectedVersion: resolved.verified.manifest.expectedVersion, appVersionCheck: 'PASS' } : { appVersionCheck: 'LEGACY_NOT_PRESENT' }),
       targetKind: resolved.targetKind,
+      ...hdcRouteEvidence(resolved.hdcRoute),
       targetRef: resolved.targetRef,
       artifact: {
         kind: resolved.artifact.kind,
@@ -2238,11 +2292,11 @@ function usage() {
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [--abi arm64-v8a|x86_64] [sync-core alias]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
-  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>]
-  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>] [--no-launch]`);
+  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>]
+  node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-location local|remote] [--vm-log <current-emulator.log>] [--storage-transition <receipt.json>] [--no-launch]`);
 }
 
-function main() {
+async function main() {
   const command = process.argv[2];
   if (!command || command === '--help' || command === '-h') {
     usage();
@@ -2280,9 +2334,9 @@ function main() {
         kind, path, sha256, signature,
       })),
     }));
-  } else if (command === 'inspect') inspectDeployment(options);
-  else if (command === 'install') withHapRunLock(dirname(resolve(requiredOption(options, '--manifest'))),
-    () => installDeployment(options));
+  } else if (command === 'inspect') await withDeploymentHdcSession(options, () => inspectDeployment(options));
+  else if (command === 'install') await withDeploymentHdcSession(options, () => withHapRunLock(dirname(resolve(requiredOption(options, '--manifest'))),
+    () => installDeployment(options)));
   else if (command === 'prune') {
     const plan = planHapRetention(resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT)), retentionLimit(options));
     console.log(JSON.stringify(options.get('--apply') === true ? applyHapRetention(plan) : plan, null, 2));
@@ -2295,7 +2349,7 @@ function main() {
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   try {
-    main();
+    await main();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;

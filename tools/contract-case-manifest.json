@@ -11109,6 +11109,19 @@
           "qualification": "REVIEW_NEEDED"
         }
       }
+    },
+    "test-delivery-admission.mjs": {
+      "sourceSha256": "1418eb2ae8f42818955d673b4f2d7f006f129a60ceca15ae26428231e11f0725",
+      "cases": {
+        "readiness": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "delivery-admission": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
     }
   },
   "legacy": {
@@ -11672,22 +11685,6 @@
           "fake native ABI"
         ],
         "scope": "Core拒收错误envelope/SDK lastError拼接、Owner requestDirect诊断或preparation清理变更时按需。"
-      },
-      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
-    },
-    "test-delivery-admission.mjs": {
-      "resources": [],
-      "basis": {
-        "reviewedCostType": "plain-js",
-        "prerequisites": [
-          "Node",
-          "git",
-          "mkfifo/POSIX symlink hardlink",
-          "可写tmp",
-          "tinyNode子进程",
-          "实际controller模块"
-        ],
-        "scope": "交付admission/controller、Nativecache修复、IDElease/工具env、bootreadiness或resource/receiptvalidator变更需回归时手选；实际build仅核动作所需输入。"
       },
       "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
     },
