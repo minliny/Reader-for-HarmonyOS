@@ -3,7 +3,6 @@
 // real WindowCoordinator metrics are deliberately shared with the actor.
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router } from '@kit.ArkUI';
 import { SourceManagementPage } from '../features/source/ui/SourceManagementPage';
 import type { BookSource } from '../features/source/application/SourceGateway';
 import type { SourceManagementProjection } from '../features/source/application/SourceOrchestrator';
@@ -84,7 +83,7 @@ struct ReaderPageStructureVerification {
     this.admitted = this.debugBuild();
     if (!this.admitted) {
       this.fontState = 'denied';
-      router.replaceUrl({ url: 'pages/Index' });
+      void this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' });
       return;
     }
     void this.loadFonts();
@@ -135,7 +134,7 @@ struct ReaderPageStructureVerification {
   }
 
   private returnToPilot(menuPresentation: number): void {
-    if (this.mounted && this.admitted && this.scene === 'menu' && menuPresentation === this.presentation) router.back();
+    if (this.mounted && this.admitted && this.scene === 'menu' && menuPresentation === this.presentation) this.getUIContext().getRouter().back();
   }
 
   private createSources(scene: PageStructureFixtureScene): BookSource[] {

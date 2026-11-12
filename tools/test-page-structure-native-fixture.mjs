@@ -64,10 +64,10 @@ if (selected.length) {
       defaultSourceManagementFilters,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
       readerContentSafeTop,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
       prepareReaderFonts:()=>{fontCalls++;return fonts();},
-      router:{replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})},
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));},error(){}},
     },{...sdk.hooks,childSources:{...sdk.childSources,SourceManagementPage:sourceActor,ReaderPageState:stateActor,
       ReaderDirectoryStructureFixture:directoryFixture,ReaderDownloadStructureFixture:downloadFixture,ReaderSourceToolsStructureFixture:toolsFixture}}));
+    page.getUIContext=()=>({getRouter:()=>({replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})})});
     return{page,children,states,routes,events,sdk,fontCalls:()=>fontCalls,props:()=>children.at(-1)?.params};
   }
   async function admission() {

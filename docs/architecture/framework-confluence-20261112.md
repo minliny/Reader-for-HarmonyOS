@@ -119,3 +119,5 @@ UI 配套提交为 `9bfc916`，在主题 PR 原提交上支付目录 clear/downl
 用户已选择远程现有x86_64实例，随后指定通过HDC无线调试。当前HDC TCP链路已能发现该实例并读取ABI和安装元数据。UU远程的工具访问被拒绝，现场取证沿HDC入口执行。原生更新仍需当前实例日志和实际正式storage-transition事实。
 
 无线交付入口合入既有HDC租约的准确server/target准入、命令时限、当前child清理及只清除代理变量的直连环境。保留现有acquire/release接口与HAP安装参数。9个具名离线case和真实临时loopback所有权检查通过，未执行HDC服务维护或设备动作。首次沙箱socket失败保留，受审执行权限下的实际回执单独归档。页面登记220项输入未受这些工具变化影响。
+
+第二次canonical构建已成功发布签名候选09596，指定证书验签通过，contracts-scope none。编译发现新增DEBUG根夹具仍使用旧全局router的两处deprecated API，已改为当前UIContext的Router；admission、source-callbacks、fixture-scenes三个受影响case重新执行通过，其他夹具逻辑按影响范围复用。该改动进入下一固定候选，09596保留原时点manifest。
