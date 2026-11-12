@@ -15,6 +15,11 @@
       "fixture": "reading-topbar.ets.txt",
       "sha256": "c8989539878ae44840266fd705c89b5ac09053effc77d00bb0577ab67a13f88f",
       "sourceBoundary": "PR22 production top-bar title negative/default-equivalence fixture only."
+    },
+    {
+      "fixture": "fixture-instance-identity.ets.txt",
+      "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494",
+      "sourceBoundary": "Exact before-fix DEBUG fixture source with per-component presentation-only identities. Finite synthetic source, without user data or device artifacts. Demonstrates real retained viewport-anchor reuse across new actors."
     }
   ]
 }

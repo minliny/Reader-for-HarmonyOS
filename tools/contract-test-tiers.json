@@ -623,6 +623,7 @@
     "test-source-default-state-upgrade.mjs",
     "test-source-foundation-specs.mjs",
     "test-source-index-presentation-consumers.mjs",
+    "test-source-journey-retention.mjs",
     "test-source-login-page-projection.mjs",
     "test-source-management-cold-owner.mjs",
     "test-source-management-exact-intents.mjs",

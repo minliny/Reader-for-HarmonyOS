@@ -4,9 +4,9 @@
   "reviewedDefinitionsFrozen": true,
   "scope": "703-file historical review; 39 user-approved retirements excluded from active execution. Two UI-framework leaves have current definition qualification; navigation-owner remains NEEDS_EVIDENCE. Default OFF; source review is not product or release acceptance.",
   "reviewedFiles": 703,
-  "inventoryFiles": 665,
+  "inventoryFiles": 666,
   "qualificationCounts": {
-    "NAVIGATION": 323,
+    "NAVIGATION": 324,
     "QUALIFIED": 342
   },
   "defaultPolicy": "No full gate for ordinary feature work, vulnerability fixes, builds or installs.",
@@ -78007,6 +78007,117 @@
         "选择准确已审case和本次变更理由"
       ],
       "definitionInputs": []
+    },
+    {
+      "file": "tools/test-source-journey-retention.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-journey-retention.mjs"
+      ],
+      "needs": [
+        "Source Tools roundtrip",
+        "D4 retention",
+        "signed scroll anchor",
+        "Tools return focus"
+      ],
+      "prerequisites": [
+        "Node with TypeScript support",
+        "installed Harmony SDK ETS compiler",
+        "current vendored Core SDK module",
+        "bounded method and frame ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e",
+      "definitionInputs": [
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-journey-retention.mjs",
+          "sha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e"
+        },
+        {
+          "path": "tools/lib/source-management-owner-probe.mjs",
+          "sha256": "2e20da8c56aab2941f25872ac068e199a7036a31627ee7a8d83cecd53022e7f6"
+        },
+        {
+          "path": "tools/lib/reader-runtime-admission-probe.mjs",
+          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+          "sha256": "c1daddb8222b0db42cc927b1d4da298fc3e7108a0d35069082924366d1546be2"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+          "sha256": "4bb7dc971a3d228518022c4723fb2bf9b635611ac5e07a649211150b1a84c69b"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+          "sha256": "54096f02f04fd88a51cf97d29c62c18670c3dd1be36ed24b702ff4ef791139ae"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
+          "sha256": "70cf18244e01e58e5121f106474118d6fb9d249616a92059e98558a6a73cda1a"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-source-journey-retention",
+      "qualification": "NAVIGATION",
+      "protectedBehavior": "Three independent Source journey ownership, scroll and Tools-return focus contracts.",
+      "mechanism": "Manual navigation to an exact current case. Parent does not dispatch a test.",
+      "productionBinding": "Current SourceJourneyPresentation and SourceManagementPage methods.",
+      "minimumTrigger": "Choose only the exact case matching the current change.",
+      "necessityReason": "Focused metadata prevents unqualified file selection from listing cases and being treated as PASS.",
+      "limitations": "SDK/method evidence and native route/focus evidence are recorded separately.",
+      "repairAction": "Select an exact manual case",
+      "repair": "Select one of the three focused entries explicitly.",
+      "focusedEntries": [
+        "H-source-journey-retention#journey-retention",
+        "H-source-journey-retention#scroll-restoration",
+        "H-source-journey-retention#tools-focus-echo"
+      ],
+      "validationEvidence": {
+        "metadata": "NEW_METADATA_ONLY",
+        "fixtures": "REUSED_EXACT_RESULTS",
+        "otherSuites": "NOT_RUN"
+      }
     }
   ],
   "auditBaselineFiles": 703,
@@ -369709,6 +369820,357 @@
       },
       "nestedActions": [],
       "nestedCalls": []
+    },
+    {
+      "file": "tools/test-source-journey-retention.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-journey-retention.mjs"
+      ],
+      "needs": [
+        "Source Tools roundtrip",
+        "D4 retention",
+        "signed scroll anchor",
+        "Tools return focus"
+      ],
+      "prerequisites": [
+        "Node with TypeScript support",
+        "installed Harmony SDK ETS compiler",
+        "current vendored Core SDK module",
+        "bounded method and frame ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e",
+      "definitionInputs": [
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-journey-retention.mjs",
+          "sha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e"
+        },
+        {
+          "path": "tools/lib/source-management-owner-probe.mjs",
+          "sha256": "2e20da8c56aab2941f25872ac068e199a7036a31627ee7a8d83cecd53022e7f6"
+        },
+        {
+          "path": "tools/lib/reader-runtime-admission-probe.mjs",
+          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+          "sha256": "c1daddb8222b0db42cc927b1d4da298fc3e7108a0d35069082924366d1546be2"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+          "sha256": "4bb7dc971a3d228518022c4723fb2bf9b635611ac5e07a649211150b1a84c69b"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+          "sha256": "54096f02f04fd88a51cf97d29c62c18670c3dd1be36ed24b702ff4ef791139ae"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
+          "sha256": "70cf18244e01e58e5121f106474118d6fb9d249616a92059e98558a6a73cda1a"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "protectedBehavior": "Same Runtime Source-Tools-Source handoff preserves a copied four-filter state and scroll snapshot while old openings, extra route retirement and changed Runtime lose admission.",
+      "mechanism": "Actual SourceJourneyPresentation, SourceOrchestrator and SourceToolsOrchestrator with bounded runtime source.list port; no Core process.",
+      "productionBinding": "SourceJourneyPresentation openManagement/retainManagementViewForTools/retire/openTools/initialManagementViewState, actual operation owners.",
+      "failureExample": "Caller mutations must not mutate retained filters/scroll. Changed Runtime and obsolete opening cannot retrieve prior state.",
+      "limitations": "Owner-method evidence only. Mounted Surface, actual route and native focus require separate evidence.",
+      "id": "H-source-journey-retention#journey-retention",
+      "parentId": "H-source-journey-retention",
+      "caseId": "journey-retention",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-source-journey-retention.mjs": [
+          "journey-retention"
+        ]
+      },
+      "minimumTrigger": "Only when this exact behavior changes, select this manual case explicitly.",
+      "necessityReason": "A focused leaf dispatches one selected case and never its siblings.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c9700de1fefc97ccb0f43681ae0868728c9a68c49f5835f70b3ebeed6831d019",
+      "nestedActions": [],
+      "nestedCalls": [],
+      "repair": null,
+      "repairAction": null,
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "boundary": "Existing exact execution is reused. Metadata validation executes no business fixtures."
+      }
+    },
+    {
+      "file": "tools/test-source-journey-retention.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-journey-retention.mjs"
+      ],
+      "needs": [
+        "Source Tools roundtrip",
+        "D4 retention",
+        "signed scroll anchor",
+        "Tools return focus"
+      ],
+      "prerequisites": [
+        "Node with TypeScript support",
+        "installed Harmony SDK ETS compiler",
+        "current vendored Core SDK module",
+        "bounded method and frame ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e",
+      "definitionInputs": [
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-journey-retention.mjs",
+          "sha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e"
+        },
+        {
+          "path": "tools/lib/source-management-owner-probe.mjs",
+          "sha256": "2e20da8c56aab2941f25872ac068e199a7036a31627ee7a8d83cecd53022e7f6"
+        },
+        {
+          "path": "tools/lib/reader-runtime-admission-probe.mjs",
+          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+          "sha256": "c1daddb8222b0db42cc927b1d4da298fc3e7108a0d35069082924366d1546be2"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+          "sha256": "4bb7dc971a3d228518022c4723fb2bf9b635611ac5e07a649211150b1a84c69b"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+          "sha256": "54096f02f04fd88a51cf97d29c62c18670c3dd1be36ed24b702ff4ef791139ae"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
+          "sha256": "70cf18244e01e58e5121f106474118d6fb9d249616a92059e98558a6a73cda1a"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "protectedBehavior": "Source anchor restoration retains signed header offsets and same-layout itemY, recalculates changed-layout insets and retires changed-filter or old-opening frames.",
+      "mechanism": "Actual SourceManagementPage selected capture/restore methods plus actual SourceListLayoutFrame compiled by the installed ETS compiler, bounded Scroller/frame ports.",
+      "productionBinding": "SourceManagementPage captureScroll/requestOpenTools/scheduleSourceAnchorRestore/currentFilterKey/scrollLayoutKey and SourceManagementScrollState.",
+      "failureExample": "Queued restore after opening/filter/touch retirement must not scroll the succeeding presentation.",
+      "limitations": "Method/frame evidence only. Native virtual List, real scroll pixels and route retention are separately verified.",
+      "id": "H-source-journey-retention#scroll-restoration",
+      "parentId": "H-source-journey-retention",
+      "caseId": "scroll-restoration",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-source-journey-retention.mjs": [
+          "scroll-restoration"
+        ]
+      },
+      "minimumTrigger": "Only when this exact behavior changes, select this manual case explicitly.",
+      "necessityReason": "A focused leaf dispatches one selected case and never its siblings.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c9700de1fefc97ccb0f43681ae0868728c9a68c49f5835f70b3ebeed6831d019",
+      "nestedActions": [],
+      "nestedCalls": [],
+      "repair": null,
+      "repairAction": null,
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "boundary": "Existing exact execution is reused. Metadata validation executes no business fixtures."
+      }
+    },
+    {
+      "file": "tools/test-source-journey-retention.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-journey-retention.mjs"
+      ],
+      "needs": [
+        "Source Tools roundtrip",
+        "D4 retention",
+        "signed scroll anchor",
+        "Tools return focus"
+      ],
+      "prerequisites": [
+        "Node with TypeScript support",
+        "installed Harmony SDK ETS compiler",
+        "current vendored Core SDK module",
+        "bounded method and frame ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e",
+      "definitionInputs": [
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-journey-retention.mjs",
+          "sha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e"
+        },
+        {
+          "path": "tools/lib/source-management-owner-probe.mjs",
+          "sha256": "2e20da8c56aab2941f25872ac068e199a7036a31627ee7a8d83cecd53022e7f6"
+        },
+        {
+          "path": "tools/lib/reader-runtime-admission-probe.mjs",
+          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "dd3969322a785f18f72038741ab975e33686199d1f3f91bde122a24c69672263"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+          "sha256": "c1daddb8222b0db42cc927b1d4da298fc3e7108a0d35069082924366d1546be2"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+          "sha256": "4bb7dc971a3d228518022c4723fb2bf9b635611ac5e07a649211150b1a84c69b"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+          "sha256": "54096f02f04fd88a51cf97d29c62c18670c3dd1be36ed24b702ff4ef791139ae"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
+          "sha256": "70cf18244e01e58e5121f106474118d6fb9d249616a92059e98558a6a73cda1a"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "protectedBehavior": "Restored-value Native input echo retains pending Tools focus while a changed query, obsolete opening and inactive group input cannot steal focus.",
+      "mechanism": "Actual SourceManagementPage input/focus methods, ReaderSearchField.changeText and compiled SourceListLayoutFrame; measured layout requests current header ID, explicit onFocus ACK retires pending focus.",
+      "productionBinding": "SourceManagementPage applySourceSearchInput/onToolsEntryLayout/scheduleToolsReturnFocus/onToolsEntryFocused and ReaderSearchField.changeText.",
+      "failureExample": "Actual prior unconditional edit cancellation fails the equal17 echo regression before layout; changed18 still cancels.",
+      "limitations": "Observed old FAIL and corrected method PASS. Focus request and explicit simulated ACK do not establish current Native focus restoration.",
+      "id": "H-source-journey-retention#tools-focus-echo",
+      "parentId": "H-source-journey-retention",
+      "caseId": "tools-focus-echo",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-source-journey-retention.mjs": [
+          "tools-focus-echo"
+        ]
+      },
+      "minimumTrigger": "Only when this exact behavior changes, select this manual case explicitly.",
+      "necessityReason": "A focused leaf dispatches one selected case and never its siblings.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c9700de1fefc97ccb0f43681ae0868728c9a68c49f5835f70b3ebeed6831d019",
+      "nestedActions": [],
+      "nestedCalls": [],
+      "repair": null,
+      "repairAction": null,
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "boundary": "Existing exact execution is reused. Metadata validation executes no business fixtures."
+      }
     }
   ],
   "externalEntries": [
@@ -370585,7 +371047,7 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 2323,
+    "QUALIFIED": 2326,
     "REVIEW_NEEDED": 7,
     "DIAGNOSTIC_ONLY": 22,
     "NEEDS_EVIDENCE": 1

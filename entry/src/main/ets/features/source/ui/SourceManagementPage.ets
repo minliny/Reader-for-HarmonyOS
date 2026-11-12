@@ -544,7 +544,7 @@ export struct SourceManagementPage {
       if (value !== undefined && value !== this.searchQuery) this.searchInputRevision += 1;
       return;
     }
-    if (value !== undefined) {
+    if (value !== undefined && value !== this.searchQuery) {
       this.cancelToolsReturnFocus('edit');
       this.searchQuery = value;
     }
@@ -1166,6 +1166,7 @@ export struct SourceManagementPage {
       ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'equal',
         focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
         onAction: (): void => this.requestOpenTools('footer') })
+        .layoutWeight(1)
         .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));
       ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '新增书源',
         icon: $r('app.media.source_add'), focusId: this.importFocusId(identity, 'footer'),

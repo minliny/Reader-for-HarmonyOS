@@ -1,5 +1,12 @@
 import type { LocalReadingTocEntry, LocalReadingDownloadState } from '../features/reading/application/LocalReadingFlowGateway';
 
+let directoryFixtureInstanceSequence: number = 0;
+
+/** Shared across DEBUG fixture actors, retained throughout one actor's HUD changes. */
+export function nextReaderDirectoryFixtureInstanceId(): number {
+  return ++directoryFixtureInstanceSequence;
+}
+
 /** Deterministic, process-local samples. No persisted identity or user record. */
 export function readerDirectoryFixtureEntries(manga: boolean): LocalReadingTocEntry[] {
   const states: LocalReadingDownloadState[] = ['missing', 'completed', 'failed', 'queued', 'inProgress', 'cached', 'paused', 'unknown'];

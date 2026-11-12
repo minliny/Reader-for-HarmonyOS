@@ -6,6 +6,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 const selected = selectContractCases({
   'journey-retention': 'Actual SourceJourneyPresentation and both operation owners retain copied filters/scroll only across the same Runtime Source-Tools-Source journey; no Core process.',
+  'tools-focus-echo': 'Actual page and SearchField changeText preserve pending Tools focus on the restored value echo, cancel on real edits and reject stale/inactive input; method-level request and explicit focus ACK only.',
   'scroll-restoration': 'Actual Source page capture/restore methods preserve signed header offsets and same-layout itemY, use current-layout insets, and retire changed-filter/old-opening frames.',
 });
 if (selected.length) {
@@ -103,6 +104,57 @@ if (selected.length) {
     let returned;capture.actor.onOpenTools=value=>returned=value;capture.actor.requestOpenTools('footer');
     assert.deepEqual(returned,{...filters,anchorSourceId:'b',anchorFallbackIndex:1,toolsEntry:'footer',scroll});
   }
-  const cases={'journey-retention':journeyRetention,'scroll-restoration':scrollRestoration};
+
+  async function toolsFocusEcho() {
+    const file = new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
+    const source = readFileSync(file, 'utf8');
+    const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+    const { ts, options } = installedEtsCompiler();
+    const tree = ts.createSourceFile('SourceFocus.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const frame = tree.statements.find(node => node.name?.getText(tree) === 'SourceListLayoutFrame');
+    const emitted = ts.transpileModule(frame.getText(tree), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
+    const SourceListLayoutFrame = new Function('FrameCallback', emitted + ';return SourceListLayoutFrame;')(class {});
+    const Page = selectedProductionMethods(file, 'SourceManagementPage', ['sourceSearchInputIdentity', 'applySourceSearchInput',
+      'cancelToolsReturnFocus', 'traceToolsReturnFocus', 'toolsFocusId', 'onToolsEntryLayout', 'scheduleToolsReturnFocus',
+      'onToolsEntryFocused', 'managementOpeningIsCurrent', 'managementBackIsCurrent'],
+      { SourceListLayoutFrame, readerPageAreaLength: value => Number(value), hilog: { info() {} } });
+    const Field = selectedProductionMethods(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url),
+      'ReaderSearchField', ['changeText']);
+    function fixture() {
+      const frames = [], requests = [], page = new Page();
+      Object.assign(page, { mounted: true, appForeground: true, temporaryBackIdentity: 'source-back:3', searchQuery: '17',
+        sourceSearchInputRevision: 0, searchInputRevision: 0, pendingToolsFocus: 'header', toolsFocusReady: false,
+        toolsFocusScheduled: false, toolsFocusRevision: 1, toolsFocusAttempt: 0, groupOpen: false,
+        rebuildSourceProjection() {}, getUIContext: () => ({ postFrameCallback: frame => frames.push(frame),
+          getFocusController: () => ({ requestFocus: id => requests.push(id) }) }) });
+      const identity = page.sourceSearchInputIdentity();
+      const field = Object.assign(new Field(), { mounted: true, mode: 'live', onTextChange: value => page.applySourceSearchInput(identity, value) });
+      return { page, field, frames, requests };
+    }
+    const echo = fixture();
+    echo.field.changeText('17');
+    assert.equal(echo.page.pendingToolsFocus, 'header', 'restored-value Native echo must preserve the pending return target');
+    echo.page.onToolsEntryLayout('source-back:3', 'header', { width: 44, height: 44 });
+    echo.frames.shift().onIdle(1);
+    assert.deepEqual(echo.requests, ['source-back:3:tools:header']);
+    assert.equal(echo.page.pendingToolsFocus, 'header', 'a request is not an onFocus ACK');
+    echo.page.onToolsEntryFocused('source-back:3', 'header');
+    assert.equal(echo.page.pendingToolsFocus, undefined);
+    while (echo.frames.length) echo.frames.shift().onIdle(1);
+    assert.equal(echo.requests.length, 1, 'ACK retires a queued second request');
+    const edit = fixture();
+    edit.page.onToolsEntryLayout('source-back:3', 'header', { width: 44, height: 44 });
+    edit.field.changeText('18');
+    assert.equal(edit.page.searchQuery, '18');
+    assert.equal(edit.page.pendingToolsFocus, undefined, 'an actual changed draft owns focus');
+    while (edit.frames.length) edit.frames.shift().onIdle(1);
+    assert.deepEqual(edit.requests, []);
+    const stale = fixture(); stale.page.temporaryBackIdentity = 'successor'; stale.field.changeText('99');
+    assert.equal(stale.page.searchQuery, '17', 'retired input cannot borrow the successor opening');
+    const blocked = fixture(); blocked.page.groupOpen = true; blocked.field.changeText('99');
+    assert.equal(blocked.page.searchQuery, '17');
+    assert.equal(blocked.page.searchInputRevision, 1, 'rejected changed native buffer requests a current rebind');
+  }
+  const cases={'journey-retention':journeyRetention,'scroll-restoration':scrollRestoration,'tools-focus-echo':toolsFocusEcho};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

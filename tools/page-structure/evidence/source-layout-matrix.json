@@ -10,7 +10,7 @@
   "inputs": [
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "405cdc1a02bc2263ac8f530bdc662257b736ccb2af473286b6b3bbe4d43bc641"
+      "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
     },
     {
       "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
@@ -42,7 +42,7 @@
     },
     {
       "path": "tools/test-source-management-layout.mjs",
-      "sha256": "35c145f8392279f95c8a6b158723e01bd59d9d16f607706a3fd4a3eca6ca9547"
+      "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
     },
     {
       "path": "tools/lib/source-layout-control-probe.mjs",

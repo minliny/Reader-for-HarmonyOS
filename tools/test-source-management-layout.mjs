@@ -41,6 +41,11 @@ if (selected.length) {
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: scale }) } };
   const Page = selectedProductionMethods(file, 'SourceManagementPage', ['fontScale', 'layoutBudget', 'footerControlHeight', 'footerFallbackHeight'], deps);
   const targets = [], budgets = [], samples = [];
+  function assertFooterWrapper(nodes) {
+    const wrappers = nodes.filter(node => node.type === '__Common__' && typeof node.onAreaChange === 'function');
+    assert.equal(wrappers.length, 1, 'actual footer has one measured custom-component wrapper');
+    assert.equal(wrappers[0].layoutWeight, 1, 'the native Row sibling __Common__ must own its equal allocation');
+  }
   for (const width of widths) for (scale of fontScales) {
     const contentWidth = width - 38;
     const controls = runSourceLayoutControlProbe(contentWidth, scale);
@@ -94,11 +99,24 @@ if (selected.length) {
       layoutBudget: page.layoutBudget.bind(page), statusValue: '全部', categoryValue: 'all', actionBottomInset: () => 16,
       rebuildSourceProjection() {}, onOpenTools() {}, onAddSource() {}, toolsFocusId:()=>'',importFocusId:()=>'' });
     parent.statusFilter(); parent.categoryFilter(); parent.bottomActionBar();
-    const parentNodes = shared.nodes(parent), scrolls = parentNodes.filter(n => n.type === 'Scroll');
+    const parentNodes = shared.nodes(parent);
+    assertFooterWrapper(parentNodes);
+    const scrolls = parentNodes.filter(n => n.type === 'Scroll');
     assert.equal(scrolls.length, 2);
     assert.ok(scrolls.every(n => n.height === budget.filterHeight && n.scrollable === 'horizontal'), 'both real filter viewports grow with their child controls');
     assert.ok(parentNodes.some(n => n.type === 'Row' && n.width === contentWidth && n.constraintSize?.minHeight === budget.footerHeight), 'actual footer parent uses the control growth budget');
     for (const name of ['manage', 'add']) assert.equal(controls.targets[name].layoutWeight, 1, 'both actual footer children share the measured parent equally');
+    if (width === 320 && scale === 1) {
+      const before = source.replace("        .layoutWeight(1)\n        .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));",
+        "        .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));");
+      assert.notEqual(before, source, 'controlled regression removes only the external footer allocation');
+      const old = createReaderBuilderProbe(before, ['bottomActionBar'], shared.dependencies, shared.hooks).owner;
+      Object.assign(old, { appThemeScheme: 'day', contentFrame: page.contentFrame, layoutBudget: page.layoutBudget.bind(page),
+        actionBottomInset: () => 16, toolsFocusId: () => '', importFocusId: () => '' });
+      old.bottomActionBar();
+      assert.throws(() => assertFooterWrapper(shared.nodes(old)), /native Row sibling/,
+        'native-wrapped old footer must fail while both inner leaf weights remain one');
+    }
     for (const [name, controlRef] of [['detect', 'source-detect'], ['login', 'source-login'], ['statusWide', 'source-filter-chip'], ['manage', 'footer-batch'], ['add', 'footer-add']]) {
       const t = controls.targets[name];
       targets.push({ controlRef, width, fontScale: scale, visual: { width: t.width ?? (contentWidth - readerFoundationTokens.TOK_SPACE_CONTROL_INLINE) / 2, height: t.height }, response: null });

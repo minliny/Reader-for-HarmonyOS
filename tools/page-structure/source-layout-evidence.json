@@ -10,7 +10,7 @@
   "inputs": [
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "405cdc1a02bc2263ac8f530bdc662257b736ccb2af473286b6b3bbe4d43bc641"
+      "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
     },
     {
       "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
@@ -42,7 +42,7 @@
     },
     {
       "path": "tools/test-source-management-layout.mjs",
-      "sha256": "35c145f8392279f95c8a6b158723e01bd59d9d16f607706a3fd4a3eca6ca9547"
+      "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
     },
     {
       "path": "tools/lib/source-layout-control-probe.mjs",
@@ -158,11 +158,11 @@
     },
     {
       "path": "tools/page-structure/evidence/source-layout-matrix.json",
-      "sha256": "294349157e7a3f1747aca184c62139f8c11195d3c9e20b43d41ce0bdfb7de611"
+      "sha256": "a2b971e74a78b6253ea2df41b9afbffdacf71d7100ac7a435a77f6d63d29c001"
     },
     {
       "path": "tools/page-structure/evidence/source-interaction.json",
-      "sha256": "649a41967d21cd4e9d66b44d755d94aa4cf611bfb763d7364d2dabcf4dfe7e34"
+      "sha256": "ac4598fa9dc25898de5b178b2a17f6de7c36a977e25ff54d198219a179f6f6ef"
     },
     {
       "path": "tools/page-structure/source-e2-evidence.mjs",

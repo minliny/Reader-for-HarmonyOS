@@ -17,13 +17,17 @@ import type { ReaderDirectoryChapterStartBookmarkRequest } from '../features/rea
 import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/application/MangaDownloadActionsGateway';
 import type { ReaderBookIdentity } from '../features/reading/presentation/ReaderBookmarkProjection';
 import type { ReaderDirectoryNavigationPortFactory } from '../features/reading/application/ReaderDirectoryNavigation';
-import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry } from './ReaderDirectoryStructureFixtureData';
+import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry,
+  nextReaderDirectoryFixtureInstanceId } from './ReaderDirectoryStructureFixtureData';
 
 export type ReaderDirectoryFixtureMode = 'text' | 'manga' | 'control';
 interface ReaderDirectoryFixtureObservation {
   kind: string;
   mode: string;
+  fixtureInstanceId: number;
   presentation: number;
+  bookId: string;
+  viewId: string;
   actualWidthVp: number;
   actualHeightVp: number;
   systemFontScale: number;
@@ -52,6 +56,7 @@ export struct ReaderDirectoryStructureFixture {
   @State private actualHeight: number = 0;
   @State private localControlViewportHeight: number = 0;
   @State private presentation: number = 0;
+  private readonly fixtureInstanceId: number = nextReaderDirectoryFixtureInstanceId();
   private intentCount: number = 0;
   private mounted: boolean = false;
   private nextBookmarkTime: number = 1793671200000;
@@ -83,7 +88,7 @@ export struct ReaderDirectoryStructureFixture {
     if (this.admitted()) {
       const presentation = this.presentation, identity = this.identity();
       const port = new ReaderDirectoryFixturePort(identity.sourceId, identity.bookId,
-        `directory-fixture:${this.mode}:${presentation}`, (): LocalReadingTocEntry[] => this.entries,
+        `${this.openingIdentity()}:${this.mode}`, (): LocalReadingTocEntry[] => this.entries,
         (): boolean => this.current(presentation),
         (kind: string, index: number): void => { if (this.current(presentation)) this.record(kind, index); });
       this.navigationFactory = (): ReaderDirectoryFixturePort => {
@@ -94,9 +99,12 @@ export struct ReaderDirectoryStructureFixture {
     if (this.admitted()) this.record('mount');
   }
 
+  private openingIdentity(): string { return `directory-fixture:${this.fixtureInstanceId}:${this.presentation}`; }
+
   private identity(): ReaderBookIdentity {
-    return { sourceId: 'directory-native-fixture', bookId: `${this.mode}:${this.presentation}`,
-      libraryBookId: `directory-native-fixture:${this.mode}:${this.presentation}`,
+    const bookId = `${this.mode}:${this.fixtureInstanceId}:${this.presentation}`;
+    return { sourceId: 'directory-native-fixture', bookId: bookId,
+      libraryBookId: `directory-native-fixture:${bookId}`,
       bookName: '目录原生夹具 · 山海行记', bookAuthor: '内存样本' };
   }
 
@@ -104,13 +112,15 @@ export struct ReaderDirectoryStructureFixture {
 
   private record(kind: string, chapterIndex: number = -1): void {
     const observation: ReaderDirectoryFixtureObservation = { kind: kind, mode: this.mode,
+      fixtureInstanceId: this.fixtureInstanceId, bookId: this.identity().bookId,
+      viewId: `${this.openingIdentity()}:${this.mode}`,
       presentation: this.presentation, actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
       systemFontScale: readerWindowMetrics().systemFontScale,
       chapterIndex: chapterIndex, intentCount: this.intentCount,
       initialRequestedControlHeightVp: this.initialRequestedControlHeight(),
       requestedControlHeightVp: this.requestedControlHeight(),
       actualControlWidthVp: this.actualControlWidth, actualControlHeightVp: this.actualControlHeight };
-    hilog.info(0x5244, 'ReaderDirectoryFixture', '%{public}s', JSON.stringify(observation));
+    hilog.info(0x5244, 'ReaderDirectoryFixture', 'READER_DIRECTORY_FIXTURE %{public}s', JSON.stringify(observation));
   }
 
   private onMetricsChanged(): void { if (this.admitted()) this.record('system-metrics'); }
@@ -185,7 +195,7 @@ export struct ReaderDirectoryStructureFixture {
 
   private admitControlMinimum(presentation: number, identity: string,
     measurer: ReaderControlModuleMeasurer | undefined): void {
-    if (!this.current(presentation) || identity !== `directory-fixture:${presentation}:${this.controlTab}`) return;
+    if (!this.current(presentation) || identity !== `${this.openingIdentity()}:${this.controlTab}`) return;
     if (this.controlMinimumMeasurer === measurer) return;
     this.controlMinimumMeasurer = measurer;
     this.controlMinimumRevision += 1;
@@ -194,7 +204,7 @@ export struct ReaderDirectoryStructureFixture {
 
   private refreshControlMinimum(): void {
     if (!this.admitted() || this.mode !== 'control' || this.controlMinimumMeasurer === undefined || this.actualControlWidth <= 0) return;
-    const key = `${this.presentation}:${this.controlTab}:${this.controlMinimumRevision}|${this.actualControlWidth}`;
+    const key = `${this.openingIdentity()}:${this.controlTab}:${this.controlMinimumRevision}|${this.actualControlWidth}`;
     if (key === this.controlMinimumKey) return;
     const minimum = this.controlMinimumMeasurer({ panelWidthVp: this.actualControlWidth,
       quickContentWidthVp: this.actualControlWidth, fullContentWidthVp: this.actualControlWidth }, key);
@@ -325,7 +335,7 @@ export struct ReaderDirectoryStructureFixture {
   @Builder
   private controlContent(presentation: number) {
     ReaderControlDirectoryContent({
-      minimumIdentity: `directory-fixture:${presentation}:${this.controlTab}`,
+      minimumIdentity: `${this.openingIdentity()}:${this.controlTab}`,
       minimumKey: this.controlMinimumKey,
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
         this.admitControlMinimum(presentation, identity, measurer),
@@ -335,7 +345,7 @@ export struct ReaderDirectoryStructureFixture {
       catalogReadableChapterCount: this.entries.length, catalogReadablePosition: this.currentChapterIndex,
       progress: this.controlExpanded ? 1 : 0, interactionEnabled: true,
       availableWidth: this.controlFrame().content.width, availableHeight: this.controlHeight(),
-      tab: this.controlTab, sessionKey: `directory-fixture:${presentation}`,
+      tab: this.controlTab, sessionKey: this.openingIdentity(),
       chapterDownloadEnabled: true, chapterStartBookmarkCreationEnabled: true,
       onTabChange: (tab: string): void => {
         if (!this.current(presentation)) return;

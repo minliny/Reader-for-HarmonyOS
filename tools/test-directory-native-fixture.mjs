@@ -12,6 +12,7 @@ const selected=selectContractCases({
   'memory-actions':'Memory-only samples/actions and captured presentation retirement; native intent is not a Core receipt.',
   'short-control-viewport':'Actual debug initializer applies only explicit 122/168/190 inner viewports, reports measured area separately and keeps default production Frame; no native glyph/scale claim.',
   'dynamic-control-viewport':'Actual same-instance SDK child/port/session with non-focusable local viewport HUD, real parent-budget endpoints and retired HUD rejection; no Native focus or IME claim.',
+  'instance-identity':'Actual new fixture actors isolate retained directory anchors and every opening key; the exact old fixture reproduces cross-instance anchor reuse.',
 });
 if(selected.length){
   registerHooks({resolve(specifier,context,next){
@@ -36,23 +37,23 @@ if(selected.length){
   const {readerPageAreaLength}=await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
   const file=new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets',import.meta.url),source=readFileSync(file,'utf8');
   const dataFile=new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts',import.meta.url),dataSource=readFileSync(dataFile,'utf8');
-  const {readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry}=pureModuleProbe(dataSource,'ReaderDirectoryStructureFixtureData.ts',{},['readerDirectoryFixtureEntries','ReaderDirectoryFixturePort','readerDirectoryFixtureCopyEntry']);
+  const {readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry,nextReaderDirectoryFixtureInstanceId}=pureModuleProbe(dataSource,'ReaderDirectoryStructureFixtureData.ts',{},['readerDirectoryFixtureEntries','ReaderDirectoryFixturePort','readerDirectoryFixtureCopyEntry','nextReaderDirectoryFixtureInstanceId']);
   const {readerReadableFontScale,readerScaledControlHeight}=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',import.meta.url),'utf8'),'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
   const childSources=Object.fromEntries([
     ['ReaderFullDirectory','reading/ui/ReaderFullDirectory'],['BookDirectoryPage','reading/ui/BookDirectoryPage'],
     ['ReaderControlDirectoryContent','reading/ui/ReaderControlDirectoryContent'],
   ].map(([name,path])=>[name,readFileSync(new URL('../entry/src/main/ets/features/'+path+'.ets',import.meta.url),'utf8')]));
   const require=createRequire(import.meta.url),componentMap=require(resolveEtsLoaderRoot()+'/lib/component_map.js');
-  function fixture({debug=true,build='debug',ready=true,mode='text',expanded=true,scale=1.6,controlHeight=0}={}){
+  function fixture({debug=true,build='debug',ready=true,mode='text',expanded=true,scale=1.6,controlHeight=0,fixtureSource=source}={}){
     const sdk=boundedSurfaceSdk(),children=[],events=[],actions=[],back=[];
     const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=366;metrics.windowRect.height=844;metrics.systemFontScale=scale;
-    const deps={...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:build,readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry,
+    const deps={...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:build,readerDirectoryFixtureEntries,ReaderDirectoryFixturePort,readerDirectoryFixtureCopyEntry,nextReaderDirectoryFixtureInstanceId,
       resolveReaderControlLayout,ReaderControlGeometry,readerControlMotionBounds,sampleReaderControlMotionComposition,
       readerReadableFontScale,readerPageAreaLength,readerWindowMetrics:()=>metrics,
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));}}};
     for(const name of Object.keys(childSources))deps[name]=class{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id,name});children.push(this);}updateStateVars(params){Object.assign(this.params,params);}};
     const saved=new Map(componentMap.ID_ATTRS);componentMap.ID_ATTRS.clear();let page;
-    try{({owner:page}=createReaderBuilderProbe(source,boundedMembers(source),deps,{...sdk.hooks,childSources}));}
+    try{({owner:page}=createReaderBuilderProbe(fixtureSource,boundedMembers(fixtureSource),deps,{...sdk.hooks,childSources}));}
     finally{componentMap.ID_ATTRS.clear();for(const [k,v]of saved)componentMap.ID_ATTRS.set(k,v);}
     Object.assign(page,{fontsReady:ready,mode,controlExpanded:expanded,controlViewportHeight:controlHeight,onAction:(kind,index)=>actions.push([kind,index]),onBack:()=>back.push(true)});
     page.aboutToAppear();return{page,sdk,children,events,actions,back,metrics};
@@ -98,6 +99,68 @@ if(selected.length){
     assert.deepEqual(await port.resolveTarget('book','view','fixture-chapter-21'),{kind:'chapterStart',chapterIndex:21,chapterOffsetScalar:0});
     active=false;await assert.rejects(()=>port.open({sourceId:'fixture',bookId:'book'}),/retired/);await assert.rejects(()=>port.resolveTarget('book','view','fixture-chapter-21'),/retired/);
   }
+  async function instanceIdentity(){
+    const viewport=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts');
+    const Planner=selectedProductionMethods(
+      new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets',import.meta.url),
+      'ReaderDirectoryNavigationList',['planPosition'],{
+        readerDirectoryScopeKey:navigation.readerDirectoryScopeKey,
+        readerDirectoryViewportAnchor:viewport.readerDirectoryViewportAnchor,
+        ScrollAlign:{START:'START',CENTER:'CENTER'},
+      });
+    async function opening(page){
+      const identity=page.identity();
+      return page.navigationFactory().open({sourceId:identity.sourceId,bookId:identity.bookId,chapterIndex:page.currentChapterIndex});
+    }
+    async function migratedPair(fixtureSource){
+      viewport.readerDirectoryClearViewportAnchors();
+      const first=fixture({mode:'control',controlHeight:122,scale:1,fixtureSource});
+      first.page.initialRender();
+      const firstIdentity=first.page.identity(),firstView=await opening(first.page);
+      const oldIndex=firstView.nodes.findIndex(node=>node.chapterIndex===20);
+      assert(oldIndex>=0);
+      viewport.readerDirectorySaveViewportAnchor({bookId:navigation.readerDirectoryScopeKey(firstIdentity.sourceId,firstIdentity.bookId),
+        navigationRevision:firstView.navigationRevision,viewId:firstView.viewId,nodeId:firstView.nodes[oldIndex].nodeId,
+        visibleIndex:oldIndex,rowFraction:17/154});
+      first.page.aboutToDisappear();
+      const second=fixture({mode:'control',controlHeight:168,scale:1,fixtureSource});
+      second.page.initialRender();
+      const secondIdentity=second.page.identity(),secondView=await opening(second.page);
+      const planner=Object.assign(new Planner(),{sourceId:secondIdentity.sourceId,bookId:secondIdentity.bookId,
+        view:secondView,mangaDisplay:false});
+      return {firstIdentity,secondIdentity,firstView,secondView,plan:planner.planPosition(),first,second};
+    }
+    function assertIsolated(pair){
+      assert.notEqual(pair.firstIdentity.bookId,pair.secondIdentity.bookId,'distinct fixture actors require distinct book identities');
+      assert.notEqual(pair.firstIdentity.libraryBookId,pair.secondIdentity.libraryBookId);
+      assert.notEqual(pair.firstView.viewId,pair.secondView.viewId);
+      assert.equal(pair.plan.index,pair.secondView.currentVisibleIndex);
+      assert.equal(pair.plan.rowFraction,0);
+      assert.equal(pair.plan.align,'CENTER','a new fixture does not reuse another actor viewport');
+    }
+    try{
+      const before=readFileSync(new URL('./fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt',import.meta.url),'utf8');
+      const reused=await migratedPair(before);
+      assert.equal(reused.firstIdentity.bookId,reused.secondIdentity.bookId);
+      assert.equal(reused.plan.align,'START');assert.equal(reused.plan.rowFraction,17/154);
+      assert.notEqual(reused.plan.index,reused.secondView.currentVisibleIndex,'old fixture really reads the retained previous-node anchor');
+      assert.throws(()=>assertIsolated(reused),/distinct fixture actors/);
+      const current=await migratedPair(source);assertIsolated(current);
+      const child=current.second.children.at(-1).params;
+      assert.equal(child.sessionKey,current.second.page.openingIdentity());
+      assert.equal(child.minimumIdentity,`${child.sessionKey}:directory`);
+      const event=current.second.events.findLast(item=>item.kind==='mount');
+      assert.equal(event.fixtureInstanceId,current.second.page.fixtureInstanceId);
+      assert.equal(event.bookId,current.secondIdentity.bookId);assert.equal(event.viewId,current.secondView.viewId);
+      assert(source.includes("'READER_DIRECTORY_FIXTURE %{public}s'"),'existing READER_ native capture must retain fixture identity/Area observations');
+      for(const mode of ['text','manga','control']){
+        const first=fixture({mode}),second=fixture({mode});
+        assert(first.page.fixtureInstanceId<second.page.fixtureInstanceId,'the actual shared module allocator is monotonic');
+        assert.notEqual(first.page.identity().bookId,second.page.identity().bookId);
+        assert.notEqual((await opening(first.page)).viewId,(await opening(second.page)).viewId);
+      }
+    }finally{viewport.readerDirectoryClearViewportAnchors();}
+  }
   async function shortControlViewport(){
     for(const height of [0,122,168,190,-1,123,NaN,Infinity]){
       const f=fixture({mode:'control',scale:2,controlHeight:height});
@@ -132,7 +195,7 @@ if(selected.length){
       f.metrics.statusBarHeight=39;
       p.measure({width:width+'vp',height:'844vp'});p.initialRender();
       const child=f.children.at(-1),factory=p.navigationFactory,port=factory(),presentation=p.presentation;
-      const session=child.params.sessionKey,book=p.identity().bookId,actors=f.children.length;
+      const session=child.params.sessionKey,book=p.identity().bookId,instance=p.fixtureInstanceId,actors=f.children.length;
       const hud=[...p.nodes.values()].filter(n=>n.type==='Text'&&/^reader-directory-viewport-/.test(n.id??''));
       assert.equal(hud.length,4);assert.equal(p.viewportHudVisible(),true);
       for(const node of hud){assert.equal(node.focusable,false);assert.equal(node.focusOnTouch,false);assert.equal(node.width,p.viewportHudButtonWidth());assert.equal(node.height,p.viewportHudHeight());}
@@ -149,6 +212,7 @@ if(selected.length){
         assert.equal(f.children.length,actors);assert.equal(f.children.at(-1),child,'SDK updates the same Content child');
         assert.equal(p.navigationFactory,factory);assert.equal(factory(),port);assert.equal(child.params.navigationPortFactory,factory);
         assert.equal(p.presentation,presentation);assert.equal(child.params.sessionKey,session);assert.equal(p.identity().bookId,book);assert.equal(p.intentCount,0);assert.deepEqual(f.actions,[]);
+        assert.equal(p.fixtureInstanceId,instance);assert.equal(p.openingIdentity(),session);
       }
       const revisionSubscribers=f.sdk.properties.dependencies.get(p)?.get('windowMetricsRevision');
       for(const node of hud){const nativeId=[...p.nodes.entries()].find(([_id,value])=>value===node)?.[0];assert(revisionSubscribers?.has(nativeId),'HUD budgets subscribe through the existing metrics revision');}
@@ -161,7 +225,7 @@ if(selected.length){
       p.measureControl(presentation,{width:child.params.availableWidth+'vp',height:'319vp'});
       const observation=f.events.at(-1);assert.equal(observation.initialRequestedControlHeightVp,122);assert.equal(observation.requestedControlHeightVp,320);assert.equal(observation.actualControlHeightVp,319,'request and measured receipt are independent');
       const providerCalls=[];
-      child.params.onMinimumMeasurerReady(`directory-fixture:${presentation}:${p.controlTab}`,(widths,key)=>{
+      child.params.onMinimumMeasurerReady(`${p.openingIdentity()}:${p.controlTab}`,(widths,key)=>{
         providerCalls.push({widths,key});
         return{module:'directory',quick:{heightVp:100,minWidthVp:44,fits:true},full:{heightVp:220,minWidthVp:44,fits:true}};
       });
@@ -235,9 +299,9 @@ if(selected.length){
     s.owner.aboutToDisappear();
   }
   async function capturedRetire(){
-    const f=fixture(),oldFactory=f.page.navigationFactory,oldPort=oldFactory();
+    const f=fixture(),oldFactory=f.page.navigationFactory,oldPort=oldFactory(),oldIdentity=f.page.identity();
     f.page.resetFixture();assert.throws(()=>oldFactory(),/retired/);
-    await assert.rejects(()=>oldPort.open({sourceId:'directory-native-fixture',bookId:'text:1'}),/retired/);
+    await assert.rejects(()=>oldPort.open({sourceId:oldIdentity.sourceId,bookId:oldIdentity.bookId}),/retired/);
     let complete;const port={open:()=>new Promise(resolve=>{complete=resolve;}),page(){assert.fail('no next page');}};
     const s=surface({factory:()=>port});s.owner.aboutToAppear();s.owner.aboutToDisappear();
     complete({status:'ready',viewId:'retired',navigationRevision:'retired',visibleTotal:0,nodes:[]});await tick();
@@ -250,6 +314,6 @@ if(selected.length){
     list.selectTarget({kind:'target',nodeId:'n1',chapterIndex:1});assert.equal(guard(),true);
     list.mounted=false;list.generation+=1;assert.equal(guard(),false);resolveTarget({chapterIndex:1,chapterOffsetScalar:0});await tick();assert.deepEqual(selections,[]);
   }
-  const cases={'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport};
+  const cases={'initializer-safety':initializerSafety,'memory-actions':memoryActions,'default-vs-fixture':defaultVsFixture,'no-runtime':noRuntime,'captured-retire':capturedRetire,'short-control-viewport':shortControlViewport,'dynamic-control-viewport':dynamicControlViewport,'instance-identity':instanceIdentity};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

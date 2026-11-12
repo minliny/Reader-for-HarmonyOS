@@ -11122,6 +11122,23 @@
           "qualification": "QUALIFIED"
         }
       }
+    },
+    "test-source-journey-retention.mjs": {
+      "sourceSha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e",
+      "cases": {
+        "journey-retention": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "scroll-restoration": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "tools-focus-echo": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
     }
   },
   "legacy": {

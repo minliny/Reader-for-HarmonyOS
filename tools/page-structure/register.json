@@ -44,7 +44,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "sha256": "405cdc1a02bc2263ac8f530bdc662257b736ccb2af473286b6b3bbe4d43bc641"
+        "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
       },
       "layers": {
         "route": {
@@ -508,6 +508,12 @@
               "kind": "test",
               "path": "tools/page-structure/test-source-e2-evidence.mjs",
               "symbol": "complete-targets,rejection-boundaries",
+              "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-source-journey-retention.mjs",
+              "symbol": "tools-focus-echo",
               "result": "PASS"
             }
           ],
@@ -1061,7 +1067,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "405cdc1a02bc2263ac8f530bdc662257b736ccb2af473286b6b3bbe4d43bc641"
+          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -1089,7 +1095,7 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "35c145f8392279f95c8a6b158723e01bd59d9d16f607706a3fd4a3eca6ca9547"
+          "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
         },
         {
           "path": "tools/lib/source-layout-control-probe.mjs",
@@ -1229,7 +1235,7 @@
         },
         {
           "path": "tools/test-source-journey-retention.mjs",
-          "sha256": "271a40a1b32dcd37ee7af92ea9a4f407a3d26ee2f0142a7c48d9b0305ab1391b"
+          "sha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e"
         },
         {
           "path": "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
@@ -1429,16 +1435,16 @@
         },
         {
           "path": "tools/page-structure/evidence/source-layout-matrix.json",
-          "sha256": "294349157e7a3f1747aca184c62139f8c11195d3c9e20b43d41ce0bdfb7de611"
+          "sha256": "a2b971e74a78b6253ea2df41b9afbffdacf71d7100ac7a435a77f6d63d29c001"
         },
         {
           "path": "tools/page-structure/evidence/source-interaction.json",
-          "sha256": "649a41967d21cd4e9d66b44d755d94aa4cf611bfb763d7364d2dabcf4dfe7e34"
+          "sha256": "ac4598fa9dc25898de5b178b2a17f6de7c36a977e25ff54d198219a179f6f6ef"
         }
       ],
       "layoutEvidence": {
         "path": "tools/page-structure/source-layout-evidence.json",
-        "sha256": "5ce6d60958f59fa702162f87a3f60ffa350718205c35313f87ba5a83e6c5cec1"
+        "sha256": "171c8e8fc89c1dd21d097c6600dd9c469bc6235c3787de7ac5eed32d235cc16a"
       }
     },
     {
@@ -2639,11 +2645,11 @@
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-          "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+          "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-          "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+          "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -2723,11 +2729,19 @@
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-          "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+          "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
         },
         {
           "path": "tools/test-directory-native-fixture.mjs",
-          "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+          "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+          "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+          "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
         }
       ],
       "variants": [
@@ -3882,11 +3896,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -3966,11 +3980,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -5153,11 +5175,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -5237,11 +5259,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -6397,11 +6427,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -6481,11 +6511,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -7629,11 +7667,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -7713,11 +7751,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -8783,11 +8829,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -8867,11 +8913,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -9940,11 +9994,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -10024,11 +10078,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -11184,11 +11246,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -11268,11 +11330,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -12428,11 +12498,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -12512,11 +12582,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -13582,11 +13660,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -13666,11 +13744,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -14739,11 +14825,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -14823,11 +14909,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -15995,11 +16089,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -16079,11 +16173,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -17246,11 +17348,11 @@
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets",
-                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+                "sha256": "6ea9bc0d80f87c1c0a2410c676d6a57b7eac89644b3685b74dc99936c7ac92a0"
               },
               {
                 "path": "entry/src/main/ets/pages/ReaderDirectoryStructureFixtureData.ts",
-                "sha256": "1e1e1a6071a15ec3b91ea2738f3e3f0ea0c61f6890113f553bc832b3072f25fe"
+                "sha256": "2826ce6069ef74e8f146f5ebe505759e0545868e91a1056b5d7d1b72c9109d6d"
               },
               {
                 "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
@@ -17330,11 +17432,19 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "b8a2e9d8351bb6c5221df6ae52f088136219394141d7ee16ac67205a4b07f4fc"
+                "sha256": "ce69a13312d05222b744f7d2a14a9e71dbb93fe45df74162416c179501de61c0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
-                "sha256": "626d322bb539472d8155709c56befe5555baab4627f93a0d3a29d8ea526e7169"
+                "sha256": "0fe9c66ba14f634aeca41cd8de43c45495506e5ae88df0a82106b19aca438a26"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/fixture-instance-identity.ets.txt",
+                "sha256": "7f06289cfad3574b62027f495c1de43c750fb185fc1eac2ba4470bb2e4d99494"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectorySessionState.ts",
+                "sha256": "cb1ede8c49273d8041de78adf9241a081947ff8a8f3b8e41afced87fb0af929a"
               }
             ]
           }
@@ -26651,7 +26761,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "405cdc1a02bc2263ac8f530bdc662257b736ccb2af473286b6b3bbe4d43bc641"
+          "sha256": "4250f1cb0885be18b52fc7386b844709d2f4184022faf1c9f8709a57a597cccf"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -26683,7 +26793,7 @@
         },
         {
           "path": "tools/test-source-journey-retention.mjs",
-          "sha256": "271a40a1b32dcd37ee7af92ea9a4f407a3d26ee2f0142a7c48d9b0305ab1391b"
+          "sha256": "adb02f07342f7d79982d4eaaacdc2ee1f9a5cb5a83ac557cd1a2126fa7e8d59e"
         },
         {
           "path": "tools/test-source-filter-live-selection.mjs",
@@ -26707,7 +26817,7 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "35c145f8392279f95c8a6b158723e01bd59d9d16f607706a3fd4a3eca6ca9547"
+          "sha256": "51fd9b17c2c6cabe6c0bee71351b2cc1d87c842895d95cda2de0a9cdf27bfed0"
         },
         {
           "path": "tools/page-structure/test-source-interaction-inventory.mjs",
