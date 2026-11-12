@@ -1,3 +1,4 @@
+import { readerInteractiveSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
@@ -12,11 +13,12 @@ import { resolveSourceManagementLayout, type SourceManagementLayout } from '../p
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
+import { resolveReaderLabeledIconActionSpec } from '../../../ui/controls/ReaderLabeledIconActionSpecs';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import type { SourceManagementViewState, SourceToolsEntry } from '../presentation/SourceJourneyPresentation';
-import { FrameCallback } from '@kit.ArkUI';
+import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -37,7 +39,7 @@ import {
 } from '../application/SourceGateway';
 import type { SourceManagementStatusKind, SourceManagementProjection } from '../application/SourceOrchestrator';
 import { readerSourceCategoryLabel, type ReaderSourceCategory } from '../application/ReaderSourceCategory';
-import { TYPE_SOURCE_MANAGEMENT_META } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_SOURCE_MANAGEMENT_META, TYPE_SEARCH_SOURCE_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
@@ -481,6 +483,8 @@ export struct SourceManagementPage {
         focusIdPrefix: this.groupPanelFocusPrefix(this.groupSelectionId),
         x: this.groupX - this.originX,
         y: this.groupY - this.originY,
+        hostTopVp: this.overlayTop(), hostBottomVp: this.overlayBottom(),
+        hostLeftVp: this.overlayLeft(), hostRightVp: this.overlayRight(),
         onCommit: (opt: string, identity: string): void => this.commitGroupSelection(opt, identity),
         onDismiss: (identity: string): void => this.dismissGroupSelection(identity),
       }).onAreaChange(this.groupPanelLayoutAction(this.groupSelectionId));
@@ -605,7 +609,7 @@ export struct SourceManagementPage {
   @Builder
   private originalRecovery() {
     ForEach(this.originalActionIdentities(), (identity: string) => {
-      ReaderRecoveryNotice({ view: this.originalRecoveryView(), actionLabel: '核对',
+      ReaderRecoveryNotice({ view: this.originalRecoveryView(), layoutWidthVp: this.contentFrame().width, maxHeightVp: Math.max(0, this.overlayBottom() - this.geometry.content.startInset), actionLabel: '核对',
         busy: this.operation.original?.busy === true,
         secondaryActionLabel: this.operation.original?.canRetryOriginal === true ?
           (this.operation.original?.confirmation === 'confirmed' && this.operation.original?.writeStage === 'cleanup' ? '继续清理' : '继续') : '',
@@ -624,7 +628,7 @@ export struct SourceManagementPage {
     Column() {
       if (this.operation.original?.blocked === true) { this.originalRecovery(); }
       else if (this.operation.receipt?.receipt.confirmation === 'unknown') {
-        ReaderRecoveryNotice({ view: this.recovery(), actionLabel: '核对', busy: this.statusKind === 'loading',
+        ReaderRecoveryNotice({ view: this.recovery(), layoutWidthVp: this.contentFrame().width, maxHeightVp: Math.max(0, this.overlayBottom() - contentStartInset), actionLabel: '核对', busy: this.statusKind === 'loading',
           onReconcile: this.onReconcile });
       }
     }.width('100%')
@@ -1009,8 +1013,11 @@ export struct SourceManagementPage {
   @Builder
   private sourceInfo(source: BookSource) {
       Column({ space: TOK_SPACE_XS }) {
-        Row({ space: 6 }) {
+        Flex({ direction: this.layoutBudget(source).titleStacked ? FlexDirection.Column : FlexDirection.Row,
+          alignItems: this.layoutBudget(source).titleStacked ? ItemAlign.Start : ItemAlign.Center,
+          space: { main: LengthMetrics.vp(6) } }) {
           Text(source.name)
+            .width(this.layoutBudget(source).titleStacked ? '100%' : undefined)
             .constraintSize({ minWidth: 0 }).flexShrink(1)
             .fontFamily(TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily)
             .fontWeight(TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight)
@@ -1021,15 +1028,18 @@ export struct SourceManagementPage {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(readerSourceCategoryLabel(source.category))
-            .flexShrink(0)
+            .width(this.layoutBudget(source).titleStacked ? '100%' : undefined)
+            .constraintSize({ maxWidth: '100%' })
+            .flexShrink(this.layoutBudget(source).titleStacked ? 1 : 0)
             .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily as string)
             .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight ?? 400)
             .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
             .maxFontScale(this.fontScale())
             .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
-            .maxLines(1);
-        }.width('100%').alignItems(VerticalAlign.Center);
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }.width('100%');
         Text(source.baseUrl)
           .width('100%')
           .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily as string)
@@ -1063,7 +1073,8 @@ export struct SourceManagementPage {
 
   @Builder
   private sourceActions(source: BookSource) {
-    Row({ space: TOK_SPACE_XS }) {
+    Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+      space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
       if (source.loginUrl !== undefined && source.loginUrl.trim().length > 0) {
         this.loginButton(source);
       }
@@ -1076,8 +1087,7 @@ export struct SourceManagementPage {
 
     }
     .width(this.layoutBudget(source).trailingWidth)
-    .constraintSize({ minHeight: this.layoutBudget(source).filterHeight })
-    .alignItems(VerticalAlign.Center);
+    .constraintSize({ minHeight: this.layoutBudget(source).actionsHeight });
   }
 
   @Builder
@@ -1087,7 +1097,7 @@ export struct SourceManagementPage {
       label: source.checkState === 'checking' ? '检测中' : '检测', isBusy: source.checkState === 'checking',
       actionEnabled: this.sourceDetectEnabled(source.sourceId),
       actionAccessibilityLabel: this.sourceActionLabel(source, '检测', this.sourceDetectEnabled(source.sourceId), source.checkState === 'checking'),
-      onAction: this.sourceRowCommand(source, 'check') });
+      onAction: this.sourceRowCommand(source, 'check') }).flexShrink(0);
   }
 
   @Builder
@@ -1097,7 +1107,7 @@ export struct SourceManagementPage {
       isBusy: source.checkState === 'checking',
       actionEnabled: this.sourceActionEnabled() && source.checkState !== 'checking',
       actionAccessibilityLabel: this.sourceActionLabel(source, '登录', this.sourceActionEnabled() && source.checkState !== 'checking', source.checkState === 'checking'),
-      onAction: this.sourceRowCommand(source, 'login') });
+      onAction: this.sourceRowCommand(source, 'login') }).flexShrink(0);
   }
 
   private sourceRowIsCurrent(source: BookSource, opening: string): boolean {
@@ -1127,7 +1137,7 @@ export struct SourceManagementPage {
 
   @Builder
   private statusBadge(source: BookSource) {
-    StatusBadge({ status: this.sourceBadgeStatus(source), label: this.sourceBadgeLabel(source) });
+    StatusBadge({ status: this.sourceBadgeStatus(source), label: this.sourceBadgeLabel(source) }).flexShrink(0);
   }
 
   @Builder
@@ -1137,7 +1147,7 @@ export struct SourceManagementPage {
         accessibilityLabel: `${sourceName.trim().length > 0 ? sourceName : sourceId}，启用书源${this.sourceToggleBusy() ? '，忙碌' : this.sourceActionEnabled() ? '' : '，暂不可用'}`, actionEnabled: this.sourceActionEnabled(), isBusy: this.sourceToggleBusy(),
         onToggle: (next: boolean): void => {
           if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceActionEnabled() && !this.sourceToggleBusy()) onTap(next);
-        } });
+        } }).flexShrink(0);
     }, (identity: string): string => identity);
   }
 
@@ -1164,22 +1174,25 @@ export struct SourceManagementPage {
 
   @Builder
   private bottomActionBar(identity: string = this.temporaryBackIdentity) {
-    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+    Flex({ direction: this.footerStacked() ? FlexDirection.Column : FlexDirection.Row,
+      alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(TOK_SPACE_CONTROL_INLINE) } }) {
       ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'full',
         focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
         onAction: (): void => this.requestOpenTools('footer') })
-        .layoutWeight(1)
+        .width(this.footerStacked() ? '100%' : undefined)
+        .layoutWeight(this.footerStacked() ? 0 : 1)
         .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));
-      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '新增书源',
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '新增书源', fillWidth: true,
         icon: $r('app.media.source_add'), focusId: this.importFocusId(identity, 'footer'),
         onAction: (): void => {
           if (this.mounted && identity === this.temporaryBackIdentity)
             this.onAddSource(this.importFocusId(identity, 'footer'), this.toolsFocusId('header'));
-        } });
+        } })
+        .width(this.footerStacked() ? '100%' : undefined)
+        .layoutWeight(this.footerStacked() ? 0 : 1);
     }
     .width(this.contentFrame().width)
     .constraintSize({ minHeight: this.layoutBudget().footerHeight })
-    .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
     .hitTestBehavior(HitTestMode.Transparent);
   }
@@ -1315,7 +1328,7 @@ export struct SourceManagementPage {
   }
 
   private footerFallbackHeight(): number {
-    return this.footerControlHeight() + TOK_SPACE_SM + this.actionBottomInset();
+    return this.footerActionHeight() + TOK_SPACE_SM + this.actionBottomInset();
   }
 
   private fontScale(): number {
@@ -1331,7 +1344,9 @@ export struct SourceManagementPage {
     return resolveSourceManagementLayout({ availableWidth: this.contentFrame().width, fontScale: scale,
       hasLogin: source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
       hasSummary: source?.checkMessage !== undefined && source.checkMessage.trim().length > 0 && source.checkState !== 'unchecked',
-      actionWidth: action.fixedWidth * scale, actionHeight, filterHeight: actionHeight, footerHeight: this.footerControlHeight(),
+      actionWidth: action.fixedWidth * scale, actionHeight,
+      filterHeight: Math.max(actionHeight, readerScaledControlHeight(44,
+        TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ?? TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, scale)), footerHeight: this.footerActionHeight(),
       titleLineHeight: Math.max(TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp * 1.5,
         TYPE_SOURCE_MANAGEMENT_META.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_META.fontSizeFp * 1.5),
       metaLineHeight: TYPE_SOURCE_MANAGEMENT_META.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_META.fontSizeFp * 1.5 });
@@ -1341,6 +1356,30 @@ export struct SourceManagementPage {
     const footer = resolveReaderButtonSpec('source-management-manage');
     return Math.max(48, readerScaledControlHeight(footer.height ?? 44,
       footer.text.lineHeightFp ?? footer.text.fontSizeFp * 1.5, this.fontScale()), readerScaledControlHeight(44, 20, this.fontScale()));
+  }
+
+  private footerContentWidth(): number {
+    const input = new ReaderPageGeometryInput(ReaderWindowCoordinator.metrics());
+    input.viewportWidth = this.viewportWidth;
+    input.viewportHeight = this.viewportHeight;
+    input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
+    input.contentHorizontalPadding = 19;
+    return resolveReaderPageGeometry(input).content.frame.width;
+  }
+
+  private footerStacked(): boolean {
+    const scale = this.fontScale();
+    const manage = resolveReaderButtonSpec('source-management-manage');
+    const add = resolveReaderLabeledIconActionSpec('source-management-add');
+    // Both current labels are four full-width CJK glyphs in their shared font.
+    const manageWidth = Math.ceil(manage.text.fontSizeFp * scale) * '批量管理'.length;
+    const addWidth = Math.ceil(add.text.fontSizeFp * scale) * '新增书源'.length + add.iconSize + add.gap;
+    return (this.footerContentWidth() - TOK_SPACE_CONTROL_INLINE) / 2 < Math.max(manageWidth, addWidth);
+  }
+
+  private footerActionHeight(): number {
+    const controlHeight = this.footerControlHeight();
+    return this.footerStacked() ? controlHeight * 2 + TOK_SPACE_CONTROL_INLINE : controlHeight;
   }
 
   private scrollLayout(): ReaderScrollLayout {
@@ -1358,6 +1397,27 @@ export struct SourceManagementPage {
     input.contentHorizontalPadding = 19;
     input.contentEndInset = input.footerHeight;
     this.geometry = resolveReaderPageGeometry(input);
+  }
+
+  private overlayLeft(): number {
+    return Math.min(Math.max(0, this.viewportWidth),
+      Math.max(0, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()) - this.originX));
+  }
+
+  private overlayRight(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(this.overlayLeft(), Math.min(Math.max(0, this.viewportWidth),
+      metrics.windowRect.width - readerInteractiveSafeRight(metrics) - this.originX));
+  }
+
+  private overlayTop(): number {
+    return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics(), true) - this.originY);
+  }
+
+  private overlayBottom(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(this.overlayTop(), Math.min(this.viewportHeight > 0 ? this.viewportHeight : metrics.windowRect.height,
+      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.originY));
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

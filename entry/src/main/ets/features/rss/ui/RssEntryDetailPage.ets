@@ -120,7 +120,7 @@ export struct RssEntryDetailPage {
   @Builder
   private backBar() {
     PageBackBar({
-      title: 'RSS 阅读',
+      title: 'RSS 阅读', trailingWidthVp: 94,
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 6 }) {
@@ -129,13 +129,14 @@ export struct RssEntryDetailPage {
         Stack({ alignContent: Alignment.Center }) {
           Image((this.appThemeScheme === 'night' ? $r('app.media.rss_external_theme_night') : $r('app.media.rss_external'))).width(20).height(20);
         }
-        .width(32)
-        .height(44)
+        .width(44)
+        .constraintSize({ minHeight: 44 })
         .opacity(this.hasOriginalLink() ? 1 : 0.38)
         .enabled(this.hasOriginalLink())
         .onClick((): void => this.onOpenOriginal());
       }
-      .height(44)
+      .width(94)
+      .constraintSize({ minHeight: 44 })
       .alignItems(VerticalAlign.Center);
     }
   }
@@ -148,8 +149,8 @@ export struct RssEntryDetailPage {
         .width(20)
         .height(20);
     }
-    .width(32)
-    .height(44)
+    .width(44)
+    .constraintSize({ minHeight: 44 })
     .borderRadius(16)
     .backgroundColor(this.favoriteState === 'favorited' ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('app.surface.transparent', this.appThemeScheme))
     .opacity(this.favoriteState === 'loading' ? 0.45 : 1)
@@ -193,7 +194,7 @@ export struct RssEntryDetailPage {
       ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-source-link', label: '查看源', onAction: (): void => this.onViewSource() });
     }
     .width('100%')
-    .height(58)
+    .constraintSize({ minHeight: 58 })
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
@@ -228,13 +229,13 @@ export struct RssEntryDetailPage {
       this.actionTarget('源设置', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage')), (): void => this.onSourceSettings());
     }
     .width('100%')
-    .height(44)
+    .constraintSize({ minHeight: 44 })
     .alignItems(VerticalAlign.Center);
   }
 
   @Builder
   private actionTarget(label: string, icon: Resource, action: () => void) {
-    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-entry', label, icon, onAction: action });
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-entry', fillWidth: true, label, icon, onAction: action }).layoutWeight(1);
   }
 
   @Builder
@@ -272,7 +273,7 @@ export struct RssEntryDetailPage {
         Image((this.appThemeScheme === 'night' ? $r('app.media.rss_link_theme_night') : $r('app.media.rss_link'))).width(20).height(20);
       }
       .width(28)
-      .height(28)
+      .constraintSize({ minHeight: 28 })
       .backgroundColor(readerAppColor('app.feed.actionSoft', this.appThemeScheme))
       .borderRadius(14);
 
@@ -297,7 +298,7 @@ export struct RssEntryDetailPage {
       .alignItems(HorizontalAlign.Start);
 
       Text('打开')
-        .height(28)
+        .constraintSize({ minHeight: 28 })
         .padding({ left: 9, right: 9 })
         .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
         .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
@@ -308,7 +309,7 @@ export struct RssEntryDetailPage {
         .borderRadius(999);
     }
     .width('100%')
-    .height(58)
+    .constraintSize({ minHeight: 58 })
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
@@ -320,13 +321,13 @@ export struct RssEntryDetailPage {
   @Builder
   private bottomActions() {
     Row({ space: TOK_SPACE_XS }) {
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '返回列表', primary: true, layout: 'equal', onAction: (): void => this.onBack() });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '返回列表', primary: true, layout: 'full', onAction: (): void => this.onBack() }).layoutWeight(1);
 
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '打开原文', layout: 'equal', actionEnabled: this.hasOriginalLink(), onAction: (): void => this.onOpenOriginal() });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '打开原文', layout: 'full', actionEnabled: this.hasOriginalLink(), onAction: (): void => this.onOpenOriginal() }).layoutWeight(1);
     }
     .width(this.contentFrame().width)
     .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .height(RSS_DETAIL_ACTION_AREA_HEIGHT)
+    .constraintSize({ minHeight: RSS_DETAIL_ACTION_AREA_HEIGHT })
     .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.Transparent);

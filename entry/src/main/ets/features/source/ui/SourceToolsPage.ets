@@ -1,3 +1,4 @@
+import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { LengthMetrics } from '@kit.ArkUI';
@@ -188,6 +189,9 @@ export struct SourceToolsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private sourceListWidth: number = 0;
+  @State private overlayHostWidth: number = 0;
+  @State private overlayHostHeight: number = 0;
+  @State private overlayHostY: number = 0;
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   isOpeningCurrent: (() => boolean) | undefined = undefined;
@@ -288,6 +292,11 @@ export struct SourceToolsPage {
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
       overlayContent: (contentStartInset: number): void => { this.pendingOverlay(contentStartInset); },
+    }).onAreaChange((_old: Area, next: Area): void => {
+      if (!this.mounted) return;
+      this.overlayHostWidth = readerPageAreaLength(next.width);
+      this.overlayHostHeight = readerPageAreaLength(next.height);
+      this.overlayHostY = readerPageAreaLength(next.globalPosition.y);
     });
   }
 
@@ -335,7 +344,7 @@ export struct SourceToolsPage {
   private batchCard(key: string) {
     ReaderCard({ specId: 'editor-section' }) {
       ReaderSectionHeading({ variant: 'tool-card', title: `批量管理（已选 ${this.snapshot.selectedSourceCount}/${this.snapshot.sources.length}）` });
-      Row({ space: TOK_SPACE_XS }) {
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
         this.actionButton('全选', false, !this.snapshot.busy, (): void => this.onSelectAll());
         this.actionButton('清空', false, !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
           (): void => this.onClearSelection());
@@ -345,7 +354,7 @@ export struct SourceToolsPage {
             this.confirmExportThen((): void => this.onExportSelected(selection))));
       }
       .width('100%');
-      Row({ space: TOK_SPACE_XS }) {
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
         if (this.snapshot.batchCheck.phase === 'running' || this.snapshot.batchCheck.phase === 'stopping') {
           this.actionButton(this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : '停止检测', false,
             this.snapshot.batchCheck.phase === 'running', (): void => this.onStopCheck());
@@ -423,7 +432,7 @@ export struct SourceToolsPage {
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
       }
-      Row({ space: TOK_SPACE_XS }) {
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
         this.batchCounter(`所选项通过 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
         this.batchCounter(`所选项未通过 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.status.checkError', this.appThemeScheme));
         this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.status.checkWarning', this.appThemeScheme));
@@ -462,8 +471,9 @@ export struct SourceToolsPage {
   @Builder
   private batchCounter(label: string, color: string) {
     Text(label)
-      .layoutWeight(1)
-      .height(32)
+      .width('100%')
+      .constraintSize({ minHeight: 44 })
+      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
       .textAlign(TextAlign.Center)
       .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
       .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
@@ -535,7 +545,7 @@ export struct SourceToolsPage {
   }
   @Builder
   private originalRecoveryActions(identity: string, generation: number) {
-    ReaderRecoveryNotice({ view: { visible: true, message: this.snapshot.original?.message ?? '', canRetry: true, generation },
+    ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: { visible: true, message: this.snapshot.original?.message ?? '', canRetry: true, generation },
       actionLabel: '核对', busy: this.snapshot.busy || this.snapshot.original?.busy === true,
       secondaryActionLabel: this.snapshot.original?.canRetryOriginal ?
         (this.snapshot.original.confirmation === 'confirmed' && this.snapshot.original.writeStage === 'cleanup' ? '继续清理' : '继续') : '',
@@ -549,21 +559,36 @@ export struct SourceToolsPage {
         this.originalRecoveryActions(identity, this.snapshot.original?.generation ?? 0);
       }, (identity: string): string => `source-original-recovery:${identity}`);
     } else if (this.snapshot.receipt?.receipt.confirmation === 'unknown') {
-      ReaderRecoveryNotice({ view: this.recovery(), actionLabel: '核对', busy: this.snapshot.busy, onReconcile: this.onReconcile });
+      ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: this.recovery(), actionLabel: '核对', busy: this.snapshot.busy, onReconcile: this.onReconcile });
     } else if (this.recovery().canRetry) {
       ReaderRecoveryAction({ label: '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
     }
   }
   @Builder
   private pendingOverlay(contentStartInset: number) {
-    Column() {
-      if (this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown') {
-        this.recoveryAction();
-      }
+    Scroll() {
+      Column() {
+        if (this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown') {
+          this.recoveryAction();
+        }
+      }.width('100%');
     }
-      .width('100%').padding({ left: 20, right: 20, top: contentStartInset })
-      .alignItems(HorizontalAlign.Start).hitTestBehavior(HitTestMode.Transparent);
+      .width('100%').constraintSize({ maxHeight: this.overlayAvailableHeight(contentStartInset) })
+      .scrollBar(BarState.Auto).clip(true)
+      .margin({ top: contentStartInset }).padding({ left: 20, right: 20 })
+      .hitTestBehavior(HitTestMode.Transparent);
   }
+  private overlayWidth(): number {
+    return Math.max(0, (this.overlayHostWidth > 0 ? this.overlayHostWidth : ReaderWindowCoordinator.metrics().windowRect.width) - 40);
+  }
+
+  private overlayAvailableHeight(top: number): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const height = this.overlayHostHeight > 0 ? this.overlayHostHeight : metrics.windowRect.height;
+    return Math.max(0, Math.min(height, metrics.windowRect.height -
+      readerInteractiveSafeBottom(metrics, true) - this.overlayHostY) - top);
+  }
+
   @Builder
   private statusCard() {
     if (this.snapshot.sources.length === 0 && this.snapshot.original?.blocked !== true) {
@@ -754,7 +779,7 @@ export struct SourceToolsPage {
       // The retained draft keeps its identity. Only the action row needs a new
       // V1 Builder capture when recovery changes write admission.
       ForEach([sourceEditorReadbackPending(this.snapshot.editorReadback)], (recovering: boolean): void => {
-        Row({ space: TOK_SPACE_XS }) {
+        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
           this.actionButton('取消', false, !recovering && !this.snapshot.busy &&
             this.snapshot.editorReadback?.confirmation !== 'unknown' && this.snapshot.original?.blocked !== true,
             this.editorAction(revision, 'cancel'));
@@ -763,7 +788,7 @@ export struct SourceToolsPage {
       }, (recovering: boolean): string => recovering ? 'source-editor-recovery' : 'source-editor-edit');
       if (sourceEditorReadbackPending(this.snapshot.editorReadback)) {
         this.actionButton('重新读取已保存书源', false, !this.snapshot.busy,
-          this.editorAction(revision, 'reconcile'));
+          this.editorAction(revision, 'reconcile'), false);
       }
     }
   }
@@ -869,8 +894,19 @@ export struct SourceToolsPage {
   }
 
   @Builder
-  private actionButton(label: string, primary: boolean, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: enabled, layout: 'equal', onAction: action });
+  private actionButton(label: string, primary: boolean, enabled: boolean, action: () => void, shareRow: boolean = true) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: enabled, layout: 'full', onAction: action })
+      .layoutWeight(shareRow ? 1 : undefined)
+      .constraintSize({ minWidth: shareRow ? this.actionMinimumWidth(label) : undefined, maxWidth: '100%' });
+  }
+
+  private actionMinimumWidth(label: string): number {
+    const spec = resolveReaderButtonSpec('source-tools-action');
+    const context = this.getUIContext();
+    const width = context.px2vp(context.getMeasureUtils().measureText({
+      textContent: label, fontSize: `${spec.text.fontSizeFp * this.toolsFontScale()}vp`,
+      fontFamily: spec.text.fontFamily, fontWeight: spec.text.fontWeight }));
+    return Math.max(44, Math.ceil(width) + spec.horizontalPadding * 2 + TOK_BORDER_W * 2);
   }
 
   private canWriteSources(): boolean {

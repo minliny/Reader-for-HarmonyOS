@@ -1,3 +1,6 @@
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderChoiceRow } from '../../../ui/controls/ReaderChoiceRow';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
@@ -45,6 +48,10 @@ export struct SettingsSelectOverlay {
   onSelect: (option: string, identity?: string) => void = (_option: string, _identity?: string): void => {};
   onDismiss: (identity?: string) => void = (_identity?: string): void => {};
 
+  @State private hostWidth: number = 0;
+  @State private hostHeight: number = 0;
+  @State private hostX: number = 0;
+  @State private hostY: number = 0;
   private mounted: boolean = false;
   private closed: boolean = false;
 
@@ -86,15 +93,22 @@ export struct SettingsSelectOverlay {
         this.tabletPanel();
       } else {
         Stack({ alignContent: Alignment.Bottom }) {
-          this.phoneSheet();
+          Scroll() { this.phoneSheet(); }
+            .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto).clip(true);
         }
-        .width('100%')
-        .height('100%')
+        .position({ x: this.safeLeft(), y: this.safeTop() })
+        .width(this.safeWidth())
+        .height(this.safeHeight())
         .hitTestBehavior(HitTestMode.Transparent);
       }
     }
     .width('100%')
     .height('100%')
+    .onAreaChange((_old: Area, next: Area): void => {
+      if (!this.mounted) return;
+      this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
+      this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
+    })
     .zIndex(30);
   }
 
@@ -123,7 +137,7 @@ export struct SettingsSelectOverlay {
           .fontColor(readerAppColor('app.text.heading', this.appThemeScheme));
       }
       .width('100%')
-      .height(readerScaledControlHeight(26, TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number, this.fontScale()))
+      .constraintSize({ minHeight: readerScaledControlHeight(26, TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number, this.fontScale()) })
       .padding({ left: 6, bottom: 12 })
       .alignItems(VerticalAlign.Top);
 
@@ -175,7 +189,7 @@ export struct SettingsSelectOverlay {
   private phoneOption(option: string, index: number) {
     ForEach([this.selectionId], (identity: string) => {
       ReaderChoiceRow({
-        specId: 'settings-phone', label: option, selected: this.isSelected(option),
+        specId: 'settings-phone', wrapLabel: true, label: option, selected: this.isSelected(option),
         showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
         onChoose: (value: string): void => this.choose(value, identity),
       });
@@ -184,20 +198,23 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private tabletPanel() {
+    Scroll() {
     Column() {
       ForEach(this.options, (option: string, index: number) => {
         this.tabletOption(option, index);
       }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
     }
-    .width(this.tabletSpec().width)
+    .width('100%');
+    }
+    .width(this.tabletWidth()).constraintSize({ maxHeight: Math.max(0, this.safeTop() + this.safeHeight() - this.tabletTop()) }).scrollBar(BarState.Auto)
     .backgroundColor(readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
     .border({ width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
     .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
     .shadow({ radius: this.tabletSpec().shadowRadius, color: readerAppColor(this.tabletSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.tabletSpec().shadowOffsetY })
     .position({
-      x: this.anchorRight - this.tabletSpec().width,
-      y: this.anchorBottom + this.tabletSpec().anchorOverlap,
+      x: Math.max(this.safeLeft(), Math.min(this.anchorRight - this.tabletWidth(), this.safeLeft() + this.safeWidth() - this.tabletWidth())),
+      y: this.tabletTop(),
     });
   }
 
@@ -205,11 +222,32 @@ export struct SettingsSelectOverlay {
   private tabletOption(option: string, index: number) {
     ForEach([this.selectionId], (identity: string) => {
       ReaderChoiceRow({
-        specId: 'settings-tablet', label: option, selected: this.isSelected(option),
+        specId: 'settings-tablet', wrapLabel: true, label: option, selected: this.isSelected(option),
         showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
         onChoose: (value: string): void => this.choose(value, identity),
       });
     }, (identity: string): string => identity);
+  }
+
+  private safeLeft(): number { return Math.max(0, readerInteractiveSafeLeft(readerWindowMetrics(), true) - this.hostX); }
+  private safeTop(): number { return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.hostY); }
+  private safeWidth(): number {
+    const metrics = readerWindowMetrics();
+    return Math.max(0, Math.min(this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width,
+      metrics.windowRect.width - readerInteractiveSafeRight(metrics, true) - this.hostX) - this.safeLeft());
+  }
+  private safeHeight(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    const metrics = readerWindowMetrics();
+    return Math.max(0, Math.min(this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
+      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY) - this.safeTop());
+  }
+  private tabletWidth(): number { return Math.min(this.tabletSpec().width, this.safeWidth()); }
+  private tabletTop(): number {
+    const natural = this.options.length * readerScaledControlHeight(52, 20, this.fontScale());
+    const height = Math.min(this.safeHeight(), natural);
+    return Math.max(this.safeTop(), Math.min(this.anchorBottom + this.tabletSpec().anchorOverlap,
+      this.safeTop() + this.safeHeight() - height));
   }
 
   private tabletSpec(): PopupSurfaceSpec {

@@ -1,3 +1,6 @@
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { CategorySection } from './CategorySection';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
@@ -38,6 +41,11 @@ export struct ReaderMessagePreviewPage {
   @StorageLink('readerAppForeground') @Watch('admissionChanged') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private hostWidth: number = -1;
+  @State private hostHeight: number = -1;
+  @State private hostX: number = 0;
+  @State private hostY: number = 0;
   @State private scene: MessagePreviewScene = 'none';
   @State private generation: number = 0;
   @State private batch: LocalImportBatch | undefined = undefined;
@@ -153,7 +161,12 @@ export struct ReaderMessagePreviewPage {
   build() {
     ReaderStandardPage({ variant: 'settingsGeneral', scroller: this.scroller,
       header: (): void => { this.header(); }, content: (): void => { this.content(); },
-      overlayContent: (contentStartInset: number): void => { this.previewOverlay(contentStartInset); } });
+      overlayContent: (contentStartInset: number): void => { this.previewOverlay(contentStartInset); } })
+      .onAreaChange((_old: Area, next: Area): void => {
+        if (!this.mounted) return;
+        this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
+        this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
+      });
   }
 
   @Builder
@@ -171,7 +184,7 @@ export struct ReaderMessagePreviewPage {
     }
     if (this.scene !== 'none' && !this.dialogActive() && !this.taskActive()) {
       ForEach([this.generation], (expected: number): void => {
-        ReaderButton({ label: '结束当前预览', layout: 'full', scheme: this.appThemeScheme,
+        ReaderButton({ specId: 'source-tools-action', label: '结束当前预览', layout: 'full', scheme: this.appThemeScheme,
           actionEnabled: this.admitted(), onAction: (): void => this.end(expected) });
       }, (expected: number): string => expected.toString());
     }
@@ -221,7 +234,7 @@ export struct ReaderMessagePreviewPage {
 
   @Builder
   private sampleButton(label: string, action: () => void) {
-    ReaderButton({ label, scheme: this.appThemeScheme, layout: 'full', actionEnabled: this.admitted(), onAction: action });
+    ReaderButton({ specId: 'source-tools-action', label, scheme: this.appThemeScheme, layout: 'full', actionEnabled: this.admitted(), onAction: action });
   }
 
   @Builder
@@ -238,20 +251,53 @@ export struct ReaderMessagePreviewPage {
     }, (expected: number): string => expected.toString());
   }
 
+  private noticeLeft(): number {
+    this.readerWindowMetricsRevision;
+    const metrics = readerWindowMetrics();
+    const width = this.hostWidth >= 0 ? this.hostWidth : metrics.windowRect.width;
+    const right = Math.max(0, Math.min(width, metrics.windowRect.width - readerInteractiveSafeRight(metrics) - this.hostX));
+    return Math.min(right, Math.max(0, readerInteractiveSafeLeft(metrics) - this.hostX) + 19);
+  }
+
+  private noticeWidth(): number {
+    const metrics = readerWindowMetrics();
+    const hostWidth = this.hostWidth >= 0 ? this.hostWidth : metrics.windowRect.width;
+    const right = Math.min(hostWidth, metrics.windowRect.width - readerInteractiveSafeRight(metrics) - this.hostX);
+    return Math.max(0, right - this.noticeLeft() - 19);
+  }
+
+  private noticeTop(contentStartInset: number): number {
+    const metrics = readerWindowMetrics();
+    const height = this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height;
+    const bottom = Math.max(0, Math.min(height, metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY));
+    return Math.min(bottom, Math.max(contentStartInset, readerInteractiveSafeTop(metrics, true) - this.hostY, 0));
+  }
+
+  private noticeHeight(contentStartInset: number): number {
+    const metrics = readerWindowMetrics();
+    const hostHeight = this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height;
+    const bottom = Math.min(hostHeight, metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY);
+    return Math.max(0, bottom - this.noticeTop(contentStartInset));
+  }
+
   @Builder
   private previewOverlay(contentStartInset: number) {
     if (this.noticeActive()) {
-      Column({ space: 8 }) {
-        ReaderRecoveryNotice({ view: this.noticeView(), tag: '预览', actionLabel: '核对示例',
-          secondaryActionLabel: this.scene === 'notice-long' ? '结束预览' : '', busy: this.scene === 'notice-busy',
-          onReconcile: (expected: number): void => this.reconcileNotice(expected),
-          onSecondaryAction: (expected: number): void => this.end(expected) });
-        ForEach([this.generation], (expected: number): void => {
-          ReaderButton({ label: '结束提醒预览', scheme: this.appThemeScheme, actionEnabled: this.owns(expected),
-            onAction: (): void => this.end(expected) });
-        }, (expected: number): string => expected.toString());
-      }.width('100%').padding({ left: 19, right: 19, top: contentStartInset })
-        .hitTestBehavior(HitTestMode.Transparent);
+      ForEach([this.generation], (opening: number): void => {
+        Scroll() {
+          Column({ space: 8 }) {
+            ReaderRecoveryNotice({ view: this.noticeView(), tag: '预览', actionLabel: '核对示例',
+              layoutWidthVp: this.noticeWidth(),
+              secondaryActionLabel: this.scene === 'notice-long' ? '结束预览' : '', busy: this.scene === 'notice-busy',
+              onReconcile: (expected: number): void => this.reconcileNotice(expected),
+              onSecondaryAction: (expected: number): void => this.end(expected) });
+            ReaderButton({ specId: 'source-tools-action', label: '结束提醒预览', scheme: this.appThemeScheme,
+              layout: 'full', actionEnabled: this.owns(opening), onAction: (): void => this.end(opening) });
+          }.width('100%');
+        }.width(this.noticeWidth()).constraintSize({ maxHeight: this.noticeHeight(contentStartInset) })
+          .position({ x: this.noticeLeft(), y: this.noticeTop(contentStartInset) })
+          .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Default);
+      }, (opening: number): string => `preview-notice:${opening}`);
     } else if (this.dialogActive() || this.taskActive()) {
       Column() {
         ForEach([this.generation], (expected: number): void => {
@@ -259,7 +305,7 @@ export struct ReaderMessagePreviewPage {
             Text(this.taskActive() ? '任务消息示例 · 不会导入文件' : '确认弹窗示例 · 不会执行操作')
               .layoutWeight(1).fontFamily(MESSAGE_META.fontFamily).fontSize(MESSAGE_META.fontSizeFp)
               .lineHeight(MESSAGE_META.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-            ReaderButton({ label: '结束预览', scheme: this.appThemeScheme, actionEnabled: this.owns(expected),
+            ReaderButton({ specId: 'source-tools-action', label: '结束预览', scheme: this.appThemeScheme, actionEnabled: this.owns(expected),
               onAction: (): void => this.end(expected) });
           }.width('100%').padding({ left: 19, right: 19, top: 8, bottom: 8 })
             .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));

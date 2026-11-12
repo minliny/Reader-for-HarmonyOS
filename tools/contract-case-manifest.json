@@ -659,7 +659,7 @@
       }
     },
     "test-json-import-dialog-real.mjs": {
-      "sourceSha256": "6c4f9685ee9f8fb1464ae46ecd5027a399445e192263ce2d2daa21c0d64e6812",
+      "sourceSha256": "179797dce36e568e96c0eb06b6d6d16dac4ad17f2a10e61ba2153baaeb396c5b",
       "cases": {
         "json-url-form-admission": {
           "resources": [],
@@ -677,17 +677,39 @@
       }
     },
     "test-library-search-surface-binding.mjs": {
-      "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
+      "sourceSha256": "3c2ccbfee529e34289cf1235b46442132f848bc21f1e3f28045e57c3fdcbf295",
       "cases": {
         "measured-shadow": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED",
+          "reviewedSourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
+          "qualificationHistory": {
+            "qualification": "QUALIFIED",
+            "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00"
+          },
+          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases."
         },
         "common-hit-test": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED",
+          "reviewedSourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
+          "qualificationHistory": {
+            "qualification": "QUALIFIED",
+            "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00"
+          },
+          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases."
         },
         "retained-inputs": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED",
+          "reviewedSourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
+          "qualificationHistory": {
+            "qualification": "QUALIFIED",
+            "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00"
+          },
+          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases."
+        },
+        "native-targets": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -11193,6 +11215,137 @@
           "qualification": "QUALIFIED"
         }
       }
+    },
+    "test-shelf-detail-layout-sdk.mjs": {
+      "sourceSha256": "6a0eb42b47c5f7532e44eddf229016243adcce08227238a6a4e023b3ab5d8932",
+      "cases": {
+        "shelf-selection-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "shelf-projection-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-action-target": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-notice-width": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "management-parent-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "shelf-list-residual-lane": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "shelf-filter-action-target": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-control-layout-budget.mjs": {
+      "sourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "cases": {
+        "admission-sdk": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "module-minimum-budget": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "native-targets-sdk": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-tts-sdk": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "header-home-sdk": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "brightness-sdk": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-secondary-layout-repairs.mjs": {
+      "sourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "cases": {
+        "select-host": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "actions-tools-rules": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "recovery-overlays": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "retained-and-settings": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "download-chapter-width": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-directory-rules-targets.mjs": {
+      "sourceSha256": "f10d8b04db4398a6653a37472d92e6432acc862eff8ba7c5f70b33a12f932679",
+      "cases": {
+        "directory-rules": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-source-management-safe-frame.mjs": {
+      "sourceSha256": "2b6a72ebc896f2d1b84d2eba158f8843546af41278b696fa2ee1ad4d334ad2b7",
+      "cases": {
+        "safe-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-source-owner-retention.mjs": {
+      "sourceSha256": "9182214807b2f6f5d44d6c573ad05525d3d3ac101a7e0e9f93b934c8c6ac855f",
+      "cases": {
+        "check-identity": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "tools-retention": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "editor-conflict": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-source-management-layout.mjs": {
+      "sourceSha256": "8435534006dc8b418694eaecd2aa1ce1f780beabadecf5cf830a72bdec7a2503",
+      "cases": {
+        "matrix": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
     }
   },
   "legacy": {
@@ -11604,11 +11757,10 @@
       "basis": {
         "reviewedCostType": "sdk-transpile",
         "prerequisites": [
-          "Node",
-          "Harmony SDK",
-          "真实MotionSpec/Timeline",
-          "fake nativeproperty",
-          "真实Bezier函数"
+          "Node.js with the TypeScript/module APIs consumed by the selected test",
+          "Installed Harmony ETS compiler and property-runtime source selected by tools/lib/tool-environment.mjs",
+          "Local production sources and sibling Reader-UI theme registry consumed by the declared helpers",
+          "Actual current MotionSpec/Timeline and Bezier fixture with finite native property hooks"
         ],
         "scope": "书架viewmotion alpha/分组渲染/actor重用或隐式details输入gates/最终reset方法修改时按需。"
       },

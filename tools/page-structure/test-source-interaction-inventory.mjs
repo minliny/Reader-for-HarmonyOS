@@ -113,6 +113,9 @@ if (selected.includes('inventory')) {
 }
 
 if (selected.includes('sdk-targets')) {
+  const { ReaderWindowMetricsSnapshot, ReaderRectVp, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+    readerInteractiveSafeTop, readerInteractiveSafeBottom } = await import('../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const searchGeometry = await import('../../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
   const { selectedProductionMethods, selectedProductionValues } = await import('../lib/selected-production-methods.mjs');
   const { readerSelectMenuWidth, readerSelectAvailableWidth } = await import('../../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts');
   const { foundationControls, readerFoundationTokens } = await import('../lib/reader-foundation-control-probe.mjs');
@@ -212,18 +215,23 @@ if (selected.includes('sdk-targets')) {
 
     const properties = createArkUIPropertyRuntimeProbe();
     const search = createReaderBuilderProbe(read(common('ReaderSearchField')), boundedMembers(read(common('ReaderSearchField'))),
-      { ...properties.sdk, ...readerFoundationTokens, ...readerTypographyRoles, ...accessibility, ...searchInputTarget, ...sizing,...areaHelpers,
+      { ...properties.sdk, ...readerFoundationTokens, ...readerTypographyRoles, ...accessibility, ...searchInputTarget, ...sizing,...areaHelpers, ...searchGeometry,
         readerWindowMetrics:()=>metrics, ReaderWindowCoordinator:{metrics:()=>metrics},readerAppColor,TextInputController:class{} }, properties.hooks).owner;
     const edits = []; let submits = 0;
     Object.assign(search, { variant: 'sourceManagement', mode: 'live', text: '书源', mounted: true, submitEnabled: true,
+      readerWindowMetricsRevision: 1,
       placeholder: '搜索书源名称或域名', accessibilityLabel: '搜索书源名称或域名', appThemeScheme: 'day',
       onTextChange: v => edits.push(v), onSubmit: () => submits++ });
     search.autoLineHeightField();
     const input = [...search.nodes.values()].find(n => n.type === 'TextInput');
-    assert.equal(input.height, 42); assert.deepEqual(input.responseRegion, { x: 0, y: -1, width: '100%', height: 44 });
+    const sourceStyle = readerTypographyRoles.TYPE_SEARCH_SOURCE_INPUT;
+    const queryFieldHeight = sizing.readerScaledControlHeight(44, sourceStyle.lineHeightFp ?? sourceStyle.fontSizeFp * 1.5, scale);
+    assert.equal(input.height, queryFieldHeight - 2);
+    assert.deepEqual(input.responseRegion, accessibility.readerActionTouchRegion('100%', input.height));
+    assert.equal(input.maxFontScale, scale, 'source query follows the actual current window font scale');
     input.onChange('new'); input.onSubmit(); assert.deepEqual(edits, ['new']); assert.equal(submits, 1);
     search.mounted = false; input.onChange('old'); input.onSubmit(); assert.deepEqual(edits, ['new']); assert.equal(submits, 1);
-    record('query-input', width, scale, input, { boundary: '42vp glyph carrier, authored 44vp response; native parent clipping/focus not proved' });
+    record('query-input', width, scale, input, { boundary: 'growing field pays both border edges; actual input response reserves at least44; native parent clipping/focus not proved' });
     search.variant = 'readerDirectory'; search.autoLineHeightField();
     const otherInput = [...search.nodes.values()].filter(n => n.type === 'TextInput').at(-1);
     const directoryHeight=sizing.readerScaledControlHeight(44,24,scale);
@@ -256,7 +264,7 @@ if (selected.includes('sdk-targets')) {
       {...directHooks,childSources:{ReaderIconButton:read(common('ReaderIconButton')),ReaderSearchField:read(common('ReaderSearchField'))}}).owner;
     let imports=0;
     Object.assign(direct,{mounted:true,temporaryBackIdentity:'source-current',searchInputRevision:0,appThemeScheme:'day',searchQuery:'',
-      contentFrame:()=>({width:width-38}),layoutBudget:()=>({filterHeight:sizing.readerScaledControlHeight(44,20,scale)}),onAddSource:()=>imports++});
+      contentFrame:()=>({width:width-38}),layoutBudget:()=>({filterHeight:queryFieldHeight}),onAddSource:()=>imports++});
     direct.searchField();
     const directNodes=icons.nodes(direct),importFrame=hit(directNodes,'search-import');
     assert.equal(directTree.remaining(),0,'actual searchField/child create-pop are balanced');
@@ -303,11 +311,15 @@ if (selected.includes('sdk-targets')) {
     record('group-trigger', width, scale, trigger, { parentWidthMinimum:sourceWidths.groupSelectWidth(), parentBasis:'actual Source groupSelectWidth/filterControlWidth compact allocation', boundary: 'native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim' });
 
     const overlayProps = createArkUIPropertyRuntimeProbe(); class PanelPort { constructor(owner, params, storage, id) { Object.assign(this, params, { owner, id }); } }
-    const overlay = createReaderBuilderProbe(read(pagePath), ['groupOverlay','groupCloseAction','ownsGroupSelection','managementOpeningIsCurrent','requestGroupClose','cancelGroupFocus','groupPanelLayoutAction','groupPanelFocusPrefix'],
-      { ...overlayProps.sdk, ReaderSelectPanel: PanelPort },
+    const overlayMetrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 844));
+    const overlay = createReaderBuilderProbe(read(pagePath), ['groupOverlay','groupCloseAction','ownsGroupSelection','managementOpeningIsCurrent','requestGroupClose','cancelGroupFocus','groupPanelLayoutAction','groupPanelFocusPrefix',
+      'overlayLeft','overlayRight','overlayTop','overlayBottom'],
+      { ...overlayProps.sdk, ReaderSelectPanel: PanelPort, ReaderWindowCoordinator: { metrics: () => overlayMetrics },
+        readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom },
       { ...overlayProps.hooks, childSources: { ReaderSelectPanel: read(common('ReaderSelectPanel')) } }).owner;
     Object.assign(overlay, { mounted: true, groupOpen: true, groupClosing: false, groupSelectionId: 'opening:1',
-      groupValue: '全部分组', groupOptions: () => ['全部分组', '分组A'], groupSelectWidth: () => width - 110 });
+      groupValue: '全部分组', groupOptions: () => ['全部分组', '分组A'], groupSelectWidth: () => width - 110,
+      viewportWidth: width, viewportHeight: 844, originX: 0, originY: 0 });
     overlay.groupOverlay(); const dismiss = hit([...overlay.nodes.values()], 'outside-dismiss');
     assert.equal(dismiss.width, '100%'); assert.equal(dismiss.height, '100%');
     overlay.groupSelectionId = 'opening:2'; dismiss.onClick(); assert.equal(overlay.groupClosing, false);
@@ -329,6 +341,7 @@ if (selected.includes('recovery-targets')) {
       tag: '待处理', actionLabel: '核对', secondaryActionLabel: '继续', clipped: true, expanded: false,
       onReconcile: g => { assert.equal(g, 7); reconciles++; }, onSecondaryAction: g => { assert.equal(g, 7); continues++; } });
     assert.equal(notice.actionsHeight, 44, 'unmeasured recovery lane reserves actual minimum height');
+    notice.aboutToAppear();
     notice.initialRender();
     const actions = sdk.walk(notice).filter(a => a instanceof sdk.deps.ReaderRecoveryAction);
     assert.equal(actions.length, 3);
@@ -346,15 +359,18 @@ if (selected.includes('recovery-targets')) {
     const staleExpand = [...expandAction.nodes.values()].find(n => n.onClick).onClick;
     assert.equal(expandAction.generation, 7, 'expansion carries the current notice generation, never default zero');
     notice.view = { ...notice.view, generation: 8 };
-    staleExpand(); assert.equal(notice.expanded, true, 'old generation7 expand cannot toggle successor notice8');
+    const successorExpanded = notice.expanded;
+    staleExpand(); assert.equal(notice.expanded, successorExpanded, 'old generation7 expand cannot toggle successor notice8');
     // Current8 uses the same shipping Action and original notice callback;
     // this independently mounted leaf is a current physical callback, without
     // pretending the test runtime implements native removal/reconciliation.
     const currentExpand = sdk.consumer(read(common('ReaderRecoveryAction')));
-    Object.assign(currentExpand, { variant: 'notice', label: '收起', generation: 8,
+    Object.assign(currentExpand, { variant: 'notice', label: '展开', generation: 8,
       onReconcile: expandAction.onReconcile }); currentExpand.initialRender();
     const currentExpandClick = sdk.nodes(currentExpand).find(n => n.onClick).onClick;
-    currentExpandClick(); assert.equal(notice.expanded, false, 'current generation8 can collapse its own notice');
+    currentExpandClick(); assert.equal(notice.expanded, !successorExpanded, 'current generation8 controls its own notice');
+    if (notice.expanded) currentExpandClick();
+    assert.equal(notice.expanded, false, 'current generation8 can collapse its own notice');
     notice.view = { ...notice.view, visible: false };
     currentExpandClick(); assert.equal(notice.expanded, false, 'invisible notice rejects retained expand/collapse action');
     notice.view = { ...notice.view, visible: true };
@@ -405,6 +421,7 @@ if (selected.includes('recovery-targets')) {
       Object.assign(branch, { view: { message: '原操作', visible: true, canRetry: state.canRetry, generation: 9 },
         actionLabel: state.actionLabel, secondaryActionLabel: state.secondaryActionLabel,
         busy: state.busy, clipped: state.clipped, onReconcile: () => calls++, onSecondaryAction: () => calls++ });
+      branch.aboutToAppear();
       branch.initialRender();
       const branchActions = branchSdk.walk(branch).filter(a => a instanceof branchSdk.deps.ReaderRecoveryAction);
       assert.equal(branchActions.length, state.count, state.label);
@@ -429,14 +446,136 @@ if (selected.includes('recovery-targets')) {
 }
 
 if (selected.length) {
-  const inputPaths = [inventoryPath, pagePath, ...new Set(inventory.targets.map(t => t.drawHost.path)),
-    common('ReaderControlSpecs'), 'entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts', 'entry/src/main/ets/ui/foundation/ReaderTypography.ets', 'tools/lib/selected-production-methods.mjs', common('ReaderToggle'),common('ReaderChoiceRow'), common('ReaderSelect'), common('ReaderSelectPanel'),
-    common('ReaderRecoveryNotice'), common('ReaderPageState'), common('ReaderActionAccessibility'),
-    'entry/src/main/ets/ui/layout/ReaderPageShell.ts','entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',
-    'tools/page-structure/test-source-interaction-inventory.mjs','tools/fixtures/reader-control-native-tree.mjs',
-    'tools/lib/reader-foundation-control-probe.mjs','tools/lib/reader-labeled-icon-action-probe.mjs','tools/lib/reader-icon-button-probe.mjs',
-    'tools/lib/reader-choice-row-probe.mjs','tools/lib/reader-switch-control-probe.mjs','tools/lib/reader-control-builder-probe.mjs',
-    'tools/lib/bounded-surface-sdk-probe.mjs','tools/lib/arkui-property-runtime-probe.mjs'];
+  const inputPaths = [
+    inventoryPath, pagePath, ...new Set(inventory.targets.map(target => target.drawHost.path)),
+    'entry/src/main/ets/app/BookRequestScheduler.ts',
+    'entry/src/main/ets/app/ErrorMessage.ts',
+    'entry/src/main/ets/app/LogPrivacy.ts',
+    'entry/src/main/ets/app/ReaderOperationFacts.ts',
+    'entry/src/main/ets/app/ReaderRecoveryProjection.ts',
+    'entry/src/main/ets/app/ReaderStartupTrace.ts',
+    'entry/src/main/ets/app/ReaderWriteEvidence.ts',
+    'entry/src/main/ets/app/composition/JsonImportPresentation.ets',
+    'entry/src/main/ets/app/composition/ReaderSourceSwitchActions.ets',
+    'entry/src/main/ets/app/library/BookAcquisitionPresentation.ts',
+    'entry/src/main/ets/app/library/BookAuthorMetadata.ts',
+    'entry/src/main/ets/app/library/BookSearchTiming.ts',
+    'entry/src/main/ets/app/navigation/ReaderNavigation.ts',
+    'entry/src/main/ets/features/bookshelf/application/BookshelfReadOwner.ts',
+    'entry/src/main/ets/features/bookshelf/application/BookshelfReadableAdmissionOwner.ts',
+    'entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts',
+    'entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts',
+    'entry/src/main/ets/features/downloads/ui/DownloadTypography.ets',
+    'entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts',
+    'entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts',
+    'entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts',
+    'entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts',
+    'entry/src/main/ets/features/manga/ui/MangaDirectoryEntryRow.ets',
+    'entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts',
+    'entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts',
+    'entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts',
+    'entry/src/main/ets/features/reading/application/ReaderDirectoryBackfill.ts',
+    'entry/src/main/ets/features/reading/application/ReaderDirectoryDisplayMetadata.ts',
+    'entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts',
+    'entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts',
+    'entry/src/main/ets/features/reading/presentation/ReaderBookmarkAnchorRequest.ts',
+    'entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts',
+    'entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts',
+    'entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts',
+    'entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts',
+    'entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets',
+    'entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts',
+    'entry/src/main/ets/features/reading/presentation/ReadingOfflineFailurePresentation.ts',
+    'entry/src/main/ets/features/reading/ui/ReaderControlSwitchTrack.ets',
+    'entry/src/main/ets/features/source/application/ReaderSourceCategory.ts',
+    'entry/src/main/ets/features/source/application/SourceSwitchGateway.ts',
+    'entry/src/main/ets/features/source/presentation/SourceSwitchPresentation.ets',
+    'entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts',
+    'entry/src/main/ets/features/source/ui/SourceManagementPage.ets',
+    'entry/src/main/ets/ui/chrome/PageBackBar.ets',
+    'entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',
+    'entry/src/main/ets/ui/controls/ReaderButton.ets',
+    'entry/src/main/ets/ui/controls/ReaderChoiceRow.ets',
+    'entry/src/main/ets/ui/controls/ReaderControlSpecs.ets',
+    'entry/src/main/ets/ui/controls/ReaderFormField.ets',
+    'entry/src/main/ets/ui/controls/ReaderFormRow.ets',
+    'entry/src/main/ets/ui/controls/ReaderIconButton.ets',
+    'entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets',
+    'entry/src/main/ets/ui/controls/ReaderLabeledIconActionSpecs.ets',
+    'entry/src/main/ets/ui/controls/ReaderSearchField.ets',
+    'entry/src/main/ets/ui/controls/ReaderSectionHeading.ets',
+    'entry/src/main/ets/ui/controls/ReaderSegmentedControl.ets',
+    'entry/src/main/ets/ui/controls/ReaderSelect.ets',
+    'entry/src/main/ets/ui/controls/ReaderSelectPanel.ets',
+    'entry/src/main/ets/ui/controls/ReaderToggle.ets',
+    'entry/src/main/ets/ui/feedback/ReaderPageState.ets',
+    'entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets',
+    'entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets',
+    'entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts',
+    'entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets',
+    'entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts',
+    'entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts',
+    'entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts',
+    'entry/src/main/ets/ui/foundation/ReaderLayoutTokens.ts',
+    'entry/src/main/ets/ui/foundation/ReaderMessageStyle.ets',
+    'entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets',
+    'entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts',
+    'entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts',
+    'entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts',
+    'entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',
+    'entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts',
+    'entry/src/main/ets/ui/foundation/ReaderTokens.ets',
+    'entry/src/main/ets/ui/foundation/ReaderTypography.ets',
+    'entry/src/main/ets/ui/foundation/ReaderWindowEnvironment.ts',
+    'entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts',
+    'entry/src/main/ets/ui/layout/ReaderFloatingBarMetrics.ts',
+    'entry/src/main/ets/ui/layout/ReaderPageNativeAttributes.ets',
+    'entry/src/main/ets/ui/layout/ReaderPageShell.ts',
+    'entry/src/main/ets/ui/layout/ReaderRaisedShape.ts',
+    'entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts',
+    'entry/src/main/ets/ui/surfaces/ReaderActionMenuSurface.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceActions.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderCard.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderCardSpecs.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderPanelFrame.ets',
+    'entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets',
+    'entry/vendor/core-harmony/sdk/reader_core.ts',
+    'scripts/lib/development-environment.mjs',
+    'scripts/lib/harmony-toolchain.mjs',
+    'tools/fixtures/reader-control-native-tree.mjs',
+    'tools/lib/arkui-property-runtime-probe.mjs',
+    'tools/lib/bookshelf-operation-owner-probe.mjs',
+    'tools/lib/bounded-surface-sdk-probe.mjs',
+    'tools/lib/contract-case-selection.mjs',
+    'tools/lib/ets-compiler-runtime.mjs',
+    'tools/lib/ets-pure-module-probe.mjs',
+    'tools/lib/execution-input-trace.mjs',
+    'tools/lib/json-import-presentation-probe.mjs',
+    'tools/lib/manga-directory-entry-row-probe.mjs',
+    'tools/lib/manga-directory-press-feedback-probe.mjs',
+    'tools/lib/reader-choice-row-probe.mjs',
+    'tools/lib/reader-control-builder-probe.mjs',
+    'tools/lib/reader-directory-operations-probe.mjs',
+    'tools/lib/reader-foundation-control-probe.mjs',
+    'tools/lib/reader-icon-button-probe.mjs',
+    'tools/lib/reader-labeled-icon-action-probe.mjs',
+    'tools/lib/reader-page-builder-slots.mjs',
+    'tools/lib/reader-page-shell-runtime-probe.mjs',
+    'tools/lib/reader-press-feedback-probe.mjs',
+    'tools/lib/reader-switch-control-probe.mjs',
+    'tools/lib/reader-tokens-probe.mjs',
+    'tools/lib/reader-typography-probe.mjs',
+    'tools/lib/reader-window-environment-probe.mjs',
+    'tools/lib/reading-entry-presentation-probe.mjs',
+    'tools/lib/selected-production-methods.mjs',
+    'tools/lib/source-switch-presentation-probe.mjs',
+    'tools/lib/tool-environment.mjs',
+    'tools/page-structure/lib.mjs',
+    'tools/page-structure/source-interaction-inventory.json',
+    'tools/page-structure/test-source-interaction-inventory.mjs',
+  ];
   const report = { schemaVersion: '1.0', pageId: inventory.pageId, command: { entry: 'tools/page-structure/test-source-interaction-inventory.mjs', cases: selected },
     inputs: [...new Set(inputPaths)].map(path => ({ path, sha256: createHash('sha256').update(read(path)).digest('hex') })),
     templateIds: inventory.targets.map(t => t.id), targetTemplates: inventory.targets.length, records,

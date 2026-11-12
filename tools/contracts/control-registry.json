@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 13,
+  "revision": 14,
   "controls": [
     {
       "controlId": "page-back",
@@ -909,6 +909,14 @@
         {
           "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
           "symbol": "queryStacked"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
+          "symbol": "showDirectoryRules"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
+          "symbol": "directoryRulesFocusId"
         }
       ],
       "states": [
@@ -2926,6 +2934,230 @@
       "accessibleNameSource": "清除搜索; prefix tool and filtered-empty recovery delegate the same current local query owner",
       "status": "partial",
       "knownGap": "Actual prefix clear44 and existing PageState recovery use current presentation/source/book/view guards. SDK actions/old-callback retirement pass; native hit/scroll/focus remains NOT_RUN."
+    },
+    {
+      "controlId": "directory-rules-pattern",
+      "owner": "ReaderFormField",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderFormField.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "规则${rule.id}匹配表达式",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-level",
+      "owner": "ReaderFormField",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderFormField.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "规则${rule.id}层级",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-boundary",
+      "owner": "ReaderInlineSelect",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderInlineSelect.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "current boundary value and four option labels",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-delete",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "删除",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-add",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "添加规则",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-preview",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "预览",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-apply",
+      "owner": "ReaderButton",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "应用",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "directory-rules-recovery",
+      "owner": "ReaderRecoveryAction",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets",
+          "symbol": "build"
+        },
+        {
+          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+          "symbol": "build"
+        }
+      ],
+      "states": [
+        "idle",
+        "busy",
+        "disabled"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "重新读取规则 / 刷新当前目录",
+      "status": "partial",
+      "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
     }
   ]
 }

@@ -49,7 +49,8 @@ export struct ReaderSearchHistoryPanel {
     const context = this.getUIContext();
     const measured = context.px2vp(context.getMeasureUtils().measureText(options));
     if (!Number.isFinite(measured) || measured < 0) return Number.NaN;
-    const width = Math.ceil(measured) + spec.horizontalPadding * 2 + (spec.hasBorder ? TOK_BORDER_W * 2 : 0);
+    const width = Math.max(spec.minWidth ?? 0,
+      Math.ceil(measured) + spec.horizontalPadding * 2 + (spec.hasBorder ? TOK_BORDER_W * 2 : 0));
     if (this.measuredWidths.size >= 128) this.measuredWidths.clear();
     this.measuredWidths.set(keyword, width);
     return width;
@@ -77,7 +78,7 @@ export struct ReaderSearchHistoryPanel {
             Text('清空').fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily).fontSize(11).lineHeight(16)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
             }
-          }.height(this.geometry.headingHeight).padding({ left: 4, right: 4, top: 0, bottom: 0 })
+          }.constraintSize({ minWidth: 44 }).height(this.geometry.headingHeight).padding({ left: 4, right: 4, top: 0, bottom: 0 })
             .backgroundColor(Color.Transparent).borderRadius(0)
             .enabled(this.actionsEnabled())
             .hitTestBehavior(this.actionsEnabled() ? HitTestMode.Default : HitTestMode.None)
@@ -102,7 +103,7 @@ export struct ReaderSearchHistoryPanel {
           Row({ space: this.geometry.gap }) {
             ForEach(row.chips, (chip: SearchHistoryChip) => {
               ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: chip.keyword,
-                layout: 'intrinsic', actionEnabled: this.actionsEnabled(),
+                layout: 'full', actionEnabled: this.actionsEnabled(),
                 actionAccessibilityLabel: `搜索${chip.keyword}`, onAction: (): void => this.onSelect(chip.keyword) })
                 .width(chip.width).height(this.geometry.buttonHeight);
             }, (chip: SearchHistoryChip): string => `history:${chip.keyword}`);

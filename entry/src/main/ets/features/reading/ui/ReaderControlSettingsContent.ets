@@ -6,7 +6,8 @@ import { sampleReaderControlMotionPresentation, ReaderControlMotionClipCache, re
   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
 import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
-  type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
+  readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,
+  type ReaderControlMorphScrollPath, type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
@@ -59,6 +60,9 @@ export struct ReaderControlSettingsContent {
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   @Prop fullViewportHeight: number = 666;
   private scroller: Scroller = new Scroller();
+  private minimumQuickScrollOffset: number = 0;
+  private minimumScrollPath: ReaderControlMorphScrollPath | undefined = undefined;
+  private minimumLastProgress: number = 0;
   private clipCache: ReaderControlMotionClipCache<PathShape | RectShape> = new ReaderControlMotionClipCache<PathShape | RectShape>(
     (path: string): PathShape => new PathShape().commands(path),
     (): RectShape => new RectShape().width('100%').height('100%'));
@@ -131,10 +135,32 @@ export struct ReaderControlSettingsContent {
   private scrollContentHeight(): number {
     return Math.max(this.geometry().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
   }
-  private onMotionChanged(): void { this.syncMorphScroll(); }
+  private onMotionChanged(): void {
+    const p = this.p();
+    if (this.minimumLastProgress === 0 && p > 0 && this.minimumQuickScrollOffset > 0)
+      this.minimumScrollPath = readerControlMorphScrollPath(0, this.minimumQuickScrollOffset);
+    this.minimumLastProgress = p;
+    this.syncMorphScroll();
+  }
   private syncMorphScroll(): void {
     const offset = this.scroller.currentOffset()?.yOffset;
     if (offset === undefined || !Number.isFinite(offset)) return;
+    const path = this.minimumScrollPath;
+    if (path !== undefined) {
+      const target = sampleReaderControlMorphScrollPath(path, this.p());
+      this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
+      if (Math.abs(offset - target) > .1) this.scroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
+      if (this.interactionEnabled && (this.p() === 0 || this.p() === 1)) {
+        this.minimumQuickScrollOffset = this.p() === 0 ? path.quickOffset : 0;
+        this.minimumScrollPath = undefined;
+      }
+      return;
+    }
+    if (this.quickMinimumScrollPresentation()) {
+      this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
+      this.minimumQuickScrollOffset = offset;
+      return;
+    }
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
       this.interactionEnabled, offset);
     this.scrollMotion = update.state;
@@ -148,14 +174,28 @@ export struct ReaderControlSettingsContent {
     if (offset === undefined || !Number.isFinite(offset)) return;
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
       offset, this.fullInput());
+    if (this.quickMinimumScrollPresentation()) this.minimumQuickScrollOffset = offset;
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
+    if (this.quickMinimumScrollInput() || (this.minimumScrollPath !== undefined && source === ScrollSource.SCROLLER))
+      return { xOffset: 0, yOffset: y };
     return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.scrollMotion,
       this.fullInput(), source === ScrollSource.SCROLLER) ? y : 0 };
   }
   private sharedScrollTranslation(): number {
+    if (this.minimumScrollPath !== undefined) return this.scrollMotion.nativeScrollOffset -
+      sampleReaderControlMorphScrollPath(this.minimumScrollPath, this.p());
+    if (this.quickMinimumScrollPresentation()) return 0;
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress);
   }
+  private quickMinimumScrollInput(): boolean {
+    return this.interactionEnabled && this.quickMinimumScrollPresentation();
+  }
+
+  private quickMinimumScrollPresentation(): boolean {
+    return this.p() === 0 && this.geometry().contentHeight > this.availableHeight + .1;
+  }
+
   private fullOnlyScrollTranslation(): number {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
   }
@@ -243,7 +283,7 @@ export struct ReaderControlSettingsContent {
     }
     .width(this.availableWidth).height(this.availableHeight)
     .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
-    .enableScrollInteraction(this.fullInput())
+    .enableScrollInteraction(this.fullInput() || this.quickMinimumScrollInput())
     .onAppear((): void => this.syncMorphScroll())
     .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
       this.nativeScrollDelta(y, source))

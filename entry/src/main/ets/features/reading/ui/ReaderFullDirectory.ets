@@ -421,6 +421,7 @@ export struct ReaderFullDirectory {
       Column({ space: 8 }) {
         this.directoryRulesNotice(identity, this.directoryRulesRecovery);
         ReaderDirectoryRules({ bookId,
+          availableWidthVp: this.panelWidth(), availableHeightVp: this.panelViewportHeight(),
           interactionEnabled: this.directoryRulesVisible && this.interactive,
           focusTargetId: this.directoryRulesFocusId(identity, true),
           isPresentationCurrent: (): boolean => this.directoryRulesCurrent(identity, bookId),

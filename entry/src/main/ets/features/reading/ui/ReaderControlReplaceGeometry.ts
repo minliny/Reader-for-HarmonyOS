@@ -111,7 +111,7 @@ export function sampleReaderControlReplace(progress: number, availableWidth: num
     toolbarColumns: f?.toolbarColumns ?? 3,
     toolbarCellHeight: readerControlLerp(40, f?.toolbarCellHeight ?? 40, p), rowGap: readerControlLerp(0, 7, p),
     rowPadding: readerControlLerp(5, 13, p),
-    toggleWidth: readerControlLerp(27, 44, p), toggleHeight: readerControlLerp(16, 24, p),
+    toggleWidth: 44, toggleHeight: readerControlLerp(16, 24, p),
     thumbSize: readerControlLerp(12, 20, p),
     back: sampleReaderControlActor(readerControlActor(10.1, 14.55, q?.backWidth ?? 51, qBackHeight),
       readerControlActor(10.1, 28.55, 51, 24, 0), p),

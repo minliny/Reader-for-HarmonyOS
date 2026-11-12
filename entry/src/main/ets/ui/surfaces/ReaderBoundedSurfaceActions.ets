@@ -56,7 +56,7 @@ export struct ReaderBoundedSurfaceActions {
         .padding({ left: 18, right: 18, top: 16, bottom: 16 });
     } else {
       Row({ space: 8 }) { this.textAction('cancel'); this.textAction('primary'); }
-        .width('100%').height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp))
+        .width('100%').height(this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp))
         .flexShrink(0);
     }
   }
@@ -128,7 +128,7 @@ export struct ReaderBoundedSurfaceActions {
         Text('取消').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string)
           .fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Center);
-        }.layoutWeight(1).height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.lineHeightFp)).padding(0).borderRadius(6)
+        }.layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.lineHeightFp)).padding(0).borderRadius(6)
           .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
           .enabled(this.cancelEnabled).accessibilityText('取消').onClick((): void => this.dispatch(id));
@@ -137,7 +137,7 @@ export struct ReaderBoundedSurfaceActions {
         Text(this.primaryLabel).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string)
           .fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)
           .fontColor(readerAppColor('app.replace.onToolbarAction', this.appThemeScheme)).textAlign(TextAlign.Center);
-        }.layoutWeight(1).height(this.scaledHeight(36, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp)).padding(0).borderRadius(6)
+        }.layoutWeight(1).height(this.scaledHeight(44, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp)).padding(0).borderRadius(6)
           .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .enabled(this.primaryEnabled).accessibilityText(this.primaryLabel).onClick((): void => this.dispatch(id));
       }

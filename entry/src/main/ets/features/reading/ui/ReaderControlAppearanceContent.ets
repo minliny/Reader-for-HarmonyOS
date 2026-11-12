@@ -228,10 +228,10 @@ export struct ReaderControlAppearanceContent {
     if (this.minimumPublishedIdentity.length > 0 && this.minimumPublishedIdentity !== identity)
       this.onMinimumMeasurerReady(this.minimumPublishedIdentity, undefined);
     this.minimumPublishedIdentity = identity;
-    if (this.expandedLayout || identity.length === 0) return;
+    if (identity.length === 0) return;
     const measurer: ReaderControlModuleMeasurer = (widths: ReaderControlCandidateWidths,
       key: string): ReaderControlModuleMinimum | undefined => {
-      if (!this.feedbackMounted || this.expandedLayout || this.minimumIdentity !== identity ||
+      if (!this.feedbackMounted || this.minimumIdentity !== identity ||
         generation !== this.minimumMeasurerGeneration) return undefined;
       const separator = key.lastIndexOf('|');
       const ticket = separator >= 0 ? key.slice(0, separator) : key;
@@ -252,7 +252,6 @@ export struct ReaderControlAppearanceContent {
   }
 
   private minimumProfile(): ReaderControlAppearanceMinimumProfile | undefined {
-    if (this.expandedLayout) return undefined;
     const measured = this.minimumProfiles.get(this.minimumKey);
     return measured?.profile ?? this.acceptedMinimum;
   }
@@ -398,7 +397,8 @@ export struct ReaderControlAppearanceContent {
     const minimum = this.minimumProfile();
     return this.themeIds().length > 8 || this.fontIds().length > 9 || (minimum !== undefined &&
       (Math.ceil(this.themeIds().length / minimum.quickThemeColumns) > 2 ||
-        Math.ceil((this.fontIds().length - 1) / minimum.quickFontColumns) > 2));
+        Math.ceil((this.fontIds().length - 1) / minimum.quickFontColumns) > 2 ||
+        this.frame().quickContentHeight > this.availableHeight));
   }
   private scrollInput(): boolean { return this.extendedThemes() ? this.sharedInput() : this.fullInput(); }
   private scrollContentHeight(): number {
@@ -698,15 +698,15 @@ export struct ReaderControlAppearanceContent {
           color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: 8.25, y: 2 })
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
-    }.width(62.5).height(24);
-    }.width(62.5).height(24).padding(0).backgroundColor(Color.Transparent).borderRadius(8)
+    }.width(62.5).height(this.frame().themeSwatches[index].height);
+    }.width(62.5).height(this.frame().themeSwatches[index].height).padding(0).backgroundColor(Color.Transparent).borderRadius(8)
       .position(this.actorPosition(this.frame().themeSwatches[index], true))
       .clipShape(this.sharedClip('theme', index))
       .responseRegion({ x: this.fullInput() ? -(this.frame().themeShells[index].width - 62.5) / 2 :
           (62.5 - (this.minimumProfile()?.quickThemeHitWidth ?? 62.5)) / 2,
         y: this.fullInput() ? -10 : 0,
         width: this.fullInput() ? this.frame().themeShells[index].width : this.minimumProfile()?.quickThemeHitWidth ?? 62.5,
-        height: this.fullInput() ? this.frame().themeShells[index].height : 24 })
+        height: this.fullInput() ? this.frame().themeShells[index].height : this.frame().themeSwatches[index].height })
       .enabled(this.sharedInput()).hitTestBehavior(this.sharedInput() ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.sharedInput() ? 'auto' : 'no-hide-descendants')
       .accessibilityText(`切换到${this.themeLabel(theme)}主题`)

@@ -39,11 +39,12 @@ export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = c
   const source = hooks.source ?? localBookDetailSource;
   const manga = mangaDirectoryEntryRowSdk({properties});
   const layout = actualReaderPageLayout();
+  const actionTargets = bookshelfOperationClass('ui/controls/ReaderActionAccessibility.ets', '({READER_ACTION_MIN_TARGET})');
   const headers = bookshelfOperationClass('ui/foundation/ReaderHeaderSpecs.ets', '({DetailHeaderSpec,detailHeaderSpec})', {...readerFoundationTokens,...headerMetrics});
   const resolvers = bookshelfOperationClass('ui/foundation/ReaderSurfaceResolvers.ts', '({readerScaledBarHeight,readerScaledControlHeight,readerReadableFontScale})', metrics);
   const deps = {bookCoverDisplayUrl,...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
     ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
-    ...layout,...headers,...headerMetrics,...resolvers,...mangaVisual,visual:mangaVisual.MANGA_DIRECTORY_VISUAL,READER_FEEDBACK_BRIEF_MS,
+    ...layout,...actionTargets,...headers,...headerMetrics,...resolvers,...mangaVisual,visual:mangaVisual.MANGA_DIRECTORY_VISUAL,READER_FEEDBACK_BRIEF_MS,
     readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
     ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, registerReaderFonts() {},

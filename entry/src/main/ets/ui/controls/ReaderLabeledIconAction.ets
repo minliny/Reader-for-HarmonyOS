@@ -28,7 +28,8 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     if (spec.labelMarginLeft !== undefined) instance.margin({ left: spec.labelMarginLeft });
-    instance.fontColor(readerAppColor(this.danger && spec.dangerRole !== undefined ? spec.dangerRole : spec.textRole, this.scheme)).maxLines(1);
+    instance.fontColor(readerAppColor(this.danger && spec.dangerRole !== undefined ? spec.dangerRole : spec.textRole, this.scheme));
+    if (!spec.naturalHeight) instance.maxLines(1);
   }
 }
 class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
@@ -46,15 +47,18 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   }
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
-    if (this.id === 'source-management-add') {
+    if (spec.naturalHeight) {
+      instance.constraintSize({ minHeight: 44 });
+    } else if (this.id === 'source-management-add') {
       instance.height(readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale));
     } else if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
     instance.alignItems(VerticalAlign.Center);
-    if (spec.rowWidth !== undefined) instance.width(spec.rowWidth);
+    if (spec.rowWidth !== undefined) instance.width(spec.naturalHeight && typeof spec.rowWidth === 'number' ? spec.rowWidth * this.scale : spec.rowWidth);
     if (spec.horizontalPadding !== undefined) {
-      if (spec.leftPaddingOnly) instance.padding({ left: spec.horizontalPadding });
+      if (spec.naturalHeight) instance.padding({ left: spec.horizontalPadding, right: spec.leftPaddingOnly ? 0 : spec.horizontalPadding, top: 8, bottom: 8 });
+      else if (spec.leftPaddingOnly) instance.padding({ left: spec.horizontalPadding });
       else instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
-    }
+    } else if (spec.naturalHeight) instance.padding({ top: 8, bottom: 8 });
     if (spec.centerRow) instance.justifyContent(FlexAlign.Center);
     if (spec.borderRole !== undefined) {
       if (spec.divided) instance.border({ width: { left: this.divider ? TOK_BORDER_W : 0 }, color: readerAppColor(spec.borderRole, this.scheme) });
@@ -64,8 +68,8 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
     else if (spec.radius !== undefined && !spec.surfaceOnHit) instance.borderRadius(spec.radius);
     if (spec.gradientStart !== undefined && spec.gradientEnd !== undefined) this.gradient(instance, false);
     if (!spec.outerHit) {
-      if (spec.equalLayout) instance.layoutWeight(1);
-      if (spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: 44 });
+      if (spec.equalLayout && !spec.naturalHeight) instance.layoutWeight(1);
+      if (!spec.naturalHeight && spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: 44 });
     }
   }
   applyPressedAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); const spec = resolveReaderLabeledIconActionSpec(this.id); if (spec.gradientStart !== undefined && spec.gradientEnd !== undefined) this.gradient(instance, true); else if (spec.surfaceRole !== undefined && !spec.surfaceOnHit) this.feedback().applyPressedAttribute(instance); }
@@ -88,18 +92,21 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute>
   private scheme: string;
   private scale: number;
   private enabled: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean, scale: number = 1) {
+  private fillWidth: boolean;
+  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean, scale: number = 1, fillWidth: boolean = false) {
     this.id = id;
     this.scheme = scheme;
     this.scale = scale;
     this.enabled = enabled;
+    this.fillWidth = fillWidth;
   }
   applyNormalAttribute(instance: ButtonAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
-    instance.height(this.id === 'source-management-add' ?
+    if (spec.naturalHeight) instance.constraintSize({ minHeight: 44 });
+    else instance.height(this.id === 'source-management-add' ?
       readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale) : 44);
-    if (typeof spec.rowWidth === 'number') instance.width(spec.rowWidth);
-    if (spec.equalLayout) instance.layoutWeight(1);
+    if (typeof spec.rowWidth === 'number') instance.width(spec.naturalHeight ? spec.rowWidth * this.scale : spec.rowWidth);
+    if (spec.equalLayout && !spec.naturalHeight && !this.fillWidth) instance.layoutWeight(1);
     if (spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
   }
   applyPressedAttribute(instance: ButtonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderLabeledIconActionSpec(this.id).surfaceOnHit) this.feedback().applyPressedAttribute(instance); }
@@ -119,6 +126,7 @@ export struct ReaderLabeledIconAction {
   @Prop scheme: string = 'day';
   @Prop specId: ReaderLabeledIconActionSpecId = 'rss-feed';
   @Prop label: string = '';
+  @Prop fillWidth: boolean = false;
   @Prop icon: Resource;
   @Prop isDanger: boolean = false;
   @Prop showDivider: boolean = false;
@@ -140,14 +148,15 @@ export struct ReaderLabeledIconAction {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
           .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()));
-      }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).clip(false)
-        .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale()))
+      }.width(this.fillWidth ? '100%' : undefined).padding(0).backgroundColor(Color.Transparent).borderRadius(0).clip(false)
+        .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale(), this.fillWidth))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.label).onClick((): void => this.commit());
     } else {
       Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
+        .width(this.fillWidth ? '100%' : undefined)
         .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()))
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .id(this.focusId)

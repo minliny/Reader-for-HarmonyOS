@@ -97,7 +97,7 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private backBar() {
     PageBackBar({
-      title: '订阅源管理',
+      title: '订阅源管理', trailingWidthVp: this.addActionWidth(),
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 3 }) {
@@ -111,15 +111,22 @@ export struct RssSubscriptionManagementPage {
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
-      .width(60)
-      .height(32)
+      .width(this.addActionWidth())
+      .constraintSize({ minHeight: 44 })
+      .padding({ top: 8, bottom: 8 })
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(999)
-      .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
       .onClick((): void => this.onAdd());
     }
+  }
+
+  private addActionWidth(): number {
+    const context = this.getUIContext();
+    return Math.max(60, Math.ceil(context.px2vp(context.getMeasureUtils().measureText({
+      textContent: '添加', fontFamily: TYPE_FORM_COMPACT_ACTION.fontFamily,
+      fontSize: `${TYPE_FORM_COMPACT_ACTION.fontSizeFp}fp`, fontWeight: TYPE_FORM_COMPACT_ACTION.fontWeight }))) + 14 + 3 + 16);
   }
 
   @Builder
@@ -204,7 +211,7 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private sourceDocumentAction(label: string, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-document-action', label, layout: 'equal', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-document-action', label, layout: 'full', onAction: action }).layoutWeight(1);
   }
 
   @Builder
@@ -239,7 +246,7 @@ export struct RssSubscriptionManagementPage {
             .height(20);
         }
         .width(32)
-        .height(32)
+        .constraintSize({ minHeight: 32 })
         .margin({ left: TOK_SPACE_CONTROL_INLINE })
         .backgroundColor(readerAppColor('TOK_PRIMARY_BG', this.appThemeScheme))
         .borderRadius(16)
@@ -295,11 +302,11 @@ export struct RssSubscriptionManagementPage {
             .rotate({ angle: this.isExpanded(item.subscriptionId) ? 180 : 0 });
         }
         .width(44)
-        .height(44)
+        .constraintSize({ minHeight: 44 })
         .onClick((): void => this.toggleDisclosure(item.subscriptionId));
       }
       .width('100%')
-      .height(56)
+      .constraintSize({ minHeight: 56 })
       .alignItems(VerticalAlign.Center)
       .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
 
@@ -313,7 +320,7 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private actionBar(subscriptionId: string) {
-    Row() {
+    Column() {
       this.actionTarget('查看文章', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_view_all_theme_night') : $r('app.media.rss_manage_view_all')), false, false,
         (): void => this.onViewArticles(subscriptionId));
       this.actionTarget('编辑来源', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
@@ -324,7 +331,7 @@ export struct RssSubscriptionManagementPage {
         (): void => this.onDelete(subscriptionId));
     }
     .width('100%')
-    .height(44)
+    .constraintSize({ minHeight: 44 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
@@ -332,7 +339,7 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private actionTarget(label: string, icon: Resource, danger: boolean, divider: boolean, action: () => void) {
-    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-management', label, icon, isDanger: danger, showDivider: divider, onAction: action });
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-management', fillWidth: true, label, icon, isDanger: danger, showDivider: divider, onAction: action }).width('100%');
   }
 
   private toggleDisclosure(subscriptionId: string): void {

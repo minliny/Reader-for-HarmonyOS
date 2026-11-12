@@ -79,7 +79,9 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
       const width = spec.scaleWidth ? spec.fixedWidth * this.fontScale : spec.fixedWidth;
       instance.width(spec.responsiveStatusWidth ? width * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : width);
     }
-    if (spec.minWidth !== undefined) instance.constraintSize({ minWidth: spec.minWidth });
+    if (spec.minWidth !== undefined || spec.minHeight !== undefined) instance.constraintSize({
+      minWidth: spec.minWidth, minHeight: spec.minHeight === undefined ? undefined :
+        readerScaledControlHeight(spec.minHeight, lineHeight, this.fontScale) });
     if (spec.maxWidthKind === 'scope') instance.constraintSize({ maxWidth: 160 });
     else if (spec.maxWidthKind === 'history') instance.constraintSize({ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' });
     if (spec.outerMargin !== undefined) instance.margin(spec.outerMargin);

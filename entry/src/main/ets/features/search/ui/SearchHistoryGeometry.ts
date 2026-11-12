@@ -1,4 +1,4 @@
-import { readerSearchHistoryControlHeight } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerSearchHistoryControlHeight, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 
 /** Resolve the bounded viewport before choosing records. Record count never
  * controls panel height; the projection only admits complete rows. */
@@ -24,7 +24,7 @@ export class SearchHistoryGeometry {
     const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
     this.innerInset = expandedLayout ? 20 : 13;
     this.contentWidth = Math.max(0, panelWidth - this.innerInset * 2);
-    const heading = Math.max(32, 20 * scale + 8);
+    const heading = Math.max(SEARCH_CONTROL_MIN_TARGET, 20 * scale + 8);
     this.headingVisible = viewportHeight >= 12 + heading + 8 + 16;
     this.topInset = this.headingVisible ? 12 : 0;
     this.bottomInset = this.headingVisible ? 16 : 0;
@@ -39,7 +39,7 @@ export class SearchHistoryGeometry {
     this.bodyHeight = Math.max(0, viewportHeight - this.topInset - this.bottomInset -
       this.headingHeight - this.headingGap - this.feedbackHeight);
     this.rows = Math.max(0, Math.floor((this.bodyHeight + this.gap) / (this.buttonHeight + this.gap)));
-    this.recordsVisible = this.headingVisible && this.contentWidth > 0 && this.rows > 0 &&
+    this.recordsVisible = this.headingVisible && this.contentWidth >= SEARCH_CONTROL_MIN_TARGET && this.rows > 0 &&
       (feedback === 0 || this.feedbackVisible);
     this.emptyVisible = this.headingVisible && this.bodyHeight >= 18 * scale && feedback === 0;
   }
@@ -70,7 +70,7 @@ export function projectSearchHistoryRows(history: string[], geometry: SearchHist
     const naturalWidth = measureControlWidth(keyword);
     // An unresolved native measure is not replaced with a character estimate.
     if (!Number.isFinite(naturalWidth) || naturalWidth <= 0) break;
-    const width = Math.min(geometry.contentWidth, Math.ceil(naturalWidth));
+    const width = Math.min(geometry.contentWidth, Math.max(SEARCH_CONTROL_MIN_TARGET, Math.ceil(naturalWidth)));
     let row = result.length > 0 ? result[result.length - 1] : undefined;
     if (row === undefined || row.width + geometry.gap + width > geometry.contentWidth) {
       if (result.length >= geometry.rows) break;

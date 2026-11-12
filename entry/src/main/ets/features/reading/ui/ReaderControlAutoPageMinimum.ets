@@ -24,6 +24,7 @@ export interface ReaderControlAutoPageTextMinimum {
   runningLabelWidth: number; runningLabelHeight: number;
   timerTitleHeight: number; timerMetaWidth: number; timerMetaHeight: number;
   timerLabelWidth: number; timerLabelHeight: number; timerColonHeight: number;
+  timerPickerX: number; timerPickerY: number; timerLabelY: number;
   wheelWidth: number; wheelRowHeight: number; wheelUnitHeight: number;
   followLabelHeight: number;
   stepLabelWidth: number; stepLabelHeight: number;
@@ -99,29 +100,44 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
     chapter === undefined || running === undefined || stop === undefined || speedTitle === undefined || speedValue === undefined ||
     speedRange === undefined || step === undefined || timerTitle === undefined || timerMeta === undefined ||
     timerLabel === undefined || colon === undefined || wheel === undefined || neighbour === undefined || unit === undefined || follow === undefined) return undefined;
-  const chapterWidth = Math.max(27, Math.min(62, chapter.singleLineWidthVp));
+  const chapterWidth = Math.max(27, chapter.singleLineWidthVp);
   const chapterHeight = Math.max(9, chapter.heightVp);
-  const runningWidth = Math.max(36, Math.min(95, running.singleLineWidthVp));
+  const runningWidth = Math.max(36, running.singleLineWidthVp);
   const runningHeight = Math.max(9, running.heightVp);
   const stopHeight = Math.max(9, stop.heightVp);
-  const controlExtra = Math.max(chapterHeight - 9, runningHeight - 9, stopHeight - 9);
+  const naturalCellHeight = Math.max(52, 39 + chapterHeight + 4, 39 + runningHeight + 4, 44 + 4 + stopHeight + 4);
+  const rowWidth = Math.max(0, frame.control.width - 8);
+  const columns = rowWidth >= 224 ? 4 : 2;
+  const cellWidth = Math.max(44, (rowWidth - (columns - 1) * 4) / columns);
+  const transports = [frame.previous, frame.toggle, frame.stop, frame.next];
+  for (let index = 0; index < transports.length; index++) {
+    const target = transports[index];
+    target.x = index % columns * (cellWidth + 4);
+    target.y = 5 + Math.floor(index / columns) * (naturalCellHeight + 8);
+    target.width = cellWidth; target.height = naturalCellHeight;
+  }
+  frame.stop.x += (cellWidth - 44) / 2;
+  frame.stop.width = 44; frame.stop.height = 44;
+  frame.playIcon.x = (cellWidth - frame.playIcon.width) / 2;
+  frame.stopLabel.x = frame.stop.x + (44 - stop.singleLineWidthVp) / 2;
+  frame.stopLabel.y = frame.stop.y + 48;
+  const controlExtra = 5 + Math.ceil(4 / columns) * (naturalCellHeight + 8) - 8 - 62;
   const headerExtra = Math.max(0, moduleTitle.heightVp - 14.3906, moduleMeta.heightVp - 14.3906);
   const quickHeaderExtra = Math.max(0, title.heightVp - 24, statusText.heightVp - 24);
+  frame.back.height = Math.max(44, title.heightVp + 12);
   frame.quickHeader.height += quickHeaderExtra;
   if (!full) frame.content.y += quickHeaderExtra;
   frame.controlHeader.height += headerExtra;
   frame.detailsHeader.height += headerExtra;
-  frame.previous.height += controlExtra;
-  frame.toggle.height += controlExtra;
-  frame.next.height += controlExtra;
+
   frame.stopLabel.height = stopHeight;
-  frame.stopLabel.width = Math.max(18, Math.min(24, stop.singleLineWidthVp));
+  frame.stopLabel.width = Math.max(18, stop.singleLineWidthVp);
   frame.control.height += headerExtra + controlExtra;
   frame.timer.y += headerExtra + controlExtra;
   frame.details.y += headerExtra + controlExtra;
   const stepWidth = Math.max(18, step.singleLineWidthVp);
   const stepHeight = Math.max(18, step.heightVp);
-  const stepSize = Math.max(24, stepWidth + 6, stepHeight + 6);
+  const stepSize = Math.max(44, stepWidth + 6, stepHeight + 6);
   const valueWidth = Math.max(full ? 25 : 30, speedValue.singleLineWidthVp);
   const titleWidth = Math.max(full ? 80.56 : 0, speedTitle.singleLineWidthVp);
   const speedTitleWidth = full ? titleWidth : Math.max(1, frame.speed.width - stepSize * 2 - valueWidth - 26);
@@ -143,7 +159,7 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
     frame.speedContent.maximum.x = frame.speed.width - frame.speedContent.maximum.width - 11;
     frame.speedContent.slider.x = frame.speedContent.minimum.x + frame.speedContent.minimum.width + 9;
     frame.speedContent.slider.width = Math.max(0, frame.speedContent.maximum.x - 9 - frame.speedContent.slider.x);
-    if (frame.speedContent.slider.width < 14) {
+    if (frame.speedContent.slider.width < 44) {
       const titleAvailable = Math.max(1, frame.speed.width - 22 - valueWidth - 8);
       const wrapped = measureReaderControlText(context, '翻页速度', speedTitleStyle, titleAvailable, 'wrap');
       if (wrapped === undefined) return undefined;
@@ -168,15 +184,22 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
   }
   frame.speedContent.minimum.height = Math.max(frame.speedContent.minimum.height, speedRange.heightVp);
   frame.speedContent.maximum.height = Math.max(frame.speedContent.maximum.height, speedRange.heightVp);
-  const rowHeight = Math.max(34, wheel.heightVp, neighbour.heightVp);
+  const rowHeight = Math.max(44, wheel.heightVp, neighbour.heightVp);
   const unitHeight = Math.max(8, unit.heightVp);
-  const wheelWidth = Math.max(wheel.singleLineWidthVp, neighbour.singleLineWidthVp);
+  const wheelMinimumWidth = Math.max(44, wheel.singleLineWidthVp, neighbour.singleLineWidthVp);
+  const timerLabelWidth = Math.max(84, timerLabel.singleLineWidthVp + 38);
+  const timerLabelHeight = Math.max(30, timerLabel.heightVp);
+  const pickerInline = inner - 8 >= timerLabelWidth + 31 + 15 + wheelMinimumWidth * 2 + 24;
+  const pickerX = pickerInline ? timerLabelWidth + 31 : 15;
+  const pickerY = pickerInline ? 12 : 12 + timerLabelHeight + 8;
+  const labelY = pickerInline ? 54 : 12;
+  const wheelWidth = Math.max(wheelMinimumWidth, (inner - 8 - pickerX - 15 - 24) / 2);
   const timerTitleHeight = Math.max(14.4, timerTitle.heightVp, timerMeta.heightVp);
   const timerHeaderExtra = timerTitleHeight - 14.4;
-  const timerBodyExtra = Math.max(0, rowHeight * 3 + 4 + unitHeight - 114, timerLabel.heightVp - 30);
+  const timerBodyExtra = Math.max(0, pickerY + rowHeight * 3 + 4 + unitHeight + 12 - 138, labelY + timerLabelHeight + 12 - 138);
   frame.timer.height += timerHeaderExtra + timerBodyExtra;
   if (full) frame.details.y += timerHeaderExtra + timerBodyExtra;
-  const followHeight = Math.max(36, follow.heightVp + 12);
+  const followHeight = Math.max(44, follow.heightVp + 12);
   frame.follow.height = followHeight;
   frame.follow.y += speedHeight - (full ? 64 : 32);
   frame.details.height += headerExtra + speedHeight - (full ? 64 : 32) + followHeight - 36;
@@ -184,17 +207,18 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
     speedHeight - (full ? 64 : 32) + followHeight - 36;
   frame.contentHeight = full ? frame.content.y + frame.content.height + 12 :
     Math.max(frame.content.y + frame.control.height + 12, frame.content.y + frame.details.y + frame.speed.y + frame.speed.height + 7.45);
-  const minWidth = full ? Math.max(24 + 28 + timerLabel.singleLineWidthVp + 38 + wheelWidth * 2 + 24 + 15,
+  const minWidth = full ? Math.max(24 + 8 + 30 + wheelMinimumWidth * 2 + 24,
     24 + Math.max(speedGlyph.singleLineWidthVp + 8 + valueWidth + 22,
-      speedRange.singleLineWidthVp * 2 + 18 + 14 + 22),
+      speedRange.singleLineWidthVp * 2 + 18 + 44 + 22),
     24 + moduleTitle.singleLineWidthVp + moduleMeta.singleLineWidthVp + 8) :
     Math.max(24 + speedGlyph.singleLineWidthVp + stepSize * 2 + valueWidth + 26,
       24 + title.singleLineWidthVp + statusText.singleLineWidthVp + 8);
   const text: ReaderControlAutoPageTextMinimum = { chapterLabelWidth: chapterWidth, chapterLabelHeight: chapterHeight,
     runningLabelWidth: runningWidth, runningLabelHeight: runningHeight,
     timerTitleHeight: timerTitleHeight, timerMetaWidth: Math.max(27.8, timerMeta.singleLineWidthVp),
-    timerMetaHeight: Math.max(12, timerMeta.heightVp), timerLabelWidth: Math.max(84, timerLabel.singleLineWidthVp + 38),
-    timerLabelHeight: Math.max(30, timerLabel.heightVp), timerColonHeight: Math.max(22, colon.heightVp),
+    timerMetaHeight: Math.max(12, timerMeta.heightVp), timerLabelWidth: timerLabelWidth,
+    timerLabelHeight: timerLabelHeight, timerColonHeight: Math.max(22, colon.heightVp),
+    timerPickerX: pickerX, timerPickerY: pickerY, timerLabelY: labelY,
     wheelWidth: wheelWidth, wheelRowHeight: rowHeight, wheelUnitHeight: unitHeight,
     followLabelHeight: Math.max(13, follow.heightVp), stepLabelWidth: stepWidth, stepLabelHeight: stepHeight,
     controlContentTop: 32.3906 + headerExtra, controlContentHeight: 62 + controlExtra };

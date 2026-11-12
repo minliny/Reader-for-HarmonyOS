@@ -45,19 +45,24 @@ export struct ReaderSelectPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
-  @Prop value: string = '';
-  @Prop options: string[] = [];
+  @Prop @Watch('onGeometryChanged') value: string = '';
+  @Prop @Watch('onGeometryChanged') options: string[] = [];
   @Prop x: number = 0;
   @Prop y: number = 0;
-  @Prop variant: ReaderSelectVariant = 'default';
+  @Prop @Watch('onGeometryChanged') variant: ReaderSelectVariant = 'default';
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop @Watch('onClosingChanged') closing: boolean = false;
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
   // 仅 appearance 等既有定宽模板保留固定菜单宽；default/sourceGroup独立测量。
-  @Prop controlWidth: number = 0;
+  @Prop @Watch('onGeometryChanged') controlWidth: number = 0;
   /** Optional current appearance host budget. Zero keeps the original menu contract. */
   @Prop @Watch('onGeometryChanged') maxPanelHeight: number = 0;
-  @Prop menuKind: ReaderSelectMenuKind = 'standard';
+  /** Bounds in the overlay host's coordinate space. Platform popups leave these unset. */
+  @Prop @Watch('onGeometryChanged') hostTopVp: number = 0;
+  @Prop @Watch('onGeometryChanged') hostLeftVp: number = 0;
+  @Prop @Watch('onGeometryChanged') hostRightVp: number = -1;
+  @Prop @Watch('onGeometryChanged') hostBottomVp: number = -1;
+  @Prop @Watch('onGeometryChanged') menuKind: ReaderSelectMenuKind = 'standard';
   // true = x 为面板右缘 (宿主触发条整行右对齐场景, 如 RSS 筛选)。
   @Prop alignRight: boolean = false;
   /** Optional addresses for the selected row and its wrapping alternatives. */
@@ -70,6 +75,9 @@ export struct ReaderSelectPanel {
   @State private closeInFlight: boolean = false;
   @State private measuredHeightRevision: number = 0;
   private optionHeights: Map<string, number> = new Map<string, number>();
+  private optionLayoutInputs: string = '';
+  private optionLayoutIdentity: string = '';
+  private optionHeightsLayoutIdentity: string = '';
   private mounted: boolean = false;
   private generation: number = 0;
   private closingValue: string = '';
@@ -118,11 +126,15 @@ export struct ReaderSelectPanel {
   }
 
   private onGeometryChanged(): void {
-    if (this.mounted && !this.closeInFlight && this.wrapsOptions()) this.expandPanel();
+    if (this.mounted && !this.closeInFlight && this.wrapsOptions()) {
+      this.invalidateOptionHeights();
+      this.expandPanel();
+    }
   }
 
   private recordOptionHeight(option: string, selected: boolean, height: number): void {
     if (!this.mounted || this.closeInFlight || !Number.isFinite(height) || height <= 0) return;
+    this.invalidateOptionHeights();
     const key = `${this.variant}:${selected}:${option}`;
     if (Math.abs((this.optionHeights.get(key) ?? 0) - height) < .1) return;
     this.optionHeights.set(key, height);
@@ -132,9 +144,36 @@ export struct ReaderSelectPanel {
 
   private optionHeightHandler(option: string, selected: boolean): (height: number) => void {
     const generation = this.generation;
+    const identity = this.optionMeasurementIdentity();
     return (height: number): void => {
-      if (generation === this.generation) this.recordOptionHeight(option, selected, height);
+      if (generation === this.generation && identity === this.optionMeasurementIdentity())
+        this.recordOptionHeight(option, selected, height);
     };
+  }
+
+  private optionMeasurementIdentity(): string {
+    this.readerWindowMetricsRevision;
+    const metrics = readerWindowMetrics();
+    const inputs = JSON.stringify([this.selectionId, this.variant, this.controlWidth, this.menuKind,
+      this.renderedValue(), this.renderedOptions(), this.hostLeftVp, this.hostRightVp, metrics.windowRect.width,
+      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics), metrics.systemFontScale, metrics.densityPixels]);
+    if (inputs !== this.optionLayoutInputs) {
+      this.optionLayoutInputs = inputs;
+      this.optionLayoutIdentity = JSON.stringify([inputs, this.resolvedWidth()]);
+    }
+    return this.optionLayoutIdentity;
+  }
+
+  private invalidateOptionHeights(): void {
+    const identity = this.optionMeasurementIdentity();
+    if (identity === this.optionHeightsLayoutIdentity) return;
+    this.optionHeights.clear();
+    this.optionHeightsLayoutIdentity = identity;
+  }
+
+  private measuredOptionHeight(key: string, fallback: number): number {
+    return this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ?
+      this.optionHeights.get(key) ?? fallback : fallback;
   }
 
   build() {
@@ -145,9 +184,9 @@ export struct ReaderSelectPanel {
         }.width('100%').layoutWeight(1).scrollBar(BarState.Auto);
       } else { this.optionContent(); }
     }
-    .position({ x: this.panelX(), y: this.y })
+    .position({ x: this.panelX(), y: this.panelY() })
     .width(this.resolvedWidth())
-    .height(this.expandedHeight)
+    .height(this.hostBottomVp >= 0 ? Math.min(this.expandedHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) : this.expandedHeight)
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
     .zIndex(10)
     .backgroundColor(this.panelBackgroundColor())
@@ -218,7 +257,7 @@ export struct ReaderSelectPanel {
   // 最长文本(值 ∪ 选项)实测宽 + chrome, px→vp。
   private resolvedWidth(): number {
     if (this.controlWidth > 0 && this.variant !== 'default' && this.variant !== 'sourceGroup') {
-      return this.controlWidth;
+      return this.hostRightVp >= 0 ? Math.min(this.controlWidth, readerSelectAvailableWidth(this.hostRightVp - this.hostLeftVp, 0, 0)) : this.controlWidth;
     }
     const ctx = this.getUIContext();
     const utils = ctx.getMeasureUtils();
@@ -238,9 +277,10 @@ export struct ReaderSelectPanel {
     const naturalWidth = Math.ceil(ctx.px2vp(maxPx)) + this.resolvedChrome();
     if (this.variant !== 'default' && this.variant !== 'sourceGroup') return naturalWidth;
     const metrics = readerWindowMetrics();
-    const viewportWidth = this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width;
-    const available = readerSelectAvailableWidth(viewportWidth,
-      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics));
+    const viewportWidth = this.hostRightVp >= 0 ? Math.max(0, this.hostRightVp - this.hostLeftVp) :
+      this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width;
+    const available = this.hostRightVp >= 0 ? readerSelectAvailableWidth(viewportWidth, 0, 0) :
+      readerSelectAvailableWidth(viewportWidth, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics));
     // The panel border consumes one vp on each side of the 44vp option lane.
     const minimum = 44 + TOK_BORDER_W * 2;
     const contentWidth = this.variant === 'sourceGroup' && available >= minimum ?
@@ -250,10 +290,23 @@ export struct ReaderSelectPanel {
 
   private panelX(): number {
     const requested = this.alignRight ? this.x - this.resolvedWidth() : this.x;
+    if (this.hostRightVp >= 0) {
+      const left = Math.min(this.hostRightVp, this.hostLeftVp + 16);
+      const right = Math.max(left, this.hostRightVp - 16);
+      return Math.max(left, Math.min(requested, right - this.resolvedWidth()));
+    }
     if (this.variant !== 'sourceGroup') return requested;
     const metrics = readerWindowMetrics();
     return Math.max(Math.max(16, readerInteractiveSafeLeft(metrics)), Math.min(requested,
       metrics.windowRect.width - Math.max(16, readerInteractiveSafeRight(metrics)) - this.resolvedWidth()));
+  }
+
+  private panelY(): number {
+    if (this.hostBottomVp < 0) return this.y;
+    const height = this.fullPanelHeight();
+    const below = this.hostBottomVp - this.y;
+    const requested = below >= height ? this.y : this.y - height;
+    return Math.max(this.hostTopVp, Math.min(requested, this.hostBottomVp - height));
   }
 
   private resolvedChrome(): number {
@@ -355,15 +408,16 @@ export struct ReaderSelectPanel {
       // Native rows report their actual wrapped height. Retain this state read
       // so measurements also update the animated frame during font/width changes.
       if (this.measuredHeightRevision < 0) return 0;
-      const minimum = this.variant === 'appearanceLibrary' ? APPEARANCE_SELECT_OPTION_HEIGHT : this.variant === 'default' ? 44 : OPTION_H;
+      const minimum = this.variant === 'appearanceLibrary' ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
       let height = this.variant === 'appearanceLibrary' ? 8 : TOK_BORDER_W * 2;
-      if (this.variant !== 'appearanceLibrary') height += this.optionHeights.get(`${this.variant}:true:${this.renderedValue()}`) ?? minimum;
+      if (this.variant !== 'appearanceLibrary') height += this.measuredOptionHeight(`${this.variant}:true:${this.renderedValue()}`, minimum);
       for (const option of this.renderedOptions()) {
         if (this.variant === 'appearanceLibrary' || option !== this.renderedValue())
-          height += this.optionHeights.get(`${this.variant}:${this.variant === 'appearanceLibrary' && option === this.renderedValue()}:${option}`) ?? minimum;
+          height += this.measuredOptionHeight(`${this.variant}:${this.variant === 'appearanceLibrary' && option === this.renderedValue()}:${option}`, minimum);
       }
-      const maximum = this.variant === 'appearanceLibrary' && Number.isFinite(this.maxPanelHeight) && this.maxPanelHeight > 0 ?
-        Math.min(330, this.maxPanelHeight) : 330;
+      const configured = Number.isFinite(this.maxPanelHeight) && this.maxPanelHeight > 0 ? Math.min(330, this.maxPanelHeight) : 330;
+      const maximum = this.hostBottomVp >= 0 ?
+        Math.min(configured, Math.max(0, this.hostBottomVp - this.hostTopVp)) : configured;
       return Math.min(height, maximum);
     }
     if (this.variant === 'appearanceLibrary') return appearanceSelectMenuHeight(this.options.length);

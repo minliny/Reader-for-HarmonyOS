@@ -67,13 +67,16 @@ export function boundedSurfaceSdk(options={}){
   const ReaderMenuActionView=classOf(childSources.ReaderActionMenuSurface,'ReaderMenuActionView',{});
   const nativePan = options.panGesture ?? new Proxy({}, {get:()=>()=>{}});
   const nativeGesture = new Proxy({}, {get:()=>()=>{}});
-  const deps={...properties.sdk,...specs,...readerFoundationTokens,...typography,...readerFonts,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
+  const deps={...properties.sdk,readerWindowMetrics:options.windowMetrics??(()=>({systemFontScale:1})),...specs,...readerFoundationTokens,...typography,...readerFonts,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
     readerReadableFontScale,readerScaledControlHeight,
     ColorMetrics:boundedColorMetrics,ColorFilter:BoundedColorFilter,
     PanGesture:nativePan, PanDirection:{Vertical:'vertical'}, GesturePriority:{Low:'low'},
     globalThis:{Gesture:nativeGesture,PanGesture:nativePan},
     ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor,ReaderInsetsVp,
       HitTestMode:{Default:'HitTestMode.Default'},Color:{Transparent:'Color.Transparent'}}),
+    ReaderDrawerCloseFocusModifier:new Function(stripped(childSources.ReaderBoundedSurfaceHeader.slice(
+      childSources.ReaderBoundedSurfaceHeader.indexOf('class ReaderDrawerCloseFocusModifier'),
+      childSources.ReaderBoundedSurfaceHeader.indexOf('/** Only set attributes')))+';return ReaderDrawerCloseFocusModifier;')(),
     ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...typography}),
     ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
   };

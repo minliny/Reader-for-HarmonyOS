@@ -26,7 +26,7 @@ import {
   TOK_READ_PRIMARY,
   TOK_SURFACE_PANEL_SOFT,
 } from '../foundation/ReaderTokens';
-import { readerSearchControlHeight } from '../foundation/ReaderSearchControlGeometry';
+import { readerSearchControlHeight, SEARCH_CONTROL_MIN_TARGET } from '../foundation/ReaderSearchControlGeometry';
 
 export type ReaderSearchFieldVariant =
   | 'bookPanel'
@@ -63,9 +63,11 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
   }
   applyNormalAttribute(instance: TextInputAttribute): void {
     if (this.variant === 'sourceManagement' || this.variant === 'readerDirectory') instance.responseRegion(readerActionTouchRegion('100%', this.height));
-    if (this.variant === 'readerDirectory') {
+    if (this.variant === 'sourceManagement' || this.variant === 'readerDirectory') {
       instance.minFontScale(1);
       instance.maxFontScale(this.fontScale);
+    }
+    if (this.variant === 'readerDirectory') {
       if (this.focusId.length > 0) {
         instance.id(this.focusId);
         instance.enableKeyboardOnFocus(this.keyboardOnFocus);
@@ -382,7 +384,7 @@ export struct ReaderSearchField {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
             .width(14).height(14).accessibilityLevel('no');
-        }.width(32).height(this.fieldHeight()).padding(0).backgroundColor(Color.Transparent)
+        }.width(SEARCH_CONTROL_MIN_TARGET).height(this.fieldHeight()).padding(0).backgroundColor(Color.Transparent)
           .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空搜索内容')
           .onClick((): void => this.clearBookInput());
       }
@@ -407,7 +409,7 @@ export struct ReaderSearchField {
         .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
         .layoutWeight(1)
         .height(this.inputHeight())
-        .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' ? this.directoryFontScale() : 1,
+        .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' || this.variant === 'sourceManagement' ? this.directoryFontScale() : 1,
           this.directoryFocusAllowed ? inputFocusId : '',
           (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
           (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus))
@@ -494,8 +496,13 @@ export struct ReaderSearchField {
 
   private fieldHeight(): number {
     if (this.variant === 'bookPanel') return readerSearchControlHeight(this.bookFontScale());
+    if (this.variant === 'rssPassive') {
+      return readerScaledControlHeight(44, TYPE_SEARCH_RSS_HINT.lineHeightFp ?? TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5,
+        readerReadableFontScale(readerWindowMetrics().systemFontScale));
+    }
     if (this.variant === 'sourceManagement') {
-      return 44;
+      return readerScaledControlHeight(44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??
+        TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, this.directoryFontScale());
     }
     if (this.variant === 'readerDirectory') {
       return Math.max(readerScaledControlHeight(44, 24, this.directoryFontScale()),
@@ -509,7 +516,7 @@ export struct ReaderSearchField {
       return this.fieldHeight() - this.fieldBorderWidth() * 2;
     }
     if (this.variant === 'sourceManagement') {
-      return 42;
+      return this.fieldHeight() - this.fieldBorderWidth() * 2;
     }
     if (this.variant === 'readerDirectory') {
       return Math.max(this.fieldHeight() - this.fieldBorderWidth() * 2,

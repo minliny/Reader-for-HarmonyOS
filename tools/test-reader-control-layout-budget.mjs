@@ -1,0 +1,861 @@
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+const definitions = {
+    'admission-sdk': { description: 'Current experience scheduling to measured Panel admission across orientations and wide windows, stale frame negatives', resources: [] },
+    'module-minimum-budget': { description: 'Shipping measured appearance/settings/search/replace/autopage budgets at four scales and exact narrow/wide widths', resources: [] },
+    'native-targets-sdk': { description: 'Actual SDK control target attributes and paid parent geometry for reading modules', resources: [] },
+    'manga-tts-sdk': { description: 'Manga dock/preferences and TTS configuration actual SDK targets, scale and busy identity', resources: [] },
+    'header-home-sdk': { description: 'Actual reading topbar and home native frames, scalable title/action/slider parents with old fixed-height negatives', resources: [] },
+    'brightness-sdk': { description: 'Constrained brightness rail Scroll, actual production Pan/Tap declarations and same-owner resize', resources: [] },
+};
+for (const id of selectContractCases(definitions)) {
+    await run(id);
+    recordContractCasePass(id);
+}
+async function run(id) {
+    const { default: assert } = await import('node:assert/strict');
+    const { readFileSync } = await import('node:fs');
+    const { registerHooks } = await import('node:module');
+    registerHooks({ resolve(specifier, context, next) {
+            try {
+                return next(specifier, context);
+            }
+            catch (error) {
+                if (error.code === 'ERR_MODULE_NOT_FOUND' && specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier))
+                    return next(specifier + '.ts', context);
+                throw error;
+            }
+        } });
+    const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+    const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+    const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+    const { selectedProductionClasses, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+    const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+    const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+    const { readerTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
+    const geo = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+    const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+    const controls = await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
+    const session = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+    const receipt = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMinimumReceipt.ts');
+    const actor = await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+    const appearance = await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts');
+    const settings = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts');
+    const search = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
+    const replace = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+    const playback = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+    const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+    const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+    const read = file => readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+    const ui = file => read('entry/src/main/ets/features/reading/ui/' + file);
+    const classes = selectedProductionClasses(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), ['ReaderTextStyle', 'ReaderInheritedTextStyle']);
+    const measure = pureModuleProbe(ui('ReaderControlTextMeasurement.ets'), 'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'break' } }, ['measureReaderControlText']);
+    const deps = { ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...replace, ...playback, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
+    const pure = (file, names, source = ui(file)) => pureModuleProbe(source, file, deps, names);
+    const headerSource = read('entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets');
+    const compiler = installedEtsCompiler();
+    const headerTree = compiler.ts.createSourceFile('ReadingHeader.ets', headerSource, compiler.ts.ScriptTarget.Latest, true, compiler.ts.ScriptKind.ETS, compiler.options);
+    const headerMeasure = headerTree.statements.find(n => compiler.ts.isFunctionDeclaration(n) && n.name?.text === 'readerReadingTopBarHeight');
+    Object.assign(deps, pureModuleProbe(headerMeasure.getText(headerTree), 'ReadingHeaderMeasure.ets', {
+        ...deps,
+        ...pureModuleProbe(read('entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']),
+        readerWindowMetrics: () => ({ systemFontScale: 1 }),
+    }, ['readerReadingTopBarHeight']));
+    let scale = 1;
+    let measurementCalls = 0;
+    const advance = text => [...text].reduce((sum, point) => sum + (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\u3000-\u303f\uff00-\uffef]/u.test(point) ? 1 : .55), 0);
+    const context = { px2vp: n => n, vp2px: n => n, getMeasureUtils: () => ({
+            measureText: o => Math.max(1, advance(o.textContent)) * Number.parseFloat(o.fontSize) * scale,
+            measureTextSize(o) {
+                measurementCalls++;
+                const font = Number.parseFloat(o.fontSize) * scale;
+                const line = Number.parseFloat(o.lineHeight ?? o.fontSize) * scale * (o.lineHeight ? 1 : 1.5);
+                const width = Math.max(1, advance(o.textContent)) * font;
+                const rows = o.maxLines === 1 ? 1 : Math.ceil(width / Math.max(1, o.constraintWidth));
+                return { width: Math.min(width, o.constraintWidth), height: line * rows };
+            },
+        }) };
+    Object.assign(deps, pureModuleProbe(read('entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']));
+    const ttsFacts = { playbackLabel: '朗读内容', status: '未开始', voice: '很长的中文女声音色', timerCaption: '不开启', timerSummary: '00:00', minutes: '00', seconds: '00', rate: '1.00x', error: '', seek: false, online: false, serviceDescription: '设备内置语音', manageLabel: '已配置 · 编辑', engineValue: '系统语音', languageValue: '中文普通话', failureValue: '停止并提示' };
+    const widths = w => ({ panelWidthVp: w + 26, quickContentWidthVp: w - 52, fullContentWidthVp: w });
+    const minimum = pure('ReaderControlMinimumMeasurement.ets', ['measureReaderControlMinimum']);
+    const appInput = { themes: ['纸白', '暖纸', '米色', '黑色', '绿纸', '灰色', '棕色', '淡蓝'], themeSummary: '日间：纸白 · 夜间：黑色',
+        themeActions: ['设为日间主题', '设为夜间主题'], fonts: Array.from({ length: 9 }, (_, i) => ({ label: i === 8 ? '导入字体' : '系统字体', family: 'HarmonyOS Sans' })),
+        indentValue: '2字符', languageValue: '繁转简', indentOptions: ['无', '1字符', '2字符'], languageOptions: ['原文', '繁转简', '简转繁'],
+        metricLabels: ['字号', '行距', '段距', '字距'], metricValues: ['32px', '1.50', '10px', '1px'] };
+    const ap = pure('ReaderControlAppearanceMinimum.ets', ['measureReaderControlAppearanceMinimum']);
+    const st = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum']);
+    const se = pure('ReaderControlSearchMinimum.ets', ['measureReaderSearchMinimum']);
+    const rp = pure('ReaderControlReplaceMinimum.ets', ['measureReaderControlReplaceMinimum']);
+    const tt = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum']);
+    const au = pure('ReaderControlAutoPageMinimum.ets', ['measureReaderControlAutoPageMinimum']);
+    const searchFacts = { query: '查找很长的正文关键字', title: '第一章 长章节', snippet: '正文命中关键字', message: '', hasResults: true, resultsMode: true, loading: false, loadMoreLabel: '加载更多结果', loadMoreMessage: '' };
+    const optionLabels = [['从左到右', '从右到左', '跟随系统'], ['覆盖', '仿真', '滑动', '滚动', '无动画'], ['30秒', '1分钟', '5分钟', '10分钟', '永不']];
+    const mkSettings = w => st.measureReaderControlSettingsMinimum(context, w, ['阅读方向', '翻页方式', '屏幕超时'], optionLabels, ['隐藏底部导航栏', '拓展到刘海（灵动岛）', '文字两端对齐']);
+    const native = (file, names, additional = {}, hooks = {}) => createReaderBuilderProbe(ui(file), names, { ...deps, ...additional }, hooks).owner;
+    const nodes = (owner, type) => [...owner.nodes.values()].filter(n => n.type === type);
+    const deepNodes = owner => [...owner.nodes.values(), ...[...owner.children.values()].filter(child => child.nodes).flatMap(deepNodes)];
+    const target = (node, why) => { assert.ok(node, why); assert.ok(node.width >= 44 && node.height >= 44, `${why} pays >=44, got ${node.width}x${node.height}`); };
+    if (id === 'admission-sdk') {
+        let metrics = createDefaultReaderWindowMetrics();
+        const frames = [];
+        const { owner: panel } = createReaderBuilderProbe(ui('ReaderControlPanel.ets'), ['minimumInputReady', 'publishMinimumMeasurer', 'measureControlMinimum', 'minimumModule', 'contentInputEnabled', 'bindModuleMinimum'], { ...deps, ...geo, ...minimum, DEBUG: false });
+        Object.assign(panel, { runtimeMounted: true, minimumFontsReady: true, minimumProfiles: new Map(), minimumProfileTicket: '',
+            minimumIdentity: '', minimumKey: '', minimumMetricsRevision: 1, minimumReady: false, inputEnabled: true, controlObscured: false,
+            visualVisibilityProgress: 1, visualTransitionKind: '', visualHeldPointerId: -1, hasCurrentTemporaryInput: () => false,
+            contentLocation: () => session.readerControlContentLocation(current.controlSession), contentTitle: () => '阅读控制', headerInter: () => false,
+            isExpanded: () => current.expandedLayout, getUIContext: () => context,
+            measureHomeForm: w => ({ minimumHeight: 170 * scale, minWidth: 130, fits: w >= 130 }),
+        });
+        const { owner: current } = createReaderBuilderProbe(ui('LocalReadingExperience.ets'), ['controlMinimumIdentity', 'controlMinimumCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
+            ...geo, ...receipt, ...session, ReaderWindowCoordinator: { metrics: () => metrics },
+            ReaderUIFrameCallback: class {
+                constructor(fn) { this.onFrame = fn; }
+            },
+        });
+        Object.assign(current, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true, appForeground: true,
+            windowChromeActive: true, windowChromeOverlayActive: false, interactionBlocked: false, controlObscured: false,
+            controlOpenRevision: 1, controlModuleVisitRevision: 1, readerRecoveryBottom: 0, controlMinimumRevision: 0, controlMinimumGeneration: 0,
+            controlSession: { location: { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' } },
+            isSessionActive: token => token === 1, effectiveViewportWidth() { return this.width; }, effectiveViewportHeight() { return this.height; },
+            pageTurnInputPhase: () => 'idle', invalidateControlBackdrop() { }, getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
+        });
+        panel.onMinimumMeasurerReady = (identity, provider) => current.bindControlMinimum(identity, provider);
+        let prepareModule;
+        const cycle = (width, height) => {
+            Object.assign(current, { width, height, expandedLayout: width >= 600 });
+            metrics.revision++;
+            metrics.systemFontScale = scale;
+            const cold = current.controlLayout(metrics.revision);
+            assert.ok(cold.topBarHeight >= deps.readerReadingTopBarHeight(context, 'reading', 54), 'cold conservative shell pays current native line extent');
+            assert.ok(cold.fullPanelTop >= (cold.topBarVisible ? cold.topBarTop + cold.topBarHeight + 8 : cold.topBarTop));
+            panel.layout = cold;
+            panel.minimumIdentity = current.controlMinimumIdentity();
+            panel.minimumMetricsRevision = metrics.revision;
+            if (prepareModule)
+                prepareModule(panel.minimumIdentity);
+            else
+                panel.publishMinimumMeasurer();
+            assert.equal(current.controlMinimumReady, false);
+            assert.ok(frames.length > 0, 'supported viewport scheduled measurement');
+            frames.shift().onFrame(0);
+            assert.equal(current.controlMinimumReady, true);
+            const layout = current.controlLayout(metrics.revision);
+            assert.notEqual(layout.minimumStatus, 'legacy');
+            assert.ok(layout.minimumKey.startsWith(panel.minimumIdentity + '|'));
+            assert.ok(layout.contentBudget);
+            assert.ok(layout.fullPanelTop >= (layout.topBarVisible ? layout.topBarTop + layout.topBarHeight + 8 : layout.topBarTop));
+            panel.layout = layout;
+            assert.ok(layout.fullPanelWidth <= width && layout.fullPanelHeight <= height);
+            panel.minimumKey = layout.minimumKey;
+            panel.minimumReady = current.controlMinimumReady;
+            assert.equal(panel.minimumInputReady(), true);
+            assert.equal(panel.contentInputEnabled(), true);
+            assert.ok(panel.minimumProfiles.get(layout.minimumKey), 'current Panel owns measured profile');
+            return layout;
+        };
+        for (const [w, h] of [[568, 320], [366, 844], [568, 320], [366, 844], [600, 320], [760, 960], [760, 320]])
+            cycle(w, h);
+        const moduleSpecs = [
+            ['appearance', 'ReaderControlAppearanceContent.ets', ['publishMinimumMeasurer'], { ...ap }, { feedbackMounted: true, minimumMeasurerGeneration: 0, minimumInput: () => appInput, expandedLayout: true }],
+            ['tts', 'ReaderControlTtsContent.ets', ['publishMinimumMeasurer'], { ...tt }, { configMounted: true, sourceOnly: 'none', minimumFacts: () => ttsFacts, expandedLayout: true }],
+            ['autoPage', 'ReaderControlAutoPageContent.ets', ['publishMinimumMeasurer'], { ...au }, { minimumMounted: true, minimumFontsReady: true, sourceOnly: 'none', headerMeta: () => '未开始', timerSummaryText: '未设置', expandedLayout: true }],
+            ['search', 'ReaderControlSearchContent.ets', ['publishMinimumMeasurer'], { ...se }, { queryInputMounted: true, state: { kind: 'results', hasMore: true, results: [{ chapterTitle: '章节', snippet: '正文' }] }, query: '正文', resultTitle: () => '章节', statusText: () => '', retainedLoadMoreFailure: false }],
+            ['settings', 'ReaderControlSettingsContent.ets', ['onMinimumIdentityChanged', 'measureMinimum', 'groupLabel', 'groupOptions', 'optionLabel', 'minimumMeasurer'], { ...st,
+                    ...selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url), ['SETTINGS_DIRECTION_OPTIONS', 'SETTINGS_PAGE_OPTIONS', 'SETTINGS_TIMEOUT_OPTIONS'], deps) }, { minimumMounted: true }],
+            ['replace', 'ReaderControlReplaceContent.ets', ['onMinimumIdentityChanged', 'measureMinimum', 'minimumMeasurer'], { ...rp }, { mounted: true, state: { rules: [{ name: '替换', pattern: '原文', replacement: '替换' }], errorMessage: '', recoveryLabel: '' }, localError: '', layer: '', fullContentHeight: 500, statusText: () => '', scopeSummary: () => '正文', temporaryTitle: () => '替换规则' }],
+        ];
+        for (const [module, file, names, extra, properties] of moduleSpecs) {
+            const child = native(file, names, extra);
+            Object.assign(child, { minimumProfiles: new Map(), minimumPublishedIdentity: '', publishedMinimumIdentity: '', registeredMinimumIdentity: '',
+                minimumKey: '', minimumCacheTicket: '', minimumProfileTicket: '', minimumCandidateTicket: '', getUIContext: () => context, ...properties });
+            current.controlSession.location = { level: 'secondary', module, directoryTab: 'directory', form: 'quick' };
+            prepareModule = identity => {
+                child.minimumIdentity = identity;
+                child.onMinimumMeasurerReady = (ticket, provider, reader) => panel.bindModuleMinimum(module, ticket, provider, reader);
+                if (module === 'settings' || module === 'replace')
+                    child.onMinimumIdentityChanged();
+                else
+                    child.publishMinimumMeasurer();
+            };
+            scale = 2;
+            const layout = cycle(760, 320);
+            assert.ok(child.minimumProfiles.has(layout.minimumKey), module + ' retains current expanded measurement');
+            scale = 1;
+            cycle(568, 320);
+            const previousChildProvider = panel.moduleMinimumMeasurer;
+            if (module !== 'settings' && module !== 'replace') {
+                child.minimumIdentity = 'retired';
+                assert.equal(previousChildProvider(geo.readerControlCandidateWidths(568, 320, false, metrics)[0], 'late|1'), undefined, module + ' provider rejects retired identity');
+            }
+        }
+        prepareModule = undefined;
+        current.controlSession.location = { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' };
+        cycle(366, 844);
+        const old = panel.minimumIdentity;
+        panel.publishMinimumMeasurer();
+        const late = frames.shift();
+        cycle(390, 844);
+        const revision = current.controlMinimumRevision;
+        late.onFrame(0);
+        assert.equal(current.controlMinimumRevision, revision);
+        assert.equal(current.controlMinimumCurrent(old), false);
+        const previous = current.controlMinimumProvider;
+        current.bindControlMinimum(current.controlMinimumIdentity(), undefined);
+        assert.equal(current.controlMinimumReady, false);
+        current.bindControlMinimum(current.controlMinimumIdentity(), previous);
+        frames.shift().onFrame(0);
+        const portraitOnly = ui('LocalReadingExperience.ets').replace('this.effectiveViewportWidth() > 0 && this.effectiveViewportHeight() > 0 &&', '!this.expandedLayout && this.effectiveViewportWidth() < this.effectiveViewportHeight() &&');
+        const mutant = createReaderBuilderProbe(portraitOnly, ['controlMinimumCurrent'], {}).owner;
+        Object.assign(mutant, current, { width: 568, height: 320, expandedLayout: false });
+        assert.equal(mutant.controlMinimumCurrent(current.controlMinimumIdentity()), false, 'old portrait-only admission fails landscape');
+        return;
+    }
+    if (id === 'module-minimum-budget') {
+        const check = (w, a, s, q, r, auto) => {
+            assert.ok(a && s && q && r && auto);
+            assert.ok(a.profile.quickFontCellHeight >= 44 && a.profile.fullFontCellHeight >= 44 && a.profile.selectTriggerHeight >= 44 && a.profile.stepperRowHeight >= 44 && a.profile.themeActionHeight >= 44);
+            const quick = appearance.sampleReaderControlAppearance(0, w.quickContentWidthVp, 0, 8, 8, a.profile);
+            for (let i = 4; i < 8; i++)
+                assert.ok(quick.themeSwatches[i].y >= quick.themeSwatches[i - 4].y + 44);
+            for (const full of [false, true]) {
+                const f = settings.sampleReaderControlSettings(full ? 1 : 0, full ? w.fullContentWidthVp : w.quickContentWidthVp, s);
+                for (const [choices, bar] of [[f.directionChoices, f.bars[0]], [f.pageChoices, f.bars[1]], [f.timeoutChoices, f.bars[2]]])
+                    for (const cell of choices) {
+                        assert.ok(cell.width >= 44 && cell.height >= 44);
+                        assert.ok(cell.x + cell.width <= bar.width + .1 && cell.y + cell.height <= bar.height + .1);
+                    }
+                assert.ok(f.children[2].height >= 44);
+                const form = full ? q.full : q.quick;
+                const searchFrame = search.sampleReaderControlSearch(full ? 1 : 0, full ? w.fullContentWidthVp : w.quickContentWidthVp, 180, form.natural);
+                target(searchFrame.action, 'search submit');
+                target(searchFrame.back, 'search back');
+                assert.ok(searchFrame.field.x + searchFrame.field.width <= searchFrame.action.x + .1);
+                assert.ok(searchFrame.field.width > 44);
+                const replaceForm = full ? r.full : r.quick;
+                assert.ok(replaceForm.actionHeight >= 44 && replaceForm.backHeight >= 44 && replaceForm.editorFlagHeight >= 44 && replaceForm.toolbarCellHeight >= 44);
+            }
+            assert.ok(auto.quick.back.height >= 44);
+            for (const endpoint of [auto.quick, auto.full]) {
+                for (const name of ['previous', 'toggle', 'stop', 'next']) {
+                    target(endpoint[name], 'AutoPage ' + name);
+                    assert.ok(endpoint[name].x + endpoint[name].width <= endpoint.control.width + .1);
+                }
+                assert.ok(endpoint.follow.height >= 44);
+            }
+            target(auto.full.speedContent.slider, 'AutoPage full speed Slider');
+            assert.ok(auto.full.speedContent.slider.x + auto.full.speedContent.slider.width <= auto.full.speed.width + .1);
+            assert.ok(auto.fullText.wheelRowHeight >= 44 && auto.fullText.wheelWidth >= 44);
+            assert.ok(auto.fullText.timerPickerY + auto.fullText.wheelRowHeight * 3 + 4 + auto.fullText.wheelUnitHeight <= auto.full.timer.height - 33.39 + .1);
+            const tts = tt.measureReaderTtsMinimum(context, w, ttsFacts);
+            assert.ok(tts);
+            for (const text of [tts.quickText, tts.fullText])
+                for (const key of ['timerPreset', 'timerStepButton', 'ratePreset', 'voiceField', 'manageButton'])
+                    assert.ok(text[key] >= 44, key);
+            for (const endpoint of [tts.quick, tts.full]) {
+                for (const name of ['previous', 'toggle', 'stop', 'next']) target(endpoint[name], 'TTS ' + name);
+                assert.ok(endpoint.speedTrack.width >= 44, 'TTS speed track width');
+                assert.ok(endpoint.speedTrack.x + endpoint.speedTrack.width <= endpoint.speed.width + .1);
+            }
+            assert.ok(tts.quick.quickTimerSelect.x + tts.quick.quickTimerSelect.width <= tts.quick.timer.width + .1);
+            assert.ok(tts.full.speedPresets.width >= 44 * 5 + 32);
+            assert.ok(tts.fullText.timerCustomWidth >= 2 * (44 * 2 + tts.fullText.timerDigitWidth + 2) + 4 + 16);
+        };
+        for (scale of [1, 1.3, 1.6, 2])
+            for (const width of [272, 314, 548, 694]) {
+                const w = widths(width);
+                check(w, ap.measureReaderControlAppearanceMinimum(context, w, appInput), mkSettings(w), se.measureReaderSearchMinimum(context, w, searchFacts), rp.measureReaderControlReplaceMinimum(context, w, '', '核对原规则操作', '长规则名', '正则 → 替换', '正文规则', '编辑替换规则', true), au.measureReaderControlAutoPageMinimum(context, w, '未开始', '未设置'));
+            }
+        const old = pure('ReaderControlAppearanceMinimum.ets', ['measureReaderControlAppearanceMinimum'], ui('ReaderControlAppearanceMinimum.ets').replace('quickFontCellHeight: Math.max(44,', 'quickFontCellHeight: Math.max(27,'));
+        scale = 1;
+        assert.ok(old.measureReaderControlAppearanceMinimum(context, widths(314), appInput).profile.quickFontCellHeight < 44, 'old small font cell is rejected');
+        assert.ok(65 < 44 * 2 + 5, 'old replacement trailing65 cannot pay two44 actions');
+        const oldSettings = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum'], ui('ReaderControlSettingsMinimum.ets').replace('let naturalHeight = 44;', 'let naturalHeight = 24;'));
+        const brokenSettings = oldSettings.measureReaderControlSettingsMinimum(context, widths(314), ['方向', '翻页', '超时'], optionLabels, ['隐藏底部导航栏']);
+        assert.ok(brokenSettings.quick.optionHeights.some(height => height < 44), 'old settings button height is rejected');
+        return;
+    }
+    if (id === 'native-targets-sdk') {
+        for (scale of [1, 1.3, 1.6, 2]) {
+            const w = widths(314), profile = ap.measureReaderControlAppearanceMinimum(context, w, appInput).profile;
+            let p = 0, changed = 0;
+            const a = native('ReaderControlAppearanceContent.ets', ['themeSwatch', 'themeAction', 'stepButton', 'stepperRowHeight', 'stepperOffset'], {});
+            Object.assign(a, { frame: () => appearance.sampleReaderControlAppearance(p, p ? w.fullContentWidthVp : w.quickContentWidthVp, 600, 8, 8, profile),
+                minimumProfile: () => profile, themeColor: () => '#fff', snapshot: { activeTheme: 'paper' }, appThemeScheme: 'day',
+                actorPosition: a => ({ x: a.x, y: a.y }), sharedClip: () => undefined, sharedInput: () => true, fullInput: () => true,
+                themeLabel: () => '纸白', onThemeChange: () => changed++, presentation: () => ({ contentOpacity: 1, contentBlur: 0 }),
+                defaultThemeActionLabel: () => '设为日间主题', motionProgress: 1,
+            });
+            a.themeSwatch('paper', 0);
+            const swatch = nodes(a, 'Button')[0];
+            target(swatch, 'quick theme carrier');
+            swatch.onClick();
+            assert.equal(changed, 1);
+            const ids = [...a.nodes.keys()];
+            p = 1;
+            a.replay();
+            assert.deepEqual([...a.nodes.keys()], ids);
+            target(swatch, 'same theme full carrier');
+            a.themeAction(true);
+            target(nodes(a, 'Button').at(-1), 'theme action');
+            const gesture = new Proxy({}, { get: () => () => { } });
+            const fontFormat = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+            const font = native('ReaderControlAppearanceContent.ets', ['fontCell'], { ...fontFormat, BorderStyle: { Dashed: 'dashed', Solid: 'solid' },
+                LongPressGesture: gesture, globalThis: { Gesture: gesture, LongPressGesture: gesture }, GesturePriority: { Low: 'low' } });
+            const fontFrame = appearance.sampleReaderControlAppearance(1, w.fullContentWidthVp, 600, 8, 8, profile);
+            Object.assign(font, { fontActor: () => appearance.readerControlAppearanceFontActor(fontFrame, 0, 0), activeFont: () => true,
+                frame: () => fontFrame, minimumProfile: () => profile, fontPreviewReady: () => true, visiblePreviewFamily: () => 'HarmonyOS Sans', snapshot: {},
+                sharedClip: () => undefined, fontCellPosition: () => ({ x: 11, y: fontFrame.fullFontHeader.y + profile.fullFontHeaderHeight + 14 }),
+                draggedFontId: '', fontInput: () => true, presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), appThemeScheme: 'day', importLayout: 'ordered-slot-approved' });
+            // The label formatter is outside this geometry repair. Its actual saved
+            // identity remains the production slot passed across the Builder boundary.
+            font.fontCell('system');
+            target(nodes(font, 'Stack')[0], 'font carrier');
+            const selectSource = read('entry/src/main/ets/ui/controls/ReaderSelect.ets');
+            const selectValues = selectedProductionValues(new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url), ['APPEARANCE_TRIGGER_H', 'APPEARANCE_VALUE_VERTICAL_SPACE', 'APPEARANCE_HIT_OUTSET'], deps);
+            const select = createReaderBuilderProbe(selectSource, ['phoneTrigger', 'triggerHeight', 'appearanceLibraryTriggerHeight', 'measuredValueHeight', 'triggerEnabled', 'appearanceLibraryTrigger'], {
+                ...deps, ...selectValues, uiContext: context,
+            }).owner;
+            Object.assign(select, { variant: 'appearanceLibrary', value: '2字符', readerWindowMetricsRevision: 1, appThemeScheme: 'day',
+                actionEnabled: true, mounted: true, focusId: 'indent', options: ['无', '1字符', '2字符'], isOpen: false, trigger: () => select.appearanceLibraryTrigger(),
+                dropdownAnimation: () => undefined, onToggle: () => changed++ });
+            select.phoneTrigger();
+            const selectButton = nodes(select, 'Button')[0];
+            assert.ok(selectButton.height >= 44);
+            assert.equal(Math.abs(selectButton.responseRegion.y), 0);
+            assert.equal(selectButton.responseRegion.height, selectButton.height);
+            assert.ok(profile.selectRowHeight >= selectButton.height + 12, 'appearance row pays complete shared trigger');
+            selectButton.onClick();
+            changed--;
+            const step = native('ReaderControlAppearanceContent.ets', ['stepButton', 'stepperRowHeight', 'stepperOffset'], {
+                readerAppearanceCanStep: () => true,
+            });
+            Object.assign(step, { minimumProfile: () => profile, snapshot: {}, metricLabel: () => '字号', fullInput: () => true, onMetricStep: () => { }, appThemeScheme: 'day' });
+            step.stepButton('fontSize', 1, 0);
+            target(nodes(step, 'Button')[0], 'appearance stepper');
+            const back = native('ReaderControlQuickBack.ets', ['build', 'icon', 'labelStyle']);
+            Object.assign(back, { variant: 'search', scheme: 'day', actionWidth: 51, actionHeight: 44, actionVisible: true, actionEnabled: true, onAction: () => changed++ });
+            back.initialRender();
+            target(nodes(back, 'Button')[0], 'shared QuickBack');
+            nodes(back, 'Button')[0].onClick();
+            assert.equal(changed, 2);
+            const r = native('ReaderControlReplaceContent.ets', ['ruleIcon']);
+            Object.assign(r, { state: { sessionKey: 'one' }, layer: '', appThemeScheme: 'day', fullInput: () => true, readyInput: () => true });
+            r.ruleIcon('edit', () => '编辑规则', () => changed++, () => true, () => 'rule1');
+            target(nodes(r, 'Button')[0], 'replace edit');
+            nodes(r, 'Button')[0].onClick();
+            assert.equal(changed, 3);
+            const replaceProfile = rp.measureReaderControlReplaceMinimum(context, w, '', '核对原操作', '规则名', '原文 → 替换', '正文', '编辑规则', false);
+            const replaceFrame = replace.sampleReaderControlReplace(1, w.fullContentWidthVp, 500, replaceProfile);
+            const mountRule = source => {
+                const owner = createReaderBuilderProbe(source, ['ruleRow', 'ruleIcon'], deps).owner;
+                Object.assign(owner, { state: { sessionKey: 'one' }, layer: '', appThemeScheme: 'day', frame: () => replaceFrame,
+                    presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), readyInput: () => true, fullInput: () => true, quickInput: () => false,
+                    scopeSummary: () => '正文', rowClip: () => undefined, openEditor: () => { }, askDelete: () => { } });
+                const rule = { id: 1, name: '规则名', isEnabled: true, pattern: '原文', replacement: '替换' };
+                owner.ruleRow(() => rule, () => 0);
+                return owner;
+            };
+            const row = mountRule(ui('ReaderControlReplaceContent.ets'));
+            const trailing = nodes(row, 'Row').find(n => n.width === 93 && n.height === 44);
+            assert.ok(trailing && trailing.width >= 44 * 2 + 5);
+            assert.ok(replaceFrame.rowHeight >= trailing.height);
+            for (const button of nodes(row, 'Button'))
+                target(button, 'replacement actual rule action');
+            const oldTrailing = mountRule(ui('ReaderControlReplaceContent.ets').replace('}.width(93).height(44).position(', '}.width(65).height(44).position('));
+            assert.equal(nodes(oldTrailing, 'Row').some(n => n.width >= 93 && n.height === 44), false, 'old65 trailing loses paid action lane');
+            const t = native('ReaderControlTtsContent.ets', ['toggleRow', 'toggleValue', 'toggleLabel', 'changeToggle']);
+            Object.assign(t, { appScheme: 'day', fullInput: () => true, textMinimum: () => ({ toggleRow: 48 * scale }), followHighlight: false, onFollowHighlightChange: () => changed++ });
+            t.toggleRow('followHighlight');
+            target(nodes(t, 'Button')[0], 'TTS toggle');
+            nodes(t, 'Button')[0].onClick();
+            assert.equal(changed, 4);
+            const settingsMinimum = mkSettings(w);
+            const Modifier = pure('ReaderControlSettingsOptionModifier.ets', ['ReaderControlSettingsOptionModifier'], ui('ReaderControlSettingsOptionModifier.ets')).ReaderControlSettingsOptionModifier;
+            const attributes = {};
+            const carrier = new Proxy({}, { get: (_, key) => (...args) => { attributes[key] = args.length === 1 ? args[0] : args; return carrier; } });
+            const frame = settings.sampleReaderControlSettings(0, w.quickContentWidthVp, settingsMinimum);
+            new Modifier(() => changed++).update(frame.pageChoices[0], { contentOpacity: 1, contentBlur: 0 }, true, true, '翻页', 'day').applyNormalAttribute(carrier);
+            target(attributes, 'settings actual modifier');
+            attributes.onClick();
+            assert.equal(changed, 5);
+            const settingsOwner = native('ReaderControlSettingsContent.ets', ['segmentRow']);
+            const optionModifiers = new Map();
+            Object.assign(settingsOwner, { appThemeScheme: 'day', groupLabel: () => '翻页方式', p: () => 0, label: () => frame.labels[1], bar: () => frame.bars[1],
+                presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), sharedClip: () => undefined, groupOptions: () => ['cover', 'slide', 'simulation', 'scroll', 'none'],
+                optionLabel: (_group, option) => option, isSegmentActive: () => true,
+                optionModifier: (_group, _row, index) => {
+                    if (!optionModifiers.has(index))
+                        optionModifiers.set(index, new Modifier(() => { }));
+                    return optionModifiers.get(index).update(frame.pageChoices[index], { contentOpacity: 1, contentBlur: 0 }, true, index !== 2, '翻页选项', 'day');
+                } });
+            settingsOwner.segmentRow('pageTurn', 1);
+            for (const button of nodes(settingsOwner, 'Button'))
+                target(button, 'settings native option');
+            assert.equal(nodes(settingsOwner, 'Button')[2].enabled, false, 'unavailable capability remains disabled');
+            const ttsProfile = tt.measureReaderTtsMinimum(context, w, ttsFacts);
+            const accessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
+            const presetModifier = selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), ['ReaderTtsPresetModifier'], { ...accessibility, readerAppColor, Color: { Transparent: 'transparent' } });
+            const presets = native('ReaderControlTtsContent.ets', ['timer', 'timerPreset', 'timerStepper', 'timerStepButton', 'ratePreset', 'ratePresetWidth'], {
+                ...presetModifier, readerTtsPresetLabelColor: () => '#222', ...await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts'),
+            });
+            Object.assign(presets, { appScheme: 'day', frame: () => ttsProfile.full, textMinimum: () => ttsProfile.fullText, sectionSurface: () => { }, moduleHeader: () => { }, quickLabel: () => { },
+                timerCaption: () => '不开启', p:()=>1, sharedInput: () => true, presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), fullInput: () => true, configField: '',
+                timerPresetLabel: minutes => String(minutes), timerPresetIsSelected: () => false, chooseTimerPreset: () => { }, timerMinutes: 5, timerSeconds: 5, twoDigits: n => String(n).padStart(2, '0'),
+                sharedScrollTranslation: () => 0, sharedClip: () => undefined, cycleQuickTimer: () => { }, stepTimer: () => { }, effectiveRate: () => 1, chooseRatePreset: () => { },
+            });
+            presets.timer();
+            presets.ratePreset(.5);
+            for (const button of nodes(presets, 'Button').filter(node => node.opacity !== 0)) {
+                assert.ok(button.height >= 44, button.accessibilityText);
+                if (typeof button.width === 'number')
+                    assert.ok(button.width >= 44);
+            }
+            assert.ok(nodes(presets, 'Scroll').length >= 2, 'timer controls own bounded horizontal lanes');
+            const hiddenQuick=nodes(presets,'Button').find(node=>node.opacity===0);assert.equal(hiddenQuick.enabled,false);assert.equal(hiddenQuick.accessibilityLevel,'no-hide-descendants');
+        }
+        const wheelNames = ['build', 'targetWidth', 'targetHeight', 'offsets', 'valid', 'label', 'step'];
+        let stepped = 0;
+        const wheel = native('ReaderControlTimerWheel.ets', wheelNames);
+        Object.assign(wheel, { value: 5, minimum: 0, maximum: 59, neighbours: 1, wheelWidth: 44, rowHeight: 44, unitHeight: 16, unit: '秒', interactionEnabled: true, appThemeScheme: 'day', onStep: delta => stepped += delta });
+        wheel.initialRender();
+        for (const button of nodes(wheel, 'Button')) target(button, 'timer discrete choice');
+        assert.ok(nodes(wheel, 'Stack').some(node => node.height === 132 && node.width === 44));
+        nodes(wheel, 'Button')[2].onClick(); assert.equal(stepped, 1);
+        wheel.interactionEnabled = false; nodes(wheel, 'Button')[2].onClick(); assert.equal(stepped, 1);
+        const oldWheel = createReaderBuilderProbe(ui('ReaderControlTimerWheel.ets').replace('Math.max(44, this.rowHeight)', 'this.rowHeight'), wheelNames, deps).owner;
+        Object.assign(oldWheel, { value: 5, minimum: 0, maximum: 59, neighbours: 1, wheelWidth: 44, rowHeight: 34, unitHeight: 8, unit: '秒', interactionEnabled: true, appThemeScheme: 'day' });
+        oldWheel.initialRender(); assert.throws(() => target(nodes(oldWheel, 'Button')[0], 'old discrete wheel34'), />=44/);
+        const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+        const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+        const wheelProperties = createArkUIPropertyRuntimeProbe();
+        const wheelComponent = createReaderBuilderProbe(ui('ReaderControlTimerWheel.ets'), boundedMembers(ui('ReaderControlTimerWheel.ets')), { ...deps, ...wheelProperties.sdk }, wheelProperties.hooks).Component;
+        const autoProfile = au.measureReaderControlAutoPageMinimum(context, widths(272), '未开始', '未设置');
+        const autoWheel = native('ReaderControlAutoPageContent.ets', ['timerWheel', 'timerWheelWidth', 'currentTimerValue'], { ...await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts'), ReaderControlTimerWheel: wheelComponent }, { ...wheelProperties.hooks, mountChildren: true, lifecycleChildren: true, childSources: { ReaderControlTimerWheel: ui('ReaderControlTimerWheel.ets') } });
+        Object.assign(autoWheel, { appScheme: 'day', timerMinutes: 5, timerSeconds: 5, minimumProfile: () => autoProfile, textMetric: name => autoProfile.fullText[name], fullInput: () => true, commitTimerStep: () => {} });
+        autoWheel.timerWheel(true);
+        assert.ok(deepNodes(autoWheel).filter(node => node.type === 'Button').length === 3);
+        for (const button of deepNodes(autoWheel).filter(node => node.type === 'Button')) target(button, 'AutoPage actual imported wheel');
+        const morph = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+        for (const file of ['ReaderControlSettingsContent.ets', 'ReaderControlTtsContent.ets', 'ReaderControlAutoPageContent.ets']) {
+            let offset = 60;
+            const scrolled = native(file, ['p', 'fullInput', 'syncMorphScroll', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'quickMinimumScrollInput', 'quickMinimumScrollPresentation'], morph);
+            Object.assign(scrolled, { sourceOnly: 'none', motionProgress: 0, interactionEnabled: true, availableHeight: 80,
+                scrollMotion: morph.createReaderControlMorphScroll(), minimumQuickScrollOffset: 0, minimumScrollPath: undefined,
+                scroller: { currentOffset: () => ({ yOffset: offset }), scrollTo: request => { offset = request.yOffset; } },
+                frame: () => ({ contentHeight: 500 }), geometry: () => ({ contentHeight: 500 }), selectedMinimum: () => ({ minimum: { quick: { heightVp: 500 } } }), minimumProfile: () => ({ minimum: { quick: { heightVp: 500 } } }), reportMorphActor: () => {} });
+            scrolled.syncMorphScroll(); assert.equal(scrolled.minimumQuickScrollOffset, 60);
+            assert.equal(scrolled.nativeScrollDelta(12, 'gesture').yOffset, 12);
+            assert.equal(scrolled.sharedScrollTranslation(), 0);
+            scrolled.minimumScrollPath = morph.readerControlMorphScrollPath(0, 60); scrolled.motionProgress = .5; scrolled.interactionEnabled = false;
+            scrolled.syncMorphScroll(); assert.equal(offset, morph.sampleReaderControlMorphScrollPath(scrolled.minimumScrollPath, .5));
+            scrolled.motionProgress = 1; scrolled.interactionEnabled = true; scrolled.syncMorphScroll();
+            assert.equal(offset, 0); assert.equal(scrolled.minimumScrollPath, undefined);
+        }
+        scale = 2;
+        const ttsNarrow = tt.measureReaderTtsMinimum(context, widths(272), { ...ttsFacts, online: true });
+        assert.ok(ttsNarrow.fullText.configRow > 52 && ttsNarrow.fullText.serviceTabTitle > 34, 'actual residual CJK column widths grow row/card and tab title');
+        const config = native('ReaderControlTtsContent.ets', ['onlineServiceInfoRow', 'ttsClosedConfigRow', 'voiceSelectorRow', 'ttsSelectValueField', 'fieldWidth', 'fieldHeight', 'ttsServiceTypeTabs', 'ttsServiceTypeTab']);
+        Object.assign(config, { appScheme: 'day', httpEngines: [{}], textMinimum: () => ttsNarrow.fullText, fullInput: () => true, serviceBusy: false, configFocusId: 'current',
+            fieldLabel: () => '不可用处理', fieldValue: () => '停止并提示', currentVoiceLabel: () => '中文女声', isTtsServiceTabSelected: () => true, onlineServiceDescription: () => '设备内置语音', onlineTtsAccessibilityText: () => '在线TTS', openConfiguration: () => {}, selectTtsServiceType: () => {} });
+        config.onlineServiceInfoRow(); config.ttsClosedConfigRow('failure'); config.voiceSelectorRow(); config.ttsServiceTypeTabs();
+        const manageAction = nodes(config, 'Button').find(node => node.accessibilityText === '已配置在线 TTS，编辑服务信息');
+        assert.equal(manageAction.width, ttsNarrow.fullText.manageButtonWidth); assert.ok(manageAction.height >= 44);
+        assert.ok(nodes(config, 'Row').some(node => node.height === ttsNarrow.fullText.configRow && node.padding?.left === 14));
+        assert.equal(nodes(config, 'Text').find(node => node.create?.[0] === '服务信息')?.maxLines, undefined);
+        assert.ok(nodes(config, 'Row').some(node => node.height === ttsNarrow.fullText.serviceTab));
+        const manager = native('ReaderTtsConfigOverlay.ets', ['managerForm']);
+        Object.assign(manager, { appThemeScheme: 'day', draftName: '', draftUrl: '', draftApiKey: '', draftVoice: '', draftClearApiKey: false, busy: false, errorText: '', formatActionHeight: () => 44, formatChoice: () => {} });
+        manager.managerForm();
+        const fields = deepNodes(manager).filter(node => node.type === 'TextInput');
+        assert.equal(fields.length, 4); for (const field of fields) assert.equal(field.height, 44, 'actual manager field consumes shared44');
+        const editor = native('ReaderControlReplaceContent.ets', ['editorText']);
+        Object.assign(editor, { appThemeScheme: 'day', editorTextEnabled: () => true });
+        editor.editorText('名称', () => '旧规则', () => {}, 1);
+        assert.equal(deepNodes(editor).find(node => node.type === 'TextInput').height, 44, 'actual replace field consumes shared44');
+        const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+        const bounded = boundedSurfaceSdk();
+        let opening = 1, saved = 0;
+        const actions = bounded.consumer(ui('ReaderControlReplaceContent.ets'), ['temporaryActions', 'editorActions'], deps);
+        Object.assign(actions, { appThemeScheme: 'day', layer: 'editor', state: { mutationPending: false }, localPending: false, readyInput: () => true,
+            temporaryInputCurrent: token => token === opening, cancelTemporaryLayer: () => {}, saveEditor: () => saved++ });
+        actions.temporaryActions(1);
+        const actionNodes = bounded.nodes(actions), actionButtons = actionNodes.filter(node => node.type === 'Button');
+        assert.equal(actionButtons.length, 2);
+        for (const action of actionButtons) assert.ok(action.height >= 44, 'actual shared replace footer44');
+        assert.ok(actionNodes.some(node => node.type === 'Row' && node.height >= actionButtons[0].height));
+        actionButtons[1].onClick(); assert.equal(saved, 1);
+        opening++; actionButtons[1].onClick(); assert.equal(saved, 1, 'old editor opening cannot save');
+        const flow = native('ReaderControlReplaceContent.ets', ['temporaryNeedsFlow', 'temporaryFlow'], { ...bounded.deps, readerWindowMetrics: () => ({ systemFontScale: 2 }) });
+        Object.assign(flow, { layer: 'editor', availableHeight: 142, frame: () => ({ editorHeaderHeight: 52 }), temporaryHeader: () => {}, temporaryBodyContent: () => {}, temporaryActions: () => {} });
+        assert.equal(flow.temporaryNeedsFlow(), true); flow.temporaryFlow(1);
+        assert.equal(nodes(flow, 'Scroll').length, 1, 'short replace header/body/actions share one bounded Scroll');
+        assert.equal(nodes(flow, 'Scroll')[0].layoutWeight, 1);
+        const small = createReaderBuilderProbe(ui('ReaderControlQuickBack.ets').replace('@Prop actionHeight: number = 44;', '@Prop actionHeight: number = 24;'), ['build', 'icon', 'labelStyle'], { ...deps }).owner;
+        Object.assign(small, { variant: 'search', scheme: 'day', actionWidth: 51, actionHeight: 24, actionVisible: true, actionEnabled: true, onAction() { } });
+        small.initialRender();
+        assert.throws(() => target(nodes(small, 'Button')[0], 'old QuickBack'), />=44/);
+        return;
+    }
+    if (id === 'manga-tts-sdk') {
+        const { mangaSurfaceSdkDependencies } = await import('./lib/manga-surface-sdk-probe.mjs');
+        const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+        const surfaces = readerSurfaceSpecsForProbe();
+        const source = read('entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets');
+        const base = ['bottomControls', 'footerAction', 'controlFontScale', 'dockPageRowHeight', 'dockActionHeight', 'dockHeight', 'bottomControlViewportHeight', 'recoveryNoticeHeight', 'mangaTopBarHeight'];
+        const metrics = createDefaultReaderWindowMetrics();
+        const m = createReaderBuilderProbe(source, base, { ...mangaSurfaceSdkDependencies, ...deps, uiContext: context, ReaderWindowCoordinator: { metrics: () => metrics } }).owner;
+        Object.assign(m, { viewportWidth: 320, viewportHeight: 320, recovering: false, offlineProbeStatus: '', loginRequiredForControls: false, windowMetricsRevision: 1, interactiveInsets: () => ({ left: 0, right: 0, top: 24, bottom: 24 }), backgroundPreference: 'paper',
+            opened: true, horizontalPageCount: 10, pageOrdinal: () => 2, mutedColor: () => '#888', greenColor: () => '#080', lineColor: () => '#ddd', inkColor: () => '#222', chromeScheme: () => 'day',
+            readerPanelForeground: () => true, panelTriggerFocusId: x => x, stepPage: () => { }, seekPage: () => { }, openPanel: () => { },
+        });
+        m.bottomControls();
+        const previous = nodes(m, 'Button').find(n => n.accessibilityText === '上一页'), next = nodes(m, 'Button').find(n => n.accessibilityText === '下一页');
+        for (scale of [1, 1.3, 1.6, 2]) {
+            metrics.systemFontScale = scale;
+            m.windowMetricsRevision++;
+            m.replay();
+            target(previous, 'manga previous');
+            target(next, 'manga next');
+            const dock = nodes(m, 'Row').find(n => n.height === m.dockActionHeight() + 1 && n.border);
+            assert.ok(dock);
+            for (const button of nodes(m, 'Button').filter(n => ['目录', '阅读方式', '设置'].includes(n.accessibilityText)))
+                assert.ok(button.height + 1 <= dock.height);
+            assert.ok(m.dockPageRowHeight() >= 44 + 3 + 15 * scale);
+            assert.ok(m.bottomControlViewportHeight() + m.mangaTopBarHeight() + 10 <= m.viewportHeight - 48);
+            m.recovering = true;
+            assert.ok(m.bottomControlViewportHeight() + m.mangaTopBarHeight() + 10 + m.recoveryNoticeHeight() + 8 <= m.viewportHeight - 48);
+            m.recovering = false;
+        }
+        const legacyManga = createReaderBuilderProbe(source.replace("Button('‹').height(44).width(44)", "Button('‹').height(28).width(28)").replace('.height(this.dockActionHeight() + 1).border', '.height(55).border'), base, { ...mangaSurfaceSdkDependencies, ...deps, uiContext: context, ReaderWindowCoordinator: { metrics: () => metrics } }).owner;
+        for (const key of ['viewportWidth', 'viewportHeight', 'recovering', 'offlineProbeStatus', 'loginRequiredForControls', 'windowMetricsRevision', 'interactiveInsets', 'backgroundPreference', 'opened', 'horizontalPageCount', 'pageOrdinal', 'mutedColor', 'greenColor', 'lineColor', 'inkColor', 'chromeScheme', 'readerPanelForeground', 'panelTriggerFocusId', 'stepPage', 'seekPage', 'openPanel'])
+            legacyManga[key] = m[key];
+        legacyManga.bottomControls();
+        assert.throws(() => target(nodes(legacyManga, 'Button').find(node => node.accessibilityText === '上一页'), 'old manga28'), />=44/);
+        const legacyDock = nodes(legacyManga, 'Row').find(node => node.height === 55 && node.border);
+        assert.ok(legacyDock && nodes(legacyManga, 'Button').some(node => node.height > legacyDock.height), 'old55 dock parent underpays current footer');
+        const choice = createReaderBuilderProbe(source, ['sheetChoice', 'sheetActionHeight', 'controlFontScale'], { ...mangaSurfaceSdkDependencies, ...deps, uiContext: context, ReaderWindowCoordinator: { metrics: () => metrics } }).owner;
+        Object.assign(choice, { windowMetricsRevision: 1, isSheetChoiceSelected: () => false, choiceIcon: () => 'icon', mutedColor: () => '#888', greenColor: () => '#080', softSurfaceColor: () => '#fff', lineColor: () => '#ddd' });
+        choice.sheetChoice('vertical', '竖向连续', () => { });
+        const modeChoice = nodes(choice, 'Button')[0];
+        assert.equal(modeChoice.height, undefined, 'native choice grows with actual wrapped text');
+        assert.equal(modeChoice.constraintSize.minHeight, 44);
+        assert.ok(nodes(choice, 'Text').some(node => node.layoutWeight === 1), 'label gets finite remaining Row width and wraps');
+        assert.ok(4 * 12 * 2 > 74 && 18 * 2 * 2 + 16 > 52, 'wide CJK two-line old52 negative');
+        let closing = 0, mangaOpening = 1;
+        const close = createReaderBuilderProbe(source, ['directorySheet', 'directorySideHeader', 'directoryHeaderChrome'], { ...mangaSurfaceSdkDependencies, ...deps }).owner;
+        Object.assign(close, { panel: 'directory', panelPhase: 'open', actionPanelPresentationGeneration: 1, backgroundPreference: 'paper',
+            panelInputCurrent: token => token === mangaOpening, directorySheetInputCurrent: () => true, chromeScheme: () => 'day', panelTitle: () => '长篇漫画目录', inkColor: () => '#222', lineColor: () => '#ddd',
+            panelContentInset: () => 20, directoryFontScale: () => 2, quickHeaderMeasured: 0, measureDirectorySheetHeader: () => {},
+            widePanel: () => false, directoryBottomHeader: () => {}, directoryPanel: () => {}, directoryOuterScroller: {}, directoryOuterIdentity: () => 'd', panelContentHeight: () => 260,
+            panelWidth: () => 280, panelInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }), panelOffset: 0, panelCloseFocusId: () => 'directory:close', closePanel: () => closing++ });
+        close.directorySheet('d', 1);
+        target(nodes(close, 'Button')[0], 'Manga quick close44');
+        assert.ok(close.directoryHeaderChrome() >= 24 + 44 + 8);
+        nodes(close, 'Button')[0].onClick(); assert.equal(closing, 1);
+        mangaOpening++; nodes(close, 'Button')[0].onClick(); assert.equal(closing, 1);
+        mangaOpening = 1; close.widePanel = () => true; close.directorySideHeader(1);
+        const wideClose = nodes(close, 'Button').at(-1); target(wideClose, 'Manga wide close44');
+        assert.ok(nodes(close, 'Row').some(node => node.constraintSize?.minHeight >= 69));
+        mangaOpening++; wideClose.onClick(); assert.equal(closing, 1, 'old wide close opening rejected');
+        const chapter = createReaderBuilderProbe(source, ['chapterEndContent'], { ...mangaSurfaceSdkDependencies, ...deps }).owner;
+        Object.assign(chapter, { backgroundPreference: 'paper', viewportHeight: 160, windowMetricsRevision: 1, interactiveInsets: () => ({ left: 40, right: 40, top: 24, bottom: 24 }),
+            chapterEndTypeLabel: () => '本话', chapterEndLabel: () => '超长章节标题'.repeat(8), inkColor: () => '#222', mutedColor: () => '#888', paperColor: () => '#fff', chromeScheme: () => 'day',
+            adjacentChapter: () => ({}), adjacentLabel: () => '下一话 长标题', adjacentActionLabel: () => '继续阅读下一话', selectAdjacentChapter: () => {}, openPanel: () => {}, pageOrdinal: () => 9, horizontalPageCount: 10 });
+        chapter.chapterEndContent();
+        assert.equal(nodes(chapter, 'Scroll').length, 1);
+        assert.equal(nodes(chapter, 'Scroll')[0].height, '100%');
+        for (const button of nodes(chapter, 'Button')) { assert.equal(button.constraintSize.minHeight, 44); assert.equal(button.height, undefined); }
+        assert.ok(7 * 13 * 2 > 102 && 2 * 13 * 2 * 1.5 + 16 > 44, 'old fixed44 next action loses wide CJK wrapped label');
+        const o = native('ReaderTtsConfigOverlay.ets', ['headerAreaChangeHandler', 'headerLayoutKey', 'headerHeight', 'formatChoice', 'formatActionHeight', 'previewActionHeight', 'choiceHeight', 'panelWidth', 'managerSurfaceSpec', 'compactManager', 'footerHeight', 'managerOuterPadding', 'panelHeight', 'choiceRow', 'close', 'onIdentityChanged', 'stopPreview', 'preview'], {
+            uiContext: context, resolvePopupSpec: surfaces.resolvePopupSpec, ReaderWindowCoordinator: { metrics: () => metrics },
+        });
+        Object.assign(o, { modalUsableWidth: 0, measuredHeaderHeight: 0, measuredHeaderKey: '', manager: false, voicePicker: true, availableWidth: 320, availableHeight: 180, appThemeScheme: 'day', choices: [], selectedId: 'v1', draftFormat: 'mp3', busy: false,
+            metricsRevision: 1, getUIContext: () => context, previewId: '', previewGeneration: 0, selectionId: 'one', mounted: true, errorText: '', onPreviewStop: () => { }, onBusyChange: () => { }, generation: 0 });
+        const choiceFact = { id: 'v1', label: '很长的在线中文女声音色 · 服务提供者' };
+        o.choiceRow(choiceFact);
+        target(nodes(o, 'Button')[0], 'TTS voice preview');
+        assert.ok(nodes(o, 'Row').find(n => n.height === o.choiceHeight(choiceFact)));
+        o.formatChoice('MP3', 'mp3');
+        const format = nodes(o, 'Button').at(-1);
+        assert.ok(format.height >= 44);
+        const before = [...o.nodes.keys()];
+        scale = 1;
+        o.replay();
+        assert.deepEqual([...o.nodes.keys()], before);
+        assert.ok(format.height >= 44);
+        o.manager = true;
+        o.modalUsableHeight = 166;
+        assert.equal(o.compactManager(), true);
+        assert.ok(o.panelHeight() <= 166);
+        o.modalUsableHeight = 100;
+        assert.ok(o.panelHeight() <= 100);
+        assert.equal(o.compactManager(), true);
+        o.voicePicker = false;
+        o.modalUsableWidth = 320;
+        assert.ok(o.panelWidth() <= 294, 'manager consumes measured viewport minus26 outer padding');
+        const staleHeader = o.headerAreaChangeHandler(o.headerLayoutKey());
+        o.metricsRevision++;
+        staleHeader({}, { height: 140 });
+        assert.equal(o.measuredHeaderHeight, 0);
+        o.headerAreaChangeHandler(o.headerLayoutKey())({}, { height: 64 });
+        assert.equal(o.headerHeight(), 64);
+        metrics.systemFontScale = 2; scale = 2; o.manager = true; o.voicePicker = false; o.modalUsableHeight = 240;
+        o.measuredHeaderKey = o.headerLayoutKey(); o.measuredHeaderHeight = 78;
+        assert.equal(o.footerHeight(), 96);
+        assert.equal(o.panelHeight(), 208);
+        assert.equal(o.compactManager(), true, 'actual96 footer and78 header leave34, so entire manager flows');
+        assert.ok(o.panelHeight() - o.headerHeight() - 76 >= 44 && o.panelHeight() - o.headerHeight() - o.footerHeight() < 44, 'old raw76 negative');
+        const shortPicker = native('ReaderTtsConfigOverlay.ets', ['compactContent', 'compactManager', 'boundedContent'], { ReaderWindowCoordinator: { metrics: () => metrics } });
+        Object.assign(shortPicker, { manager: false, voicePicker: false, panelHeight: () => 126, headerHeight: () => 88, configurationHeader: () => {}, configurationBody: () => {}, managerFooter: () => {} });
+        shortPicker.boundedContent();
+        assert.equal(nodes(shortPicker, 'Scroll')[0].height, 126, 'short picker Header and choices share full126 flow viewport');
+
+        const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+        const bounded = boundedSurfaceSdk();
+        const footerControls = boundedSurfaceSdk({ windowMetrics: () => metrics });
+        const footerConsumer = footerControls.consumer(ui('ReaderTtsConfigOverlay.ets'), ['managerFooter'], deps);
+        Object.assign(footerConsumer, { canSubmit: () => true, busy: false, close: () => {}, submit: () => {} });
+        footerConsumer.managerFooter();
+        const actualFooter = footerControls.nodes(footerConsumer).find(node => node.type === 'Row' && node.height === o.footerHeight());
+        assert.ok(actualFooter && actualFooter.height - 32 >= 44, 'shared footer actual96 pays row padding32 and Native64');
+
+        const headerConsumer = bounded.consumer(ui('ReaderTtsConfigOverlay.ets'), ['configurationHeader', 'boundedSpecId', 'headerAreaChangeHandler', 'headerLayoutKey', 'panelWidth', 'managerSurfaceSpec', 'close', 'stopPreview'], { ...deps, uiContext: context });
+        Object.assign(headerConsumer, { manager: true, modalUsableWidth: 320, availableWidth: 320, voicePicker: false, metricsRevision: 1, title: '第三方 TTS 配置',
+            measuredHeaderHeight: 0, measuredHeaderKey: '', selectionId: 'header:current', mounted: true, appThemeScheme: 'day', busy: false, previewGeneration: 0, previewId: '', onPreviewStop: () => { }, onClose: () => { }, closeFocusId: 'close' });
+        headerConsumer.configurationHeader();
+        const closeButton = bounded.nodes(headerConsumer).find(node => node.accessibilityText === '关闭 TTS 配置');
+        target(closeButton, 'actual shared TTS header close');
+        const actualHeaderRow = bounded.nodes(headerConsumer).find(node => node.type === 'Row' && node.constraintSize?.minHeight === 58);
+        assert.ok(actualHeaderRow && actualHeaderRow.height === undefined, 'TTS header allows actual text extent above minimum58');
+        actualHeaderRow.onAreaChange({}, { width: 293, height: 64 });
+        assert.equal(headerConsumer.measuredHeaderHeight, 64);
+        const smallHeader = read('entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets').replace("}.width(44).height(44).padding(0).backgroundColor(Color.Transparent)\n        .id(this.closeFocusId)\n        .enabled(this.actionEnabled)", "}.width(16).height(16).padding(0).backgroundColor(Color.Transparent)\n        .id(this.closeFocusId)\n        .enabled(this.actionEnabled)");
+        assert.notEqual(smallHeader, read('entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets'));
+        const oldBounded = boundedSurfaceSdk({ ReaderBoundedSurfaceHeader: smallHeader });
+        const oldHeaderConsumer = oldBounded.consumer(ui('ReaderTtsConfigOverlay.ets'), ['configurationHeader', 'boundedSpecId', 'headerAreaChangeHandler', 'headerLayoutKey', 'panelWidth', 'managerSurfaceSpec', 'close', 'stopPreview'], { ...deps, uiContext: context });
+        Object.assign(oldHeaderConsumer, { manager: true, modalUsableWidth: 320, availableWidth: 320, voicePicker: false, metricsRevision: 1, title: '第三方 TTS 配置', selectionId: 'old', mounted: true, appThemeScheme: 'day', busy: false, onClose: () => { }, closeFocusId: 'old:close' });
+        oldHeaderConsumer.configurationHeader();
+        assert.throws(() => target(oldBounded.nodes(oldHeaderConsumer).find(node => node.accessibilityText === '关闭 TTS 配置'), 'old small TTS close'), />=44/);
+        o.busy = true;
+        o.onIdentityChanged();
+        assert.equal(o.busy, false);
+        assert.equal(o.generation, 1);
+        let finish;
+        const events = [];
+        Object.assign(o, { busy: false, selectionId: 'one', onPreview: () => new Promise(r => { finish = r; }), onPreviewStop: id => events.push(id) });
+        o.preview('v1');
+        o.selectionId = 'two';
+        o.onIdentityChanged();
+        finish();
+        await new Promise(r => setImmediate(r));
+        assert.equal(o.previewId, '');
+        assert.ok(events.includes('one'));
+        return;
+    }
+    if (id === 'header-home-sdk') {
+        let headerFontsReady = true;
+        const headerDependencies = pureModuleProbe(headerSource.slice(0, headerSource.indexOf('@Component')), 'ReaderReadingTopBarTitle.ets', {
+            ...deps, readerWindowMetrics: () => ({ systemFontScale: scale }),
+            readerFontFamilyReady: () => headerFontsReady, mangaDirectoryColor: () => '#222', FontWeight: { Bold: 700 }, TextOverflow: { Ellipsis: 'ellipsis' }, TextAlign: { Start: 'start' },
+        }, ['ReaderReadingTopBarTitle', 'readerReadingTopBarHeight', 'readerReadingTopBarFontsReady']);
+        const header = createReaderBuilderProbe(headerSource, ['build', 'resolvedHeight', 'titleFontScale', 'leading', 'trailing', 'empty'], {
+            ...deps, ...headerDependencies, readerWindowMetrics: () => ({ systemFontScale: scale }), uiContext: context,
+        }).owner;
+        Object.assign(header, { variant: 'reading', barWidth: 320, barHeight: 54, bookTitle: '长书名', subtitle: '很长的章节与书源', scheme: 'day', inputEnabled: true,
+            windowMetricsRevision: 1, leading: () => { }, trailing: () => { } });
+        header.initialRender();
+        const ids = [...header.nodes.keys()];
+        for (scale of [1, 1.3, 1.6, 2]) {
+            header.windowMetricsRevision++;
+            header.replay();
+            assert.deepEqual([...header.nodes.keys()], ids);
+            const row = nodes(header, 'Row')[0];
+            assert.ok(row.height >= (19.2 + 14.4) * scale + 5);
+            assert.equal(nodes(header, 'Column')[0].height, undefined, 'title Column uses its real text extent');
+            assert.equal(row.height, headerDependencies.readerReadingTopBarHeight(context, 'reading', 54));
+        }
+        const afterReady = measurementCalls;
+        header.replay();
+        header.replay();
+        assert.equal(measurementCalls, afterReady, 'same header revision reuses actual measurement');
+        headerFontsReady = false;
+        header.replay();
+        const preparing = measurementCalls;
+        header.replay();
+        assert.ok(measurementCalls > preparing, 'preparing font never caches fallback');
+        headerFontsReady = true;
+        header.replay();
+        const registered = measurementCalls;
+        header.replay();
+        assert.equal(measurementCalls, registered, 'ready font caches current result at same metrics revision');
+        const h = native('ReaderControlPanel.ets', ['measureHomeForm', 'chapterRow', 'progressRow', 'sourceActionHeight', 'topBarActions', 'topBarBack', 'topBarInputEnabled'], {
+            uiContext: context, sourceSwitchTriggerFocusId: () => 'source:one',
+        });
+        Object.assign(h, { appScheme: 'day', minimumMetricsRevision: 1, layout: { topBarHeight: 54, topBarVisible: true }, chapterTitle: '很长的章节标题', totalChapters: 100, inputEnabled: true,
+            controlObscured: false, temporaryLayerActive: false, moreMenuVisible: false, sourceId: 's', sourceBookId: 'b',
+            canStepChapter: () => true, onPreviousChapter: () => { }, onNextChapter: () => { }, progressPercent: 40, effectiveProgressPercent: () => 40,
+            progressInputRevision: 1, progressChangeHandler: () => () => { }, sourceActionHeight: h.sourceActionHeight,
+            isLocalBook: () => false, setMoreMenuVisible: () => { }, readerMorePopupOptions: () => ({}), onSourceSwitch: () => { }, onExitReading: () => { },
+        });
+        let profile = h.measureHomeForm(240);
+        h.homeMetric = (name, fallback) => profile[name] ?? fallback;
+        h.chapterRow();
+        h.progressRow();
+        h.topBarActions();
+        h.topBarBack();
+        const homeIds = [...h.nodes.keys()];
+        for (scale of [1, 1.3, 1.6, 2]) {
+            profile = h.measureHomeForm(240);
+            h.layout.topBarHeight = headerDependencies.readerReadingTopBarHeight(context, 'reading', 54);
+            h.replay();
+            assert.deepEqual([...h.nodes.keys()], homeIds);
+            assert.ok(profile.chapterRowHeight >= 54);
+            assert.ok(profile.progressHeight >= 50);
+            const chapter = nodes(h, 'Row').find(n => n.height === profile.chapterRowHeight && n.padding?.top === 10);
+            assert.ok(chapter.height - 10 >= 44);
+            for (const child of h.children.values())
+                for (const button of nodes(child, 'Button')) {
+                    if (button.responseRegion) {
+                        const region = button.responseRegion;
+                        assert.ok(region.width >= 44 && region.height >= 44);
+                        assert.ok((chapter.height - 10 - button.height) / 2 + region.y >= 0, 'chapter native44 region remains inside its paid vertical content');
+                    }
+                }
+            const progress = nodes(h, 'Row').find(n => n.height === profile.progressHeight && n.padding?.top === 6);
+            const slider = nodes(h, 'Slider')[0];
+            assert.ok(slider.height >= 44 && progress.height - 6 >= slider.height);
+            const source = nodes(h, 'Button').find(n => n.accessibilityText === '换源');
+            target(source, 'reading source action');
+            assert.ok(source.height >= 25 + 14.4 * scale);
+            target(nodes(h, 'Button').find(n => n.accessibilityText === '更多'), 'reading more');
+            target(nodes(h, 'Button').find(n => n.accessibilityText === '退出阅读，返回上一页'), 'reading back');
+        }
+        const oldHeader = createReaderBuilderProbe(headerSource.replace('.height(this.resolvedHeight())', '.height(this.barHeight)'), ['build', 'resolvedHeight', 'titleFontScale', 'leading', 'trailing', 'empty'], {
+            ...deps, ...headerDependencies, readerWindowMetrics: () => ({ systemFontScale: 2 }), uiContext: context,
+        }).owner;
+        Object.assign(oldHeader, { variant: 'reading', barWidth: 320, barHeight: 54, bookTitle: '长书名', subtitle: '长章节', scheme: 'day', inputEnabled: true, windowMetricsRevision: 1, leading: () => { }, trailing: () => { } });
+        oldHeader.initialRender();
+        assert.ok(nodes(oldHeader, 'Row')[0].height < (19.2 + 14.4) * 2 + 5, 'old54 bar underpays two enlarged native lines');
+        const oldColumn = createReaderBuilderProbe(headerSource.replace('}.layoutWeight(1)\n        .constraintSize', '}.layoutWeight(1).height(45)\n        .constraintSize'), ['build', 'resolvedHeight', 'titleFontScale', 'leading', 'trailing', 'empty'], {
+            ...deps, ...headerDependencies, readerWindowMetrics: () => ({ systemFontScale: 2 }), uiContext: context,
+        }).owner;
+        Object.assign(oldColumn, { variant: 'reading', barWidth: 320, barHeight: 54, bookTitle: '长书名', subtitle: '长章节', scheme: 'day', inputEnabled: true, windowMetricsRevision: 1, leading: () => { }, trailing: () => { } });
+        oldColumn.initialRender();
+        assert.ok(nodes(oldColumn, 'Column')[0].height < (19.2 + 14.4) * 2 + 5, 'old45 title Column underpays current native lines');
+        assert.ok(52.563 - 10 < 44 && 30 - 6 < 44, 'old home rows cannot pay44');
+        return;
+    }
+    if (id === 'brightness-sdk') {
+        const metrics = createDefaultReaderWindowMetrics();
+        scale = 2; metrics.systemFontScale = 2;
+        metrics.systemInsets.top = 24; metrics.navigationInsets.bottom = 24;
+        const initial = geo.resolveReaderControlLayout(568, 320, false, metrics);
+        const width = geo.readerControlCandidateWidths(568, 320, false, metrics)[0];
+        const nativeBar = deps.readerReadingTopBarHeight(context, 'reading', 54);
+        const measured = minimum.measureReaderControlMinimum({ context, headerInter: false, title: '阅读控制', identity: 'current', metricsRevision: 1,
+            topBarHeightVp: nativeBar, availableWithTopBarHeightVp: initial.fullPanelHeight + initial.fullPanelTop - Math.max(88, initial.topBarTop + nativeBar + 8),
+            measureHomeForm: () => ({ minimumHeight: 170, minWidth: 100, fits: true }) }, 'home', width, 'current|1');
+        const candidate = measured.candidate;
+        const layout = geo.resolveReaderControlLayout(568, 320, false, metrics, 0, [candidate]);
+        assert.equal(layout.topBarVisible, false, 'short layout relocates topbar actions to Home Scroll');
+        assert.ok(layout.contentBudget.quickContentHeightVp >= 44, 'physical Home/brightness viewport admits complete44 target');
+        assert.ok(layout.contentBudget.fullContentHeightVp >= 44);
+        const withRecovery = geo.resolveReaderControlLayout(568, 320, false, metrics, initial.topBarTop + geo.READER_CONTROL_SAFE_TOP_GAP + 44, [candidate]);
+        assert.ok(withRecovery.contentBudget.quickContentHeightVp >= 44, 'bounded44 recovery plus gap pays full native target viewport');
+        const oldChrome = { ...candidate, chrome: { ...candidate.chrome, topBarVisible: true, quickReserveVp: 29 + 18 + measured.profile.navigationHeight + 13 } };
+        const oldLayout = geo.resolveReaderControlLayout(568, 320, false, metrics, 0, [oldChrome]);
+        assert.ok(oldLayout.contentBudget.quickContentHeightVp < 44, 'old topbar and gaps clip an entire44 target');
+        console.log(JSON.stringify({ kind: 'reader-short-control-budget', viewport: [568, 320], fontScale: 2, safeTop: 24, safeBottom: 24, topBarHeight: nativeBar, topBarVisible: layout.topBarVisible, homeNavigationHeight: layout.contentBudget.navigationHeightVp, quickReserve: candidate.chrome.quickReserveVp, quickContentHeight: layout.contentBudget.quickContentHeightVp, withRecoveryQuickContentHeight: withRecovery.contentBudget.quickContentHeightVp, oldChromeContentHeight: oldLayout.contentBudget.quickContentHeightVp }));
+        for (const module of ['tts', 'appearance', 'settings', 'search', 'replace', 'autoPage', 'directory']) {
+            const secondary = minimum.measureReaderControlMinimum({ context, headerInter: false, title: '阅读控制', identity: 'current', metricsRevision: 1,
+                topBarHeightVp: nativeBar, availableWithTopBarHeightVp: 100, measureHomeForm: () => undefined }, module, width, 'module|1',
+                () => ({ module, quick: { heightVp: 500, minWidthVp: 100, fits: true }, full: { heightVp: 500, minWidthVp: 100, fits: true } }));
+            const secondaryLayout = geo.resolveReaderControlLayout(568, 320, false, metrics, withRecovery.minimumPanelTop - 8, [secondary.candidate]);
+            assert.equal(secondaryLayout.contentBudget.navigationHeightVp, 0);
+            assert.ok(secondaryLayout.contentBudget.quickContentHeightVp >= 44);
+        }
+        const frame = motion.sampleReaderControlMotionComposition({ visibilityProgress: 1, expansionProgress: 0 }, motion.readerControlMotionBounds(layout.fullPanelWidth, layout.fullPanelHeight, layout.dockBottomGap, layout.quickPanelHeight, layout.contentBudget));
+        assert.ok(frame.brightness.height >= 44 && frame.brightness.opacity === 1);
+        const focus = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
+        let exited = 0, sourceOpened = '', location = { level: 'home' }, more = false;
+        const short = native('ReaderControlPanel.ets', ['shortWindowActions', 'shortWindowActionInput', 'topBarInputEnabled'], { ...focus, ScrollDirection: { Horizontal: 'horizontal' } });
+        Object.assign(short, { layout, appScheme: 'day', inputEnabled: true, sourceId: 'source:one', sourceBookId: 'book:one', temporaryLayerActive: false,
+            moreMenuVisible: false, moreMenuGeneration: 7, contentLocation: () => location, contentInputEnabled: () => true, frame: () => frame,
+            isLocalBook: () => false, onExitReading: () => exited++, onSourceSwitch: origin => sourceOpened = origin,
+            setMoreMenuVisible: value => { more = value; }, readerMorePopupOptions: () => ({ generation: 7 }) });
+        short.shortWindowActions();
+        const shortButtons = nodes(short, 'Button'); for (const button of shortButtons) target(button, 'short Home action');
+        assert.equal(nodes(short, 'Row').find(node => node.height === 44).width, Math.max(180, frame.content.width));
+        assert.equal(nodes(short, 'Scroll')[0].width, frame.content.width);
+        const actualWidth = frame.content.width; frame.content.width = 148; short.replay();
+        assert.equal(nodes(short, 'Scroll')[0].width, 148); assert.equal(nodes(short, 'Scroll')[0].height, 44);
+        assert.equal(nodes(short, 'Scroll')[0].enableScrollInteraction, true);
+        assert.equal(nodes(short, 'Row').find(node => node.height === 44).width, 180);
+        frame.content.width = actualWidth; short.replay();
+        shortButtons[1].onClick(); assert.equal(sourceOpened, focus.sourceSwitchTriggerFocusId('source:one', 'book:one', 'reader-control-short'));
+        assert.notEqual(shortButtons[1].id, focus.sourceSwitchTriggerFocusId('source:one', 'book:one', 'reader-control'), 'short source focus is unique from retained hidden topbar');
+        shortButtons[2].onClick(); assert.equal(more, true);
+        shortButtons[0].onClick(); assert.equal(exited, 1);
+        assert.equal(short.topBarInputEnabled(), false);
+        location = { level: 'secondary', module: 'settings' }; sourceOpened = ''; more = false;
+        shortButtons[0].onClick(); shortButtons[1].onClick(); shortButtons[2].onClick();
+        assert.equal(exited, 1); assert.equal(sourceOpened, ''); assert.equal(more, false, 'old short Home callbacks cannot operate secondary owner');
+        location = { level: 'home' }; short.layout = { ...layout, topBarVisible: true };
+        shortButtons[1].onClick(); assert.equal(sourceOpened, '', 'retired short source cannot invoke under normal topbar');
+        let stageFrame = frame;
+        const stage = native('ReaderControlPanel.ets', ['build', 'topBarInputEnabled'], { ...motion, AccessibilityRoleType: { BUTTON: 'button' } }, { childSources: { ReaderSessionLaunchStage: ui('ReaderSessionLaunchStage.ets') } });
+        Object.assign(stage, { layout, frame: () => stageFrame, appScheme: 'day', controlActorsRetained: true, launchSample: undefined, controlObscured: false,
+            inputEnabled: true, temporaryLayerActive: false, moreMenuVisible: false, visualHeldPointerId: -1, contentLocation: () => ({ level: 'home', module: 'directory', form: 'quick' }),
+            topBar: () => {}, controlContent: () => {}, controlHeader: () => {}, brightnessRail: () => {}, moduleNavBar: () => {}, measureTopBar: () => {},
+            contentInputEnabled: () => true, controlPanelHeight: () => layout.fullPanelHeight, dockLeft: () => 0, dockTop: () => layout.fullPanelTop, accessibleControlActions: () => {}, handleControlTouch: () => {} });
+        stage.initialRender();
+        const retainedHeader = nodes(stage, 'Stack').find(node => node.width === layout.topBarWidth && node.height === layout.topBarHeight && node.position?.y === layout.topBarTop);
+        assert.equal(retainedHeader.opacity, 0); assert.equal(retainedHeader.enabled, false);
+        assert.equal(retainedHeader.hitTestBehavior, 'HitTestMode.None'); assert.equal(retainedHeader.accessibilityLevel, 'no-hide-descendants');
+        stageFrame = { ...frame, navigation: { ...frame.navigation, height: 0, opacity: 0 } }; stage.replay();
+        const retiredNav = nodes(stage, 'Stack').find(node => node.width === frame.navigation.width && node.height === 0 && node.position?.y === frame.navigation.y);
+        assert.equal(retiredNav.enabled, false); assert.equal(retiredNav.hitTestBehavior, 'HitTestMode.None'); assert.equal(retiredNav.accessibilityLevel, 'no-hide-descendants');
+        const gestures = [];
+        const gesture = new Proxy({}, { get: (_, name) => (...args) => { gestures.push({ name, args }); return gesture; } });
+        const b = native('ReaderControlPanel.ets', ['brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
+            PanGesture: gesture, TapGesture: gesture, GestureGroup: gesture, PanDirection: { Vertical: 'vertical' }, GestureMode: { Exclusive: 'exclusive' },
+            GesturePriority: { Low: 'low' }, globalThis: { Gesture: gesture, GestureGroup: gesture, PanGesture: gesture, TapGesture: gesture },
+        });
+        let auto = 0;
+        const changed = [];
+        Object.assign(b, { layout, frame: () => frame, appScheme: 'day', brightnessPercent: 50, brightnessPreviewPercent: -1, brightnessAutomatic: false,
+            temporaryLayerActive: false, brightnessDragging: false, emitBrightness: () => { }, onBrightnessChange: v => changed.push(v), onBrightnessAuto: () => auto++, onBrightnessCancel: () => { }, });
+        b.brightnessRail();
+        const scroll = nodes(b, 'Scroll')[0], column = nodes(b, 'Column')[0];
+        assert.equal(scroll.height, frame.brightness.height);
+        assert.ok(column.height > scroll.height);
+        assert.equal(scroll.enableScrollInteraction, true);
+        assert.ok(b.brightnessTrackHeight() >= 44);
+        assert.ok(nodes(b, 'Stack').some(n => n.height === b.brightnessTrackHeight() && n.hitTestBehavior === 'HitTestMode.Block'));
+        const automatic = nodes(b, 'Button')[0];
+        target(automatic, 'brightness automatic');
+        assert.ok(column.width >= automatic.width + 1);
+        automatic.onClick();
+        assert.equal(auto, 1);
+        assert.ok(gestures.some(g => g.name === 'onActionStart') && gestures.some(g => g.name === 'onActionUpdate') && gestures.some(g => g.name === 'onActionEnd') && gestures.some(g => g.name === 'onAction'));
+        const start = gestures.find(g => g.name === 'onActionStart').args[0];
+        const move = gestures.find(g => g.name === 'onActionUpdate').args[0];
+        const end = gestures.find(g => g.name === 'onActionEnd').args[0];
+        start();
+        move({ offsetY: -10 });
+        end({ offsetY: -10 });
+        assert.ok(changed.length >= 1);
+        gestures.find(g => g.name === 'onAction').args[0]({ fingerList: [{ localY: 0 }] });
+        assert.equal(changed.at(-1), 100);
+        const ids = [...b.nodes.keys()];
+        frame.brightness.height = 190;
+        b.replay();
+        assert.deepEqual([...b.nodes.keys()], ids);
+        assert.equal(scroll.enableScrollInteraction, false);
+        assert.equal(column.height, 190);
+        assert.equal(scroll.height, 190);
+        const old = motion.sampleReaderControlMotionComposition({ visibilityProgress: 1, expansionProgress: 0 }, motion.readerControlMotionBounds(layout.fullPanelWidth, layout.fullPanelHeight, layout.dockBottomGap, layout.quickPanelHeight, layout.contentBudget));
+        assert.ok(controls.readerControlBrightnessTrackHeight(old.brightness.height, 44) < 44, 'old usable predicate would retire this required rail');
+        return;
+    }
+}

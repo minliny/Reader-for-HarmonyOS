@@ -165,7 +165,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private publishMinimumMeasurer(): void {
-    if (!this.minimumMounted || !this.minimumFontsReady || this.expandedLayout || this.minimumIdentity.length === 0) return;
+    if (!this.minimumMounted || !this.minimumFontsReady || this.minimumIdentity.length === 0) return;
     if (this.publishedMinimumIdentity.length > 0 && this.publishedMinimumIdentity !== this.minimumIdentity)
       this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     const identity = this.minimumIdentity;
@@ -202,7 +202,7 @@ export struct ReaderControlAutoPageContent {
 
   private minimumProfile(): ReaderControlAutoPageMinimumProfile | undefined {
     if (this.sourceOnly !== 'none') return this.sourceMinimumCurrent() ? this.sourceMinimum?.data.autoPage : undefined;
-    return this.expandedLayout ? undefined : this.minimumProfiles.get(this.minimumKey);
+    return this.minimumProfiles.get(this.minimumKey);
   }
 
   private sourceMinimumCurrent(): boolean {
@@ -234,7 +234,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private naturalMorphMeasurementCurrent(): boolean {
-    if (this.expandedLayout || this.minimumIdentity.length === 0) return true;
+    if (this.minimumIdentity.length === 0) return true;
     if (this.minimumProfile() === undefined || (this.p() !== 0 && this.p() !== 1)) return false;
     const full = this.form === 'full';
     const measured = full ? this.fullMeasurement : this.quickMeasurement;
@@ -265,6 +265,10 @@ export struct ReaderControlAutoPageContent {
     if (name === 'timerLabelWidth') return profile.timerLabelWidth;
     if (name === 'timerLabelHeight') return profile.timerLabelHeight;
     if (name === 'timerColonHeight') return profile.timerColonHeight;
+    if (name === 'timerPickerX') return profile.timerPickerX;
+    if (name === 'timerPickerY') return profile.timerPickerY;
+    if (name === 'timerLabelY') return profile.timerLabelY;
+    if (name === 'wheelWidth') return profile.wheelWidth;
     if (name === 'wheelRowHeight') return profile.wheelRowHeight;
     if (name === 'wheelUnitHeight') return profile.wheelUnitHeight;
     if (name === 'followLabelHeight') return profile.followLabelHeight;
@@ -572,7 +576,7 @@ export struct ReaderControlAutoPageContent {
         Image($r(previous ? (this.appScheme === 'night' ? 'app.media.reader_auto_full_chevron_left_theme_night' : 'app.media.reader_auto_full_chevron_left') : (this.appScheme === 'night' ? 'app.media.reader_auto_full_chevron_right_theme_night' : 'app.media.reader_auto_full_chevron_right')))
           .width(16).height(16).position({ x: 8, y: 5.5 });
       }.width(27).height(27).backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(8).position({ x: 22.5, y: 5 });
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(8).position({ x: (this.chapterActor(previous).width - 27) / 2, y: 5 });
       Text(previous ? '上一章' : '下一章').width(this.textMetric('chapterLabelWidth', 27))
         .height(this.textMetric('chapterLabelHeight', 9)).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.fontFamily)
         .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.fontWeight).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
@@ -606,7 +610,7 @@ export struct ReaderControlAutoPageContent {
       // to 1939:801 above, not this label (the previous Full adapter mixed them).
       Text('自动翻页').width(this.textMetric('runningLabelWidth', 36)).height(this.textMetric('runningLabelHeight', 9))
         .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.fontWeight).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.fontSizeFp)
-        .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).textAlign(TextAlign.Center)
+        .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).textAlign(TextAlign.Center).opacity(this.p())
         .position({ x: this.textMetric('runningLabelWidth', 36) > 36 ?
           Math.max(0, (this.frame().toggle.width - this.textMetric('runningLabelWidth', 36)) / 2) : 29.4921875, y: 39 });
     }.width('100%').height('100%').accessibilityLevel('no-hide-descendants');
@@ -639,7 +643,8 @@ export struct ReaderControlAutoPageContent {
     // the two wheels share the remaining space around the 24vp colon gap.
     // Preserve 76vp at the design width and update the actual child paint on
     // narrower hosts; keeping a fixed176vp group overflows the rounded card.
-    return Math.max(0, (this.sectionInnerWidth() - (this.textMetric('timerLabelWidth', 84) + 31) - 15 - 24) / 2);
+    if (this.minimumProfile() !== undefined) return this.textMetric('wheelWidth', 44);
+    return Math.max(44, (this.sectionInnerWidth() - (this.textMetric('timerLabelWidth', 84) + 31) - 15 - 24) / 2);
   }
 
   @Builder
@@ -648,7 +653,7 @@ export struct ReaderControlAutoPageContent {
       value: this.currentTimerValue(minutes),
       minimum: minutes ? READER_AUTO_PAGE_FULL_MIN_MINUTES : READER_AUTO_PAGE_FULL_MIN_SECONDS,
       maximum: minutes ? READER_AUTO_PAGE_FULL_MAX_MINUTES : READER_AUTO_PAGE_FULL_MAX_SECONDS,
-      wheelWidth: this.timerWheelWidth(), rowHeight: this.textMetric('wheelRowHeight', 34),
+      wheelWidth: this.timerWheelWidth(), rowHeight: this.textMetric('wheelRowHeight', 44),
       unitHeight: this.textMetric('wheelUnitHeight', 8), neighbours: 1,
       unit: minutes ? '分' : '秒', interactionEnabled: this.fullInput(),
       onStep: (delta: number): void => this.commitTimerStep(minutes, delta),
@@ -705,7 +710,7 @@ export struct ReaderControlAutoPageContent {
         .width(this.textMetric('timerLabelWidth', 84))
         .height(this.textMetric('timerLabelHeight', 30))
         .alignItems(VerticalAlign.Center)
-        .position({ x: 15, y: 54 });
+        .position({ x: 15, y: this.textMetric('timerLabelY', 54) });
 
         Stack({ alignContent: Alignment.TopStart }) {
           this.timerWheel(true);
@@ -719,12 +724,13 @@ export struct ReaderControlAutoPageContent {
             .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
             .textAlign(TextAlign.Center)
             .position({ x: this.timerWheelWidth() + 8,
-              y: this.textMetric('wheelRowHeight', 34) * 1.5 - this.textMetric('timerColonHeight', 22) / 2 + .5 });
+              y: this.textMetric('wheelRowHeight', 44) * 1.5 - this.textMetric('timerColonHeight', 22) / 2 + .5 });
           this.timerWheel(false);
         }
         .width(this.timerWheelWidth() * 2 + 24)
-        .height(this.textMetric('wheelRowHeight', 34) * 3 + 4 + this.textMetric('wheelUnitHeight', 8))
-        .position({ x: this.textMetric('timerLabelWidth', 84) + 31, y: 12 });
+        .height(this.textMetric('wheelRowHeight', 44) * 3 + 4 + this.textMetric('wheelUnitHeight', 8))
+        .position({ x: this.textMetric('timerPickerX', this.textMetric('timerLabelWidth', 84) + 31),
+          y: this.textMetric('timerPickerY', 12) });
       }
       .width(this.sectionInnerWidth())
       .height(this.minimumProfile() === undefined ? 138 :

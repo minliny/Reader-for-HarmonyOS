@@ -1,3 +1,4 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
@@ -123,7 +124,7 @@ export struct SyncPage {
   private sectionHeadingDark(title: string) {
     Text(title)
       .width('100%')
-      .height(16)
+      .constraintSize({ minHeight: 16 })
       .fontFamily(TYPE_SECTION_HEADING.fontFamily)
       .fontWeight(TYPE_SECTION_HEADING.fontWeight)
       .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
@@ -199,7 +200,7 @@ export struct SyncPage {
         Image(icon).width(15).height(15);
       }
       .width(28)
-      .height(28)
+      .constraintSize({ minHeight: 28 })
       .borderRadius(14)
       .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
 
@@ -229,10 +230,10 @@ export struct SyncPage {
   @Builder
   private configActions() {
     Row({ space: TOK_SPACE_XS }) {
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-test', label: '测试网络连通性', layout: 'equal', actionEnabled: this.canMutate(),
-        onAction: (): void => this.onTestConnection(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.effectiveWebdavPath().trim()) });
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-save', label: '保存配置', primary: true, layout: 'equal', actionEnabled: this.canMutate(),
-        onAction: (): void => this.onSaveConfig(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.backupPass, this.effectiveWebdavPath().trim()) });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-test', label: '测试网络连通性', layout: 'full', actionEnabled: this.canMutate(),
+        onAction: (): void => this.onTestConnection(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.effectiveWebdavPath().trim()) }).layoutWeight(1);
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-save', label: '保存配置', primary: true, layout: 'full', actionEnabled: this.canMutate(),
+        onAction: (): void => this.onSaveConfig(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.backupPass, this.effectiveWebdavPath().trim()) }).layoutWeight(1);
     }.width('100%');
   }
 
@@ -289,7 +290,7 @@ export struct SyncPage {
 
   @Builder
   private manualActionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-action', label, primary, actionEnabled: this.canMutate(), layout: 'equal', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-action', label, primary, actionEnabled: this.canMutate(), layout: 'full', onAction: action }).layoutWeight(1);
   }
 
   @Builder
@@ -355,7 +356,7 @@ export struct SyncPage {
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
-    .height(50)
+    .constraintSize({ minHeight: 50 })
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
     .opacity(0.72)
     .hitTestBehavior(HitTestMode.None);
@@ -397,7 +398,7 @@ export struct SyncPage {
       .accessibilityDescription('多选展开设计和持久化契约待确认，当前不可编辑');
     }
     .width('100%')
-    .height(50)
+    .constraintSize({ minHeight: 50 })
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
     .alignItems(VerticalAlign.Center);
   }
@@ -451,7 +452,7 @@ export struct SyncPage {
       cardWidth: this.contentFrame().width,
     }) {
       Column() {
-        Row() {
+        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
           Stack({ alignContent: Alignment.Center }) {
             Text(entry.destination)
               .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)
@@ -460,8 +461,9 @@ export struct SyncPage {
               .fontColor(readerAppColor('app.text.syncBadge', this.appThemeScheme))
               .maxLines(1);
           }
-          .width(64)
-          .height(24)
+          .constraintSize({ minWidth: 64 })
+          .padding({ left: 8, right: 8 })
+          .constraintSize({ minHeight: 24 })
           .borderRadius(12)
           .backgroundColor(readerAppColor('app.sync.badgeSurface', this.appThemeScheme));
 
@@ -471,7 +473,7 @@ export struct SyncPage {
             .fontSize(TYPE_SYNC_INPUT.fontSizeFp)
             .fontColor(readerAppColor('app.text.syncMeta', this.appThemeScheme))
             .maxLines(1)
-            .margin({ left: TOK_SPACE_CONTROL_INLINE });
+            .constraintSize({ maxWidth: '100%' });
         }
         .width('100%')
         .alignItems(VerticalAlign.Center);
@@ -498,7 +500,7 @@ export struct SyncPage {
         .alignItems(VerticalAlign.Center);
       }
       .width('100%')
-      .height(85)
+      .constraintSize({ minHeight: 85 })
       .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
       .alignItems(HorizontalAlign.Start);
     }
@@ -514,13 +516,13 @@ export struct SyncPage {
           .fontSize(TYPE_APP_COMPACT_BADGE.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
-      .height(26)
+      .constraintSize({ minHeight: 26 })
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(8);
     }
     .width('100%')
-    .height(32)
+    .constraintSize({ minHeight: 32 })
     .justifyContent(FlexAlign.End);
   }
 

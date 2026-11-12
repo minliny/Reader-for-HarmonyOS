@@ -1,3 +1,6 @@
+import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
+import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../ui/foundation/ReaderWindowMetrics';
+import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../ui/controls/ReaderFormField';
 import { TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_URL_INPUT, TYPE_JSON_IMPORT_DESCRIPTION } from '../../ui/foundation/ReaderTypography';
@@ -56,6 +59,8 @@ export struct JsonImportDialog {
   @State private urlDraft: string = '';
   @State private validationMessage: string = '';
   @State private urlInputRevision: number = 0;
+  @State private hostHeight: number = 0;
+  @State private hostOriginY: number = 0;
   private mounted: boolean = false;
   private focusRevision: number = 0;
 
@@ -108,7 +113,9 @@ export struct JsonImportDialog {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Scroll() {
+      Column() {
       ReaderDialogSurface({
         specId: 'json-import',
         title: this.title,
@@ -126,14 +133,35 @@ export struct JsonImportDialog {
           this.formBody();
         },
       })
+      }.width('100%').constraintSize({ minHeight: this.availableHeight() }).justifyContent(FlexAlign.Center);
+      }.width('100%').height(this.availableHeight()).position({ x: 0, y: this.safeTop() })
+        .scrollBar(BarState.Auto).clip(true);
     }
     .width('100%')
     .height('100%')
+    .onAreaChange((_old: Area, next: Area): void => {
+      if (!this.mounted) return;
+      this.hostHeight = readerPageAreaLength(next.height);
+      this.hostOriginY = readerPageAreaLength(next.globalPosition.y);
+    })
     .id(this.focusScopeKey()).focusable(true).focusScopeId(this.focusScopeKey(), true, false)
     .onAppear((): void => this.requestInitialFocus())
     .onDisAppear(this.restoreFocusAction())
     .backgroundColor(readerAppColor('app.scrim.import', this.appThemeScheme))
     .zIndex(200);
+  }
+
+  private safeTop(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.hostOriginY);
+  }
+
+  private availableHeight(): number {
+    const metrics = readerWindowMetrics();
+    const height = this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height;
+    const bottom = Math.min(height, metrics.windowRect.height -
+      readerInteractiveSafeBottom(metrics, true) - this.hostOriginY);
+    return Math.max(0, bottom - this.safeTop());
   }
 
   @Builder

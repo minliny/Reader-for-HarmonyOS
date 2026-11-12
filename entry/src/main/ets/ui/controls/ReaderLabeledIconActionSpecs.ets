@@ -29,6 +29,7 @@ export interface ReaderLabeledIconActionSpec {
   responseOffset: number | undefined;
   pressFeedback?: boolean;
   disabledIconOpacity?: number;
+  naturalHeight?: boolean;
 }
 const FEED: ReaderLabeledIconActionSpec = {
   labelMarginLeft: undefined, leftPaddingOnly: false, gradientStart: undefined, gradientEnd: undefined, text: TYPE_APP_SMALL_ACTION, textRole: 'app.text.filter',
@@ -84,8 +85,11 @@ const DETAIL_DIRECTORY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActio
 DETAIL_DIRECTORY.text = TYPE_APP_COMPACT_PRIMARY_ACTION; DETAIL_DIRECTORY.textRole = 'TOK_PRIMARY_TEXT';
 DETAIL_DIRECTORY.surfaceRole = 'app.surface.chapterSection'; DETAIL_DIRECTORY.borderRole = 'TOK_BORDER';
 DETAIL_DIRECTORY.iconSize = 20; DETAIL_DIRECTORY.gap = 6;
-DETAIL_DIRECTORY.rowWidth = 94; DETAIL_DIRECTORY.rowHeight = 30; DETAIL_DIRECTORY.horizontalPadding = 11;
+DETAIL_DIRECTORY.naturalHeight = true; DETAIL_DIRECTORY.rowWidth = undefined; DETAIL_DIRECTORY.rowHeight = 30; DETAIL_DIRECTORY.horizontalPadding = 11;
 DETAIL_DIRECTORY.pressFeedback = false; DETAIL_DIRECTORY.disabledIconOpacity = 1;
+FEED.naturalHeight = true; ENTRY.naturalHeight = true; MANAGEMENT.naturalHeight = true;
+MANAGE.naturalHeight = true; SOURCE_OPERATIONS.naturalHeight = true; VIEW_ALL.naturalHeight = true;
+DISCOVER_APPLY.naturalHeight = true;
 const SPECS: Record<ReaderLabeledIconActionSpecId, ReaderLabeledIconActionSpec> = {
   'discover-apply': DISCOVER_APPLY, 'rss-feed': FEED, 'rss-entry': ENTRY, 'rss-management': MANAGEMENT,
   'rss-manage': MANAGE, 'rss-source-operations': SOURCE_OPERATIONS, 'rss-view-all': VIEW_ALL, 'source-management-add': SOURCE_ADD,

@@ -9,12 +9,17 @@ import type { ReaderRecoveryView } from './ReaderRecoveryView';
 @Component
 export struct ReaderRecoveryNotice {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') @Watch('remeasure') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('remeasure') view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @Prop @Watch('remeasure') tag: string = '待处理';
   @Prop @Watch('remeasure') actionLabel: string = '刷新列表';
   @Prop @Watch('remeasure') secondaryActionLabel: string = '';
   @Prop @Watch('remeasure') busy: boolean = false;
   @Prop @Watch('remeasure') secondaryBusy: boolean = false;
+  /** Flow content leaves the negative default. Overlay callers supply their current host remainder. */
+  @Prop maxHeightVp: number = -1;
+  /** Current outer width from a known host. Negative leaves flow width to native layout. */
+  @Prop layoutWidthVp: number = -1;
   @State private expanded: boolean = false;
   @State private clipped: boolean = false;
   @State private reservedSpace: string = '';
@@ -22,12 +27,29 @@ export struct ReaderRecoveryNotice {
   @State private actionsHeight: number = 44;
   @State private titleLineHeight: number = 22;
   private measuredWidth: number = 0;
+  private mounted: boolean = false;
+  private appearanceEpoch: number = 0;
   private measuredGeneration: number = -1;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onSecondaryAction: (generation: number) => void = (_generation: number): void => {};
 
+  aboutToAppear(): void { this.mounted = true; this.appearanceEpoch += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.appearanceEpoch += 1; }
+
   build() {
     if (this.view.visible) {
+      if (this.maxHeightVp >= 0) {
+        ForEach([this.view.generation], (generation: number): void => {
+        Scroll() { this.noticeBody(); }
+          .width('100%').constraintSize({ maxHeight: this.maxHeightVp })
+          .scrollBar(BarState.Auto).clip(true);
+        }, (generation: number): string => `recovery-scroll:${generation}`);
+      } else { this.noticeBody(); }
+    }
+  }
+
+  @Builder
+  private noticeBody() {
       Stack({ alignContent: Alignment.BottomEnd }) {
         Column() {
           Text() {
@@ -47,7 +69,7 @@ export struct ReaderRecoveryNotice {
           .fontColor(readerAppColor('TOK_MESSAGE_NOTICE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_WORD).maxLines(this.expanded ? 10000 : 3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .onAreaChange((_old: Area, area: Area): void => this.measureFlow(Number(area.width)));
+          .onAreaChange(this.flowAreaHandler());
           if (this.clipped && !this.expanded) { Blank().height(this.actionsHeight); }
           else { Blank().height(Math.max(0, this.actionsHeight - this.titleLineHeight)); }
         }.width('100%');
@@ -70,26 +92,44 @@ export struct ReaderRecoveryNotice {
               } });
           }
         }.constraintSize({ maxWidth: '100%' }).width(this.actionsWidth > 0 ? this.actionsWidth : undefined)
-          .onAreaChange((_old: Area, area: Area): void => {
-            const height = Number(area.height);
-            if (Number.isFinite(height) && height >= 0) this.actionsHeight = height;
-          });
+          .onAreaChange(this.actionsAreaHandler());
       }
       .width('100%').padding({ left: 12, right: 12, top: 10, bottom: 10 })
       .borderRadius(14).backgroundColor(readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
       .shadow({ radius: 16, offsetY: 4, color: '#18000000' })
       .hitTestBehavior(HitTestMode.Transparent);
-    }
   }
 
-  private remeasure(): void { this.measureFlow(this.measuredWidth); }
+  private measurementIdentity(): string {
+    return JSON.stringify([this.appearanceEpoch, this.view.generation, this.view.message, this.view.visible, this.view.canRetry,
+      this.tag, this.actionLabel, this.secondaryActionLabel, this.busy, this.secondaryBusy,
+      this.maxHeightVp, this.layoutWidthVp, this.readerWindowMetricsRevision]);
+  }
+
+  private flowAreaHandler(): (_old: Area, next: Area) => void {
+    const identity = this.measurementIdentity();
+    return (_old: Area, next: Area): void => {
+      if (this.mounted && identity === this.measurementIdentity()) this.measureFlow(Number(next.width));
+    };
+  }
+
+  private actionsAreaHandler(): (_old: Area, next: Area) => void {
+    const identity = this.measurementIdentity();
+    return (_old: Area, next: Area): void => {
+      if (!this.mounted || identity !== this.measurementIdentity()) return;
+      const height = Number(next.height);
+      if (Number.isFinite(height) && height >= 0) this.actionsHeight = height;
+    };
+  }
+
+  private remeasure(): void { if (this.mounted) this.measureFlow(this.measuredWidth); }
 
   private measureFlow(width: number): void {
-    if (!Number.isFinite(width) || width <= 0) return;
     if (this.measuredGeneration !== this.view.generation) {
       this.measuredGeneration = this.view.generation;
       this.expanded = false;
     }
+    if (!Number.isFinite(width) || width <= 0) return;
     this.measuredWidth = width;
     try {
       const context = this.getUIContext();

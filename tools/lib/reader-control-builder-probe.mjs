@@ -174,7 +174,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // These newly introduced members are the finite page-chrome measurement
   // seam. Keep their real initializers/functions when older focused probes
   // select pre-migration Builders; do not reconstruct inset math in fixtures.
-  const chromeMembers = new Set(['searchContentStartInset', 'fixedHeaderHeight', 'selectionHeaderHeight',
+  const chromeMembers = new Set(['headerLayoutKey', 'headerAreaChangeHandler', 'noticeAreaChange', 'readerRecoveryTopBarHeight', 'sourceActionHeight', 'brightnessRailContent', 'brightnessContentHeight',
+    'sheetActionHeight', 'controlFontScale', 'dockPageRowHeight', 'dockActionHeight', 'mangaTopBarHeight', 'recoveryNoticeHeight',
+    'formatActionHeight', 'previewActionHeight', 'choiceHeight', 'searchContentStartInset', 'fixedHeaderHeight', 'selectionHeaderHeight',
     'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey',
     'catalogHeaderHeight','catalogHeaderTop',
     'searchFontScale','searchFilterHeight','searchFilterLabelWidth','searchBarHeight','bookFontScale',
@@ -342,10 +344,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     if (name === 'ReaderReadingTopBar') {
       const title = tree.statements.find(statement => ts.isClassDeclaration(statement) && statement.name?.text === 'ReaderReadingTopBarTitle');
       hostDependencies.ReaderReadingTopBarTitle = new Function('readerAppColor', 'mangaDirectoryColor', 'READER_FONT_NOTO_SERIF_SC_BOLD',
-        'FontWeight', 'TextOverflow', ...Object.keys(readerTypographyRoles),
+        'FontWeight', 'TextOverflow', 'TextAlign', ...Object.keys(readerTypographyRoles),
         `${stripTypeScriptTypes(title.getText(tree).replace(/^export /, ''))}; return ReaderReadingTopBarTitle;`)(
         readerAppColor, directoryChrome.mangaDirectoryColor, READER_FONT_NOTO_SERIF_SC_BOLD,
-        { Bold: 'FontWeight.Bold' }, { Ellipsis: 'TextOverflow.Ellipsis' }, ...Object.values(readerTypographyRoles));
+        { Bold: 'FontWeight.Bold' }, { Ellipsis: 'TextOverflow.Ellipsis' }, { Start: 'TextAlign.Start' }, ...Object.values(readerTypographyRoles));
     }
     const host = createReaderBuilderProbe(definition, declaration.members.filter(member => member.name)
       .map(member => member.name.getText(tree)), hostDependencies, { ...hooks, componentName: name });
@@ -649,6 +651,18 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
   globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
     () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
+  if (/\breaderReadingTopBar(?:Height|FontsReady)\b/.test(members.join('\n'))) {
+    const header = readFileSync(new URL('../../entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets', import.meta.url), 'utf8');
+    const resolvers = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'),
+      'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale']);
+    const measurement = pureModuleProbe(header.slice(0, header.indexOf('@Component')), 'ReaderReadingTopBarMeasure.ets', {
+      ...readerTypographyRoles, ...resolvers, readerWindowMetrics: globals.readerWindowMetrics, READER_FONT_NOTO_SERIF_SC_BOLD,
+      readerFontFamilyReady: globals.readerFontFamilyReady,
+    }, ['readerReadingTopBarHeight','readerReadingTopBarFontsReady']);
+    globals.readerReadingTopBarHeight ??= measurement.readerReadingTopBarHeight;
+    globals.readerReadingTopBarFontsReady ??= measurement.readerReadingTopBarFontsReady;
+  }
+
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
   globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
     { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });

@@ -63,7 +63,9 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
   // The unanimated Full Query parent left a 38.45vp empty band in Quick,
   // and clipped most of the first result. Adapt the viewport to the query
   // row while compensating its children so their authored screen paths stay.
-  const fieldHeight = natural === undefined ? field.height : Math.max(field.height, natural.fieldHeightVp);
+  const fieldHeight = natural === undefined ? field.height : Math.max(44, field.height, natural.fieldHeightVp);
+  const actionWidth = natural === undefined ? action.width : Math.max(44, action.width);
+  const actionGrowth = actionWidth - action.width;
   const queryBottom = basisY + field.y + fieldHeight + lerp(5, 9, progress);
   const resultsY = queryBottom + 1;
   const resultOriginCorrection = basisY + 51 - (basisY + field.y + field.height + lerp(5, 9, progress) + 1);
@@ -73,9 +75,9 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
   const fieldShift = natural === undefined ? 0 : Math.max(0, back.x + backWidth + 4 - (basisX + field.x)) * (1 - progress);
   return {
     field: actor(basisX + field.x + fieldShift, basisY + field.y,
-      Math.max(0, field.width + widthDelta - fieldShift), fieldHeight),
-    action: actor(Math.max(0, basisX + action.x + widthDelta), basisY + action.y,
-      Math.min(width, action.width), Math.max(action.height, fieldHeight)),
+      Math.max(0, field.width + widthDelta - fieldShift - actionGrowth), fieldHeight),
+    action: actor(Math.max(0, basisX + action.x + widthDelta - actionGrowth), basisY + action.y,
+      Math.min(width, actionWidth), Math.max(action.height, fieldHeight)),
     // Back is a screen-level sibling, NOT under the moving source shell.
     back: actor(back.x, back.y, backWidth, natural === undefined ? back.height : Math.max(back.height, natural.backHeightVp), back.opacity),
     // Full 1938:5101 remains (2,53,334,612) in its canonical 338x666 slot.

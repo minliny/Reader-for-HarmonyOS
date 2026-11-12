@@ -1,3 +1,5 @@
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { SheetSurfaceSpec, DrawerSurfaceSpec, resolveSheetSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';
@@ -39,6 +41,7 @@ export class ReaderBoundedTitleModifier implements AttributeModifier<TextAttribu
 @Component
 export struct ReaderBoundedSurfaceHeader {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';
   @Prop title: string = '';
   // Only the embedded reading replacement editor supplies a natural header budget.
@@ -81,6 +84,10 @@ export struct ReaderBoundedSurfaceHeader {
     } else { this.headerRow(); }
   }
 
+  private fontScale(): number {
+    return readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+  }
+
   private drawerSpec(): DrawerSurfaceSpec { return resolveDrawerSpec('reader-action-sheet'); }
   private drawerScheme(): string { return this.scheme === 'auto' ? this.appThemeScheme : this.scheme; }
   private drawerInset(): number {
@@ -105,11 +112,11 @@ export struct ReaderBoundedSurfaceHeader {
       Row({ space: 12 }) {
         Text(this.title).fontFamily(this.drawerSpec().titleFontFamily).fontWeight(this.drawerSpec().titleFontWeight)
           .fontSize(this.drawerSpec().titleFontSize).lineHeight(this.drawerSpec().titleLineHeight).halfLeading(true)
-          .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)
+          .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(Math.max(1, this.fontScale()))
           .fontColor(readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())).layoutWeight(1)
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         this.drawerClose();
-      }.width('100%').constraintSize({ minHeight: this.drawerSpec().titleHeight })
+      }.width('100%').constraintSize({ minHeight: Math.max(this.drawerSpec().titleHeight, this.drawerSpec().titleLineHeight * this.fontScale()) })
         .padding({ left: this.drawerInset(), right: this.drawerInset() });
     }.width('100%')
       .padding(this.placement === 'side' ? { top: this.drawerSpec().handleTop, bottom: this.drawerSpec().handleBottom } : {})
@@ -198,11 +205,14 @@ export struct ReaderBoundedSurfaceHeader {
       this.titleText();
       this.accessory();
       this.closeAction();
-    }.width('100%').height(this.specId === 'source-switch-window' ? 33 : this.specId === 'tts-config-manager' ? 58 : 40)
+    }.width('100%')
+      .height(this.specId === 'source-switch-window' ? 33 : undefined)
+      .constraintSize({ minHeight: this.specId === 'source-switch-window' ? undefined : this.specId === 'tts-config-manager' ? 58 : 44 })
       .alignItems(VerticalAlign.Center)
       .padding(this.specId === 'source-switch-window' ? 0 : {
         left: this.specId === 'tts-config-manager' ? 18 : 12, right: this.specId === 'tts-config-manager' ? 24 : 16,
-      });
+      })
+      .onAreaChange((oldValue: Area, next: Area): void => { if (this.specId !== 'source-switch-window') this.onAreaChanged(oldValue, next); });
   }
 
   @Builder private titleText() {
@@ -224,9 +234,9 @@ export struct ReaderBoundedSurfaceHeader {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image(this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close'))
           .width(16).height(16).accessibilityLevel('no');
-      }.width(16).height(16).padding(0).backgroundColor(Color.Transparent)
+      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
         .id(this.closeFocusId)
-        .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(this.actionEnabled)
+        .enabled(this.actionEnabled)
         .accessibilityText('关闭 TTS 配置').onClick((): void => { if (this.actionEnabled) this.onClose(); });
     }
   }

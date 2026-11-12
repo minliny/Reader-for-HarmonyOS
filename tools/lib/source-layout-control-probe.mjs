@@ -28,9 +28,9 @@ export function runSourceLayoutControlProbe(width, scale) {
     actor.aboutToAppear(); actor.initialRender();
     return scalarFrame(foundation.nodes(actor), label);
   }
-  function icon(specId, label) {
+  function icon(specId, label, fillWidth = false) {
     const actor = new labeled.component(undefined, {
-      specId, label, icon: 'source-layout-fixture-icon', scheme: 'day',
+      specId, label, fillWidth, icon: 'source-layout-fixture-icon', scheme: 'day',
       actionEnabled: true, isDanger: false, showDivider: false, onAction() {},
     });
     actor.aboutToAppear(); actor.initialRender();
@@ -46,7 +46,7 @@ export function runSourceLayoutControlProbe(width, scale) {
     statusWide: button('source-management-status-wide', '未检测'),
     category: button('source-management-category', '全部类型'),
     manage: button('source-management-manage', '批量管理', 'full'),
-    add: icon('source-management-add', '新增书源'),
+    add: icon('source-management-add', '新增书源', true),
   }, unchanged: {
     compact: button('source-compact', '普通操作'),
     rssFeed: icon('rss-feed', '原RSS动作'),

@@ -1,3 +1,4 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
@@ -149,8 +150,8 @@ export struct RulesManagementPage {
       Text('Core schema v1 包含替换、字典、TXT 目录和规则订阅；导入默认合并且同主键覆盖。')
         .width('100%').fontSize(TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
-        this.actionButton('导入并合并', false, (): void => this.onImportBundle());
-        this.actionButton('导出全部', true, (): void => this.onExportBundle(), false);
+        this.actionButton('导入并合并', false, (): void => this.onImportBundle(), true, true);
+        this.actionButton('导出全部', true, (): void => this.onExportBundle(), false, true);
       }.width('100%');
     }
     .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
@@ -253,9 +254,9 @@ export struct RulesManagementPage {
       this.input(this.subName, '名称', (value: string): void => { this.subName = value; });
       this.input(this.subUrl, '订阅 URL', (value: string): void => { this.subUrl = value; });
       Row({ space: TOK_SPACE_XS }) {
-        this.actionButton('书源', this.subType === 0, (): void => { this.subType = 0; }, false);
-        this.actionButton('RSS 源', this.subType === 1, (): void => { this.subType = 1; }, false);
-        this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; }, false);
+        this.actionButton('书源', this.subType === 0, (): void => { this.subType = 0; }, false, true);
+        this.actionButton('RSS 源', this.subType === 1, (): void => { this.subType = 1; }, false, true);
+        this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; }, false, true);
       }.width('100%');
       this.booleanField('自动更新标记', this.subAutoUpdate,
         (next: boolean): void => { this.subAutoUpdate = next; });
@@ -303,46 +304,50 @@ export struct RulesManagementPage {
         inputIdentity: `${label}:${this.replaceId}:${this.txtId}:${this.dictName}:${this.subId}`,
         // These controls edit the retained local draft, not the pending durable write.
         actionEnabled: true, onToggle: action });
-    }.layoutWeight(1).height(40);
+    }.layoutWeight(1).constraintSize({ minHeight: 44 });
   }
 
   @Builder
-  private actionButton(label: string, primary: boolean, action: () => void, mutation: boolean = true) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'rules-action', label, primary, layout: 'equal',
+  private actionButton(label: string, primary: boolean, action: () => void, mutation: boolean = true, shareRow: boolean = false) {
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rules-action', label, primary, layout: 'full',
       actionEnabled: !this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown')),
-      onAction: action });
+      onAction: action }).layoutWeight(shareRow ? 1 : undefined);
   }
 
   @Builder
   private entityRow(title: string, detail: string, edit: () => void, remove: () => void) {
-    Row({ space: TOK_SPACE_XS }) {
+    Column({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
         Text(title.length > 0 ? title : '未命名').width('100%').fontSize(TYPE_RULES_ENTITY_TITLE.fontSizeFp).fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
-        Text(detail).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      this.smallButton('编辑', edit, false);
-      this.smallButton('删除', remove);
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        Text(detail).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .wordBreak(WordBreak.BREAK_WORD);
+      }.width('100%').alignItems(HorizontalAlign.Start);
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
+        this.smallButton('编辑', edit, false);
+        this.smallButton('删除', remove);
+      }.width('100%');
     }
-    .width('100%').height(56).padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
+    .width('100%').constraintSize({ minHeight: 56 }).padding(TOK_SPACE_XS)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
   @Builder
   private subscriptionRow(rule: ManagedRuleSubscription) {
-    Row({ space: TOK_SPACE_XS }) {
+    Column({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
         Text(rule.name.length > 0 ? rule.name : '未命名').width('100%').fontSize(TYPE_RULES_ENTITY_TITLE.fontSizeFp)
-          .fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
+          .fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      this.smallButton('编辑', (): void => this.editSubscription(rule), false);
-      this.smallButton('拉取', (): void => this.onRefreshSubscription(rule));
-      this.smallButton('删除', (): void => this.onDeleteSubscription(rule.id));
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).wordBreak(WordBreak.BREAK_WORD);
+      }.width('100%').alignItems(HorizontalAlign.Start);
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
+        this.smallButton('编辑', (): void => this.editSubscription(rule), false);
+        this.smallButton('拉取', (): void => this.onRefreshSubscription(rule));
+        this.smallButton('删除', (): void => this.onDeleteSubscription(rule.id));
+      }.width('100%');
     }
-    .width('100%').height(60).padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
+    .width('100%').constraintSize({ minHeight: 60 }).padding(TOK_SPACE_XS)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 

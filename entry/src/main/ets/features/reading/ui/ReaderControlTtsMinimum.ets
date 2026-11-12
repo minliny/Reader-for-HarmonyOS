@@ -55,7 +55,9 @@ export interface ReaderTtsTextMinimum {
   stopLabel: number;
   stopLabelWidth: number;
   timerPreset: number;
+  timerPresetsWidth: number;
   timerCustom: number;
+  timerCustomWidth: number;
   timerDigit: number;
   timerDigitWidth: number;
   timerStepper: number;
@@ -81,6 +83,7 @@ export interface ReaderTtsTextMinimum {
   languageFieldWidth: number;
   failureFieldWidth: number;
   manageButton: number;
+  manageButtonWidth: number;
   seekY: number;
   errorY: number;
 }
@@ -145,7 +148,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const section = largest(context, ['播放配置', '朗读引擎'], actual(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL), inner);
   const sectionMeta = largest(context, ['即时生效'], actual(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META), inner);
   const tabTitle = largest(context, ['系统 TTS', '在线 TTS'], actual(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE),
-    Math.max(1, (inner - 38) / 2 - 24));
+    Math.max(1, (inner - 38) / 2 - 27), true);
   const tabSubtitle = largest(context, ['设备内置语音', facts.serviceDescription],
     actual(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY), Math.max(1, (inner - 38) / 2 - 24));
   const labels = largest(context, ['语音引擎', '朗读语言', '不可用处理'],
@@ -185,28 +188,44 @@ function measureForm(context: UIContext, width: number, full: boolean,
     quickPlaybackTitle: Math.max(16, qPlayback.heightVp), quickPlaybackStatus: Math.max(13, qStatus.heightVp),
     quickSettingTitle: Math.max(18, qSetting.heightVp), header: Math.max(18, header.heightVp, playbackMeta.heightVp, speedMeta.heightVp),
     sectionHeader: Math.max(18, section.heightVp, sectionMeta.heightVp), stopLabel: Math.max(14, stop.heightVp),
-    stopLabelWidth: Math.max(24, stop.singleLineWidthVp), timerPreset: Math.max(36, timerPreset.heightVp + 8),
+    stopLabelWidth: Math.max(24, stop.singleLineWidthVp), timerPreset: Math.max(44, timerPreset.heightVp + 8),
+    timerPresetsWidth: Math.max(inner - 28, 3 * Math.max(44, Math.ceil(timerPreset.singleLineWidthVp) + 12) + 16),
+    timerCustomWidth: Math.max(inner - 28, custom.singleLineWidthVp + 4 +
+      2 * (44 * 2 + Math.max(23, digit.singleLineWidthVp) + 2) + 4 + 16),
     timerCustom: Math.max(48, custom.heightVp + 2 + customMeta.heightVp + 8, digit.heightVp + 16),
     timerDigit: Math.max(24, digit.heightVp), timerDigitWidth: Math.max(23, digit.singleLineWidthVp),
-    timerStepper: Math.max(32, digit.heightVp + 8), timerStepButton: Math.max(30, digit.heightVp + 6),
-    ratePreset: Math.max(32, ratePreset.heightVp + 8), speedRange: Math.max(14, range.heightVp),
+    timerStepper: Math.max(44, digit.heightVp + 8), timerStepButton: Math.max(44, digit.heightVp + 6),
+    ratePreset: Math.max(44, ratePreset.heightVp + 8), speedRange: Math.max(14, range.heightVp),
     speedRangeWidth: Math.max(21, range.singleLineWidthVp), speedRangeY: 75,
-    serviceTab: Math.max(87, 24 + 20 + 7 + Math.max(17, tabTitle.heightVp) + 3 + Math.max(14, tabSubtitle.heightVp)),
+    serviceTab: Math.max(87, 27 + 20 + 7 + Math.max(17, tabTitle.heightVp) + 3 + Math.max(14, tabSubtitle.heightVp)),
     serviceTabTitle: Math.max(17, tabTitle.heightVp), serviceTabSubtitle: Math.max(14, tabSubtitle.heightVp),
     configRow: Math.max(48, labels.heightVp + 12, field.heightVp + 8, manageTitle.heightVp + 12, manage.heightVp + 20),
     voiceRow: Math.max(52, field.heightVp + 20, voiceBadge.heightVp + 28),
     toggleRow: Math.max(48, Math.min(toggle.heightVp, toggleLine.heightVp * 2) + 16),
     detailCard: 340, systemCard: facts.online ? 164 : 212,
     voiceBadge: Math.max(24, voiceBadge.heightVp), voiceBadgeWidth: Math.max(24, voiceBadge.singleLineWidthVp),
-    voiceField: Math.max(30, field.heightVp + 8, voiceBadge.heightVp + 6),
+    voiceField: Math.max(44, field.heightVp + 8, voiceBadge.heightVp + 6),
     configField: Math.max(48, field.heightVp + 8),
     voiceFieldWidth: Math.max(37 + Math.max(24, voiceBadge.singleLineWidthVp) + fieldGlyph.singleLineWidthVp,
       Math.min(cap, Math.ceil(voiceValue.singleLineWidthVp) + 37 + Math.max(24, voiceBadge.singleLineWidthVp))),
-    engineFieldWidth: Math.min(cap, Math.ceil(engineValue.singleLineWidthVp) + 18),
-    languageFieldWidth: Math.min(cap, Math.ceil(languageValue.singleLineWidthVp) + 18),
-    failureFieldWidth: Math.min(cap, Math.ceil(failureValue.singleLineWidthVp) + 18),
-    manageButton: Math.max(30, manage.heightVp + 8), seekY: 198, errorY: facts.seek ? 230 : 198,
+    engineFieldWidth: Math.max(44, Math.min(cap, Math.ceil(engineValue.singleLineWidthVp) + 18)),
+    languageFieldWidth: Math.max(44, Math.min(cap, Math.ceil(languageValue.singleLineWidthVp) + 18)),
+    failureFieldWidth: Math.max(44, Math.min(cap, Math.ceil(failureValue.singleLineWidthVp) + 18)),
+    manageButton: Math.max(44, manage.heightVp + 8), manageButtonWidth: Math.max(44, Math.min(cap, manage.singleLineWidthVp + 38)), seekY: 198, errorY: facts.seek ? 230 : 198,
   };
+  const closedLabel = largest(context, ['语音引擎', '朗读语言', '不可用处理'],
+    actual(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE),
+    Math.max(1, inner - 28 - 8 - Math.max(text.engineFieldWidth, text.languageFieldWidth, text.failureFieldWidth)), true);
+  const voiceLabel = largest(context, ['音色'], actual(TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL),
+    Math.max(1, inner - 28 - text.voiceFieldWidth), true);
+  const serviceLabel = largest(context, ['服务信息'], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL),
+    Math.max(1, inner - 28 - 8 - text.manageButtonWidth), true);
+  const serviceAction = largest(context, [facts.manageLabel], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE),
+    Math.max(1, text.manageButtonWidth - 38), true);
+  if (closedLabel === undefined || voiceLabel === undefined || serviceLabel === undefined || serviceAction === undefined) return undefined;
+  text.manageButton = Math.max(44, serviceAction.heightVp + 8);
+  text.configRow = Math.max(text.configRow, closedLabel.heightVp + 12, serviceLabel.heightVp + 12, text.manageButton + 12);
+  text.voiceRow = Math.max(text.voiceRow, voiceLabel.heightVp + 12);
   text.configRow = Math.max(text.configRow, text.configField);
   text.voiceRow = Math.max(text.voiceRow, text.voiceField + 12);
   text.timerStepper = Math.max(text.timerStepper, text.timerStepButton, text.timerDigit);
@@ -228,18 +247,32 @@ function measureForm(context: UIContext, width: number, full: boolean,
     const statusMinimumWidth = Math.min(qStatus.singleLineWidthVp, statusReadable.singleLineWidthVp);
     const labelMinimumWidth = 34 + 9 + Math.max(qPlayback.singleLineWidthVp, 5 + 4 + statusMinimumWidth);
     frame.quickPlaybackLabel.width = Math.max(frame.quickPlaybackLabel.width, labelMinimumWidth);
-    frame.playback.height = Math.max(66, frame.quickPlaybackLabel.y + frame.quickPlaybackLabel.height + 16);
+    const columns = inner >= 204 ? 4 : 2;
+    const cellWidth = Math.max(44, (inner - 16 - (columns - 1) * 4) / columns);
+    const controlsTop = frame.quickPlaybackLabel.y + frame.quickPlaybackLabel.height + 10;
+    const transports = [frame.previous, frame.toggle, frame.stop, frame.next];
+    for (let index = 0; index < transports.length; index++) {
+      const target = transports[index];
+      target.x = 8 + index % columns * (cellWidth + 4) + (cellWidth - 44) / 2;
+      target.y = controlsTop + Math.floor(index / columns) * 52;
+      target.width = 44; target.height = 44;
+    }
+    frame.playback.height = controlsTop + Math.ceil(4 / columns) * 52 + 4;
     frame.playbackCard.height = frame.playback.height;
-    const playbackGrowth = frame.playback.height - 66;
-    frame.previous.y += playbackGrowth / 2; frame.toggle.y += playbackGrowth / 2;
-    frame.stop.y += playbackGrowth / 2; frame.next.y += playbackGrowth / 2;
     frame.quickTimerLabel.height = Math.max(26, text.quickSettingTitle);
-    frame.quickTimerSelect.height = Math.max(30, caption.heightVp + 12);
+    frame.quickTimerLabel.width = Math.max(72, 34 + qSetting.singleLineWidthVp);
+    frame.quickTimerSelect.height = Math.max(44, caption.heightVp + 12);
     frame.quickTimerSelect.width = Math.max(78, caption.singleLineWidthVp + 32);
     frame.quickTimerSelect.x = inner - frame.quickTimerSelect.width - 11;
     frame.timer.y = frame.playback.y + frame.playback.height + 8;
     frame.timer.height = Math.max(42, frame.quickTimerLabel.height + 16, frame.quickTimerSelect.height + 12);
     frame.quickTimerSelect.y = (frame.timer.height - frame.quickTimerSelect.height) / 2;
+    if (frame.quickTimerLabel.width + frame.quickTimerSelect.width + 34 > inner) {
+      frame.quickTimerSelect.x = 11;
+      frame.quickTimerSelect.width = Math.max(44, inner - 22);
+      frame.quickTimerSelect.y = 8 + frame.quickTimerLabel.height + 8;
+      frame.timer.height = frame.quickTimerSelect.y + frame.quickTimerSelect.height + 8;
+    }
     frame.quickSpeedLabel.height = Math.max(26, text.quickSettingTitle);
     frame.quickSpeedLabel.width = Math.max(72, 34 + qSetting.singleLineWidthVp);
     frame.quickSpeedValue.height = Math.max(24, rate.heightVp);
@@ -251,28 +284,37 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.speedTrack.y = frame.speed.height / 2 - 3;
     frame.speedTrack.x = Math.max(frame.speedTrack.x, 11 + 34 + qSetting.singleLineWidthVp + 10);
     frame.speedTrack.width = Math.max(0, frame.quickSpeedValue.x - 15 - frame.speedTrack.x);
+    if (frame.speedTrack.width < 44) {
+      frame.speedTrack.x = 11; frame.speedTrack.width = Math.max(0, inner - 22);
+      frame.speedTrack.y = 8 + Math.max(frame.quickSpeedLabel.height, frame.quickSpeedValue.height) + 8 + 19;
+      frame.speed.height = frame.speedTrack.y + 25 + 8;
+      frame.quickSpeedValue.y = 8;
+    }
     frame.speedThumb.y = frame.speedTrack.y - 6;
     frame.speedCard.height = frame.speed.height;
     frame.contentHeight = frame.speed.y + frame.speed.height + 11;
-    minWidth = width - inner + Math.max(13 + labelMinimumWidth + 2 + 129 + 10,
-      11 + 26 + 8 + qSetting.singleLineWidthVp + 12 + frame.quickTimerSelect.width + 11,
-      11 + 26 + 8 + qSetting.singleLineWidthVp + 10 + 64 + 15 + frame.quickSpeedValue.width + 11);
+    minWidth = width - inner + Math.max(16 + 44 * 2 + 4, 13 + labelMinimumWidth + 11,
+      frame.quickTimerLabel.width + 22, 44 + 22,
+      frame.quickSpeedLabel.width + frame.quickSpeedValue.width + 34);
   } else {
     const headerGrowth = text.header - 18;
     frame.playbackHeader.height = text.header;
     frame.timerHeader.height = text.header; frame.speedHeader.height = text.header;
     frame.playbackCard.y += headerGrowth;
     frame.waveform.y += headerGrowth;
+    frame.previous.width = Math.max(44, frame.previous.width); frame.previous.height = Math.max(44, frame.previous.height);
+    frame.next.width = Math.max(44, frame.next.width); frame.next.height = Math.max(44, frame.next.height);
     frame.previous.y += headerGrowth; frame.toggle.y += headerGrowth;
     frame.stop.y += headerGrowth; frame.next.y += headerGrowth;
     frame.voice.y += headerGrowth; frame.voice.height = Math.max(frame.voice.height, voice.heightVp, 16);
-    frame.stop.height = Math.max(frame.stop.height, text.stopLabel, 10);
+    frame.stop.height = Math.max(44, frame.stop.height, text.stopLabel + 12);
     frame.stop.width = Math.max(frame.stop.width, 10 + 4 + text.stopLabelWidth + 14);
     frame.stop.x = inner - frame.stop.width - 16;
     frame.voice.width = Math.max(0, frame.stop.x - 8 - frame.voice.x);
-    text.seekY = 198 + headerGrowth + Math.max(0, frame.voice.height - 21);
-    text.errorY = text.seekY + (facts.seek ? 32 : 0);
-    frame.playback.height = text.seekY + (facts.seek ? 32 : 0) + (facts.error.length > 0 ? error.heightVp + 12 : 0);
+    frame.voice.y += Math.max(0, (frame.stop.height - frame.voice.height) / 2);
+    text.seekY = Math.max(198 + headerGrowth + Math.max(0, frame.voice.height - 21), frame.stop.y + frame.stop.height + 16);
+    text.errorY = text.seekY + (facts.seek ? 52 : 0);
+    frame.playback.height = text.seekY + (facts.seek ? 52 : 0) + (facts.error.length > 0 ? error.heightVp + 12 : 0);
     frame.playbackCard.height = frame.playback.height - frame.playbackCard.y;
     frame.speed.y = frame.playback.y + frame.playback.height + 20;
     frame.speedCard.y = 26 + headerGrowth;
@@ -281,6 +323,8 @@ function measureForm(context: UIContext, width: number, full: boolean,
     text.speedRangeY = 75 + headerGrowth;
     frame.speedPresets.y = text.speedRangeY + text.speedRange + 10.5;
     frame.speedPresets.height = text.ratePreset;
+    frame.speedPresets.width = Math.max(frame.speedPresets.width,
+      Math.max(44, Math.ceil(ratePreset.singleLineWidthVp) + 12) * 5 + 32);
     frame.speed.height = frame.speedPresets.y + text.ratePreset + 16;
     frame.speedCard.height = frame.speed.height - frame.speedCard.y;
     frame.timer.y = frame.speed.y + frame.speed.height + 20;
@@ -292,16 +336,10 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.detail.y = frame.config.y + frame.config.height + 20;
     frame.detail.height = text.sectionHeader + 8 + text.detailCard;
     frame.contentHeight = frame.detail.y + frame.detail.height + 16;
-    minWidth = width - inner + Math.max(32 + 32 + ratePreset.singleLineWidthVp * 5,
-      28 + 16 + timerPreset.singleLineWidthVp * 3,
-      28 + 16 + 8 + custom.singleLineWidthVp + (text.timerDigitWidth + 50) * 2,
-      // Service descriptions explicitly keep maxLines(1); long provider names
-      // do not demand an unbounded phone width. The fixed title/icon row does.
-      38 + 2 * (24 + Math.max(tabTitle.singleLineWidthVp, 36)),
-      28 + 8 + labels.singleLineWidthVp + Math.max(text.engineFieldWidth, text.languageFieldWidth, text.failureFieldWidth),
-      28 + voiceTitle.singleLineWidthVp + text.voiceFieldWidth,
-      28 + 8 + manageTitle.singleLineWidthVp + manage.singleLineWidthVp + 38,
-      6 + header.singleLineWidthVp + 16 + Math.min(playbackMeta.singleLineWidthVp, inner * 0.45));
+    minWidth = width - inner + Math.max(32 + 44, 38 + 2 * (27 + 36),
+      28 + 8 + 44 + Math.max(text.engineFieldWidth, text.languageFieldWidth, text.failureFieldWidth),
+      28 + 44 + text.voiceFieldWidth, 28 + 8 + 44 + text.manageButtonWidth);
+
   }
   return { frame: frame, text: text, minWidth: minWidth };
 }
@@ -324,11 +362,14 @@ export function measureReaderTtsMinimum(context: UIContext, widths: ReaderContro
 export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
   progress: number): ReaderTtsTextMinimum {
   const q = profile.quickText; const f = profile.fullText;
-  return { quickPlaybackTitle: readerControlLerp(q.quickPlaybackTitle, f.quickPlaybackTitle, progress),
+  return {
+    quickPlaybackTitle: readerControlLerp(q.quickPlaybackTitle, f.quickPlaybackTitle, progress),
     quickPlaybackStatus: readerControlLerp(q.quickPlaybackStatus, f.quickPlaybackStatus, progress),
     quickSettingTitle: readerControlLerp(q.quickSettingTitle, f.quickSettingTitle, progress),
     header: readerControlLerp(q.header, f.header, progress), sectionHeader: readerControlLerp(q.sectionHeader, f.sectionHeader, progress),
     stopLabel: readerControlLerp(q.stopLabel, f.stopLabel, progress), stopLabelWidth: readerControlLerp(q.stopLabelWidth, f.stopLabelWidth, progress),
+    timerPresetsWidth: readerControlLerp(q.timerPresetsWidth, f.timerPresetsWidth, progress),
+    timerCustomWidth: readerControlLerp(q.timerCustomWidth, f.timerCustomWidth, progress),
     timerPreset: readerControlLerp(q.timerPreset, f.timerPreset, progress), timerCustom: readerControlLerp(q.timerCustom, f.timerCustom, progress),
     timerDigit: readerControlLerp(q.timerDigit, f.timerDigit, progress), timerDigitWidth: readerControlLerp(q.timerDigitWidth, f.timerDigitWidth, progress),
     timerStepper: readerControlLerp(q.timerStepper, f.timerStepper, progress), timerStepButton: readerControlLerp(q.timerStepButton, f.timerStepButton, progress),
@@ -347,5 +388,6 @@ export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
     languageFieldWidth: readerControlLerp(q.languageFieldWidth, f.languageFieldWidth, progress),
     failureFieldWidth: readerControlLerp(q.failureFieldWidth, f.failureFieldWidth, progress),
     manageButton: readerControlLerp(q.manageButton, f.manageButton, progress),
+    manageButtonWidth: readerControlLerp(q.manageButtonWidth, f.manageButtonWidth, progress),
     seekY: readerControlLerp(q.seekY, f.seekY, progress), errorY: readerControlLerp(q.errorY, f.errorY, progress) };
 }

@@ -1,6 +1,7 @@
 import { BOOKSHELF_GRID_TEXT_GAP } from './BookshelfGridSpec';
 import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { resolveReaderIconButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerMainViewport } from '../../shell/MainNavigationSpec';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
@@ -91,7 +92,7 @@ import {
   bookshelfViewMotionContract,
   motionAnimateParam,
 } from '../../../ui/foundation/MotionSpec';
-import { bookshelfCoverHeight, bookshelfGridFrame } from './BookshelfGridSpec';
+import { bookshelfCoverHeight, bookshelfGridFrame, BookshelfListTextBudget, BookshelfListTextFrame, prepareBookshelfListTextFonts } from './BookshelfGridSpec';
 
 const PHONE_LIST_COVER_WIDTH = 48;
 const PHONE_LIST_COVER_HEIGHT = 72;
@@ -179,6 +180,9 @@ class BookshelfRowDataSource implements IDataSource {
  */
 @Component
 export struct BookshelfPage {
+  private readonly listTextBudget: BookshelfListTextBudget = new BookshelfListTextBudget();
+  @State private listTextFontRevision: number = 0;
+  private listTextFontGeneration: number = 0;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   viewState: BookshelfViewState = new BookshelfViewState();
   private readonly shelfScroller: Scroller = new Scroller();
@@ -296,6 +300,7 @@ export struct BookshelfPage {
     this.mounted = true;
     this.detailReturnFocus = this.takeDetailReturnFocus(this.navigationGeneration);
     registerReaderShelfFonts(this.getUIContext().getFont());
+    this.prepareListTextFonts();
     const confirmedMode = this.webDavCredentials.currentBookshelfViewMode();
     const restoredMode: BookshelfViewMode = confirmedMode ?? (this.storedViewMode === 'list' ? 'list' : 'cover');
     this.viewMode = restoredMode;
@@ -383,6 +388,7 @@ export struct BookshelfPage {
   }
 
   aboutToDisappear(): void {
+    this.listTextFontGeneration += 1;
     this.transientFeedback.reset();
     this.cancelBookActionFocus();
     this.publishContinueCardRect(undefined);
@@ -912,14 +918,14 @@ export struct BookshelfPage {
           Text('清除').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .constraintSize({ minHeight: 44 });
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-          .constraintSize({ minHeight: 44 }).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
+          .constraintSize({ minWidth: 44, minHeight: 44 }).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
           .attributeModifier(new ReaderActionAccessibility('清除内容类型和来源筛选', this.hasActiveFilters(), false, true, undefined, 'nativeButton'))
           .onClick((): void => this.clearFilters());
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('收起').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .constraintSize({ minHeight: 44 });
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-          .constraintSize({ minHeight: 44 }).attributeModifier(new ReaderActionAccessibility('收起筛选', true, false, true, undefined, 'nativeButton'))
+          .constraintSize({ minWidth: 44, minHeight: 44 }).attributeModifier(new ReaderActionAccessibility('收起筛选', true, false, true, undefined, 'nativeButton'))
           .onClick((): void => this.setFilterExpanded(false));
       }.width('100%');
       Text('内容类型').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -1177,7 +1183,7 @@ export struct BookshelfPage {
   @Builder
   private projectionListDetails(book: ShelfBook, expandedLayout: boolean) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      ShelfBookListDetails({ book })
+      ShelfBookListDetails({ book, textFrame: this.listTextFrame(expandedLayout) })
         .layoutWeight(1).constraintSize({ minWidth: 0 });
 
       ReaderIconButton({ specId: 'toolbar-wide',
@@ -1186,7 +1192,7 @@ export struct BookshelfPage {
         onTap: this.bookActionPresentationHandler(book, true) });
     }
     .width(this.projectionListDetailsWidth(expandedLayout))
-    .height(this.listCoverHeight(expandedLayout))
+    .height(this.listRowHeight(expandedLayout))
     .alignItems(VerticalAlign.Center)
     .translate({ x: this.listCoverWidth(expandedLayout) + TOK_SPACE_CONTROL_INLINE })
     .opacity(this.viewSwitchListContentOpacity)
@@ -1410,6 +1416,25 @@ export struct BookshelfPage {
 
   private listCoverHeight(expandedLayout: boolean): number {
     return expandedLayout ? TABLET_LIST_COVER_HEIGHT : PHONE_LIST_COVER_HEIGHT;
+  }
+
+  private prepareListTextFonts(): void {
+    const generation = ++this.listTextFontGeneration;
+    void prepareBookshelfListTextFonts().then((): void => {
+      if (this.mounted && generation === this.listTextFontGeneration) this.listTextFontRevision += 1;
+    }).catch((): void => {});
+  }
+
+  private listTextFrame(expandedLayout: boolean): BookshelfListTextFrame {
+    const width = Math.max(0, this.projectionListDetailsWidth(expandedLayout) -
+      resolveReaderIconButtonSpec('toolbar-wide').boxSize - TOK_SPACE_CONTROL_INLINE);
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return this.listTextBudget.resolve(this.getUIContext(), width, scale, this.listTextFontRevision);
+  }
+
+  private listRowHeight(expandedLayout: boolean): number {
+    return Math.max(this.listCoverHeight(expandedLayout),
+      this.listTextFrame(expandedLayout).height);
   }
 
 
@@ -1890,7 +1915,7 @@ export struct BookshelfPage {
   private projectionRowHeight(row: ShelfBook[], expandedLayout: boolean, index: number): number {
     let grid = 0;
     for (const book of row) grid = Math.max(grid, this.gridBookCardHeight(book, expandedLayout));
-    const list = row.length * this.listCoverHeight(expandedLayout) +
+    const list = row.length * this.listRowHeight(expandedLayout) +
       Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE;
     return grid + (list - grid) * this.projectionListProgress(index);
   }
@@ -1902,7 +1927,7 @@ export struct BookshelfPage {
 
   private projectionBookHeight(book: ShelfBook, expandedLayout: boolean, index: number): number {
     const grid = this.gridBookCardHeight(book, expandedLayout);
-    return grid + (this.listCoverHeight(expandedLayout) - grid) * this.projectionListProgress(index);
+    return grid + (this.listRowHeight(expandedLayout) - grid) * this.projectionListProgress(index);
   }
 
   private projectionBookTranslateX(columnIndex: number, expandedLayout: boolean, index: number): number {
@@ -1911,7 +1936,7 @@ export struct BookshelfPage {
   }
 
   private projectionBookTranslateY(columnIndex: number, expandedLayout: boolean, index: number): number {
-    return columnIndex * (this.listCoverHeight(expandedLayout) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
+    return columnIndex * (this.listRowHeight(expandedLayout) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
   }
 
   private projectionCoverScale(expandedLayout: boolean, index: number): number {

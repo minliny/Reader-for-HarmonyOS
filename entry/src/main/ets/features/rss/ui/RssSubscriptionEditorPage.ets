@@ -110,7 +110,7 @@ export struct RssSubscriptionEditorPage {
         });
       }
       .width('100%')
-      .height(60)
+      .constraintSize({ minHeight: 60 })
       .alignItems(VerticalAlign.Center);
       Row() {
         Column({ space: TOK_SPACE_XS }) {
@@ -135,7 +135,7 @@ export struct RssSubscriptionEditorPage {
         });
       }
       .width('100%')
-      .height(60)
+      .constraintSize({ minHeight: 60 })
       .alignItems(VerticalAlign.Center);
       this.editorField('请求头规则', this.snapshot.header, 'JSON 对象；动态 JS 规则会由 Core fail-closed',
         (value: string): void => this.onSourceFieldChanged('header', value));

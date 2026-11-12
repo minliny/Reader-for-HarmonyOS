@@ -40,7 +40,6 @@ export struct ReaderSearchTaskPanel {
   private mounted: boolean = false;
   private readonly nativeSheet: SearchResultSheetBinding = new SearchResultSheetBinding();
   @State private measuredHeaderHeight: number = 0;
-  @State private measuredBodyHeight: number = 0;
 
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; this.nativeSheet.retire(this.onNativeClosing); }
@@ -97,13 +96,6 @@ export struct ReaderSearchTaskPanel {
         Math.abs(height - this.measuredHeaderHeight) > .5) this.measuredHeaderHeight = height;
     };
   }
-  private measureBody(identity: string): (_old: Area, next: Area) => void {
-    return (_old: Area, next: Area): void => {
-      const height = readerPageAreaLength(next.height);
-      if (this.accepts(identity) && Number.isFinite(height) && height >= 0 &&
-        Math.abs(height - this.measuredBodyHeight) > .5) this.measuredBodyHeight = height;
-    };
-  }
   private messageText(kind: string): string {
     if (kind === 'progress') return this.progressText;
     if (kind === 'partial') return this.partialText;
@@ -131,8 +123,7 @@ export struct ReaderSearchTaskPanel {
         }, (key: string): string => key);
       }
     }.width('100%').padding({ left: resolveSheetSpec('search-task-status').horizontalInset,
-      right: resolveSheetSpec('search-task-status').horizontalInset })
-      .onAreaChange(this.measureBody(identity));
+      right: resolveSheetSpec('search-task-status').horizontalInset });
   }
   @Builder private sheetHeader(identity: string) {
     ReaderBoundedSurfaceHeader({ specId: 'search-task-status', title: '搜索进度',
@@ -140,10 +131,8 @@ export struct ReaderSearchTaskPanel {
       onAreaChanged: this.measureHeader(identity) });
   }
   @Builder private sheetBody(identity: string) {
-    if (this.measuredBodyHeight > this.bodyLimit()) {
-      Scroll() { this.details(identity); }.width('100%').constraintSize({ maxHeight: this.bodyLimit() })
-        .scrollBar(BarState.Auto);
-    } else { this.details(identity); }
+    Scroll() { this.details(identity); }.width('100%').constraintSize({ maxHeight: this.bodyLimit() })
+      .scrollBar(BarState.Auto);
   }
   @Builder private sheetContent() {
     ForEach([this.presentationIdentity], (identity: string): void => {

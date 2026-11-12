@@ -207,6 +207,8 @@ export interface ReaderControlModuleMinimum {
 }
 
 export interface ReaderControlChromeMinimum {
+  topBarVisible?: boolean;
+  topBarHeightVp?: number;
   quickReserveVp: number;
   fullReserveVp: number;
   navigationHeightVp: number;
@@ -232,6 +234,9 @@ export class ReaderControlLayoutSnapshot {
   viewportWidth: number;
   viewportHeight: number;
   topBarTop: number;
+  topBarHeight: number = READER_CONTROL_TOP_BAR_HEIGHT;
+  topBarVisible: boolean = true;
+  minimumPanelTop: number = 0;
   topBarWidth: number;
   dockBottomGap: number;
   dockRightGap: number;
@@ -426,14 +431,20 @@ function pixelWithin(preferred: number, min: number, max: number, density: numbe
  * minimum of a neighbouring width: wrapping belongs to that exact candidate. */
 export function readerControlCandidateWidths(viewportWidth: number, viewportHeight: number,
   expandedHint: boolean, metrics: ReaderWindowMetricsSnapshot): ReaderControlCandidateWidths[] {
-  if (readerWidthClass(viewportWidth, expandedHint) !== 'compact' || viewportWidth >= viewportHeight ||
-    viewportWidth <= 0 || viewportHeight <= 0) return [];
+  if (viewportWidth <= 0 || viewportHeight <= 0) return [];
+  const profile = new ReaderDesignProfile(readerWidthClass(viewportWidth, expandedHint) === 'expanded');
   const density = Number.isFinite(metrics.densityPixels) && metrics.densityPixels > 0 ? metrics.densityPixels : 1;
   const available = Math.max(0, viewportWidth - readerContentSafeHorizontal(metrics) * 2);
   const lo = Math.ceil(viewportWidth * 0.91 * density - 1e-8);
   const hi = Math.floor(Math.min(viewportWidth * 0.96, available) * density + 1e-8);
   const widths: number[] = [];
-  for (let pixel = lo; pixel <= hi; pixel++) widths.push(pixel / density);
+  if (readerWidthClass(viewportWidth, expandedHint) === 'compact' && viewportWidth < viewportHeight) {
+    for (let pixel = lo; pixel <= hi; pixel++) widths.push(pixel / density);
+  } else {
+    widths.push(Math.min(profile.fullPanelMaxWidth, Math.max(0, viewportWidth -
+      Math.max(profile.fullPanelLeftGap, readerContentSafeHorizontal(metrics)) -
+      Math.max(profile.fullPanelRightGap, readerContentSafeHorizontal(metrics)))));
+  }
   if (widths.length === 0) widths.push(pixelWithin(viewportWidth * PHONE_PANEL_WIDTH_SHARE, 0, available, density) ?? 0);
   const preferred = viewportWidth * PHONE_PANEL_WIDTH_SHARE;
   widths.sort((a: number, b: number): number => Math.abs(a - preferred) - Math.abs(b - preferred) || a - b);
@@ -460,7 +471,7 @@ function validControlCandidate(value: ReaderControlCandidateMinimum, availableWi
     Number.isFinite(f.heightVp) && f.heightVp >= 0 && Number.isFinite(f.minWidthVp) && f.minWidthVp >= 0 &&
     Number.isFinite(c.quickReserveVp) && c.quickReserveVp >= 0 &&
     Number.isFinite(c.fullReserveVp) && c.fullReserveVp >= 0 &&
-    Number.isFinite(c.navigationHeightVp) && c.navigationHeightVp > 0 &&
+    Number.isFinite(c.navigationHeightVp) && c.navigationHeightVp >= 0 &&
     Number.isFinite(c.headerHeightVp) && c.headerHeightVp > 0 &&
     Number.isFinite(c.brightnessAutoHeightVp) && c.brightnessAutoHeightVp > 0 &&
     Number.isFinite(c.brightnessAutoWidthVp) && c.brightnessAutoWidthVp > 0;
@@ -589,10 +600,19 @@ export function resolveReaderControlLayout(
   // Reserve the complete top-bar box plus a breathing gap before the full
   // sheet. Previously the sheet's fixed 88vp anchor could overlap the 54vp
   // top bar whenever a visible status/cutout inset was present.
-  const persistentBottom = widthClass === 'compact' && width < height && Number.isFinite(measuredPersistentBottomVp) ?
-    Math.max(0, measuredPersistentBottomVp) : 0;
-  const fullPanelTop = Math.max(READER_FULL_PANEL_TOP, topBarTop + READER_CONTROL_TOP_BAR_HEIGHT + 8,
-    persistentBottom > 0 ? persistentBottom + 8 : 0);
+  const persistentBottom = Number.isFinite(measuredPersistentBottomVp) ? Math.max(0, measuredPersistentBottomVp) : 0;
+  const measuredTopBars = (candidates ?? []).map((value: ReaderControlCandidateMinimum): number =>
+    value.chrome.topBarHeightVp ?? 0).filter((value: number): boolean => Number.isFinite(value) && value > 0);
+  // Before the current provider answers, reserve a conservative scaled shell.
+  // It is replaced only by a real current candidate's native line receipt.
+  const topBarHeight = measuredTopBars.length > 0 ? Math.max(READER_CONTROL_TOP_BAR_HEIGHT, ...measuredTopBars) :
+    Math.ceil(READER_CONTROL_TOP_BAR_HEIGHT * Math.max(1, Number.isFinite(metrics.systemFontScale) ? metrics.systemFontScale : 1));
+  const topBarVisible = candidates !== undefined && candidates.some((value: ReaderControlCandidateMinimum): boolean => value.chrome.topBarVisible !== undefined) ?
+    candidates.every((value: ReaderControlCandidateMinimum): boolean => value.chrome.topBarVisible !== false) :
+    height - Math.max(READER_FULL_PANEL_TOP, topBarTop + topBarHeight + 8) - Math.max(READER_FULL_PANEL_BOTTOM_GAP, dockBottomGap) >= 184;
+  const minimumPanelTop = persistentBottom > 0 ? persistentBottom + 8 : 0;
+  const fullPanelTop = Math.max(topBarVisible ? READER_FULL_PANEL_TOP : topBarTop,
+    topBarVisible ? topBarTop + topBarHeight + 8 : topBarTop, minimumPanelTop);
   const fullPanelBottom = Math.max(READER_FULL_PANEL_BOTTOM_GAP, dockBottomGap);
   const availablePanelHeight = Math.max(0, height - fullPanelTop - fullPanelBottom);
   const defaultPanelWidth = Math.min(profile.fullPanelMaxWidth,
@@ -604,6 +624,18 @@ export function resolveReaderControlLayout(
         availablePanelHeight, density, candidates) : undefined) ??
       resolvePortraitControlPanelSize(width, height, Math.max(0, width - safeHorizontal * 2), availablePanelHeight, density) :
     undefined;
+  // Wide and landscape windows use their exact dock width. Their measured
+  // natural extent is allowed to scroll inside the physical viewport.
+  const otherCandidate = candidates?.find((value: ReaderControlCandidateMinimum): boolean =>
+    validControlCandidate(value, Math.max(0, width - safeHorizontal * 2)) &&
+    Math.abs(value.widths.panelWidthVp - defaultPanelWidth) < 0.01);
+  const otherPanel: ReaderControlPanelSize | undefined = portraitPanel === undefined && otherCandidate !== undefined ? {
+    width: otherCandidate.widths.panelWidthVp,
+    fullHeight: availablePanelHeight,
+    quickHeight: Math.min(availablePanelHeight, Math.max(otherCandidate.minimum.quick.heightVp +
+      otherCandidate.chrome.quickReserveVp, 330)), measured: otherCandidate, preferred: false,
+  } : undefined;
+  const selectedPanel = portraitPanel ?? otherPanel;
   const snapshot = new ReaderControlLayoutSnapshot(
     widthClass,
     width,
@@ -615,16 +647,17 @@ export function resolveReaderControlLayout(
     dockWidth,
     fullPanelTop,
     fullPanelRightGap,
-    portraitPanel?.width ?? defaultPanelWidth,
-    portraitPanel?.fullHeight ?? availablePanelHeight,
-    portraitPanel?.quickHeight,
+    selectedPanel?.width ?? defaultPanelWidth,
+    selectedPanel?.fullHeight ?? availablePanelHeight,
+    selectedPanel?.quickHeight,
   );
-  const measured = portraitPanel?.measured;
-  if (measured !== undefined && portraitPanel !== undefined) {
+  snapshot.topBarHeight = topBarHeight; snapshot.topBarVisible = topBarVisible; snapshot.minimumPanelTop = minimumPanelTop;
+  const measured = selectedPanel?.measured;
+  if (measured !== undefined && selectedPanel !== undefined) {
     snapshot.minimumKey = measured.key;
-    snapshot.minimumStatus = portraitPanel.preferred ? 'preferred' : 'constrained';
-    const quickHeight = Math.max(0, portraitPanel.quickHeight - measured.chrome.quickReserveVp);
-    const fullHeight = Math.max(0, portraitPanel.fullHeight - measured.chrome.fullReserveVp);
+    snapshot.minimumStatus = selectedPanel.preferred ? 'preferred' : 'constrained';
+    const quickHeight = Math.max(0, selectedPanel.quickHeight - measured.chrome.quickReserveVp);
+    const fullHeight = Math.max(0, selectedPanel.fullHeight - measured.chrome.fullReserveVp);
     snapshot.quickMinimumFits = measured.minimum.quick.fits &&
       measured.minimum.quick.heightVp <= quickHeight + 0.01 &&
       measured.minimum.quick.minWidthVp <= measured.widths.quickContentWidthVp + 0.01;

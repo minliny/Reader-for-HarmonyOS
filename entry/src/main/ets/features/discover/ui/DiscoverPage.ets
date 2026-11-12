@@ -198,7 +198,7 @@ export struct DiscoverPage {
         Image((this.appThemeScheme === 'night' ? $r('app.media.discover_source_stack_theme_night') : $r('app.media.discover_source_stack'))).width(20).height(20);
       }
       .width(34)
-      .height(34)
+      .constraintSize({ minHeight: 34 })
       .borderRadius(17)
       .backgroundColor(readerAppColor('app.discover.sourceIconSurface', this.appThemeScheme));
 
@@ -231,7 +231,7 @@ export struct DiscoverPage {
       Image((this.appThemeScheme === 'night' ? $r('app.media.discover_source_chevron_theme_night') : $r('app.media.discover_source_chevron'))).width(20).height(20);
     }
     .width('100%')
-    .height(58)
+    .constraintSize({ minHeight: 58 })
     .padding({ left: TOK_SPACE_SM, right: 13.1 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
@@ -249,12 +249,12 @@ export struct DiscoverPage {
             primary: this.presentation.activeKindIndex === index, onAction: (): void => this.onSelectKind(index) });
         }, (label: string): string => `discover-chip-${label}`);
       }
-      .height(32)
+      .constraintSize({ minHeight: 32 })
       .padding({ right: TOK_SPACE_XS })
       .alignItems(VerticalAlign.Center);
     }
     .width('100%')
-    .height(32)
+    .constraintSize({ minHeight: 32 })
     .scrollable(ScrollDirection.Horizontal)
     .scrollBar(BarState.Off);
   }
@@ -286,7 +286,7 @@ export struct DiscoverPage {
         Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_chevron_theme_night') : $r('app.media.discover_filter_chevron'))).width(20).height(20);
       }
       .layoutWeight(1)
-      .height(34)
+      .constraintSize({ minHeight: 34 })
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: 5 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -297,7 +297,7 @@ export struct DiscoverPage {
         icon: $r('app.media.discover_apply'), onAction: (): void => this.onRefresh() });
     }
     .width('100%')
-    .height(34)
+    .constraintSize({ minHeight: 34 })
     .alignItems(VerticalAlign.Center);
   }
 
@@ -350,7 +350,7 @@ export struct DiscoverPage {
       this.pageAction('下一页', this.presentation.hasNext, (): void => this.onNextPage());
     }
     .width('100%')
-    .height(48)
+    .constraintSize({ minHeight: 48 })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
@@ -418,7 +418,7 @@ export struct DiscoverPage {
       .alignItems(HorizontalAlign.Start);
     }
     .width('100%')
-    .height(98)
+    .constraintSize({ minHeight: 98 })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });

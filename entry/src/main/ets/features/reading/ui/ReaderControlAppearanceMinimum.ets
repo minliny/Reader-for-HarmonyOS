@@ -149,7 +149,7 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
     if (measured === undefined) return undefined;
     fontHeight = Math.max(fontHeight, Math.ceil(measured.heightVp));
   }
-  const triggerHeight = Math.max(30, Math.ceil(Math.max(indent.heightVp, language.heightVp)) + 15);
+  const triggerHeight = Math.max(44, Math.ceil(Math.max(indent.heightVp, language.heightVp)) + 15);
   const triggerWidth = Math.ceil(Math.max(indent.singleLineWidthVp, language.singleLineWidthVp)) + 38;
   const selectStacked = selectLabel.singleLineWidthVp + triggerWidth + 28 > section;
   const buttonWidth = Math.max(44, Math.ceil(stepButton.singleLineWidthVp) + 18);
@@ -157,7 +157,7 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
   const glyphWidth = Math.max(26, Math.ceil(stepButton.singleLineWidthVp));
   const stepperWidth = buttonWidth * 2 + valueWidth - (buttonWidth - glyphWidth);
   const stepperStacked = metricLabel.singleLineWidthVp + stepperWidth + 26 > section;
-  const rowMinimum = Math.max(42, Math.ceil(metricLabel.heightVp) + 24,
+  const rowMinimum = Math.max(44, Math.ceil(metricLabel.heightVp) + 24,
     Math.ceil(metricValue.heightVp) + 17, Math.ceil(stepButton.heightVp) + 17);
   // Quick paints only the 46vp swatch; the 62.5vp transparent motion root is
   // not a minimum column cell. Keep the original root centers and 4vp gap,
@@ -174,12 +174,12 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
     quickFontHeaderHeight: Math.max(10, qFontHeader.heightVp),
     fullFontHeaderHeight: Math.max(16, fFontHeader.heightVp, fFontMeta.heightVp),
     themeLabelHeight: Math.max(13, Math.ceil(theme.heightVp)),
-    themeActionHeight: Math.max(28, Math.ceil(action.heightVp) + 15),
-    quickFontCellHeight: Math.max(27, fontHeight + 10), fullFontCellHeight: Math.max(30, fontHeight + 10),
+    themeActionHeight: Math.max(44, Math.ceil(action.heightVp) + 15),
+    quickFontCellHeight: Math.max(44, fontHeight + 10), fullFontCellHeight: Math.max(44, fontHeight + 10),
     layoutHeaderHeight: Math.max(17, layoutHeader.heightVp, layoutMeta.heightVp),
     selectLabelHeight: Math.max(18, Math.ceil(selectLabel.heightVp)), selectTriggerHeight: triggerHeight,
     selectRowHeight: selectStacked ? Math.max(18, Math.ceil(selectLabel.heightVp)) + triggerHeight + 18 :
-      Math.max(42, triggerHeight + 12, Math.ceil(selectLabel.heightVp) + 24),
+      Math.max(44, triggerHeight + 12, Math.ceil(selectLabel.heightVp) + 24),
     selectStacked, indentTriggerWidth: Math.ceil(indent.singleLineWidthVp) + 38,
     languageTriggerWidth: Math.ceil(language.singleLineWidthVp) + 38, indentMenuHeight, languageMenuHeight,
     stepperLabelHeight: Math.max(18, Math.ceil(metricLabel.heightVp)),

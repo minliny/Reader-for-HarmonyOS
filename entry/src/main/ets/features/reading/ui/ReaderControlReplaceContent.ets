@@ -1,3 +1,6 @@
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE } from '../../../ui/foundation/ReaderTypography';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
@@ -534,7 +537,7 @@ export struct ReaderControlReplaceContent {
       Text(rule().name).fontFamily(TYPE_READER_REPLACE_RULE_NAME.fontFamily).fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)
         .fontWeight(TYPE_READER_REPLACE_RULE_NAME.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(Math.max(0, this.frame().list.width - this.frame().rowPadding * 2 - this.frame().toggleWidth -
-          10 - 75 * this.frame().progress))
+          10 - 103 * this.frame().progress))
         .height(this.frame().nameHeight).position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,
           y: this.frame().nameY });
       Column({ space: 4 }) {
@@ -542,7 +545,7 @@ export struct ReaderControlReplaceContent {
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.scopeSummary(rule())).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.width(Math.max(0, this.frame().list.width - 155)).height(this.frame().metaHeight).alignItems(HorizontalAlign.Start)
+      }.width(Math.max(0, this.frame().list.width - 183)).height(this.frame().metaHeight).alignItems(HorizontalAlign.Start)
         .position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10, y: this.frame().metaY })
         .opacity(this.frame().progress).hitTestBehavior(HitTestMode.None);
       Row({ space: 5 }) {
@@ -550,7 +553,7 @@ export struct ReaderControlReplaceContent {
           (): void => this.openEditor(rule()), (): boolean => index() >= 0, (): string => `edit:${rule().id}`);
         this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,
           (): void => this.askDelete(rule()), (): boolean => index() >= 0, (): string => `delete:${rule().id}`);
-      }.width(65).height(30).position({ x: Math.max(0, this.frame().list.width - 78), y: (this.frame().rowHeight - 30) / 2 })
+      }.width(93).height(44).position({ x: Math.max(0, this.frame().list.width - 106), y: (this.frame().rowHeight - 44) / 2 })
         .opacity(this.frame().progress).hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)
         .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
       }.width(this.frame().list.width).height(this.frame().rowHeight)
@@ -566,7 +569,7 @@ export struct ReaderControlReplaceContent {
   @Builder
   private ruleIcon(icon: Resource, label: () => string, action: () => void, enabled: () => boolean, focusRole: () => string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) { Image(icon).width(20).height(20); }
-      .width(30).height(30).padding(0).backgroundColor(Color.Transparent).borderRadius(6)
+      .width(44).height(44).padding(0).backgroundColor(Color.Transparent).borderRadius(6)
       .id(`${this.state.sessionKey}:replace-editor:${focusRole()}`)
       .attributeModifier(new ReaderActionAccessibility(label(), this.layer === '' && this.fullInput() && this.readyInput() && enabled(), false, true, undefined, 'nativeButton'))
       .onClick((): void => { if (this.layer === '' && this.fullInput() && this.readyInput() && enabled()) action(); });
@@ -610,11 +613,32 @@ export struct ReaderControlReplaceContent {
       .enabled(enabled() && (this.fullInput() || this.quickInput()))
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });
   }
+  private temporaryNeedsFlow(): boolean {
+    const actionsHeight = this.layer === 'editor' ? readerScaledControlHeight(44,
+      TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.lineHeightFp ?? 20,
+      readerReadableFontScale(readerWindowMetrics().systemFontScale)) : 0;
+    return this.availableHeight < 24 + this.frame().editorHeaderHeight + actionsHeight + 16 + 44;
+  }
+
+  @Builder
+  private temporaryFlow(opening: number) {
+    Scroll() {
+      Column({ space: 8 }) {
+        this.temporaryHeader(opening); this.temporaryBodyContent(opening); this.temporaryActions(opening);
+      }.width('100%');
+    }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
+  }
+
   @Builder
   private temporaryOverlay(opening: number) {
-    ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
-      header: (): void => { this.temporaryHeader(opening); }, body: (): void => { this.temporaryBody(opening); },
-      actions: (): void => { this.temporaryActions(opening); } });
+    if (this.temporaryNeedsFlow()) {
+      ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
+        body: (): void => { this.temporaryFlow(opening); } });
+    } else {
+      ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
+        header: (): void => { this.temporaryHeader(opening); }, body: (): void => { this.temporaryBody(opening); },
+        actions: (): void => { this.temporaryActions(opening); } });
+    }
   }
 
   private temporaryTitle(): string {
@@ -655,7 +679,12 @@ export struct ReaderControlReplaceContent {
 
   @Builder
   private temporaryBody(opening: number) {
-      Scroll() {
+    Scroll() { this.temporaryBodyContent(opening); }
+      .width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
+  }
+
+  @Builder
+  private temporaryBodyContent(opening: number) {
         Column({ space: 8 }) {
           if (this.layer === 'editor') {
             this.editorFields(opening);
@@ -684,7 +713,6 @@ export struct ReaderControlReplaceContent {
             Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
         }.width('100%').alignItems(HorizontalAlign.Start);
-      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
 
   @Builder

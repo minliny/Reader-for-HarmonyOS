@@ -1,3 +1,4 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
@@ -94,6 +95,7 @@ export struct RssPage {
   onDiscoverRequested: () => void = (): void => {};
   @State private filterValue: string = '全部';
   @State private filterOpen: boolean = false;
+  @State private measuredHeaderHeight: number = 0;
   @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
@@ -140,7 +142,8 @@ export struct RssPage {
         this.topBar();
         this.searchBar();
         this.statusTabs();
-      }.layoutWeight(1).height(RSS_FLOATING_HEADER_HEIGHT).alignItems(HorizontalAlign.Start);
+      }.layoutWeight(1).constraintSize({ minHeight: RSS_FLOATING_HEADER_HEIGHT }).alignItems(HorizontalAlign.Start)
+        .onAreaChange((_old: Area, next: Area): void => { this.measuredHeaderHeight = this.numericAreaLength(next.height); });
     }.width('100%');
   }
 
@@ -148,7 +151,7 @@ export struct RssPage {
   // RSS 标题左 20vp。SpaceBetween 复现 justify-end (管理右缘 = 栏宽 - 20vp 内缩)。
   @Builder
   private topBar() {
-    Row() {
+    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
       Text('RSS')
         .fontFamily(TYPE_RSS_HOME_TITLE.fontFamily)
         .fontWeight(TYPE_RSS_HOME_TITLE.fontWeight)
@@ -158,15 +161,16 @@ export struct RssPage {
         .maxLines(1)
         .margin({ left: this.headerLeftInset() });
 
-      Row({ space: 6 }) {
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(6) } }) {
         this.refreshPill();
         this.managePill();
       }
-      .margin({ left: TOK_SPACE_CONTROL_INLINE })
+      .constraintSize({ maxWidth: this.contentFrame().width })
+      .margin({ left: this.headerLeftInset() })
       .alignItems(VerticalAlign.Center);
     }
     .width('100%')
-    .height(58)
+    .constraintSize({ minHeight: 58 })
     .justifyContent(FlexAlign.SpaceBetween)
     .padding({ right: this.headerRightInset() })
     .alignItems(VerticalAlign.Center);
@@ -216,7 +220,7 @@ export struct RssPage {
         .width(18)
         .height(18);
     }
-    .height(34)
+    .constraintSize({ minHeight: 34 })
     .padding({ left: 11, right: 9 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('app.feed.pillSurface', this.appThemeScheme))
@@ -237,30 +241,26 @@ export struct RssPage {
   private searchBar() {
     Row() {
       ReaderSearchField({
-        variant: 'rssPassive',
-        mode: 'passive',
-        placeholder: '搜索订阅源、文章标题或分组',
-        accessibilityLabel: '搜索订阅源、文章标题或分组',
+        variant: 'rssPassive', mode: 'passive',
+        placeholder: '搜索订阅源、文章标题或分组', accessibilityLabel: '搜索订阅源、文章标题或分组',
       });
-    }
-    .width(this.contentFrame().width)
-    .height(44)
-    .alignItems(VerticalAlign.Center)
-    .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
+    }.width(this.contentFrame().width).constraintSize({ minHeight: 44 })
+      .alignItems(VerticalAlign.Center)
+      .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
   }
 
   @Builder
   private statusTabs() {
-    Row({ space: 6 }) {
-      this.statusTab('源列表', 'sources');
-      this.statusTab('全部', 'all');
-      this.statusTab('收藏', 'favorites');
-      this.statusTab('规则订阅', 'rules');
-    }
-    .width(this.contentFrame().width)
-    .height(30)
-    .alignItems(VerticalAlign.Center)
-    .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
+    Scroll() {
+      Row({ space: 6 }) {
+        this.statusTab('源列表', 'sources');
+        this.statusTab('全部', 'all');
+        this.statusTab('收藏', 'favorites');
+        this.statusTab('规则订阅', 'rules');
+      }.constraintSize({ minWidth: this.contentFrame().width, minHeight: 44 })
+        .alignItems(VerticalAlign.Center);
+    }.width(this.contentFrame().width).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+      .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
   }
 
   @Builder
@@ -318,7 +318,7 @@ export struct RssPage {
         .maxLines(1);
     }
     .width(this.contentFrame().width)
-    .height(30)
+    .constraintSize({ minHeight: 30 })
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center);
   }
@@ -335,7 +335,7 @@ export struct RssPage {
           .maxLines(1);
       }
       .width('100%')
-      .height(44)
+      .constraintSize({ minHeight: 44 })
       .padding({ left: 11, right: 11 })
       .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(VerticalAlign.Center)
@@ -369,7 +369,7 @@ export struct RssPage {
         .alignItems(VerticalAlign.Center);
       }
       .width('100%')
-      .height(34)
+      .constraintSize({ minHeight: 34 })
       .padding({ left: 11, right: 11 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -474,7 +474,7 @@ export struct RssPage {
       });
     }
     .width('100%')
-    .height(62)
+    .constraintSize({ minHeight: 62 })
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
@@ -523,7 +523,7 @@ export struct RssPage {
         onAction: (): void => this.onModeRequested('all') });
     }
     .width('100%')
-    .height(30)
+    .constraintSize({ minHeight: 30 })
     .padding({ left: 2, right: 2 })
     .alignItems(VerticalAlign.Center);
   }
@@ -783,7 +783,7 @@ export struct RssPage {
     const metrics = ReaderWindowCoordinator.metrics();
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.effectiveViewportWidth();
-    input.headerHeight = RSS_FLOATING_HEADER_HEIGHT;
+    input.headerHeight = Math.max(RSS_FLOATING_HEADER_HEIGHT, this.measuredHeaderHeight);
     input.contentGap = TOK_SPACE_XS;
     input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
     input.contentHorizontalPadding = TOK_SCREEN_INSET;

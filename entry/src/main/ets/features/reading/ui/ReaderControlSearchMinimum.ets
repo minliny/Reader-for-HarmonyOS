@@ -56,14 +56,14 @@ function form(context: UIContext, width: number, full: boolean,
   if (field === undefined || title === undefined || snippet === undefined || match === undefined ||
     loadAction === undefined || loadMessage === undefined || status === undefined || back === undefined || glyph === undefined) return undefined;
   const inputHeight = Math.max(14, field.heightVp);
-  const backHeight = Math.max(24, back.heightVp);
-  const fieldHeight = Math.max(full ? 32 : 24, inputHeight + 10, full ? 0 : backHeight);
+  const backHeight = Math.max(44, back.heightVp);
+  const fieldHeight = Math.max(44, inputHeight + 10, full ? 0 : backHeight);
   const titleHeight = Math.max(13, title.heightVp);
   // The actual Text keeps maxLines(2); both real Span weights share this
   // declared line-height upper bound, including short and long result rows.
   const snippetHeight = Math.max(28, Math.max(snippet.heightVp, match.heightVp) * 2);
   const rowHeight = Math.max(full ? 72 : 54, 9.09375 + titleHeight + 9 + snippetHeight + 8);
-  const loadHeight = facts.loadMoreLabel.length > 0 ? Math.max(facts.loadMoreMessage.length > 0 ? 44 : 26,
+  const loadHeight = facts.loadMoreLabel.length > 0 ? Math.max(44,
     loadAction.heightVp + 8, facts.loadMoreMessage.length > 0 ? loadMessage.heightVp : 0) : 0;
   const natural: ReaderControlSearchNaturalSize = { fieldHeightVp: fieldHeight, inputHeightVp: inputHeight,
     titleHeightVp: titleHeight, snippetHeightVp: snippetHeight, rowHeightVp: rowHeight, loadMoreHeightVp: loadHeight,

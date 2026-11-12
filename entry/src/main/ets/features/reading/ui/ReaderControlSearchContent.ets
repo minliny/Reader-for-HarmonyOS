@@ -656,9 +656,9 @@ export struct ReaderControlSearchContent {
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1);
       }
-      .width(Math.min(this.frame().results.width, this.frame().loadMoreWidthVp)).height(Math.max(26, this.frame().loadMoreHeightVp)).padding(0)
+      .width(Math.min(this.frame().results.width, this.frame().loadMoreWidthVp)).height(Math.max(44, this.frame().loadMoreHeightVp)).padding(0)
       .position({ x: Math.max(0, this.frame().results.width - this.frame().loadMoreWidthVp - 8),
-        y: Math.max(0, this.frame().results.height - Math.max(26, this.frame().loadMoreHeightVp) - 4) })
+        y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp) - 4) })
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .enabled(this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&

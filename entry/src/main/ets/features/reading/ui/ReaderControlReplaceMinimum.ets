@@ -19,9 +19,9 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
   statusText: string, recoveryLabel: string, nameText: string, patternText: string, metaText: string, headerTitle: string, editorOpen: boolean): ReaderControlReplaceEndpointMinimum | undefined {
   const listWidth = width - (full ? 28 : 36);
   // Metadata keeps its existing one-line ellipsis contract. Heights still use native glyphs.
-  const name = measureReaderControlText(context, nameText || '字', TYPE_READER_REPLACE_RULE_NAME, Math.max(1, listWidth - 155));
-  const pattern = measureReaderControlText(context, patternText || '字', TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, Math.max(1, listWidth - 155));
-  const meta = measureReaderControlText(context, metaText || '字', TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, Math.max(1, listWidth - 155));
+  const name = measureReaderControlText(context, nameText || '字', TYPE_READER_REPLACE_RULE_NAME, Math.max(1, listWidth - 183));
+  const pattern = measureReaderControlText(context, patternText || '字', TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, Math.max(1, listWidth - 183));
+  const meta = measureReaderControlText(context, metaText || '字', TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, Math.max(1, listWidth - 183));
   const back = measureReaderControlText(context, '返回', TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK, width - 36);
   const status = measureReaderControlText(context, statusText || '规则载入中…', TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS,
     Math.max(1, listWidth), 'wrap');
@@ -32,7 +32,7 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
   if (editorFlag === undefined || editorBack === undefined) return undefined;
   const toolbarLabels: string[] = ['新增规则', '导入', '导出'];
   const weights: number[] = [100.66, 96.67, 96.67];
-  let toolbarHeight = 40; let toolbarFits = true;
+  let toolbarHeight = 44; let toolbarFits = true;
   for (let i = 0; i < toolbarLabels.length; i++) {
     const text = measureReaderControlText(context, toolbarLabels[i], TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL,
       Math.max(1, (width - 28 - 16) * weights[i] / 294 - 26));
@@ -51,15 +51,15 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
     }
   }
   const actionLabels = full ? ['预览当前章节已保存规则', recoveryLabel || '核对原规则操作', '确认删除', '选择文件并导入', '重试预览'] : ['预览效果', '完整管理', recoveryLabel || '核对原规则操作'];
-  let actionHeight = 28;
+  let actionHeight = 44;
   for (let i = 0; i < actionLabels.length; i++) {
     const constraint = !full && i < 2 ? (width - 35.1 - 6) / 2 - 12 : listWidth - 12;
     const text = measureReaderControlText(context, actionLabels[i], TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, Math.max(1, constraint), 'wrap');
     if (text === undefined) return undefined;
     actionHeight = Math.max(actionHeight, text.heightVp + 10);
   }
-  const editorBackHeight = Math.max(28, editorBack.heightVp + 10);
-  const editorBackWidth = Math.max(38, editorBack.singleLineWidthVp + 12);
+  const editorBackHeight = Math.max(44, editorBack.heightVp + 10);
+  const editorBackWidth = Math.max(44, editorBack.singleLineWidthVp + 12);
   const headerBodyWidth = Math.max(1, width - 24);
   const cancelWidth = Math.max(1, (headerBodyWidth - 8) / 2);
   const cancel = measureReaderControlText(context, '取消', TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL,
@@ -70,15 +70,15 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
   const title = measureReaderControlText(context, headerTitle, titleStyle,
     editorOpen ? Math.max(1, headerBodyWidth - editorBackWidth - 8) : cancelWidth, 'wrap');
   if (cancel === undefined || title === undefined) return undefined;
-  const editorHeaderHeight = Math.max(28, title.heightVp, editorOpen ? editorBackHeight : cancel.heightVp + 10);
+  const editorHeaderHeight = Math.max(44, title.heightVp, editorOpen ? editorBackHeight : cancel.heightVp + 10);
   if (full && !editorOpen) actionHeight = Math.max(actionHeight, cancel.heightVp + 10);
   const nameHeight = Math.max(17, name.heightVp);
   const metaHeight = Math.max(34, pattern.heightVp + meta.heightVp + 4);
   return { width, nameHeight, metaHeight, actionHeight,
-    editorFlagHeight: Math.max(32, editorFlag.heightVp + 12), editorHeaderHeight,
+    editorFlagHeight: Math.max(44, editorFlag.heightVp + 12), editorHeaderHeight,
     editorBackHeight, editorBackWidth,
-    rowHeight: full ? Math.max(77, 11 + nameHeight + 4 + metaHeight + 11) : Math.max(28, nameHeight + 11),
-    backHeight: Math.max(24, back.heightVp + 8), backWidth: Math.max(51, 11 + 5 + back.singleLineWidthVp + 8),
+    rowHeight: full ? Math.max(77, 11 + nameHeight + 4 + metaHeight + 11) : Math.max(44, nameHeight + 11),
+    backHeight: Math.max(44, back.heightVp + 8), backWidth: Math.max(51, 11 + 5 + back.singleLineWidthVp + 8),
     toolbarColumns: columns, toolbarCellHeight: toolbarHeight,
     statusHeight: Math.max(76, status.heightVp + actionHeight + 4), fits: (full ? toolbarFits : true) && back.fitsWidth };
 }

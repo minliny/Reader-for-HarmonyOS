@@ -1,3 +1,6 @@
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../foundation/ReaderWindowMetrics';
+import { readerPageAreaLength } from '../layout/ReaderPageShell';
+import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import inputMethod from '@ohos.inputMethod';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
@@ -18,6 +21,13 @@ export struct ArkWebExecutionHost {
   onBackBridge: (handler: (() => boolean) | undefined) => void = (): void => {};
   onInputCaptureChange: (captured: boolean) => void = (): void => {};
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private hostWidth: number = 0;
+  @State private hostHeight: number = 0;
+  @State private hostX: number = 0;
+  @State private hostY: number = 0;
+  @State private measuredToolbarHeight: number = 0;
+  private mounted: boolean = false;
 
   @State private interactive: boolean = false;
   @State private title: string = '';
@@ -46,12 +56,14 @@ export struct ArkWebExecutionHost {
   };
 
   aboutToAppear(): void {
+    this.mounted = true;
     ArkWebExecutor.instance.attachSurfaceHost(this.surfaceListener);
     ArkWebExecutor.instance.attachPresentation(this.presentationListener);
     this.onBackBridge((): boolean => this.consumeBack());
   }
 
   aboutToDisappear(): void {
+    this.mounted = false;
     this.onBackBridge(undefined);
     this.interactiveBackSurface = undefined;
     this.onInputCaptureChange(false);
@@ -78,6 +90,35 @@ export struct ArkWebExecutionHost {
     return this.currentSurface?.id === id ? [this.currentSurface] : [];
   }
 
+  private fontScale(): number {
+    return readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+  }
+
+  private safeLeft(): number { return Math.max(0, readerInteractiveSafeLeft(readerWindowMetrics(), true) - this.hostX); }
+  private safeTop(): number { return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.hostY); }
+  private safeWidth(): number {
+    const metrics = readerWindowMetrics();
+    return Math.max(0, Math.min(this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width,
+      metrics.windowRect.width - readerInteractiveSafeRight(metrics, true) - this.hostX) - this.safeLeft());
+  }
+  private safeHeight(): number {
+    const metrics = readerWindowMetrics();
+    return Math.max(0, Math.min(this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
+      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY) - this.safeTop());
+  }
+  private toolbarHeight(): number {
+    const lines = 15 * 1.5 + (this.currentUrl.length > 0 ? 11 * 1.5 + 2 : 0);
+    return Math.min(this.safeHeight(), Math.max(this.measuredToolbarHeight, 44 + 16, lines * this.fontScale() + 16));
+  }
+  private toolbarAreaHandler(surface: ArkWebSurface): (_old: Area, next: Area) => void {
+    const revision = this.readerWindowMetricsRevision;
+    return (_old: Area, next: Area): void => {
+      if (!this.mounted || !this.interactive || this.currentSurface !== surface ||
+        revision !== this.readerWindowMetricsRevision) return;
+      this.measuredToolbarHeight = readerPageAreaLength(next.height);
+    };
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ForEach(this.surfacesForRender(this.surfaceId), (surface: ArkWebSurface) => {
@@ -90,8 +131,10 @@ export struct ArkWebExecutionHost {
           .domStorageAccess(true)
           .fileAccess(false)
           .onlineImageAccess(this.interactive)
-          .width('100%')
-          .height('100%')
+          .width(this.interactive ? this.safeWidth() : '100%')
+          .height(this.interactive ? Math.max(0, this.safeHeight() - this.toolbarHeight()) : '100%')
+          .position({ x: this.interactive ? this.safeLeft() : 0,
+            y: this.interactive ? this.safeTop() + this.toolbarHeight() : 0 })
           .opacity(this.interactive ? 1 : 0.001)
           // Background source execution must not acquire keyboard/navigation
           // focus. Hit-test exclusion alone only excludes pointer events.
@@ -150,6 +193,7 @@ export struct ArkWebExecutionHost {
           })
 
         if (this.interactive) {
+          Scroll() {
           Row({ space: 12 }) {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('取消')
@@ -158,7 +202,7 @@ export struct ArkWebExecutionHost {
                 .fontColor(readerAppColor('app.web.status', this.appThemeScheme))
                 .accessibilityLevel('no');
             }
-              .padding(0).constraintSize({ minWidth: 0, minHeight: 0 })
+              .padding({ left: 6, right: 6, top: 8, bottom: 8 }).constraintSize({ minWidth: 44, minHeight: 44 })
               .backgroundColor(Color.Transparent).borderRadius(0)
               .attributeModifier(new ReaderActionAccessibility('取消登录', true, false, true, undefined, 'nativeButton'))
               .defaultFocus(true)
@@ -189,22 +233,30 @@ export struct ArkWebExecutionHost {
                 .fontColor(readerAppColor('app.web.action', this.appThemeScheme))
                 .accessibilityLevel('no');
             }
-              .padding(0).constraintSize({ minWidth: 0, minHeight: 0 })
+              .padding({ left: 6, right: 6, top: 8, bottom: 8 }).constraintSize({ minWidth: 44, minHeight: 44 })
               .backgroundColor(Color.Transparent).borderRadius(0)
               .attributeModifier(new ReaderActionAccessibility('完成登录', true, false, true, undefined, 'nativeButton'))
               .onClick((): void => ArkWebExecutor.instance.finishInteractive(surface));
           }
-          .width('100%')
-          .height(56)
-          .padding({ left: 18, right: 18 })
+          .width(this.safeWidth())
+          .constraintSize({ minHeight: 44 })
+          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+          .onAreaChange(this.toolbarAreaHandler(surface))
           .alignItems(VerticalAlign.Center)
           .backgroundColor(readerAppColor('app.web.surface', this.appThemeScheme))
           .shadow({ radius: 8, color: readerAppColor('app.shadow.control', this.appThemeScheme), offsetY: 2 });
+          }.width(this.safeWidth()).height(this.toolbarHeight())
+            .position({ x: this.safeLeft(), y: this.safeTop() }).scrollBar(BarState.Auto).clip(true);
         }
       }, (surface: ArkWebSurface): string => `${surface.id}`)
     }
     .width(this.interactive ? '100%' : 1)
     .height(this.interactive ? '100%' : 1)
+    .onAreaChange((_old: Area, next: Area): void => {
+      if (!this.mounted || !this.interactive) return;
+      this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
+      this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
+    })
     .accessibilityLevel(this.interactive ? 'auto' : 'no-hide-descendants')
     .backgroundColor(this.interactive ? readerAppColor('app.web.surface', this.appThemeScheme) : readerAppColor('app.surface.transparent', this.appThemeScheme))
     .zIndex(this.interactive ? 10000 : -1)

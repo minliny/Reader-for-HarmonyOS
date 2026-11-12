@@ -1,3 +1,5 @@
+import { LengthMetrics } from '@kit.ArkUI';
+import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
@@ -37,6 +39,8 @@ export struct ReaderDirectoryRules {
   @Prop @Watch('loadRules') bookId: string = '';
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop focusTargetId: string = '';
+  @Prop availableWidthVp: number = -1;
+  @Prop availableHeightVp: number = -1;
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @State private rules: DirectoryRuleDraft[] = [];
   private nextRuleId: number = 0;
@@ -276,11 +280,14 @@ export struct ReaderDirectoryRules {
       ForEach(this.rules, (rule: DirectoryRuleDraft) => {
         Column({ space: 6 }) {
           ReaderFormField({ specId: 'directory-rule-pattern', scheme: this.scheme, text: rule.pattern,
+            fieldAccessibilityLabel: `规则${rule.id}匹配表达式`,
             isEditable: this.canEdit(), placeholder: '匹配完整标题或独立正文行的正则表达式',
             onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'pattern', value); } });
-          Row({ space: 8 }) {
+          Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+            space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
             Text('层级').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
             ReaderFormField({ specId: 'directory-rule-level', scheme: this.scheme, text: rule.level,
+              fieldAccessibilityLabel: `规则${rule.id}层级`,
               isEditable: this.canEdit(),
               onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'level', value); } });
             ReaderInlineSelect({
@@ -288,26 +295,28 @@ export struct ReaderDirectoryRules {
               options: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'],
               selectedIndex: Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary)),
               actionEnabled: this.canEdit(),
+              maxTriggerWidthVp: this.availableWidthVp >= 0 ? Math.max(0, this.availableWidthVp - 20) : -1,
               onSelect: (index: number, _value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'boundary', ['title', 'head', 'tail', 'any'][index]); },
             });
-            Button('删除').enabled(this.canEdit()).onClick((): void => {
+            ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '删除', actionEnabled: this.canEdit(), onAction: (): void => {
               if (!this.ownsActor(identity) || !this.canEdit() || !this.rules.some((item: DirectoryRuleDraft): boolean => item.id === rule.id)) return;
               this.rules = this.rules.filter((item: DirectoryRuleDraft): boolean => item.id !== rule.id); this.changed();
-            });
-          }
+            } });
+          }.width('100%');
         }
       }, (rule: DirectoryRuleDraft): string => `${rule.id}`);
-        } }.height(Math.min(240, this.rules.length * 94)).width('100%');
+        } }.height(Math.min(240, this.rules.length * 94, this.availableHeightVp >= 0 ? this.availableHeightVp : 240)).width('100%');
       }
-      Row({ space: 8 }) {
-        Button('添加规则').enabled(this.canEdit() && this.rules.length < 32).onClick((): void => {
+      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '添加规则', actionEnabled: this.canEdit() && this.rules.length < 32, onAction: (): void => {
           if (!this.ownsActor(identity) || !this.canEdit() || this.rules.length >= 32) return;
           this.rules = [...this.rules, new DirectoryRuleDraft(++this.nextRuleId)]; this.changed();
-        });
-        Button('预览').enabled(this.canEdit()).onClick((): void => { if (this.ownsActor(identity)) void this.run(false); });
-        Button('应用').enabled(this.canEdit() && this.previewReady && this.gateway?.supportsApply() === true)
-          .onClick((): void => { if (this.ownsActor(identity)) void this.run(true); });
-      }
+        } });
+        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '预览', actionEnabled: this.canEdit(),
+          onAction: (): void => { if (this.ownsActor(identity)) void this.run(false); } });
+        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '应用', actionEnabled: this.canEdit() && this.previewReady && this.gateway?.supportsApply() === true,
+          onAction: (): void => { if (this.ownsActor(identity)) void this.run(true); } });
+      }.width('100%');
       }, (identity: string): string => identity);
       if (!this.recoveryView().visible) {
         Text(this.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);

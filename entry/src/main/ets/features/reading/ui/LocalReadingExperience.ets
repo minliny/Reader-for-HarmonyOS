@@ -167,6 +167,7 @@ import {
 } from './BookTurnMotionState';
 import { ReaderContinuousReadingStage } from './ReaderContinuousReadingStage';
 import { readerTextSelectionEnabled } from './ReaderTextSelectionPolicy';
+import { readerReadingTopBarHeight, readerReadingTopBarFontsReady } from '../../../ui/chrome/ReaderReadingTopBar';
 import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel';
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileReceipt,
   type ReaderControlPlaybackLaunchProfile } from './ReaderControlPlaybackProfile';
@@ -2301,15 +2302,37 @@ export struct ReadingExperience {
   }
 
   private usesReaderRecoveryBudget(): boolean {
-    return this.readerRecoveryBaseLayout().widthClass === 'compact' &&
-      this.effectiveViewportWidth() < this.effectiveViewportHeight();
+    return this.controlVisible() || (this.readerRecoveryBaseLayout().widthClass === 'compact' &&
+      this.effectiveViewportWidth() < this.effectiveViewportHeight());
+  }
+
+  private recoveryTopBarRevision: number = -1;
+  private recoveryTopBarHeight: number = READER_CONTROL_TOP_BAR_HEIGHT;
+  private readerRecoveryTopBarHeight(): number {
+    const revision = ReaderWindowCoordinator.metrics().revision;
+    const ready = readerReadingTopBarFontsReady('reading');
+    if (!ready || this.recoveryTopBarRevision !== revision) {
+      this.recoveryTopBarHeight = readerReadingTopBarHeight(this.getUIContext(), 'reading', READER_CONTROL_TOP_BAR_HEIGHT);
+      this.recoveryTopBarRevision = ready ? revision : -1;
+    }
+    return this.recoveryTopBarHeight;
   }
 
   private readerRecoveryTop(): number {
     const base = this.readerRecoveryBaseLayout();
+    const layout = this.controlLayout(this.readerWindowMetricsRevision);
+    const headerHeight = layout.topBarVisible ? Math.max(this.readerRecoveryTopBarHeight(), layout.topBarHeight) : 0;
     return this.usesReaderRecoveryBudget() ?
-      base.topBarTop + READER_CONTROL_TOP_BAR_HEIGHT + READER_CONTROL_SAFE_TOP_GAP :
-      base.topBarTop + (this.controlVisible() ? 54 : 10);
+      base.topBarTop + headerHeight + READER_CONTROL_SAFE_TOP_GAP :
+      base.topBarTop + (this.controlVisible() ? headerHeight : 10);
+  }
+
+  private readerRecoveryViewportHeight(): number {
+    const layout = this.controlLayout(this.readerWindowMetricsRevision);
+    const remaining = this.effectiveViewportHeight() - this.readerRecoveryTop() -
+      readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics(), false);
+    const cap = this.controlVisible() && !layout.topBarVisible ? 44 : this.viewportHeight / 3;
+    return Math.max(0, Math.min(cap, remaining));
   }
 
   private readerRecoveryMeasurementId(): string {
@@ -2322,7 +2345,8 @@ export struct ReadingExperience {
   private readerRecoveryMeasurementIdentity(): string {
     const base = this.readerRecoveryBaseLayout();
     return [this.readerRecoveryMeasurementId(), this.viewportWidth, this.viewportHeight,
-      ReaderWindowCoordinator.metrics().revision, base.topBarTop, base.topBarWidth].join('|');
+      ReaderWindowCoordinator.metrics().revision, base.topBarTop, base.topBarWidth, this.controlVisible(),
+      this.controlLayout(this.readerWindowMetricsRevision).topBarVisible].join('|');
   }
 
   private readerRecoveryMeasurementCurrent(identity: string): boolean {
@@ -2397,7 +2421,7 @@ export struct ReadingExperience {
       Math.abs(width - this.readerRecoveryBaseLayout().topBarWidth) > 1) return false;
     // Scroll's viewport, rather than its potentially very long inner Column,
     // owns the obstruction. The original one-third cap remains unchanged.
-    this.admitReaderRecoveryBottom(top + Math.min(height, this.viewportHeight / 3), identity);
+    this.admitReaderRecoveryBottom(top + Math.min(height, this.readerRecoveryViewportHeight()), identity);
     return true;
   }
 
@@ -2452,7 +2476,7 @@ export struct ReadingExperience {
         Column({ space: 8 }) {
           if (this.bookmarkRecovery.bookmarks.visible) {
             ForEach([this.bookmarkRecoveryIdentity()], (identity: string): void => {
-              ReaderRecoveryNotice({ view: this.bookmarkRecovery.bookmarks, tag: '书签',
+              ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.bookmarkRecovery.bookmarks, tag: '书签',
                 busy: this.bookmarkRecovery.bookmarksBusy === true, actionLabel: '重新载入核对书签',
                 onReconcile: (): void => this.reconcileBookmarkRecovery(identity, false),
                 secondaryActionLabel: this.bookmarkRecovery.canContinueBookmarks ? '继续原操作' : '',
@@ -2461,36 +2485,36 @@ export struct ReadingExperience {
           }
           if (this.readerRecoveryView.visible) {
             ForEach([this.readerRecoveryView.generation], (generation: number): void => {
-              ReaderRecoveryNotice({ view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
+              ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
                 onReconcile: (): void => this.reconcileReaderRecovery(generation) });
             }, (generation: number): string => `recovery:${generation}`);
           }
           if (this.readerSettingsRecovery.visible) {
             ForEach([this.readerSettingsRecovery.generation], (generation: number): void => {
-              ReaderRecoveryNotice({ view: this.readerSettingsRecovery, tag: '阅读设置',
+              ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.readerSettingsRecovery, tag: '阅读设置',
                 busy: this.readerSettingsRecoveryBusy, actionLabel: '重试保存',
                 onReconcile: (): void => this.retryReaderPreferenceNotice('settings', generation) });
             }, (generation: number): string => `settings:${generation}`);
           }
           if (this.ttsPreferencesRecovery.visible) {
             ForEach([this.ttsPreferencesRecovery.generation], (generation: number): void => {
-              ReaderRecoveryNotice({ view: this.ttsPreferencesRecovery, tag: '朗读设置',
+              ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.ttsPreferencesRecovery, tag: '朗读设置',
                 busy: this.ttsPreferencesRecoveryBusy, actionLabel: '重试保存',
                 onReconcile: (): void => this.retryReaderPreferenceNotice('tts', generation) });
             }, (generation: number): string => `tts:${generation}`);
           }
           if (this.ttsConfigurationRecovery.visible) {
-            ReaderRecoveryNotice({ view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
+            ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
               onReconcile: (generation: number): void => this.openTtsConfigurationRecovery(generation) });
           }
           if (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') {
-            ReaderRecoveryNotice({ view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
+            ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
               onReconcile: (generation: number): void => this.openReplaceRecovery(generation) });
           }
         }.width('100%').hitTestBehavior(HitTestMode.Transparent);
       }
       .width(this.controlLayout(this.readerWindowMetricsRevision).topBarWidth)
-      .constraintSize({ maxHeight: Math.max(0, this.viewportHeight / 3) })
+      .constraintSize({ maxHeight: this.readerRecoveryViewportHeight() })
       .position({ x: (this.viewportWidth - this.controlLayout(this.readerWindowMetricsRevision).topBarWidth) / 2,
         y: this.readerRecoveryTop() })
       .id(this.readerRecoveryMeasurementId())
@@ -7669,7 +7693,7 @@ export struct ReadingExperience {
       return held.receipt.layout;
     const width = this.effectiveViewportWidth();
     const height = this.effectiveViewportHeight();
-    const recoveryBottom = !this.expandedLayout && width < height ? (this.readerRecoveryBottom ?? 0) : 0;
+    const recoveryBottom = this.readerRecoveryBottom ?? 0;
     if (this.controlLayoutCache !== undefined && this.controlLayoutCacheWidth === width &&
       this.controlLayoutCacheHeight === height && this.controlLayoutCacheRevision === metrics.revision &&
       this.controlLayoutCacheTablet === this.expandedLayout &&
@@ -7681,7 +7705,7 @@ export struct ReadingExperience {
       this.controlMinimumCandidateHeight === height && this.controlMinimumCandidateMetrics === metrics.revision ?
         this.controlMinimumCandidates : undefined;
     const retained = this.controlMinimumRetainedLayout;
-    const retaining = measured === undefined && !this.expandedLayout && width < height && retained !== undefined &&
+    const retaining = measured === undefined && retained !== undefined &&
       this.controlMinimumCandidateSource === this.sourceId && this.controlMinimumCandidateBook === this.bookId &&
       this.controlMinimumCandidateLifecycle === this.lifecycleToken && this.controlMinimumCandidateWidth === width &&
       this.controlMinimumCandidateHeight === height && this.controlMinimumCandidateMetrics === metrics.revision &&
@@ -7730,7 +7754,7 @@ export struct ReadingExperience {
   private controlMinimumCurrent(identity: string): boolean {
     return this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive &&
       !this.windowChromeOverlayActive && !this.interactionBlocked && !this.controlObscured &&
-      !this.expandedLayout && this.effectiveViewportWidth() < this.effectiveViewportHeight() &&
+      this.effectiveViewportWidth() > 0 && this.effectiveViewportHeight() > 0 &&
       identity === this.controlMinimumIdentity();
   }
 
@@ -10254,7 +10278,7 @@ export struct ReadingExperience {
     const kind = readerSessionMorphSourceKindForPage(this.controlPage());
     if (kind === undefined || (type === 'tts') !== (kind === 'quickTts' || kind === 'fullTtsPlayback')) return false;
     let sourceMinimum: ReaderControlPlaybackProfileReceipt | undefined = undefined;
-    const nativeMinimumContract = !this.expandedLayout && this.effectiveViewportWidth() < this.effectiveViewportHeight() &&
+    const nativeMinimumContract = this.effectiveViewportWidth() > 0 && this.effectiveViewportHeight() > 0 &&
       typeof this.controlMinimumProviderIdentity === 'string' && this.controlMinimumProviderIdentity.length > 0;
     if (nativeMinimumContract) {
       const receipt = this.controlPlaybackProfile;
@@ -10843,6 +10867,7 @@ export struct ReadingExperience {
     }
     // The module/opening identity changes only at semantic edges, never p.
     this.controlLayoutCache = undefined;
+    this.scheduleReaderRecoveryMeasurement();
     if (!readerControlHostCloseCommitted(this.controlSession, this.observedControlCloseRevision)) return;
     this.observedControlCloseRevision = this.controlSession.closeRevision;
     this.invalidateControlBackdrop();

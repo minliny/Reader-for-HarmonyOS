@@ -24,20 +24,20 @@ import {
 
 // 统一下拉触发条 — 对齐最终下拉模板 (1506:8807/9291): panel-soft 高亮底 +
 // 边框 + r6 + 容器 padding 10 + 文字-chevron gap 8, 值左对齐 Noto Sans SC Bold 12。
-// 展开面板已拆至 ReaderSelectPanel: 默认触发条最小 36 高，随真实字高增长。展开面板由宿主
+// 展开面板已拆至 ReaderSelectPanel: 默认触发条最小 44 高，随真实字高增长。展开面板由宿主
 // 页在全高 overlay Stack 内按触发条全局坐标定位渲染 (ReaderSelectPanel)。
 // 原因: ArkUI 把溢出父容器边界的子组件命中测试裁到父边界 — 固定高行(58/50/36)内的
 // 下拉面板下层选项渲染可见但不可点, 所以面板必须挂在全高容器, 不能留在行内。
 // 默认紧凑按钮只测当前值；菜单独立测量全部选项，不借最长选项撑大闭合按钮。
-const TRIGGER_H = 36;
+const TRIGGER_H = 44;
 const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
 const CHEVRON_H = 8;
 const SELECT_CHROME = SELECT_PAD * 2 + CHEVRON_GAP + CHEVRON_W; // 40
-const APPEARANCE_TRIGGER_H = 30;
+const APPEARANCE_TRIGGER_H = 44;
 const APPEARANCE_VALUE_VERTICAL_SPACE = 15; // Original 30vp frame around the 15fp value line.
-const APPEARANCE_HIT_OUTSET = 6;
+const APPEARANCE_HIT_OUTSET = 0;
 
 export type ReaderSelectVariant =
   | 'default'
@@ -61,6 +61,8 @@ export struct ReaderSelect {
   @Prop reduceMotion: boolean = false;
   // default: 当前按钮可用宽度上限；其他明确的字段变体保留其固定宽合同。
   @Prop controlWidth: number = 0;
+  /** Measured caller cap for the default trigger. -1 keeps intrinsic sizing. */
+  @Prop maxTriggerWidthVp: number = -1;
   /** Optional address of the source-group or appearance-library native action. */
   @Prop focusId: string = '';
   onToggle: () => void = (): void => {};
@@ -255,9 +257,10 @@ export struct ReaderSelect {
       const width = context.px2vp(context.getMeasureUtils().measureText({ textContent: this.value,
         fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
       const metrics = readerWindowMetrics();
-      return readerSelectTriggerWidth(width, readerSelectAvailableWidth(
-        this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width,
-        readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)), this.controlWidth);
+      const windowAvailable = readerSelectAvailableWidth(this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width,
+        readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics));
+      const available = this.maxTriggerWidthVp >= 0 ? Math.min(windowAvailable, this.maxTriggerWidthVp) : windowAvailable;
+      return Math.min(available, Math.max(44, readerSelectTriggerWidth(width, available, this.controlWidth)));
     }
     if (this.controlWidth > 0) {
       return this.controlWidth;
@@ -293,7 +296,7 @@ export struct ReaderSelect {
     if (this.variant === 'sourceGroup') return Math.max(44,
       this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp, TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily,
         TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight, TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp) + 20);
-    if (this.isSettingsVariant()) return Math.max(34,
+    if (this.isSettingsVariant()) return Math.max(44,
       this.measuredValueHeight(TYPE_SELECT_SETTINGS_VALUE.fontSizeFp, TYPE_SELECT_SETTINGS_VALUE.fontFamily,
         TYPE_SELECT_SETTINGS_VALUE.fontWeight, TYPE_SELECT_SETTINGS_VALUE.lineHeightFp) + 18);
     return TRIGGER_H;

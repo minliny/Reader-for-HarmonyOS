@@ -35,7 +35,7 @@ function measureEndpoint(context: UIContext, width: number, full: boolean, group
     const label = measureReaderControlText(context, groupLabels[row], labelStyle, Math.max(1, width - 30));
     if (label === undefined) return undefined;
     labels.push(Math.max(full ? 16 : 12, label.heightVp)); fits = fits && label.fitsWidth;
-    let naturalHeight = full ? 27 : 24; let largestWidth = 0; let originalFits = true;
+    let naturalHeight = 44; let largestWidth = 44; let originalFits = true;
     for (let i = 0; i < options[row].length; i++) {
       const original = readerControlSettingsChoice(options[row].length, i, p, bar.width);
       const measured = measureReaderControlText(context, options[row][i], TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE,
@@ -43,7 +43,7 @@ function measureEndpoint(context: UIContext, width: number, full: boolean, group
       if (measured === undefined) return undefined;
       naturalHeight = Math.max(naturalHeight, measured.heightVp + 6);
       largestWidth = Math.max(largestWidth, measured.singleLineWidthVp + 6);
-      originalFits = originalFits && measured.fitsWidth;
+      originalFits = originalFits && measured.fitsWidth && original.width >= 44;
     }
     const count = originalFits ? options[row].length :
       Math.max(1, Math.min(options[row].length, Math.floor((bar.width - 3) / (largestWidth + 3))));
@@ -60,6 +60,6 @@ function measureEndpoint(context: UIContext, width: number, full: boolean, group
   }
   const result: ReaderControlSettingsEndpointMinimum = { width, labelHeights: labels, optionHeights,
     columns, titleHeight: Math.max(16, title.heightVp), addedTitleHeight: Math.max(16, addedTitle.heightVp),
-    toggleLabelHeight, toggleRowHeight: Math.max(38, toggleLabelHeight + 12), fits };
+    toggleLabelHeight, toggleRowHeight: Math.max(44, toggleLabelHeight + 12), fits };
   return result;
 }

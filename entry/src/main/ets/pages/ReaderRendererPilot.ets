@@ -1,3 +1,5 @@
+import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
+import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 // Explicit debug cold-start route only. Uses an original frozen Core export;
 // never imports a user book, persists a position, or replaces the native reader.
@@ -18,6 +20,8 @@ struct ReaderRendererPilot {
   @State private textNodeMode: boolean = false;
   @State private mangaMode: boolean = false;
   @State private resourceBusy: boolean = false;
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private hostHeight: number = -1;
   private resourceDiagnostic: ArkWebResourceDiagnostic<WebResourceResponse> =
     new ArkWebResourceDiagnostic((): WebResourceResponse => new WebResourceResponse());
   private readonly controller: webview.WebviewController = new webview.WebviewController('reader-oss-pilot');
@@ -51,52 +55,62 @@ struct ReaderRendererPilot {
     }
   }
 
-  build() {
-    Column() {
+  private menuHeight(): number {
+    this.readerWindowMetricsRevision;
+    const height = Math.max(0, this.hostHeight >= 0 ? this.hostHeight : readerWindowMetrics().windowRect.height);
+    return height - Math.min(240, height / 2);
+  }
+
+  @Builder
+  private diagnosticMenu() {
+    Column({ space: 8 }) {
       Row({ space: 12 }) {
-        Button('返回书架').onClick((): void => { void this.returnToBookshelf(); });
+        Button('返回书架').constraintSize({ minWidth: 44, minHeight: 44 }).onClick((): void => { void this.returnToBookshelf(); });
         Text(this.result).fontSize(12).layoutWeight(1).id('reader-oss-pilot-status');
-      }.width('100%').padding(12)
-      if (this.mangaMode) {
-        Button('返回正文试点').onClick((): void => { this.mangaMode = false; });
-        ReaderMangaPlatformDiagnostic();
-      } else if (this.textNodeMode) {
-        Button('返回正文试点').onClick((): void => { this.textNodeMode = false; });
-        ReaderTextNodeDiagnostic();
-      } else if (this.paragraphMode) {
-        Button('返回正文试点').onClick((): void => { this.paragraphMode = false; });
-        ReaderParagraphDiagnostic();
+      }.width('100%').padding(12);
+      if (this.mangaMode || this.textNodeMode || this.paragraphMode) {
+        Button('返回正文试点').constraintSize({ minWidth: 44, minHeight: 44 }).onClick((): void => {
+          this.mangaMode = false; this.textNodeMode = false; this.paragraphMode = false;
+        });
       } else if (this.resourceMode) {
-        Column({ space: 12 }) {
-          Text('PH76 · 真实 WebView 回调，内存响应样本；不读写用户书籍').fontSize(14);
-          Button('验证早期资源回调').enabled(!this.resourceBusy).id('reader-ph76-early')
-            .onClick((): void => { void this.runResourceDiagnostic('early'); });
-          Button('验证取消后资源归属').enabled(!this.resourceBusy).id('reader-ph76-cancel')
-            .onClick((): void => { void this.runResourceDiagnostic('cancel'); });
-          Button('返回正文试点').enabled(!this.resourceBusy).onClick((): void => {
-            this.resourceDiagnostic.dispose();
-            this.resourceMode = false;
-          });
-          ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide });
-        }.width('100%').layoutWeight(1);
+        Text('PH76 · 真实 WebView 回调，内存响应样本；不读写用户书籍').fontSize(14);
+        Button('验证早期资源回调').constraintSize({ minWidth: 44, minHeight: 44 }).enabled(!this.resourceBusy).id('reader-ph76-early')
+          .onClick((): void => { void this.runResourceDiagnostic('early'); });
+        Button('验证取消后资源归属').constraintSize({ minWidth: 44, minHeight: 44 }).enabled(!this.resourceBusy).id('reader-ph76-cancel')
+          .onClick((): void => { void this.runResourceDiagnostic('cancel'); });
+        Button('返回正文试点').constraintSize({ minWidth: 44, minHeight: 44 }).enabled(!this.resourceBusy).onClick((): void => {
+          this.resourceDiagnostic.dispose(); this.resourceMode = false;
+        });
       } else {
-      if (DEBUG === true && BUILD_MODE_NAME === 'debug') {
-        Button('页面结构验证').id('reader-page-structure-open').onClick((): void => {
-          this.openPageStructureVerification();
+        if (DEBUG === true && BUILD_MODE_NAME === 'debug') {
+          Button('页面结构验证').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-page-structure-open').onClick((): void => {
+            this.openPageStructureVerification();
+          });
+        }
+        Button('漫画平台图像诊断').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-manga-probe-open').onClick((): void => { this.mangaMode = true; });
+        Button('原生 Text 同节点诊断').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-textnode-open').onClick((): void => { this.textNodeMode = true; });
+        Button('系统 Paragraph 诊断').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-paragraph-open').onClick((): void => { this.paragraphMode = true; });
+        Button('PH76 资源验证').constraintSize({ minWidth: 44, minHeight: 44 }).id('reader-ph76-open').onClick((): void => {
+          this.resourceDiagnostic = new ArkWebResourceDiagnostic((): WebResourceResponse => new WebResourceResponse());
+          this.result = '选择一项 PH76 受控验证'; this.resourceMode = true;
         });
       }
-      Button('漫画平台图像诊断').id('reader-manga-probe-open').onClick((): void => { this.mangaMode = true; });
-      Button('原生 Text 同节点诊断').id('reader-textnode-open').onClick((): void => {
-        this.textNodeMode = true;
-      });
-      Button('系统 Paragraph 诊断').id('reader-paragraph-open').onClick((): void => {
-        this.paragraphMode = true;
-      });
-      Button('PH76 资源验证').id('reader-ph76-open').onClick((): void => {
-        this.resourceDiagnostic = new ArkWebResourceDiagnostic((): WebResourceResponse => new WebResourceResponse());
-        this.result = '选择一项 PH76 受控验证';
-        this.resourceMode = true;
-      });
+    }.width('100%');
+  }
+
+  build() {
+    Column() {
+      Scroll() { this.diagnosticMenu(); }
+        .width('100%').constraintSize({ maxHeight: this.menuHeight() }).scrollBar(BarState.Auto).clip(true);
+      if (this.mangaMode) {
+        ReaderMangaPlatformDiagnostic().layoutWeight(1);
+      } else if (this.textNodeMode) {
+        ReaderTextNodeDiagnostic().layoutWeight(1);
+      } else if (this.paragraphMode) {
+        ReaderParagraphDiagnostic().layoutWeight(1);
+      } else if (this.resourceMode) {
+        ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide }).layoutWeight(1);
+      } else {
       Web({ src: $rawfile('reader-oss-pilot/index.html'), controller: this.controller, incognitoMode: true })
         .javaScriptAccess(true)
         .domStorageAccess(false)
@@ -139,5 +153,6 @@ struct ReaderRendererPilot {
         })
       }
     }.width('100%').height('100%').backgroundColor('#F7F4ED')
+      .onAreaChange((_old: Area, next: Area): void => { this.hostHeight = readerPageAreaLength(next.height); });
   }
 }

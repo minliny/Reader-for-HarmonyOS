@@ -17,6 +17,7 @@ export struct ReaderInlineSelect {
   @Prop options: string[] = [];
   @Prop selectedIndex: number = 0;
   @Prop controlWidth: number = 0;
+  @Prop maxTriggerWidthVp: number = -1;
   @Prop menuKind: ReaderSelectMenuKind = 'standard';
   @Prop variant: ReaderSelectVariant = 'default';
   @Prop reduceMotion: boolean = false;
@@ -24,7 +25,6 @@ export struct ReaderInlineSelect {
   onSelect: (index: number, value: string) => void = (_index: number, _value: string): void => {};
   @State private open: boolean = false;
   @State private selectionId: string = '';
-  @State private triggerHeight: number = 36;
   private mounted: boolean = false;
   private generation: number = 0;
 
@@ -93,16 +93,14 @@ export struct ReaderInlineSelect {
         actionEnabled: this.actionEnabled,
         variant: this.variant,
         controlWidth: this.controlWidth,
+        maxTriggerWidthVp: this.maxTriggerWidthVp,
         reduceMotion: this.reduceMotion,
         // Disabled triggers remain visible and preserve the shared geometry.
         onToggle: (): void => this.toggle(),
-      }).onAreaChange((_old: Area, next: Area): void => {
-        const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height as string);
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.triggerHeight) > .1) this.triggerHeight = height;
       });
     }
     .width(this.variant === 'default' ? 'auto' : this.controlWidth > 0 ? this.controlWidth : 'auto')
-    .height(this.triggerHeight)
+    .constraintSize({ minHeight: 44 })
     .opacity(this.actionEnabled ? 1 : 0.4)
     .bindPopup(this.open, this.popupOptions(this.selectionId));
   }

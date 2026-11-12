@@ -69,7 +69,7 @@ export class RulesMutationOwner {
       if (pending !== undefined) { this.admitPending(pending); throw new RulesMutationError(this.state.message, true); }
       this.state.method = method;
       intent = await this.intents.accept(label, method, fixed, async (): Promise<number> => {
-        const q = await this.query(undefined, current); this.requireMethodCapability(method); return q.head?.sequence ?? 0;
+        const q = await this.query(undefined, current); this.requireMethodCapability(method, fixed); return q.head?.sequence ?? 0;
       }, current);
       this.admitIdentity(intent); this.state.writeStage = 'core';
       const options: BookRequestOptions = {
@@ -148,7 +148,8 @@ export class RulesMutationOwner {
       const journey: RuleSubscriptionJourney = { kind, steps, localFailures, cursor: 0, facts: [] };
       const first = steps[0];
       const intent = await this.intents.accept(kind===3 ? '书源文档导入' : '订阅更新', first.method, first.params,
-        async (): Promise<number> => { const q = await this.query(undefined,current); this.requireSubscriptionCapability(kind); return q.head?.sequence ?? 0; },current,journey);
+        async (): Promise<number> => { const q = await this.query(undefined,current); this.requireSubscriptionCapability(kind);
+          this.requireMethodCapability(first.method,first.params); return q.head?.sequence ?? 0; },current,journey);
       originalOperationId = intent.operationId;
       return await this.continueSubscription(intent,current,qualify,true,observer,true,rejected);
     } catch (error) {
@@ -177,6 +178,7 @@ export class RulesMutationOwner {
       if (q !== undefined) this.requireSubscriptionCapability(journey.kind);
       let receipt = intent.terminal === undefined ? q?.receipt : await this.decodeReceipt(intent.terminal,intent);
       if (receipt === undefined) {
+        this.requireMethodCapability(intent.mutation.method,intent.mutation.params);
         const head = q?.head?.sequence ?? 0;
         if (head !== intent.sequence - 1) throw new Error(head >= intent.sequence ? '流水已越过订阅原步骤且无精确回执，保持阻断' : '订阅原流水不连续');
         this.state.canRetryOriginal = true;
@@ -256,9 +258,9 @@ export class RulesMutationOwner {
       if (intent.subscription !== undefined) return await this.continueSubscription(intent,current,qualify,retryOriginal);
       let receipt = intent.terminal === undefined ? undefined : await this.decodeReceipt(intent.terminal, intent);
       const query = receipt === undefined ? await this.query(intent, current) : undefined;
-      if (receipt === undefined) this.requireMethodCapability(intent.mutation.method);
       receipt = receipt ?? query?.receipt;
       if (receipt === undefined) {
+        this.requireMethodCapability(intent.mutation.method,intent.mutation.params);
         const head = query?.head?.sequence ?? 0;
         if (head >= intent.sequence) throw new RulesMutationError('规则流水已越过原记录且无精确回执，保持阻断；不能按列表或总量判定成功', true);
         if (head !== intent.sequence - 1) throw new RulesMutationError('规则原记录与当前流水不连续，保持阻断', true);
@@ -349,8 +351,11 @@ export class RulesMutationOwner {
     if (kind===3) return;
     if (this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true) throw new Error('当前 Core 不支持订阅原旅程回执，已停止派发');
   }
-  private requireMethodCapability(method: string): void {
+  private requireMethodCapability(method: string, params?: JsonObject): void {
     this.requireCapability();
+    if (method==='source.import' && params?.['expectedVersion'] !== undefined &&
+      this.runtime.supportsCoreCapability?.('source.import.conditional.v1') !== true)
+      throw new Error('当前 Core 不支持书源条件编辑，保留原操作并停止派发');
     if (method==='reading.directory.rules.apply.v2' && this.runtime.supportsCoreCapability?.('rules.mutation.directory-rules.v1') !== true)
       throw new Error('当前 Core 不支持本书目录规则原操作回执，已停止派发');
     if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)

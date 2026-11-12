@@ -1,3 +1,5 @@
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { createDefaultSettingsSnapshot, type SettingsSnapshot, type GeneralSettingsKey } from '../application/SettingsGateway';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
@@ -42,10 +44,10 @@ import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipb
 
 // 页面私有布局常量 (不属共享 token: 页面独有下拉行对齐常量)。
 // Figma Article 行右内距 12 (= TOK_SPACE_SM, 直引)。
-// selectRow 专用: Figma Settings/SelectTrigger (`4104:3585`) 为 34 高，
+// selectRow 专用: Settings/SelectTrigger 使用 44vp 最小操作高度，
 // 在 58 行内垂直居中。Phone 用右箭头，Tablet 用下/上箭头。
 const SELECT_ROW_H = 58;
-const SELECT_TRIGGER_H = 34;
+const SELECT_TRIGGER_H = 44;
 const SELECT_TRIGGER_OFFSET = (SELECT_ROW_H - SELECT_TRIGGER_H) / 2;
 // App主题 为分段控件 (Figma ThemeSegment 2114:20635), 非下拉; 标签用 Figma 原文。
 const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
@@ -61,6 +63,10 @@ let settingsSelectionGeneration: number = 0;
 export struct SettingsPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private overlayHostWidth: number = 0;
+  @State private overlayHostHeight: number = 0;
+  @State private overlayHostY: number = 0;
 
   @Prop @Watch('onActiveSectionChanged') activeSection: 'home' | 'general' = 'home';
   @Prop navigationGeneration: number = 0;
@@ -173,6 +179,18 @@ export struct SettingsPage {
   }
 
   build() {
+    Stack({ alignContent: Alignment.TopStart }) { this.pageSurface(); }
+      .width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
+      .onAreaChange((_old: Area, next: Area): void => {
+        if (!this.mounted) return;
+        this.overlayHostWidth = readerPageAreaLength(next.width);
+        this.overlayHostHeight = readerPageAreaLength(next.height);
+        this.overlayHostY = readerPageAreaLength(next.globalPosition.y);
+      });
+  }
+
+  @Builder
+  private pageSurface() {
     if (this.aboutPageCurrent(this.aboutPageId)) {
       ForEach([this.aboutPageId], (identity: string): void => { this.aboutPage(identity); }, (identity: string): string => identity);
     } else if (this.messagePreviewCurrent(this.messagePreviewId)) {
@@ -497,11 +515,12 @@ export struct SettingsPage {
 
   @Builder
   private pendingFeedback(contentStartInset: number) {
+    Scroll() {
     Column({ space: 10 }) {
       if (this.hasPendingSettings()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('read'), this.recoveryIdentityFor('accepted'),
           this.temporaryBackIdentity, `${this.operation.receipt?.facts.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
+          ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
             canRetry: true, generation: this.operation.receipt?.facts.generation ?? 0 },
             actionLabel: '核对', busy: this.operation.receipt?.facts.fact === 'refreshing',
             secondaryActionLabel: this.recoveryIdentityFor('accepted').length > 0 ? '继续保存' : '',
@@ -512,7 +531,7 @@ export struct SettingsPage {
       if (this.hasPendingCleanup()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('cache-read'), this.recoveryIdentityFor('cache-continue'),
           this.temporaryBackIdentity, `${this.cacheCleanup?.operation.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ view: { visible: true,
+          ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: { visible: true,
             message: this.cacheCleanup?.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用',
             canRetry: true, generation: this.cacheCleanup?.operation.generation ?? 0 },
             actionLabel: '核对', busy: this.cacheCleanup?.busy === true,
@@ -521,8 +540,22 @@ export struct SettingsPage {
             onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
         }, (key: string): string => key);
       }
-    }.width('100%').padding({ left: 20, right: 20, top: contentStartInset })
-      .hitTestBehavior(HitTestMode.Transparent);
+    }.width('100%');
+    }.width('100%').constraintSize({ maxHeight: this.overlayAvailableHeight(contentStartInset) })
+      .margin({ top: contentStartInset }).padding({ left: 20, right: 20 })
+      .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private overlayWidth(): number {
+    return Math.max(0, (this.overlayHostWidth > 0 ? this.overlayHostWidth : readerWindowMetrics().windowRect.width) - 40);
+  }
+
+  private overlayAvailableHeight(top: number): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    const metrics = readerWindowMetrics();
+    const height = this.overlayHostHeight > 0 ? this.overlayHostHeight : metrics.windowRect.height;
+    return Math.max(0, Math.min(height, metrics.windowRect.height -
+      readerInteractiveSafeBottom(metrics, true) - this.overlayHostY) - top);
   }
 
   private operationFeedbackIdentity(): string {
@@ -716,7 +749,7 @@ export struct SettingsPage {
         });
     }
     .width('100%')
-    .height(SELECT_ROW_H)
+    .constraintSize({ minHeight: SELECT_ROW_H })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });

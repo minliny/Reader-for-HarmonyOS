@@ -9,7 +9,7 @@ export struct ReaderControlQuickBack {
   @Prop variant: 'search' | 'auto-page' | 'replace' = 'search';
   @Prop scheme: string = 'day';
   @Prop actionWidth: number = 51;
-  @Prop actionHeight: number = 24;
+  @Prop actionHeight: number = 44;
   @Prop actionVisible: boolean = true;
   @Prop actionEnabled: boolean = true;
   onAction: () => void = (): void => {};

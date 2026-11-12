@@ -14,6 +14,7 @@ import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAcce
 import { PathShape } from '@ohos.arkui.shape';
 import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
+  readerControlMorphScrollPath, sampleReaderControlMorphScrollPath, type ReaderControlMorphScrollPath,
   type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
 import {
   READER_TTS_RATE_MAX, READER_TTS_RATE_MIN, READER_TTS_RATE_STEP, READER_TTS_RATE_STEP_SCALE,
@@ -213,6 +214,9 @@ export struct ReaderControlTtsContent {
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   @Prop fullViewportHeight: number = 666;
   private readonly scroller: Scroller = new Scroller();
+  private minimumQuickScrollOffset: number = 0;
+  private minimumScrollPath: ReaderControlMorphScrollPath | undefined = undefined;
+  private minimumLastProgress: number = 0;
   private quickMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;
   private fullMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;
   private quickMeasurementScope: string = '';
@@ -342,6 +346,10 @@ export struct ReaderControlTtsContent {
     return this.cachedFrame;
   }
   private onMotionChanged(): void {
+    const p = this.p();
+    if (this.minimumLastProgress === 0 && p > 0 && this.minimumQuickScrollOffset > 0)
+      this.minimumScrollPath = readerControlMorphScrollPath(0, this.minimumQuickScrollOffset);
+    this.minimumLastProgress = p;
     if (this.sourceOnly !== 'none') return;
     this.syncMorphScroll();
     if (!this.sharedInput()) this.ratePreview = -1;
@@ -435,6 +443,22 @@ export struct ReaderControlTtsContent {
   private syncMorphScroll(): void {
     const offset = this.scroller.currentOffset()?.yOffset;
     if (offset === undefined || !Number.isFinite(offset)) return;
+    const path = this.minimumScrollPath;
+    if (path !== undefined) {
+      const target = sampleReaderControlMorphScrollPath(path, this.p());
+      this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
+      if (Math.abs(offset - target) > .1) this.scroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
+      if (this.interactionEnabled && (this.p() === 0 || this.p() === 1)) {
+        this.minimumQuickScrollOffset = this.p() === 0 ? path.quickOffset : 0;
+        this.minimumScrollPath = undefined;
+      }
+      return;
+    }
+    if (this.quickMinimumScrollPresentation()) {
+      this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
+      this.minimumQuickScrollOffset = offset;
+      return;
+    }
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
       this.interactionEnabled, offset);
     this.scrollMotion = update.state;
@@ -449,15 +473,31 @@ export struct ReaderControlTtsContent {
     if (offset === undefined || !Number.isFinite(offset)) return;
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
       offset, this.fullInput());
+    if (this.quickMinimumScrollPresentation()) this.minimumQuickScrollOffset = offset;
     this.reportMorphActor();
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
+    if (this.quickMinimumScrollInput() || (this.minimumScrollPath !== undefined && source === ScrollSource.SCROLLER))
+      return { xOffset: 0, yOffset: y };
     return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.scrollMotion,
       this.fullInput(), source === ScrollSource.SCROLLER) ? y : 0 };
   }
   private sharedScrollTranslation(): number {
+    if (this.minimumScrollPath !== undefined) return this.scrollMotion.nativeScrollOffset -
+      sampleReaderControlMorphScrollPath(this.minimumScrollPath, this.p());
+    if (this.quickMinimumScrollPresentation()) return 0;
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress);
   }
+  private quickMinimumScrollInput(): boolean {
+    return this.interactionEnabled && this.quickMinimumScrollPresentation();
+  }
+
+  private quickMinimumScrollPresentation(): boolean {
+    const profile = this.selectedMinimum();
+    return this.p() === 0 && profile !== undefined &&
+      profile.minimum.quick.heightVp > this.availableHeight + .1;
+  }
+
   private fullOnlyScrollTranslation(): number {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
   }
@@ -559,7 +599,7 @@ export struct ReaderControlTtsContent {
     // Other existing reports (visibility, form, theme and scroll) share the
     // same admission as key refresh, so none can re-sign an old native rect
     // with the newly selected natural layout key.
-    if (!this.expandedLayout && this.minimumIdentity.length > 0 && !this.measuredActorCurrent()) return;
+    if (this.minimumIdentity.length > 0 && !this.measuredActorCurrent()) return;
     const full = this.fullMeasurement;
     let scrolled: ReaderControlPlaybackMeasuredRect | undefined = undefined;
     if (this.form === 'full' && full !== undefined) {
@@ -631,7 +671,7 @@ export struct ReaderControlTtsContent {
           .height(Math.max(this.frame().contentHeight,
             this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion)));
       }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput() && this.configField === '')
+        .edgeEffect(EdgeEffect.None).enableScrollInteraction((this.fullInput() || this.quickMinimumScrollInput()) && this.configField === '')
         .enabled(this.configField === '')
         .accessibilityLevel(this.configField === '' ? 'auto' : 'no-hide-descendants')
         .onAppear((): void => this.syncMorphScroll())
@@ -890,7 +930,7 @@ export struct ReaderControlTtsContent {
         if (this.state.totalSlices > 1) {
           Slider({ value: this.state.sliceIndex ?? 0, min: 0, max: this.state.totalSlices - 1,
             step: 1, style: SliderStyle.OutSet, direction: Axis.Horizontal, reverse: false })
-            .width(this.frame().playback.width - 32).height(24).position({ x: 16, y: this.textMinimum()?.seekY ?? 198 })
+            .width(this.frame().playback.width - 32).height(44).position({ x: 16, y: this.textMinimum()?.seekY ?? 198 })
             .selectedColor(readerAppColor('TOK_TTS_TEAL', this.appScheme)).enabled(this.fullInput()).opacity(this.p())
             .accessibilityText('跳转朗读句子')
             .onChange((value: number, mode: SliderChangeMode): void => {
@@ -1018,24 +1058,32 @@ export struct ReaderControlTtsContent {
           .padding({ left: 8, right: 8, top: 0, bottom: 0 })
           .position({ x: this.frame().quickTimerSelect.x, y: this.frame().quickTimerSelect.y })
           .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) }).borderRadius(999)
-          .opacity(this.frame().quickTimerSelect.opacity).enabled(this.sharedInput())
+          .opacity(this.frame().quickTimerSelect.opacity).enabled(this.sharedInput() && this.p() === 0)
+          .accessibilityLevel(this.sharedInput() && this.p() === 0 ? 'auto' : 'no-hide-descendants')
           .accessibilityText(`定时${this.timerCaption()}，循环切换定时预设`)
           .accessibilityRole(AccessibilityRoleType.BUTTON)
           .onClick((): void => this.cycleQuickTimer());
         Column({ space: 12 }) {
+          Scroll() {
           Column({ space: 8 }) {
             Row({ space: 8 }) { this.timerPreset(0); this.timerPreset(15); this.timerPreset(30); }
               .width('100%');
             Row({ space: 8 }) { this.timerPreset(45); this.timerPreset(60); this.timerPreset('chapterEnd'); }
               .width('100%');
-          }.width('100%');
+          }.width(this.textMinimum()?.timerPresetsWidth ?? '100%');
+          }.width('100%').height((this.textMinimum()?.timerPreset ?? 44) * 2 + 8)
+            .scrollable(Axis.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
+          Scroll() {
           Row({ space: 4 }) {
             Column({ space: 2 }) {
               Text('自定义时长').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
               Text('分 · 秒').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme));
             }.layoutWeight(1).alignItems(HorizontalAlign.Start);
             this.timerStepper(true); this.timerStepper(false);
-          }.width('100%').height(this.textMinimum()?.timerCustom ?? 48).padding({ left: 10, right: 6 }).alignItems(VerticalAlign.Center)
+          }.width(this.textMinimum()?.timerCustomWidth ?? '100%').height(this.textMinimum()?.timerCustom ?? 48)
+            .padding({ left: 10, right: 6 }).alignItems(VerticalAlign.Center);
+          }.width('100%').height(this.textMinimum()?.timerCustom ?? 48).scrollable(Axis.Horizontal)
+            .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
             .border({ width: 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10);
         }.width(this.frame().timer.width).height(this.frame().timerCard.height).padding(14)
           .position({ x: this.frame().timerCard.x, y: this.frame().timerCard.y })
@@ -1085,7 +1133,7 @@ export struct ReaderControlTtsContent {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Image($r(delta < 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_minus_theme_night' : 'app.media.reader_tts_make_minus') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_plus_theme_night' : 'app.media.reader_tts_make_plus'))).width(12).height(12)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(24).height(this.textMinimum()?.timerStepButton ?? 30).padding(0).opacity(1).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).borderRadius(999)
+    }.width(44).height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).borderRadius(999)
       .enabled(this.fullInput() && (delta > 0 ?
         (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
         (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)))
@@ -1131,9 +1179,12 @@ export struct ReaderControlTtsContent {
           .attributeModifier(new ReaderTtsNaturalRangeFrame(this.textMinimum()?.speedRange, this.textMinimum()?.speedRangeWidth))
           .position({ x: this.frame().speed.width - 16 - (this.textMinimum()?.speedRangeWidth ?? 21),
             y: this.textMinimum()?.speedRangeY ?? 75 }).opacity(this.p());
+        Scroll() {
         Row({ space: 8 }) {
           ForEach(this.ratePresets(), (rate: number): void => { this.ratePreset(rate); }, (rate: number): string => rate.toString());
-        }.width(this.frame().speedPresets.width).height(this.frame().speedPresets.height)
+        }.width(this.frame().speedPresets.width).height(this.frame().speedPresets.height);
+        }.width(Math.max(0, this.frame().speed.width - 32)).height(this.frame().speedPresets.height)
+          .scrollable(Axis.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
           .position({ x: this.frame().speedPresets.x, y: this.frame().speedPresets.y })
           .opacity(this.frame().speedPresets.opacity).enabled(this.fullInput())
           .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
@@ -1209,7 +1260,7 @@ export struct ReaderControlTtsContent {
       }.width('100%').height(20);
       Column({ space: 3 }) {
         Text(http ? '在线 TTS' : '系统 TTS').fontFamily(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontWeight)
-          .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).constraintSize({ minHeight: this.textMinimum()?.serviceTabTitle ?? 17 }).maxLines(1);
+          .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).constraintSize({ minHeight: this.textMinimum()?.serviceTabTitle ?? 17 });
         Text(http ? this.onlineServiceDescription() : '设备内置语音').fontFamily(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontWeight)
           .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme)).constraintSize({ minHeight: this.textMinimum()?.serviceTabSubtitle ?? 14 }).maxLines(1);
       }.width('100%').alignItems(HorizontalAlign.Start);
@@ -1240,7 +1291,7 @@ export struct ReaderControlTtsContent {
   private ttsClosedConfigRow(kind: ReaderControlTtsField) {
     Row({ space: 8 }) {
       Text(this.fieldLabel(kind)).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontWeight)
-        .fontSize(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).maxLines(1);
+        .fontSize(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
       this.ttsSelectValueField(kind);
     }.width('100%').constraintSize({ minHeight: this.textMinimum()?.configRow ?? 48 }).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
       .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) });
@@ -1296,7 +1347,7 @@ export struct ReaderControlTtsContent {
         ReaderControlSwitchTrack({ value: this.toggleValue(kind), trackWidth: 42,
           activeColor: readerAppColor('TOK_TTS_TEAL', this.appScheme), inactiveColor: readerAppColor('app.control.paint.C6BFB2', this.appScheme), thumbColor: readerAppColor('TOK_TTS_PAPER', this.appScheme) })
           .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.width(42).height(24).padding(0).backgroundColor(Color.Transparent).borderRadius(999)
+      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent).borderRadius(999)
         .enabled(this.fullInput()).opacity(1).accessibilitySelected(this.toggleValue(kind))
         .accessibilityText(`${this.toggleLabel(kind)}，${this.toggleValue(kind) ? '已开启' : '已关闭'}`)
         .onClick((): void => this.changeToggle(kind));
@@ -1347,7 +1398,7 @@ export struct ReaderControlTtsContent {
     const measured = context.getMeasureUtils().measureTextSize({ textContent: this.fieldValue(kind) || '字',
       fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight });
     const height = context.px2vp(Number(measured.height));
-    return Math.max(kind === 'voice' ? 30 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
+    return Math.max(kind === 'voice' ? 44 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
   }
 
   private toggleValue(kind: ReaderControlTtsToggle): boolean {
@@ -1481,14 +1532,14 @@ export struct ReaderControlTtsContent {
         .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: 6 }) {
-        Text(this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置').fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
+        Text(this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置').layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontSizeFp)
           .fontColor(this.httpEngines.length > 0 ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.FFFAF4', this.appScheme));
         Image(this.httpEngines.length === 0 ?
           (this.appScheme === 'night' ? $r('app.media.reader_tts_configure_chevron_theme_night') : $r('app.media.reader_tts_configure_chevron')) :
           (this.appScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12);
-        }.alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.height(this.textMinimum()?.manageButton ?? 30).padding({ left: 11, right: 9, top: 0, bottom: 0 }).borderRadius(999).opacity(1)
+        }.width('100%').alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+      }.width(this.textMinimum()?.manageButtonWidth ?? 130).height(this.textMinimum()?.manageButton ?? 44).flexShrink(0).padding({ left: 11, right: 9, top: 0, bottom: 0 }).borderRadius(999).opacity(1)
         .backgroundColor(this.httpEngines.length > 0 ? readerAppColor('app.control.paint.1A2F6373', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
         .border({ width: this.httpEngines.length > 0 ? .5 : 0, color: readerAppColor('app.control.paint.4D2F6373', this.appScheme) })
         .shadow({ radius: 7, color: this.httpEngines.length > 0 ? Color.Transparent : readerAppColor('app.control.paint.472F6373', this.appScheme), offsetY: 2 })

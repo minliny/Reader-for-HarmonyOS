@@ -7,7 +7,6 @@ import {
   READER_CONTROL_BRIGHTNESS_RAIL_WIDTH,
   READER_CONTROL_CONTENT_PADDING_RIGHT,
   READER_CONTROL_HOME_TOP_ROW_HEIGHT,
-  readerControlBrightnessTrackHeight,
 } from './ReaderControlGeometry.ts';
 
 /** Restored Directory 1689:1616 + MR1 1247:28/1247:489 + M-01/M-02/L-01.
@@ -157,8 +156,6 @@ export function sampleReaderControlMotionComposition(frame: ReaderControlVisualF
   const brightnessRight = READER_CONTROL_CONTENT_PADDING_RIGHT;
   const brightnessHeight = bounds.contentBudget === undefined ? Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT,
     Math.max(0, bounds.quickHeight - navigationBottom - READER_CONTROL_MOTION_CONTENT_TOP_QUICK)) : quickContentHeight;
-  const brightnessUsable = readerControlBrightnessTrackHeight(brightnessHeight,
-    bounds.contentBudget?.brightnessAutoHeightVp) >= READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE;
   return {
     progress: p, visibility: visibility,
     topBar: whole.topBar, dock: whole.dock,
@@ -180,13 +177,13 @@ export function sampleReaderControlMotionComposition(frame: ReaderControlVisualF
     // short window may only give it the space before the navigation row.
     brightness: actor(bounds.width - brightnessRight - brightnessWidth +
       (brightnessWidth + brightnessRight) * p, shellY + READER_CONTROL_MOTION_CONTENT_TOP_QUICK,
-      brightnessWidth, brightnessUsable ? brightnessHeight : 0, brightnessUsable ? 1 - p : 0),
+      brightnessWidth, brightnessHeight, brightnessHeight > 0 ? 1 - p : 0),
     // Original navigation displacement 0 -> 20, on the common spatial axis.
     navigation: actor(READER_CONTROL_MOTION_NAVIGATION_LEFT,
       shellY + height - navigationBottom +
         READER_CONTROL_MOTION_NAVIGATION_TRANSLATE_Y * p,
       Math.max(0, bounds.width - READER_CONTROL_MOTION_NAVIGATION_HORIZONTAL_INSET),
-      navigationHeight, 1 - p),
+      navigationHeight, navigationHeight > 0 ? 1 - p : 0),
   };
 }
 

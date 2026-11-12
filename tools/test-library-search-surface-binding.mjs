@@ -1,6 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'native-targets': { description: 'Current bookPanel/bar/history native44 targets, paid Common/lane/heading/projection and SearchPage query/header ownership. Old36/32/30 recipes rejected.', resources: [] },
   'measured-shadow': {
     description: 'Actual SDK header owns one rounded Native material/shadow and measured fractional-density radius; stale or missing bindings and a second phone painter are rejected',
     resources: [],
@@ -30,6 +31,250 @@ for (const id of selected) {
   const componentMap = require(`${root}/lib/component_map.js`);
   const parse = source => ts.createSourceFile(virtualFilePath('SearchSurfaceBindingProbe.ets'), source,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  if (id === 'native-targets') {
+    const { writeFileSync } = await import('node:fs');
+    const { createHash } = await import('node:crypto');
+    const { execFileSync } = await import('node:child_process');
+    const { foundationControls, foundationSpecs, readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
+    const { tailControls, compileTailConsumer } = await import('./lib/foundation-tail-consumer-probe.mjs');
+    const { boundedMembers, readerSurfaceSpecsForProbe, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+    const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+    const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+    const { actualSourceManagementGeometry } = await import('./lib/source-management-owner-probe.mjs');
+    const geometry = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+    const safe = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+    const { consumeReaderControlKeyboardBack } = await import('../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts');
+    const base = new URL('../entry/src/main/ets/', import.meta.url);
+    const read = relative => readFileSync(new URL(relative, base), 'utf8');
+    const surfaceSource = read('features/search/ui/ReaderLibrarySearchSurface.ets');
+    const fieldSource = read('ui/controls/ReaderSearchField.ets');
+    const historySource = read('features/search/ui/ReaderSearchHistoryPanel.ets');
+    const historyGeometrySource = read('features/search/ui/SearchHistoryGeometry.ts');
+    const searchSource = read('features/search/ui/SearchPage.ets');
+    const modelSource = read('features/search/presentation/ReaderLibrarySearchModel.ets');
+    const modelTypes = pureModuleProbe(modelSource, 'ReaderLibrarySearchModel.ets', { Observed: type => type }, ['ReaderLibrarySearchModel', 'READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
+    const { ReaderLibraryJourney } = pureModuleProbe(read('app/composition/ReaderLibraryJourney.ets'), 'ReaderLibraryJourney.ets', {}, ['ReaderLibraryJourney']);
+    const historyTypes = pureModuleProbe(historyGeometrySource, 'SearchHistoryGeometry.ts', geometry, ['SearchHistoryGeometry', 'SearchHistoryViewport', 'projectSearchHistoryRows']);
+    const headerTypes = pureModuleProbe(read('ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets', {
+      ...readerFoundationTokens, ...(await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts')) }, ['searchHeaderSpec', 'bookshelfHeaderSpec']);
+    const fieldFocus = pureModuleProbe(fieldSource.slice(0, fieldSource.indexOf('@Component')), 'ReaderSearchFocusFrame.ets', { FrameCallback: class {} }, ['ReaderSearchFocusFrame']);
+    const fonts = ['Regular', 'Bold'].map(weight => {
+      const path = new URL(`../entry/src/main/resources/rawfile/NotoSansSC-UI${weight}.otf`, import.meta.url);
+      return { path: path.pathname, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') };
+    });
+    const widths = new Map();
+    function measure(text, size, weight) {
+      const key = JSON.stringify([text, size, weight]);
+      if (!widths.has(key)) widths.set(key, Number(execFileSync('python3', ['-c', 'from PIL import ImageFont\nimport sys\nf=ImageFont.truetype(sys.argv[1],round(float(sys.argv[3])*100))\nprint(f.getlength(sys.argv[2])/100)', fonts[Number(weight) >= 600 ? 1 : 0].path, text, String(size)], { encoding: 'utf8' })));
+      return widths.get(key);
+    }
+    const cases = [];
+    for (const width of [320, 366]) for (const scale of [1, 1.45, 2, 3]) for (const safeInset of [0, 40]) {
+      const metrics = new safe.ReaderWindowMetricsSnapshot(new safe.ReaderRectVp(0, 0, width, 360));
+      metrics.ready = true; metrics.systemFontScale = scale; metrics.systemInsets = new safe.ReaderInsetsVp(safeInset, 24, safeInset, 16);
+      const foundation = foundationControls({ windowMetrics: () => metrics });
+      const controls = tailControls({ foundation });
+      const surfaces = boundedSurfaceSdk({ properties: foundation.properties, windowMetrics: () => metrics, allowEmptyBranchAdmission: true });
+      const nativeCalls = [], frames = [];
+      const uiContext = { getFont: () => ({}), px2vp: value => value,
+        postFrameCallback: callback => frames.push(callback), getFocusController: () => ({ requestFocus: name => nativeCalls.push(['focus', name]), clearFocus: () => nativeCalls.push(['clearFocus']) }),
+        getMeasureUtils: () => ({ measureText: options => measure(options.textContent, Number.parseFloat(options.fontSize) * scale, options.fontWeight) }) };
+      const shared = { ...surfaces.deps, ...controls.dependencies, ...geometry, ...historyTypes, ...headerTypes, ...modelTypes,
+        ...safe, ...readerSurfaceSpecsForProbe(metrics), ...fieldFocus, ...actualSourceManagementGeometry(metrics),
+        ReaderWindowCoordinator: { metrics: () => metrics }, readerWindowMetrics: () => metrics, uiContext };
+      const History = compileTailConsumer(historySource, boundedMembers(historySource), shared, controls.hooks).Component;
+      const SearchField = compileTailConsumer(fieldSource, boundedMembers(fieldSource), shared, controls.hooks).Component;
+      const hooks = { ...controls.hooks, childSources: { ...surfaces.childSources, ...controls.hooks.childSources, ReaderSearchField: fieldSource, ReaderSearchHistoryPanel: historySource } };
+      const model = new modelTypes.ReaderLibrarySearchModel();
+      const searches = [], changes = [];
+      const page = compileTailConsumer(searchSource, ['bindSurface', 'publishSurface', 'ownsPageQuery', 'ownsSurface', 'searchPanelOwnsInput', 'hasSearchSession', 'isSweeping', 'operation', 'canSubmit', 'submitSearch',
+        'pageGeometry', 'resolvedHeaderHeight', 'searchBottomInset', 'searchControlHeight', 'searchFontScale', 'externalHeaderChanged', 'acceptSearchHeaderHeight', 'searchHeaderMeasurementKey', 'ownsList'], { ...shared, nextSearchSurfaceOwner: 0 }, hooks).owner;
+      Object.assign(page, { pageMounted: true, isPresentationCurrent: () => true, pageEpoch: 1, queryAtMount: 1,
+        viewState: { pageRevision: 1, revision: 1, keywordDraft: '书' }, surfaceModel: model, surfaceOwner: 0, keyword: '书',
+        presentation: { kind: 'initial', history: ['书', '甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未'], historyStatus: undefined },
+        nativePanel: undefined, filtersExpanded: false, taskStatusExpanded: false, focusInputOnAppear: false,
+        spinnerRunKey: 0, searchProgressText: () => '', cancelSearchFocusRestore() {}, onSearch: keyword => searches.push(keyword),
+        onClearHistory: () => changes.push('clear-history'), onRetryHistory() {}, readerWindowMetricsRevision: 1, expandedLayout: false, measurementRevision: 1,
+        measurements: new shared.ReaderMeasurementStore(), externalHeaderHeight: 0, headerAnchorPending: false, listMounted: false });
+      page.bindSurface();
+      const names = ['header', 'bar', 'controlHeight', 'fontScale', 'barHeight', 'actionWidth', 'searchLaneLeft', 'searchLaneWidth', 'fieldWidth', 'laneTop', 'stackedSearch', 'searchLaneHeight', 'cardContentWidth', 'horizontalInset',
+        'fieldIdentity', 'presentedSearch', 'surfaceValue', 'actionInteractive', 'inputInteractive', 'headerActionGlyph', 'headerActionFrame', 'headerActionTop', 'moreInteractive', 'leadingAction', 'moreAction', 'textAction',
+        'submitAction', 'focusAction', 'searchAction', 'acceptsField', 'historyInteractive', 'historyAction', 'clearHistoryAction', 'retryHistoryAction', 'historyGeometry', 'historyFeedbackKey',
+        'historyViewportHeight', 'historyLimit', 'resolvedHistoryViewport', 'surfaceHeight', 'availableBottom', 'historyDividerColor', 'consumeInputBack',
+        'captureHeader', 'metricsChanged', 'retargetHistoryViewport'];
+      const surface = compileTailConsumer(surfaceSource, names, { ...shared, ReaderSearchField: SearchField, ReaderSearchHistoryPanel: History,
+        READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold', consumeReaderControlKeyboardBack,
+        inputMethod: { getController: () => ({ hideTextInput: () => { nativeCalls.push(['hideIme']); return Promise.resolve(); } }) }, hilog: { warn() {} } }, hooks).owner;
+      const surfaceFields = { mounted: true, scheme: 'day', metricsRevision: 1, spec: headerTypes.searchHeaderSpec(), mode: 'input', transitionKind: 'none',
+        model, identity: 7, navigationGeneration: 9, mounting: 11, searchMounted: true, expandedLayout: false, moreIdentity: 'shelf', surfaceWindowY: 0,
+        surfaceProgress: () => 1, historyProgress: () => 1, resultsProgress: () => 1, titleOpacity: () => 0, blend: (a, b, progress) => a + (b - a) * progress,
+        headerVeil: () => false, panelBorderColor: () => '#000000', headerMaterialRadius: () => 18, headerSurfaceAreaChange: () => () => {},
+        historyFeedbackAction: () => () => {}, measuredHistoryFeedbackKey: '', measuredHistoryFeedback: 0,
+        displayedHistoryLimit: 0, continueCardRect: undefined, onOpen() {}, onBack() {}, onMore() {}, measurementKey: 1, headerBottom: 0,
+        reduceMotion: true, historyLimitTrack: { set() {} }, historyTrack: { set() {} }, publishContinueCardCoverage() {}, schedule() {} };
+      Object.assign(surface, surfaceFields);
+      const runtime = {}, host = {}, scope = { owner: runtime, mounting: 11, inputAllowed: true, retired: false };
+      const headerPresentation = { identity: 7, host, mode: 'input', headerBottom: 0 };
+      const journey = new ReaderLibraryJourney({ snapshot: () => ({ route: 'search', generation: 9 }) }, {
+        scope: () => scope, ownsRuntime: candidate => candidate === runtime, acquisition: () => ({ currentOwner: () => runtime }),
+        search: () => headerPresentation, read: () => ({ headerBottom: 0 }),
+      });
+      const headerActions = journey.headerActions(runtime, host), acceptedHeaderBottoms = [];
+      surface.onHeaderBottom = (bottom, identity, key, generation, mounting) => {
+        headerActions.onHeaderBottom(bottom, identity, key, generation, mounting);
+        page.externalHeaderHeight = headerPresentation.headerBottom;
+        page.externalHeaderChanged(); acceptedHeaderBottoms.push(page.externalHeaderHeight);
+      };
+      surface.historyHeight = surface.resolvedHistoryViewport().height;
+      surface.displayedHistoryViewport = surface.historyHeight;
+      surface.header();
+      const nodes = controls.nodes(surface), input = nodes.find(node => node.type === 'TextInput');
+      const clear = nodes.find(node => node.type === 'Button' && node.accessibilityText === '清空搜索内容');
+      const submit = nodes.find(node => node.type === 'Button' && node.accessibilityText === '搜索');
+      assert.ok(input.height >= 44 && clear.width >= 44 && clear.height >= 44 && submit.height >= 44 && submit.width >= 44);
+      assert.equal(input.height, surface.controlHeight());
+      assert.ok(nodes.some(node => node.type === '__Common__' && node.width === surface.fieldWidth() && node.height === input.height), 'normal bar Common pays the actual bookPanel height');
+      assert.ok(nodes.some(node => node.type === 'Flex' && node.width === surface.searchLaneWidth() && node.height === surface.searchLaneHeight()), 'normal clipped lane uses the shared height');
+      assert.ok(surface.fieldWidth() - 18 - clear.width >= 44, '320/366 at1..3x retains44vp input beside the separate44clear');
+      assert.ok(surface.laneTop() >= 0 && surface.laneTop() + input.height <= surface.barHeight());
+      surface.captureHeader(surface.barHeight() + 2 * surface.spec.borderWidth + surface.historyViewportHeight(), surface.measurementKey);
+      assert.equal(page.measurements.readForGeneration('search:header', page.searchHeaderMeasurementKey(), -1), page.externalHeaderHeight);
+      assert.equal(page.pageGeometry().header.height, page.externalHeaderHeight, 'SearchPage content geometry consumes current external header receipt');
+      input.onChange('当前查询'); input.onSubmit('EnterKeyType.Search'); submit.onClick();
+      assert.equal(page.keyword, '当前查询'); assert.deepEqual(searches, ['当前查询', '当前查询']);
+      const oldSubmit = submit.onClick; model.claim(999); model.activate(999); oldSubmit(); assert.equal(searches.length, 2, 'retired normal bar callback cannot submit a new model owner');
+      model.claim(page.surfaceOwner); model.activate(page.surfaceOwner);
+      clear.onClick(); assert.equal(page.keyword, '', 'actual Native clear reaches the same current SearchPage query owner');
+      assert.ok(frames.length > 0, 'clear retains native input focus scheduling');
+      const history = [...surface.children.values()].find(child => child instanceof History);
+      assert.ok(history); const historyNodes = controls.nodes(history), geometryValue = history.geometry;
+      if (geometryValue.headingVisible) {
+        const clearHistory = historyNodes.find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
+        assert.ok(clearHistory.height >= 44 && clearHistory.constraintSize.minWidth >= 44);
+        assert.ok(historyNodes.some(node => node.type === 'Row' && node.height === clearHistory.height));
+        const heading = historyNodes.find(node => node.type === 'Text' && node.create === '最近搜索');
+        assert.ok(clearHistory.height >= heading.lineHeight * scale, 'heading parent pays current natural line box');
+        clearHistory.onClick(); assert.deepEqual(changes, ['clear-history']);
+      }
+      const rows = history.projectedRows();
+      assert.ok(rows.every(row => row.width <= geometryValue.contentWidth));
+      assert.ok(rows.flatMap(row => row.chips).every(chip => chip.width >= 44));
+      const keyword = historyNodes.find(node => node.type === 'Button' && node.accessibilityText === '搜索书');
+      if (geometryValue.recordsVisible) {
+        assert.ok(keyword && keyword.constraintSize.minWidth >= 44 && keyword.height === geometryValue.buttonHeight && keyword.width === '100%');
+        assert.ok(historyNodes.some(node => node.type === '__Common__' && node.width === history.measuredControlWidth('书') && node.height === geometryValue.buttonHeight), 'single CJK chip parent participates in paid44 width packing');
+      }
+      for (const viewport of [0, 40, 100, 180]) {
+        const bounded = new historyTypes.SearchHistoryGeometry(width - 32, viewport, scale, false);
+        const projected = historyTypes.projectSearchHistoryRows(['书', '甲', '乙'], bounded, () => 1);
+        assert.ok(projected.length <= bounded.rows && projected.flatMap(row => row.chips).every(chip => chip.width >= 44));
+        assert.ok(!bounded.recordsVisible || projected.length * bounded.buttonHeight + Math.max(0, projected.length - 1) * bounded.gap <= bounded.bodyHeight);
+      }
+      const narrow = new historyTypes.SearchHistoryGeometry(60, 250, scale, false);
+      assert.equal(narrow.recordsVisible, false, 'sub44 content never admits an overflowing native44 chip');
+      const filterSource = read('features/search/ui/ReaderSearchFilterPanel.ets');
+      const filter = compileTailConsumer(filterSource, ['sheetHeader', 'resetAction', 'active', 'accepts', 'headerMeasurement', 'bodyHeightLimit', 'systemFontScale'], shared, hooks).owner;
+      Object.assign(filter, { mounted: true, scheme: 'day', expanded: true, presentationIdentity: 'filter:1', selectedGroup: '在线', selectedType: '全部类型',
+        metricsRevision: 1, measuredHeaderHeight: 0, sheetSpec: () => shared.resolveSheetSpec('search-result-filter'), onReset() {}, onDismiss() {} });
+      filter.sheetHeader('filter:1');
+      const reset = controls.nodes(filter).find(node => node.type === 'Button' && node.accessibilityText === '重置');
+      assert.ok(reset.constraintSize.minWidth >= 44 && reset.constraintSize.minHeight >= 44);
+      assert.ok(controls.nodes(filter).some(node => node.type === 'Row' && node.height === undefined && node.constraintSize?.minHeight === 44), 'actual filter title/action row is natural above44');
+      const sheet = shared.resolveSheetSpec('search-result-filter');
+      const rowHeight = Math.max(sheet.titleHeight, sheet.titleLineHeight * scale, reset.constraintSize.minHeight);
+      assert.ok(filter.bodyHeightLimit() <= metrics.windowRect.height - safe.readerVisualSafeTop(metrics) - safe.readerVisualSafeBottom(metrics) -
+        sheet.handleTop - sheet.handleHeight - sheet.handleBottom - rowHeight - sheet.titleBottom - sheet.contentBottom,
+        'cold filter body budget pays the actual title and reset target before a native area receipt');
+      const taskSource = read('features/search/ui/ReaderSearchTaskPanel.ets');
+      const task = compileTailConsumer(taskSource, ['sheetHeader', 'sheetBody', 'details', 'message', 'messageText', 'retryAction', 'accepts', 'bodyLimit', 'fontScale', 'measureHeader'],
+        { ...shared, READER_ACTION_MIN_TARGET: 44 }, hooks).owner;
+      Object.assign(task, { mounted: true, scheme: 'day', expanded: true, presentationIdentity: 'task:1', retryIdentity: 'retry:1', metricsRevision: 1,
+        measuredHeaderHeight: 0, canRetry: true, partialText: '部分未完成'.repeat(100), failed: 3, failedText: '失败详情', skipped: 1, skippedText: '跳过详情', searching: false,
+        progressText: '仍在读取', onRetry() {}, onDismiss() {} });
+      task.sheetHeader('task:1'); task.sheetBody('task:1');
+      const retry = controls.nodes(task).find(node => node.type === 'Button' && node.accessibilityText === '重试未完成的书源');
+      assert.ok(retry.constraintSize.minWidth >= 44 && retry.constraintSize.minHeight >= 44);
+      assert.ok(controls.nodes(task).some(node => node.type === 'Scroll' && node.constraintSize?.maxHeight === task.bodyLimit()), 'cold task details and grown Native retry share a bounded body document');
+      if (width === 320 && scale === 2 && safeInset === 40) {
+        assert.equal(surface.stackedSearch(), true, 'the actual two-axis deficit selects the existing lane wrap');
+        const oldSource = surfaceSource.replace('return this.searchLaneWidth() - this.actionWidth() - 5 < SEARCH_CONTROL_MIN_TARGET * 2 + 18;', 'return false;');
+        assert.notEqual(oldSource, surfaceSource);
+        const old = compileTailConsumer(oldSource, names, { ...shared, ReaderSearchField: SearchField, ReaderSearchHistoryPanel: History,
+          READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold' }, hooks).owner;
+        Object.assign(old, surfaceFields); model.keyword = '书'; old.bar();
+        const oldCommon = controls.nodes(old).find(node => node.type === '__Common__' && node.width === old.fieldWidth());
+        assert.ok(oldCommon); assert.throws(() => assert.ok(oldCommon.width - 18 - 44 >= 44), /AssertionError/, 'actual old forced-inline bar leaves30vp input after44clear');
+      }
+      metrics.keyboardInsets = new safe.ReaderInsetsVp(0, 0, 0, 180);
+      assert.equal(surface.consumeInputBack(), true); assert.ok(nativeCalls.some(call => call[0] === 'hideIme'));
+      assert.equal(searches.length, 2, 'IME Back does not dispatch a search');
+      if (width === 320 && scale === 1 && safeInset === 40) {
+        input.onChange('保留草稿');
+        const field = [...surface.children.values()].find(child => child instanceof SearchField);
+        const physicalInput = input, oldKey = surface.measurementKey, oldHeight = surface.headerBottom;
+        metrics.systemFontScale = 2; metrics.keyboardInsets = new safe.ReaderInsetsVp();
+        surface.metricsRevision += 1; page.readerWindowMetricsRevision += 1;
+        field.readerWindowMetricsRevision += 1; history.metricsRevision += 1;
+        surface.metricsChanged();
+        assert.equal(surface.measurementKey, oldKey + 1, 'real metricsChanged advances the header receipt epoch');
+        surface.replay(); foundation.properties.flush();
+        const currentField = [...surface.children.values()].find(child => child instanceof SearchField);
+        const currentInput = controls.nodes(currentField).find(node => node.type === 'TextInput');
+        assert.equal(currentField, field); assert.equal(currentInput, physicalInput, 'inline-to-wrap preserves the same physical Native input observer');
+        assert.equal(page.keyword, '保留草稿'); assert.equal(page.viewState.keywordDraft, '保留草稿');
+        assert.equal(surface.stackedSearch(), true);
+        const currentNodes = controls.nodes(surface), clip = currentNodes.find(node => node.type === 'Stack' && node.width === surface.searchLaneWidth() && node.clip === true);
+        assert.ok(currentNodes.some(node => node.type === 'Flex' && node.width === surface.searchLaneWidth() && node.height === surface.searchLaneHeight()));
+        assert.equal(clip.height, surface.searchLaneHeight(), 'current two-row clip pays both complete44+ targets');
+        assert.equal(surface.barHeight(), surface.searchLaneHeight() + surface.spec.barHeightExtra);
+        const accepted = acceptedHeaderBottoms.length;
+        surface.captureHeader(10, oldKey); assert.equal(acceptedHeaderBottoms.length, accepted, 'old inline header receipt cannot enter the wrapped owner');
+        assert.equal(surface.headerBottom, oldHeight);
+        surface.captureHeader(surface.barHeight() + 2 * surface.spec.borderWidth + surface.historyViewportHeight(), surface.measurementKey);
+        assert.equal(acceptedHeaderBottoms.length, accepted + 1);
+        assert.equal(page.externalHeaderHeight, surface.headerBottom);
+        assert.equal(page.measurements.readForGeneration('search:header', page.searchHeaderMeasurementKey(), -1), surface.headerBottom,
+          'current receipt crosses the actual Journey callback then current SearchPage watcher');
+        physicalInput.onSubmit('EnterKeyType.Search'); assert.equal(searches.at(-1), '保留草稿', 'retained IME submit still enters the original current query owner');
+        metrics.systemFontScale = 1; surface.metricsRevision += 1; field.readerWindowMetricsRevision += 1; history.metricsRevision += 1;
+        surface.metricsChanged(); surface.replay(); foundation.properties.flush();
+        assert.equal(surface.stackedSearch(), false); assert.equal([...surface.children.values()].find(child => child instanceof SearchField), field);
+        assert.equal(controls.nodes(field).find(node => node.type === 'TextInput'), physicalInput, 'wrap-to-inline also retains the physical actor');
+      }
+      cases.push({ width, scale, safeInset, stacked: surface.stackedSearch(), fieldWidth: surface.fieldWidth(), nativeInputHeight: input.height, clearWidth: clear.width, actionHeight: submit.height, barHeight: surface.barHeight(),
+        historyButtonHeight: geometryValue.buttonHeight, historyHeadingHeight: geometryValue.headingHeight, admittedRows: rows.length });
+    }
+    // Prior finite recipes and the actual old packed Common reproduce all three omissions.
+    const currentSpecsSource = read('ui/controls/ReaderControlSpecs.ets');
+    const oldGeometry = pureModuleProbe(read('ui/foundation/ReaderSearchControlGeometry.ts').replace('SEARCH_CONTROL_MIN_TARGET = 44', 'SEARCH_CONTROL_MIN_TARGET = 36'), 'PriorSearchControlGeometry.ts', {}, ['readerSearchControlHeight']);
+    const oldField = compileTailConsumer(fieldSource.replace('.width(SEARCH_CONTROL_MIN_TARGET).height(this.fieldHeight())', '.width(32).height(this.fieldHeight())'), boundedMembers(fieldSource), {
+      ...tailControls().dependencies, ...oldGeometry, ...fieldFocus, SEARCH_CONTROL_MIN_TARGET: 36, readerWindowMetrics: () => ({ systemFontScale: 1 }) }, tailControls().hooks).owner;
+    Object.assign(oldField, { variant: 'bookPanel', mode: 'submit', text: '书', placeholder: '搜索', clearable: true, onTextChange() {}, onSubmit() {}, appThemeScheme: 'day' }); oldField.initialRender();
+    assert.throws(() => assert.ok([...oldField.nodes.values()].find(node => node.type === 'TextInput').height >= 44), /AssertionError/, 'old actual bookPanel Native36 rejected');
+    assert.throws(() => assert.ok([...oldField.nodes.values()].find(node => node.type === 'Button').width >= 44), /AssertionError/, 'old actual bookPanel clear32 rejected');
+    const oldHistorySource = historySource.replace('Math.max(spec.minWidth ?? 0,\n      Math.ceil(measured) + spec.horizontalPadding * 2 + (spec.hasBorder ? TOK_BORDER_W * 2 : 0))', 'Math.ceil(measured) + spec.horizontalPadding * 2 + (spec.hasBorder ? TOK_BORDER_W * 2 : 0)');
+    assert.notEqual(oldHistorySource, historySource);
+    const one = { systemFontScale: 1 }, controls = tailControls({ foundation: foundationControls({ windowMetrics: () => one }) });
+    const oldHistory = compileTailConsumer(oldHistorySource, boundedMembers(oldHistorySource), { ...controls.dependencies, ...historyTypes, ReaderWindowCoordinator: { metrics: () => one } }, controls.hooks).owner;
+    Object.assign(oldHistory, { metricsRevision: 1, measuredRevision: -1, measuredWidths: new Map(), getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({ measureText: () => 12 }) }) });
+    assert.throws(() => assert.ok(oldHistory.measuredControlWidth('书') >= 44), /AssertionError/, 'old measured30 width cannot silently leave Native44 debt');
+    const oldHeading = pureModuleProbe(historyGeometrySource.replace('Math.max(SEARCH_CONTROL_MIN_TARGET, 20 * scale + 8)', 'Math.max(32, 20 * scale + 8)'), 'PriorSearchHistoryGeometry.ts', geometry, ['SearchHistoryGeometry']);
+    assert.throws(() => assert.ok(new oldHeading.SearchHistoryGeometry(320, 250, 1, false).headingHeight >= 44), /AssertionError/, 'old heading32 parent rejected');
+    const oldControls = foundationControls({ specs: { ...foundationSpecs(readerTypographyRoles, currentSpecsSource), ...oldGeometry } });
+    const oldAction = new oldControls.dependencies.ReaderButton(undefined, { specId: 'search-field-wide', label: '搜索' }); oldAction.initialRender();
+    assert.throws(() => assert.ok(oldControls.nodes(oldAction).find(node => node.type === 'Button').height >= 44), /AssertionError/, 'old shared action36 rejected');
+    const oldRetrySpecs = foundationSpecs(readerTypographyRoles, currentSpecsSource.replace('SEARCH_RETRY_PROGRESS.minWidth = 44; SEARCH_RETRY_PROGRESS.minHeight = 44;', ''));
+    const oldRetryControls = foundationControls({ specs: oldRetrySpecs });
+    const oldRetry = new oldRetryControls.dependencies.ReaderButton(undefined, { specId: 'search-retry-progress', label: '重置' }); oldRetry.initialRender();
+    assert.throws(() => assert.ok(oldRetryControls.nodes(oldRetry).find(node => node.type === 'Button').constraintSize?.minHeight >= 44), /AssertionError/, 'old bare reset/retry Native has no44 target');
+    writeFileSync(new URL('../.reader-artifacts/framework-confluence-20261112/code-side-audit/repair-secondary-post-library-native-targets.json', import.meta.url), JSON.stringify({
+      result: 'PASS', command: { entry: 'tools/test-library-search-surface-binding.mjs', cases: ['native-targets'] }, cases, fonts, glyphMeasurements: widths.size,
+      glyphRuntime: JSON.parse(execFileSync('python3', ['-c', "import sys,json,PIL;from PIL import features;print(json.dumps({'python':sys.version,'pillow':PIL.__version__,'freetype':features.version('freetype2'),'raqm':features.version('raqm')}))"], { encoding: 'utf8' })),
+      completeInputManifest: process.env.READER_LAYOUT_TRACE_OUTPUT ?? 'NOT_RECORDED', boundary: 'Actual current SDK Native builders, actual model/query dispatch and bounded projection with bundled-font FreeType. No platform layout/IME/pointer/device or HAP.',
+    }, null, 2) + '\n');
+    recordContractCasePass(id);
+    continue;
+  }
   if (id === 'measured-shadow') {
     const surfaceTree = parse(readFileSync(new URL('../entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets', import.meta.url), 'utf8'));
     const surface = surfaceTree.statements.find(node => node.name?.text === 'ReaderLibrarySearchSurface');

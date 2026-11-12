@@ -606,7 +606,9 @@ export struct SourceSwitchWindow {
   }
   @Builder
   private recoveryNotice() {
-    ReaderRecoveryNotice({ view: this.recoveryView(), tag: this.rollbackRequired() ? '待撤销' : '待核对',
+    ReaderRecoveryNotice({ view: this.recoveryView(), layoutWidthVp: Math.max(0, this.drawerWidth() - this.novelSafeLeft() - this.novelSafeRight() - this.sideInset() * 2), maxHeightVp: Math.max(0, this.drawerHeight() - this.headingHeight() -
+      this.safeBottom() - (!this.compactWindow() && !this.flowChrome() ?
+        SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom : 0)), tag: this.rollbackRequired() ? '待撤销' : '待核对',
       actionLabel: this.rollbackRequired() ? '撤销切换' : '重试核对',
       onReconcile: (generation: number): void => this.recoverOriginal(generation) });
   }

@@ -2,7 +2,7 @@ import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwit
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -364,11 +364,11 @@ export struct LocalBookDetail {
             .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.book.sourceId !== 'local') {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
-              Text('换源').constraintSize({ minHeight: 30 }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+              Text('换源').constraintSize({ minHeight: READER_ACTION_MIN_TARGET }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
                 .fontWeight(visual.bodyFontWeight).fontSize(visual.heroSourceFontSize).lineHeight(visual.heroSourceLineHeight)
                 .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
                 .fontColor(mangaDirectoryColor('accent', this.appThemeScheme));
-            }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).constraintSize({ minHeight: 30 })
+            }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
               .id(sourceSwitchTriggerFocusId(this.book.sourceId, this.book.bookId, 'detail-source'))
               .opacity(this.sourceSwitchEnabled ? 1 : visual.disabledOpacity)
               .attributeModifier(new ReaderActionAccessibility('换源', this.sourceSwitchEnabled, false, true,
@@ -495,11 +495,12 @@ export struct LocalBookDetail {
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.book.sourceId !== 'local') {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
-              Text('换源').height(32).padding({ left: 12, right: 12 }).fontSize(12)
+              Text('换源').constraintSize({ minHeight: READER_ACTION_MIN_TARGET }).padding({ left: 12, right: 12 }).fontSize(12)
                 .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
                 .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)
                 .textAlign(TextAlign.Center);
-            }.height(32).padding(0).backgroundColor(Color.Transparent).borderRadius(10)
+            }.constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
+              .padding(0).backgroundColor(Color.Transparent).borderRadius(10)
               .id(sourceSwitchTriggerFocusId(this.book.sourceId, this.book.bookId, 'detail-source'))
               .opacity(this.sourceSwitchEnabled ? 1 : 0.4)
               .attributeModifier(new ReaderActionAccessibility('换源', this.sourceSwitchEnabled, false, true, undefined, 'nativeButton'))
@@ -571,7 +572,7 @@ export struct LocalBookDetail {
               .width(visual.sectionActionIcon).height(visual.sectionActionIcon).rotate({ angle: this.introExpanded ? 180 : 0 });
           }.constraintSize({ minHeight: visual.sectionActionHeight });
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-          .constraintSize({ minHeight: visual.sectionActionHeight }).margin({ top: visual.introExpandTop })
+          .constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: visual.sectionActionHeight }).margin({ top: visual.introExpandTop })
           .attributeModifier(new ReaderActionAccessibility(this.introExpanded ? '收起简介' : '展开简介', true, false, true,
             new MangaDirectoryPressFeedback(true, true, this.appThemeScheme, 'nativeButton'), 'nativeButton'))
           .onClick((): void => this.toggleIntro());
@@ -596,9 +597,10 @@ export struct LocalBookDetail {
         });
       if (this.introOverflow) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Text(this.introExpanded ? '收起' : '展开').height(32).fontSize(12)
+          Text(this.introExpanded ? '收起' : '展开').constraintSize({ minHeight: READER_ACTION_MIN_TARGET }).fontSize(12)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-        }.height(32).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+        }.constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: READER_ACTION_MIN_TARGET })
+          .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .attributeModifier(new ReaderActionAccessibility(this.introExpanded ? '收起简介' : '展开简介', true, false, true, undefined, 'nativeButton'))
           .onClick((): void => this.toggleIntro());
       }
@@ -660,7 +662,7 @@ export struct LocalBookDetail {
             .width(visual.sectionActionIcon).height(visual.sectionActionIcon);
         }.constraintSize({ minHeight: visual.sectionActionHeight });
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-        .constraintSize({ minHeight: visual.sectionActionHeight }).flexShrink(0)
+        .constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: visual.sectionActionHeight }).flexShrink(0)
         .id(this.directoryFocusKey())
         .attributeModifier(new ReaderActionAccessibility('完整目录', !this.removing, false, true,
           new MangaDirectoryPressFeedback(!this.removing, true, this.appThemeScheme, 'nativeButton'), 'nativeButton'))
@@ -736,23 +738,23 @@ export struct LocalBookDetail {
 
   @Builder
   private actionSurface() {
-    // Measure the 48vp action row independently from the 68vp painted dock;
-    // horizontal insets must not shrink its vertical button bounds.
+    // The action row and painted dock grow together. The scaffold records
+    // their actual height for the matching scroll clearance.
     Stack({ alignContent: Alignment.Center }) {
       Row({ space: this.book.contentKind === 'manga' ? visual.detailDockGap : 12 }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.readingActionLabel()).width('100%').height(this.book.contentKind === 'manga' ? undefined : 48)
+        Text(this.readingActionLabel()).width('100%')
           .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 })
           .padding({ left: this.book.contentKind === 'manga' ? 16 : 0, right: this.book.contentKind === 'manga' ? 16 : 0 }).fontFamily(this.book.contentKind === 'manga' ? READER_FONT_NOTO_SANS_SC_UI_600 : 'ReaderNotoSansSCUIBold')
           .fontSize(this.book.contentKind === 'manga' ? visual.detailPrimaryFontSize : 14)
           .lineHeight(this.book.contentKind === 'manga' ? visual.detailPrimaryLineHeight : undefined)
-          .minFontScale(this.book.contentKind === 'manga' ? Math.min(1, this.mangaFontScale()) : 0)
-          .maxFontScale(this.book.contentKind === 'manga' ? Math.max(1, this.mangaFontScale()) : 2)
+          .minFontScale(Math.min(1, this.mangaFontScale()))
+          .maxFontScale(Math.max(1, this.mangaFontScale()))
           .halfLeading(this.book.contentKind === 'manga')
           .fontWeight(this.book.contentKind === 'manga' ? visual.groupFontWeight : FontWeight.Bold)
           .fontColor(this.detailColor('TOK_ON_PRIMARY', 'onGreen'))
           .textAlign(TextAlign.Center).backgroundColor(this.detailColor('TOK_PRIMARY_DARK', 'green')).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16);
-        }.layoutWeight(1).height(this.book.contentKind === 'manga' ? undefined : 48)
+        }.layoutWeight(1)
           .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 })
           .padding(0).backgroundColor(Color.Transparent).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
           .opacity(this.removing || !this.detailBookAvailable() ? (this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5) : 1)
@@ -763,21 +765,19 @@ export struct LocalBookDetail {
         Stack({ alignContent: Alignment.Center }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(this.shelfActionLabel()).width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
-          .height(this.book.contentKind === 'manga' ? undefined : 48)
           .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 })
           .padding({ left: this.book.contentKind === 'manga' ? 6 : 0, right: this.book.contentKind === 'manga' ? 6 : 0 })
           .fontFamily('ReaderNotoSansSCUIMedium')
           .fontSize(this.book.contentKind === 'manga' ? visual.detailSecondaryFontSize : 12)
           .lineHeight(this.book.contentKind === 'manga' ? visual.detailSecondaryLineHeight : undefined)
-          .minFontScale(this.book.contentKind === 'manga' ? Math.min(1, this.mangaFontScale()) : 0)
-          .maxFontScale(this.book.contentKind === 'manga' ? Math.max(1, this.mangaFontScale()) : 2)
+          .minFontScale(Math.min(1, this.mangaFontScale()))
+          .maxFontScale(Math.max(1, this.mangaFontScale()))
           .halfLeading(this.book.contentKind === 'manga').fontWeight(500)
           .textAlign(TextAlign.Center).fontColor(this.removing || this.cancellingAdd ? Color.Transparent : this.detailColor(this.inBookshelf ? 'TOK_MUTED' : 'TOK_GREEN',
             this.book.contentKind === 'manga' ? 'muted' : this.inBookshelf ? 'muted' : 'accent'))
           .backgroundColor(this.detailColor('TOK_SURFACE_PANEL_SOFT', 'soft')).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') });
         }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
-          .height(this.book.contentKind === 'manga' ? undefined : 48)
           .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 })
           .padding(0).backgroundColor(Color.Transparent).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
           .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
@@ -794,12 +794,10 @@ export struct LocalBookDetail {
           }
         }
         }, (identity: string): string => identity);
-      }.width('100%').height(this.book.contentKind === 'manga' ? undefined : 48)
+      }.width('100%')
         .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 }).alignItems(VerticalAlign.Center);
-    // The design dock reserves 9vp on every side. The viewport-bottom owner
-    // aligns this entire 68vp surface; this Stack centers the 48vp row inside
-    // the painted capsule and must not apply a second bottom alignment.
-    }.width('100%').height(this.book.contentKind === 'manga' ? undefined : DETAIL_DOCK_HEIGHT)
+    // The viewport-bottom owner aligns this complete measured surface.
+    }.width('100%')
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
       .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape()))

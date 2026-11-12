@@ -1,3 +1,6 @@
+import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
+import { readerInteractiveSafeBottom } from '../../ui/foundation/ReaderWindowMetrics';
+import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { BookshelfDetailNotice } from '../../features/bookshelf/ui/BookshelfDetailNotice';
 import { BookshelfDetailPresentation } from '../../features/bookshelf/presentation/BookshelfDetailPresentation';
 import { ReadingEntryPresentation } from '../../features/reading/presentation/ReadingEntryPresentation';
@@ -7,6 +10,10 @@ import type { ReaderRecoveryView } from '../../ui/feedback/ReaderRecoveryView';
 /** Presents each current recovery view in the shared nonmodal root slot. */
 @Component
 export struct ReaderJourneyRecoveryNotices {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private hostWidth: number = 0;
+  @State private hostHeight: number = 0;
+  @State private hostY: number = 0;
   @ObjectLink reading: ReadingEntryPresentation;
   @ObjectLink detail: BookshelfDetailPresentation;
   @Prop topInset: number = 0;
@@ -25,20 +32,22 @@ export struct ReaderJourneyRecoveryNotices {
   }
 
   build() {
+    Stack({ alignContent: Alignment.TopStart }) {
     if (this.interactive && ((this.startupRecoveryVisible && this.startupRecovery.visible) ||
       this.reading.recoveryNoticeVisible() || this.detailNoticeVisible() ||
       (this.mangaRecoveryVisible && this.mangaRecovery.visible))) {
+      Scroll() {
       Column({ space: 8 }) {
         if (this.startupRecoveryVisible && this.startupRecovery.visible) {
-          ReaderRecoveryNotice({ view: this.startupRecovery, tag: '旧版数据', actionLabel: '' });
+          ReaderRecoveryNotice({ layoutWidthVp: this.noticeWidth(), view: this.startupRecovery, tag: '旧版数据', actionLabel: '' });
         }
         if (this.detailNoticeVisible()) {
-          BookshelfDetailNotice({ presentation: this.detail,
+          BookshelfDetailNotice({ layoutWidthVp: this.noticeWidth(), presentation: this.detail,
             canInteract: (): boolean => this.interactive && this.canInteract() });
         }
         if (this.reading.recoveryNoticeVisible()) {
           ForEach([this.reading.recoveryNotice.generation], (generation: number): void => {
-            ReaderRecoveryNotice({ view: this.reading.recoveryNotice, actionLabel: this.reading.recoveryActionLabel,
+            ReaderRecoveryNotice({ layoutWidthVp: this.noticeWidth(), view: this.reading.recoveryNotice, actionLabel: this.reading.recoveryActionLabel,
               onReconcile: (_expected: number): void => {
                 if (this.interactive && this.canInteract()) this.reading.retryRecoveryNotice(generation);
               } });
@@ -46,7 +55,7 @@ export struct ReaderJourneyRecoveryNotices {
         }
         if (this.mangaRecoveryVisible && this.mangaRecovery.visible) {
           ForEach([this.mangaRecovery.generation], (generation: number): void => {
-            ReaderRecoveryNotice({ view: this.mangaRecovery, tag: '漫画换源',
+            ReaderRecoveryNotice({ layoutWidthVp: this.noticeWidth(), view: this.mangaRecovery, tag: '漫画换源',
               actionLabel: this.mangaRecoveryActionLabel, busy: this.mangaRecoveryBusy,
               onReconcile: (_expected: number): void => {
                 if (this.interactive && this.canInteract() && this.mangaRecoveryVisible) this.onMangaRecovery(generation);
@@ -54,8 +63,25 @@ export struct ReaderJourneyRecoveryNotices {
           }, (generation: number): string => generation.toString());
         }
       }
-      .width('100%').padding({ left: 16, right: 16, top: this.topInset + 12 })
-      .align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent);
+      .width('100%').padding({ left: 16, right: 16 });
+      }.width('100%').constraintSize({ maxHeight: this.availableHeight() })
+        .margin({ top: this.topInset + 12 }).scrollBar(BarState.Auto).clip(true)
+        .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
     }
+    }.width('100%').height('100%').zIndex(220).hitTestBehavior(HitTestMode.Transparent)
+      .onAreaChange((_old: Area, next: Area): void => {
+        this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height); this.hostY = readerPageAreaLength(next.globalPosition.y);
+      });
+  }
+
+  private noticeWidth(): number {
+    return Math.max(0, (this.hostWidth > 0 ? this.hostWidth : readerWindowMetrics().windowRect.width) - 32);
+  }
+
+  private availableHeight(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    const metrics = readerWindowMetrics();
+    return Math.max(0, Math.min(this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
+      metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY) - this.topInset - 12);
   }
 }

@@ -311,10 +311,17 @@ export struct ReaderChoiceRow {
       .accessibilitySelected(this.selected)
       .attributeModifier(new ReaderActionAccessibility(this.accessibilityLabel(), this.actionEnabled, this.selected, this.focusId.length > 0, undefined, 'nativeButton'))
       .accessibilityText(this.accessibilityLabel()).onClick((): void => this.choose())
-      .onAreaChange((_old: Area, next: Area): void => {
-        const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height as string);
-        if (Number.isFinite(height) && height > 0) this.onHeightChange(height);
-      });
+      .onAreaChange(this.heightAreaHandler());
+  }
+
+  private heightAreaHandler(): (_old: Area, next: Area) => void {
+    const report = this.onHeightChange;
+    const spec = this.specId, label = this.label, selected = this.selected;
+    return (_old: Area, next: Area): void => {
+      if (!this.mounted || spec !== this.specId || label !== this.label || selected !== this.selected) return;
+      const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height as string);
+      if (Number.isFinite(height) && height > 0) report(height);
+    };
   }
 
   @Builder

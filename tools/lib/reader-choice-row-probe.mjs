@@ -20,10 +20,10 @@ export function compileReaderChoiceLabelModifier(resolve=resolveReaderChoiceSpec
     resolve,{Start:'TextAlign.Start'},{Ellipsis:'TextOverflow.Ellipsis'},{BREAK_WORD:'WordBreak.BREAK_WORD'});
 }
 
-export function choiceRowProbe(resolve=resolveReaderChoiceSpec,source=choiceSource,properties=createArkUIPropertyRuntimeProbe()) {
+export function choiceRowProbe(resolve=resolveReaderChoiceSpec,source=choiceSource,properties=createArkUIPropertyRuntimeProbe(),windowMetrics=()=>({systemFontScale:1})) {
   const modifier=compileReaderChoiceLabelModifier(resolve,source);
   const probe=createReaderBuilderProbe(source,boundedMembers(source),
-    {...properties.sdk,...surfaceFontResolvers(),readerWindowMetrics:()=>({systemFontScale:1}),ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
+    {...properties.sdk,...surfaceFontResolvers(),readerWindowMetrics:windowMetrics,ReaderWindowCoordinator:{metrics:windowMetrics},
       resolveReaderChoiceSpec:resolve,ReaderChoiceLabelModifier:modifier},properties.hooks);
   return {...probe,properties,dependencies:{ReaderChoiceRow:probe.Component,resolveReaderChoiceSpec:resolve},
     hooks:{childSources:{ReaderChoiceRow:source},mountChildren:true,lifecycleChildren:true},

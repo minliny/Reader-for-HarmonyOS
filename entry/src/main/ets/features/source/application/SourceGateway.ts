@@ -129,10 +129,12 @@ export type SourceDebugOutcome = {
   durationMs: number;
 };
 
-/** Source definition at one authoritative read boundary, excluding diagnostic projections. */
+/** Source identity with stored raw JSON or a legacy export projection. */
 export interface SourceDefinitionSnapshot {
   sourceId: string;
   sourceVersion?: string;
+  /** True only when source.list returned the stored raw BookSource object. */
+  hasRawBookSource: boolean;
   text: string;
   identity: string;
 }
@@ -149,6 +151,8 @@ export class SourceGateway {
   private writeEvidence: ReaderWriteEvidence | undefined;
   private editableSourceId: string = '';
   private editableDefinitionIdentity: string | undefined;
+  private editableSourceVersion: string | undefined;
+  private editableBookSourceUrl: string | undefined;
 
   observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
@@ -341,12 +345,15 @@ export class SourceGateway {
       this.runtimeOwner.supportsCoreCapability?.('rules.mutation.source-management.v1') === true;
   }
   private async importOriginalSourceDocument(text: string, current: () => boolean,
-    identifyOriginal?: (operationId: string) => void): Promise<SourceImportSummary> {
+    identifyOriginal?: (operationId: string) => void,
+    editedSource?: { sourceId: string; expectedVersion: string }): Promise<SourceImportSummary> {
     const prepared=this.prepareSubscriptionDocument(text),failures: SourceImportFailure[]=prepared.failures.slice();
     const sourceIds: string[]=[];
     if (prepared.items.length===0) return {importedCount:0,sourceIds,failedCount:failures.length,failures};
     const steps: RuleSubscriptionStep[]=prepared.items.map((item): RuleSubscriptionStep => ({
-      method:'source.import',sourceIndex:item.index,params:{sourceId:item.sourceId,bookSource:item.bookSource} }));
+      method:'source.import',sourceIndex:item.index,params:editedSource === undefined ?
+        {sourceId:item.sourceId,bookSource:item.bookSource} :
+        {sourceId:editedSource.sourceId,bookSource:item.bookSource,expectedVersion:editedSource.expectedVersion} }));
     const result=await RulesMutationOwner.forRuntime(this.runtimeOwner).runSubscription(3,steps,
       prepared.failures.map((failure): {index:number;message:string} => ({index:failure.index,message:failure.message})),
       current,(method: string, params: JsonObject, data: JsonObject): void => {
@@ -414,7 +421,7 @@ export class SourceGateway {
     return rawSources;
   }
 
-  /** Core serializes the exact persisted raw BookSource objects. */
+  /** Core exports stored raw BookSource objects or legacy metadata projections. */
   async exportBookSources(sourceIds?: string[], current?: () => boolean): Promise<SourceExportResult> {
     const params: JsonObject = { format: 'json' };
     if (sourceIds !== undefined) {
@@ -449,8 +456,13 @@ export class SourceGateway {
   async loadEditableSource(sourceId: string, current?: () => boolean): Promise<string> {
     const definition = await this.readSourceDefinition(sourceId, current);
     if (definition === undefined) throw new Error('原始书源已删除，请重新选择');
+    if (!definition.hasRawBookSource) {
+      throw new Error('当前书源缺少可核对的完整原始 BookSource JSON，无法使用原始 JSON 编辑；现有规则与草稿已保留');
+    }
     this.editableSourceId = sourceId;
     this.editableDefinitionIdentity = definition.identity;
+    this.editableSourceVersion = definition.sourceVersion;
+    this.editableBookSourceUrl = this.optionalString(JSON.parse(definition.text) as JsonObject, 'bookSourceUrl');
     return definition.text;
   }
 
@@ -472,14 +484,15 @@ export class SourceGateway {
       if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('原始书源 JSON 无效');
       text = JSON.stringify(raw, null, 2);
     } else {
-      // Older list DTOs omit raw rules. Preserve the existing exact Core export
-      // capability so editing never reconstructs a partial BookSource.
+      // Legacy diagnostics retain their export projection. V1-only sources
+      // export minimal metadata, so this projection cannot admit raw editing.
       const exported = await this.exportBookSources([sourceId], active);
       const entries = JSON.parse(exported.data) as unknown[];
       if (!active() || entries.length !== 1) throw new Error('原始书源读取不完整，请重试');
       text = JSON.stringify(this.requireBookSourceObject(entries[0], 0), null, 2);
     }
-    return { sourceId, sourceVersion: this.optionalString(source, 'sourceVersion'), text,
+    return { sourceId, sourceVersion: this.optionalString(source, 'sourceVersion'),
+      hasRawBookSource: raw !== undefined && raw !== null, text,
       identity: JSON.stringify([sourceId, source['sourceVersion'] ?? null, source['name'] ?? null,
         source['baseUrl'] ?? null, source['enabled'] ?? null, source['enabledExplore'] ?? null, text]) };
   }
@@ -503,22 +516,27 @@ export class SourceGateway {
       throw new Error(`Edited book source is not valid JSON: ${(error as Error).message}`);
     }
     const bookSource = this.requireBookSourceObject(value, 0);
-    const editedId = this.requireBookSourceUrl(bookSource, 0);
-    if (editedId !== sourceId) {
-      throw new Error('书源地址是主键；编辑器不允许隐式迁移 bookSourceUrl');
-    }
+    const editedUrl = this.requireBookSourceUrl(bookSource, 0);
     const baseline = this.editableSourceId === sourceId ? this.editableDefinitionIdentity : undefined;
     if (baseline === undefined) throw new Error('请先重新读取书源，再保存编辑');
+    if (editedUrl !== this.editableBookSourceUrl) {
+      throw new Error('编辑器不允许更改原始书源的 bookSourceUrl；请保留原地址');
+    }
+    const expectedVersion = this.editableSourceVersion;
+    if (!this.supportsOriginalSourceImport() ||
+      this.runtimeOwner.supportsCoreCapability?.('source.import.conditional.v1') !== true ||
+      expectedVersion === undefined || !/^[0-9a-f]{64}$/.test(expectedVersion)) {
+      throw new Error('当前 Core 无法核定编辑前的完整书源版本；草稿保留，请更新 Core 后重新读取');
+    }
     const currentDefinition = await this.readSourceDefinition(sourceId);
     if (currentDefinition === undefined || currentDefinition.identity !== baseline) {
       throw new Error('书源已被修改或删除；草稿保留，请重新读取后核对');
     }
-    // source.import has no expected-version field. This protects observed
-    // drift at the read boundary while Core retains the write transaction.
+    // This early read gives an undispatched conflict. The frozen editor-open
+    // SHA is also checked by Core inside the actual original write transaction.
     const document = JSON.stringify(bookSource);
-    const summary = this.supportsOriginalSourceImport() ?
-      await this.importOriginalSourceDocument(document, (): boolean => true, identifyOriginal) :
-      await this.importBookSourceDocument(document);
+    const summary = await this.importOriginalSourceDocument(document, (): boolean => true,
+      identifyOriginal, { sourceId, expectedVersion });
     if (summary.failedCount > 0) {
       throw new Error(`source.import failed: ${summary.failures[0].message}`);
     }
@@ -527,6 +545,8 @@ export class SourceGateway {
     }
     this.editableSourceId = '';
     this.editableDefinitionIdentity = undefined;
+    this.editableSourceVersion = undefined;
+    this.editableBookSourceUrl = undefined;
   }
 
   /** Replay-only compatibility API. Product debug uses real `source.check.run` evidence. */

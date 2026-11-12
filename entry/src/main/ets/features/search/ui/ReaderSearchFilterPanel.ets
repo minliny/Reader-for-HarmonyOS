@@ -1,3 +1,4 @@
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import type { MeasureOptions } from '@ohos.measure';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
@@ -120,9 +121,12 @@ export struct ReaderSearchFilterPanel {
   private bodyHeightLimit(): number {
     const metrics = ReaderWindowCoordinator.metrics();
     const spec = this.sheetSpec();
+    const reset = resolveReaderButtonSpec('search-retry-progress');
+    const resetHeight = readerScaledControlHeight(reset.minHeight ?? 44,
+      reset.text.lineHeightFp ?? reset.text.fontSizeFp * 1.5, this.systemFontScale());
     const header = this.measuredHeaderHeight > 0 ? this.measuredHeaderHeight :
       spec.handleTop + spec.handleHeight + spec.handleBottom +
-      Math.max(spec.titleHeight, spec.titleLineHeight * Math.max(1, this.systemFontScale())) + spec.titleBottom;
+      Math.max(spec.titleHeight, spec.titleLineHeight * Math.max(1, this.systemFontScale()), resetHeight) + spec.titleBottom;
     return Math.max(0, Math.min(metrics.windowRect.height * .6, metrics.windowRect.height -
       readerVisualSafeTop(metrics) - readerVisualSafeBottom(metrics) - header - spec.contentBottom));
   }

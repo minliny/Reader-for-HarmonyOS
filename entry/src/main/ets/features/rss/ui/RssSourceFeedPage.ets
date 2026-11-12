@@ -142,7 +142,7 @@ export struct RssSourceFeedPage {
         .margin({ left: TOK_SPACE_XS, right: 3 });
     }
     .width('100%')
-    .height(64)
+    .constraintSize({ minHeight: 64 })
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
@@ -163,13 +163,13 @@ export struct RssSourceFeedPage {
       this.actionTarget('编辑源', (this.appThemeScheme === 'night' ? $r('app.media.rss_edit_theme_night') : $r('app.media.rss_edit')), (): void => this.onEditSource());
     }
     .width('100%')
-    .height(44)
+    .constraintSize({ minHeight: 44 })
     .alignItems(VerticalAlign.Center);
   }
 
   @Builder
   private actionTarget(label: string, icon: Resource, action: () => void) {
-    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-feed', label, icon, onAction: action });
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-feed', fillWidth: true, label, icon, onAction: action }).layoutWeight(1);
   }
 
   @Builder
@@ -187,7 +187,7 @@ export struct RssSourceFeedPage {
         onAction: (): void => this.onSourceOperations() });
     }
     .width('100%')
-    .height(34)
+    .constraintSize({ minHeight: 34 })
     .padding({ left: 2, right: 2 })
     .alignItems(VerticalAlign.Center);
   }

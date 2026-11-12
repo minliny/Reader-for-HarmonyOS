@@ -1,3 +1,4 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
@@ -305,7 +306,7 @@ export struct SharedDownloadPage {
   private pageOverlays() {
     if (this.batchRecovery.visible && this.appForeground && !this.covered && !this.modalBlocking()) {
       Column() {
-        ReaderRecoveryNotice({ view: this.batchRecovery, tag: '下载待处理', actionLabel: '刷新列表', busy: this.loading,
+        ReaderRecoveryNotice({ view: this.batchRecovery, layoutWidthVp: Math.max(0, this.pageViewportWidth() - this.leftInset() - this.rightInset()), maxHeightVp: Math.max(0, this.availableHeight() - this.contentTop() - this.bottomInset()), tag: '下载待处理', actionLabel: '刷新列表', busy: this.loading,
           onReconcile: (generation: number): void => {
             if (this.uiInputIsCurrent() && !this.modalBlocking() &&
               this.batchRecovery.visible && generation === this.batchRecovery.generation) this.onRefreshBatchRecovery(generation);
@@ -559,7 +560,7 @@ export struct SharedDownloadPage {
         .placeholderFont({ family: TYPE_DOWNLOAD_SEARCH.fontFamily, size: TYPE_DOWNLOAD_SEARCH.fontSizeFp, weight: TYPE_DOWNLOAD_SEARCH.fontWeight })
         .backgroundColor(Color.Transparent).caretColor(downloadVisualColor('ink', this.appThemeScheme)).borderRadius(0)
         .padding({ top: DOWNLOAD_VISUAL.searchPaddingY, bottom: DOWNLOAD_VISUAL.searchPaddingY, left: 0, right: 0 })
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.searchHeight - DOWNLOAD_VISUAL.borderWidth * 2,
+        .height(this.textControlHeight(DOWNLOAD_VISUAL.touchTarget,
           DOWNLOAD_VISUAL.searchLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
         .enterKeyType(EnterKeyType.Search).accessibilityText('搜索书架书籍')
         .onChange((value: string): void => this.changeSearchInput(value, identity));
@@ -570,7 +571,7 @@ export struct SharedDownloadPage {
           .accessibilityText('清除搜索')
           .onClick((): void => this.clearSearchInput(identity));
       }
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.searchHeight }).padding({ left: DOWNLOAD_VISUAL.searchPaddingX, right: DOWNLOAD_VISUAL.searchPaddingX }).borderRadius(DOWNLOAD_VISUAL.searchRadius)
+    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.searchHeight + DOWNLOAD_VISUAL.borderWidth * 2 }).padding({ left: DOWNLOAD_VISUAL.searchPaddingX, right: DOWNLOAD_VISUAL.searchPaddingX }).borderRadius(DOWNLOAD_VISUAL.searchRadius)
       .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
       .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.border.searchField', this.appThemeScheme) });
   }
@@ -850,9 +851,16 @@ export struct SharedDownloadPage {
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.chapterGroupHeight }).padding(DOWNLOAD_VISUAL.chapterGroupPadding).margin({ top: DOWNLOAD_VISUAL.chapterGroupTop }).backgroundColor(downloadVisualColor('soft', this.appThemeScheme));
   }
 
+  private chapterTextMinimum(): number {
+    const width = Math.max(0, this.pageViewportWidth() - this.contentLeftInset() - this.contentRightInset() -
+      DOWNLOAD_VISUAL.chapterPaddingX * 2 - (this.managing ? DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.chapterGap : 0));
+    return Math.min(width, 120 * this.fontScale());
+  }
+
   @Builder
   private chapterRow(book: () => DownloadBookView, chapter: () => DownloadChapterView, ownerGeneration: number = this.presentationGeneration) {
-    Row({ space: DOWNLOAD_VISUAL.chapterGap }) {
+    Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Start,
+      space: { main: LengthMetrics.vp(DOWNLOAD_VISUAL.chapterGap), cross: LengthMetrics.vp(DOWNLOAD_VISUAL.chapterGap) } }) {
       if (this.managing) {
         Stack({ alignContent: Alignment.Center }) {
         Checkbox().select(this.chapterSelected(chapter())).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
@@ -868,12 +876,13 @@ export struct SharedDownloadPage {
         }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget);
       }
       Column({ space: 0 }) {
-        Row({ space: DOWNLOAD_VISUAL.statusGap }) {
+        Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+          space: { main: LengthMetrics.vp(DOWNLOAD_VISUAL.statusGap), cross: LengthMetrics.vp(DOWNLOAD_VISUAL.statusGap) } }) {
           Text(chapter().title).fontFamily(TYPE_DOWNLOAD_CHAPTER_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_CHAPTER_TITLE.fontWeight)
             .fontSize(TYPE_DOWNLOAD_CHAPTER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number).halfLeading(true)
-            .fontColor(downloadVisualColor(!chapter().localComplete && chapter().queueState === 'inProgress' ? 'green' : 'ink', this.appThemeScheme)).layoutWeight(1)
+            .fontColor(downloadVisualColor(!chapter().localComplete && chapter().queueState === 'inProgress' ? 'green' : 'ink', this.appThemeScheme)).flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())
             .id(this.focusKey(this.chapterReadingFocusKey(chapter(), 'title'))).focusable(!this.managing)
-            .constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget })
+            .constraintSize({ minWidth: this.chapterTextMinimum(), maxWidth: '100%', minHeight: DOWNLOAD_VISUAL.touchTarget })
             .onClick((): void => { if (!this.managing) this.showReadTarget(book(), chapter(), ownerGeneration); });
           if (this.currentChapterForBook(book())?.key === chapter().key) {
             Text('当前阅读').fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -886,7 +895,8 @@ export struct SharedDownloadPage {
         Text(downloadChapterDetailLabel(book().contentKind, chapter())).fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
           .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
           .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight });
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+      }.flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())
+        .constraintSize({ minWidth: this.chapterTextMinimum() }).alignItems(HorizontalAlign.Start);
       if (!this.managing) {
         Row({ space: DOWNLOAD_VISUAL.chapterTailGap }) {
         Button({ type: ButtonType.Normal }) {
@@ -940,7 +950,7 @@ export struct SharedDownloadPage {
         Button({ type: ButtonType.Normal }) {
           Text('重试').fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
             .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.textActionHeight }).padding(0).borderRadius(0)
+        }.constraintSize({ minWidth: DOWNLOAD_VISUAL.touchTarget, minHeight: DOWNLOAD_VISUAL.touchTarget }).padding(0).borderRadius(0)
           .backgroundColor(Color.Transparent).onClick((): void => {
             if (!this.uiInputIsCurrent(ownerGeneration)) return;
             if (this.fontsFailed) { this.prepareFonts(); return; }

@@ -2,14 +2,14 @@ import curves from '@ohos.curves';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { PathShape } from '@ohos.arkui.shape';
-import { FrameCallback } from '@kit.ArkUI';
+import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { readerVisualSafeTop, readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
 import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
-import { readerSearchControlHeight, readerSearchActionWidth } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerSearchControlHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -440,7 +440,9 @@ export struct ReaderLibrarySearchSurface {
   private surfaceValue(): number { return Math.max(0, Math.min(1, this.surfaceProgress())); }
   private titleOpacity(): number { return 1 - Math.min(1, this.surfaceValue() / .45); }
   private barHeight(): number {
-    return this.spec.barHeight(this.controlHeight());
+    const height = this.spec.barHeight(this.controlHeight());
+    return this.searchMounted && this.model.currentOwner() !== 0 ?
+      height + (this.searchLaneHeight() - this.controlHeight()) * this.surfaceValue() : height;
   }
   private trailingWidth(): number {
     return this.blend(bookshelfHeaderSpec().actionExtent,
@@ -563,8 +565,16 @@ export struct ReaderLibrarySearchSurface {
   private searchLaneWidth(): number {
     return Math.max(0, this.cardContentWidth() - this.searchLaneLeft() - this.spec.barPaddingRight);
   }
-  private fieldWidth(): number { return Math.max(0, this.searchLaneWidth() - this.actionWidth() - 5); }
-  private laneTop(): number { return (this.barHeight() - this.controlHeight()) / 2; }
+  private stackedSearch(): boolean {
+    return this.searchLaneWidth() - this.actionWidth() - 5 < SEARCH_CONTROL_MIN_TARGET * 2 + 18;
+  }
+  private searchLaneHeight(): number {
+    return this.stackedSearch() ? this.controlHeight() * 2 + 5 : this.controlHeight();
+  }
+  private fieldWidth(): number {
+    return this.stackedSearch() ? this.searchLaneWidth() : Math.max(0, this.searchLaneWidth() - this.actionWidth() - 5);
+  }
+  private laneTop(): number { return this.spec.barPaddingTop; }
   // The icon describes the current destination state. The closing track may
   // still retire the search content, but an idle bookshelf owns a search entry.
   private presentedSearch(): boolean { return this.mode !== 'idle'; }
@@ -657,7 +667,8 @@ export struct ReaderLibrarySearchSurface {
         .onClick(this.moreAction(this.identity, this.navigationGeneration, this.mounting, this.moreIdentity));
       if (this.searchMounted && this.model.currentOwner() !== 0) {
         Stack({ alignContent: Alignment.TopStart }) {
-          Row({ space: 5 }) {
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.End, alignItems: ItemAlign.Center,
+            space: { main: LengthMetrics.vp(5), cross: LengthMetrics.vp(5) } }) {
             ForEach([this.fieldIdentity()], (key: string) => {
               // The closing track keeps the field mounted after search mode ends.
               ReaderSearchField({ variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
@@ -685,8 +696,8 @@ export struct ReaderLibrarySearchSurface {
               .accessibilityText(this.model.sweeping ? '停止搜索' : '搜索')
               .accessibilityLevel(this.inputInteractive() ? 'auto' : 'no-hide-descendants')
               .onClick(this.searchAction(this.model.currentOwner(), this.fieldIdentity()));
-          }.width(this.searchLaneWidth()).height(this.controlHeight()).alignItems(VerticalAlign.Center);
-        }.width(this.searchLaneWidth() * this.surfaceValue()).height(this.controlHeight())
+          }.width(this.searchLaneWidth()).height(this.searchLaneHeight());
+        }.width(this.searchLaneWidth() * this.surfaceValue()).height(this.barHeight() - this.spec.barHeightExtra)
           .position({ x: this.searchLaneLeft(), y: this.laneTop() })
           .translate({ x: -22 * (1 - this.surfaceValue()) })
           .clip(true)

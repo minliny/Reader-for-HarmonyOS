@@ -123,7 +123,7 @@ export struct ReaderDialogSurface {
             .fontFamily(TYPE_SELECT_OPTION.fontFamily).fontWeight(TYPE_SELECT_OPTION.fontWeight).fontSize(TYPE_SELECT_OPTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center).accessibilityLevel('no');
-        }.width(52).height(readerScaledControlHeight(36, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale()))
+        }.constraintSize({ minWidth: 52 }).height(readerScaledControlHeight(44, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale()))
           .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .accessibilityText('关闭')
           .onClick((): void => this.onClose());

@@ -29,6 +29,7 @@ export struct PageBackBar {
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop title: string = '';
+  @Prop trailingWidthVp: number = 44;
   @Prop centered: boolean = false;
   @Prop @Watch('onRaisedRecipeChanged') floating: boolean = false;
   /** Rounded fixed bars keep their geometry without inheriting lift. */
@@ -105,7 +106,7 @@ export struct PageBackBar {
           .lineHeight(this.variant === 'mangaDirectory' ? visual.headerLineHeight : this.floating ? 28 : TYPE_PAGE_TITLE.lineHeightFp as number)
           .halfLeading(this.variant === 'mangaDirectory')
           .minFontScale(this.variant === 'mangaDirectory' ? Math.min(1, this.mangaFontScale()) : 0)
-          .maxFontScale(this.variant === 'mangaDirectory' ? Math.max(1, this.mangaFontScale()) : 2)
+          .maxFontScale(this.variant === 'mangaDirectory' ? Math.max(1, this.mangaFontScale()) : Math.max(1, this.fontScale()))
           .fontColor(this.titleColor.length > 0 ? this.titleColor : this.variant === 'mangaDirectory' ? mangaDirectoryColor('ink', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -119,7 +120,9 @@ export struct PageBackBar {
           if (this.trailing !== undefined) { this.trailing(); }
         }.width(DOWNLOAD_HEADER_SLOT_WIDTH);
       } else if (this.trailing !== undefined) {
-        Stack({ alignContent: Alignment.Center }) { this.trailing(); }.width(this.variant === 'mangaDirectory' ? visual.headerSlot : 44).height(this.variant === 'mangaDirectory' ? visual.headerSlot : 44);
+        Stack({ alignContent: Alignment.Center }) { this.trailing(); }.width(this.variant === 'mangaDirectory' ? visual.headerSlot : this.trailingWidthVp)
+          .height(this.variant === 'mangaDirectory' ? visual.headerSlot : undefined)
+          .constraintSize({ minHeight: this.variant === 'mangaDirectory' ? undefined : 44 });
       } else if (this.centered) {
         Blank().width(this.variant === 'mangaDirectory' ? visual.headerSlot : 44).height(this.variant === 'mangaDirectory' ? visual.headerSlot : 44);
       }

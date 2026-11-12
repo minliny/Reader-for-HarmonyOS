@@ -129,7 +129,10 @@ export class DrawerSurfaceSpec {
   readonly titleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
   readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
   readonly titleMinFontScale: number = 0;
-  readonly titleMaxFontScale: number = 2;
+  get titleMaxFontScale(): number {
+    const scale = readerWindowMetrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 1 ? scale : 1;
+  }
   readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;
   readonly titleBottom: number = 0;
   readonly sideTitleFontFamily: string = 'ReaderNotoSerifSCBold';
