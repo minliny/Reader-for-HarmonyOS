@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { ReaderParagraphLayoutOwner } from '../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
-import { ReaderPhysicalPaginationOwner } from '../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
-import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { ReaderParagraphLayoutOwner } from '../entry/src/main/ets/features/reading/ui/ReaderParagraphLayoutOwner.ts';
+import { ReaderPhysicalPaginationOwner } from '../entry/src/main/ets/features/reading/ui/ReaderPhysicalPaginationOwner.ts';
+import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
+import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
 
 // Whole native paragraph context survives restored anchors, bounds and a giant
 // paragraph. Cursor belongs to the production owner, not a UI-side shadow copy.
@@ -75,7 +75,7 @@ const input=(request,draft,extra={})=>({key,requestedAnchor:request,chapterStart
 
 // Actual SDK-parsed LRE delegates both producers to the real owner classes.
 class Paragraph {constructor(...values){this.values=values;}}
-const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 const Owner=productionMotionMethods(file,['prepareNextMeasurementBatch','observeMeasuredPhysicalPage'],{
   MeasurementParagraph:Paragraph,ReadingSurfaceLayoutMap,TextController:class {},
   MAX_MEASUREMENT_BATCH_PARAGRAPHS:8,MAX_MEASUREMENT_BATCH_UTF16:12288});

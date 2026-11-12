@@ -13,7 +13,7 @@ const current=n=>ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderRun
 function visit(n){if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(n.operatorToken.kind))assert.equal(current(n.left)||current(n.right),false,'late identity checks use authoritative static admission, without throwing getter');ts.forEachChild(n,visit);}visit(tree);
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
 const Index=productionMotionMethods(path,['isCurrentRuntime','aboutToDisappear','hasUnknownShelfWrite','shelfRecovery','emptyShelfRecovery'],{ReaderRuntimeOwner:Runtime});
-const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost');
+const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/application/BookshelfHost.ets','BookshelfHost');
 function fixture(){const calls=[],old={bookAcquisitions:()=>({endSearch:()=>calls.push('old-search')}),readingEntryPreparations:()=>({setPaused:()=>calls.push('old-pause')})};installed=old;
   const index=Object.assign(new Index(),{bookshelfHost:new ActualBookshelfHost(()=>{},()=>false),mountedRuntimeOwner:old,shelfOperationOwner:old,shelfOperation:{receipt:{receipt:{confirmation:'unknown'}},generation:4,cleanupWarning:''},
     dismissBookRemovalDialog:()=>calls.push('delete-dismiss'),searchHost:{close:()=>calls.push('search-host')},

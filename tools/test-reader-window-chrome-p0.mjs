@@ -8,7 +8,7 @@ const { readFileSync } = await import('node:fs');
 const { fileURLToPath } = await import('node:url');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 
 
@@ -16,7 +16,7 @@ const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.ur
 
 const coordinator = read('entry/src/main/ets/app/ReaderWindowCoordinator.ts');
 const index = read('entry/src/main/ets/pages/Index.ets');
-const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
+const experience = read('entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets');
 
 
 // Read the actual outer Stack modifier chain. A count over the whole Index
@@ -60,7 +60,9 @@ for (const scheme of ['day','night','day']) {
 }
 // Verify failure remains inside the common bookshelf content slot, rather than
 // silently regaining a separate page root that this palette check would miss.
-const content = indexType.members.find(node => node.name?.getText(tree) === 'bookshelfContent');
+const shelfSceneTree = parse(read('entry/src/main/ets/features/bookshelf/ui/BookshelfScene.ets'));
+const shelfScene = shelfSceneTree.statements.find(node => node.name?.getText(shelfSceneTree) === 'BookshelfScene');
+const content = shelfScene.members.find(node => node.name?.getText(shelfSceneTree) === 'shelfContent');
 assert.ok(content);
 const calls = (node, name, sourceTree = tree) => {
   const result = []; const visit = item => {
@@ -68,17 +70,22 @@ const calls = (node, name, sourceTree = tree) => {
     ts.forEachChild(item, visit);
   }; visit(node); return result;
 };
-const shellContent = indexType.members.find(node => node.name?.getText(tree) === 'bookshelfShellContent');
+const shellContent = shelfScene.members.find(node => node.name?.getText(shelfSceneTree) === 'build');
+const indexContent = indexType.members.find(node => node.name?.getText(tree) === 'indexContent');
+const pageSurfaces = indexType.members.find(node => node.name?.getText(tree) === 'pageSurfaces');
 assert.ok(shellContent);
-assert.equal(calls(build, 'this.bookshelfShellContent').length, 1);
-assert.equal(calls(shellContent, 'BookshelfShell').length, 1);
-assert.equal(calls(shellContent, 'this.bookshelfContent').length, 1, 'shared shell receives the readiness content slot');
-const shelfShellTree = parse(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets'));
+assert.equal(calls(build, 'this.indexContent').length, 1);
+assert.equal(calls(indexContent, 'this.pageSurfaces').length, 1);
+assert.equal(calls(indexContent, 'ArkWebExecutionHost').length, 1);
+assert.equal(calls(pageSurfaces, 'BookshelfScene').length, 1);
+assert.equal(calls(shellContent, 'BookshelfShell', shelfSceneTree).length, 1);
+assert.equal(calls(shellContent, 'this.shelfContent', shelfSceneTree).length, 1, 'shared shell receives the readiness content slot');
+const shelfShellTree = parse(read('entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets'));
 assert.equal(calls(shelfShellTree, 'MainTabShell', shelfShellTree).length, 1, 'bookshelf chrome uses the actual app palette owner');
-const failure = calls(content, 'BookshelfStatusContent'); assert.equal(failure.length, 1);
-const failedProp = failure[0].arguments[0].properties.find(node => node.name?.getText(tree) === 'failed');
-assert.equal(failedProp.initializer.getText(tree), 'this.bookshelfLoadFailed');
-const status = read('entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets');
+const failure = calls(content, 'BookshelfStatusContent', shelfSceneTree); assert.equal(failure.length, 1);
+const failedProp = failure[0].arguments[0].properties.find(node => node.name?.getText(shelfSceneTree) === 'failed');
+assert.equal(failedProp.initializer.getText(shelfSceneTree), 'this.read.failed');
+const status = read('entry/src/main/ets/features/bookshelf/ui/BookshelfStatusContent.ets');
 syntax.componentCollection.customComponents.add('SearchSpinner');
 const { owner: failureContent } = createReaderBuilderProbe(status, ['build'], { READER_FLOATING_TOP_BAR_HEIGHT: 58 });
 Object.assign(failureContent, { failed:true, appThemeScheme:'night', onRetry() {},
@@ -95,7 +102,7 @@ assert.ok([...failureContent.nodes.values()].every(node => node.backgroundColor 
 if(selectedCase==='root-edges'){
  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'Index',['readerOwnsWindowEdges','mangaOwnsWindowEdges']);
  const cases=[['detail',false,'detail',undefined,false,false],['detail',false,'detail',{contentKind:'text'},true,false],['directory',false,'detail',{contentKind:'manga'},true,false],['directory',false,'detail',{contentKind:'text'},false,false],['directory',true,'readerControl',undefined,true,false],['reading',true,'detail',undefined,true,false],['reading',true,'detail',undefined,true,true]];
- for(const [route,active,target,detail,reader,manga]of cases){const o=Object.assign(new Owner(),{route,readingSessionActive:active,directoryReturnTarget:target,detailBook:detail,readingContentKind:manga?'manga':'text'});assert.equal(o.readerOwnsWindowEdges(),reader);assert.equal(o.mangaOwnsWindowEdges(),manga);}
+ for(const [route,active,target,detail,reader,manga]of cases){const o=Object.assign(new Owner(),{route,directoryReturnTarget:target,mangaSourceSwitch:{selectionVisible:false},readingEntry:{sessionActive:active,book:detail,contentKind:manga?'manga':'text'}});assert.equal(o.readerOwnsWindowEdges(),reader);assert.equal(o.mangaOwnsWindowEdges(),manga);}
  const modifiers=new Map();let e=build.body.statements[0].expression;while(ts.isCallExpression(e)&&ts.isPropertyAccessExpression(e.expression)){modifiers.set(e.expression.name.text,e.arguments);e=e.expression.expression;}
  const keys=['padding','expandSafeArea','ignoreLayoutSafeArea'];for(const key of keys)assert.ok(modifiers.has(key),'actual Index root '+key);
  const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>name+'.'+String(key)})]));

@@ -9,17 +9,18 @@ const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const { mangaGridBuilderMembers, mangaRowBuilderMembers, mangaGridProbeDependencies, emptyMangaGridState } = await import('./lib/manga-directory-grid-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { localBookDetailSdk } = await import('./lib/local-book-detail-sdk-probe.mjs');
-const { openReaderDirectoryNavigation, readerDirectoryScopeKey,
-  readerDirectoryToggleCollapsed, readerDirectoryCollapsedIds } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts');
-const { readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts');
+const { readerDirectoryScopeKey } = await import('../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts');
+const { openReaderDirectoryNavigation, readerDirectoryToggleCollapsed, readerDirectoryCollapsedIds } =
+  await import('./lib/reader-directory-navigation-session-probe.mjs');
+const { readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts');
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
-const listPath = file('features/reading/ReaderDirectoryNavigationList.ets');
+const listPath = file('features/reading/ui/ReaderDirectoryNavigationList.ets');
 const listSource = readFileSync(listPath, 'utf8');
 
 
@@ -55,7 +56,7 @@ const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
 syntax.propCollection.set('ReaderDirectoryNavigationList', new Set([...listSource.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(match => match[1])));
-const navigationSource = readFileSync(file('features/reading/ReaderDirectoryNavigationSurface.ets'), 'utf8');
+const navigationSource = readFileSync(file('features/reading/ui/ReaderDirectoryNavigationSurface.ets'), 'utf8');
 for (const mangaDisplay of [false, true])
 for (const [mangaCatalogDisplay, mangaCatalogNarrow] of [[false, false], [true, false], [true, true]]) {
   const properties = createArkUIPropertyRuntimeProbe();

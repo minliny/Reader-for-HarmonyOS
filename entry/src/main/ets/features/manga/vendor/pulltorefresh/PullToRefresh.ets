@@ -209,7 +209,7 @@ export struct PullToRefresh {
 
   private resetPull(animated: boolean): void {
     const reset = (): void => { this.trYTop = 0; this.trYBottom = 0; };
-    if (animated) animateTo({ duration: Math.max(0, this.animationDuration) }, reset);
+    if (animated) this.getUIContext().animateTo({ duration: Math.max(0, this.animationDuration) }, reset);
     else reset();
     this.state = IS_FREE;
     this.rawDistance = 0;

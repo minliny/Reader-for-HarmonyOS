@@ -33,6 +33,18 @@ for(const name of ['ReadingSessionFlowGateway.ts','ReadingOfflineGateway.ts','Re
  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/'+name,import.meta.url),'utf8');assert.ok(classifiedConsole(source,name)>0,'selected actual gateway owns the audited sinks');
  for(const injection of ["console.warn('failure', error);",'console.error(\n error\n);','console.warn(`failure ${error.message}`);'])assert.throws(()=>classifiedConsole(source+'\n'+injection,name),/unclassified public console/,'quote style, multiline and raw template detail cannot bypass real AST sink check');
 }
-const ui=readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8');assert.equal(classifiedConsole(ui,'LocalReadingExperience.ets'),0,'selected reading UI has no raw public console sink');
+const ui=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8');
+classifiedConsole(ui,'LocalReadingExperience.ets');
+assert.throws(()=>classifiedConsole(ui+'\nconsole.error(error.message);','LocalReadingExperience.ets'),/unclassified public console/);
+
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const lines=[];
+const Coordinator=selectedProductionMethods(
+ new URL('../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts',import.meta.url),
+ 'ReaderTtsSessionCoordinator',['logTtsEvent'],{diagnosticCodeOf,console:{error:line=>lines.push(line)}});
+const coordinator=new Coordinator();
+coordinator.logTtsEvent('callback.start','https://user:password@example.test/tts?token=secret');
+coordinator.logTtsEvent('error-stop.host','Bearer private-session-value');
+assert.deepEqual(lines,['[ReaderTTS] stage=callback.start code=NETWORK','[ReaderTTS] stage=error-stop.host code=OPERATION_FAILED']);
 
 }

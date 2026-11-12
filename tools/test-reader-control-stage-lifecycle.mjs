@@ -7,10 +7,10 @@ async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { stripTypeScriptTypes }=await import('node:module');
-const sessionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const gesturePolicy=await import('../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts');
-const geometryPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
-const layoutPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlLayoutRebase.ts');
+const sessionPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const gesturePolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts');
+const geometryPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const layoutPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts');
 
 // Execute the actual ArkTS adapter methods, not a mirrored state machine. Only
 // ArkUI syntax, decorators, and render DSL are removed. The fake UI context
@@ -20,7 +20,7 @@ const layoutPolicy=await import('../entry/src/main/ets/features/reading/ReaderCo
 // the production reducer samples.
 // This is a deterministic adapter test, not evidence of native frame scheduling.
 const stageSource = readFileSync(new URL(
-  '../entry/src/main/ets/features/reading/ReaderControlMotionStage.ets', import.meta.url), 'utf8');
+  '../entry/src/main/ets/features/reading/ui/ReaderControlMotionStage.ets', import.meta.url), 'utf8');
 const dependencies = { ...sessionPolicy, ...gesturePolicy, ...geometryPolicy, ...layoutPolicy,
   FrameCallback: class {}, TouchType: { Down: 0, Up: 1, Move: 2, Cancel: 3 } };
 const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 1e-8,

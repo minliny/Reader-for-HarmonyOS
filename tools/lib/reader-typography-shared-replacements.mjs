@@ -6,19 +6,20 @@ import { auditTypographyConsumers } from './reader-typography-consumer-audit.mjs
 import { foundationTypographyCarrier } from './foundation-typography-carrier-probe.mjs';
 import { boundedTypographyCarrier } from './bounded-typography-carrier-probe.mjs';
 import { typographyLayoutMethod } from './reader-typography-layout-successor.mjs';
+import { currentSharedUiFile, currentSharedUiImport, originalSharedUiFile } from './shared-ui-source-paths.mjs';
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const registry = JSON.parse(readFileSync(new URL('../fixtures/design/typography-carrier-successors.json', import.meta.url), 'utf8'));
 assert.equal(registry.schemaVersion, 1);
-const successor = (file, expected) => registry.entries.find(entry => entry.origin.path === file && entry.origin.method === expected.method && entry.origin.kind === expected.kind && entry.origin.text === expected.text);
+const successor = (file, expected) => registry.entries.find(entry => entry.origin.path === originalSharedUiFile(file) && entry.origin.method === expected.method && entry.origin.kind === expected.kind && entry.origin.text === expected.text);
 function currentCarrierText(entry) {
   if (entry.id !== 'local-import-body-3') return entry.target.text;
   // The registry is a hash-bound historical relocation witness. Only this
   // existing hint gained the current task-blocked branch; its complete native
   // tuple and original witness remain unchanged.
-  const path = 'entry/src/main/ets/features/bookshelf/LocalImportDialog.ets';
+  const path = 'entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets';
   const text = "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'";
   assert.equal(entry.kind, 'sameFile');
   assert.deepEqual(entry.origin, { path, method: 'fileSelectionPanel', kind: 'Text', text });
@@ -47,7 +48,7 @@ function callsMethod(source, file, origin, target) {
 export function typographyCarrierMethod(file, expected, pageSource) {
   const entry = successor(file, expected);
   if (entry?.kind === 'sameFile') {
-    assert.equal(entry.target.path, file);
+    assert.equal(currentSharedUiFile(entry.target.path), currentSharedUiFile(file));
     for (const [origin, target] of entry.methodEdges ?? [[entry.origin.method, entry.target.method]]) callsMethod(pageSource, file, origin, target);
     const text = currentCarrierText(entry);
     const carriers = auditTypographyConsumers(pageSource, file).filter(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === text);
@@ -67,10 +68,13 @@ export function typographyCarrierMethod(file, expected, pageSource) {
  * rows/counts, physical values or AUTO omissions are changed. */
 export function sharedTypographyReplacement(file, expected, pageSource, targetSource) {
   const entry = successor(file, expected);
+  if (!entry || entry.kind === 'sameFile') return undefined;
+  const target = currentSharedUiFile(entry.target.path);
+  const module = currentSharedUiImport(currentSharedUiFile(file), entry.origin.path, entry.module, entry.target.path);
   if (entry?.kind === 'bounded' || entry?.kind === 'foundation') {
     for (const [origin, target] of entry.methodEdges ?? []) callsMethod(pageSource, file, origin, target);
     const { tree, method } = methodOf(pageSource, file, entry.bindingMethod);
-    assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
+    assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === module &&
       node.importClause?.namedBindings?.elements?.some(element => element.name?.text === entry.component)), `${entry.id}: actual finite component import`);
     let found = false;
     const visit = node => {
@@ -85,11 +89,12 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
     };
     visit(method);
     assert.ok(found, `${entry.id}: real finite binding, not a comment or unrelated shared node`);
-    return entry.kind === 'foundation' ? foundationTypographyCarrier(entry,file,expected,pageSource,targetSource) : boundedTypographyCarrier(entry, file, expected, pageSource, targetSource);
+    const current = target === entry.target.path ? entry : { ...entry, target: { ...entry.target, path: target } };
+    return entry.kind === 'foundation' ? foundationTypographyCarrier(current,file,expected,pageSource,targetSource) : boundedTypographyCarrier(current, file, expected, pageSource, targetSource);
   }
   if (entry?.kind !== 'shared') return undefined;
   const { tree, method } = methodOf(pageSource, file, expected.method); let found = false;
-  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
+  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === module &&
     node.importClause?.namedBindings?.elements?.some(element => element.name?.text === entry.component)), `${file}: actual shared implementation import`);
   const visit = node => {
     if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) && node.expression?.getText(tree) === entry.component) {
@@ -104,7 +109,6 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
   };
   visit(method);
   assert.ok(found, `${file}/${expected.method}: actual page consumes the finite shared replacement`);
-  const target = entry.target.path;
   const source = targetSource ?? readFileSync(new URL('../../'+target, import.meta.url), 'utf8');
   const actual = auditTypographyConsumers(source, target).find(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === entry.target.text);
   assert.ok(actual, 'shared actual message carrier');

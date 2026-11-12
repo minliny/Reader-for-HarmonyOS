@@ -6,7 +6,7 @@ import { productionMangaDirectoryPressFeedback } from './lib/manga-directory-pre
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryPressFeedback.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets', import.meta.url), 'utf8');
 const prototype = readFileSync(new URL('../../Reader-UI/design/manga-directory/reference.css', import.meta.url), 'utf8');
 assert.equal(createHash('sha256').update(prototype).digest('hex'), '6a37247662ce1bdb2805d5dc4b768b3676ebd0ab77a06b16b55647d859c174c7',
   'paired UI reference preserves the original approved prototype CSS bytes');

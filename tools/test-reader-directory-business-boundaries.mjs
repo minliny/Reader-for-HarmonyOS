@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {BookshelfCatalogUpdate}=await import('../entry/src/main/ets/features/bookshelf/BookshelfCatalogUpdate.ts');
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const {BookshelfCatalogUpdate}=await import('../entry/src/main/ets/features/bookshelf/application/BookshelfCatalogUpdate.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const file=name=>fileURLToPath(new URL(`../entry/src/main/ets/${name}`,import.meta.url));

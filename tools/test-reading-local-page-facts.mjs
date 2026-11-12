@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
 
 const key = {
   sourceId: 'local', bookId: 'local-page-facts', chapterIndex: 3,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
 const calls=[],raw={sourceId:'local',bookId:'book',chapters:[{chapterIndex:1,state:'completed'}]};
 const runtime={async request(method,params,options){calls.push({method,params,options});return{data:method==='cache.book.status'?raw:{bookmarks:[{
  bookName:'Book',bookAuthor:'Author',time:5,chapterIndex:1,chapterPos:3,chapterName:'One',content:'mark',bookText:'text'}]}};}};

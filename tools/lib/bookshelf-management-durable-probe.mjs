@@ -37,7 +37,7 @@ export async function managementFixture(existing, suppliedRuntime, gatewaySource
    finishWrite(){fs.renameSync(this.tmp,this.path);io.finishes++;if(options.loseFinishAt===io.finishes)throw Error('rename accepted; ACK lost');}failWrite(){io.failWrites++;try{fs.unlinkSync(this.tmp);}catch{}}}};
  const replaceReaderAtomicSnapshot=compile('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo},true);
  const sha256Hex=compile('app/BundledBookSourceSupply.ts','sha256Hex',{cryptoFramework:{createMd:()=>{const hash=createHash('sha256');return{update:async({data})=>{hash.update(data);},digest:async()=>({data:new Uint8Array(hash.digest())})};}},util:{TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}}}},true);
- const Store=compile('features/bookshelf/BookshelfManagementIntentStore.ts','BookshelfManagementIntentStore',{
+ const Store=compile('features/bookshelf/application/BookshelfManagementIntentStore.ts','BookshelfManagementIntentStore',{
   ReaderRuntimeOwner:Runtime,...scheduler,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sha256Hex},true);
  let coldCommandTail=Promise.resolve();
  async function coldCommand(method,params={}) {
@@ -74,14 +74,14 @@ export async function managementFixture(existing, suppliedRuntime, gatewaySource
   }});
  installed=runtime;
  const ReaderCoreGateway=compile('app/ReaderCoreGateway.ts','ReaderCoreGateway',{ReaderRuntimeOwner:Runtime},true);
- const Gateway=compile('features/bookshelf/BookshelfManagementGateway.ts','BookshelfManagementGateway',{
-  ReaderRuntimeOwner:Runtime,ReaderCoreGateway,BookshelfManagementIntentStore:Store},true,gatewaySource??read('features/bookshelf/BookshelfManagementGateway.ts'));
+ const Gateway=compile('features/bookshelf/application/BookshelfManagementGateway.ts','BookshelfManagementGateway',{
+  ReaderRuntimeOwner:Runtime,ReaderCoreGateway,BookshelfManagementIntentStore:Store},true,gatewaySource??read('features/bookshelf/application/BookshelfManagementGateway.ts'));
  const projectPersistedReceipt=compile('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts,true);
- const types=compile('features/bookshelf/BookshelfManagementOrchestrator.ets','*',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,
+ const types=compile('features/bookshelf/application/BookshelfManagementOrchestrator.ets','*',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,
   BookshelfManagementGateway:Gateway,...facts,projectPersistedReceipt,hilog:{error(){}}},true);
- const Host=compile('features/bookshelf/BookshelfHost.ets','BookshelfHost',{ReaderRuntimeOwner:Runtime,ReaderCoreGateway,
+ const Host=compile('features/bookshelf/application/BookshelfHost.ets','BookshelfHost',{ReaderRuntimeOwner:Runtime,ReaderCoreGateway,
   BookshelfManagementOrchestrator:types.BookshelfManagementOrchestrator},true,
-  read('features/bookshelf/BookshelfHost.ets').replace(/^export \{[\s\S]*?from ['"][^'"]+['"];\n/gm,''));
+  read('features/bookshelf/application/BookshelfHost.ets').replace(/^export \{[\s\S]*?from ['"][^'"]+['"];\n/gm,''));
  const store=Store.forRuntime(runtime),gateway=new Gateway(runtime,store);
  return{root,files,core,runtime,Runtime,options,calls,io,Store,Gateway,Host,ReaderCoreGateway,Orchestrator:types.BookshelfManagementOrchestrator,
   EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:types.EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,store,gateway,command,sha256Hex,

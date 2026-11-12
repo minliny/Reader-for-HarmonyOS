@@ -76,7 +76,7 @@ function runtimeFixture(cachedBytes) {
 
 try{
 if(id==='profile'){
-const Paths=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url),['manifestPath','mangaCacheProfile'],{MANGA_SCRIPT_CACHE_PROFILE:'script-bgra-v2'});
+const Paths=productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts',import.meta.url),['manifestPath','mangaCacheProfile'],{MANGA_SCRIPT_CACHE_PROFILE:'script-bgra-v2'});
 const paths=new Paths();
 assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('identity-v1')),'/chapter/manifest.json');
 assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('bytes-v1')),'/chapter/manifest-script-bgra-v2.json');

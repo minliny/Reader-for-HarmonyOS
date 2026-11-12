@@ -5,13 +5,13 @@ export async function fixture(existing) {
  const f=await rulesFixture(true,existing);
  const capabilities=new Set((await f.command('core.info')).data.capabilities);
  f.runtime.supportsCoreCapability=cap=>f.options.capability!==false && capabilities.has(cap);
- const Gateway=compile('features/rss/RssGateway.ts','RssGateway',{ReaderRuntimeOwner:f.Runtime,RulesMutationOwner:f.Owner,isReaderCoreTransactionPendingError},true);
+ const Gateway=compile('features/rss/application/RssGateway.ts','RssGateway',{ReaderRuntimeOwner:f.Runtime,RulesMutationOwner:f.Owner,isReaderCoreTransactionPendingError},true);
  const rss=new Gateway(f.runtime);
  const projectPersistedReceipt=compile('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',{projectOperationFacts,projectCommitReadback},true);
  const common={RssGateway:Gateway,ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,projectOperationFacts,projectPersistedReceipt,isReaderCoreTransactionPendingError,hilog:{warn(){},error(){}}};
- const Route=compile('features/rss/RssRouteOperationHost.ts','RssRouteOperationHost',common,true);
- const Orchestrator=compile('features/rss/RssOrchestrator.ets','RssOrchestrator',{...common,RssRouteOperationHost:Route},true);
- const editorTypes=compile('features/rss/RssSubscriptionEditorOrchestrator.ets','*',common,true);
+ const Route=compile('features/rss/application/RssRouteOperationHost.ts','RssRouteOperationHost',common,true);
+ const Orchestrator=compile('features/rss/application/RssOrchestrator.ets','RssOrchestrator',{...common,RssRouteOperationHost:Route},true);
+ const editorTypes=compile('features/rss/application/RssSubscriptionEditorOrchestrator.ets','*',common,true);
  const current=()=>f.Runtime.isCurrent(f.runtime);
  return {...f,rss,Gateway,Route,Orchestrator,Editor:editorTypes.RssSubscriptionEditorOrchestrator,emptyEditor:editorTypes.EMPTY_RSS_EDITOR_SNAPSHOT,current,
   recover:(expected,retry=false)=>rss.recoverOriginalRss(current,expected,retry)};

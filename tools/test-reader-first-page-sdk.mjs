@@ -1,10 +1,10 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const selected=selectContractCases({'sdk-lowering':{description:'Actual component member lowering and viewport/chapter/stale/adjacent first-page admission',resources:[]},'accessor-diagnostic':{description:'Diagnostic source-only ordinary-member policy; does not prove SDK lowering',resources:[]}});
 async function run(id){
-if(id==='accessor-diagnostic'){const {default:assert}=await import('node:assert/strict');const{readFileSync}=await import('node:fs');assert.doesNotMatch(readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8'),/private (?:get|set) measuring\w+\(/);return;}
+if(id==='accessor-diagnostic'){const {default:assert}=await import('node:assert/strict');const{readFileSync}=await import('node:fs');assert.doesNotMatch(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8'),/private (?:get|set) measuring\w+\(/);return;}
 const { resolveEtsLoaderRoot, virtualFilePath }=await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner }=await import('./lib/reader-measurement-owner-fixture.mjs');
-const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts');
+const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageCoordinator.ts');
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync, existsSync }=await import('node:fs');
 const { createRequire, stripTypeScriptTypes }=await import('node:module');
@@ -12,7 +12,7 @@ const { createRequire, stripTypeScriptTypes }=await import('node:module');
 // Exercise the SDK's actual @Component member lowering. A normal TypeScript
 // class keeps accessors which ArkUI V1 silently drops, hiding this cold-entry bug.
 const sdk = resolveEtsLoaderRoot();
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const names = ['automaticReadingState', 'automaticReadingConfiguration', 'currentMeasurementGeneration', 'currentMeasurementSelection',
   'beginMeasurement', 'admitReaderViewportSize', 'hasMeasuredViewport',
   'hasCurrentMaterializedChapter', 'isSelectionCurrent', 'requireMeasurementLayoutMap',

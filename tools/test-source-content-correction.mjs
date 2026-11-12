@@ -3,11 +3,11 @@ import { coreAdmissionFailureSummary, httpResponseFailureSummary } from '../entr
 import { registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
-const {ReadingChapterWindow}=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
-const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
+const {ReadingChapterWindow}=await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const Owner=productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url)),
  ['request','requestDirect','bookAcquisitions','readingEntryPreparations','captureReadingContentValidity'],

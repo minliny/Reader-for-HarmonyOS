@@ -5,9 +5,10 @@ async function run(id){
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
  const base=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
  if(id==='preparation'){
-  const names=['onReaderPageGestureStateChanged','updateBookTurnGesturePresentation','queuePageTurnPreparation','drainPageTurnPreparationQueue','drainRapidPageTurn'];
-  const Owner=selectedProductionMethods(new URL('LocalReadingExperience.ets',base),'ReadingExperience',names,{
-   readerPageTransitionUsesPreparedPages:()=>true,readerRapidPageTurnDirection:()=> 'next',hilog:{info(){}}});
+  const { drainReaderPagePreparation } = await import('../entry/src/main/ets/features/reading/ui/ReaderPagePreparationCoordinator.ts');
+  const names=['retryPageTurnPreparation','onReaderPageGestureStateChanged','updateBookTurnGesturePresentation','queuePageTurnPreparation','drainPageTurnPreparationQueue','drainRapidPageTurn'];
+  const Owner=selectedProductionMethods(new URL('ui/LocalReadingExperience.ets',base),'ReadingExperience',names,{
+   drainReaderPagePreparation, readerPageTransitionUsesPreparedPages:()=>true,readerRapidPageTurnDirection:()=> 'next',hilog:{info(){}}});
   for(const bookTurn of [false,true]){
    const begun=[];
    const owner=Object.assign(new Owner(),{pageTurnGestureState:{phase:'idle'},pageTurnFrozenRevision:1,pageTurnRenderRevision:1,pageTurnSessionCapsuleFrozen:true,
@@ -33,8 +34,8 @@ async function run(id){
    assert.equal(begun.length,2);
   }
  }else{
-  const {startReaderPagePan,updateReaderPagePanInPlace}=await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
-  const Layer=selectedProductionMethods(new URL('ReaderPageInteractionLayer.ets',base),'ReaderPageInteractionLayer',['onReadinessChanged'],{updateReaderPagePanInPlace});
+  const {startReaderPagePan,updateReaderPagePanInPlace}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
+  const Layer=selectedProductionMethods(new URL('ui/ReaderPageInteractionLayer.ets',base),'ReaderPageInteractionLayer',['onReadinessChanged'],{updateReaderPagePanInPlace});
   const delivered=[];const state=startReaderPagePan(390,300,100,1,844);
   updateReaderPagePanInPlace(state,-80,0,0,220,100,0,10);
   const owner=Object.assign(new Layer(),{gestureState:state,activePointerId:1,pointerRejected:true,tapOnlyPointer:false,interactionEnabled:true,

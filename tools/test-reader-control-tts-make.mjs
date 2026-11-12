@@ -1,19 +1,59 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
  'clip-difference':{description:'Pure Timer minus painted Speed clip sets across source/scroll/reversal',resources:[]},
+ 'quick-vertical-budget':{description:'Actual Phone and Tablet panel budgets fit every Quick TTS row and keep a shortened brightness rail clear of navigation',resources:[]},
  'preset-controls':{description:'Actual SDK timer/rate preset and stepper callbacks, ranges and retained admission',resources:[]}
 };
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
-const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const actors=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
-const paint=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
-const tts=await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
+const geometry=await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const actors=await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+const paint=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+const tts=await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
 
 
-if(selectedCase==='clip-difference'){
+if(selectedCase==='quick-vertical-budget'){
+const panelGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
+const motion=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const Panel=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),
+  'ReaderControlPanel',['controlPanelHeight','controlQuickHeight','brightnessTrackHeight','clampBrightness','roundBrightness',
+    'commitBrightnessTap','updateBrightnessDrag'],panelGeometry);
+function fixture(expanded,width,fullPanelHeight){
+  const changes=[];
+  const owner=Object.assign(new Panel(),{layout:{fullPanelHeight,quickPanelHeight:Math.min(fullPanelHeight,330)},isExpanded:()=>expanded,
+    brightnessDragStartPercent:1,onBrightnessChange:value=>changes.push(value)});
+  const bounds=motion.readerControlMotionBounds(width,owner.controlPanelHeight(),19,owner.controlQuickHeight());
+  const frame=motion.sampleReaderControlMotionComposition({visibilityProgress:1,expansionProgress:0},bounds);
+  owner.frame=()=>frame;
+  return {owner,frame,changes};
+}
+for(const [expanded,width] of [[false,364],[true,720]]){
+  const {frame}=fixture(expanded,width,650);
+  const quick=geometry.sampleReaderControlTts(0,frame.content.width);
+  assert.equal(frame.content.height,quick.contentHeight);
+  for(const section of [quick.playback,quick.timer,quick.speed]){
+    assert.ok(section.y+section.height<=frame.content.height,'all three authored Quick actors survive the actual host clip');
+  }
+  assert.ok(frame.content.y+frame.content.height<=frame.navigation.y,'Quick content stays above navigation');
+  assert.equal(frame.brightness.height,panelGeometry.READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT);
+}
+const {owner,frame,changes}=fixture(true,720,260);
+assert.ok(frame.brightness.y+frame.brightness.height<=frame.navigation.y,'short rail cannot cover navigation');
+const trackHeight=owner.brightnessTrackHeight();
+assert.ok(trackHeight>0&&trackHeight<panelGeometry.READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT);
+owner.commitBrightnessTap({fingerList:[{localY:trackHeight}]});
+owner.commitBrightnessTap({fingerList:[{localY:0}]});
+owner.updateBrightnessDrag(-trackHeight);
+assert.deepEqual(changes,[1,100,100],'tap and drag share the shortened track endpoints');
+const tiny=fixture(true,720,200);
+assert.equal(tiny.frame.brightness.opacity,0,'a rail with no usable track takes no input');
+tiny.owner.commitBrightnessTap({fingerList:[{localY:0}]});
+assert.deepEqual(tiny.changes,[]);
+
+}else if(selectedCase==='clip-difference'){
 const inside = (rects, x, y) => rects.some(r => x > r.x && x < r.x + r.width && y > r.y && y < r.y + r.height);
 const intersection = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
   Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
@@ -48,7 +88,7 @@ assert.ok(crossed && clippedSpeed, 'test covers both real crossing and invisible
 
 }else{
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
 const methods = ['p', 'fullInput', 'sharedInput', 'effectiveRate', 'timerSummary', 'timerCaption', 'twoDigits',
   'timerPresetSelected', 'timerPresetLabel', 'timerPresetIsSelected', 'chooseTimerPreset', 'timerPreset',
   'cycleQuickTimer', 'timerStepper', 'timerStepButton', 'stepTimer',

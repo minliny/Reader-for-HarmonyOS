@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import * as auto from '../entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts';
+import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
+import * as auto from '../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
 const candidates = ['p', 'frame', 'effectiveSpeedSeconds', 'speedRow', 'speedControlsWidth', 'speedControlsHeight',
   'speedControlsX', 'speedControlsY', 'speedSliderWidth', 'speedSliderX', 'speedMinusX', 'speedMaxLabelX',
   'speedPlusX', 'speedLabelY', 'speedActor', 'speedActorId', 'speedStepButton', 'changeSpeedStep'];

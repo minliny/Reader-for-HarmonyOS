@@ -3,8 +3,8 @@ import {readFileSync} from 'node:fs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function designRoles(){
  const {loadReaderTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
- const fontFamilies=await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
- const typographySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets',import.meta.url),'utf8');
+ const fontFamilies=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+ const typographySource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets',import.meta.url),'utf8');
  const design=JSON.parse(readFileSync(new URL('../../Reader-UI/design/source-switch/source-switch.visual.json',import.meta.url))); 
 const roleKeys = {
   HEADING: 'title', BOOK_TITLE: 'bookTitle', METADATA: 'author', CAPTION: 'metadata',
@@ -30,20 +30,25 @@ const novelTuples = Object.entries(roleKeys).map(([name, key]) => {
  for(const [name,fontFamily,fontWeight,fontSizeFp,lineHeightFp] of novelTuples)assert.deepEqual({...roles['TYPE_SOURCE_SWITCH_NOVEL_'+name]},{fontFamily,fontWeight,fontSizeFp,lineHeightFp,letterSpacingFp:undefined,scalePolicy:'system',source:'appBaseline'},name+' selected design record');
 }
 async function candidateRoles(){
- const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
- const {boundedMembers,boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs');
  const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
- const {readerFoundationTokens}=await import('./lib/reader-foundation-control-probe.mjs');
- const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
- const source=readFileSync(new URL('../entry/src/main/ets/features/source/CandidateRow.ets',import.meta.url),'utf8');
+ const carriers=[['source','NAME'],['38','LATENCY'],[' ms','LATENCY_UNIT'],['chapter','CHAPTER']];
  for(const mutate of [false,true]){
-  const roles={...readerTypographyRoles};for(const key of ['TYPE_SOURCE_SWITCH_NAME','TYPE_SOURCE_SWITCH_LATENCY','TYPE_SOURCE_SWITCH_CHAPTER'])if(mutate)roles[key]={...roles[key],fontFamily:'Probe-'+key,fontSizeFp:17,fontWeight:600,lineHeightFp:26};
-  const latency=readFileSync(new URL('../entry/src/main/ets/features/source/LatencyBar.ets',import.meta.url),'utf8');
-  const p=boundedSurfaceSdk();const latencyDeps={...p.deps,...readerFoundationTokens,readerAppColor,Alignment:{TopStart:'start'}};
-  const LatencyBar=createReaderBuilderProbe(latency,boundedMembers(latency),latencyDeps,p.hooks).Component;
-  const {owner}=createReaderBuilderProbe(source,boundedMembers(source),{...p.deps,...readerFoundationTokens,...roles,readerAppColor,LatencyBar,LATENCY_TEXT_W:28,CHAPTER_TEXT_W:100,VerticalAlign:{Center:'center'},TextAlign:{End:'end'},TextOverflow:{Ellipsis:'ellipsis'}},{...p.hooks,mountChildren:true,childSources:{...p.hooks.childSources,LatencyBar:latency}});
-  Object.assign(owner,{appThemeScheme:'day',sourceName:'source',bookName:'book',currentChapterTitle:'chapter',latencyMs:38,isCurrent:false,offline:false,timeout:false});owner.initialRender();
-  for(const [text,key] of [['source','NAME'],['38ms','LATENCY'],['chapter','CHAPTER']]){const node=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===text);assert.ok(node,text);const r=roles['TYPE_SOURCE_SWITCH_'+key];assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[r.fontFamily,r.fontWeight,r.fontSizeFp,r.lineHeightFp]);}
+  const roles={};
+  for(const [,suffix] of carriers){
+   const key='TYPE_SOURCE_SWITCH_NOVEL_'+suffix,role=readerTypographyRoles[key];
+   roles[key]=mutate?{...role,fontFamily:'Probe-'+key,fontSizeFp:17,fontWeight:600,lineHeightFp:26}:role;
+  }
+  const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,roles);
+  const row=new deps.SourceSwitchCandidateRow({sourceId:'fixture-source',bookUrl:'/book',sourceName:'source',
+   latestChapterTitle:'chapter',latencyKind:'search',latencyMs:38});
+  const owner=new deps.SourceSwitchNovelRow(undefined,{row,reduceMotion:true});owner.initialRender();
+  for(const [label,suffix] of carriers){
+   const node=p.nodes(owner).find(n=>n.type==='Text'&&n.create===label);assert.ok(node,label);
+   const role=roles['TYPE_SOURCE_SWITCH_NOVEL_'+suffix];
+   assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);
+  }
  }
 }
-for(const id of selectContractCases({'design-roles':'Independent selected source-switch design record → semantic roles','candidate-roles':'Actual compact CandidateRow role propagation with mutation'})){await ({'design-roles':designRoles,'candidate-roles':candidateRoles})[id]();recordContractCasePass(id);}
+for(const id of selectContractCases({'design-roles':'Independent selected source-switch design record → semantic roles','candidate-roles':'Live source-switch drawer row role propagation with mutation'})){await ({'design-roles':designRoles,'candidate-roles':candidateRoles})[id]();recordContractCasePass(id);}

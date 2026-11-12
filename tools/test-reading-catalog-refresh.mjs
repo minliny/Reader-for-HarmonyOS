@@ -5,15 +5,15 @@ const { ProductionHost, setRuntime }=await import('./lib/reading-entry-owner-pro
 const { readingPrefetchOwnerProbe }=await import('./lib/reading-prefetch-owner-probe.mjs');
 
 const { registerHooks }=await import('node:module');
-const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-p1-motion-method-probe.mjs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-const { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence } = await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const { readingSessionDocuments } = await import('../entry/src/main/ets/features/reading/ReadingSessionDocuments.ts');
-const { readReadingCatalog } = await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
+const { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+const { readingSessionDocuments } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionDocuments.ts');
+const { readReadingCatalog } = await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
 const file = name => new URL(`../entry/src/main/ets/${name}`,import.meta.url);
 const deferred=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 const pause=()=>new Promise(setImmediate);
@@ -56,7 +56,7 @@ function fixture(cachedSourceVersion=sourceVersion){
  for(const [alias,key] of [['remoteCatalogRefreshAt','refreshAt'],['remoteCatalogRefreshAttemptAt','attemptAt'],['remoteCatalogRefreshInFlight','refreshInFlight']])Object.defineProperty(page,alias,{get:()=>authority[key]});
  return{runtime,owner,page,calls,warnings,gate:g=>{tocGate=g;},fail:v=>{fail=v;},catalog:()=>catalog};
 }
-const View=productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),['onRemoteCatalogChanged','prepareRemoteCatalogNearEnd','hydrateEntryCatalog','admitTocEntries','readingTocEntries','adjacentChapterIndex','turnNextPage','queuePageTurnPreparation','drainPageTurnPreparationQueue','completePreparedPageTurn','notifyReadingPresentationReady'],{
+const View=productionMotionMethods(file('features/reading/ui/LocalReadingExperience.ets'),['onRemoteCatalogChanged','prepareRemoteCatalogNearEnd','hydrateEntryCatalog','admitTocEntries','readingTocEntries','adjacentChapterIndex','turnNextPage','queuePageTurnPreparation','drainPageTurnPreparationQueue','completePreparedPageTurn','notifyReadingPresentationReady'],{
  sameRemoteSessionEvidence,LOCAL_READING_SOURCE_ID:'local',readerPageTransitionUsesPreparedPages:()=>true,errorMessageOf:e=>e.message,hilog:{warn(){},error(){}},
  PreparedReaderPageTurn:class{constructor(direction,page,context,key,originChapterIndex,originPageStartScalar,generation){Object.assign(this,{direction,page,context,key,originChapterIndex,originPageStartScalar,generation});}}
 });
@@ -171,7 +171,7 @@ await check('first-session navigation only evicts its own process bodies and pre
  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',session:fresh},runtime),r=reader(gateway);
  const docs=readingSessionDocuments(runtime),other={...chapter(955),bookId:'other-book'};
  docs.configure(sourceId,other.bookId,[955],()=>true);docs.admit(other,true);
- const Gesture=productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),['preparedPageTurn']);
+ const Gesture=productionMotionMethods(file('features/reading/ui/LocalReadingExperience.ets'),['preparedPageTurn']);
  const candidate=chapter(954),prepared={direction:'previous',context:{chapter:candidate},key:{chapterIndex:954,contentVersion:candidate.contentVersion},generation:7,originPageStartScalar:0,originChapterIndex:955};
  Object.assign(r.v,{activePagePointerId:3,pageTurnAdmittedPrepared:prepared,preparedPreviousPage:prepared,
   pageTurnGestureState:{phase:'dragging'},knownContentVersion:()=>candidate.contentVersion,isPreparedPageTurnFresh:()=>true});
@@ -252,7 +252,7 @@ await check('source/book/rule/reordered/retargeted or variable-mutated catalogs 
 }finally{}
 }
 async function runPure(id){
-const {registerHooks}=await import('node:module');registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});const {canAppendRemoteReadingCatalog}=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const {registerHooks}=await import('node:module');registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});const {canAppendRemoteReadingCatalog}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
 const sourceId='source',bookId='book',sourceVersion='rule-v8';
 const seed={sourceId,bookId,sourceVersion,detailUrl:'https://source.invalid/book',title:'终宋',author:'作者'};
 // Synthetic data with the real incident's indices: seven preceding non-body

@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
-import * as state from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderTtsState.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts';
+import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
 import { ReaderTtsConfigurationHost } from './lib/reader-tts-configuration-fixture.mjs';
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 

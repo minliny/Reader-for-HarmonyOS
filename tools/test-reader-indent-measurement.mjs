@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
-import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
+import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
 import { installReaderLayoutOwners } from './lib/reader-measurement-owner-fixture.mjs';
 import {
   readerAppearanceParagraphContentScalarOffset,
   readerAppearanceParagraphDisplayText,
-} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 
 // Execute production measurement with controlled ArkUI UTF-16 line metrics.
 // This verifies scalar/continuation semantics, not actual platform line wrapping.

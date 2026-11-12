@@ -6,16 +6,16 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
-import { MangaStripProjection } from '../entry/src/main/ets/features/manga/MangaStripProjection.ts';
+import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
 import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 // Only Core/controller acquisition, timers, native frames/rectangles and haptics
 // are controlled ports. Chapter sequencing, retention, position admission,
 // callback identity and SDK-generated closure wiring are actual production code.
 const root = new URL('../entry/src/main/ets/', import.meta.url);
-const surfaceURL = new URL('features/manga/MangaReadingSurface.ets', root);
-const shellURL = new URL('features/shell/ReaderShell.ets', root);
+const surfaceURL = new URL('features/manga/ui/MangaReadingSurface.ets', root);
+const shellURL = new URL('features/reading/ui/ReaderShell.ets', root);
 const indexURL = new URL('pages/Index.ets', root);
 const source = readFileSync(surfaceURL, 'utf8');
 const require = createRequire(import.meta.url);
@@ -87,7 +87,7 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
     async cancel(){ports.cancelCount++;this.pending=false;}};
   const entries=[{index:0,url:'chapter-0',title:'Chapter 0',navigable:true},{index:1,url:'',title:'Group',navigable:false},{index:4,url:'chapter-4',title:'Chapter 4',navigable:true}];
   Object.assign(owner,{controller:origin,data,runtime:{hasCurrentCatalogProjection:()=>true},sourceId:'s',bookId:'b',
-    mounted:true,opened:true,horizontal:false,zoom:1,viewportWidth:300,viewportHeight:450,
+    mounted:true,appForeground:true,opened:true,horizontal:false,zoom:1,viewportWidth:300,viewportHeight:450,
     first:0,last:1,fitPreference:'width',recoveryRequired:false,recovering:false,exiting:false,
     panel:'',panelPhase:'closed',chapterEnd:false,windowChromeActive:true,windowChromeOverlayActive:false,
     loginRequiredForControls:false,error:'',restoringAnchor:false,layoutGeneration:0,appliedLayoutGeneration:0,

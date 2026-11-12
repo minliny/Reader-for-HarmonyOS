@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
+import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
-const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 let active = false, admission;
 const host = { isBackgroundPlaybackActive: () => active,
   waitForBackgroundPlaybackAdmission: () => admission.promise };
-const Reader = productionMotionMethods(source, ['onAppForegroundChanged'], {
+const Reader = selectedProductionMethods(source, 'ReadingExperience', ['onAppForegroundChanged'], {
   ReaderRuntimeOwner: { current: () => ({ getTtsHost: () => host }) },
 });
 const deferred = () => {
@@ -22,6 +22,7 @@ function fixture(enabled = true) {
   const reader = Object.assign(new Reader(), {
     mounted: true, appForeground: false, ttsBackgroundPlayback: enabled, ttsCoordinator: coordinator,
     bookmarkRollbackGeneration: 0, onControlInputBoundaryChanged() {}, cancelAutomaticPageStart() {},
+    cancelSourceSwitchCompletion() {},
     stopReaderTtsAudition() {}, finishSessionCapsuleMorph() {}, finishBookmarkRollback() {},
     captureReadingRecordElapsed() {}, clearReadingRecordTimer() {}, flushReadingRecord: async () => {},
     pauseAutoPage() {}, logTtsFailure() {},

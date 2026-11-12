@@ -25,7 +25,7 @@ const {readFileSync} = await import('node:fs');
 const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
 const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
 const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
@@ -181,7 +181,7 @@ const {readFileSync} = await import('node:fs');
 const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
 const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
 const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
@@ -189,9 +189,9 @@ const saved=(id='b')=>({sourceId:'s',bookId:id,title:'书',author:'作者',added
 const {addedBookPreparationCoreFixture}=await import('./lib/added-book-preparation-core-fixture.mjs');
 const {fixture}=addedBookPreparationCoreFixture({assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick});
 function detailSdk(f){
- const detailSource=source('features/bookshelf/LocalBookDetail.ets');
+ const detailSource=source('features/reading/ui/LocalBookDetail.ets');
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){for(const [key,value]of Object.entries(params))if(key!=='onRemove'&&key!=='onCancelAdd')this.params[key]=value;}}
- const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/bookshelf/BookDirectoryPage.ets')}}).owner;
+ const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/reading/ui/BookDirectoryPage.ets')}}).owner;
  Object.assign(parent,f.page,{detailToc:[],remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',offlineMutationActiveKey:'',directoryReturnTarget:'detail',hasUnknownShelfWrite:()=>f.page.hasUnknownShelfWrite(),
   detailReadableAdmission:book=>f.page.detailReadableAdmission(book),detailShelfMessage:book=>f.page.detailShelfMessage(book),detailShelfAdmissionIdentity:()=>f.page.detailShelfAdmissionIdentity(),isCurrentDetailShelfAdmission:id=>f.page.isCurrentDetailShelfAdmission(id),requestDetailShelfMutation:()=>f.page.requestDetailShelfMutation(),cancelDetailBookAddition:()=>f.page.cancelDetailBookAddition(),detailBookKey:book=>f.page.detailBookKey(book)});
  parent.detailContent();const child=[...parent.children.values()][0];
@@ -267,7 +267,7 @@ const {readFileSync} = await import('node:fs');
 const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
 const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
 const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
@@ -275,9 +275,9 @@ const saved=(id='b')=>({sourceId:'s',bookId:id,title:'书',author:'作者',added
 const {addedBookPreparationCoreFixture}=await import('./lib/added-book-preparation-core-fixture.mjs');
 const {fixture}=addedBookPreparationCoreFixture({assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick});
 function detailSdk(f){
- const detailSource=source('features/bookshelf/LocalBookDetail.ets');
+ const detailSource=source('features/reading/ui/LocalBookDetail.ets');
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){for(const [key,value]of Object.entries(params))if(key!=='onRemove'&&key!=='onCancelAdd')this.params[key]=value;}}
- const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/bookshelf/BookDirectoryPage.ets')}}).owner;
+ const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/reading/ui/BookDirectoryPage.ets')}}).owner;
  Object.assign(parent,f.page,{detailToc:[],remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',offlineMutationActiveKey:'',directoryReturnTarget:'detail',hasUnknownShelfWrite:()=>f.page.hasUnknownShelfWrite(),
   detailReadableAdmission:book=>f.page.detailReadableAdmission(book),detailShelfMessage:book=>f.page.detailShelfMessage(book),detailShelfAdmissionIdentity:()=>f.page.detailShelfAdmissionIdentity(),isCurrentDetailShelfAdmission:id=>f.page.isCurrentDetailShelfAdmission(id),requestDetailShelfMutation:()=>f.page.requestDetailShelfMutation(),cancelDetailBookAddition:()=>f.page.cancelDetailBookAddition(),detailBookKey:book=>f.page.detailBookKey(book)});
  parent.detailContent();const child=[...parent.children.values()][0];
@@ -347,7 +347,7 @@ const {readFileSync} = await import('node:fs');
 const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
 const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
 const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
@@ -355,9 +355,9 @@ const saved=(id='b')=>({sourceId:'s',bookId:id,title:'书',author:'作者',added
 const {addedBookPreparationCoreFixture}=await import('./lib/added-book-preparation-core-fixture.mjs');
 const {fixture}=addedBookPreparationCoreFixture({assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick});
 function detailSdk(f){
- const detailSource=source('features/bookshelf/LocalBookDetail.ets');
+ const detailSource=source('features/reading/ui/LocalBookDetail.ets');
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){for(const [key,value]of Object.entries(params))if(key!=='onRemove'&&key!=='onCancelAdd')this.params[key]=value;}}
- const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/bookshelf/BookDirectoryPage.ets')}}).owner;
+ const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/reading/ui/BookDirectoryPage.ets')}}).owner;
  Object.assign(parent,f.page,{detailToc:[],remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',offlineMutationActiveKey:'',directoryReturnTarget:'detail',hasUnknownShelfWrite:()=>f.page.hasUnknownShelfWrite(),
   detailReadableAdmission:book=>f.page.detailReadableAdmission(book),detailShelfMessage:book=>f.page.detailShelfMessage(book),detailShelfAdmissionIdentity:()=>f.page.detailShelfAdmissionIdentity(),isCurrentDetailShelfAdmission:id=>f.page.isCurrentDetailShelfAdmission(id),requestDetailShelfMutation:()=>f.page.requestDetailShelfMutation(),cancelDetailBookAddition:()=>f.page.cancelDetailBookAddition(),detailBookKey:book=>f.page.detailBookKey(book)});
  parent.detailContent();const child=[...parent.children.values()][0];

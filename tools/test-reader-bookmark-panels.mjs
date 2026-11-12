@@ -3,9 +3,9 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 async function fullProjectionCase() {
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
-  const { projectReaderDirectoryEntries } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts');
-  const { projectReaderBookmarkRows, readerBookmarkLoadState } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
-  const Full = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets', import.meta.url),
+  const { projectReaderDirectoryEntries } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts');
+  const { projectReaderBookmarkRows, readerBookmarkLoadState } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
+  const Full = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets', import.meta.url),
     'FullDirectoryPanel', ['switchTab', 'rebuildProjection', 'applySearch', 'handleControl', 'selectBookmark'],
     { projectReaderDirectoryEntries, projectReaderBookmarkRows, readerBookmarkLoadState });
   const entries = [
@@ -47,8 +47,8 @@ async function bookmarkRowCase() {
   const { readFileSync } = await import('node:fs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-  const { sampleReaderControlBookmark } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
-  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets', import.meta.url), 'utf8');
+  const { sampleReaderControlBookmark } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
+  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets', import.meta.url), 'utf8');
   const { ts, options } = installedEtsCompiler();
   const tree = ts.createSourceFile('ReaderBookmarkRow.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const constants = ['BOOKMARK_ROW_HEIGHT', 'BOOKMARK_PENDING_LABEL'];

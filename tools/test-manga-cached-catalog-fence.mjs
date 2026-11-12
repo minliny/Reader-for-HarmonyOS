@@ -7,13 +7,13 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 
 // Real SDK-emitted Surface methods, Controller/protection owner and the real
 // content-mutation fence. Only Core/Host transport and native layout are seams.
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-const read = name => readFileSync(new URL(name, root), 'utf8');
+const read = name => readFileSync(mangaSourceUrl(name), 'utf8');
 function load(name, dependencies = {}) {
   const source = read(name + '.ts').replace(/^import[\s\S]*?;\n/gm, '')
     .replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
@@ -121,7 +121,7 @@ for (const scenario of cases) {
   await controller.close(); preparation.close();
 }
 
-const hostSource = read('../reading/ReadingEntryHost.ts');
+const hostSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingEntryHost.ts', import.meta.url), 'utf8');
 const oldHostSource = hostSource.replace('this.refreshMangaDirectoryDisplay(refreshDirectoryDisplay, false)', 'this.refreshMangaDirectoryDisplay(refreshDirectoryDisplay)');
 assert.notEqual(hostSource, oldHostSource);
 for (const legacy of [false, true]) {

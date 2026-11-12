@@ -7,15 +7,15 @@ const { readFileSync } = await import('node:fs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
-const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisualSafeLeft, readerVisualSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisualSafeLeft, readerVisualSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { actualReaderPageShell } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
 const {readerFoundationTokens}=await import('./lib/reader-foundation-control-probe.mjs');
-const {SurfaceHorizontalFrame}=await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const {SurfaceHorizontalFrame}=await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const policy=actualReaderPageShell();
 if(selectedCase==='discover-frame'||selectedCase==='rss-frame'){
  let metrics=new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,1280,800));const rss=selectedCase==='rss-frame',path=new URL('../entry/src/main/ets/features/'+(rss?'rss/RssPage.ets':'discover/DiscoverPage.ets'),import.meta.url),name=rss?'RssPage':'DiscoverPage';
@@ -29,7 +29,7 @@ if(selectedCase==='discover-frame'||selectedCase==='rss-frame'){
 // measured width must replace the larger physical window, including vp strings.
 const controls = foundationControls();
 let metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 1280, 800));
-const standard = read('entry/src/main/ets/features/common/ReaderStandardPage.ets');
+const standard = read('entry/src/main/ets/ui/layout/ReaderStandardPage.ets');
 const { Component } = createReaderBuilderProbe(standard, boundedMembers(standard), {
   ...controls.dependencies, ReaderWindowCoordinator: { metrics: () => metrics },
 }, controls.hooks);

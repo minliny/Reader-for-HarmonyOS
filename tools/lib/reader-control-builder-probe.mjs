@@ -1,7 +1,18 @@
+import { remoteReadingEntryKind, remoteReadingSeedForSession, remoteReadingSeedForShelf } from '../../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts';
+import { JsonImportPresentation, bindJsonImportFixtureFields } from './json-import-presentation-probe.mjs';
+import { BookRemovalDialogPresentation } from '../../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts';
+import { pureModuleProbe } from './ets-pure-module-probe.mjs';
+import { ReaderEntryStartupTrace } from '../../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import { actualReadingEntryPresentation, legacyReadingEntryIndexFields, bindReadingEntryFixtureFields } from './reading-entry-presentation-probe.mjs';
+import { actualSourceSwitchPresentation, sourceSwitchProbeQuery, legacySourceSwitchIndexFields, bindSourceSwitchFixtureFields } from './source-switch-presentation-probe.mjs';
+import { actualReaderDirectoryJourney, directoryOperationIndexMembers } from './reader-directory-operations-probe.mjs';
+import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
-import * as directoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import * as directoryGeometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as directoryVisual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
+import * as directoryChrome from '../../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
+import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import * as directoryGeometry from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
+import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -15,13 +26,20 @@ import { switchControls } from './reader-switch-control-probe.mjs';
 import { iconButtonControls } from './reader-icon-button-probe.mjs';
 import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs';
 import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
+import * as headerMetrics from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { readerContentSafeTop, createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerContentSafeTop, createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
-import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
+import { boundedSurfaceSdk, readerSurfaceSpecsForProbe } from './bounded-surface-sdk-probe.mjs';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import { ReaderTransientFeedback } from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
+import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
+import { readerFoundationTokens } from './reader-tokens-probe.mjs';
 
 const sdkRoot = resolveEtsLoaderRoot();
+const { readerSourceSwitchActions } = pureModuleProbe(readFileSync(new URL(
+  '../../entry/src/main/ets/app/composition/ReaderSourceSwitchActions.ets', import.meta.url), 'utf8'),
+  'ReaderSourceSwitchActions.ets', {}, ['readerSourceSwitchActions']);
 export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_component_class.js`);
 let pageFrameworkProperties;
 // Cache only installed-SDK emitted code. Each use still constructs new real
@@ -30,7 +48,21 @@ const sdkLoweringCache = new Map();
 let sdkLoweringCompiles = 0, sdkLoweringHits = 0;
 export const readerBuilderCompilationCacheStats = () => ({ compiles: sdkLoweringCompiles, hits: sdkLoweringHits, entries: sdkLoweringCache.size });
 const digest = value => createHash('sha256').update(value).digest('hex');
-const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
+const actionAccessibilitySource = readFileSync(new URL(
+  '../../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), 'utf8');
+const actionAccessibilityBindings = new Function('AccessibilityRoleType',
+  `${stripTypeScriptTypes(actionAccessibilitySource.replace(/^export /gm, ''))}; return { ReaderActionAccessibility, readerActionTouchRegion };`);
+const panelFrameSource = readFileSync(new URL('../../entry/src/main/ets/ui/surfaces/ReaderPanelFrame.ets', import.meta.url), 'utf8');
+function readerPanelFrameForProbe(globals) {
+  const elevation = globals.readerSurfaceElevation ?? readerSurfaceSpecsForProbe(new Proxy({}, {
+    get: (_target, key) => globals.ReaderWindowCoordinator.metrics()[key],
+  })).readerSurfaceElevation;
+  return new Function('DIRECTORY_CHROME_VISUAL', 'mangaDirectoryColor', 'readerAppColor', 'TOK_BORDER_W', 'TOK_RADIUS_XL', 'readerSurfaceElevation',
+    `${stripTypeScriptTypes(panelFrameSource.replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, ''))}; return ReaderPanelFrame;`)(
+      directoryChrome.DIRECTORY_CHROME_VISUAL, directoryChrome.mangaDirectoryColor, readerAppColor, readerFoundationTokens.TOK_BORDER_W,
+      readerFoundationTokens.TOK_RADIUS_XL, elevation);
+}
+const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/application/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
   .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
 const EMPTY_READABLE_ADMISSION = new Function(stripTypeScriptTypes(readableAdmissionInitializer.replace('export ', '')) + ';return EMPTY_READABLE_ADMISSION;')();
 const childPropertyMetadata = new Map();
@@ -122,7 +154,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const delegatedReferences = new Set();
   const collectSlots = node => {
     if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && ts.isIdentifier(node.expression) &&
-      ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderStandardPage'].includes(node.expression.text)) {
+      ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderStandardPage', 'ReaderPageScrollHost'].includes(node.expression.text)) {
       for (const argument of node.arguments) for (const match of argument.getText(original).matchAll(/this\.(\w+)/g))
         delegatedReferences.add(match[1]);
     }
@@ -146,20 +178,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey',
     'catalogHeaderHeight','catalogHeaderTop',
     'searchFontScale','searchFilterHeight','searchFilterLabelWidth','searchBarHeight','bookFontScale',
-    'resultTagWidth','resultTagHeight',
+    'resultTagWidth','resultTagHeight','resultViewportId',
+    'inputAllowed','readingContentIsForeground','acceptsTextInput',
+    'isMangaSurfaceCurrent','acceptsMangaInput','requestedMangaOfflineChapterId',
     // Nonmodal feedback is a finite visual/admission seam. Keep the actual
     // production defaults and helpers in focused pre-migration consumers.
     'indexRecoveryNotice','indexRecoveryActionLabel','indexRecoveryAction','indexRecoveryCurrent',
-    'indexRecoveryRevision','remoteCacheRefreshConsent','indexRecoveryNoticeContent','showIndexRecoveryNotice','clearIndexRecoveryNotice','runIndexRecoveryAction',
+    'indexRecoveryRevision','remoteCacheRefreshConsent','indexRecoveryNoticeContent','showIndexRecoveryNotice','runIndexRecoveryAction','jsonImportPresentation','isCurrentJsonImportContext','executeJsonImport','dismissJsonImport',
     'sourceImportSearchActionLabel','sourceImportSearchActionRevision','sourceImportSearchAction','runSourceImportSearchAction',
     'statusActionLabel','statusActionGeneration','onStatusAction','rssOperationResultMessage','resultMessage',
     'readerRecoveryView','readerRecoveryActionLabel','readerRecoveryAction','showReaderRecovery','reconcileReaderRecovery',
-    'detailPendingNoticeVisible','detailReadableAdmission','readableAdmissions','detailBookKey','hasUnknownShelfWrite','isCurrentRuntime',
+    'detailPendingNoticeVisible','detailContentIsForeground','isDirectoryOpeningCurrent','handleDetailBack','prepareDetailRoute','directoryNavigationPorts','openDirectory','isDetailDirectoryRoute','currentReadingRuntime','detailReadableAdmission','readableAdmissions','detailBookKey','hasUnknownShelfWrite','isCurrentRuntime',
+    'dispatchBackDestination','requestReadingExit','cancelShelfReadingPreparation','bookshelfModalVisible','bookshelfContentAcceptsInput','openShelfEntry',
     'pendingFeedback','hasPendingSettings','hasPendingCleanup','recovery',
     'operationFeedbackIdentity','cacheFeedbackIdentity','showFeedbackToast','lastOperationFeedback','lastOperationToast','lastCacheFeedback',
     'recoveryIdentityFor','capturedPendingAction','feedbackIdentity','lastFeedbackIdentity','lastToastMessage',
     'notifyOpenedError','openedErrorNoticeKey','chapterLoadState','openFailureStage',
-    'modeReconcileBusy','modeLoadBusy','recoveryBusy','catalogBusy']);
+    'modeReconcileBusy','modeLoadBusy','recoveryBusy','catalogBusy','chromeScheme','directorySheet','directorySideHeader',
+    'directoryBottomHeader','measureDirectorySheetHeader','offlineBookAction','offlineMenuGeneration']);
   let addedChrome;
   do {
     addedChrome = false;
@@ -198,6 +234,54 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     dependencies = { ...feedbackProperties.sdk, ...dependencies };
     hooks = { ...feedbackProperties.hooks, ...originalHooks };
   }
+  if (struct.name.getText(original) === 'Index' && struct.members.some(member =>
+    names.includes(member.name?.getText(original)) && /this\.(directoryOperations|directoryJourney)\b/.test(member.getText(original)))) {
+    for (const name of ['navigationOwner', 'directoryJourney', ...directoryOperationIndexMembers])
+      if (!names.includes(name)) names.push(name);
+    dependencies = { ReaderNavigation, ...dependencies,
+      ReaderDirectoryJourney: dependencies.ReaderDirectoryJourney ?? actualReaderDirectoryJourney(dependencies) };
+  }
+  const sourceSwitchIndex = struct.name.getText(original) === 'Index' &&
+    struct.members.some(member => member.name?.getText(original) === 'sourceSwitchPresentation') &&
+    (names.some(name => legacySourceSwitchIndexFields.includes(name) || ['sourceSwitchPresentation', 'sourceSwitchProbeQuery'].includes(name)) ||
+      struct.members.some(member => names.includes(member.name?.getText(original)) && member.getText(original).includes('this.sourceSwitchPresentation.')));
+  if (sourceSwitchIndex) {
+    names = names.filter(name => !legacySourceSwitchIndexFields.includes(name));
+    for (const name of ['sourceSwitchPresentation', 'sourceSwitchScene']) if (!names.includes(name)) names.push(name);
+    if (names.includes('sourceSwitchPorts') || struct.members.some(member => names.includes(member.name?.getText(original)) &&
+      member.getText(original).includes('this.sourceSwitchPorts('))) {
+      for (const name of ['sourceSwitchPorts', 'sourceSwitchProbeQuery']) if (!names.includes(name)) names.push(name);
+    }
+    dependencies = { ...dependencies, sourceSwitchProbeQuery, SourceSwitchPresentation: actualSourceSwitchPresentation(dependencies) };
+  }
+  const readingEntryIndex = struct.name.getText(original) === 'Index' &&
+    struct.members.some(member => member.name?.getText(original) === 'readingEntry') &&
+    (names.some(name => legacyReadingEntryIndexFields.includes(name) || name === 'readingEntry') ||
+      struct.members.some(member => names.includes(member.name?.getText(original)) && member.getText(original).includes('this.readingEntry.')));
+  if (readingEntryIndex) {
+    names = names.filter(name => !legacyReadingEntryIndexFields.includes(name));
+    if (!names.includes('readingEntry')) names.push('readingEntry');
+    if (names.some(name => ['bindReadingEntryReader', 'performSourceSwitchSeam'].includes(name)) &&
+      !names.includes('readingEntryPorts')) names.push('readingEntryPorts');
+    dependencies = { ...dependencies, ReadingEntryPresentation: actualReadingEntryPresentation(dependencies) };
+  }
+  if (struct.name.getText(original) === 'Index' && struct.members.some(member =>
+    names.includes(member.name?.getText(original)) && member.getText(original).includes('this.bookRemovalConfirmation.'))) {
+    if (!names.includes('bookRemovalConfirmation')) names.push('bookRemovalConfirmation');
+    dependencies = { BookRemovalDialogPresentation, ...dependencies };
+  }
+  if (struct.name.getText(original) === 'Index' && struct.members.some(member =>
+    names.includes(member.name?.getText(original)) && member.getText(original).includes('this.sourceSwitchActions'))) {
+    if (!names.includes('sourceSwitchActions')) names.push('sourceSwitchActions');
+    dependencies = { readerSourceSwitchActions, ...dependencies };
+  }
+  if (struct.name.getText(original) === 'Index' && struct.members.some(member =>
+    names.includes(member.name?.getText(original)) && member.getText(original).includes('this.entryStartupTrace'))) {
+    if (!names.includes('entryStartupTrace')) names.push('entryStartupTrace');
+    dependencies = { ReaderEntryStartupTrace, ...dependencies };
+  }
+  const jsonImportIndex = struct.name.getText(original) === 'Index' && names.includes('jsonImportPresentation');
+  if (jsonImportIndex) dependencies = { JsonImportPresentation, ...dependencies };
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);
@@ -224,12 +308,13 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       },
     };
   }
-  // Page migration introduces only these three finite visual hosts. Older
+  // Page migration introduces these finite visual hosts. Older
   // business probes still execute their own production slots, now delegated
   // through the actual SDK-emitted host instead of a no-op wrapper stub.
-  for (const name of ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderStandardPage']) {
+  for (const name of ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderStandardPage', 'ReaderPageScrollHost', 'ReaderReadingTopBar']) {
     if (!new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n'))) continue;
-    const url = new URL(`../../entry/src/main/ets/features/common/${name}.ets`, import.meta.url);
+    const family = name === 'ReaderReadingTopBar' ? 'chrome' : 'layout';
+    const url = new URL(`../../entry/src/main/ets/ui/${family}/${name}.ets`, import.meta.url);
     const definition = readFileSync(url, 'utf8'), tree = parse(definition);
     assert.deepEqual(tree.parseDiagnostics, [], `actual ${name} parses`);
     const declaration = componentDeclaration(tree, name);
@@ -253,8 +338,17 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
         originalHooks.onChildUpdated?.(child, params);
       },
     };
+    const hostDependencies = { ...dependencies };
+    if (name === 'ReaderReadingTopBar') {
+      const title = tree.statements.find(statement => ts.isClassDeclaration(statement) && statement.name?.text === 'ReaderReadingTopBarTitle');
+      hostDependencies.ReaderReadingTopBarTitle = new Function('readerAppColor', 'mangaDirectoryColor', 'READER_FONT_NOTO_SERIF_SC_BOLD',
+        'FontWeight', 'TextOverflow', ...Object.keys(readerTypographyRoles),
+        `${stripTypeScriptTypes(title.getText(tree).replace(/^export /, ''))}; return ReaderReadingTopBarTitle;`)(
+        readerAppColor, directoryChrome.mangaDirectoryColor, READER_FONT_NOTO_SERIF_SC_BOLD,
+        { Bold: 'FontWeight.Bold' }, { Ellipsis: 'TextOverflow.Ellipsis' }, ...Object.values(readerTypographyRoles));
+    }
     const host = createReaderBuilderProbe(definition, declaration.members.filter(member => member.name)
-      .map(member => member.name.getText(tree)), dependencies, { ...hooks, componentName: name });
+      .map(member => member.name.getText(tree)), hostDependencies, { ...hooks, componentName: name });
     dependencies = { ...dependencies, [name]: class extends host.Component {
       constructor(owner, params, storage, id, ...rest) {
         super(owner, params, storage, id, ...rest);
@@ -280,7 +374,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // Resolve only actual calls in the selected production members, and keep an
   // explicitly supplied component/property runtime authoritative. Foundation
   // components themselves do not call either child, so this is not recursive.
-  const missingFoundation = ['ReaderButton', 'ReaderFormField', 'ReaderLabeledIconAction'].filter(name =>
+  const missingFoundation = ['ReaderButton', 'ReaderFormField', 'ReaderLabeledIconAction', 'ReaderCard'].filter(name =>
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingFoundation.length > 0) {
     const foundation = missingFoundation.includes('ReaderLabeledIconAction') ? labeledIconControls() : foundationControls();
@@ -298,7 +392,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // The two existing controlled switch families follow the same bounded
   // actual-child resolution. Explicit components remain authoritative; the
   // producer itself calls neither child, so it cannot recursively resolve.
-  const missingSwitch = ['ReaderToggle', 'ReaderSegmentedControl'].filter(name =>
+  const missingSwitch = ['ReaderToggle', 'ReaderSegmentedControl', 'ReaderFormRow'].filter(name =>
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingSwitch.length > 0) {
     const controls = switchControls();
@@ -335,10 +429,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     // Index mounts the optional runtime geometry guide at the root. Keep it
     // registered as a real custom component for SDK Builder probes so focused
     // consumers do not need to know about this diagnostics-only child.
-    ['ReaderLayoutDebugOverlay', '../../entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'],
-    ['ReaderInlineSelect', '../../entry/src/main/ets/features/common/ReaderInlineSelect.ets'],
-    ['ReaderFullDirectory', '../../entry/src/main/ets/features/reading/ReaderFullDirectory.ets'],
-    ['BookDirectoryPage', '../../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets'],
+    ['ReaderLayoutDebugOverlay', '../../entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'],
+    ['ReaderInlineSelect', '../../entry/src/main/ets/ui/controls/ReaderInlineSelect.ets'],
+    ['ReaderFullDirectory', '../../entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets'],
+    ['BookDirectoryPage', '../../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets'],
   ];
   for (const [name, relative] of knownChildren) {
     if (!new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n'))) continue;
@@ -372,12 +466,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // Register the actual shared child Prop names so the SDK emits its real
   // updateStateVarsOfChildByElmtId payload instead of an empty test stub.
   const childName = 'ReaderControlSwitchTrack';
-  const childSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets', import.meta.url), 'utf8');
+  const childSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlSwitchTrack.ets', import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(childName);
   syntax.propCollection.set(childName, childProps(childSource));
   const recoveryChildren = ['ReaderRecoveryAction', 'ReaderRecoveryNotice'];
   for (const name of recoveryChildren) {
-    const child = new URL(`../../entry/src/main/ets/features/common/${name}.ets`, import.meta.url);
+    const child = new URL(`../../entry/src/main/ets/ui/feedback/${name}.ets`, import.meta.url);
     if (!existsSync(child)) continue;
     const definition = readFileSync(child, 'utf8');
     syntax.componentCollection.customComponents.add(name);
@@ -524,22 +618,23 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   }
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
-  const globals = { readerRegisteredFontFamily: (_font, family) => family,
+  const globals = { remoteReadingEntryKind, remoteReadingSeedForSession, remoteReadingSeedForShelf, readerRegisteredFontFamily: (_font, family) => family,
     readerFontFamilyReady: () => true, MangaDirectoryCurrentFooter: Child,
     // Constructor arguments cross the platform seam unchanged; native color
     // parsing and focus-box rasterization remain target evidence.
     LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, ColorMetrics: { resourceColor: color => ({ color }) },
-    readerAppColor, readerThemeDefinition, readerRecoveryView, EMPTY_READABLE_ADMISSION, readerContentSafeTop, ViewPU, ReaderControlSwitchTrack: Child,
+    readerAppColor, readerThemeDefinition, readerRecoveryView, ReaderTransientFeedback, EMPTY_READABLE_ADMISSION, readerContentSafeTop, ViewPU, ReaderControlSwitchTrack: Child,
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
-      'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign',
+      'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'ToggleType', 'ButtonType',
       'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
     // Actual production surface/inset policy, including all finite variants.
     ...actualReaderPageShell(),
+    ...headerMetrics,
     // Constructor identity is the native seam; movement requires an explicit
     // focused Scroller fixture. Render probes do not simulate scroll physics.
     Scroller: class {},
@@ -550,9 +645,20 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };
+  // Existing fixtures supply an explicit fake metrics source under the old
+  // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
+  globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
+    () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
   globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
     { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });
+  if (members.some(member => member.includes('new ReaderPanelFrame('))) globals.ReaderPanelFrame ??= readerPanelFrameForProbe(globals);
+  if (/\b(?:ReaderActionAccessibility|readerActionTouchRegion)\b/.test(members.join('\n'))) {
+    for (const [name, binding] of Object.entries(actionAccessibilityBindings(globals.AccessibilityRoleType))) globals[name] ??= binding;
+  }
   const Component = new Function(...Object.keys(globals), `${lowered.javascript}; return ReaderBuilderProbe;`)(...Object.values(globals));
+  if (sourceSwitchIndex) bindSourceSwitchFixtureFields(Component.prototype);
+  if (readingEntryIndex) bindReadingEntryFixtureFields(Component.prototype);
+  if (jsonImportIndex) bindJsonImportFixtureFields(Component.prototype);
   return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
 }

@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {registerHooks} from 'node:module';
 import {ReaderBrightnessWriter} from '../../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
-import * as metrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {findReaderTheme} from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as metrics from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import {findReaderTheme} from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import {installedEtsCompiler} from './ets-compiler-runtime.mjs';
+import {readerWindowEnvironmentForProbe} from './reader-window-environment-probe.mjs';
 const base=new URL('../../entry/src/main/ets/',import.meta.url);
 export async function createWindowCoordinatorFixture(){
  const extensionHook=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -17,9 +18,10 @@ export async function createWindowCoordinatorFixture(){
    AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
    display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
  const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
-   '../features/common/ReaderThemeRegistry':{findReaderTheme},
+   '../ui/foundation/ReaderThemeRegistry':{findReaderTheme},
    './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
-   '../features/common/ReaderWindowMetrics':metrics};
+   '../ui/foundation/ReaderWindowMetrics':metrics,
+   '../ui/foundation/ReaderWindowEnvironment':readerWindowEnvironmentForProbe()};
  const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
  const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
  const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);

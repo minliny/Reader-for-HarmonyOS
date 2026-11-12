@@ -161,3 +161,50 @@ export class ReaderStartupTrace {
     try { this.record(sample); } catch (_) {}
   }
 }
+
+export type ReaderShelfEntryPhase = 'tap' | 'reader-mount-request' | 'present';
+type ReaderShelfEntryLog = (phase: ReaderShelfEntryPhase, attempt: number, navigation: number, elapsedMs: number) => void;
+
+/** Correlates entry milestones within one mounted application root. */
+export class ReaderEntryStartupTrace {
+  private entryId: number = 0;
+  private shelfAttempt: number = 0;
+  private shelfStartedAt: number = -1;
+  private readonly logShelfPhase: ReaderShelfEntryLog;
+
+  constructor(logShelfPhase: ReaderShelfEntryLog) {
+    this.logShelfPhase = logShelfPhase;
+  }
+
+  begin(): void {
+    this.shelfStartedAt = -1;
+    this.entryId = ReaderStartupTrace.current()?.beginEntry() ?? 0;
+  }
+
+  beginShelf(navigation: number): void {
+    this.begin();
+    this.shelfAttempt += 1;
+    this.shelfStartedAt = Date.now();
+    this.shelfPhase('tap', navigation);
+  }
+
+  shelfPhase(phase: ReaderShelfEntryPhase, navigation: number): void {
+    if (this.shelfStartedAt < 0) return;
+    try {
+      ReaderStartupTrace.current()?.mark(`shelf-entry.${phase}`, 'event', this.entryId);
+      this.logShelfPhase(phase, this.shelfAttempt, navigation, Math.max(0, Date.now() - this.shelfStartedAt));
+    } catch (_) { /* Diagnostic delivery cannot interrupt reader admission. */ }
+  }
+
+  ready(shelfNavigation?: number): void {
+    if (shelfNavigation !== undefined) this.shelfPhase('present', shelfNavigation);
+    const entryId = this.entryId;
+    this.retire();
+    if (entryId > 0) ReaderStartupTrace.current()?.mark('reader.model-ready', 'ready', entryId);
+  }
+
+  retire(): void {
+    this.entryId = 0;
+    this.shelfStartedAt = -1;
+  }
+}

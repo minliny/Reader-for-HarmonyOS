@@ -16,13 +16,13 @@ const commit='beforeMethod';
  const f=await fixture();await f.source.importBookSourceDocument(document,f.current);
  f.options[commit]='rules.mutation.apply';await assert.rejects(f.source.updateSource('https://cold-source.test',{enabled:false},f.current));
  const original=JSON.parse(f.disk());f.retire();const c=await fixture(f);
- let live=true,projection;let host=new c.SourceHost(()=>{},()=>live,()=>{},()=>c.runtime,p=>projection=p);
+ let live=true,projection;let host=new c.SourceHost(()=>{},()=>{},p=>projection=p);
  assert.equal(host.bindPresentation(c.runtime,'old',()=>live),true);host.open('old');
  const owner=c.SourceOrchestrator.forRuntime(c.runtime);await owner.operationChain;
  assert.equal(projection.original.blocked,true);assert.equal(c.writes().length,0);
  const firstGeneration=projection.original.generation;
  let retained;
- const second=new c.SourceHost(()=>{},()=>live,()=>{},()=>c.runtime,p=>{
+ const second=new c.SourceHost(()=>{},()=>{},p=>{
   if(second.isPresentationCurrent(c.runtime,'new'))retained=p;
  });
  assert.equal(second.bindPresentation(c.runtime,'new',()=>live),true);
@@ -33,7 +33,16 @@ const commit='beforeMethod';
  host=second;
  host.continueOriginal(firstGeneration,'old');await owner.operationChain;assert.equal(c.writes().length,0,'retired physical identity cannot continue');
  host.toggleSource('https://cold-source.test',true,'new');await owner.operationChain;assert.equal(c.writes().length,0,'new page cannot replace an unknown original');
- host.continueOriginal(firstGeneration,'new');await owner.operationChain;
+ let release;
+ const gate=new Promise(resolve=>release=resolve);
+ owner.operationChain=owner.operationChain.then(()=>gate);
+ host.continueOriginal(firstGeneration,'new');
+ try { await c.recoverSource(false); } finally { release(); }
+ await owner.operationChain;
+ assert.equal(c.writes().length,0,'queued Continue cannot borrow a newer shared recovery generation');
+ assert.equal(retained.original.operationId,original.operationId);
+ assert.ok(retained.original.generation>firstGeneration,'the current page receives the refreshed original projection');
+ host.continueOriginal(retained.original.generation,'new');await owner.operationChain;
  assert.equal(retained.original.blocked,false);assert.equal(projection.original.blocked,true,'retired view keeps its original pending projection');assert.equal(c.disk(),'');
  assert.equal(c.writes().length,commit==='beforeMethod'?1:0);
  if(c.writes().length)assert.equal(c.writes()[0].params.operationId,original.operationId);
@@ -57,13 +66,13 @@ const commit='afterMethod';
  const f=await fixture();await f.source.importBookSourceDocument(document,f.current);
  f.options[commit]='rules.mutation.apply';await assert.rejects(f.source.updateSource('https://cold-source.test',{enabled:false},f.current));
  const original=JSON.parse(f.disk());f.retire();const c=await fixture(f);
- let live=true,projection;let host=new c.SourceHost(()=>{},()=>live,()=>{},()=>c.runtime,p=>projection=p);
+ let live=true,projection;let host=new c.SourceHost(()=>{},()=>{},p=>projection=p);
  assert.equal(host.bindPresentation(c.runtime,'old',()=>live),true);host.open('old');
  const owner=c.SourceOrchestrator.forRuntime(c.runtime);await owner.operationChain;
  assert.equal(projection.original.blocked,true);assert.equal(c.writes().length,0);
  const firstGeneration=projection.original.generation;
  let retained;
- const second=new c.SourceHost(()=>{},()=>live,()=>{},()=>c.runtime,p=>{
+ const second=new c.SourceHost(()=>{},()=>{},p=>{
   if(second.isPresentationCurrent(c.runtime,'new'))retained=p;
  });
  assert.equal(second.bindPresentation(c.runtime,'new',()=>live),true);
@@ -96,6 +105,7 @@ const commit='afterMethod';
 'cleanup-batch':async()=>{
  const f=await fixture();await f.source.importBookSourceDocument(document,f.current);
  await f.source.importBookSourceDocument(JSON.stringify({bookSourceUrl:'https://second.test',bookSourceName:'Second',enabled:true}),f.current);
+ await f.source.importBookSourceDocument(JSON.stringify({bookSourceUrl:'https://third.test',bookSourceName:'Third',enabled:false}),f.current);
  let snapshot;const tools=f.SourceToolsOrchestrator.forRuntime(f.runtime);tools.attachPresentation('batch',s=>snapshot=s,()=>true);
  tools.open([]);await tools.operationTail;f.options.cookieFailure=true;
  const writes=f.writes().length;tools.setSelectedEnabled(['https://cold-source.test','https://second.test'],false);await tools.operationTail;
@@ -103,7 +113,19 @@ const commit='afterMethod';
  assert.deepEqual(f.cleanupCalls,['https://cold-source.test'],'outer Tools never repeats or bypasses gated Host cleanup');
  assert.equal(snapshot.original.confirmation,'confirmed');assert.equal(snapshot.original.blocked,true);
  f.options.cookieFailure=false;tools.continueOriginal(snapshot.original.generation);await tools.operationTail;
- assert.equal(f.writes().length-writes,1,'explicit cleanup does not resume unaccepted later batch items');count++;
+ assert.equal(f.writes().length-writes,1,'explicit cleanup does not resume unaccepted later batch items');
+
+ await f.source.deleteSources(['https://second.test']);
+ assert.ok(snapshot.sources.some(source=>source.sourceId==='https://second.test'),'tools still holds the older selection projection');
+ const beforeWrites=f.writes().length, beforeReads=f.calls.filter(call=>call.method==='source.list').length;
+ tools.setSelectedEnabled(['https://cold-source.test','https://second.test','https://third.test'],true);await tools.operationTail;
+ assert.deepEqual(f.writes().slice(beforeWrites).map(call=>call.params.mutation.params.sourceId),
+   ['https://cold-source.test','https://second.test'],'an exact rejection does not dispatch the remaining suffix');
+ assert.equal(f.calls.filter(call=>call.method==='source.list').length,beforeReads+1);
+ assert.equal(snapshot.receipt.receipt.fact,'confirmedCurrent');
+ assert.equal(snapshot.confirmedParts,1);assert.match(snapshot.statusMessage,/已确认 1 个书源.*2 个未执行/);
+ assert.equal(snapshot.sources.find(source=>source.sourceId==='https://cold-source.test').enabled,true);
+ assert.equal(snapshot.sources.find(source=>source.sourceId==='https://third.test').enabled,false);count++;
 
 },
 };await cases[caseID]();passed=true;

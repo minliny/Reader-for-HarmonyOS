@@ -1,7 +1,7 @@
 import { appTasks, OhosPluginId, OhosAppContext } from '@ohos/hvigor-ohos-plugin';
 import { hvigor } from '@ohos/hvigor';
 
-const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild, isBuildResourceTask } = require('./hvigor/reader-hap-guard.cjs');
+const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild, isBuildResourceTask, isPackageTask, configureAppBuildIdentity } = require('./hvigor/reader-hap-guard.cjs');
 
 type IdeSigningSession = {
   pipeline: {
@@ -55,10 +55,19 @@ hvigor.taskGraphResolved(async () => {
   await ensureIdeSigning();
   const tasks = hvigor.getCommandEntryTask() || [];
   assertReaderHapInvocation(tasks, ideSigning);
-  if (ideSigning && tasks.some((name: string) => isBuildResourceTask(name))) {
+  const needsBuild = tasks.some((name: string) => isBuildResourceTask(name));
+  if (ideSigning && needsBuild) {
     const buildEnv = await beginIdeBuild(ideSigning);
     try { ideSigning.pipeline.preflightIdeNative(buildEnv); }
     catch (error) { finishIdeBuild(); throw error; }
+  }
+  if (tasks.some((name: string) => isPackageTask(name) || /(?:compileArkTS|compileTS|compileJS)$/i.test(name))) {
+    const nodes = hvigor.getAllNodes();
+    const appNode = nodes.find(node => node.getContext(OhosPluginId.OHOS_APP_PLUGIN));
+    const appContext = appNode?.getContext(OhosPluginId.OHOS_APP_PLUGIN) as OhosAppContext;
+    const modules = nodes.map(node => node.getContext(OhosPluginId.OHOS_HAP_PLUGIN)).filter(Boolean);
+    if (!appContext) throw new Error('Reader application context is unavailable for app identity');
+    await configureAppBuildIdentity(appContext, modules, ideSigning);
   }
 });
 

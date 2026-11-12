@@ -19,17 +19,17 @@ const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 // app.
 const errorMessageSource = read('entry/src/main/ets/app/ErrorMessage.ts')
   .replace(/^export /gm, '');
-const transportPolicySource = read('entry/src/main/ets/app/HttpTransportPolicy.ts')
+const transportPolicySource = read('entry/src/main/ets/platform/network/HttpTransportPolicy.ts')
   .replace(/^export /gm, '');
-const sourceCategorySource = read('entry/src/main/ets/features/source/ReaderSourceCategory.ts')
+const sourceCategorySource = read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts')
   .replace(/^export /gm, '');
-const gatewaySource = read('entry/src/main/ets/features/source/SourceGateway.ts')
+const gatewaySource = read('entry/src/main/ets/features/source/application/SourceGateway.ts')
   .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
   .replace(/^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy['"];\n/m, '')
   .replace(/^import \{ classifyReaderSource, type ReaderSourceCategory \} from ['"]\.\/ReaderSourceCategory['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
-const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsOrchestrator.ets')
+const orchestratorSource = read('entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
@@ -210,7 +210,7 @@ const currentHistory = { checkedAtMs: 20, stale: false, report: reportEnvelope('
 try{
 if(id==='followup-feedback'){
 const SourceToolsFeedback = productionMotionMethods(new URL(
-  '../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), ['feedbackIdentity', 'showTransientFeedback']);
+  '../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), ['feedbackIdentity', 'showTransientFeedback']);
 
 // Retained batch results do not own feedback from later operations. Exercise
 // real check progress, editor/export Gateway calls, receipt facts and the
@@ -375,7 +375,7 @@ if(id==='stop'){
 }
 if(id==='index-selection'){
 const sources=[source('selected-a','甲'),source('selected-b','乙')],owner=controlledOwner(sources);const {orchestrator,snapshots}=capture(owner);await openReady(orchestrator,snapshots,sources);orchestrator.setSelection(sources.map(s=>s.sourceId));
-const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('entry/src/main/ets/features/source/SourceToolsPage.ets');sdk.hooks.childSources.SourceToolsPage=pageSource;
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('entry/src/main/ets/features/source/ui/SourceToolsPage.ets');sdk.hooks.childSources.SourceToolsPage=pageSource;
 const leaf=sdk.consumer(pageSource,['snapshot','onCheckSelected'],{EMPTY_SOURCE_TOOLS_SNAPSHOT:latest(snapshots)}).constructor;
 const index=sdk.consumer(read('entry/src/main/ets/pages/Index.ets'),['sourceToolsContent','sourceToolsSurface','isCurrentSourceToolsPresentation','isCurrentRuntime'],{SourceToolsPage:leaf,ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>currentOwner)});
 Object.assign(index,{navigationGeneration:1,mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,sourceToolsOrchestrator:orchestrator,sourceToolsPresentationIdentity:'source-tools:1',sourceToolsSnapshot:latest(snapshots),shelfReceiptRetired:false,route:'sourceTools'});orchestrator.attachPresentation('source-tools:1',snapshot=>{snapshots.push(snapshot);index.sourceToolsSnapshot=snapshot;},()=>true);
@@ -436,7 +436,7 @@ if(id==='scale-selection'){
 }
 }
 if(id==='list-notifications'){
-const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();const sourceText=read('entry/src/main/ets/features/source/SourceToolsPage.ets');const tree=ts.createSourceFile('SourceToolsData.ets',sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();const sourceText=read('entry/src/main/ets/features/source/ui/SourceToolsPage.ets');const tree=ts.createSourceFile('SourceToolsData.ets',sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
 const names=['SourceToolListRow','SourceToolListDataSource','SourceCheckResultDataSource','SourceDebugLogDataSource'];const declarations=tree.statements.filter(n=>n.name&&names.includes(n.name.getText(tree)));assert.equal(declarations.length,names.length);
 const code=ts.transpileModule(declarations.map(n=>n.getText(tree)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;const types=new Function(code+';return{'+names.join(',')+'};')();
 const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const snapshot={sources:Array.from({length:1777},(_,i)=>source('row-'+i,'源'+i)),selectedSourceIds:[],sourceListRevision:1,selectionRevision:1,busy:false,batchCheck:{results:[]},debugLogs:[],debugSourceId:''};

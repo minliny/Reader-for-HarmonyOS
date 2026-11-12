@@ -17,7 +17,7 @@ async function heightPolicy() {
 }
 async function rectPolicy() {
  const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
- const {ReaderRectVp}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+ const {ReaderRectVp}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
  const measured=new ReaderStatusBarMeasurement();
  const rect=(left,top,width,height)=>Object.assign(new ReaderRectVp(),{left,top,width,height});
  const portrait=rect(7,11,390,48),landscape=rect(13,17,800,24),zero=rect(19,23,320,0);

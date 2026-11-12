@@ -4,11 +4,12 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaRowBuilderMembers, mangaGridProbeDependencies } from './lib/manga-directory-grid-probe.mjs';
 import { productionMangaDirectoryNavigationDataSource, mangaDirectoryNavigationListSource as listSource } from './lib/manga-directory-navigation-data-source-probe.mjs';
-import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
-import { openReaderDirectoryNavigation, readerDirectoryScopeKey, readerDirectoryToggleCollapsed, readerDirectoryCollapsedIds } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
-const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets', import.meta.url), 'utf8');
+import * as fonts from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryTrace.ts';
+import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { openReaderDirectoryNavigation, readerDirectoryToggleCollapsed, readerDirectoryCollapsedIds } from './lib/reader-directory-navigation-session-probe.mjs';
+import { readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts';
+const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets', import.meta.url), 'utf8');
 const tick = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
 const node = index => ({ nodeId: `chapter-${index}`, title: String(index).padStart(4, '0'), kind: 'target', depth: 2,
   chapterIndex: 10000 + index * 3, chapterOffsetScalar: 0, parentId: 'volume', parentTitle: '第一卷', hasChildren: false, expanded: false });

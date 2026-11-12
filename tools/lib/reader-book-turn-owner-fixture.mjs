@@ -1,7 +1,7 @@
 import { productionMotionMethods } from './reader-motion-method-probe.mjs';
 
 export function createBookTurnTextureOwner(upload = async () => true, commit = () => true) {
-  const Session = productionMotionMethods(new URL('../../entry/src/main/ets/features/reading/BookTurnPresentationSession.ets', import.meta.url),
+  const Session = productionMotionMethods(new URL('../../entry/src/main/ets/features/reading/ui/BookTurnPresentationSession.ets', import.meta.url),
     ['capturedIdentity', 'clearCapturedTextures', 'retainPendingSnapshot', 'takePendingSnapshot',
       'releasePendingSnapshot', 'uploadTexture', 'commitSlots', 'onNativeEvent'], {
       bookTurnNative: { uploadTexture: (_id, ...args) => upload(...args), commitSlots: (_id, ...args) => commit(...args) },

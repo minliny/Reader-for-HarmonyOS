@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const path=new URL('../entry/src/main/ets/features/sync/SyncGateway.ts',import.meta.url);
+ const path=new URL('../entry/src/main/ets/features/sync/application/SyncGateway.ts',import.meta.url);
  if(id==='closed-transaction'){
   const C=productionMotionMethods(path,['isAlreadyClosedTransactionError','abortBestEffort']);
   for(const [fault,expected] of [[{event:{error:{code:'INVALID_PARAMS',message:'unknown or completed WebDAV transaction'}}},true],[{event:{error:{code:'INVALID_PARAMS',message:'transaction id is invalid'}}},false],[new Error('network timeout'),false]]){

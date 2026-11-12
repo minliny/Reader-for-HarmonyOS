@@ -6,11 +6,11 @@ import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.
 
 
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts'),morph=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts'),presentation=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
-const stateApi=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const geometry=await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts'),morph=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts'),presentation=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+const stateApi=await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const read=p=>readFileSync(new URL(`../entry/src/main/ets/${p}`,import.meta.url),'utf8');
-const source=read('features/reading/ReaderControlReplaceContent.ets'),actionsSource=read('features/common/ReaderBoundedSurfaceActions.ets');
-const gateway=read('features/reading/ReaderReplaceQuickGateway.ts'),start=gateway.indexOf('export class ReaderReplacePreview'),end=gateway.indexOf('\n/**',start);
+const source=read('features/reading/ui/ReaderControlReplaceContent.ets'),actionsSource=read('ui/surfaces/ReaderBoundedSurfaceActions.ets');
+const gateway=read('features/reading/application/ReaderReplaceQuickGateway.ts'),start=gateway.indexOf('export class ReaderReplacePreview'),end=gateway.indexOf('\n/**',start);
 const ReaderReplacePreview=new Function(`${stripTypeScriptTypes(gateway.slice(start,end)).replace(/^export /gm,'')};return ReaderReplacePreview;`)();
 const state=(session='book:A:1')=>({...stateApi.createReaderControlReplaceState(session,'书A','https://source.test'),status:'ready',rules:[{id:1,name:'原规则',pattern:'原文',replacement:'替换',scope:'本书',scopeTitle:true,scopeContent:true,scopeSource:false,isRegex:false,isEnabled:true}]});
 const props=o=>({state:o.state,motionProgress:o.motionProgress,availableWidth:o.availableWidth,availableHeight:o.availableHeight,fullContentHeight:o.fullContentHeight,quickContentHeight:o.quickContentHeight,interactionEnabled:o.interactionEnabled,dismissTemporaryRevision:o.dismissTemporaryRevision});
@@ -50,7 +50,7 @@ for(const layer of ['delete','import-confirm','preview']){const {p,o}=mount({},s
 // Shared action implementation propagation with finite family isolation.
 const changed=actionsSource.replace(".borderRadius(6)",".borderRadius(7)");assert.notEqual(changed,actionsSource);const {p,o}=mount({ReaderBoundedSurfaceActions:changed});const footer=p.walk(o).find(x=>x instanceof p.deps.ReaderBoundedSurfaceActions);assert.equal([...footer.nodes.values()].find(n=>n.create==='取消').borderRadius,7);
 const tts=new p.deps.ReaderBoundedSurfaceActions(undefined,{specId:'tts-manager'});tts.initialRender();assert.equal([...tts.nodes.values()].find(n=>n.create==='取消').borderRadius,12);
-assert.throws(()=>mount({},source.replace('header: (): void => { this.temporaryHeader(); }','header: this.temporaryHeader')),/temporaryTitle|header|bind/,'direct business Builder references are a failing negative control');
-assert.throws(()=>{const bad=mount({},source.replace('leading: (): void => { this.temporaryLeading(); }','leading: this.temporaryLeading'));assert.ok(bad.p.nodes(bad.o).some(n=>n.create==='返回'&&n.width===38),'bound leading retains original owner Back');},/bound leading/);
+assert.throws(()=>mount({},source.replace('header: (): void => { this.temporaryHeader(opening); }','header: this.temporaryHeader')),/temporaryTitle|header|bind/,'direct business Builder references are a failing negative control');
+assert.throws(()=>{const bad=mount({},source.replace('leading: (): void => { this.temporaryLeading(opening); }','leading: this.temporaryLeading'));assert.ok(bad.p.nodes(bad.o).some(n=>n.create==='返回'&&n.width===38),'bound leading retains original owner Back');},/bound leading/);
 assert.doesNotMatch(source,/\.width\(this\.availableWidth\)\.height\(this\.availableHeight\)\.padding\(12\)/,'private temporary frame deleted');
 console.log('bounded retained replace composition PASS: full real SDK owner→Frame/Header/body/actions, current draft/guards/error/unknown/late session/close/reopen, stable canonical row morph, all temporary families, shared variant isolation and missing binding negative control; native removal/layout/focus remain OPEN');

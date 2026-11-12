@@ -23,16 +23,16 @@ registerHooks({
 
 const {
   RemoteReadingFlowGateway,
-} = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+} = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const {
   ReadingSessionFlowGateway,
-} = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const {
   ReadingChapterWindow,
-} = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
 const {
   ReadingPaginationIndex,
-} = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
 
 const SOURCE_ID = 'source-1';
 const BOOK_ID = '/book/42';
@@ -608,7 +608,7 @@ if(id==='directory-metadata'){
     assert.throws(() => gateway.decodeToc([{ ...raw, ...malformed }]), error =>
       error instanceof Error && error.code === 'invalidResponse' && error.command === 'book.toc' && /directory .* invalid/.test(error.message));
   }
-  const Local = (await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts')).LocalReadingFlowGateway;
+  const Local = (await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts')).LocalReadingFlowGateway;
   const local = new Local({ async request(method, params) {
     assert.equal(method, 'local_book.toc'); assert.equal(params.bookId, 'metadata-local');
     return { data: { sourceId: 'local', bookId: 'metadata-local', toc: [raw] } };
@@ -642,11 +642,11 @@ if(id==='directory-metadata'){
 if(id==='offline-manga'){
 {
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const {MangaSessionGateway}=await import('../entry/src/main/ets/features/manga/MangaSessionGateway.ts');
- const {MangaSessionController}=await import('../entry/src/main/ets/features/manga/MangaSessionController.ts');
- const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
- const {mangaDirectoryDisplay}=await import('../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
+ const {MangaSessionGateway}=await import('../entry/src/main/ets/features/manga/application/MangaSessionGateway.ts');
+ const {MangaSessionController}=await import('../entry/src/main/ets/features/manga/application/MangaSessionController.ts');
+ const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
+ const {mangaDirectoryDisplay}=await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts');
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),
   ['open','acquireCatalog','effectiveFit','configureAdjacentChapter','directoryEntries','directoryCurrentIndex','directoryCurrentCatalogEntry','directoryCurrentTitle','adjacentChapter'],
   {RemoteReadingFlowGateway,MangaSessionGateway,MangaBookPresentation,mangaDirectoryDisplay,AppStorage:{setOrCreate(){}}});
  const mangaSeed={sourceId:SOURCE_ID,bookId:BOOK_ID,detailUrl:BOOK_ID,title:'Cached manga',author:'Writer',contentKind:'manga',sourceVersion:'v1'};

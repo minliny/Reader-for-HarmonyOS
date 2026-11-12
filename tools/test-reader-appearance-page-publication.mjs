@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -7,17 +8,17 @@ import { join } from 'node:path';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as appearanceStyle from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
+import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import * as appearanceStyle from '../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
+import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts';
 import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 // Execute production methods and SDK-emitted Builder closures. These assertions
 // concern publication inputs and async ownership, not native paint timing.
-const lreFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const stageFile = new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url);
-const lreSource = readFileSync(lreFile, 'utf8'), stageSource = readFileSync(stageFile, 'utf8');
-const measurementModelsSource = readFileSync(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
+const lreFile = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const stageFile = new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets', import.meta.url);
+const lreSource = readReaderExperienceFixture(lreFile, 'utf8'), stageSource = readReaderExperienceFixture(stageFile, 'utf8');
+const measurementModelsSource = readReaderExperienceFixture(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -48,7 +49,7 @@ function fixture({ mode = 'paged', initial = true, queued = false, file = lreFil
   const chapter = { chapterIndex: 2, chapterTitle: 'chapter', bodyVersion: 'body', processingVersion: 'processing' };
   const old = initial ? page(20) : undefined;
   let activeTurn = false;
-  const Serial=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts',import.meta.url),['runProgressCommitSerial']);
+  const Serial=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts',import.meta.url),['runProgressCommitSerial']);
   const lane=Object.assign(new Serial(),{progressCommitTail:Promise.resolve()});
   const persistence=new ReadingSessionProgressOwner({captureReadingContentValidity:()=>()=>true},'source','book',async fn=>{
     if (queued) await queueGate.promise; return lane.runProgressCommitSerial(fn);
@@ -215,7 +216,7 @@ for (const mode of ['paged', 'continuous']) {
 }
 
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url), 'utf8');
+const surfaceSource = readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets', import.meta.url), 'utf8');
 for (const [name, source] of [['ReaderPageTurnSurface', stageSource], ['ReadingSurface', surfaceSource]]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));

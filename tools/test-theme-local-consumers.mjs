@@ -3,10 +3,10 @@ const definitions={"role-registry": {"description": "本地role alpha/颜色格�
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const {switchControls,segmentSource} = await import('./lib/reader-switch-control-probe.mjs');
+const {switchControls,switchSpecs,segmentSource} = await import('./lib/reader-switch-control-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 const { foundationControls, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -22,7 +22,7 @@ const rows = JSON.parse(readFileSync(new URL('./fixtures/design/theme-consumers.
 // Migrated Sync actions consume these same roles through the actual shared
 // Button. Execute the SDK-emitted parent and child, then retain the authored
 // palette checks below; registry presence or a new whitelist is insufficient.
-const syncFile = 'features/sync/SyncPage.ets';
+const syncFile = 'features/sync/ui/SyncPage.ets';
 const syncSource = readFileSync(new URL(`../entry/src/main/ets/${syncFile}`, import.meta.url), 'utf8');
 const sharedRoles = new Set();
 function syncActions(specs = foundationSpecs()) {
@@ -97,21 +97,23 @@ function captureSharedConsumer(file, methods, render) {
   }
   sharedBindings.set(file, new Set([...witnesses].filter(([, schemes]) => schemes.size === 2).map(([role]) => role)));
 }
-if(selectedCase==='source') captureSharedConsumer('features/source/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
+if(selectedCase==='source') captureSharedConsumer('features/source/ui/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
   owner.chip('未检测', 58, false, true); owner.bottomActionBar();
 });
-if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
-if(selectedCase==='rss') captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
+if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/ui/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
+if(selectedCase==='rss') captureSharedConsumer('features/rss/ui/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
   owner.statusTab('未读', 'unread'); owner.filterPill('未读'); owner.recentUnreadHeader();
 });
-if(selectedCase==='discover') captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
+if(selectedCase==='discover') captureSharedConsumer('features/discover/ui/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
   owner.categoryChips();owner.filterRow();
 });
 // F04's same theme palette now belongs to the actual finite enum producer.
 function captureSegmentTheme(source = segmentSource) {
   const control = switchControls({ segmentDefinition: source });
   const owner = control.mount(control.segment, { inputIdentity: 'theme-palette', options: ['跟随','浅色','深色'], optionIds: ['system','day','night'], selectedIndex: 0 });
-  const roles = new Set(rows.filter(row => row.file === 'features/common/ReaderSegmentedControl.ets').map(row => row.role));
+  const {activeText,inactiveText,selectedSurface,selectedBorder,surface,border}=switchSpecs().resolveReaderSegmentSpec('app-theme-segment');
+  const roles = new Set([activeText,inactiveText,selectedSurface,selectedBorder,surface,border]);
+  for(const role of roles) assert.match(readerAppColor(role,'day'),/^#[0-9A-Fa-f]{8}$/, 'current finite segmented palette role');
   const witnessed = new Map();
   for (const scheme of ['day', 'night', 'day']) {
     owner.appThemeScheme = scheme; control.properties.flush();
@@ -124,14 +126,14 @@ function captureSegmentTheme(source = segmentSource) {
   return new Set([...witnessed].filter(([,schemes])=>schemes.size===2).map(([role])=>role));
 }
 if(selectedCase==='segment') {
-sharedBindings.set('features/common/ReaderSegmentedControl.ets', captureSegmentTheme());
-assert.notDeepEqual(captureSegmentTheme(segmentSource.replaceAll('this.appThemeScheme', "'day'")), sharedBindings.get('features/common/ReaderSegmentedControl.ets'), 'frozen Day shared enum cannot qualify Night role consumption');
+sharedBindings.set('ui/controls/ReaderSegmentedControl.ets', captureSegmentTheme());
+assert.notDeepEqual(captureSegmentTheme(segmentSource.replaceAll('this.appThemeScheme', "'day'")), sharedBindings.get('ui/controls/ReaderSegmentedControl.ets'), 'frozen Day shared enum cannot qualify Night role consumption');
 }
 if(selectedCase==='bookmark-empty') {
 // C03 intentionally replaces this one historical empty-state button color
 // with the approved message family. Keep its original registry tuple above,
 // and prove the real wrapper -> PageState -> Action and both live schemes.
-const bookmarkEmptyFile='features/reading/ReaderBookmarkEmptyState.ets';
+const bookmarkEmptyFile='features/reading/ui/ReaderBookmarkEmptyState.ets';
 const bookmarkEmptySource=readFileSync(new URL(`../entry/src/main/ets/${bookmarkEmptyFile}`,import.meta.url),'utf8');
 const bookmarkMessages=boundedSurfaceSdk();let returned=0;
 const bookmarkEmpty=bookmarkMessages.consumer(bookmarkEmptySource,undefined,{}, {onReturnToDirectory:()=>returned++});bookmarkEmpty.initialRender();
@@ -162,7 +164,7 @@ assert.throws(() => checkSyncActions(wrongRole, 'day'), /authored Sync surface r
 
 }
 if(selectedCase==='status-semantics') {
-const SourcePage = selectedProductionMethods(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets', import.meta.url),'SourceManagementPage',
+const SourcePage = selectedProductionMethods(new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url),'SourceManagementPage',
   ['statusBadgeBackground', 'statusBadgeDot'],{readerAppColor});
 const page = new SourcePage();
 for (const scheme of ['day', 'night']) {

@@ -50,9 +50,9 @@
     },
     {
       "scope": "SourceManagementPage.statusBanner",
-      "status": "retained-unreachable",
-      "authority": "entry/src/main/ets/features/source/SourceManagementPage.ets",
-      "rule": "No consumed call site; retained hand-drawn legacy banner is not a current reachable unified entry and must not be reintroduced."
+      "status": "retired-unreachable",
+      "authority": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+      "rule": "The private hand-drawn legacy banner has been removed after its only references were obsolete tool probes. Production sourceList/statusAction/pendingOverlay use ReaderRecoveryAction, ReaderPageState and ReaderRecoveryNotice; onMessageChanged retains the transient adapter. Old tool samples now target those real producers; no business owner, write or retry policy is replaced."
     },
     {
       "scope": "RulesManagementPage",
@@ -80,30 +80,8 @@
       "member": "mangaEmptyState",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前目录 sourceId/bookId、挂载及 navigation；页态使用本次目录投影，规则浮层接原 rulesRecovery 和其原操作动作。",
-      "retireRule": "目录身份/投影/规则原操作代次变化后按原 owner 更新；关闭目录退役宿主，规则 UI 清除不代替写入确认。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage.pageRecoveryOverlay::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
-      "owner": "BookDirectoryPage",
-      "member": "pageRecoveryOverlay",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前目录 sourceId/bookId、挂载及 navigation；页态使用本次目录投影，规则浮层接原 rulesRecovery 和其原操作动作。",
-      "retireRule": "目录身份/投影/规则原操作代次变化后按原 owner 更新；关闭目录退役宿主，规则 UI 清除不代替写入确认。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage.standardContent::shared.page-state",
-      "file": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
-      "owner": "BookDirectoryPage",
-      "member": "standardContent",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前目录 sourceId/bookId、挂载及 navigation；页态使用本次目录投影，规则浮层接原 rulesRecovery 和其原操作动作。",
-      "retireRule": "目录身份/投影/规则原操作代次变化后按原 owner 更新；关闭目录退役宿主，规则 UI 清除不代替写入确认。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前目录 sourceId/bookId、挂载及 navigation，页态使用本次目录投影。",
+      "retireRule": "目录身份或投影变化后按原 owner 更新。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
       "status": "registered-source-entry"
     },
     {
@@ -118,14 +96,47 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets#BookshelfEmptyCard.build::shared.page-state",
-      "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets",
-      "owner": "BookshelfEmptyCard",
+      "id": "entry/src/main/ets/features/bookshelf/BookshelfDetailNotice.ets#BookshelfDetailNotice.build::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfDetailNotice.ets",
+      "owner": "BookshelfDetailNotice",
+      "member": "build",
+      "family": "shared.recovery-notice",
+      "category": "详情加书或移除原操作待核对",
+      "effectiveHost": "当前书籍详情展示层。根恢复槽的实时前景资格与原移除操作身份共同约束核对。",
+      "retireRule": "弹层覆盖或离开当前宿主时拒绝点击。核对仍要求原书、原移除键和原操作代次。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets#BookshelfEmptyPage.build::shared.page-state",
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+      "owner": "BookshelfEmptyPage",
       "member": "build",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "当前书架调用方所呈现的空态，动作回传原书架/搜索/导入宿主。",
       "retireRule": "父书架投影变化卸载/更新空态；动作有效性由父宿主原 navigation/runtime 准入决定。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/BookshelfGroupDialog.ets#BookshelfGroupDialog.recovery::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfGroupDialog.ets",
+      "owner": "BookshelfGroupDialog",
+      "member": "recovery",
+      "family": "shared.recovery-notice",
+      "category": "分组原操作待核对或继续",
+      "effectiveHost": "书架编辑分组表面的 BookshelfGroupPresentation，按当前打开身份及已保存的原分组操作投影。",
+      "retireRule": "打开身份与回执代次必须同时匹配。仅同书同组、原方法可继续时将动作交给 BookshelfHost。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/BookshelfGroupDialog.ets#BookshelfGroupDialog.surface::shared.dialog-surface",
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfGroupDialog.ets",
+      "owner": "BookshelfGroupDialog",
+      "member": "surface",
+      "family": "shared.dialog-surface",
+      "category": "书架编辑分组表面的公共有限外框",
+      "effectiveHost": "书架当前编辑分组表面，BookshelfGroupPresentation 按打开身份和书籍挂载 BookshelfGroupSelector。",
+      "retireRule": "退场或替换打开身份后旧遮罩及选择失效，正在提交时保持原关闭规则。UI 退役不改变原操作事实。",
       "status": "registered-source-entry"
     },
     {
@@ -147,7 +158,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 feedbackMounted 的书架管理页；snapshot 原 managementMutation/receipt/readFacts 决定消息和动作。",
-      "retireRule": "管理页退场拒绝新短反馈并清空局部去重；原分组/书籍操作变更后按原 snapshot 更新，通知消失不确认写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "管理页退场拒绝新短反馈并清空局部去重；原分组/书籍操作变更后按原 snapshot 更新，通知消失不确认写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -213,7 +224,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的书架页；viewModeSnapshot 原保存/核对身份和 navigationGeneration 决定模式消息。",
-      "retireRule": "退场或模式保存/核对身份变化拒绝旧动作，页态跟随当前书架投影，既有去重在事实变化时重置。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场或模式保存/核对身份变化拒绝旧动作，页态跟随当前书架投影，既有去重在事实变化时重置。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -224,7 +235,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的书架设置页；operation、viewModeSnapshot 与 revision/presentationRevision 决定原保存/核对准入。",
-      "retireRule": "退场递增 revision/presentationRevision 并清除局部反馈去重；未决写入仍由原设置/模式 owner 核对。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场递增 revision/presentationRevision 并清除局部反馈去重；未决写入仍由原设置/模式 owner 核对。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -235,7 +246,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的书架设置页；operation、viewModeSnapshot 与 revision/presentationRevision 决定原保存/核对准入。",
-      "retireRule": "退场递增 revision/presentationRevision 并清除局部反馈去重；未决写入仍由原设置/模式 owner 核对。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场递增 revision/presentationRevision 并清除局部反馈去重；未决写入仍由原设置/模式 owner 核对。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -279,7 +290,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 且 populated 的书架宿主；原 navigationGeneration 和 recovery/readRecovery 的 generation 决定消息。",
-      "retireRule": "书架宿主退场清除局部去重；readRecovery 事实消失清理提示键，原未决操作仍归原 owner。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "书架宿主退场清除局部去重；readRecovery 事实消失清理提示键，原未决操作仍归原 owner。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -345,7 +356,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前已挂载且 detailBookAvailable 的书籍详情，沿用 sourceId/bookId、目录投影与字体准备代次。",
-      "retireRule": "详情身份/目录投影变化或退场拒绝旧回调；书架短反馈按原 shelfMessage 事实更新，不更改书籍数据。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "详情身份/目录投影变化或退场拒绝旧回调；书架短反馈按原 shelfMessage 事实更新，不更改书籍数据。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -367,12 +378,12 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的原导入呈现，recovery、import operation 与 result batch 决定消息及动作。",
-      "retireRule": "导入呈现退场或 operation/result 变化后退役 UI；退出弹层不取消/确认已提交的导入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "导入呈现退场或 operation/result 变化后退役 UI；退出弹层不取消/确认已提交的导入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/common/JsonImportDialog.ets#JsonImportDialog.build::shared.dialog-surface",
-      "file": "entry/src/main/ets/features/common/JsonImportDialog.ets",
+      "id": "entry/src/main/ets/app/composition/JsonImportDialog.ets#JsonImportDialog.build::shared.dialog-surface",
+      "file": "entry/src/main/ets/app/composition/JsonImportDialog.ets",
       "owner": "JsonImportDialog",
       "member": "build",
       "family": "shared.dialog-surface",
@@ -382,16 +393,15 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/common/ReaderTransientFeedback.ts#ReaderTransientFeedback.show::native.toast",
-      "file": "entry/src/main/ets/features/common/ReaderTransientFeedback.ts",
-      "owner": "ReaderTransientFeedback",
-      "member": "show",
-      "family": "native.toast",
-      "category": "短时反馈的唯一原生 Toast 适配桥",
-      "effectiveHost": "单个调用宿主的实例；每次展示前后调用传入 isCurrent 并在边界内获取 UIContext。",
-      "retireRule": "reset 清空局部去重；无效/空消息、重复或原生异常均返回 false；已显示 Toast 由系统 duration 到期，无业务队列。 已显示由原生 duration 到期；适配器不控制业务完成、取消或重试。",
-      "status": "registered-source-entry",
-      "bridge": "toast-adapter"
+      "id": "entry/src/main/ets/pages/Index.ets#Index.indexContent::shared.transient-presentation",
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "owner": "Index",
+      "member": "indexContent",
+      "family": "shared.transient-presentation",
+      "category": "应用窗口的公共短反馈呈现",
+      "effectiveHost": "Index 根窗口只挂载一处 ReaderTransientToast；组件只在前台且持有当前宿主身份时呈现。原生覆盖窗口的实际可见性独立验收。",
+      "retireRule": "宿主退场取消定时器并注销身份；到期和退出只退役其已接收的代次。发布与呈现均无权改变业务结果。",
+      "status": "registered-source-entry"
     },
     {
       "id": "entry/src/main/ets/features/discover/DiscoverPage.ets#DiscoverPage.onPresentationChanged::shared.transient",
@@ -401,7 +411,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "L0 下 discover 被 ReaderProductScope 禁用；保留组件仅在未来明确恢复后按原 mounted/presentation operation 准入。",
-      "retireRule": "当前不可达，不记为当前可见接入；恢复前必须重新检查入口和生命周期，既有组件退场清空去重。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "当前不可达，不记为当前可见接入；恢复前必须重新检查入口和生命周期，既有组件退场清空去重。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "retained-disabled"
     },
     {
@@ -456,7 +466,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
-      "retireRule": "退场或下载页呈现身份失效拒绝旧操作；错误/章节数据更新清除对应短反馈键，确认框仍由外部呈现 owner 关闭。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场或下载页呈现身份失效拒绝旧操作；错误/章节数据更新清除对应短反馈键，确认框仍由外部呈现 owner 关闭。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -467,18 +477,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
-      "retireRule": "退场或下载页呈现身份失效拒绝旧操作；错误/章节数据更新清除对应短反馈键，确认框仍由外部呈现 owner 关闭。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets#SharedDownloadPage.pageContent::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "pageContent",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
-      "retireRule": "退场或下载页呈现身份失效拒绝旧操作；错误/章节数据更新清除对应短反馈键，确认框仍由外部呈现 owner 关闭。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "retireRule": "退场或下载页呈现身份失效拒绝旧操作；错误/章节数据更新清除对应短反馈键，确认框仍由外部呈现 owner 关闭。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -487,9 +486,20 @@
       "owner": "SharedDownloadPage",
       "member": "pageOverlays",
       "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
-      "retireRule": "退场或下载页呈现身份失效拒绝旧操作；错误/章节数据更新清除对应短反馈键，确认框仍由外部呈现 owner 关闭。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "category": "下载批操作结果未确认的持续提示",
+      "effectiveHost": "当前 Runtime 的下载展示层投影批操作回执。页面覆盖时隐藏持续提示，刷新列表为只读。",
+      "retireRule": "页面退场使旧按钮失效。同一根展示重开下载保留结果，读回不会确认原操作，重建根展示或切换 Runtime 时清除本地投影。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets#SharedDownloadPage.pageBody::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "owner": "SharedDownloadPage",
+      "member": "pageBody",
+      "family": "shared.page-state",
+      "category": "下载管理字体准备的加载或失败",
+      "effectiveHost": "当前挂载的下载页字体准备分支，书籍或章节列表在字体准备完毕后接入。",
+      "retireRule": "字体准备完成后切换到原列表，失败仅重试字体准备。页面退场递增字体代次。",
       "status": "registered-source-entry"
     },
     {
@@ -511,7 +521,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -522,7 +532,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -533,7 +543,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -555,7 +565,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -577,7 +587,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -588,18 +598,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.changeTtsRate::shared.transient",
-      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "changeTtsRate",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -610,7 +609,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -621,7 +620,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -632,7 +631,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -643,7 +642,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -665,18 +664,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.requireTtsConfigurationHost::shared.transient",
-      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "requireTtsConfigurationHost",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -687,7 +675,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -698,30 +686,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.showReaderAlert::native.alert",
-      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "showReaderAlert",
-      "family": "native.alert",
-      "category": "经 ReaderNativeAlertOwner 的原生确认/选择桥",
-      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 必须位于本方法 ReaderNativeAlertOwner.present 的第一个 native 回调内；owner 退役使旧按钮不再分派业务。",
-      "status": "registered-source-entry",
-      "bridge": "owned-alert-native-callback"
-    },
-    {
-      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.showReaderAlert::shared.alert-owner",
-      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "showReaderAlert",
-      "family": "shared.alert-owner",
-      "category": "原生确认/选择的原宿主 owner 入口",
-      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 原生 lease 在决定/取消/退役时结束；原生 UI 关闭仍遵循原系统/调用者规则，不作为业务 ACK。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -732,7 +697,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -743,7 +708,51 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.notifyTtsConfigurationFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "owner": "ReadingExperience",
+      "member": "notifyTtsConfigurationFailure",
+      "family": "shared.transient",
+      "category": "朗读配置明确失败短反馈",
+      "effectiveHost": "当前文字阅读生命周期和可交互前景，目录、换源或原生层覆盖时拒绝配置失败短反馈。",
+      "retireRule": "会话、前景和阅读窗口资格失效时拒绝发布。短反馈不触发重试配置写入。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.projectTtsConfigurationRecovery::shared.transient",
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "owner": "ReadingExperience",
+      "member": "projectTtsConfigurationRecovery",
+      "family": "shared.transient",
+      "category": "朗读配置刷新失败及已提交后的读回提示",
+      "effectiveHost": "当前文字阅读会话投影 TTS 配置 owner 的 metadata、durable 和 selection。仍有配置时可短反馈，原操作未决由持续提示承载。",
+      "retireRule": "仅当前生命周期且阅读控制有前景资格时发布短反馈。回执和持续提示仍由原朗读配置 owner 更新。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.readingFailureContent::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "owner": "ReadingExperience",
+      "member": "readingFailureContent",
+      "family": "shared.page-state",
+      "category": "当前正文不可用或换源失败",
+      "effectiveHost": "当前文字阅读正文预算内的可滚动失败投影，继续使用当前纸色和原恢复动作。",
+      "retireRule": "正文恢复或当前会话退役后退出。换源失败的继续动作捕获原 scope，刷新及其他动作仍交回阅读 owner。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/LocalReadingExperience.ets#ReadingExperience.sourceSwitchCompletionChanged::shared.transient",
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "owner": "ReadingExperience",
+      "member": "sourceSwitchCompletionChanged",
+      "family": "shared.transient",
+      "category": "文字换源确认后的短反馈",
+      "effectiveHost": "当前前景文字阅读会话。源、书、阅读就绪代次及正文选择验证通过后，按原回执身份消费一次。",
+      "retireRule": "旧生命周期、章节选择或换源回执身份失效后退役。阅读淡入动效和提示均不确认写入。",
       "status": "registered-source-entry"
     },
     {
@@ -787,7 +796,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "已挂载外观面板 feedbackMounted 且 fullInput 有效，主题选择来自当前 snapshot.activeTheme。",
-      "retireRule": "外观面板退场清空局部去重；完整面板交互端点失效即不显示旧动作短反馈。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "外观面板退场清空局部去重；完整面板交互端点失效即不显示旧动作短反馈。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -821,6 +830,17 @@
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "当前 reader 内搜索临时页及原 quickSearch publication/state；结果页态不重建搜索 owner。",
       "retireRule": "关键词/搜索 generation 或临时页失效后更新/卸载，onSearch/retry 仍由原 reader 搜索 owner 准入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets#ReaderDirectoryNavigationList.mangaEmptyState::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+      "owner": "ReaderDirectoryNavigationList",
+      "member": "mangaEmptyState",
+      "family": "shared.page-state",
+      "category": "漫画目录空态或章节搜索无匹配",
+      "effectiveHost": "当前漫画目录 Grid 的 viewId；实际列表无可见节点时区分查询无匹配与暂无章节。",
+      "retireRule": "目录投影或交互资格变化后，捕获旧 viewId 的清空或恢复动作失效。目录数据仍由当前 owner 持有。",
       "status": "registered-source-entry"
     },
     {
@@ -864,7 +884,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 feedbackMounted 的 reader 目录恢复面；presentationId + bookmark/offline generation 与 isCurrent(identity) 决定准入。",
-      "retireRule": "退场清空短反馈去重；presentationId/原操作 generation 变化使旧动作失效，原书签/缓存未决事项分别保留。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场清空短反馈去重；presentationId/原操作 generation 变化使旧动作失效，原书签/缓存未决事项分别保留。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -875,7 +895,18 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的本地 TXT 目录规则编辑器；保留 sourceId/bookId、原 rules operation、route/entity admission 与 notifyApplied 身份。",
-      "retireRule": "目录规则实体/原操作身份或组件挂载失效拒绝旧短反馈；待核对/继续浮层由 BookDirectoryPage 接原 operation 决定清除。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "目录规则实体/原操作身份或组件挂载失效拒绝旧短反馈；待核对/继续由 ReaderFullDirectory 接原 operation 决定清除。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets#ReaderFullDirectory.directoryRulesNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+      "owner": "ReaderFullDirectory",
+      "member": "directoryRulesNotice",
+      "family": "shared.recovery-notice",
+      "category": "原操作待核对/待继续或明确结果的消息表面",
+      "effectiveHost": "当前本地 TXT 完整目录的 opening 与书籍身份，规则编辑器持有原 Runtime 和原操作回执。",
+      "retireRule": "目录离场、书籍变化或原操作代次变化立即拒绝旧动作；仅收起编辑层保留同一次目录打开的规则 owner 及恢复投影。",
       "status": "registered-source-entry"
     },
     {
@@ -886,7 +917,18 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted、selectionEnabled 的原生段落；复制动作绑定原 selection epoch 与 recipe 原文。",
-      "retireRule": "段落退场/重新准备使 epoch 失效，关闭 native controller 并清空反馈去重；复制失败不修改原文或阅读进度。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "段落退场/重新准备使 epoch 失效，关闭 native controller 并清空反馈去重；复制失败不修改原文或阅读进度。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay.configurationStatus::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+      "owner": "ReaderTtsConfigOverlay",
+      "member": "configurationStatus",
+      "family": "shared.recovery-notice",
+      "category": "原生覆盖窗口内的朗读配置未决状态",
+      "effectiveHost": "当前 TTS 管理器 windowModal 的配置恢复投影，仅在回执可见时显示无动作状态提示。",
+      "retireRule": "配置事实或当前覆盖窗口退役时移除。核对原操作由原配置 owner 接管。",
       "status": "registered-source-entry"
     },
     {
@@ -897,7 +939,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 highlightMounted 且 longPressSelectText 的显示片段；复制使用原文本选区投影。",
-      "retireRule": "片段退场后拒绝新复制短反馈并清空去重，原选择菜单仍由原 TextController 关闭。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "片段退场后拒绝新复制短反馈并清空去重，原选择菜单仍由原 TextController 关闭。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -956,6 +998,17 @@
       "status": "retained-disabled"
     },
     {
+      "id": "entry/src/main/ets/features/search/ReaderSearchHistoryPanel.ets#ReaderSearchHistoryPanel.build::shared.page-state",
+      "file": "entry/src/main/ets/features/search/ReaderSearchHistoryPanel.ets",
+      "owner": "ReaderSearchHistoryPanel",
+      "member": "build",
+      "family": "shared.page-state",
+      "category": "书架搜索历史局部加载及读取或清空失败",
+      "effectiveHost": "Library 搜索的历史场景。公共页态随当前历史状态显示，已有历史项仍可独立渲染。",
+      "retireRule": "退出历史场景或状态变化后退役。反馈测量须匹配当前状态，重试交给历史呈现的原操作回调。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/search/SearchPage.ets#SearchPage.emptyContent::shared.page-state",
       "file": "entry/src/main/ets/features/search/SearchPage.ets",
       "owner": "SearchPage",
@@ -971,17 +1024,6 @@
       "file": "entry/src/main/ets/features/search/SearchPage.ets",
       "owner": "SearchPage",
       "member": "errorContent",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 SearchHost 呈现 identity/navigationGeneration、history/source/search publication 的真实 loading/empty/failure 事实。",
-      "retireRule": "关键词/搜索/历史/书源读取代次改变或页面退场后原 Host 拒绝旧回调；页态跟随当前事实更新。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/search/SearchPage.ets#SearchPage.initialContent::shared.page-state",
-      "file": "entry/src/main/ets/features/search/SearchPage.ets",
-      "owner": "SearchPage",
-      "member": "initialContent",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "当前 SearchHost 呈现 identity/navigationGeneration、history/source/search publication 的真实 loading/empty/failure 事实。",
@@ -1020,6 +1062,50 @@
       "effectiveHost": "当前 SearchHost 呈现 identity/navigationGeneration、history/source/search publication 的真实 loading/empty/failure 事实。",
       "retireRule": "关键词/搜索/历史/书源读取代次改变或页面退场后原 Host 拒绝旧回调；页态跟随当前事实更新。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
       "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage.dialogPreview::shared.dialog-surface",
+      "file": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets",
+      "owner": "ReaderMessagePreviewPage",
+      "member": "dialogPreview",
+      "family": "shared.dialog-surface",
+      "category": "开发者诊断的普通及危险确认样本",
+      "effectiveHost": "设置中的开发者模式与消息预览打开身份。确认和取消只演示本地样本。",
+      "retireRule": "失去前景、预览退场或代次变化后，旧动作不再作用到新样本。无真实确认或业务提交。",
+      "status": "diagnostic-only"
+    },
+    {
+      "id": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage.pagePreview::shared.page-state",
+      "file": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets",
+      "owner": "ReaderMessagePreviewPage",
+      "member": "pagePreview",
+      "family": "shared.page-state",
+      "category": "开发者诊断的加载、空态和失败样本",
+      "effectiveHost": "设置中的开发者模式与消息预览打开身份。数据与重试结果来自本地示例场景。",
+      "retireRule": "预览退役使旧重试定时器及按钮失效。样本不代表真实页面的网络、读取或设备验收。",
+      "status": "diagnostic-only"
+    },
+    {
+      "id": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage.previewOverlay::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets",
+      "owner": "ReaderMessagePreviewPage",
+      "member": "previewOverlay",
+      "family": "shared.recovery-notice",
+      "category": "开发者诊断的未决、长文和核对忙态样本",
+      "effectiveHost": "设置中的开发者模式与消息预览打开身份。持续提示使用当前本地预览代次。",
+      "retireRule": "切换样本、失去前景或退场时清理原定时器；核对只改变预览投影。",
+      "status": "diagnostic-only"
+    },
+    {
+      "id": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage.previewToast::shared.transient",
+      "file": "entry/src/main/ets/features/settings/ReaderMessagePreviewPage.ets",
+      "owner": "ReaderMessagePreviewPage",
+      "member": "previewToast",
+      "family": "shared.transient",
+      "category": "开发者诊断的普通、成功、失败和长文短反馈样本",
+      "effectiveHost": "设置中的开发者模式与消息预览打开身份。发布使用捕获的预览代次及当前前景资格。",
+      "retireRule": "关闭、失去前景或替换样本时重置适配器并清除定时器。无业务完成、失败或写入事实。",
+      "status": "diagnostic-only"
     },
     {
       "id": "entry/src/main/ets/features/settings/SettingsPage.ets#SettingsPage.pendingFeedback::shared.recovery-notice",
@@ -1086,7 +1172,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
-      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -1097,51 +1183,84 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
-      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/SourceManagementPage.ets#SourceManagementPage.onMessageChanged::shared.transient",
-      "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.onMessageChanged::shared.transient",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
       "owner": "SourceManagementPage",
       "member": "onMessageChanged",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前已挂载书源页，原 operation/original/receipt 身份与 loading/blocked 状态控制消息；statusBanner 保留但无当前消费入口。",
-      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/SourceManagementPage.ets#SourceManagementPage.originalRecovery::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.originalRecovery::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
       "owner": "SourceManagementPage",
       "member": "originalRecovery",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前已挂载书源页，原 operation/original/receipt 身份与 loading/blocked 状态控制消息；statusBanner 保留但无当前消费入口。",
-      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "effectiveHost": "当前书源管理开页、当前原操作代次及前景。继续动作复查原记录的继续权限。",
+      "retireRule": "分组打开及退场、切到后台或代次变化时拒绝旧动作。原回执由书源 owner 保留。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/SourceManagementPage.ets#SourceManagementPage.pendingOverlay::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.pendingOverlay::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
       "owner": "SourceManagementPage",
       "member": "pendingOverlay",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前已挂载书源页，原 operation/original/receipt 身份与 loading/blocked 状态控制消息；statusBanner 保留但无当前消费入口。",
-      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "retireRule": "分组占用及退场、后台或开页失效时停用提示输入。已受理操作仍由原 owner 结算。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/SourceManagementPage.ets#SourceManagementPage.sourceList::shared.page-state",
-      "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.sourceList::shared.page-state",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
       "owner": "SourceManagementPage",
       "member": "sourceList",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "当前已挂载书源页，原 operation/original/receipt 身份与 loading/blocked 状态控制消息；statusBanner 保留但无当前消费入口。",
       "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/SourceSwitchWindow.ets#SourceSwitchWindow.notifyOrdinaryFailure::shared.transient",
+      "file": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "owner": "SourceSwitchWindow",
+      "member": "notifyOrdinaryFailure",
+      "family": "shared.transient",
+      "category": "仍保留候选的普通查源或换源失败",
+      "effectiveHost": "当前前景换源窗口仍有已展示候选且没有未决恢复。按当前源、状态和消息去重。",
+      "retireRule": "窗口状态、身份或消息代次变化时退役。待核对或待撤销走持续提示，候选耗尽走局部页态。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/SourceSwitchWindow.ets#SourceSwitchWindow.novelEmptyMessage::shared.page-state",
+      "file": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "owner": "SourceSwitchWindow",
+      "member": "novelEmptyMessage",
+      "family": "shared.page-state",
+      "category": "文字换源候选局部加载、确认空及失败",
+      "effectiveHost": "当前文字换源窗口没有可展示候选的列表位置，状态随原查源投影变化。",
+      "retireRule": "候选出现或窗口退役后退出；重试绑定当前消息代次及有效交互，交给原查源或候选重试动作。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/SourceSwitchWindow.ets#SourceSwitchWindow.recoveryNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "owner": "SourceSwitchWindow",
+      "member": "recoveryNotice",
+      "family": "shared.recovery-notice",
+      "category": "文字换源原操作未确认或等待撤销",
+      "effectiveHost": "当前文字换源窗口对原交易状态的持续投影，区分待核对和待撤销。",
+      "retireRule": "确认、原事务身份或窗口代次变化后更新；动作仅在当前窗口和原状态允许时交回 Host。",
       "status": "registered-source-entry"
     },
     {
@@ -1197,7 +1316,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。",
-      "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -1223,69 +1342,25 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.applyBookshelfCatalogSnapshot::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "applyBookshelfCatalogSnapshot",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.assignShelfDefaultGroup::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "assignShelfDefaultGroup",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.bookshelfHost::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "bookshelfHost",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
       "id": "entry/src/main/ets/pages/Index.ets#Index.chooseCachedChapterRefresh::shared.transient",
       "file": "entry/src/main/ets/pages/Index.ets",
       "owner": "Index",
       "member": "chooseCachedChapterRefresh",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "effectiveHost": "当前根页面及原缓存刷新操作。失败短反馈检查当前恢复槽的前景资格。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.detailOperationNoticeContent::shared.recovery-notice",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "detailOperationNoticeContent",
+      "id": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets#ReaderJourneyRecoveryNotices.build::shared.recovery-notice",
+      "file": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets",
+      "owner": "ReaderJourneyRecoveryNotices",
+      "member": "build",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.indexRecoveryNoticeContent::shared.recovery-notice",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "indexRecoveryNoticeContent",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "effectiveHost": "根装配提供当前阅读、详情及漫画恢复视图；当前Runtime保留的旧版快照待恢复事实仅在可交互书架展示，暂隐不清除原文件或标记迁移完成。Library47可移植操作支持不自动授权消费旧Host文件，automaticImportDeferred仅表达旧文件保留与当前书库继续使用现有数据，不提供重试或导入按钮。展示和点击都检查当前前景与覆盖状态。",
+      "retireRule": "导航或原操作代次变化退役旧按钮。应用弹层、原生 Web、后台和书架转场暂停展示和操作，原 owner 保留回执；旧版快照提示随Runtime投影退役，无不支持的恢复按钮，也不进入阅读控制的布局。",
       "status": "registered-source-entry"
     },
     {
@@ -1296,7 +1371,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -1307,31 +1382,20 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.openBookRemovalDialog::native.custom-dialog",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "openBookRemovalDialog",
+      "id": "entry/src/main/ets/features/bookshelf/BookRemovalDialogHost.ets#BookRemovalDialogHost.createDialog::native.custom-dialog",
+      "file": "entry/src/main/ets/features/bookshelf/BookRemovalDialogHost.ets",
+      "owner": "BookRemovalDialogHost",
+      "member": "createDialog",
       "family": "native.custom-dialog",
       "category": "书籍移除确认的既有原生 CustomDialogController 容器",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 沿原 bookRemovalDialogController 及当前书籍/导航身份关闭和退役，不更换删除 owner。",
+      "effectiveHost": "书架功能层原生宿主通过 BookRemovalDialogPresentation 接受当前单本、详情和多选移除确认。",
+      "retireRule": "原生取消及退场仅释放同一打开代次。确认关闭后核对原动作资格，再交原书架操作 owner。",
       "status": "registered-source-entry",
       "bridge": "registered-dialog-controller"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.openBookshelfMultiSelect::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "openBookshelfMultiSelect",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
     },
     {
       "id": "entry/src/main/ets/pages/Index.ets#Index.performMangaPreviewSourceSwitch::shared.transient",
@@ -1341,7 +1405,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -1352,40 +1416,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.presentMangaSourceSwitchCommitRecovery::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "presentMangaSourceSwitchCommitRecovery",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfGroupRecoveryContent::shared.recovery-notice",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "shelfGroupRecoveryContent",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfGroupSurface::shared.dialog-surface",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "shelfGroupSurface",
-      "family": "shared.dialog-surface",
-      "category": "自绘确认/输入的公共有限外框",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 外框只管理已认可的布局；外层呈现 owner 决定开关、取消和旧回调失效。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -1419,7 +1450,7 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -1430,7 +1461,51 @@
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 退场 reset 后拒绝新展示；已显示由原生 duration 到期，原业务事实不受反馈失败影响。",
+      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/pages/Index.ets#Index.bindBookshelfCatalog::shared.transient",
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "owner": "Index",
+      "member": "bindBookshelfCatalog",
+      "family": "shared.transient",
+      "category": "书架目录刷新失败或部分完成短反馈",
+      "effectiveHost": "BookshelfCatalogPresentation 的当前书架路由、Runtime、挂载和导航绑定，保留已有书架投影。",
+      "retireRule": "自动或手动刷新状态切换及事实变化更新去重。路由、代次或前景资格失效后拒绝发布。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/pages/Index.ets#Index.mangaSourceSwitchPorts::shared.transient",
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "owner": "Index",
+      "member": "mangaSourceSwitchPorts",
+      "family": "shared.transient",
+      "category": "漫画换源确认后读回失败或核对结果短反馈",
+      "effectiveHost": "MangaSourceSwitchPresentation 的 savedRecovery 接线，当前原书、Host、导航、Runtime 和前景必须有效。",
+      "retireRule": "换源状态未确认时沿原恢复入口，确认后只提示读回或回书架结果。旧身份不能发布或重派换源。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/pages/Index.ets#Index.openShelfGroup::shared.transient",
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "owner": "Index",
+      "member": "openShelfGroup",
+      "family": "shared.transient",
+      "category": "分组已确认但列表刷新失败或分组暂不可用",
+      "effectiveHost": "BookshelfGroupPresentation 的当前书籍、编辑分组打开身份及书架路由。",
+      "retireRule": "分组退场或切换身份后拒绝旧反馈。列表刷新失败不重新派发分组写入。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfMutations::shared.transient",
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "owner": "Index",
+      "member": "shelfMutations",
+      "family": "shared.transient",
+      "category": "书架移除普通结果和清理、多选读取与确认前核对反馈",
+      "effectiveHost": "BookshelfMutationPresentation 的当前 Runtime 与书架、详情或多选呈现。移除结果按回执代次去重，多选核对绑定本次打开。",
+      "retireRule": "Runtime、前景或当前呈现失效即拒绝发布。旧多选确认只释放原选择，核对提示不确认写入，仍待核对的原删除继续使用恢复呈现。",
       "status": "registered-source-entry"
     },
     {
@@ -1440,8 +1515,19 @@
       "member": "build",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "Index 无法挂载时的最小启动恢复宿主，使用 ReaderRuntimeOwner 配置恢复状态订阅。",
-      "retireRule": "宿主退场 unsubscribe；恢复状态决定当前页态和重试，不能借普通页面的 runtime 准入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "Index 载入前的独立启动恢复页，消费当前 WindowStage 的 ReaderStartupContentOwner 发布状态。",
+      "retireRule": "宿主退场取消订阅。按钮绑定当前启动 owner 和恢复发布代次，旧按钮不能重启新一次启动。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.showAboutFeedback::shared.transient",
+      "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+      "owner": "SettingsPage",
+      "member": "showAboutFeedback",
+      "family": "shared.transient",
+      "category": "普通完成/失败短反馈",
+      "effectiveHost": "当前已挂载且可输入的设置首页关于 Reader 子页；复制前及展示中检查 aboutPageId、isOpeningCurrent、runtime 和当前输入准入。",
+      "retireRule": "关于页返回、设置切换或退场清除 aboutPageId 并 reset 短反馈；旧代复制与短反馈失效，不涉及任何业务写入。",
       "status": "registered-source-entry"
     }
   ],
@@ -1451,10 +1537,10 @@
       "file": "entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets",
       "owner": "SourceSwitchCompletionOverlay",
       "member": "build",
-      "category": "换源已确认后的纸面短反馈/纸面过渡",
+      "category": "换源已确认后的纸面过渡",
       "effectiveHost": "由当前 reader 的原 source-switch completion presentation/身份承载，沿当前阅读纸色。",
-      "retireRule": "原 reader completion owner 控制原 2200ms 期限、身份变化及退场清理；组件本身不建计时器/ACK。",
-      "reason": "已认可的阅读纸面短反馈及纸面过渡，不能强行改为系统 Toast 或持久通知。",
+      "retireRule": "当前阅读会话控制纸面过渡的透明度及退场，减少动效时沿用阅读会话的原规则。",
+      "reason": "纸色过渡由阅读页面绘制。换源完成提示统一经 ReaderTransientFeedback 发布，沿用原 2200ms 期限。",
       "status": "dedicated-existing-surface"
     },
     {

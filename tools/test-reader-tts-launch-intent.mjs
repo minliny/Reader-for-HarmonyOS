@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
 import { chapter, canonicalRemoteContent, FakeGateway, FakeHost } from './lib/reader-tts-fixtures.mjs';
 function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};}
 for(const stage of ['getConfig','selectEngine','probe','slice','play','setRate','activateAudioSession']){

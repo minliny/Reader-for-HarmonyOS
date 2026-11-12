@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function sourceSelection() {
- const source=readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsOrchestrator.ets',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets',import.meta.url),'utf8');
  let owner={};const runtime=owner,emitted=[];let pageCurrent=true;
  class SelectionGateway {originalMutationSnapshot(){return undefined;}}
  const body=source.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
@@ -17,7 +17,7 @@ async function sourceSelection() {
  pageCurrent=false;assert.deepEqual(host.consumeSelection(['a']),[]);pageCurrent=true;owner={};assert.deepEqual(host.consumeSelection(['a']),[]);
  assert.ok(emitted.length>0,'production publish/deliver runs, not a copied selection algorithm');
 }
-async function rssProjection(){const {RssPresentationProjection}=await import('../entry/src/main/ets/features/rss/RssPresentationProjection.ts');
+async function rssProjection(){const {RssPresentationProjection}=await import('../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts');
 const subscriptions = [{ subscriptionId: 'one', title: '完整订阅', enabled: false, feedUrl: 'https://fixture/feed',
   siteUrl: 'https://fixture/site', sourceGroup: '分组', customOrder: 0, ruleArticles: 'article', lastFetchAt: new Date(2024, 4, 2, 7, 1).getTime() },
   { subscriptionId: 'two', title: '', enabled: true, feedUrl: 'https://fixture/empty', sourceGroup: ' ', ruleArticles: '', lastFetchAt: 0 }];

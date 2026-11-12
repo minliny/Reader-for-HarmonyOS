@@ -14,14 +14,14 @@ const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const appearance = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
-const render = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
-const style = await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts');
-const presentation = await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
-const scroll = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const select = await import('../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts');
-const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const appearance = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+const render = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts');
+const style = await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceStyle.ts');
+const presentation = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+const scroll = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const select = await import('../entry/src/main/ets/ui/controls/ReaderSelectAppearanceStyle.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/ui/foundation/MotionPointTrack.ts');
 // Full, unchanged production component: SDK constructors, fields, @Watch,
 // lifecycle and every Builder. Only platform layout/Scroller/font services and
 // child view rendering are instrumented. This does not simulate device pixels.
@@ -30,7 +30,7 @@ const require = createRequire(import.meta.url);
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
 const parsed = ts.createSourceFile(virtualFilePath('ReaderControlAppearanceContent.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const component = parsed.statements.find(node => node.name?.getText(parsed) === 'ReaderControlAppearanceContent');
@@ -39,7 +39,7 @@ assert.ok(component.members.filter(node => !node.name).every(node =>
   ts.isConstructorDeclaration(node) && node.getText(parsed) === ''),
   'only omit the ETS parser synthetic empty constructor; retain every production member');
 for (const name of ['ReaderSelect', 'ReaderSelectPanel']) {
-  const child = readFileSync(new URL(`../entry/src/main/ets/features/common/${name}.ets`, import.meta.url), 'utf8');
+  const child = readFileSync(new URL(`../entry/src/main/ets/ui/controls/${name}.ets`, import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...child.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
 }

@@ -15,7 +15,7 @@ const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mj
 const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaBoundaryTurnFeedback.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -76,7 +76,7 @@ if(selectedCase === 'retained-paint') {
 // Execute the real parent Builder and the complete existing page modifier.
 // A retained chapter's empty paper gaps must hide candidate pixels, while the
 // noninteractive paint layer keeps native gestures owned by the reading stage.
-const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const surfaceTree = ts.createSourceFile(virtualFilePath('MangaRetainedPaint.ets'), surfaceSource, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(surfaceTree.parseDiagnostics.length, 0);

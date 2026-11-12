@@ -49,14 +49,14 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 const owner={};
 const W=productionMotionMethods(file('app/ReaderWindowCoordinator.ts'),['statusBarRectVp','topAvoidRectVp','topCornersVp','rectVp'],
  {ReaderWindowCoordinator:owner,ReaderRectVp:R,ReaderDisplayCornerVp:C,window:{AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1}},display:{CornerType:{TOP_LEFT:0,TOP_RIGHT:1}}});
@@ -96,14 +96,14 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 const owner={};
 const W=productionMotionMethods(file('app/ReaderWindowCoordinator.ts'),['statusBarRectVp','topAvoidRectVp','topCornersVp','rectVp'],
  {ReaderWindowCoordinator:owner,ReaderRectVp:R,ReaderDisplayCornerVp:C,window:{AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1}},display:{CornerType:{TOP_LEFT:0,TOP_RIGHT:1}}});
@@ -159,14 +159,14 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 const owner={};
 const W=productionMotionMethods(file('app/ReaderWindowCoordinator.ts'),['statusBarRectVp','topAvoidRectVp','topCornersVp','rectVp'],
  {ReaderWindowCoordinator:owner,ReaderRectVp:R,ReaderDisplayCornerVp:C,window:{AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1}},display:{CornerType:{TOP_LEFT:0,TOP_RIGHT:1}}});
@@ -261,14 +261,14 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 const owner={};
 const W=productionMotionMethods(file('app/ReaderWindowCoordinator.ts'),['statusBarRectVp','topAvoidRectVp','topCornersVp','rectVp'],
  {ReaderWindowCoordinator:owner,ReaderRectVp:R,ReaderDisplayCornerVp:C,window:{AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1}},display:{CornerType:{TOP_LEFT:0,TOP_RIGHT:1}}});
@@ -350,7 +350,7 @@ assert.notEqual(pagedGeometry,continuousGeometry,'navigation mode invalidates th
 assert.equal(pagedGeometry.contentTop,visibleGeometry.contentTop,'returning to paged mode restores the complete bookmark reservation');
 const require=createRequire(import.meta.url);
 const syntax=require(((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js'));
-const paperSource=readFileSync(file('features/reading/ReaderStatusBarPaper.ets'),'utf8');
+const paperSource=readFileSync(file('features/reading/ui/ReaderStatusBarPaper.ets'),'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper',new Set([...paperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 class PaperChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
@@ -387,15 +387,15 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
-const {readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
+const {readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const source=readFileSync(lre,'utf8');
 const B=productionMotionMethods(lre,['bookmarkMatchesCurrentChapter','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','canStartReaderBookmarkGesture','bookmarkFeedbackOwnerKey'],{LOCAL_READING_SOURCE_ID:'local'});
 let entries=[{index:0,title:'C',bookmarks:[]}],requests=[];
@@ -443,14 +443,14 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 const Refresh=productionMotionMethods(lre,['canRefreshCurrentChapter','refreshCurrentChapter','loadSessionChapter']);
 let calls=[];const old={content:'old'};
 const refresh=Object.assign(new Refresh(),{isControlInputEnabled:()=>true,phase:'ready',visiblePage:{startScalar:71},chapter:{chapterIndex:3},
@@ -478,14 +478,14 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 const {bookmarkFixture:durableFixture}=await import('./lib/reading-operation-durable-probe.mjs');
 const {makeBookmarkIndex:actualDirectoryIndex}=await import('./lib/reading-directory-sdk-consumer.mjs');
 // Cold Core query/create/confirm/settle/readback is actual external I/O, not a
@@ -532,17 +532,17 @@ const { productionMotionMethods } = await import('./lib/reader-motion-method-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { measureReaderPageChromeText, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
-const lre=file('features/reading/LocalReadingExperience.ets');
-const panel=file('features/reading/ReaderControlPanel.ets');
+const lre=file('features/reading/ui/LocalReadingExperience.ets');
+const panel=file('features/reading/ui/ReaderControlPanel.ets');
 // Real listener registration + full metric refresh: move without resize,
 // duplicate events, hidden 180-degree rotation, unregister, and old callback.
-const {ReaderInsetsVp:I}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderInsetsVp:I}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const events=new Map(),displayEvents=new Map(),published=[];
 let displayInfo={id:1,rotation:0,densityPixels:3,scaledDensity:3};
 let globalX=0,hidden=false;

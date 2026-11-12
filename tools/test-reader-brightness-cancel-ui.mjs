@@ -1,4 +1,4 @@
-import { readerBrightnessControlPercent } from '../entry/src/main/ets/features/reading/ReaderBrightnessCurve.ts';
+import { readerBrightnessControlPercent } from '../entry/src/main/ets/features/reading/ui/ReaderBrightnessCurve.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 

@@ -18,6 +18,7 @@ const scopeBoundary = [
   'A registered source entry is not a complete business-scene inventory, lifecycle behavior proof, visual acceptance, or whole-app notification coverage claim.',
 ];
 const components = new Map([
+  ['ReaderTransientToast', 'shared.transient-presentation'],
   ['ReaderRecoveryNotice', 'shared.recovery-notice'],
   ['ReaderPageState', 'shared.page-state'],
   ['ReaderDialogSurface', 'shared.dialog-surface'],
@@ -27,7 +28,6 @@ const owners = new Map([
   ['ReaderNativeAlertOwner', 'shared.alert-owner'],
 ]);
 const idFor = (file, owner, member, family) => `${file}#${owner}.${member}::${family}`;
-const toastBridge = idFor(`${sourceRoot}/features/common/ReaderTransientFeedback.ts`, 'ReaderTransientFeedback', 'show', 'native.toast');
 const usage = 'node tools/check-message-entrypoints.mjs --inventory | --check';
 
 function sourceFiles(directory) {
@@ -150,7 +150,7 @@ export function inventoryMessageEntrypoints() {
     collect(tree);
     const union = lists => new Set(lists.flatMap(value => [...value]));
     function propertyValue(receiver, property, node, seen) {
-      if (property === 'showToast') return new Set(['api:native.toast']);
+      if (property === 'showToast' || property === 'openToast' || property === 'closeToast') return new Set(['api:native.toast']);
       if (property === 'showAlertDialog') return new Set(['api:native.alert']);
       if (components.has(property)) return new Set([`api:${components.get(property)}`]);
       if (owners.has(property) || property === 'CustomDialogController') return new Set([`constructor:${property}`]);
@@ -264,7 +264,7 @@ export function compareMessageEntrypoints(inventory, registry) {
   for (const row of inventory.entries) {
     const registration = registered.get(row.id);
     if (!registration) failures.push({ kind: 'unregistered-entry', id: row.id, family: row.family });
-    if (row.family === 'native.toast' && row.id !== toastBridge) failures.push({ kind: 'toast-bypasses-adapter', id: row.id });
+    if (row.family === 'native.toast') failures.push({ kind: 'toast-bypasses-adapter', id: row.id });
     if (row.family === 'native.alert' && (!row.nativeOwnerCallback || registration?.bridge !== 'owned-alert-native-callback')) {
       failures.push({ kind: 'alert-bypasses-owner', id: row.id });
     }

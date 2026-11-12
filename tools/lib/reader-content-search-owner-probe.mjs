@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 export const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
-  readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
+  readFileSync(new URL('../../entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
 // Adapt old probe inspection fields to the actual sole owner, never create a
 // second writable state in production just to keep a test fixture working.
 export function installContentSearchOwnerProbe(owner, publications = [], gateway) {

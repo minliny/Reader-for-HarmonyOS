@@ -7,8 +7,8 @@ const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
-const { readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryLevel }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts');
-const { readerControlDirectorySnapshot }=await import('../entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts');
+const { readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryLevel }=await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts');
+const { readerControlDirectorySnapshot }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts');
 
 if(selectedCase==='model'){
 const chapter = { index: 4, title: '一节', downloadState: 'unknown', navigable: true };
@@ -35,9 +35,9 @@ assert.deepEqual(snapshot.rows.map(row => row.chapter?.level), [1, 2, 3],
 return;
 }
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets',import.meta.url),'utf8');
 for(const [level,navigable] of [[1,true],[2,true],[20,true],[3,false]]){
- const {owner}=createReaderBuilderProbe(source,['build'],{readerDirectoryIndentVp,readerDirectoryAccessibilityText});
+ const {owner}=createReaderBuilderProbe(source,['build','chapterTitle'],{readerDirectoryIndentVp,readerDirectoryAccessibilityText});
  const entry={index:4,title:'一节',level,navigable,downloadState:'unknown'},selected=[];
  Object.assign(owner,{entry,rowHeight:40,currentChapterIndex:-1,chapterDownloadEnabled:false,onSelectChapter:index=>selected.push(index)});
  owner.initialRender();const title=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===entry.title);

@@ -7,8 +7,9 @@ const {createTemporaryBackLeafFixtures} = await import('./lib/temporary-back-lea
 
 const {harness,settingsFixture,sourceFixture,shelfFixture,settingsSource,sourceSource,shelfSource,read,child}=await createTemporaryBackLeafFixtures();
 function assertCycle(factory){
-  const f=factory(),old=f.events.at(-1);assert.equal(typeof old.handler,'function');assert.equal(old.handler(),true);
+  const f=factory(),old=f.events.at(-1),nativeClose=f.native?.()[2].onDisappear;assert.equal(typeof old.handler,'function');assert.equal(old.handler(),true);
   if(factory===sourceFixture){f.p.properties.flush();f.finishes.at(-1)();}
+  if(nativeClose!==undefined){assert.equal(old.handler(),true,'native exit still owns Back');nativeClose();}
   assert.equal(old.handler(),false,'normal page must fall through to Index route handling');
   f.o.aboutToDisappear();assert.deepEqual(f.events.at(-1),old.generation===undefined?{handler:undefined,identity:old.identity}:{handler:undefined,identity:old.identity,generation:old.generation});assert.equal(old.handler(),false);
   f.o.aboutToAppear();const current=f.events.at(-1);assert.notEqual(current.identity,old.identity,'every appearance gets a new lease');
@@ -33,23 +34,24 @@ if(selectedCase==='source'){
   const queuedId=panel.selectionId;o.aboutToDisappear();panel.onCommit('B',queuedId);panel.onDismiss(queuedId);assert.equal(o.groupValue,'A');assert.equal(o.groupOpen,false);
 }
 if(selectedCase==='shelf'){
-  const f=shelfFixture(),o=f.o;let menu=child(f.p,o,'BookshelfMoreMenu');const oldDismiss=menu.onDismiss,oldImport=menu.onLocalImport,oldUpdate=menu.onCheckUpdates;
-  const oldOpen=[...o.children.values()].filter(x=>x instanceof f.p.deps.ReaderIconButton).at(-1).params.onTap;
-  const back=f.events.at(-1).handler;assert.equal(back(),true);
-  // The helper does not simulate native If removal. Execute actual disappear
-  // and a fresh SDK constructor path for the new overlay, retaining old ACKs.
-  menu.aboutToDisappear();o.moreOpenAction(f.events.at(-1).identity)();o.shellOverlay();menu=f.p.walk(o).filter(x=>x instanceof f.p.deps.BookshelfMoreMenu).at(-1);f.p.properties.flush();
-  oldDismiss();oldImport();oldUpdate();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[],'old menu cannot execute business work');
-  o.updateRunning=true;f.p.properties.flush();menu.onCheckUpdates();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[]);
-  o.updateRunning=false;f.p.properties.flush();menu.onCheckUpdates();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
-  menu.aboutToDisappear();o.moreOpenAction(f.events.at(-1).identity)();o.shellOverlay();menu=f.p.walk(o).filter(x=>x instanceof f.p.deps.BookshelfMoreMenu).at(-1);f.p.properties.flush();
-  const row=f.p.walk(menu).find(x=>x instanceof f.p.deps.ReaderActionMenuSurface);assert.ok(row);[...row.nodes.values()].find(n=>n.accessibilityText==='本地导入').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update','import']);
-  o.aboutToDisappear();o.aboutToAppear();oldOpen();oldDismiss();assert.equal(o.moreMenuVisible,false,'old trigger and dismiss reject a replaced mounting');
+  const f=shelfFixture(),o=f.o,old=f.sheet(),oldOpen=o.moreOpenAction(f.events.at(-1).identity);
+  const oldImport=old.row('本地导入').onClick,oldUpdate=old.row('检查更新').onClick;
+  const back=f.events.at(-1).handler;assert.equal(back(),true);assert.equal(back(),true);
+  // The SDK probe retains old physical rows and allows an explicit native ACK.
+  old.options.onDisappear();f.open();const current=f.sheet();
+  old.options.onDisappear();oldImport();oldUpdate();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[],'old sheet cannot execute business work');
+  o.updateRunning=true;f.sheet();current.row('检查更新中').onClick();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[]);
+  o.updateRunning=false;f.sheet();current.row('检查更新').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
+  current.options.onDisappear();f.open();const next=f.sheet();
+  next.row('本地导入').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
+  next.options.onDisappear();next.options.onDisappear();assert.deepEqual(f.calls,['update','import']);
+  o.aboutToDisappear();o.aboutToAppear();oldOpen();old.options.onDisappear();assert.equal(o.moreMenuVisible,false,'old trigger and ACK reject a replaced mounting');
 }
 // Counterexamples exercise the actual production members, not a parallel model.
 for(const [factory,source] of [[factoryByCase[selectedCase],{settings:settingsSource,source:sourceSource,shelf:shelfSource}[selectedCase]]]){
   const weakened=source.replace('identity !== this.temporaryBackIdentity || ','');assert.notEqual(weakened,source);
-  const f=factory(weakened),old=f.events.at(-1);f.o.aboutToDisappear();f.o.aboutToAppear();
+  const f=factory(weakened),old=f.events.at(-1),nativeClose=f.native?.()[2].onDisappear;
+  f.o.aboutToDisappear();nativeClose?.();f.o.aboutToAppear();
   if(factory===settingsFixture)f.o.toggleSelection('language');else if(factory===sourceFixture)f.o.toggleGroupSelection();else f.o.moreOpenAction(f.events.at(-1).identity)();
   assert.equal(old.handler(),true,'removed epoch admission admits an obsolete handler (negative control)');
 }
@@ -58,8 +60,11 @@ if(selectedCase==='source'){
   f.o.dismissGroupSelection(oldId);f.o.toggleGroupSelection();panel.onDismiss(oldId);assert.equal(f.o.groupOpen,false,'removed opening identity lets old ACK close replacement');
 }
 if(selectedCase==='shelf'){
-  const source=shelfSource.replace(' || identity !== this.moreSelectionId',''),f=shelfFixture(source),menu=child(f.p,f.o,'BookshelfMoreMenu'),oldDismiss=menu.onDismiss;
-  f.events.at(-1).handler();f.o.moreOpenAction(f.events.at(-1).identity)();oldDismiss();assert.equal(f.o.moreMenuVisible,false,'removed menu admission lets old dismiss close replacement');
+  const source=shelfSource.replace(' || presentationId !== this.moreSheetCurrentId) return;',') return;');
+  assert.notEqual(source,shelfSource);
+  const f=shelfFixture(source),old=f.sheet().options;
+  f.events.at(-1).handler();old.onDisappear();f.open();assert.notEqual(f.o.moreSheetCurrentId,'');
+  old.onDisappear();assert.equal(f.o.moreSheetCurrentId,'','removed native ACK identity lets old close retire replacement');
 }
 console.log('temporary back leaves SDK PASS: real settings phone/tablet choice and source collapse, shelf menu actions, live registered handlers, same-instance reentry, late callback/ACK rejection, no route consumption without a temporary layer; Index priority/native scheduling remain separate');
 

@@ -6,17 +6,17 @@ import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mj
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
-import { MangaStripProjection } from '../entry/src/main/ets/features/manga/MangaStripProjection.ts';
-import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
-import { findReaderTheme } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
+import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { mangaUserError } from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
+import { findReaderTheme } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 // SDK-emitted Surface/Image/PullToRefresh closures and the installed SDK's
 // unmodified @State property runtime execute here. Native frames, geometry,
 // image decoding, imported child mounting and subscriber delivery are ports.
 // This proves retained property updates, not native rendering or VM gestures.
 const root = new URL('../entry/src/main/ets/', import.meta.url);
-const source = readFileSync(new URL('features/manga/MangaReadingSurface.ets', root), 'utf8');
+const source = readFileSync(new URL('features/manga/ui/MangaReadingSurface.ets', root), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);

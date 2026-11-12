@@ -7,13 +7,13 @@ for (const id of selectContractCases(definitions)) {
 async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { appearanceSelectMenuHeight, appearanceSelectMenuPosition } = await import('../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts');
-const style = await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts');
+const { appearanceSelectMenuHeight, appearanceSelectMenuPosition } = await import('../entry/src/main/ets/ui/controls/ReaderSelectAppearanceStyle.ts');
+const style = await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceStyle.ts');
 const { createDefaultReaderAppearanceSnapshot, normalizeReaderAppearanceSnapshot,
-  setReaderAppearanceTheme } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+  setReaderAppearanceTheme } = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
 
 
-const Content = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url),
+const Content = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url),
   ['selectOptions', 'selectValue', 'applySelect', 'commitSelect', 'toggleSelect', 'metricValue', 'selectionActorIdentity',
     'themeIds', 'themeLabel', 'themeColor', 'themeSummary'], { ...style, appearanceSelectMenuPosition });
 const snapshot = createDefaultReaderAppearanceSnapshot();

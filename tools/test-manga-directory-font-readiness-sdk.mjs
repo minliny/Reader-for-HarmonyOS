@@ -7,17 +7,17 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { mangaDirectoryEntryRowSdk } from './lib/manga-directory-entry-row-probe.mjs';
 import { mangaRowBuilderMembers, mangaGridProbeDependencies } from './lib/manga-directory-grid-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
-import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
-import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryTrace.ts';
+import * as fonts from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
+import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
 
-const surfacePath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets', import.meta.url);
-const listPath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
+const surfacePath = new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets', import.meta.url);
+const listPath = new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url);
 const source = readFileSync(surfacePath, 'utf8');
 const listSource = readFileSync(listPath, 'utf8');
-const fallbackSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets', import.meta.url), 'utf8');
-const mangaSurfacePath = new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url);
+const fallbackSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets', import.meta.url), 'utf8');
+const mangaSurfacePath = new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url);
 const mangaSurfaceSource = readFileSync(mangaSurfacePath, 'utf8');
 const { mangaSurfaceSdkDependencies } = await import('./lib/manga-surface-sdk-probe.mjs');
 const tick = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };

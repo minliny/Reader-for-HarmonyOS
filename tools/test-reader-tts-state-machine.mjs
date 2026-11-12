@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
-const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');const owned=[];const createCoordinator=(...args)=>{const c=new ReaderTtsSessionCoordinator(...args);owned.push(c);return c;};
+const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts');const owned=[];const createCoordinator=(...args)=>{const c=new ReaderTtsSessionCoordinator(...args);owned.push(c);return c;};
 const chapter = { sourceId: 'source-1', bookId: 'book-1', chapterIndex: 0, chapterTitle: '第一章' };
 const content = '第一句。\n\n￼\n\n第二句。';
 const plan = {

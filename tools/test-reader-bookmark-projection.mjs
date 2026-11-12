@@ -10,8 +10,8 @@ import {
   readerBookmarkExcerpt,
   readerBookmarkTimeLabel,
   readerBookmarkPositionLabel,
-} from '../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts';
-import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
+} from '../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts';
+import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
 
 const bookmarksByChapter = {
   5: [{ time: 500, chapterIndex: 5, chapterOffset: 0, chapterTitle: '第 6 章', content: '章首书签' }],

@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {labeledIconControls} from './reader-labeled-icon-action-probe.mjs';
 
-const source=readFileSync(new URL('../../entry/src/main/ets/features/source/SourceManagementPage.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../../entry/src/main/ets/features/source/ui/SourceManagementPage.ets',import.meta.url),'utf8');
 export function sourceSharedActionFixture(names,deps={},params={}){
  const controls=labeledIconControls();
  const {owner}=createReaderBuilderProbe(source,names,{...controls.dependencies,...deps},controls.hooks);

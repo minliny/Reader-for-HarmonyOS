@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function formal(){
-const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');
+const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts');
 const {chapter,canonicalRemoteContent,FakeGateway,FakeHost}=await import('./lib/reader-tts-fixtures.mjs');
 const gateway=new FakeGateway(),host=new FakeHost(),progress=[];
 const coordinator=new ReaderTtsSessionCoordinator(gateway,host,async p=>progress.push(p));
@@ -34,7 +34,7 @@ await coordinator.resume();assert.ok(!host.requests.at(-1).requestId.includes('a
 }finally{await coordinator.dispose();}
 }
 async function missingAck(){
-const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');
+const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts');
 const {chapter,canonicalRemoteContent,FakeGateway,FakeHost}=await import('./lib/reader-tts-fixtures.mjs');
 const lostGateway = new FakeGateway(), lostHost = new FakeHost();
 const lost = new ReaderTtsSessionCoordinator(lostGateway, lostHost, async () => assert.fail('audition never persists position'));

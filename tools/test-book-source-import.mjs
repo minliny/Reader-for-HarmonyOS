@@ -11,8 +11,8 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync,rmSync } = await import('node:fs');
 const {stripTypeScriptTypes} = await import('node:module');
 const {errorMessageOf} = await import('../entry/src/main/ets/app/ErrorMessage.ts');
-const {httpUrlHostname,isPrivateNetworkTarget} = await import('../entry/src/main/ets/app/HttpTransportPolicy.ts');
-const {classifyReaderSource} = await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const {httpUrlHostname,isPrivateNetworkTarget} = await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
+const {classifyReaderSource} = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const {isReaderCoreTransactionPendingError} = await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
 const { dirname, resolve } = await import('node:path');
 const { fileURLToPath } = await import('node:url');
@@ -21,11 +21,11 @@ const { fileURLToPath } = await import('node:url');
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
-const gatewaySource = read('entry/src/main/ets/features/source/SourceGateway.ts');
+const gatewaySource = read('entry/src/main/ets/features/source/application/SourceGateway.ts');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
-const orchestrator = read('entry/src/main/ets/features/source/SourceOrchestrator.ets');
-const page = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
+const orchestrator = read('entry/src/main/ets/features/source/application/SourceOrchestrator.ets');
+const page = read('entry/src/main/ets/features/source/ui/SourceManagementPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
 // Load the complete production gateway and its genuine Rules owner/store with

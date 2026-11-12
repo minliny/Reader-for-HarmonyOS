@@ -8,24 +8,24 @@ const { readFileSync } = await import('node:fs');
 const { createRequire, registerHooks } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const chromeLayout = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const chromeLayout = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const { loadReaderTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
-const gesture = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
-const rapid = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
-const { mergeReaderControlBookmarkProjection } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
+const gesture = await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
+const rapid = await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+const { mergeReaderControlBookmarkProjection } = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
 const resolution = registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw e;
 } } });
 try {
 const { ReaderRectVp: Rect, ReaderDisplayCornerVp: Corner, ReaderWindowMetricsSnapshot: Metrics } =
-  await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+  await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } =
-  await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { findReaderTheme } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+  await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { findReaderTheme } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const file = name => new URL(`../entry/src/main/ets/features/reading/${name}`, import.meta.url);
-const typography = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const typography = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL } =
   loadReaderTypographyRoles(typography);
 const roles = { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL };

@@ -9,13 +9,16 @@ import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 
-const read = name => readFileSync(new URL('../../entry/src/main/ets/features/common/' + name + '.ets', import.meta.url), 'utf8');
 const { ts, options } = installedEtsCompiler();
-export const iconButtonSource = read('ReaderIconButton'), iconButtonSpecSource = read('ReaderControlSpecs');
+export const iconButtonSource = readFileSync(new URL('../../entry/src/main/ets/ui/controls/ReaderIconButton.ets', import.meta.url), 'utf8');
+export const iconButtonSpecSource = readFileSync(new URL('../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets', import.meta.url), 'utf8');
 export function compileIconButtonSpecs(source = iconButtonSpecSource) {
   const tree = ts.createSourceFile(virtualFilePath('ReaderControlSpecs.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, 'actual finite icon specification parses');
-  for (const node of tree.statements.filter(ts.isImportDeclaration).reverse()) source = source.slice(0, node.getStart(tree)) + source.slice(node.end);
+  const resolverIndex = tree.statements.findIndex(node => ts.isFunctionDeclaration(node) && node.name?.text === 'resolveReaderIconButtonSpec');
+  assert.ok(resolverIndex >= 0, 'actual finite icon resolver exists');
+  source = tree.statements.slice(0, resolverIndex + 1).filter(node => !ts.isImportDeclaration(node))
+    .map(node => node.getText(tree)).join('\n');
   const js = ts.transpileModule(source.replace(/^export /gm, ''), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
   const values = { ...readerFoundationTokens, ...readerTypographyRoles };
   return new Function(...Object.keys(values), js + ';return resolveReaderIconButtonSpec;')(...Object.values(values));

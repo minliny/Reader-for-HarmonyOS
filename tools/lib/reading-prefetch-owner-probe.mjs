@@ -2,11 +2,11 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
-const { RemoteReadingFlowGateway } = await import('../../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const { sameRemoteSessionEvidence, canAppendRemoteReadingCatalog } = await import('../../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+const { RemoteReadingFlowGateway } = await import('../../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const { sameRemoteSessionEvidence, canAppendRemoteReadingCatalog } = await import('../../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
 const { errorMessageOf } = await import('../../entry/src/main/ets/app/ErrorMessage.ts');
-const source = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReadingPrefetchHost.ts',import.meta.url),'utf8');
+const source = readFileSync(new URL('../../entry/src/main/ets/features/reading/application/ReadingPrefetchHost.ts',import.meta.url),'utf8');
 /** Complete original feature owner and Gateways. Runtime installation is the
  * only authority seam; IO, timing and native layout are separate fixtures. */
 export function readingPrefetchOwnerProbe(readCurrent, overrides={}) {

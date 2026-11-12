@@ -4,10 +4,10 @@ import {stripTypeScriptTypes} from 'node:module';
 
 const app=new URL('../entry/src/main/ets/app/',import.meta.url);
 const source=name=>stripTypeScriptTypes(readFileSync(new URL(name,app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
-const httpSource=source('HttpExecuteHost.ts'),policy=source('HttpTransportPolicy.ts');
+const httpSource=source('../platform/network/HttpExecuteHost.ts'),policy=source('../platform/network/HttpTransportPolicy.ts');
 const logs=[],requests=[],admissions=[];
 const {errorMessageOf,httpTransportFailureSummary}=await import(new URL('ErrorMessage.ts',app));
-const {classifyRemoteReadingCommandFailure}=await import(new URL('../features/reading/RemoteReadingContract.ts',app));
+const {classifyRemoteReadingCommandFailure}=await import(new URL('../features/reading/application/RemoteReadingContract.ts',app));
 let response,requestFailure,cookieFailure;
 const http={RequestMethod:Object.fromEntries(['GET','HEAD','POST','PUT','DELETE','OPTIONS','CONNECT','TRACE'].map(method=>[method,method])),
  HttpDataType:{ARRAY_BUFFER:2},InterceptorType:{REDIRECTION:1},

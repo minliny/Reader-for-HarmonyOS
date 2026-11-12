@@ -1,7 +1,7 @@
-import * as directoryState from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import * as visual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import * as directoryState from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import * as visual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
+import * as layout from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
 
 /** Named production members needed when the SDK lowers the real Grid build.
  * Empty data is only the IO seam for chrome probes, never a layout substitute. */

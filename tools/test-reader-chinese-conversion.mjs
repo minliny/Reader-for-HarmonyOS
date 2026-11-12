@@ -11,7 +11,7 @@ const {readFileSync}=await import('node:fs');
 const {createRequire}=await import('node:module');
 const {fixture,compile,until,deferred,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
 const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
-const lre=readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8');
+const lre=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8');
 const options=require((resolveEtsLoaderRoot())+'/lib/ets_checker.js').compilerOptions;
 const methodsTree=ts.createSourceFile('LRE.ets',lre,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 assert.equal(methodsTree.parseDiagnostics.length,0,'actual LRE ETS parser');
@@ -19,8 +19,8 @@ const names=['chineseConversionIdentity','dispatchChineseConversionAction','chin
 const klass=methodsTree.statements.find(n=>n.members&&names.every(name=>n.members.some(m=>m.name?.getText(methodsTree)===name)));
 const body=names.map(name=>{const method=klass.members.find(n=>ts.isMethodDeclaration(n)&&n.name.getText(methodsTree)===name);assert.ok(method,name);return method.getText(methodsTree);}).join('\n');
 let cases=0;
-function gateway(f,official){const Gateway=compile('features/reading/ReaderChineseConversionGateway.ts','ReaderChineseConversionGateway',{RulesMutationOwner:f.Owner,RulesManagementGateway:f.Gateway,ReaderRuntimeOwner:f.Runtime},official);return new Gateway(f.runtime);}
-function reading(f,official){const Reader=compile('features/reading/LocalReadingExperience.ets','Reader',{},official,'export class Reader{\n'+body+'\n}');const r=new Reader();r.mounted=true;r.lifecycleToken=1;r.bookId='book';r.sourceId='source';r.chineseConversionMode='none';r.chineseConversionLoaded=false;r.chineseConversionOperationId='';r.chineseConversionMutationGeneration=0;r.isSessionActive=t=>r.mounted&&r.lifecycleToken===t;r.chineseConversionGateway=gateway(f,official);r.persistCount=0;r.persistBeforeContentMutation=async()=>{r.persistCount++;return()=>true;};r.quickSearchPublication={cancel(){}};r.publishQuickSearchState=()=>{};r.phase='ready';r.chapter=undefined;r.notices=[];r.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>r.notices.push(message)})});return r;}
+function gateway(f,official){const Gateway=compile('features/reading/application/ReaderChineseConversionGateway.ts','ReaderChineseConversionGateway',{RulesMutationOwner:f.Owner,RulesManagementGateway:f.Gateway,ReaderRuntimeOwner:f.Runtime},official);return new Gateway(f.runtime);}
+function reading(f,official){const Reader=compile('features/reading/ui/LocalReadingExperience.ets','Reader',{},official,'export class Reader{\n'+body+'\n}');const r=new Reader();r.mounted=true;r.lifecycleToken=1;r.bookId='book';r.sourceId='source';r.chineseConversionMode='none';r.chineseConversionLoaded=false;r.chineseConversionOperationId='';r.chineseConversionMutationGeneration=0;r.isSessionActive=t=>r.mounted&&r.lifecycleToken===t;r.chineseConversionGateway=gateway(f,official);r.persistCount=0;r.persistBeforeContentMutation=async()=>{r.persistCount++;return()=>true;};r.quickSearchPublication={cancel(){}};r.publishQuickSearchState=()=>{};r.phase='ready';r.chapter=undefined;r.notices=[];r.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>r.notices.push(message)})});return r;}
 console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
 try {
 for(const official of selectedCase==='sdk-transactions'?[true]:[false,true]){

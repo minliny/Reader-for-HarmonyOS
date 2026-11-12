@@ -8,7 +8,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = JSON.parse(readFileSync(resolve(repo, '../Reader-UI/contracts/fixtures/manga-pages-extract.json'), 'utf8'));
 assert.deepEqual(fixture, JSON.parse(readFileSync(resolve(repo,
   '../Reader-Core/crates/reader-contract/fixtures/manga-pages-extract.json'), 'utf8')));
-const source = readFileSync(resolve(repo, 'entry/src/main/ets/features/manga/MangaResourceGateway.ts'), 'utf8');
+const source = readFileSync(resolve(repo, 'entry/src/main/ets/features/manga/application/MangaResourceGateway.ts'), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const Gateway = new Function(`${executable}\nreturn MangaResourceGateway;`)();
 const manifest = { chapter: {sourceId:fixture.sourceId,bookId:fixture.bookId,chapterId:'https://books.example.test/chapter/1'},

@@ -13,9 +13,16 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { foundationControls, foundationSpecs, foundationModifiers } = await import('./lib/reader-foundation-control-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
-const source=file=>readFileSync(new URL('../entry/src/main/ets/features/'+file+'.ets',import.meta.url),'utf8');
+const liveSourcePaths = new Map([
+ ['source/SourceToolsPage', 'source/ui/SourceToolsPage'],
+ ['settings/RulesManagementPage', 'settings/ui/RulesManagementPage'],
+ ['sync/SyncPage', 'sync/ui/SyncPage'],
+ ['rss/RssSubscriptionEditorPage', 'rss/ui/RssSubscriptionEditorPage'],
+ ['rss/RssSubscriptionManagementPage', 'rss/ui/RssSubscriptionManagementPage'],
+]);
+const source=file=>readFileSync(new URL('../entry/src/main/ets/features/'+(liveSourcePaths.get(file)??file)+'.ets',import.meta.url),'utf8');
 function parent(kind,options={}) {
  const shared=foundationControls(options),methods=kind==='source'?['smallButton','actionButton','fullWidthActionButton']:
   kind==='rules'?['input','actionButton','smallButton']:['manualActionButton','webdavInputRow','canMutate','canEdit'];
@@ -28,6 +35,15 @@ const updateField=(child,changes)=>child.updateStateVars(Object.assign({scheme:c
 const checkFont=(node,expected)=>{
  const map={fontFamily:'fontFamily',fontWeight:'fontWeight',fontSize:'fontSizeFp',lineHeight:'lineHeightFp',letterSpacing:'letterSpacingFp'};
  for(const[p,key]of Object.entries(map))if(expected[key]===undefined)assert.equal(Object.hasOwn(node,p),false,p+': AUTO omission');else assert.equal(node[p],expected[key],p);
+};
+const nativeAction=nodes=>{
+ const actions=nodes.filter(node=>typeof node.onClick==='function');
+ assert.equal(actions.length,1,'one actual native actor owns the physical action');
+ const action=actions[0];assert.equal(action.type,'Button');
+ assert.deepEqual(action.createWithChild,{type:'ButtonType.Normal',stateEffect:false});
+ assert.equal(action.onTouch,undefined,'no parallel touch business dispatcher');
+ assert.equal(action.onKeyEvent,undefined,'native Button owns keyboard activation');
+ return action;
 };
 for(const kind of ['source','rules','sync'].filter(kind=>kind===selectedCase)){
  const p=parent(kind);let count=0;
@@ -81,6 +97,33 @@ if(selectedCase==='native-modifier') {
  assert.ok(platformCalls.some(c=>c[0]==='rgba'&&c[4]===.12));
  const disabled=new modifiers.ReaderButtonTextModifier('rules-action',false,false,'equal','day');
  const before=platformCalls.length;disabled.applyPressedAttribute(native);assert.equal(platformCalls.length,before);assert.equal(attrs.backgroundColor,normal);assert.equal(attrs.opacity,.62);
+ // The retained combined modifier above still serves compact capsules. The
+ // ordinary Rules action now applies its frame to a native Button and its
+ // typography to a passive child Text; execute both actual modifiers here.
+ const frameAttrs={},labelAttrs={};
+ const attributePort=attrs=>{const port=new Proxy({}, {get(_t,key){return value=>{attrs[key]=value;return port;};}});return port;};
+ const framePort=attributePort(frameAttrs),labelPort=attributePort(labelAttrs);
+ const frame=new modifiers.ReaderButtonFrameModifier('rules-action',false,true,'equal','day');
+ const labelModifier=new modifiers.ReaderButtonLabelModifier('rules-action',false,'day');
+ frame.applyNormalAttribute(framePort);labelModifier.applyNormalAttribute(labelPort);
+ assert.equal(frameAttrs.backgroundColor,normal);assert.equal(frameAttrs.height,foundationSpecs().resolveReaderButtonSpec('rules-action').height);
+ assert.equal(frameAttrs.layoutWeight,1);assert.equal(labelAttrs.height,undefined);
+ assert.equal(labelAttrs.fontSize,readerTypographyRoles.TYPE_RULES_MANAGEMENT_ACTION.fontSizeFp);
+ frame.applyPressedAttribute(framePort);assert.equal(frameAttrs.backgroundColor,'platform-pressed');
+ frame.applyNormalAttribute(framePort);assert.equal(frameAttrs.backgroundColor,normal,'actual ordinary frame restores its normal endpoint');
+ const disabledFrame=new modifiers.ReaderButtonFrameModifier('rules-action',false,false,'equal','day');
+ const frameBefore=platformCalls.length;disabledFrame.applyPressedAttribute(framePort);
+ assert.equal(platformCalls.length,frameBefore);assert.equal(frameAttrs.backgroundColor,normal);assert.equal(frameAttrs.opacity,.62);
+ const p=parent('rules',{ColorMetrics}),calls=[];p.owner.actionButton('执行',false,()=>calls.push('action'));
+ const button=nativeAction(p.nodes()),label=p.nodes().find(node=>node.type==='Text'&&node.create==='执行');
+ assert.equal(button.height,frameAttrs.height);assert.equal(button.backgroundColor,normal);assert.equal(button.padding,0);
+ assert.equal(button.accessibilityText,'执行');assert.equal(button.accessibilityRole,'AccessibilityRoleType.BUTTON');
+ checkFont(label,readerTypographyRoles.TYPE_RULES_MANAGEMENT_ACTION);
+ assert.equal(label.onClick,undefined);assert.equal(label.accessibilityLevel,'no');assert.equal(label.hitTestBehavior,'HitTestMode.None');
+ const retained=button.onClick;retained();assert.deepEqual(calls,['action']);
+ const child=[...p.owner.children.values()][0];updateButton(child,{actionEnabled:false});p.shared.properties.flush();
+ assert.equal(button.enabled,false);retained();assert.deepEqual(calls,['action']);
+ updateButton(child,{actionEnabled:true});p.shared.properties.flush();child.aboutToDisappear();retained();assert.deepEqual(calls,['action']);
 }
 // Common-role change reaches source+rules; changing one geometry spec reaches
 // only that finite variant. The native tuple omissions remain untouched.
@@ -88,7 +131,7 @@ if(selectedCase==='propagation') {
  const roles={...readerTypographyRoles,TYPE_SOURCE_TOOLS_ACTION:{...readerTypographyRoles.TYPE_SOURCE_TOOLS_ACTION,fontSizeFp:14},TYPE_RULES_MANAGEMENT_ACTION:{...readerTypographyRoles.TYPE_RULES_MANAGEMENT_ACTION,fontSizeFp:14}};
  for(const kind of ['source','rules']){const p=parent(kind,{specs:foundationSpecs(roles)});kind==='source'?p.owner.actionButton('传播',false,true,()=>{}):p.owner.actionButton('传播',false,()=>{});assert.equal(p.nodes().find(n=>n.type==='Text').fontSize,14);}
  const original=foundationSpecs(),specs={...original,resolveReaderButtonSpec:id=>({...original.resolveReaderButtonSpec(id),height:original.resolveReaderButtonSpec(id).height+(id==='source-action'?3:0)})};
- for(const kind of ['source','rules']){const p=parent(kind,{specs});kind==='source'?p.owner.actionButton('变体',false,true,()=>{}):p.owner.actionButton('变体',false,()=>{});assert.equal(p.nodes().find(n=>n.type==='Text').height,original.resolveReaderButtonSpec(kind==='source'?'source-action':'rules-action').height+(kind==='source'?3:0));}
+ for(const kind of ['source','rules']){const p=parent(kind,{specs});kind==='source'?p.owner.actionButton('变体',false,true,()=>{}):p.owner.actionButton('变体',false,()=>{});const action=nativeAction(p.nodes());assert.equal(action.height,original.resolveReaderButtonSpec(kind==='source'?'source-action':'rules-action').height+(kind==='source'?3:0));assert.equal(p.nodes().find(n=>n.type==='Text').height,undefined,'passive label does not duplicate the frame');}
 }
 // Actual RSS caller deliberately omits foundation dependencies. The common
 // SDK resolver must mount real production child and flush its actual @Props.
@@ -101,19 +144,21 @@ if(selectedCase==='rss') {
  assert.equal(typeof child.commit,'function','real production commit exists');assert.equal(typeof child.aboutToDisappear,'function');
  assert.ok(child.nodes instanceof Map,'not an empty stand-in child');
  const label=[...child.nodes.values()].find(n=>n.type==='Text');
+ const button=nativeAction([...child.nodes.values()]);
  checkFont(label,readerTypographyRoles.TYPE_FORM_LABEL_ACTION);assert.equal(Object.hasOwn(label,'border'),false);
- assert.equal(label.opacity,1);label.onClick();assert.equal(calls.length,1);
+ assert.equal(Object.hasOwn(button,'border'),false);assert.equal(label.onClick,undefined);assert.equal(label.accessibilityLevel,'no');
+ const retained=button.onClick;assert.equal(button.opacity,1);retained();assert.equal(calls.length,1);
  probe.owner.updateStateVars({snapshot:{busy:true,canSave:false}});properties.flush();
- assert.equal(label.enabled,false,'real parent Prop update reaches actual retained Button');assert.equal(label.opacity,.62);
- label.onClick();assert.equal(calls.length,1,'old physical action consumes current busy Prop');
- probe.owner.updateStateVars({snapshot:{busy:false,canSave:true}});properties.flush();label.onClick();assert.equal(calls.length,2);
- child.aboutToDisappear();label.onClick();assert.equal(calls.length,2);
+ assert.equal(button.enabled,false,'real parent Prop update reaches actual retained Button');assert.equal(button.opacity,.62);
+ retained();assert.equal(calls.length,1,'old physical action consumes current busy Prop');
+ probe.owner.updateStateVars({snapshot:{busy:false,canSave:true}});properties.flush();retained();assert.equal(calls.length,2);
+ child.aboutToDisappear();retained();assert.equal(calls.length,2);
 }
 // Original JSON and RSS form variants retain native event/placeholder/AUTO
 // differences. URL Enter submission is owned by the same live draft owner.
 if(selectedCase==='json') {
  const shared=foundationControls(),calls=[];
- const {owner}=createReaderBuilderProbe(source('common/JsonImportDialog'),['formBody','localButton','submitOnlineImport'],shared.dependencies,shared.hooks);
+ const {owner}=createReaderBuilderProbe(source('../app/composition/JsonImportDialog'),['formBody','localButton','submitOnlineImport'],shared.dependencies,shared.hooks);
  Object.assign(owner,{appThemeScheme:'day',description:'描述',urlDraft:'https://example.test/a.json',validationMessage:'',onImportOnline:u=>calls.push(u),onSelectLocal:()=>calls.push('local')});
  owner.formBody();const input=shared.nodes(owner).find(n=>n.type==='TextInput'),button=shared.nodes(owner).find(n=>n.type==='Text'&&n.create==='选择本地 JSON 文件');
  checkFont(input,readerTypographyRoles.TYPE_FORM_URL_INPUT);
@@ -134,6 +179,6 @@ if(selectedCase==='json') {
  const action=shared.nodes(management).find(n=>n.type==='Text');checkFont(action,readerTypographyRoles.TYPE_FORM_COMPACT_ACTION);assert.equal(action.height,36);assert.equal(action.borderRadius,8);assert.equal(action.layoutWeight,1);
  assert.equal(action.backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));assert.equal(Object.hasOwn(action,'border'),false);assert.equal(Object.hasOwn(action,'opacity'),false);action.onClick();assert.equal(calls.at(-1),'import');
 }
-console.log('PASS foundation controls: three real page consumers, eight bounded buttons/five fields + omitted-dependency actual RSS child, native AUTO/Props/drafts/disabled/unmount and common/variant propagation');
+console.log(`PASS foundation controls exact case: ${selectedCase}; current source/SDK component evidence only`);
 
 }

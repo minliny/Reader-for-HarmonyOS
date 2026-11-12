@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { readerControlDirectorySnapshot, ReaderControlDirectoryPosition } from '../entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts';
+import { readerControlDirectorySnapshot, ReaderControlDirectoryPosition } from '../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-const source=new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets',import.meta.url);
+const source=new URL('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets',import.meta.url);
 const Owner=productionMotionMethods(source,['refreshData','search','sort','deferCatalogAction','scrollCatalogEdge','cancelPendingPlacement','userScroll'],{
  readerControlDirectorySnapshot,ControlDirectoryFrame:class{constructor(action){this.action=action;}},Edge:{Top:'top',Bottom:'bottom'},
 });
@@ -38,7 +38,7 @@ assert.equal(readerControlDirectorySnapshot(entries.slice(697,704),'directory','
  {complete:false,chapterCount:1368,currentPosition:-1}).currentPosition,'');
 console.log('PASS production directory: immediate 7-row window, true 1368 total/global position; full search/sort/edges deferred; old lifecycle rejected');
 
-const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
  ['hydrateEntryCatalog','admitTocEntries'],{hilog:{warn(){}}});
 function hydrationOwner(){
  const requests=[],published=[];const window=entries.slice(697,704);const chapter={chapterIndex:700};

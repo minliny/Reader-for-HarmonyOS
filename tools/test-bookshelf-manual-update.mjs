@@ -10,13 +10,13 @@ import { projectOperationFacts } from '../entry/src/main/ets/app/ReaderOperation
 import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as metricsApi from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
 } });
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
+const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const indexFile = process.env.READER_UPDATE_INDEX ?? new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
@@ -82,18 +82,18 @@ sdkRequire(sdkRoot + '/lib/validate_ui_syntax.js').builderParamObjectCollection.
 sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
 function actualFeedbackShell(composition, shellSource, props) {
  const mainSource=ets('features/shell/MainTabShell.ets'),barSource=ets('features/shell/MainTabBar.ets');
- Object.assign(composition.childSources,{MainTabShell:mainSource,MainTabBar:barSource,BookshelfMoreMenu:ets('features/bookshelf/BookshelfMoreMenu.ets')});
+ Object.assign(composition.childSources,{MainTabShell:mainSource,MainTabBar:barSource,BookshelfMoreActionSheet:ets('features/bookshelf/ui/BookshelfMoreActionSheet.ets')});
  const platform={...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},MainTabBar:Child};
  const MainTabShell=createReaderBuilderProbe(mainSource,boundedMembers(mainSource),{...composition.deps,...platform},composition.hooks).Component;
  const shell=composition.consumer(shellSource,['onNoticeHeightChange','onReadRecoveryChanged','onRecoveryChanged','lastReadFeedback','noticeHeight','build','shellHeader','shellOverlay','headerHeight','onHeaderHeightChange','showBottomNav','numericAreaLength','recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','requestMainTab','content','recoveryNoticeContent'],
-  {MainTabShell,BookshelfMoreMenu:Child,bookshelfTemporaryGeneration:0,BOOKSHELF_WIDE_BREAKPOINT:600,...platform},props);
+  {MainTabShell,BookshelfMoreActionSheet:Child,bookshelfTemporaryGeneration:0,BOOKSHELF_WIDE_BREAKPOINT:600,...platform},props);
  Object.assign(shell,{topBar(){},content(){},moreMenuVisible:false});shell.initialRender();
  assert.ok(composition.nodes(shell).some(node=>node.type==='Stack'&&node.backgroundColor),'the production Scaffold owns the page surface');
  assert.equal(composition.walk(shell).some(owner=>owner instanceof composition.deps.ReaderRecoveryNotice),false,'confirmed catalog work never paints a pending Notice');
  return shell;
 }
 function actualRecovery(f) {
- const shellSource=ets('features/bookshelf/BookshelfShell.ets'),composition=boundedSurfaceSdk();
+ const shellSource=ets('features/bookshelf/ui/BookshelfShell.ets'),composition=boundedSurfaceSdk();
  for(const member of shellSource.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))sdkRequire(sdkRoot+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(member[1]);
  const parent=createReaderBuilderProbe(ets('pages/Index.ets'),['bookshelfShellContent'],{BookshelfShell:Child},
   {childSources:{BookshelfShell:shellSource}}).owner;
@@ -106,7 +106,7 @@ function actualRecovery(f) {
  parent.isCurrentRuntime=f.page.isCurrentRuntime.bind(f.page);
  parent.isCurrentBookshelfPresentation=f.page.isCurrentBookshelfPresentation.bind(f.page);
  parent.bookshelfShellContent();const props=[...parent.children.values()][0].params;
- composition.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
+ composition.childSources.BookshelfMoreActionSheet=ets('features/bookshelf/ui/BookshelfMoreActionSheet.ets');
  const shell=actualFeedbackShell(composition,shellSource,props);
  const notice=composition.walk(shell).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
  assert.equal(notice,undefined,'ordinary catalog result uses short Toast, not pending Notice');
@@ -387,8 +387,8 @@ await check('warm readback failure retains original fact and readonly recovery a
 await check('actual SDK retained Shell keeps catalog Toast outside pending Notice and fences read delegates across navigation',async()=>{
  const f=fixture();try{
   f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
-  const old=actualRecovery(f),text=ets('features/bookshelf/BookshelfShell.ets'),sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
-  sdk.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
+  const old=actualRecovery(f),text=ets('features/bookshelf/ui/BookshelfShell.ets'),sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  sdk.childSources.BookshelfMoreActionSheet=ets('features/bookshelf/ui/BookshelfMoreActionSheet.ets');
   const shell=actualFeedbackShell(sdk,text,old.props),sequence=f.page.bookshelfCatalogFacts.generation;
   assert.equal(sdk.walk(shell).some(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice),false);
   const oldHandler=old.props.onReconcile;

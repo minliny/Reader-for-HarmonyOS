@@ -37,24 +37,26 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
   loadReaderTypographyRoles(typographySource);
 const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('actual TextInput uses explicit compact geometry and live app-theme text without repeating label',()=>{
   const shared=foundationControls();
-  const {owner}=createReaderBuilderProbe(source,['editorText','fullInput'],{...shared.dependencies,readerControlReplaceEndpoint},shared.hooks);
-  Object.assign(owner,{appThemeScheme:'night',state:ready(),motionProgress:1,interactionEnabled:true,localPending:false});
-  let value='';owner.editorText('替换为（可留空）',()=>value,x=>{value=x;});
+  const {owner}=createReaderBuilderProbe(source,['editorText','editorTextEnabled','temporaryInputCurrent','fullInput'],{...shared.dependencies,readerControlReplaceEndpoint},shared.hooks);
+  const reading=ready();
+  Object.assign(owner,{appThemeScheme:'night',state:reading,motionProgress:1,interactionEnabled:true,localPending:false,
+    mounted:true,layer:'editor',presentationRevision:1,lastSessionKey:reading.sessionKey});
+  let value='';owner.editorText('替换为（可留空）',()=>value,x=>{value=x;},1);
   const input=shared.nodes(owner).find(n=>n.type==='TextInput');
   assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','night'));
   assert.equal(input.placeholderColor,readerAppColor('TOK_READ_MUTED','night'));
@@ -75,27 +77,29 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
   loadReaderTypographyRoles(typographySource);
 const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('actual editor has distinct back and fixed bottom save/cancel outside scrolling fields',()=>{
-  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryAction','textAction','editorFields','editorText','editorFlag','previewContent',
+  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryAction','textAction','editorFields','editorText','editorFlag','previewContent','temporaryInputCurrent',
     ...(source.includes('private editorActions(')?['editorActions']:[])];
   const composition=boundedSurfaceSdk(),owner=composition.consumer(source,members);
-  Object.assign(owner,{layer:'editor',draft:state.createReaderControlReplaceDraft(),state:ready(),appThemeScheme:'night',
+  const reading=ready();
+  Object.assign(owner,{layer:'editor',draft:state.createReaderControlReplaceDraft(),state:reading,appThemeScheme:'night',
+    mounted:true,presentationRevision:1,lastSessionKey:reading.sessionKey,
     availableWidth:320,availableHeight:400,localError:'',localPending:false,fullInput:()=>true,quickInput:()=>false,
     readyInput:()=>true,editorFields(){},dismissTemporaryLayer(){},saveEditor(){},cancelTemporaryLayer(){}});
-  owner.temporaryOverlay();const labels=composition.nodes(owner).filter(n=>n.type==='Text').map(n=>n.create);
+  owner.temporaryOverlay(1);const labels=composition.nodes(owner).filter(n=>n.type==='Text').map(n=>n.create);
   assert.equal(labels.filter(x=>x==='返回').length,1);assert.equal(labels.filter(x=>x==='取消').length,1);
   assert.equal(labels.filter(x=>x==='保存').length,1);
 });
@@ -112,17 +116,17 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
   loadReaderTypographyRoles(typographySource);
 const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('actual reading draft uses real book/source defaults and editing/global creation remain independent',()=>{
@@ -152,17 +156,17 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
   loadReaderTypographyRoles(typographySource);
 const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss',async()=>{
@@ -190,23 +194,25 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
   loadReaderTypographyRoles(typographySource);
 const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('same mounted footer reacts to mutation, uncertain writes and endpoint input guards',()=>{
-  const composition=boundedSurfaceSdk(),owner=composition.consumer(source,['editorActions','readyInput','fullInput','quickInput'],{readerControlReplaceEndpoint});
-  Object.assign(owner,{state:ready(),appThemeScheme:'night',motionProgress:1,interactionEnabled:true,localPending:false});
-  owner.editorActions();const nodes=composition.nodes(owner);const save=nodes.find(n=>n.create==='保存'),cancel=nodes.find(n=>n.create==='取消');
+  const composition=boundedSurfaceSdk(),owner=composition.consumer(source,['editorActions','temporaryInputCurrent','readyInput','fullInput','quickInput'],{readerControlReplaceEndpoint});
+  const reading=ready();
+  Object.assign(owner,{state:reading,appThemeScheme:'night',motionProgress:1,interactionEnabled:true,localPending:false,
+    mounted:true,layer:'editor',presentationRevision:1,lastSessionKey:reading.sessionKey});
+  owner.editorActions(1);const nodes=composition.nodes(owner);const save=nodes.find(n=>n.create==='保存'),cancel=nodes.find(n=>n.create==='取消');
   assert.equal(save.enabled,true);assert.equal(cancel.enabled,true);
   for(const key of ['mutationPending','writeUncertain','canonicalReloadRequired']){
     owner.state[key]=true;owner.replay();composition.properties.flush();assert.equal(save.enabled,false,`${key} immediately disables save`);
@@ -229,24 +235,24 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const state = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
   loadReaderTypographyRoles(typographySource);
 const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await (async (_label,fn)=>await fn())('actual standalone settings Add action has no inherited reading scope',()=>{
-  const settingsSource=readFileSync(new URL('../entry/src/main/ets/features/settings/RulesManagementPage.ets',import.meta.url),'utf8');
+  const settingsSource=readFileSync(new URL('../entry/src/main/ets/features/settings/ui/RulesManagementPage.ets',import.meta.url),'utf8');
   const sdk=resolveEtsLoaderRoot();
   const syntax=createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
-  const toggleSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderToggle.ets',import.meta.url),'utf8');
+  const toggleSource=readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderToggle.ets',import.meta.url),'utf8');
   syntax.componentCollection.customComponents.add('ReaderToggle');
   syntax.propCollection.set('ReaderToggle',new Set([...toggleSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class NativeChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}

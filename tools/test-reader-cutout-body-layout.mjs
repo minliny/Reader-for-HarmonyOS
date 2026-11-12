@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
-import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
-import { createReadingPaginationLayoutSignature } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
-import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout, READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-import { READER_PAGE_CHROME_TOP_ROW_PADDING_VP } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
+import { createReadingPaginationLayoutSignature } from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
+import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout, READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts';
+import { READER_PAGE_CHROME_TOP_ROW_PADDING_VP } from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
 
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
@@ -118,7 +118,7 @@ for (const [width, height, tablet] of forms) for (const ready of [false, true]) 
 // unchanged owner must retain the same body budget for either cutout setting
 // and ignore a later chrome-only inset update, preserving the scalar anchor.
 let currentMetrics = metrics(390, 844, 24);
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Reader = productionMotionMethods(file, ['readingLayout', 'effectiveViewportWidth', 'effectiveViewportHeight',
   'windowMetricsLayoutKey', 'paginationLayoutSignature', 'reflowAfterWindowGeometryChange', 'bookmarkFeedbackTopBoundary'], {
   ...geometry, ReaderWindowCoordinator: { metrics: () => currentMetrics }, createReadingPaginationLayoutSignature,

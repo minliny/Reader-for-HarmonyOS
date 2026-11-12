@@ -1,21 +1,21 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import * as layoutPolicy from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
-import { READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import * as layoutPolicy from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
+import { READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts';
 import {
   ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot,
-} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import {
   readerControlMotionBounds, sampleReaderControlMotionComposition,
-} from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
 import {
   createReaderControlSessionState, enterReaderControlModule, holdReaderControlSession,
   openReaderControlSession,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 import {
   consumeReaderControlKeyboardBack, hideReaderControlKeyboard, readerControlKeyboardVisible,
-} from '../entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts';
+} from '../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts';
 
 const hidden = { ready: true, keyboardInsets: { left: 0, top: 0, right: 0, bottom: 0 } };
 const visible = { ready: true, keyboardInsets: { left: 0, top: 0, right: 0, bottom: 280 } };
@@ -62,7 +62,7 @@ assert.equal(consumeReaderControlKeyboardBack(hidden, host), false,
   'a failed request cannot latch a permanent focus-based Back lock');
 
 // Structural wiring only; platform IME interaction remains a device gate.
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const back = source.slice(source.indexOf('  private requestExit(): void {'), source.indexOf('  private beginExit(): void {'));
 assert.ok(back.indexOf('consumeReaderControlKeyboardBack') < back.indexOf('this.controlTemporaryLayer'));
 assert.ok(back.indexOf('consumeReaderControlKeyboardBack') < back.indexOf('backReaderControlHostSession'));
@@ -139,18 +139,21 @@ assert.equal(layoutHost.windowMetricsLayoutKey(), previousReadingKey,
   'IME is an interactive inset, not a reading-pagination change');
 assert.equal(layoutHost.chromeCalls, 1);
 const restoredLayout = readBinding.call(layoutHost);
-assert.equal(restoredLayout.fullPanelHeight, 700, 'same binding restores the full viewport budget');
+assert.equal(restoredLayout.fullPanelHeight, 2386 / 3.5,
+  'the same binding restores the phone-ratio full endpoint within the 700vp budget');
 assert.strictEqual(layoutHost.controlSession, heldIdentity, 'layout refresh cannot reset session/held ownership');
 assert.equal(layoutHost.controlSession.heldPointerId, 9);
 assert.equal(layoutHost.quickSearchQuery, '他');
 assert.deepEqual(layoutHost.quickSearchState.results, ['retained']);
 function quickContentScreenPx(layout) {
   const frame = sampleReaderControlMotionComposition({ expansionProgress: 0, visibilityProgress: 1 },
-    readerControlMotionBounds(layout.fullPanelWidth, layout.fullPanelHeight, layout.dockBottomGap));
+    readerControlMotionBounds(layout.fullPanelWidth, layout.fullPanelHeight, layout.dockBottomGap,
+      layout.quickPanelHeight));
   return (layout.viewportHeight - layout.dockBottomGap - layout.fullPanelHeight + frame.content.y) * 3.5;
 }
-assert.equal(quickContentScreenPx(keyboardLayout), 703.5);
-assert.equal(quickContentScreenPx(restoredLayout), 1704.5,
-  'production geometry restores Quick to the bottom without a close/reopen or a new session');
+assert.ok(Math.abs(quickContentScreenPx(keyboardLayout) - 728.5) < 1e-6);
+const restoredQuickY = quickContentScreenPx(restoredLayout);
+assert.ok(Math.abs(restoredQuickY - 1728.5) < 1e-6,
+  'production geometry restores Quick to the bottom at ' + restoredQuickY);
 console.log('Reader control keyboard: production visibility/Back/hide failure cases PASS; structural Host wiring PASS (not native IME acceptance)');
-console.log('Reader control keyboard layout: actual Host methods/binding dependency and 414→700vp budget PASS (not native IME acceptance)');
+console.log('Reader control keyboard layout: actual Host methods, binding dependency and phone-ratio endpoint recovery PASS');

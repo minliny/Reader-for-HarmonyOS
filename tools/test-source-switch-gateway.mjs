@@ -13,15 +13,15 @@ const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(s
   ? siblingCore : resolve(repo, '../../Reader-Core'));
 const coreSdkUrl = pathToFileURL(resolve(core, 'bindings/harmony/sdk/reader_core.ts')).href;
 const { ReaderCoreRequestError } = await import(coreSdkUrl);
-const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
-const searchTimingModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookSearchTiming.ts'), 'utf8');
-const sharedSearchDecoderModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchGateway.ts'), 'utf8')
+const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookAuthorMetadata.ts'), 'utf8');
+const searchTimingModule = readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookSearchTiming.ts'), 'utf8');
+const sharedSearchDecoderModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/search/application/SearchGateway.ts'), 'utf8')
   .replace(/^import[\s\S]*?;\n/gm, '');
-const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
+const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookAcquisitionPresentation.ts'), 'utf8'));
 const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
 const searchCandidateRank = (book, now) => acquisitionCandidateRank(book.acquisition, book.sourceRuleVersion, now);
 const gateway = readFileSync(
-  resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchGateway.ts'),
+  resolve(repo, 'entry/src/main/ets/features/source/application/SourceSwitchGateway.ts'),
   'utf8',
 );
 
@@ -29,20 +29,20 @@ const errorMessageModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
 ).replace('export function errorMessageOf', 'function errorMessageOf');
 const sourceCategoryModule = stripTypeScriptTypes(
-  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'), 'utf8'),
 ).replace(/^export /gm, '');
 const providerFamilyModule = stripTypeScriptTypes(
-  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts'), 'utf8'),
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/application/SourceSwitchProviderFamily.ts'), 'utf8'),
 ).replace(/^export /gm, '');
 
 const executable = stripTypeScriptTypes(
   (authorMetadataModule + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
     .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/app/BookRequestScheduler.ts'), 'utf8'))
-    .replace(/^import \{[^}]+\} from ['"]\.\.\/common\/BookAcquisitionPresentation['"];$/m,
+    .replace(/^import \{[^}]+\} from ['"]\.\.\/\.\.\/app\/library\/BookAcquisitionPresentation['"];$/m,
       () => factModule.replace(/^export /gm, ''))
     .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
-      readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
+      readFileSync(resolve(repo, 'entry/src/main/ets/app/library/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
     .replace(/^import \{ errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
@@ -80,7 +80,7 @@ const cachedAt=Date.now();
 const ownedHosts=[];let sourceOwnerFixture,setCurrentRuntime,productionMotionMethods;
 
 if(['progressive','host-known','host-failed-delta'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
-if(['host-known','candidate-retry'].includes(id))({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
+if(id==='host-known')({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
 const clock=['progressive','cancellation'].includes(id)?controlledClock():undefined;try{
 if(id==='identity-family'){
 assert.notEqual(
@@ -1094,13 +1094,20 @@ if(id==='live-candidate'){
 }
 if(id==='candidate-retry'){
 {
-  const Candidate = productionMotionMethods(resolve(repo, 'entry/src/main/ets/features/source/CandidateRow.ets'),
-    ['selectCandidate'], {});
-  for (const offline of [false, true]) for (const timeout of [false, true]) for (const isCurrent of [false, true]) {
+  const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+  const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs');
+  const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p);
+  for (const acquisitionState of ['discovered','attemptFailed','failed','stale'])
+    for (const isCurrent of [false,true]) for (const rowEnabled of [false,true]) {
     let selected = 0;
-    const row = Object.assign(new Candidate(), { offline, timeout, isCurrent, onSelect: () => selected++ });
-    row.selectCandidate();
-    assert.equal(selected, isCurrent ? 0 : 1, 'historical availability feedback must not lock source selection');
+    const row = new deps.SourceSwitchCandidateRow({sourceId:'source-a',bookUrl:'/book',bookName:'Book',
+      category:'novel',acquisitionState,isCurrent});
+    const owner = new deps.SourceSwitchNovelRow(undefined,{row,rowEnabled,reduceMotion:true,onSelect:()=>selected++});
+    owner.initialRender();
+    const hit=p.nodes(owner).find(node=>node.type==='Row'&&node.onClick);
+    assert.equal(hit.enabled,rowEnabled&&!isCurrent);
+    hit.onClick();
+    assert.equal(selected,rowEnabled&&!isCurrent?1:0,'historical availability cannot replace the live row admission');
   }
 }
 }

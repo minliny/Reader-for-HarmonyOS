@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
 
 // Ordinary method adapter only. It copies AST-selected production declarations,
 // never a hand-maintained implementation. Callers supply platform I/O explicitly.
@@ -24,8 +25,16 @@ export function selectedProductionMethods(file, className, names, dependencies =
     reportDiagnostics: true, fileName: 'SelectedProductionMethods.ts',
   });
   assert.deepEqual(result.diagnostics, [], 'selected unchanged production declarations emit');
+  const bindings = { ...dependencies };
+  if (members.some(member => /\breaderWindowMetrics\s*\(/.test(member)) && bindings.readerWindowMetrics === undefined &&
+    typeof dependencies.ReaderWindowCoordinator?.metrics === 'function') {
+    // Keep the fixture's explicitly supplied platform source, crossing the
+    // actual new read port rather than restoring a UI -> app import.
+    bindings.readerWindowMetrics = readerWindowEnvironmentForProbe(
+      () => dependencies.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
+  }
   const exports = {};
-  new Function('exports', ...Object.keys(dependencies), result.outputText)(exports, ...Object.values(dependencies));
+  new Function('exports', ...Object.keys(bindings), result.outputText)(exports, ...Object.values(bindings));
   return exports[className];
 }
 

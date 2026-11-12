@@ -37,11 +37,11 @@ const dependencies={FrameNode:Frame,NodeController:Controller,
   n.measure=v=>{n.constraint=v;};n.layout=v=>{n.position=v;};nodes.push(n);return n;}},
  FontWeight:{Regular:400},CopyOptions:{InApp:1},WordBreak:{BREAK_ALL:1},TextAlign:{JUSTIFY:'justify',Start:'start'},Direction:{Rtl:'rtl',Ltr:'ltr'},
  hilog:{info(_d,_t,_f,v){logs.push(JSON.parse(v));}}};
-const adapterSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
+const adapterSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
 const adapterJs=ts.transpileModule(adapterSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const nativeAdapter=new Function('typeNode','WordBreak','LengthMetrics',adapterJs+';return {ReaderNativeTextMeasurement,readerNativeTextGeometryKey,readerNativeTextNodeGeometry,readerNativeTextNodeContent};')(dependencies.typeNode,dependencies.WordBreak,{vp:v=>v});
 dependencies.ReaderNativeTextMeasurement=nativeAdapter.ReaderNativeTextMeasurement;
-const windowSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextWindow.ets',import.meta.url),'utf8');
+const windowSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets',import.meta.url),'utf8');
 const windowJs=ts.transpileModule(windowSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 dependencies.ReaderNativeTextWindow=new Function('FrameNode','LengthMetrics','graphicsText','readerNativeTextGeometryKey','readerNativeTextNodeGeometry','readerNativeTextNodeContent',windowJs+';return ReaderNativeTextWindow;')(Frame,{vp:v=>v},{RectWidthStyle:{TIGHT:0},RectHeightStyle:{TIGHT:0}},nativeAdapter.readerNativeTextGeometryKey,nativeAdapter.readerNativeTextNodeGeometry,nativeAdapter.readerNativeTextNodeContent);
 const js=ts.transpileModule(prefix.replace(/^import[\s\S]*?;$/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;

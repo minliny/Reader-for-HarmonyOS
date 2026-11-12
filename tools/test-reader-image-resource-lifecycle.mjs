@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts';
+import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../entry/src/main/ets/features/reading/application/ReaderReadingImageResources.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 assert.match(source, /readingImageResources: ReaderReadingImageResources =\s*new ReaderReadingImageResources\(ReaderRuntimeOwner.current\(\)/);
 const events = [];
@@ -31,7 +31,7 @@ function fixture() {
     nativeTextMeasurement: { clear: () => events.push(['measurement-clear']) },
     remoteSessionObserverDispose: () => events.push(['observer-dispose']),
     ttsCoordinator: { dispose: async () => events.push(['tts-dispose']) },
-    onExitRequestHandler: () => events.push(['unregister']),
+    withdrawExitRequest: () => events.push(['unregister']),
   });
   for (const name of ['finishSessionCapsuleMorph','invalidatePageTurnRuntime','clearDeferredPageTurnWork',
     'restoreInitialWindowBrightness','onControlInputBoundaryChanged','invalidateReplaceMutationOwner','cancelPendingAutoPageStart',

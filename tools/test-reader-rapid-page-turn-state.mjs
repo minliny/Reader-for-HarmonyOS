@@ -11,7 +11,7 @@ import {
   readerRapidPageTurnRetryExhausted,
   requestReaderRapidPageControl,
   retryReaderRapidPageTurn,
-} from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
 
 function enqueue(state, direction, count) {
   let next = state;

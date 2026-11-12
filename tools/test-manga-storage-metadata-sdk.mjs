@@ -5,8 +5,8 @@ import { readFileSync,readdirSync } from 'node:fs';
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),root=`${sdk}/../..`;
-const diskPath=localFilePath(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url));
-const displayPath=localFilePath(new URL('../entry/src/main/ets/app/MangaDisplayRetention.ts',import.meta.url));
+const diskPath=localFilePath(new URL('../entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts',import.meta.url));
+const displayPath=localFilePath(new URL('../entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts',import.meta.url));
 const disk=readFileSync(diskPath,'utf8').replace(/import \{\s*assertReadingOfflineWriteCapacity,[^]*?from '\.\.\/features\/reading\/ReadingOfflineContract';/,
   `declare function assertReadingOfflineWriteCapacity(free:number,bytes:number,reserve:number):void;
 declare class ReadingOfflineMaterializationError extends Error { constructor(kind:string,message:string); }

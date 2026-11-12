@@ -48,7 +48,7 @@ console.log('PASS real installed SDK ImageKit readback/native hash/file APIs and
 
 owner.passed=0;owner.failed=0;owner.receipt({caseId:'stage',phase:'large-region-start',pass:true,checkResult:false,presentationEvidence:false});assert.equal(owner.passed,0,'measurement stage marker never counts as a semantic PASS');owner.receipt({caseId:'large',phase:'large-region-end',pass:true,presentationEvidence:false});assert.equal(owner.passed,1);
 
-const bodyFile=readFileSync(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),'utf8');
+const bodyFile=readFileSync(new URL('../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts',import.meta.url),'utf8');
 const bodyTree=ts.createSourceFile('ReadingBodyImageHost.ts',bodyFile,ts.ScriptTarget.Latest,true);
 const bodyClass=bodyTree.statements.find(n=>n.name?.getText(bodyTree)==='ReadingBodyImageHost');
 const bodyMethods=['withDecodedPixelMap','assertMangaPixelBudget'].map(name=>bodyClass.members.find(n=>n.name?.getText(bodyTree)===name).getText(bodyTree)).join('\n');
@@ -67,7 +67,7 @@ class NativeBudgetSdk {
 assert.deepEqual(semantic(semanticSource+'\n'+bodyBudgetCheck),[],'actual production crop, SDR, RGBA, metadata and row-byte API must match installed SDK');
 assert.ok(semantic(semanticSource+'\n'+bodyBudgetCheck.replace('image.CropAndScaleStrategy.CROP_FIRST',"'cropFirst'" )).length>0,'invalid crop strategy is not silently accepted by SDK');
 console.log('PASS actual BodyHost production region/preview allocation and PixelMap stride methods against installed SDK (including invalid enum counterfactual).');
-const graphicsFile=readFileSync(new URL('../entry/src/main/ets/app/MangaImageGraphicsHost.ts',import.meta.url),'utf8')
+const graphicsFile=readFileSync(new URL('../entry/src/main/ets/platform/reading-resources/MangaImageGraphicsHost.ts',import.meta.url),'utf8')
  .replace(/^import .*?;\n/gm,'').replaceAll('MangaImageGraphicsHost','NativeGraphicsSdk');
 const graphicsBridge=`type MangaPlatformObserver = (event:MangaPlatformObservation)=>void;
 interface MangaGraphicsDimensions {width:number;height:number}

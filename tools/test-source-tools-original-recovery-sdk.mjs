@@ -12,17 +12,18 @@ const {boundedMembers,boundedSurfaceSdk} = await import('./lib/bounded-surface-s
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {readerRecoveryView} = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
-const {ReaderWindowMetricsSnapshot,ReaderRectVp,readerVisualSafeLeft,readerVisualSafeRight,readerInteractiveSafeLeft,readerInteractiveSafeRight} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {ReaderWindowMetricsSnapshot,ReaderRectVp,readerVisualSafeLeft,readerVisualSafeRight,readerInteractiveSafeLeft,readerInteractiveSafeRight} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {READER_FLOATING_TOP_BAR_HEIGHT,readerFloatingBarBottomInset} = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 
-const path='features/source/SourceToolsPage.ets',read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'),pageSource=read(path),recoverySource=read('features/common/ReaderRecoveryAction.ets'),headerSource=read('features/common/PageBackBar.ets');
+const path='features/source/ui/SourceToolsPage.ets',read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'),pageSource=read(path),recoverySource=read('ui/feedback/ReaderRecoveryAction.ets'),headerSource=read('ui/chrome/PageBackBar.ets');
 const document=JSON.stringify({bookSourceUrl:'https://tools-original.test',bookSourceName:'Original source',enabled:true});
 function sdkPage(f,host,snapshot,definition=pageSource){
- const controls=foundationControls(),messages=boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true}),metrics=new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844)),geometry=compile('features/common/SurfaceHorizontalGeometry.ts','*',{},true);
+ const controls=foundationControls(),messages=boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true}),metrics=new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844)),geometry=compile('ui/layout/SurfaceHorizontalGeometry.ts','*',{},true);
  const prefix=pageSource.slice(0,pageSource.indexOf('@Component'))+'\nexport const pageDataSources={SourceToolListDataSource,SourceCheckResultDataSource,SourceDebugLogDataSource};';
  const classes=compile(path,'pageDataSources',{},true,prefix);
- const empty=compile('features/source/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);
- const deps={...messages.deps,...controls.dependencies,...classes,...geometry,EMPTY_SOURCE_TOOLS_SNAPSHOT:empty,readerRecoveryView,ReaderNativeAlertOwner,
+ const empty=compile('features/source/application/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);
+ const sourceEditorReadbackPending=compile('features/source/application/SourceToolsOrchestrator.ets','sourceEditorReadbackPending',{},true);
+ const deps={...messages.deps,...controls.dependencies,...classes,...geometry,EMPTY_SOURCE_TOOLS_SNAPSHOT:empty,readerRecoveryView,ReaderNativeAlertOwner,sourceEditorReadbackPending,
   readerVisualSafeLeft,readerVisualSafeRight,readerInteractiveSafeLeft,readerInteractiveSafeRight,READER_FLOATING_TOP_BAR_HEIGHT,readerFloatingBarBottomInset,
   ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts:()=>{},
   // Native virtual-list painting only; the production data source and row
@@ -68,11 +69,42 @@ for(const moment of [selectedCase==='cold-before'?'beforeMethod':'afterMethod'])
  if(cold.writes().length)assert.equal(cold.writes()[0].params.operationId,intent.operationId,'explicit continuation retains original full ID');
  assert.equal(host.current().original.blocked,false);assert.equal(cold.disk(),'');const writes=cold.writes().length;page.action(continueLabel).click();await host.operationTail;assert.equal(cold.writes().length,writes,'terminal old physical actor rejected');
  page.node.aboutToDisappear();read.click();next.click();await host.operationTail;assert.equal(cold.writes().length,writes,'unmounted page cannot continue original');groups++;
+ if (moment === 'beforeMethod') {
+  const sourceId='https://tools-original.test';
+  let release;
+  cold.options.gate={promise:new Promise(resolve=>{release=resolve;})};
+  cold.options.pauseMethod='source.export';
+  host.openEditor(sourceId);
+  try {
+   await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(cold.options.pauseMethod,undefined,'original source export reached the retained read boundary');
+   host.detachPresentation('tools-sdk');
+   host.attachPresentation('tools-successor',value=>{snapshot=value;},()=>true);
+   host.open(snapshot.sources);
+  } finally { release(); }
+  await host.operationTail;
+  assert.equal(snapshot.editorSourceId,'','the previous opening cannot install its editor in the successor');
+  assert.equal(snapshot.busy,false);
+
+  host.openEditor(sourceId);await host.operationTail;
+  const revision=snapshot.editorRevision;
+  const draft=JSON.stringify({...JSON.parse(snapshot.editorText),bookSourceName:'Revised source'});
+  host.updateEditorDraft(draft,revision);
+  cold.options.transformMethod='source.list';cold.options.transform=data=>({...data,sources:[]});
+  host.saveEditor(revision);await host.operationTail;
+  assert.equal(snapshot.editorReadback.fact,'confirmedRefreshFailed','a successful list read missing the exact source is not an editor readback');
+  assert.equal(snapshot.editorSourceId,sourceId);assert.equal(snapshot.editorText,draft);
+  const saveWrites=cold.writes().length;
+  cold.options.transformMethod=undefined;
+  host.reconcileEditor(revision);await host.operationTail;
+  assert.equal(cold.writes().length,saveWrites,'editor readback retries only the existing source list');
+  assert.equal(snapshot.editorSourceId,'');assert.equal(snapshot.editorReadback.fact,'confirmedCurrent');
+ }
 }
 complete=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!complete});if(!complete)console.error(JSON.stringify({kind:'reader-test-retained-fixtures',...cleanup}));}
 }
 if(selectedCase==='page-eligibility') {
- const empty=compile('features/source/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);const calls=[];
+ const empty=compile('features/source/application/SourceToolsOrchestrator.ets','EMPTY_SOURCE_TOOLS_SNAPSHOT',{},true);const calls=[];
  const host=new Proxy({},{get:(_target,key)=>(...args)=>calls.push([key,...args])});
  const original={generation:7,operationId:'source-original/7',sequence:7,method:'source.setEnabled',confirmation:'unknown',writeStage:'core',busy:false,blocked:true,canRetryOriginal:true,message:'原事项待核对'};
  const source={sourceId:'https://tools-original.test',name:'Original source',enabled:true,enabledExplore:true,bookSource:{bookSourceUrl:'https://tools-original.test',bookSourceName:'Original source'}};
@@ -80,7 +112,17 @@ if(selectedCase==='page-eligibility') {
  const old=page.action('继续');page.update({...snapshot,original:{...original,generation:8,operationId:'replacement/8'}});old.click();assert.deepEqual(calls,[],'old physical actor cannot borrow current original');
  page.update({...snapshot,original:{...original,busy:true}});const busy=page.action('继续');assert.equal(busy.actor.actionEnabled,false);busy.click();assert.deepEqual(calls,[]);
  page.update({...snapshot,original});const current=page.action('继续');current.click();assert.deepEqual(calls,[['continueOriginal',7]],'actual current native actor routes exact generation');
+ const editor={...snapshot,editorSourceId:source.sourceId,editorRevision:11};
+ page.node.snapshot=editor;
+ assert.equal(page.node.editorDraftIsEditable(11),false,'an outstanding original write also blocks the native draft');
+ page.node.snapshot={...editor,original:undefined,busy:true};
+ assert.equal(page.node.editorDraftIsEditable(11),false,'an active save does not accept edits the owner would discard');
+ page.node.snapshot={...editor,original:undefined,busy:false};
+ assert.equal(page.node.editorDraftIsEditable(11),true);
+ assert.equal(page.node.editorDraftIsEditable(10),false,'a retired editor callback cannot edit the current draft');
  page.node.aboutToDisappear();current.click();assert.equal(calls.length,1,'unmounted actor cannot continue');
+ assert.equal(page.node.editorDraftIsEditable(11),false);
+ page.node.snapshot=snapshot;
  const raw=page.node.batchControlsRenderKey();page.node.snapshot={...snapshot,original:{...original,busy:false,blocked:false}};assert.notEqual(page.node.batchControlsRenderKey(),raw,'only small batch key tracks actual write admission');
 }
 

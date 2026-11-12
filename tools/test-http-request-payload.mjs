@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 
 const app=new URL('../entry/src/main/ets/app/',import.meta.url);
-const production=stripTypeScriptTypes(readFileSync(new URL('HttpExecuteHost.ts',app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
+const production=stripTypeScriptTypes(readFileSync(new URL('../platform/network/HttpExecuteHost.ts',app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const sdk=readFileSync(new URL('../entry/vendor/core-harmony/Index.ts',import.meta.url),'utf8');
 const sharedFunction=sdk.slice(sdk.indexOf('export function encodeSharedText('),sdk.indexOf('export async function runHarmonyNapiSmoke('));
 const calls=[];

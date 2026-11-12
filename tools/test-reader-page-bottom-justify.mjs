@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { readerPageBottomJustifyGap } from
-  '../entry/src/main/ets/features/reading/ReaderPageBottomJustify.ts';
+  '../entry/src/main/ets/features/reading/ui/ReaderPageBottomJustify.ts';
 
 assert.equal(readerPageBottomJustifyGap(false, 10, 190, 200, 20, false), 0);
 assert.equal(readerPageBottomJustifyGap(true, 1, 20, 200, 20, false), 0);

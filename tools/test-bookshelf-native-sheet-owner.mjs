@@ -4,24 +4,26 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
-import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+import {admitBookshelfSdkCarrier,mountBookshelfSceneProbe} from './lib/bookshelf-projection-owner-probe.mjs';
+import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {ReaderNavigation} from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
+import {readerAppColor} from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import * as metricsApi from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import * as geometryApi from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const sdk=resolveEtsLoaderRoot();
 const builders=createRequire(import.meta.url)(sdk+'/lib/component_map.js').CUSTOM_BUILDER_METHOD;
-for(const match of source('features/bookshelf/BookshelfPage.ets').matchAll(/@Builder\s+(?:private\s+)?(\w+)\(/g))builders.add(match[1]);
-const pageSource=source('features/bookshelf/BookshelfPage.ets');
-const names=['presentBookActionSheet','isCurrentBookActionSheet','dismissBookActionSheet','performBookAction','bookActionSheetOptions','bookActionSheetSpec','onBooksChanged','aboutToDisappear'];
+for(const match of source('features/bookshelf/ui/BookshelfPage.ets').matchAll(/@Builder\s+(?:private\s+)?(\w+)\(/g))builders.add(match[1]);
+const pageSource=source('features/bookshelf/ui/BookshelfPage.ets');
+const names=['presentBookActionSheet','isCurrentBookActionSheet','dismissBookActionSheet','performBookAction','bookActionSheetOptions','bookActionSheetSpec','onBooksChanged','aboutToDisappear','cancelBookActionFocus','bookActionFocusRevision','bookActionFocusKey'];
 const book=(sourceId,bookId)=>({sourceId,bookId,title:bookId,author:'author',kind:'novel',currentChapterTitle:'chapter'});
 const A=book('a','same'),B=book('b','same');
 function fixture(definition=pageSource,{width=390,left=0,right=0}={}){
   const metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,844),undefined,new metricsApi.ReaderInsetsVp(left,0,right,0));
   const p=boundedSurfaceSdk();p.hooks.lifecycleChildren=true;p.hooks.allowEmptyBranchAdmission=true;
-  p.hooks.childSources.ReaderSheetActionList=source('features/common/ReaderSheetActionList.ets');
+  p.hooks.childSources.ReaderSheetActionList=source('features/bookshelf/ui/ReaderSheetActionList.ets');
   p.deps.ReaderSheetActionList=createReaderBuilderProbe(p.hooks.childSources.ReaderSheetActionList,boundedMembers(p.hooks.childSources.ReaderSheetActionList),p.deps,p.hooks).Component;
-  const leaf=source('features/bookshelf/BookshelfBookActionSheet.ets');p.hooks.childSources.BookshelfBookActionSheet=leaf;
+  const leaf=source('features/bookshelf/ui/BookshelfBookActionSheet.ets');p.hooks.childSources.BookshelfBookActionSheet=leaf;
   p.deps.BookshelfBookActionSheet=createReaderBuilderProbe(leaf,boundedMembers(leaf),p.deps,p.hooks).Component;
   const probe=createReaderBuilderProbe(definition,['books','navigationGeneration','actionBook','actionSheetId','actionSheetRevision','actionSheetNavigation','mounted',...names,
     'readerWindowMetricsRevision','viewportWidth','bookActionWidth','resolveContentFrame','effectiveViewportWidth',
@@ -109,20 +111,26 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   for(const button of old.buttons)button.onClick();assert.equal(f.calls.length,0,'retired physical handlers cannot target the same book on a later mount');
   fresh.buttons[1].onClick();assert.deepEqual(f.calls,[['info',A]]);
 }
+const IndexShelfPorts=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['bookshelfScenePorts']);
 for(const retirement of ['current','runtime','route','mount'])for(const actionIndex of [0,1,2,3]){
   const f=fixture(),runtime={};let installed=runtime;
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['bookshelfContent'],
-    {...f.p.deps,BookshelfPage:Child,BookshelfEmptyPage:Child,BookshelfStatusContent:Child},
-    {...f.p.hooks,childSources:{...f.p.hooks.childSources,BookshelfPage:pageSource,
-      BookshelfEmptyPage:source('features/bookshelf/BookshelfEmptyPage.ets'),BookshelfStatusContent:source('features/bookshelf/BookshelfStatusContent.ets')}});
+  const index=new IndexShelfPorts();
   const dispatched=[];
-  Object.assign(index,{navigationGeneration:7,isBookshelfVisualAdmitted:true,shelfBooks:[A,B],shelfProjectionRevision:'revision',
-    bookshelfViewState:{},settingsSnapshot:{reduceMotion:false},readingSessionActive:false,shelfReadingPreparation:false,
+  Object.assign(index,{navigationGeneration:7,shelfReadingPreparation:false,navigationOwner:new ReaderNavigation(),
     openBookshelfMultiSelect:book=>dispatched.push(['multi',book]),openShelfBookInfo:book=>dispatched.push(['info',book]),
-    openShelfGroup:book=>dispatched.push(['group',book]),requestRemoveShelfBook:book=>dispatched.push(['remove',book])});
-  admitBookshelfSdkCarrier(index,runtime,()=>installed);index.bookshelfContent();
-  const props=[...index.children.values()].find(child=>child.params.books).params;
+    openShelfGroup:book=>dispatched.push(['group',book])});
+  admitBookshelfSdkCarrier(index,runtime,()=>installed);
+  Object.assign(index.shelfRead.snapshot,{visualAdmitted:true,books:[A,B],revision:'revision'});
+  Object.assign(index.shelfMutations,{recovery:()=>({visible:false}),canContinueRemoval:()=>false,
+    requestSingleRemoval:book=>dispatched.push(['remove',book])});
+  const scene=mountBookshelfSceneProbe({
+    read:index.shelfRead,mutations:index.shelfMutations,catalog:{snapshot:{}},motion:{},
+    navigation:index.navigationGeneration,feedbackEnabled:true,reduceMotion:false,continueCardSuppressed:false,
+    ports:index.bookshelfScenePorts(runtime,index.detailShelfAdmissionMount),
+  },{BookshelfShell:Child,BookshelfPage:Child,BookshelfEmptyPage:Child,BookshelfStatusContent:Child});
+  [...scene.children.values()].at(-1).params.content();
+  const props=[...scene.children.values()].find(child=>child.params.books).params;
   for(const name of ['onBookMultiSelectRequested','onBookInfoRequested','onBookGroupRequested','onBookRemoveRequested'])f.owner[name]=props[name];
   f.owner.presentBookActionSheet(A);const physical=f.render();
   if(retirement==='runtime')installed={};else if(retirement==='route')index.route='detail';else if(retirement==='mount')index.detailShelfAdmissionMount+=1;

@@ -6,8 +6,8 @@ const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { searchListFixture, searchListRows, searchListSources, searchListTouches,
   searchListSource, searchListDependencies, assertSearchListBuilderGeometry }=await import('./lib/reader-content-search-list-probe.mjs');
-const list=await import('../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts');
-const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
+const list=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchListProjection.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts');
 const { readerContentSearchFieldProbe }=await import('./lib/reader-content-search-field-probe.mjs');
 const near = (a, b, why) => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} != ${b}`);
 const { ReaderContentSearchDataSource } = searchListDependencies;
@@ -154,7 +154,7 @@ if(selectedCase==='row-admission'){
 }
 }
 if(selectedCase==='input-variant'){
-const fontSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
+const fontSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
 const fieldProbe=readerContentSearchFieldProbe(fontSource),field=fieldProbe.owner;
 Object.assign(field,{query:'保留全文搜索',motionProgress:1,availableWidth:338,availableHeight:666});
 field.searchField();

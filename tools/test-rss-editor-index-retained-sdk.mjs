@@ -11,13 +11,13 @@ import {actualSourceManagementTypes} from './lib/source-management-owner-probe.m
 import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
 const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
 function compile(file,n,deps){const source=read(file),tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(tree.parseDiagnostics,[]);const emitted=ts.transpileModule(source.replace(/^import[\s\S]*?;\n/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);const exports={};new Function('exports',...Object.keys(deps),emitted.outputText)(exports,...Object.values(deps));return n===undefined?exports:exports[n];}
-const Gateway=compile('features/rss/RssGateway.ts','RssGateway',{ReaderRuntimeOwner:RssRuntime,isReaderCoreTransactionPendingError});
+const Gateway=compile('features/rss/application/RssGateway.ts','RssGateway',{ReaderRuntimeOwner:RssRuntime,isReaderCoreTransactionPendingError});
 const deps={RssGateway:Gateway,ReaderRuntimeOwner:RssRuntime,ReaderWriteEvidence:RssWriteEvidence,RssRouteOperationHost:RealRssRouteHost,
  hilog:{error(){},warn(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt:rssProjection,projectOperationFacts:rssFacts.projectOperationFacts};
-const Lane=compile('features/rss/RssOrchestrator.ets','RssOrchestrator',deps),editor=compile('features/rss/RssSubscriptionEditorOrchestrator.ets',undefined,deps),Editor=editor.RssSubscriptionEditorOrchestrator;
+const Lane=compile('features/rss/application/RssOrchestrator.ets','RssOrchestrator',deps),editor=compile('features/rss/application/RssSubscriptionEditorOrchestrator.ets',undefined,deps),Editor=editor.RssSubscriptionEditorOrchestrator;
 let instances=0;
 function makeIndex(runtime,{indexSource=read('pages/Index.ets')}={}){
- replaceRssRuntime(runtime);const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),raw=read('features/rss/RssSubscriptionEditorPage.ets');p.hooks.childSources.RssSubscriptionEditorPage=raw;
+ replaceRssRuntime(runtime);const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),raw=read('features/rss/ui/RssSubscriptionEditorPage.ets');p.hooks.childSources.RssSubscriptionEditorPage=raw;
  const members=['snapshot','onBack','onFeedUrlChanged','onTitleChanged','onEnabledChanged','onEnabledCookieJarChanged','onSourceFieldChanged','onSave','onReconcile','onRetryRead',
   'operationRecovery','recoveryActionIdentities','recoveryGeneration','dispatchRecovery','saveAction','editorField'];
  const Page=createReaderBuilderProbe(raw,members,{...p.deps,EMPTY_RSS_EDITOR_SNAPSHOT:editor.EMPTY_RSS_EDITOR_SNAPSHOT},p.hooks).Component;

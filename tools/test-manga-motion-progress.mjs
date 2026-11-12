@@ -1,17 +1,17 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire, registerHooks, stripTypeScriptTypes} from 'node:module';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 registerHooks({resolve(specifier, context, next) {
   try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; }
 }});
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name.split('/').at(-1)};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -19,7 +19,7 @@ const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaRetainedTileCache,MangaSessionGateway, MangaResourceGateway});
 const Projection = load('MangaStripProjection');
 const Scale = load('vendor/photoview/PhotoViewScaleModel');
-const surfaceURL = process.env.READER_MANGA_MOTION_SURFACE ?? new URL('MangaReadingSurface.ets', root);
+const surfaceURL = process.env.READER_MANGA_MOTION_SURFACE ?? mangaSourceUrl('MangaReadingSurface.ets');
 const source = readFileSync(surfaceURL, 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -42,7 +42,7 @@ function stop(owner, index) {
 const methods = ['rollbackChapterImages', 'publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'flushViewportObservation', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'displayChapterTitle', 'changeFit', 'toggleDirection', 'turnPage', 'seekPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
-const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
+const Surface = productionMotionMethods(surfaceURL, [...methods, 'onPanelForegroundChanged'].filter(name => memberNames.has(name)), {
   setTimeout: callback => timers.push(callback), ScrollAlign: {START: 0}, LengthMetrics: {vp: value => ({value, unit: 'vp'})}, MangaLayoutFrame, MangaBookPresentation, AppStorage:{setOrCreate(){}}
 });
 const pages = [0, 1, 2].map(ordinal => ({ordinal, pageId: `mp1:${String(ordinal).repeat(64)}`, resourceRef: `manga:mp1:${String(ordinal).repeat(64)}`}));
@@ -76,6 +76,7 @@ async function fixture(horizontal = false, offline = true) {
   const surface = Object.assign(new Surface(), {controller, runtime,
     data: {projection, totalCount: () => projection.totalCount(), getData: index => projection.row(index), notify() {}},
     first: native.first, last: native.first, panel:'', chapterEnd:false, brightnessOwner:0, mounted: true, opened: true, recovering: false,
+    appForeground: true, windowChromeActive: true, interactionBlocked: false, pageTurnInputRevision: 0,
     horizontal, horizontalPage: 1, zoom: 2, scalePolicy: new Scale(), viewportWidth: 500, viewportHeight: 900,
     fitPreference: 'width', layoutGeneration: 0, viewportGeneration: 0, presentationGeneration: 0, appliedLayoutGeneration: -1, loginGeneration: 0,
     restoringAnchor: false, error: '', settingsGateway: {updateMangaDirection: async () => {}, updateMangaFit: async () => {}},
@@ -152,7 +153,7 @@ assert.equal(touch.writes.at(-1).location.y, 0.52, 'the user-canceled restore ca
 touch.close();
 console.log('PASS actual touch cancellation and superseding restore: stale frames cannot clear the new anchor; user geometry can settle');
 
-for (const mutation of ['direction', 'direction-round-trip', 'zoom', 'chapter', 'refresh-intent', 'exit']) {
+for (const mutation of ['direction', 'direction-round-trip', 'zoom', 'chapter', 'refresh-intent', 'cover-round-trip', 'exit']) {
   const f = await fixture(true); const wait = deferred(); f.holdSave(wait.promise);
   const turning = f.surface.turnPage(1); await tick(); assert.equal(f.writes.length, 1);
   if (mutation === 'direction') f.surface.toggleDirection();
@@ -169,6 +170,12 @@ for (const mutation of ['direction', 'direction-round-trip', 'zoom', 'chapter', 
     refreshing = f.surface.refreshImages();
   }
   if (mutation === 'exit') f.surface.aboutToDisappear();
+  if (mutation === 'cover-round-trip') {
+    f.surface.interactionBlocked = true;
+    f.surface.onPanelForegroundChanged();
+    f.surface.interactionBlocked = false;
+    f.surface.onPanelForegroundChanged();
+  }
   wait.resolve(); await turning; if (refreshing) await refreshing;
   assert.notEqual(f.surface.horizontalPage, 2, `${mutation} must fence the old horizontal turn`);
   if (mutation === 'direction') assert.equal(f.projection.totalCount(), 30, 'old turn must not replace the new vertical projection');

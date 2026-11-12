@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -5,10 +6,10 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(s,c,next) { try { return next(s,c); } catch(e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(s+'.ts',c); throw e;
 } } });
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const { BookRequestNotDispatchedError } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
-const sourceURL = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
-const source=readFileSync(sourceURL,'utf8'), start=source.indexOf('class CoreReadingAnchor implements'), end=source.indexOf('\nclass ',start+1);
+const sourceURL = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
+const source=readReaderExperienceFixture(sourceURL,'utf8'), start=source.indexOf('class CoreReadingAnchor implements'), end=source.indexOf('\nclass ',start+1);
 const CoreReadingAnchor=new Function(stripTypeScriptTypes(source.slice(start,end))+';return CoreReadingAnchor;')();
 const layout={viewportWidth:390,viewportHeight:800,fontScale:1};
 const anchor=offset=>({chapterIndex:2,chapterOffset:offset,chapterProgress:offset/100,bodyVersion:'body',processingVersion:'processing'});

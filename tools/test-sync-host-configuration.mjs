@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
 const { configIntentFixture }=await import("./lib/sync-config-intent-fixture.mjs");
-const { restoreReaderThemeSelection, migrateLegacyReaderThemeSelection }=await import("../entry/src/main/ets/features/common/ReaderThemeSelection.ts");
+const { restoreReaderThemeSelection, migrateLegacyReaderThemeSelection }=await import("../entry/src/main/ets/app/ReaderThemeSelection.ts");
 const { productionMotionMethods }=await import("./lib/reader-motion-method-probe.mjs");
 const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const copy=x=>JSON.parse(JSON.stringify(x));
@@ -11,12 +11,12 @@ const actualConfigGuard=()=>{const f=configIntentFixture(),x=f.fixture({empty:tr
 const selected={version:1,appMode:'day',reader:{id:'day',scheme:'day'},defaultDayReaderId:'day',defaultNightReaderId:'night'};
 let theme=copy(selected),mode='cover',failTheme=false,durableReads=0;
 const store={loadBookshelfViewMode:async()=>mode,saveBookshelfViewMode:async x=>{mode=x;}};
-const Host=productionMotionMethods(path('features/sync/SyncHostConfiguration.ts'),['capture','encode','decode','apply'],{
+const Host=productionMotionMethods(path('features/sync/application/SyncHostConfiguration.ts'),['capture','encode','decode','apply'],{
  restoreReaderThemeSelection, migrateLegacyReaderThemeSelection, WebDavCredentialStore:{instance:store},ReaderThemeHost:{durableBackup:async()=>{durableReads++;return copy(theme);},restore:async x=>{if(failTheme){failTheme=false;throw Error('flush');}theme=copy(x);return ''; }},AppStorage:{get:key=>key==='readerSystemScheme'?'night':'day',setOrCreate(){}}
 });
 const host=new Host(),prior=await host.capture(),next={version:1,bookshelfViewMode:'list',themeSelection:{...copy(selected),appMode:'night',reader:{id:'night',scheme:'night'}}};
 const journal={version:1,operationId:'operation-1',checksum:'a'.repeat(64)};
-const Gateway=productionMotionMethods(path('features/sync/SyncGateway.ts'),['recoverInterruptedRestore','recoverRestoreJournal','driveTransaction','assertTransactionIdentity'],{MAX_TRANSACTION_STEPS:30,SyncGateway:{restoreRecoveries:new Map()}});
+const Gateway=productionMotionMethods(path('features/sync/application/SyncGateway.ts'),['recoverInterruptedRestore','recoverRestoreJournal','driveTransaction','assertTransactionIdentity'],{MAX_TRANSACTION_STEPS:30,SyncGateway:{restoreRecoveries:new Map()}});
 function gatewayFixture({receipt=false,hostConfig=true,failApplyResponse=false,failCommitResponse=false,failHost=false}={}){
  let applied=receipt,coreApplications=0,themeApplications=0,commits=0,queries=0,record;
  let pending=copy(journal);let hostFailed=failHost,commitFailed=failCommitResponse;const guard=actualConfigGuard();
@@ -46,7 +46,7 @@ await host.apply(next);assert.equal(mode,'list');assert.equal(theme.appMode,'nig
 failTheme=true;await assert.rejects(host.apply(prior),/恢复失败/);assert.equal(mode,'list','theme flush failure compensates only acknowledged mode');assert.equal(theme.appMode,'night');
 }
 if(id==='journal'){
-const Store=productionMotionMethods(path('features/sync/WebDavCredentialStore.ts'),['loadRestoreJournal','saveRestoreJournal','clearRestoreJournal','validateRestoreJournal'],{LOCAL_RESTORE_JOURNAL_KEY:'journal'});
+const Store=productionMotionMethods(path('features/sync/application/WebDavCredentialStore.ts'),['loadRestoreJournal','saveRestoreJournal','clearRestoreJournal','validateRestoreJournal'],{LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 const values=new Map();let failFlush=false;
 const prefs={get:async(k,d)=>values.get(k)??d,put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),flush:async()=>{if(failFlush){failFlush=false;throw Error('flush');}}};
 const credentials=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),ensureLocalPreferences:async()=>prefs});
@@ -99,7 +99,7 @@ if(id==='scheme-order'){
 if(id==='migration-start'){
 {
  const diagnostics=new Map();let params,barrier=0;
- const Start=productionMotionMethods(path('features/sync/SyncGateway.ts'),['startTransaction','decodeTransaction','requireBackupSettled','reconcileBackupReceipt'],{
+ const Start=productionMotionMethods(path('features/sync/application/SyncGateway.ts'),['startTransaction','decodeTransaction','requireBackupSettled','reconcileBackupReceipt'],{
    MAX_TRANSACTION_REQUESTS:100,ReaderThemeHost:{prepareUserChange:async()=>{barrier++;},observedSystemScheme:()=> 'night'},
    AppStorage:{setOrCreate:(k,v)=>diagnostics.set(k,v)},
  });

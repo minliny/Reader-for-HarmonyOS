@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
@@ -10,12 +11,12 @@ const { compileHost, ReaderDirectoryHost }=await import('./lib/reading-entry-own
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
-const mapSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts',import.meta.url),'utf8')
+const mapSource=readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts',import.meta.url),'utf8')
   .replace('constructor(private readonly content: string) {','constructor(content: string) { this.content = content;');
 const {ReadingSurfaceLayoutMap}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
-const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const file=fileURLToPath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
-const anchorSource=readFileSync(file,'utf8').match(/class CoreReadingAnchor[\s\S]*?\n}/)[0];
+const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const file=fileURLToPath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
+const anchorSource=readReaderExperienceFixture(file,'utf8').match(/class CoreReadingAnchor[\s\S]*?\n}/)[0];
 const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; return CoreReadingAnchor;`)();
 let captureContentEpoch=()=>()=>true;
 let waitContentIdle=async()=>{};
@@ -243,8 +244,8 @@ for(const scenario of ['refresh','decline','stale','late','preserved','already-r
 }
 if(id==='index-cache-recovery'){
 {
- const admission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
- const {withPreparedRemoteChapter}=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+ const admission=await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+ const {withPreparedRemoteChapter}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
  const session={identity:{sourceId:'s',bookId:'b'},sourceVersion:'v',acquisitionMode:'online',
    detailUrl:'/b',tocUrl:'/toc',book:{title:'书',author:'作者'},entries:[{index:0,title:'章',url:'/0',variables:[]}],
    continuationVariables:[],hostRequirements:[]};
@@ -259,7 +260,7 @@ if(id==='index-cache-recovery'){
    const Entry=compileHost(undefined,{ReaderRuntimeOwner:{current:()=>runtime,isCurrent:owner=>owner===runtime},RemoteReadingFlowGateway:NativeGateway});
    const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
    const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-     ['refreshCachedChapterFromPrompt','bindReadingEntryReader','runIndexRecoveryAction'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+     ['refreshCachedChapterFromPrompt','bindReadingEntryReader'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
        ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',
        ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
        RemoteReadingFlowGateway:NativeGateway});
@@ -274,7 +275,7 @@ if(id==='index-cache-recovery'){
      assert.equal(page.indexRecoveryNotice.canRetry,true);assert.equal(page.indexRecoveryActionLabel,'刷新本章');
      const presentation=page.indexRecoveryNotice.generation;
      if(scenario==='stale')active=false;
-     if(scenario!=='decline'){page.runIndexRecoveryAction(presentation);page.runIndexRecoveryAction(presentation);}
+     if(scenario!=='decline'){page.readingEntry.retryRecoveryNotice(presentation);page.readingEntry.retryRecoveryNotice(presentation);}
      if(scenario==='late'){
        for(let n=0;n<20&&calls.length<1;n++)await new Promise(resolve=>setImmediate(resolve));
        assert.equal(calls.length,1,'late entry cancellation follows actual dispatch');active=false;release(upgraded);
@@ -375,8 +376,8 @@ if(id==='cold-bookmark'){
    ['onReaderBookmarkSelected'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:class{constructor(...args){this.args=args;}}});
  for(const active of [false,true]){
   const notices=[];const p=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b'},readingSessionActive:active,
-   route:'directory',bookmarkAnchorRequestId:0,isKnownDetailChapter:()=>true,openReading(){throw Error('must not open');},
-   getUIContext:()=>({getPromptAction:()=>({showToast:row=>notices.push(row.message)})})});
+   detailToc:[{index:0,navigable:true}],route:'directory',bookmarkAnchorRequestId:0,
+   openReading(){throw Error('must not open');},transientFeedback:{show(_context,message){notices.push(message.message);}}});
   p.onReaderBookmarkSelected('unresolved',0,6);assert.equal(notices.length,1);assert.equal(p.route,'directory');
   assert.equal(p.requestedBookmarkAnchor,undefined);assert.equal(p.readingSessionActive,active);
  }
@@ -384,13 +385,13 @@ if(id==='cold-bookmark'){
 }
 if(id==='index-bookmark-failure'){
 {
- const {loadReaderControlBookmarkProjection}=await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
+ const {loadReaderControlBookmarkProjection}=await import('../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
  for(const scenario of ['read-failed','new-mutation','new-navigation']){
   let reject;const gate=new Promise((_resolve,no)=>reject=no);
   const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['loadControlBookmarks','directoryBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries'],
-   {ReaderRuntimeOwner:{current:()=>runtime}});
-  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+   ['loadControlBookmarks','applyOwnedDirectoryEntries'],
+   {ReaderRuntimeOwner:{current:()=>runtime},ReaderDirectoryHost:{forRuntime:()=>host}});
+  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
   const runtime={request:()=>gate};
   const host=new ReaderDirectoryHost({gateway:new LocalReadingFlowGateway(runtime),ownsRuntime:()=>true});
   const fresh=[{index:0,title:'章',bookmarks:[{time:2,chapterOffset:0}]}];
@@ -398,7 +399,7 @@ if(id==='index-bookmark-failure'){
    detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
    navigationGeneration:1,directoryBookmarkMutationGeneration:1,directoryBookmarkMutationActiveKey:'',
    detailToc:[{index:0,title:'章',bookmarks:[]}],directoryBookmarkMutationKey:()=> 'book-key',
-   getReaderDirectoryHost:()=>host,getReadingEntryHost:()=>undefined,clearDirectoryBookmarkProjectionFailure(){}});
+   getReadingEntryHost:()=>undefined,clearDirectoryBookmarkProjectionFailure(){}});
   const promise=p.loadControlBookmarks('s','b',()=>true);
   await new Promise(resolve=>setImmediate(resolve));
   if(scenario==='new-mutation'){host.generation++;p.detailToc=fresh;}

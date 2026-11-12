@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
@@ -42,17 +43,17 @@ const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderSta
 const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
 const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
 const { MangaOfflineNetworkProbe } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
-const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
-const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryHandoff.ts');
+const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
 const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
-const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const runtimeSource=readReaderExperienceFixture(runtimeFile,'utf8'), abilitySource=readReaderExperienceFixture(abilityFile,'utf8');
 const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
@@ -149,17 +150,17 @@ const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderSta
 const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
 const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
 const { MangaOfflineNetworkProbe } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
-const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
-const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryHandoff.ts');
+const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
 const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
-const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const runtimeSource=readReaderExperienceFixture(runtimeFile,'utf8'), abilitySource=readReaderExperienceFixture(abilityFile,'utf8');
 const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
@@ -265,17 +266,17 @@ const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderSta
 const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
 const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
 const { MangaOfflineNetworkProbe } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
-const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
-const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryHandoff.ts');
+const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
 const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
-const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const runtimeSource=readReaderExperienceFixture(runtimeFile,'utf8'), abilitySource=readReaderExperienceFixture(abilityFile,'utf8');
 const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
@@ -302,8 +303,8 @@ const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({
 // The retained-page entrance and producer are independent of shelf preparation.
 // Execute all three production guards; the disabled reader cannot even query a
 // provider, and its producer must discard an old RAM handoff before returning.
-const readingFile=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
-const readingTree=ts.createSourceFile(virtualFilePath('ReaderOptionalRetained.ets'),readFileSync(readingFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const readingFile=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
+const readingTree=ts.createSourceFile(virtualFilePath('ReaderOptionalRetained.ets'),readReaderExperienceFixture(readingFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const dto=Object.fromEntries(['ReaderRetainedPresentation','ReaderMaterializedChapterContext'].map(name=>{
   const node=readingTree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(readingTree)===name);
   assert.ok(node,name);

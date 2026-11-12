@@ -6,7 +6,7 @@ let systemFileIndexFixture;if(id==='index-navigation')({systemFileIndexFixture}=
 
 const { readFileSync }=await import('node:fs');
 const { createRequire, stripTypeScriptTypes }=await import('node:module');
-const { ReaderSystemFileOpenQueue }=await import('../entry/src/main/ets/app/ReaderSystemFileOpenQueue.ts');
+const { ReaderSystemFileOpenQueue }=await import('../entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenQueue.ts');
 const { isReaderLocalBookFileName }=await import('../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts');
 const { localImportFailure }=await import('../entry/src/main/ets/app/LocalImportFailure.ts');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
@@ -19,7 +19,7 @@ const book = { sourceId: 'local', bookId: 'local:hash', title: '本地书', auth
 
 // Actual queue: cold delivery survives a late/rebuilt page, a warm delivery is
 // serialized, repeated active/completed Wants coalesce, new retries are allowed.
-const hostCode=stripTypeScriptTypes(read('entry/src/main/ets/app/ReaderSystemFileOpenHost.ts')
+const hostCode=stripTypeScriptTypes(read('entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenHost.ts')
   .replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
 function hostType(core,gateway,barrier={prepareUserChange:async()=>{}}) {
   return new Function('ReaderRuntimeOwner','ReaderCoreGateway','LocalBookImportGateway','ReaderSystemFileOpenQueue','hilog','ReaderThemeHost',
@@ -99,6 +99,24 @@ for (const existing of [true,false]) {
   assert.deepEqual(calls,existing?['stage','get','asset','discard']:['stage','get','import','get']);
   Host.detach({}); assert.ok(Host.peek(),'another owner cannot detach active queue'); Host.detach(owner); assert.equal(Host.peek(),undefined);
 }
+for (const readback of ['missing', 'failed']) {
+  let reads = 0, writes = 0;
+  class Core { async loadShelfBook() {
+    if (++reads === 2 && readback === 'failed') throw Error('private readback details');
+    return undefined;
+  } }
+  class Import { async importPreparedSelections() { writes++; return { items: [{ state: 'success' }] }; } }
+  const Host = hostType(Core, Import);
+  const owner = { prepareSystemLocalBookInput: async () => ({ state: 'ready', input: { bookId: book.bookId } }) };
+  Host.install(owner, Promise.resolve());
+  Host.receive({ action: 'ohos.want.action.viewData', uri: 'file://p/a.txt' });
+  await until(() => Host.peek());
+  assert.equal(reads, 2);
+  assert.equal(writes, 1);
+  assert.deepEqual(Host.peek().failure, { code: 'recoveryPending', message: '文件已保存，请返回书架重试打开' });
+  assert.equal(Host.peek().book, undefined);
+  Host.detach(owner);
+}
 }
 if(id==='host-retired'){
 {
@@ -125,26 +143,28 @@ if(id==='index-navigation'){
 {
   let result={id:1,book}; const actions=[];
   const Host={subscribe:()=>()=>{},peek:()=>result, acknowledge:id=>{assert.equal(id,result.id);actions.push('ack');result=undefined;}};
-  const f=systemFileIndexFixture({bridge:Host,book}); const index=f.page;
-  Object.assign(index,{readingSessionActive:true,getUIContext:()=>({getPromptAction:()=>({showToast:()=>actions.push('toast')})}),
-    returnToBookshelf(){actions.push('shelf');this.readingSessionActive=false;},openShelfBook:b=>{assert.equal(b,book);actions.push('open');},
+  const f=systemFileIndexFixture({bridge:Host,book}); const index=f.page;f.admitBook(index,book);
+  Object.assign(index,{getUIContext:()=>({getPromptAction:()=>({showToast:()=>actions.push('toast')})}),
+    returnToBookshelf(){actions.push('shelf');this.readingEntry.endReading();this.route='bookshelf';this.navigationGeneration++;},
+    openShelfBook(selected){assert.equal(selected,book);actions.push('open');f.admitBook(this,selected);},
     closeImportDialog(){actions.push('close-import');}});f.mount();
   index.consumeSystemFileOpen(); assert.deepEqual(actions,[],'wait for mounted reader exit callback');
   index.readingExitRequest=()=>actions.push('exit'); index.consumeSystemFileOpen(); index.consumeSystemFileOpen();
-  assert.deepEqual(actions,['exit']); index.onReaderExited(index.currentReaderPresentationIdentity()); assert.deepEqual(actions,['exit','shelf','close-import','shelf','open','ack']);
+  assert.deepEqual(actions,['exit']); index.onReaderExited(index.currentReaderPresentationIdentity()); assert.deepEqual(actions,['exit','shelf','close-import','open','ack']);
+  index.readingEntry.endReading();index.route='detail';
   result={id:2,book}; index.sourceSwitchVisible=true;index.sourceSwitchState={kind:'switching'};actions.length=0;
   index.consumeSystemFileOpen();index.consumeSystemFileOpen();assert.deepEqual(actions,['toast']);assert.ok(result);
   index.sourceSwitchVisible=false;index.sourceSwitchState={kind:'discovering'};index.consumeSystemFileOpen();assert.ok(actions.includes('open'));assert.equal(result,undefined);
   result={id:3,failure:{code:'readFailed',message:'读取失败'}};actions.length=0;index.consumeSystemFileOpen();assert.deepEqual(actions,['toast','ack']);
   result={id:4,book};index.searchAppForeground=false;actions.length=0;index.consumeSystemFileOpen();assert.deepEqual(actions,[]);assert.ok(result);
-  index.searchAppForeground=true;index.readingSessionActive=true;index.navigationGeneration=7;index.detailBook={sourceId:'remote',bookId:'remote-book'};
+  index.searchAppForeground=true;f.admitBook(index,{sourceId:'remote',bookId:'remote-book'});index.navigationGeneration=7;
   const journal=deferred();index.resolveReaderSourceSwitchTransaction=async()=>{actions.push('resolve-journal');await journal.promise;index.pendingSourceSwitch={transactionId:'late',targetSourceId:'remote',targetBookId:'remote-book'};};
   index.readingExitRequest=()=>actions.push('exit');index.consumeSystemFileOpen();index.consumeSystemFileOpen();await tick();
   assert.deepEqual(actions,['resolve-journal'],'cold unresolved source-switch journal blocks navigation');
   journal.resolve();await tick();assert.deepEqual(actions,['resolve-journal','toast']);assert.ok(result);
   index.pendingSourceSwitch=undefined;index.consumeSystemFileOpen();assert.equal(actions.at(-1),'exit');
   index.cancelReaderExitDestination(index.currentReaderPresentationIdentity());assert.equal(result,undefined,'cancelled progress save retains current book; imported book stays on shelf');
-  result={id:5,book};index.readingSessionActive=false;index.shelfReceiptRetired=true;index.systemFileOpenNavigation.dispose();actions.length=0;
+  result={id:5,book};index.readingEntry.endReading();index.route='detail';index.shelfReceiptRetired=true;index.systemFileOpenNavigation.dispose();actions.length=0;
   index.consumeSystemFileOpen();assert.deepEqual(actions,[],'unmounted Index cannot consume retained result');
   index.shelfReceiptRetired=false;index.detailShelfAdmissionMount++;index.mountSystemFileOpenNavigation(f.owner);index.pendingSourceSwitch={transactionId:'other-book',targetSourceId:'other',targetBookId:'other'};
   index.consumeSystemFileOpen();assert.ok(actions.includes('open'),'inactive other-book journal is preserved without stranding local file opens');

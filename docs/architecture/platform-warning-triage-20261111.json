@@ -1,0 +1,1237 @@
+{
+  "schema": "reader.platform-warning-triage.v1",
+  "createdAt": "2026-11-11T02:03:53.909294+00:00",
+  "status": "SOURCE_TRIAGE_AND_BOUNDED_HIGH_RISK_FIXES_IMPLEMENTED_ROOT_OWNS_CANONICAL_BUILD",
+  "baseline": {
+    "source": "/home/administrator/Reader/.local/ui-goal-remainder-20261109/final-visible-handoff/warnings-20261110.json",
+    "sha256": "0ced02c3887af38aba0f4b6d5b7f973410c64ae83a161e5671de959068f043d3",
+    "runId": "20261110T090246Z-ed187bf8-84405d28",
+    "appBuildId": "0.2.0.DEV.a4438c05bb65",
+    "count": 374,
+    "categories": {
+      "throws": 313,
+      "native-verification": 2,
+      "deprecated": 32,
+      "capability-availability": 7,
+      "missing-type-or-member": 20
+    }
+  },
+  "policy": "All313 throws locations are receiver-boundary inventory; they are not313 proven uncaught errors. Fix concrete gaps, preserve propagation/unknown-write facts, never add global catch-to-success or warning suppression. No algorithm, new visual, device or user-data operations.",
+  "apiFamilies": [
+    {
+      "family": "TS native response boundary",
+      "baselineCount": 20,
+      "change": "ArkWebDiagnosticResponse minimal generic port; native WebResourceResponse factory only in ETS. No TS import of native ETS or invented module export.",
+      "officialLocalSdk": "component/web.d.ts global WebResourceResponse; actual ETS consumer factory",
+      "evidence": "arkweb-port"
+    },
+    {
+      "family": "BackgroundTaskManager capability",
+      "baselineCount": 7,
+      "change": "Keep ContinuousTask activate guard; add Core and recheck dispatch/readback/stop/off. Capability loss retains exact task/listener ownership and failed retirement. Unknown ACK cannot broad-stop or replay.",
+      "officialLocalSdk": "api/@ohos.resourceschedule.backgroundTaskManager.d.ts Core module plus ContinuousTask APIs",
+      "evidence": "H-harmony-tts-background-lease; background-capability"
+    },
+    {
+      "family": "TextEncoder.encode",
+      "baselineCount": 6,
+      "change": "encodeInto(string):Uint8Array; same utf-8 input bytes/credentials at original boundary",
+      "officialLocalSdk": "api/@ohos.util.d.ts:883-917",
+      "evidence": "deprecated-api-compat"
+    },
+    {
+      "family": "TextDecoder.decodeWithStream",
+      "baselineCount": 4,
+      "change": "decodeToString(bytes, options?); no-stream defaults and explicit stream:true preserved",
+      "officialLocalSdk": "api/@ohos.util.d.ts:451-486,715-733",
+      "evidence": "deprecated-api-compat; root canonical compile"
+    },
+    {
+      "family": "URL/searchParams/has/XML parse",
+      "baselineCount": 10,
+      "change": "URL.parseURL(...).params with same exact query names; XmlPullParser.parseXml same bounded no-DTD options; malformed/ambiguous input denies refresh",
+      "officialLocalSdk": "api/@ohos.url.d.ts parseURL/params; api/@ohos.xml.d.ts:1447-1463",
+      "evidence": "deprecated-api-compat actual classifier with controlled ports"
+    },
+    {
+      "family": "ImagePacker.packing",
+      "baselineCount": 1,
+      "change": "packToData(output,{format:image/jpeg,quality:90,bufferSize:MAX_BYTES}); original release order/size guards unchanged",
+      "officialLocalSdk": "api/@ohos.multimedia.image.d.ts:10840-10865",
+      "evidence": "deprecated-api-compat argument/source contract; root compile"
+    },
+    {
+      "family": "List/Scroll.onScroll",
+      "baselineCount": 7,
+      "change": "onDidScroll same passive observer handler. All7 handlers ignore event offsets and read owned Scroller/queue actual viewport. No x/y argument reinterpretation or geometry edit.",
+      "officialLocalSdk": "component/list.d.ts:2148-2151; component/scroll.d.ts:1390-1429",
+      "evidence": "deprecated-api-compat source hook contract; native timing NOT_RUN"
+    },
+    {
+      "family": "DataChangeListener.onDataChanged",
+      "baselineCount": 2,
+      "change": "onDataChange same row index/identity",
+      "officialLocalSdk": "component/lazy_for_each.d.ts:615-647",
+      "evidence": "root compile; no native List proof"
+    },
+    {
+      "family": "Global router.replaceUrl",
+      "baselineCount": 1,
+      "change": "UIContext.getRouter().replaceUrl same pilot bookshelf route; try/await catches sync/rejection and logs privately",
+      "officialLocalSdk": "api/@ohos.arkui.UIContext.d.ts:425,4089",
+      "evidence": "root compile; no device navigation"
+    },
+    {
+      "family": "Vendored global animateTo",
+      "baselineCount": 1,
+      "change": "Root changed to this.getUIContext().animateTo and synchronized reader.patch/source-lock/UPSTREAM against immutable upstream. This agent did not edit vendor.",
+      "officialLocalSdk": "Host source-integration UPSTREAM.md; not a Reader-UI generated projection",
+      "evidence": "ROOT_OWNED patch inverse/forward reconstruction and component SDK check"
+    }
+  ],
+  "nonThrowsBaselineInventory": [
+    {
+      "location": "oh_modules/.ohpm/@reader+core-harmony@sphm7s2n04qmjmmnco0nulv0lpdxh5g1in8gwujd8vm=/oh_modules/@reader/core-harmony/Index.ts:1:28",
+      "message": "Currently module for 'libreader_core_napi.so' is not verified. If you're importing napi, its verification will be enabled in later SDK version. Please make sure the corresponding .d.ts file is provided and the napis are correctly declared.",
+      "category": "native-verification"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/MangaImageGraphicsHost.ts:157:36",
+      "message": "'packing' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/network/CookieSessionStore.ts:1004:42",
+      "message": "'encode' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:17:43",
+      "message": "'searchParams' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:18:19",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:18:51",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:19:14",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:19:47",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:20:14",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:20:40",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:20:65",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:20:93",
+      "message": "'has' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts:33:12",
+      "message": "'parse' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:298:56",
+      "message": "'decodeWithStream' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/ReaderHostRegistry.ts:418:59",
+      "message": "'encode' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/ReaderHostRegistry.ts:484:49",
+      "message": "'encode' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:81:11",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:94:31",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:99:31",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:103:33",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:118:36",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:157:13",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/platform/tts/HarmonyTtsBackgroundSession.ts:176:13",
+      "message": "The system capacity of this api 'backgroundTaskManager' is not supported on all devices",
+      "category": "capability-availability"
+    },
+    {
+      "location": "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:740:42",
+      "message": "'encode' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/sync/application/SyncGateway.ts:896:49",
+      "message": "'encode' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/ReaderMangaPlatformDiagnostic.ts:183:40",
+      "message": "'decodeWithStream' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/search/ui/SearchPage.ets:1346:10",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets:248:8",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets:730:6",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/reading/ui/BookTurnPresentationSession.ets:2:28",
+      "message": "Currently module for 'libreader_bookturn_napi.so' is not verified. If you're importing napi, its verification will be enabled in later SDK version. Please make sure the corresponding .d.ts file is provided and the napis are correctly declared.",
+      "category": "native-verification"
+    },
+    {
+      "location": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets:112:53",
+      "message": "'onDataChanged' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets:1351:10",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets:1395:6",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets:56:57",
+      "message": "'onDataChanged' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets:212:19",
+      "message": "'animateTo' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets:2311:10",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets:2338:8",
+      "message": "'onScroll' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:61:26",
+      "message": "Cannot find name 'WebResourceResponse'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:62:14",
+      "message": "Cannot find name 'setResponseCode'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:63:14",
+      "message": "Cannot find name 'setReasonMessage'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:64:14",
+      "message": "Cannot find name 'setResponseMimeType'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:65:14",
+      "message": "Cannot find name 'setResponseData'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:77:16",
+      "message": "Cannot find name 'setResponseCode'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:78:16",
+      "message": "Cannot find name 'setReasonMessage'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:79:16",
+      "message": "Cannot find name 'setResponseMimeType'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:80:16",
+      "message": "Cannot find name 'setResponseData'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:93:14",
+      "message": "Cannot find name 'setResponseCode'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:94:14",
+      "message": "Cannot find name 'setReasonMessage'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:95:14",
+      "message": "Cannot find name 'setResponseMimeType'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:96:14",
+      "message": "Cannot find name 'setResponseData'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:102:16",
+      "message": "Cannot find name 'setResponseIsReady'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:106:18",
+      "message": "Cannot find name 'setResponseIsReady'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:184:104",
+      "message": "'encode' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:338:22",
+      "message": "Cannot find name 'setResponseIsReady'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:247:52",
+      "message": "'decodeWithStream' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:280:56",
+      "message": "'decodeWithStream' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/pages/ReaderRendererPilot.ets:44:53",
+      "message": "'replaceUrl' has been deprecated.",
+      "category": "deprecated"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:34:32",
+      "message": "Cannot find name 'WebResourceResponse'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:34:71",
+      "message": "Cannot find name 'WebResourceResponse'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:59:37",
+      "message": "Cannot find name 'WebResourceResponse'.",
+      "category": "missing-type-or-member"
+    },
+    {
+      "location": "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:336:37",
+      "message": "Cannot find name 'WebResourceResponse'.",
+      "category": "missing-type-or-member"
+    }
+  ],
+  "throwsCount": 313,
+  "throwFiles": 36,
+  "throwBoundaryInventory": [
+    {
+      "path": "entry/src/main/ets/app/ReaderCustomFontHost.ts",
+      "baselineCount": 24,
+      "baselineLocations": [
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:42:33",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:89:15",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:101:24",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:104:24",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:107:25",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:109:13",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:124:26",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:126:33",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:131:35",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:141:35",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:149:15",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:151:15",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:154:13",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:166:24",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:167:20",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:169:24",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:173:33",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:178:15",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:181:13",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:186:26",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:227:15",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:233:19",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:240:15",
+        "entry/src/main/ets/app/ReaderCustomFontHost.ts:241:13"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "ReaderCustomFontHost",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "54da356e221d476758be5365397dc314a18bc0afbb09d2b06af64464fa81ff80",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/app/BundledBookSourceSupply.ts",
+      "baselineCount": 7,
+      "baselineLocations": [
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:56:18",
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:57:9",
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:58:24",
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:253:24",
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:255:26",
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:257:13",
+        "entry/src/main/ets/app/BundledBookSourceSupply.ts:260:13"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "BundledBookSourceSupply",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "0bd827c56399d0e0b7413bf1762e3430d81d5f9fd059eacc07e4a8b4f814bd5a",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts",
+      "baselineCount": 75,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:100:12",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:106:12",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:498:21",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:499:28",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:608:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:623:86",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:648:30",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:650:19",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:651:26",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:652:11",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:654:18",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:668:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:984:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:989:21",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:990:28",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:991:14",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1001:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1015:30",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1017:19",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1018:26",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1019:11",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1020:16",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1413:24",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1613:24",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1614:10",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1639:24",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1640:10",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1649:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1672:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1733:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1735:30",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1739:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1740:37",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1743:16",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1743:23",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1750:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1750:42",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1750:49",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1759:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1761:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1762:35",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1765:14",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1765:21",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1766:37",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1769:16",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1769:23",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1777:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1778:32",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1783:13",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1783:20",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1798:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1799:30",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1802:26",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1803:11",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1839:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1839:41",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1839:48",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1839:88",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1846:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1846:50",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1846:98",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1865:42",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1896:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1982:20",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1983:11",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:1984:26",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2118:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2124:19",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2131:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2132:13",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2138:17",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2139:24",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2140:13",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2146:24",
+        "entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts:2155:20"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "ReadingImageDiskCache",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "49e6623f8771b3017f5fc755bcb2f23dc5b18f3cfb9d514eb9a5f6a3b9f55ac7",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/downloads/application/SharedDownloadIntentPreferences.ts",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/features/downloads/application/SharedDownloadIntentPreferences.ts:83:54"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "SharedDownloadIntentPreferences",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "e708db82e4d2f499d54bc37d72acadf11a38f5cd5f3805e7643c0dd7b6e95ba5",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/reading-resources/MangaImageGraphicsHost.ts",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/reading-resources/MangaImageGraphicsHost.ts:52:15"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "MangaImageGraphicsHost",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "308e343bbd4d650da27a5473125c6321e5cc5918fcf79a0109922432e5024fb0",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/network/NetworkRoutePolicy.ts",
+      "baselineCount": 3,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/network/NetworkRoutePolicy.ts:95:23",
+        "entry/src/main/ets/platform/network/NetworkRoutePolicy.ts:97:25",
+        "entry/src/main/ets/platform/network/NetworkRoutePolicy.ts:105:28"
+      ],
+      "boundaryFamily": "network-and-untrusted-input",
+      "owner": "NetworkRoutePolicy",
+      "review": "Original route/request/Web job owner receives OS/DNS/proxy/HTTP failures. NetworkRoutePolicy catches native route/DNS errors into fixed sanitized failures; HttpExecuteHost keeps deadline/cancellation/redirect owners. URL/credential input is never logged by this triage and deny does not fall back to direct network.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "71a72c1b900343493e8b2d2aa668dc9e98c5dcf5d9c14123708827b66db19aa2",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/network/HttpExecuteHost.ts",
+      "baselineCount": 3,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/network/HttpExecuteHost.ts:1233:21",
+        "entry/src/main/ets/platform/network/HttpExecuteHost.ts:1234:22",
+        "entry/src/main/ets/platform/network/HttpExecuteHost.ts:1266:22"
+      ],
+      "boundaryFamily": "network-and-untrusted-input",
+      "owner": "HttpExecuteHost",
+      "review": "Original route/request/Web job owner receives OS/DNS/proxy/HTTP failures. NetworkRoutePolicy catches native route/DNS errors into fixed sanitized failures; HttpExecuteHost keeps deadline/cancellation/redirect owners. URL/credential input is never logged by this triage and deny does not fall back to direct network.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "5ff0d091f9fc1497be90e013b9157e9e8f350bdfe1023d2206f5a58050a8842a",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/network/ArkWebExecutor.ts",
+      "baselineCount": 6,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/network/ArkWebExecutor.ts:602:11",
+        "entry/src/main/ets/platform/network/ArkWebExecutor.ts:610:9",
+        "entry/src/main/ets/platform/network/ArkWebExecutor.ts:612:9",
+        "entry/src/main/ets/platform/network/ArkWebExecutor.ts:638:38",
+        "entry/src/main/ets/platform/network/ArkWebExecutor.ts:639:35",
+        "entry/src/main/ets/platform/network/ArkWebExecutor.ts:790:52"
+      ],
+      "boundaryFamily": "network-and-untrusted-input",
+      "owner": "ArkWebExecutor",
+      "review": "Original route/request/Web job owner receives OS/DNS/proxy/HTTP failures. NetworkRoutePolicy catches native route/DNS errors into fixed sanitized failures; HttpExecuteHost keeps deadline/cancellation/redirect owners. URL/credential input is never logged by this triage and deny does not fall back to direct network.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "bdefdcdb07485f7d4d4c8aeea83e25bf39e9f0e8f3e7c99637b4c4fca3481dee",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts",
+      "baselineCount": 15,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:81:17",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:82:24",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:83:9",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:160:26",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:168:26",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:174:33",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:178:25",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:180:13",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:197:17",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:199:30",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:207:30",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:229:17",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:232:15",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:264:19",
+        "entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts:266:17"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "MangaDisplayRetention",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "abc4e0ef3947348a33ecf297e7236ff76484cbe0fc7fe1826e823b2d1e74b8be",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts",
+      "baselineCount": 7,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:145:58",
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:149:30",
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:926:15",
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:932:19",
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:959:20",
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:960:11",
+        "entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts:961:26"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "ReadingBodyImageHost",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "c68800cb8cfc9c5c033446425682cfdcfa7e8ab9a6428b4e6a342ff5ac129673",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderHostRegistry.ts",
+      "baselineCount": 45,
+      "baselineLocations": [
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:195:18",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:195:64",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:502:24",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:510:31",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:516:13",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:518:13",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:533:15",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:543:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:558:28",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:695:24",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:700:29",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:707:20",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:709:26",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:711:31",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:718:33",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:727:15",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:731:33",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:741:13",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:743:13",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:745:23",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:746:26",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:762:24",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:767:20",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:769:24",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:773:33",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:785:15",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:788:13",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:793:29",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:797:26",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:812:24",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:824:24",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:828:33",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:841:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:845:13",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:858:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:861:27",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:887:19",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:890:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:956:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:959:11",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:963:15",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:971:19",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:1073:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:1235:17",
+        "entry/src/main/ets/app/ReaderHostRegistry.ts:1238:23"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "ReaderHostRegistry",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "05860dc10bc3bf51f0e116dc1ed8e93a51699be4168ae320c62849287c796555",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/tts/HarmonyTtsAudioSessionLease.ts",
+      "baselineCount": 3,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/tts/HarmonyTtsAudioSessionLease.ts:9:5",
+        "entry/src/main/ets/platform/tts/HarmonyTtsAudioSessionLease.ts:13:11",
+        "entry/src/main/ets/platform/tts/HarmonyTtsAudioSessionLease.ts:16:45"
+      ],
+      "boundaryFamily": "platform-audio-media",
+      "owner": "HarmonyTtsAudioSessionLease",
+      "review": "Original audio/session/router/coordinator owner. Native activation/start/stop/release errors propagate to that owner. AVSession destroy remains authoritative release evidence; optional unsubscribe/deactivate errors cannot become a fabricated destroy ACK. Foreground speech is separate from optional background admission.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "6da9d63b53f426adfe2897fac548f835b3c00317a3d6684364ffcba53d110c3c",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts",
+      "baselineCount": 7,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:311:12",
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:333:5",
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:334:5",
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:335:5",
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:343:5",
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:344:5",
+        "entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts:345:5"
+      ],
+      "boundaryFamily": "platform-audio-media",
+      "owner": "HarmonySystemTtsHost",
+      "review": "Original audio/session/router/coordinator owner. Native activation/start/stop/release errors propagate to that owner. AVSession destroy remains authoritative release evidence; optional unsubscribe/deactivate errors cannot become a fabricated destroy ACK. Foreground speech is separate from optional background admission.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "8f9231033905d584445b1246a79142669a9a4a185c519269f77375e747ae2451",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts",
+      "baselineCount": 8,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:169:26",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:171:13",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:533:5",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:534:5",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:535:5",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:543:5",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:544:5",
+        "entry/src/main/ets/platform/tts/HarmonyHttpTtsHost.ts:545:5"
+      ],
+      "boundaryFamily": "platform-audio-media",
+      "owner": "HarmonyHttpTtsHost",
+      "review": "Original audio/session/router/coordinator owner. Native activation/start/stop/release errors propagate to that owner. AVSession destroy remains authoritative release evidence; optional unsubscribe/deactivate errors cannot become a fabricated destroy ACK. Foreground speech is separate from optional background admission.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "1d042b4a72467973c8dce1ce0949a3d00bc686fee2a5b3c0f4082ec57950fe62",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/tts/HarmonyTtsMediaSession.ts",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/tts/HarmonyTtsMediaSession.ts:93:27"
+      ],
+      "boundaryFamily": "platform-audio-media",
+      "owner": "HarmonyTtsMediaSession",
+      "review": "Original audio/session/router/coordinator owner. Native activation/start/stop/release errors propagate to that owner. AVSession destroy remains authoritative release evidence; optional unsubscribe/deactivate errors cannot become a fabricated destroy ACK. Foreground speech is separate from optional background admission.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "bcb3d67e4de836fb35d96b1b040f2d5c1f5a15e8e673c9236bc0b106568dd54c",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/reading-resources/LocalEpubResourceHost.ts",
+      "baselineCount": 2,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/reading-resources/LocalEpubResourceHost.ts:49:17",
+        "entry/src/main/ets/platform/reading-resources/LocalEpubResourceHost.ts:52:17"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "LocalEpubResourceHost",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "c233b3bbdec326061f29097ff839ab34f93cb211759b53389a348e0585ed1318",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderAppearancePreferences.ts",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/app/ReaderAppearancePreferences.ts:64:26"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "ReaderAppearancePreferences",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "97c7884de9990318751a8c06ecbae6341b456743641f4b9c8778b409f9cd3cd0",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts",
+      "baselineCount": 6,
+      "baselineLocations": [
+        "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts:252:23",
+        "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts:482:23",
+        "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts:549:30",
+        "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts:554:11",
+        "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts:555:11",
+        "entry/src/main/ets/features/reading/application/ReadingRecordGateway.ts:563:24"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "ReadingRecordGateway",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "ffb0bdf1d90abc7faefed8712e718cd5d91509297e5229b8b4127705b2e556ee",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "baselineCount": 18,
+      "baselineLocations": [
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:182:22",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:187:46",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:188:47",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:189:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:193:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:394:21",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:489:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:491:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:496:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:501:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:503:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:509:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:511:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:516:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:519:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:521:11",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:539:25",
+        "entry/src/main/ets/app/ReaderWindowCoordinator.ts:544:24"
+      ],
+      "boundaryFamily": "platform-window",
+      "owner": "ReaderWindowCoordinator",
+      "review": "Original current window/policy/brightness owner. Async policy writes and lookups retain queue/admission and native ACK boundaries. P3 does not alter layout/window algorithms or treat a drawn frame as a window-policy ACK.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "a1bce3a166e5ad09bf5bc91fa1414836cf5304bab934a1e9594666e17f9862d8",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts",
+      "baselineCount": 4,
+      "baselineLocations": [
+        "entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts:168:24",
+        "entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts:193:11",
+        "entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts:194:11",
+        "entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts:211:24"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "ReaderSettingsGateway",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "f16c4e9e9e590f8d7da909a0866095f077218a3aa4497560f37640434670ec59",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts",
+      "baselineCount": 13,
+      "baselineLocations": [
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:219:27",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:220:26",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:221:27",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:239:27",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:240:29",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:241:32",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:252:26",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:253:18",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:254:13",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:372:25",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:620:20",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:621:11",
+        "entry/src/main/ets/features/sync/application/WebDavCredentialStore.ts:622:26"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "WebDavCredentialStore",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "eeb969c11e708cda8bddf08f19977ae48e0131a1bea0b01923501df1864333c2",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/application/SyncGateway.ts",
+      "baselineCount": 2,
+      "baselineLocations": [
+        "entry/src/main/ets/features/sync/application/SyncGateway.ts:414:26",
+        "entry/src/main/ets/features/sync/application/SyncGateway.ts:414:73"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "SyncGateway",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "ae3cc38095d07b1b0e85d983e827bd5ae6f651fbcf4f55010d6bd19052343b1b",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/application/SettingsGateway.ts",
+      "baselineCount": 13,
+      "baselineLocations": [
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:161:11",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:162:11",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:163:11",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:164:11",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:165:11",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:166:11",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:170:31",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:171:34",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:172:28",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:173:24",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:174:29",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:175:34",
+        "entry/src/main/ets/features/settings/application/SettingsGateway.ts:189:54"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "SettingsGateway",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "d3858997258e054a9b5b8d983de5e6bc0de1f0224978b718122a294519c3c995",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/application/ReaderTtsPreferencesGateway.ts",
+      "baselineCount": 5,
+      "baselineLocations": [
+        "entry/src/main/ets/features/reading/application/ReaderTtsPreferencesGateway.ts:54:24",
+        "entry/src/main/ets/features/reading/application/ReaderTtsPreferencesGateway.ts:74:13",
+        "entry/src/main/ets/features/reading/application/ReaderTtsPreferencesGateway.ts:84:13",
+        "entry/src/main/ets/features/reading/application/ReaderTtsPreferencesGateway.ts:85:13",
+        "entry/src/main/ets/features/reading/application/ReaderTtsPreferencesGateway.ts:104:24"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "ReaderTtsPreferencesGateway",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "679e2ec190f50a7829cfcf7ebe88ef9a58da97fdc9188a2313e4246bda5485e7",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts",
+      "baselineCount": 6,
+      "baselineLocations": [
+        "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts:75:25",
+        "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts:76:27",
+        "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts:84:13",
+        "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts:86:29",
+        "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts:108:11",
+        "entry/src/main/ets/features/settings/application/LocalConfigurationReset.ts:110:27"
+      ],
+      "boundaryFamily": "preferences-and-original-write-facts",
+      "owner": "LocalConfigurationReset",
+      "review": "Original serialized preference/gateway owner. Awaited get/put/flush errors remain returned Promise failures; queue-tail catch only releases scheduling. Accepted, saved, pending/unknown and confirmed facts remain distinct. Existing parse fallbacks are recorded existing policy, not new warning suppression. No reset/migration/UNKNOWN dispatch performed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "f0fd358e01a93ae390801104ae5aba7b486ab7024d14c87a93b5e751f26d086f",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets",
+      "baselineCount": 6,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets:26:18",
+        "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets:27:8",
+        "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets:28:17",
+        "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets:30:17",
+        "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets:34:8",
+        "entry/src/main/ets/platform/reading-resources/MangaAtomicPayloadReader.ets:49:25"
+      ],
+      "boundaryFamily": "bounded-user-file-and-resource-io",
+      "owner": "MangaAtomicPayloadReader",
+      "review": "Original file/image/import/atomic payload owner. Bounded async file/crypto/image operations propagate rejection through the resource/Host handler; existing finally blocks own release. Do not catch a failed durable/resource write and invent success, delete originals or retry a new operation.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "39b3d5fc94f4c64e0be55ee9442af559cc57c2a6314ef0d7f7b7896de948b421",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts",
+      "baselineCount": 13,
+      "baselineLocations": [
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:110:60",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:195:9",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:195:65",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:200:10",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:202:17",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:227:16",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:228:7",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:228:33",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:232:8",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:232:33",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:237:16",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:238:7",
+        "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts:238:33"
+      ],
+      "boundaryFamily": "diagnostic-only-resource-boundary",
+      "owner": "ReaderCoreCopyProbe",
+      "review": "Explicit existing diagnostic owner, no production/live/original data inspected. CoreCopyProbe secondary error-file access is now inside the existing secondary IO catch so PROBE_ERROR is not suppressed. Diagnostic native render/FS annotations are inventoried; no native runtime or device diagnostics executed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "064cc95af115cd21ee711e4f595116df122e3690c343bea8da0d35f98f4f453d",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets",
+      "baselineCount": 2,
+      "baselineLocations": [
+        "entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets:37:20",
+        "entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets:39:12"
+      ],
+      "boundaryFamily": "deterministic-render-token-input",
+      "owner": "ReaderPressFeedback",
+      "review": "Existing ColorMetrics/registered ResourceColor receiver. Fixed registered tokens/alpha calculations are inventoried, not313 native fault reproductions. No arbitrary fallback color, palette, geometry or blanket swallowing added.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "de661500ec97b4f1b6688a0d6d89fa59439757a2a7aaee4f9ce1bd72d528480e",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/ui/surfaces/ReaderScrimColor.ets",
+      "baselineCount": 2,
+      "baselineLocations": [
+        "entry/src/main/ets/ui/surfaces/ReaderScrimColor.ets:6:17",
+        "entry/src/main/ets/ui/surfaces/ReaderScrimColor.ets:6:61"
+      ],
+      "boundaryFamily": "deterministic-render-token-input",
+      "owner": "ReaderScrimColor",
+      "review": "Existing ColorMetrics/registered ResourceColor receiver. Fixed registered tokens/alpha calculations are inventoried, not313 native fault reproductions. No arbitrary fallback color, palette, geometry or blanket swallowing added.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "d09f126fffa45ba26a192e80c15a1008adcc3647afa7afef2742e8e008b094cd",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets:24:20"
+      ],
+      "boundaryFamily": "deterministic-render-token-input",
+      "owner": "MangaDirectoryPressFeedback",
+      "review": "Existing ColorMetrics/registered ResourceColor receiver. Fixed registered tokens/alpha calculations are inventoried, not313 native fault reproductions. No arbitrary fallback color, palette, geometry or blanket swallowing added.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "985c289800bad895c586a902221c7b9e346c0a88ae179e61ef0ae555c1394a0f",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets:222:26"
+      ],
+      "boundaryFamily": "native-render-lifecycle",
+      "owner": "ReaderNativeTextWindow",
+      "review": "Existing native node/reading surface owner. NativeTextWindow.close uses nested finally to attempt node/root disposal; errors remain caller-visible. Manga changes only passive onDidScroll observation API. Native detach/cleanup failure behavior is not certified by this inventory.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "38294f6692cc8b54402b721247a14f162485bb651cbaee239594fa956f648f82",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/platform/clipboard/ReaderClipboardHost.ts",
+      "baselineCount": 2,
+      "baselineLocations": [
+        "entry/src/main/ets/platform/clipboard/ReaderClipboardHost.ts:9:3",
+        "entry/src/main/ets/platform/clipboard/ReaderClipboardHost.ts:18:3"
+      ],
+      "boundaryFamily": "platform-clipboard-user-input",
+      "owner": "ReaderClipboardHost",
+      "review": "Synchronous user-copy adapter intentionally propagates. Actual receivers catch: ReaderNativeParagraphView.updateSelection uses ReaderTransientFeedback with epoch/mount guards; SettingsPage.copyAboutBuild catches and uses current about-page feedback. No global catch inside adapter and no new user message.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "4ad9203ae2a056ead7cb284299b7b2fa6d56ee62a324934b351483d8a1c552bc",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets:1458:20"
+      ],
+      "boundaryFamily": "native-render-lifecycle",
+      "owner": "MangaReadingSurface",
+      "review": "Existing native node/reading surface owner. NativeTextWindow.close uses nested finally to attempt node/root disposal; errors remain caller-visible. Manga changes only passive onDidScroll observation API. Native detach/cleanup failure behavior is not certified by this inventory.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "9e485e848ea63868a0dab78c46d59d60b46a15acc5fd50feb5fd4debfe7a5630",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets",
+      "baselineCount": 2,
+      "baselineLocations": [
+        "entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets:132:19",
+        "entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets:653:19"
+      ],
+      "boundaryFamily": "deterministic-render-token-input",
+      "owner": "SourceSwitchWindow",
+      "review": "Existing ColorMetrics/registered ResourceColor receiver. Fixed registered tokens/alpha calculations are inventoried, not313 native fault reproductions. No arbitrary fallback color, palette, geometry or blanket swallowing added.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "69e4a579514d755380a247f8f84dc8c33234621565343757284b2839df6435ca",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/pages/ReaderParagraphDiagnostic.ets",
+      "baselineCount": 1,
+      "baselineLocations": [
+        "entry/src/main/ets/pages/ReaderParagraphDiagnostic.ets:160:5"
+      ],
+      "boundaryFamily": "diagnostic-only-resource-boundary",
+      "owner": "ReaderParagraphDiagnostic",
+      "review": "Explicit existing diagnostic owner, no production/live/original data inspected. CoreCopyProbe secondary error-file access is now inside the existing secondary IO catch so PROBE_ERROR is not suppressed. Diagnostic native render/FS annotations are inventoried; no native runtime or device diagnostics executed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "80b2cdff453e5704d5a781ac0d16447847898017ffe85e6a2f68a8bdcf8c45b2",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    },
+    {
+      "path": "entry/src/main/ets/app/MangaPlatformProbeRunner.ts",
+      "baselineCount": 6,
+      "baselineLocations": [
+        "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:43:14",
+        "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:44:9",
+        "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:45:22",
+        "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:143:24",
+        "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:145:21",
+        "entry/src/main/ets/app/MangaPlatformProbeRunner.ts:159:58"
+      ],
+      "boundaryFamily": "diagnostic-only-resource-boundary",
+      "owner": "MangaPlatformProbeRunner",
+      "review": "Explicit existing diagnostic owner, no production/live/original data inspected. CoreCopyProbe secondary error-file access is now inside the existing secondary IO catch so PROBE_ERROR is not suppressed. Diagnostic native render/FS annotations are inventoried; no native runtime or device diagnostics executed.",
+      "status": "SOURCE_BOUNDARY_INVENTORY_NOT_INDIVIDUAL_FAULT_PASS",
+      "sourceSha256": "e1c4fc07d9d5c48f0ae7bc93115650f4651405ca3b01411d18221c815cc3645f",
+      "nativeFaultInjection": "NOT_RUN; only CoreCopyProbe secondary-IO behavior has a new fake-port method case"
+    }
+  ],
+  "actualMissingBoundaryFixes": [
+    {
+      "path": "entry/src/main/ets/app/diagnostics/ReaderCoreCopyProbe.ts",
+      "before": "Secondary accessSync in outer catch could escape before PROBE_ERROR.",
+      "after": "Move only that existence read into existing private IO try; retain original failure report.",
+      "proof": "New diagnostic-failure-boundary evaluates actual function and rejects old guard counterfactual; no native runtime created."
+    },
+    {
+      "path": "entry/src/main/ets/pages/ReaderRendererPilot.ets",
+      "before": "Global router call was fire-and-forget with no rejection boundary.",
+      "after": "Local async UIContext router method catches synchronous/Promise failure, retains route and private error log; no new user-facing message."
+    }
+  ],
+  "nativeVerificationDisposition": "Keep the two SDK NAPI verification limitations; declarations/imports are not removed and native verification is not fabricated.",
+  "messageFramework": "No user-visible message/alert/notification was added or modified. TTS remains registered dedicated OS adaptation. No Toast/Alert bypass.",
+  "checks": {
+    "plan": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p3-check-plan.json",
+    "attempts": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p3-check-attempts.json",
+    "indexedBackgroundOwner": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/p3-tts-indexed/results.json",
+    "indexedStatus": "PASS one selected legacy file/worker1, nested imports[], resources[], treeSettled; initial REVIEW_NEEDED retained",
+    "directExactCases": [
+      "background-capability",
+      "arkweb-port",
+      "deprecated-api-compat",
+      "diagnostic-failure-boundary"
+    ],
+    "directStatus": "PASS; deprecated initial fixture failure retained",
+    "fullSuite": "NOT_RUN",
+    "build": "ROOT_OWNED_NOT_CLAIMED_HERE",
+    "device": "NOT_RUN"
+  },
+  "testFixtureCompatibility": {
+    "files": [
+      "tools/test-arkweb-resource-diagnostic.mjs",
+      "tools/test-manga-image-graphics.mjs",
+      "tools/test-manga-display-retention.mjs"
+    ],
+    "change": "Only native API spellings/factory mocks synchronized; original assertions unchanged.",
+    "execution": "NOT_RUN",
+    "indexIdentity": "No automatic rehash/requalification; these changed test definitions require separate narrow review before future indexed execution."
+  },
+  "limitations": [
+    "Method tests use controlled Kit/URL/XML/codec ports, not Harmony native implementation/event timing.",
+    "Only root canonical build establishes current warning count. No zero-warning claim; legitimate throws annotations can remain or be added.",
+    "Inventory is not exhaustive runtime fault injection or a whole-product exception-safety certificate.",
+    "P1 LocalReadingExperience/ReaderControlPanel and P4 ui/layout geometry are not edited by this agent.",
+    "No original UNKNOWN payload, database, device, build/sign/install or prior evidence mutation."
+  ],
+  "actualSuccessfulBuild": {
+    "runId": "20261111T034526Z-def50fbc-02199dc7",
+    "appBuildId": "0.2.0.DEV.0511f567914d",
+    "warningTotal": 322,
+    "categories": {
+      "throws": 313,
+      "native-verification": 2,
+      "capability-availability": 7
+    },
+    "delta": {
+      "before": 374,
+      "after": 322,
+      "missingTypeOrMember": {
+        "before": 20,
+        "after": 0
+      },
+      "deprecated": {
+        "before": 32,
+        "after": 0
+      },
+      "capabilityAvailability": {
+        "before": 7,
+        "after": 7,
+        "interpretation": "Existing module-availability warnings remain despite explicit runtime guards; downgrade/release behavior has exact method tests, no compiler suppression used."
+      },
+      "throws": {
+        "before": 313,
+        "after": 313,
+        "interpretation": "Boundary inventory plus exact missing failure receiver fixed; no global catch for warning count."
+      },
+      "nativeVerification": {
+        "before": 2,
+        "after": 2
+      }
+    },
+    "receipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/warnings-current.json",
+    "signature": "verified minliny_HarmonyOS3A563778...676DC4",
+    "boundary": "Final actual canonical ArkTS build after capacity fix;322 warnings, not device/whole-product/user acceptance."
+  },
+  "finalCandidateReceipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/final-results.json",
+  "finalCandidateWarningReceipt": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/warnings-current.json"
+}

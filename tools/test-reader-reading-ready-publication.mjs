@@ -1,3 +1,4 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
@@ -6,19 +7,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as selection from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
-import { readerTextSelectionEnabled } from '../entry/src/main/ets/features/reading/ReaderTextSelectionPolicy.ts';
+import * as selection from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
+import { readerTextSelectionEnabled } from '../entry/src/main/ets/features/reading/ui/ReaderTextSelectionPolicy.ts';
 import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
-const sourceFile=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
-const source=readFileSync(sourceFile,'utf8');
+const sourceFile=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
+const source=readReaderExperienceFixture(sourceFile,'utf8');
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const tree=ts.createSourceFile(virtualFilePath('ReaderReadyClasses.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const commitTree=ts.createSourceFile(virtualFilePath('ReadingCommit.ts'),
+  readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts',import.meta.url),'utf8'),
+  ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const classNames=['ReadingCommit','CoreReadingAnchor','PreparedReaderPageTurn','ReaderControlSelectionCandidate'];
 const classes=Object.fromEntries(classNames.map(name=>{
-  const node=tree.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.getText(tree)===name);assert.ok(node,name);
-  return[name,new Function(stripTypeScriptTypes(node.getText(tree)).replace(/^export /,'')+`;return ${name};`)()];
+  const classTree=name==='ReadingCommit'?commitTree:tree;
+  const node=classTree.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.getText(classTree)===name);assert.ok(node,name);
+  return[name,new Function(stripTypeScriptTypes(node.getText(classTree)).replace(/^export /,'')+`;return ${name};`)()];
 }));
 const methods=['publishMeasuredFirstPage','resumeSupersededAppearanceMeasurement','completeFirstPage','reconcileFailedControlSelection','promotePreparedPageTurn',
   'isOrdinaryPageMeasurement','canPresentOrdinaryPage','isChapterFirstPageStart',
@@ -38,7 +43,7 @@ function fixture({file=sourceFile,mode='paged',storedIndex=0,storedOffset=0}={})
   const context={chapter,layoutMap:{scalarCount:()=>100},paragraphRanges:[{startScalar:0}]};
   const stored={bookId:'b',chapterIndex:storedIndex,chapterOffset:storedOffset,chapterProgress:storedOffset/100,locationRevision:'r1',updatedAt:1};
   const gate=deferred();let hold=false,rejectWrite=false,writes=0,reads=0;
-  const Serial=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts',import.meta.url),['runProgressCommitSerial']);
+  const Serial=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts',import.meta.url),['runProgressCommitSerial']);
   const serial=Object.assign(new Serial(),{progressCommitTail:Promise.resolve()});
   const writeOwners=[];
   const runtime={captureReadingContentValidity:()=>()=>true};

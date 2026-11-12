@@ -21,7 +21,6 @@ const storageSha = createHash('sha256').update(storageRaw).digest('hex');
 const { chromium } = requireToolPackage('playwright', process.env.READER_PLAYWRIGHT_MODULE);
 const browser = await chromium.launch({ headless: true });
 let rules;
-let radioSize;
 let overlayColors;
 let selectMetrics;
 let storageRules;
@@ -65,14 +64,6 @@ try {
       }];
     };
     return Array.from(sheet.cssRules).flatMap(rule => visit(rule));
-  });
-  radioSize = await page.evaluate(() => {
-    const root = document.createElement('div'); root.id = 'shared-reader-download';
-    const phone = document.createElement('div'); phone.className = 'phone';
-    const row = document.createElement('label'); row.className = 'range-choice';
-    const radio = document.createElement('input'); radio.type = 'radio';
-    row.append(radio); phone.append(row); root.append(phone); document.body.append(root);
-    const width = parseFloat(getComputedStyle(radio).width); root.remove(); return width;
   });
   // The native opaque system band must match the browser's authored scrim.
   // Chromium Canvas2D owns alpha compositing and rounding, not a second color engine.
@@ -211,7 +202,6 @@ const map = [
   ['controlFontSize','.app-button','font-size'],['metaFontSize','.book-progress','font-size'],
   ['tagFontSize','.tags','font-size'],['tagLineHeight','.tags','line-height'],
   ['bookTitleFontSize','.book-title','font-size'],['bookTitleLineHeight','.book-title','line-height'],
-  ['headerTitleFontSize','.header h2','font-size'],['headerTitleLineHeight','.header h2','line-height'],
   ['coverFontSize','.cover','font-size'],['coverLineHeight','.cover','line-height'],
   ['sheetTitleFontSize','.sheet-title strong','font-size'],['sheetTitleLineHeight','.sheet-title strong','line-height'],
   ['tabFontSize','.tabs button','font-size'],['searchFontSize','.phone','font-size'],
@@ -222,7 +212,6 @@ const map = [
   ['settingsHintFontSize','.settings-hint','font-size'],['settingsHintLineHeight','.settings-hint','line-height'],
   ['rangeHintFontSize','.range-choice small','font-size'],['rangeHintLineHeight','.range-choice small','line-height'],
   ['headerTop','.header','top'],['statusBarHeight','.statusbar','height'],['headerSide','.header','left'],
-  ['headerHeight','.header','height'],['headerRadius','.header','border-radius'],['headerPadding','.header','padding-top'],
   ['headerIconWidth','.icon-action','width'],['headerIconHeight','.icon-action','height'],
   ['headerTextWidth','.header-text','width'],['contentTop','.scroll','padding-top'],
   ['contentSide','.scroll','padding-left'],['contentBottom','.scroll','padding-bottom'],
@@ -274,8 +263,8 @@ const map = [
   ['sheetTitleHeight','.sheet-title','min-height'],['sheetTitleLeft','.sheet-title','padding-left'],['sheetTitleRight','.sheet-title','padding-right'],
   ['sheetBodySide','.sheet-body','padding-left'],['sheetBodyBottom','.sheet-body','padding-bottom'],
   ['sheetFooterTop','.sheet-footer','padding-top'],['sheetFooterSide','.sheet-footer','padding-left'],['sheetFooterBottom','.sheet-footer','padding-bottom'],
-  ['rangeHeight','.range-choice','min-height'],['rangePaddingY','.range-choice','padding-top'],['rangeGap','.range-choice','gap'],
-  ['settingsHeight','.settings-line','min-height'],['settingsGap','.settings-line','gap'],['settingsHintMargin','.settings-hint','margin-top'],
+  ['rangePaddingY','.range-choice','padding-top'],
+  ['settingsHeight','.settings-line','min-height'],['settingsGap','.settings-line','gap'],
   ['dialogOuterSide','.dialog-layer','padding-left'],['dialogRadius','.dialog','border-radius'],
   ['dialogTop','.dialog','padding-top'],['dialogSide','.dialog','padding-left'],['dialogBottom','.dialog','padding-bottom'],
   ['dialogTitleBottom','.dialog h3','margin-bottom'],['dialogBodyBottom','.dialog p','margin-bottom'],
@@ -291,10 +280,6 @@ const map = [
   ['textActionPaddingY','.text-action','padding-top'],['chapterToolbarSelectMaxWidth','.chapter-toolbar select','max-width'],
 ];
 for (const row of map) field(...row);
-if (!Number.isFinite(radioSize) || radioSize <= 0) throw Error('HTML radio box unavailable');
-fields.radioSize = radioSize;
-provenance.radioSize = {selector:'.range-choice input',property:'width',browserDefault:true,
-  boundary:'Measured Chromium HTML radio box; native ring rasterization remains platform-specific.'};
 // These roles deliberately inherit the authored base line box.
 for (const name of ['controlLineHeight','metaLineHeight','tabLineHeight','searchLineHeight',
   'listToolsLineHeight','emptyTitleLineHeight','chapterTitleLineHeight']) {
@@ -303,10 +288,7 @@ for (const name of ['controlLineHeight','metaLineHeight','tabLineHeight','search
 }
 fields.headerTopGap = fields.headerTop - fields.statusBarHeight;
 provenance.headerTopGap = { derived: 'headerTop - statusBarHeight' };
-const slots = value('.header', 'grid-template-columns').split(/\s+/);
-fields.headerSlotWidth = parseFloat(slots[0]);
-provenance.headerSlotWidth = { selector: '.header', property: 'grid-template-columns' };
-for (const [prefix,selector] of [['header','.header'],['tab','.tabs button[aria-selected="true"]'],['sheet','.sheet']]) {
+for (const [prefix,selector] of [['tab','.tabs button[aria-selected="true"]'],['sheet','.sheet']]) {
   const shadow = value(selector, 'box-shadow').match(/^(-?\d+(?:\.\d+)?)(?:px)?\s+(-?\d+(?:\.\d+)?)(?:px)?\s+(\d+(?:\.\d+)?)(?:px)?\s+var\(--shadow\)$/);
   if (!shadow) throw Error('Unsupported approved shadow: ' + value(selector, 'box-shadow'));
   for (const [suffix,index] of [['ShadowX',1],['ShadowY',2],['ShadowRadius',3]]) {
@@ -314,8 +296,7 @@ for (const [prefix,selector] of [['header','.header'],['tab','.tabs button[aria-
     provenance[prefix + suffix] = {selector,property:'box-shadow',authored:value(selector,'box-shadow')};
   }
 }
-// The storage sheet has its own approved v2 source. Retain the original 207
-// download-page fields unchanged and add only its finite named constraints.
+// The storage sheet has its own approved v2 source and finite named constraints.
 const storageProvenance = {};
 const storageMap = [
   ['storageBodyTop','.sheet-body','padding-top'],['storageBodySide','.sheet-body','padding-left'],
@@ -403,11 +384,11 @@ for (const [name,role] of [['overlayChromeDouble','background'],['overlayChromeD
     provenance:'user-approved storage management v2 demo; SHA256 ' + storageSha +
       '; Chromium Canvas2D .scrim and .dialog-layer over --' + (role==='background'?'paper':'ink')};
 }
-const output = resolve(root, 'entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts');
+const output = resolve(root, 'entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts');
 let code = '// Generated from approved docs/ui-design/shared-download/demo.html by Chromium CSSOM.\n' +
   '// Storage v2 constraints come from approved storage-demo.html; each source SHA is independent.\n' +
   '// Do not edit values. This finite adapter is not a general HTML/CSS engine.\n' +
-  'import { readerAppColor } from \'./ReaderThemeRegistry.ts\';\n' +
+  'import { readerAppColor } from \'../../../ui/foundation/ReaderThemeRegistry.ts\';\n' +
   'export const SHARED_DOWNLOAD_DEMO_SHA256 = ' + JSON.stringify(sha) + ';\n' +
   'export const SHARED_DOWNLOAD_STORAGE_DEMO_SHA256 = ' + JSON.stringify(storageSha) + ';\n' +
   'export class SharedDownloadVisualSpec {\n';

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 
-const sourceUrl = new URL('../../entry/src/main/ets/features/source/SourceSwitchWindow.ets', import.meta.url);
+const sourceUrl = new URL('../../entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets', import.meta.url);
 const sdkRoot = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
 
@@ -23,7 +23,7 @@ export function sourceSwitchRowSdk(properties, source = readFileSync(sourceUrl, 
     assert.ok(node, `actual production ${name}`);
     return node.getText(tree);
   };
-  const gatewayText = readFileSync(new URL('../../entry/src/main/ets/features/source/SourceSwitchGateway.ts', import.meta.url), 'utf8');
+  const gatewayText = readFileSync(new URL('../../entry/src/main/ets/features/source/application/SourceSwitchGateway.ts', import.meta.url), 'utf8');
   const gateway = parse(gatewayText, ts.ScriptKind.TS);
   const keyText = gateway.statements.find(value => value.name?.getText(gateway) === 'sourceSwitchCandidateKey').getText(gateway);
   const sourceSwitchCandidateKey = new Function(stripTypeScriptTypes(keyText).replace(/^export /, '') +

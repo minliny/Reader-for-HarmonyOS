@@ -4,8 +4,8 @@ import text from '@ohos.graphics.text';
 import { DrawContext, FrameNode, LengthMetricsUnit, NodeController, RenderNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
-import { ReadingSurfaceLayoutMap } from '../features/reading/ReadingSurfaceLayoutMap';
+import { readerMotionNowMs } from '../ui/foundation/ReaderMotionClock';
+import { ReadingSurfaceLayoutMap } from '../features/reading/application/ReadingSurfaceLayoutMap';
 
 const PARAGRAPH_FONT = 'ReaderParagraphDiagnosticNotoSerifSC';
 const PARAGRAPH_FONT_FILE = 'NotoSerifSC-Regular.ttf';

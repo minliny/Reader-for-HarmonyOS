@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { readerControlDirectorySnapshot as project, ReaderControlDirectoryPosition }
-  from '../entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts';
+  from '../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts';
 const entries = Array.from({length: 100}, (_, i) => ({ index: i * 10, title: `章节 ${i}`,
   downloadState: 'unknown', bookmarks: [] }));
 const place = new ReaderControlDirectoryPosition();
@@ -42,7 +42,7 @@ assert.equal(project(withBookmarks, 'bookmarks', '章节 52', true, 500).targetR
   'nearest positioning uses the visible filtered projection');
 console.log('Production directory model: late load, centering ownership, route/data independence PASS');
 
-const ui = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets', import.meta.url), 'utf8');
+const ui = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets', import.meta.url), 'utf8');
 const methods = ['captureLeadingRow', 'onProgressChanged', 'queueLeadingCorrection', 'onInputChanged', 'rowHeight', 'value',
   'cancelPendingPlacement', 'userScroll',
   'queuePosition', 'listHeight', 'listTop', 'openList', 'refreshData', 'leadingAnchorIsAligned'].map(name => {

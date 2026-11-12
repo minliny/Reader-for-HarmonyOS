@@ -5,11 +5,11 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import * as fonts from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
-const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
 const names = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers, 'directoryCurrentChapterIndex', 'directoryEntries', 'directoryPanel', 'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'directoryBody', 'directoryFallback', 'adjacentChapter',
   'selectAdjacentChapter', 'pageOrdinal', 'accentColor', 'mutedColor', 'inkColor', 'lineColor',
   'directoryFontScale', 'directoryToolHeight', 'directoryHeaderChrome', 'directoryInitialWidth', 'directoryQuickHeight',
@@ -33,6 +33,7 @@ function fixture({ current = 71, night = false, stale = false, candidate = sourc
     remoteSession: { contentKind: 'manga', identity: { sourceId: stale ? 'other' : 'source', bookId: 'book' }, entries },
     controller: { chapter: { chapterIndex: current, manifest: { chapter: { sourceId: 'source', bookId: 'book', chapterId: `chapter-${current}` } } }, totalPages: 24 },
     horizontal: false, displayedPage: 4, panelPhase: 'open', panel: 'directory', chapterEnd: false,
+    mounted: true, appForeground: true, windowChromeActive: true,
     directoryQuery: '', directoryAscending: true, directoryRevision: 0, directoryOpenRevision: 2,
     publishedManifestVersion: 4, downloadEnabled: true, isReaderIdentityCurrent: () => true, stageWidth: 390, viewportWidth: 390,
     stageHeight: 844, viewportHeight: 844, error: '', openingRetry: false, recovering: false,

@@ -11,7 +11,7 @@ const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-r
 const { mangaSurfaceSdkDependencies } = await import('./lib/manga-surface-sdk-probe.mjs');
 
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const colors = ['inkColor', 'mutedColor', 'lineColor', 'softSurfaceColor', 'greenColor', 'accentColor', 'surfaceColor'];
 const fields = ['backgroundPreference', 'horizontal', 'fitPreference', 'brightnessPercent', 'showPageNumbers'];
 const choices = { vertical: '竖向连续', horizontal: '横向分页', sun: '暖纸', moon: '深墨' };
@@ -23,7 +23,8 @@ function mount(text, panel) {
   const pageUpdates = [];
   const branches = new Map();
   const names = [panel === 'mode' ? 'modePanel' : 'settingsPanel', 'sheetChoice', 'choiceIcon',
-    'isSheetChoiceSelected', 'sectionTitle', 'onWindowChromeChanged', ...colors, ...fields];
+    'isSheetChoiceSelected', 'sectionTitle', 'onWindowChromeChanged', 'preferencePanelInputCurrent', 'panelInputCurrent',
+    ...colors, ...fields];
   if (panel === 'settings') names.push('displayedBrightnessPercent');
   if (panel === 'mode') names.push('fitLine');
   const { owner, output } = createReaderBuilderProbe(text, names, {
@@ -37,6 +38,7 @@ function mount(text, panel) {
   // re-create native children. The shared probe does not model branch removal.
   owner.ifElseBranchUpdateFunction = branchId => { branches.set(observerId, branchId); };
   Object.assign(owner, {
+    panel, panelPhase: 'open', actionPanelPresentationGeneration: 1, readerPanelForeground: () => true, widePanel: () => false,
     setBackground(value) { this.backgroundPreference = value; },
     toggleDirection() { this.horizontal = !this.horizontal; },
     changeFit(value) { this.fitPreference = value; },
@@ -44,7 +46,7 @@ function mount(text, panel) {
     setPageNumbers(value) { pageUpdates.push(value); this.showPageNumbers = value; },
     resetMangaPreferences() { return Promise.resolve(); },
   });
-  owner[panel === 'mode' ? 'modePanel' : 'settingsPanel']();
+  owner[panel === 'mode' ? 'modePanel' : 'settingsPanel'](1);
   const mountedObservers = [...owner.observers];
   const mountedIds = [...owner.nodes.keys()];
   const replay = () => {
@@ -64,7 +66,7 @@ function verifyChoices(fixture, kinds) {
     const selected = kind === 'vertical' ? !owner.horizontal : kind === 'horizontal' ? owner.horizontal :
       kind === 'sun' ? owner.backgroundPreference === 'paper' : night;
     const label = choices[kind];
-    const row = fixture.nodes('Row').find(node => node.accessibilityText?.startsWith(`${label}，`));
+    const row = fixture.nodes('Button').find(node => node.accessibilityText?.startsWith(`${label}，`));
     const text = fixture.nodes('Text').find(node => node.create === label);
     const image = fixture.nodes('Image')[index];
     assert.ok(row && text && image, `mounted ${label} actors exist`);
@@ -99,10 +101,11 @@ function verifySettings(text) {
       fixture.owner.showPageNumbers = enabled; fixture.replay();
       const toggle = fixture.nodes('Toggle')[0];
       assert.deepEqual(toggle.create, { type: 'switch', isOn: enabled });
-      const row=fixture.nodes('Row').find(node=>node.accessibilityText?.startsWith('常驻页码，'));
-      assert.ok(row,'the whole setting row is actionable');
-      assert.equal(row.hitTestBehavior,'HitTestMode.Block','row owns pointer hits and excludes child Toggle pointer duplication');
-      assert.equal(row.accessibilityGroup,true);
+      const row=fixture.nodes('Button').find(node=>node.accessibilityText?.startsWith('常驻页码，'));
+      assert.ok(row,'the native label action is a sibling of the native Toggle');
+      const container=fixture.nodes('Row').find(node=>node.height===46&&node.hitTestBehavior);
+      assert.equal(container.hitTestBehavior,'HitTestMode.Default','the settings ancestor admits both native child actions');
+      assert.equal(typeof container.onClick,'undefined','the visual row cannot duplicate either child action');
       const before=fixture.pageUpdates.length;
       row.onClick();fixture.replay();assert.equal(fixture.owner.showPageNumbers,!enabled);assert.equal(fixture.pageUpdates.length,before+1);
       row.onClick();fixture.replay();assert.equal(fixture.owner.showPageNumbers,enabled);assert.equal(fixture.pageUpdates.length,before+2);
@@ -113,8 +116,16 @@ function verifySettings(text) {
   assert.equal(fixture.nodes('Slider')[0].create.value,fixture.nodes('Slider')[0].create.min,'legacy value below current display floor does not alter persistence');
   assert.ok(fixture.nodes('Text').some(node => node.create === '8%'), 'legacy label shows actual brightness');
   assert.equal(fixture.owner.brightnessPercent, 8, 'displaying the demo minimum does not overwrite a prior brightness preference');
-  fixture.nodes('Slider')[0].onChange(37); fixture.replay();
+  const fromThisOpening = fixture.nodes('Slider')[0].onChange;
+  fromThisOpening(37); fixture.replay();
   assert.equal(fixture.owner.brightnessPercent, 37, 'an actual user change owns the new brightness value');
+  fixture.owner.panelPhase = 'closing';
+  fromThisOpening(49);
+  assert.equal(fixture.owner.brightnessPercent, 37, 'a closing sheet no longer accepts queued native input');
+  fixture.owner.panelPhase = 'open';
+  fixture.owner.actionPanelPresentationGeneration += 1;
+  fromThisOpening(62);
+  assert.equal(fixture.owner.brightnessPercent, 37, 'reopening cannot give an old native callback the new sheet');
 }
 
 function verifyFit(text) {
@@ -131,7 +142,7 @@ function verifyFit(text) {
     for (const fit of ['source', 'width', 'contain', 'width', 'source']) {
       fixture.owner.fitPreference = fit; fixture.replay();
       fits.forEach(([key, label], index) => {
-        const row = fixture.nodes('Row').find(node => node.accessibilityText?.startsWith(`${label}，`));
+        const row = fixture.nodes('Button').find(node => node.accessibilityText?.startsWith(`${label}，`));
         assert.equal(row.accessibilityText, `${label}，${fit === key ? '已选择' : '未选择'}`, `${label}: live fit semantics`);
         assert.equal(fixture.branches.get(ifIds[index]), fit === key ? 0 : 1, `${label}: live SDK check branch`);
       });
@@ -179,7 +190,7 @@ const fakeWarm = changeMember(source, 'isSheetChoiceSelected', member => member.
 if(selectedCase==='settings') assert.throws(() => verifySettings(fakeWarm), /live selection semantics/, 'legacy white cannot pretend to be warm paper');
 const fakeBrightness = changeMember(source, 'settingsPanel', member => member.replace('Math.round(this.brightnessPercent)', 'Math.round(this.displayedBrightnessPercent())'));
 if(selectedCase==='settings') assert.throws(() => verifySettings(fakeBrightness), /legacy label shows actual brightness/, 'legacy brightness label must report the actual value');
-const doublePointer = changeMember(source,'settingsPanel',member=>member.replace('.hitTestBehavior(HitTestMode.Block)', '.hitTestBehavior(HitTestMode.Default)'));
-if(selectedCase==='settings') assert.throws(()=>verifySettings(doublePointer),/excludes child Toggle pointer duplication/,'native child and row may not both own the same pointer click');
+const blockedChildren = changeMember(source,'settingsPanel',member=>member.replace('this.widePanel() ? HitTestMode.Block : HitTestMode.Default', 'HitTestMode.Block'));
+if(selectedCase==='settings') assert.throws(()=>verifySettings(blockedChildren),/admits both native child actions/,'a parent Block cannot suppress the two actual native controls');
 
 }

@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import * as auto from '../entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts';
+import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
+import * as auto from '../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
-const wheelSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
+const wheelSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTimerWheel.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);

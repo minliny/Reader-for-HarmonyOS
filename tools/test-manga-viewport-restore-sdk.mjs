@@ -5,11 +5,11 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 
 // The override permits an immutable old-source counterfactual without changing
 // the shared worktree. Normal check-local always reads the production Surface.
-const source=readFileSync(process.env.READER_MANGA_VIEWPORT_SOURCE??new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),'utf8');
+const source=readFileSync(process.env.READER_MANGA_VIEWPORT_SOURCE??new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
@@ -17,7 +17,7 @@ const tree=ts.createSourceFile(virtualFilePath('MangaViewportRestoreProbe.ets'),
 assert.equal(tree.parseDiagnostics.length,0);
 const component=tree.statements.find(n=>n.name?.getText(tree)==='MangaReadingSurface');
 const names=component.members.map(n=>n.name?.getText(tree)).filter(Boolean);
-const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataText=tree.statements.find(n=>n.name?.getText(tree)==='MangaStripDataSource').getText(tree);
 const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataText)};return MangaStripDataSource`)(Projection);

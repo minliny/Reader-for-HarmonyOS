@@ -47,15 +47,15 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 for (const [name, file, slots] of [
-  ['ReaderPageScaffold', 'common/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
-  ['ReaderStandardPage', 'common/ReaderStandardPage.ets', ['content', 'header', 'footer', 'overlayContent']],
-  ['MainTabShell', 'shell/MainTabShell.ets', ['content', 'header', 'overlayContent']],
+  ['ReaderPageScaffold', 'ui/layout/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['ReaderStandardPage', 'ui/layout/ReaderStandardPage.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['MainTabShell', 'features/shell/MainTabShell.ets', ['content', 'header', 'overlayContent', 'scrollOverlayContent']],
 ]) {
-  const source = readFileSync(`entry/src/main/ets/features/${file}`, 'utf8');
+  const source = readFileSync(`entry/src/main/ets/${file}`, 'utf8');
   assert.deepEqual([...readerPageBuilderSlots(source, name)], slots, `${name}: all original public slots retain their actual declarations`);
   const collision = source.replaceAll('overlayContent', 'overlay');
   assert.notEqual(collision, source);
@@ -77,10 +77,10 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
 const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
 const findChild = (owner, predicate) => {
@@ -158,10 +158,10 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
 const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
 const findChild = (owner, predicate) => {
@@ -173,18 +173,25 @@ function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
     { ...properties.hooks, ...hooks }), properties };
 }
 
-for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail', 'directory', 'mangaDirectory', 'search', 'selection', 'download', 'reader', 'readerDirectory']) {
+const { readerFrameStyle } = await import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
+for (const clip of [false, true]) {
   const probe = actual('ReaderPageScaffold');
   const slots = [], headerHeights = [], footerHeights = [];
-  Object.assign(probe.owner, { variant, headerKind: variant === 'reader' ? 'reader' : 'standard',
-    frameInsetLeft: 13, frameInsetRight: 17, headerTop: 6, footerBottom: 28,
+  const background = readerAppColor('app.window.background', 'day');
+  const frameStyle = readerFrameStyle({ backgroundColor: background, clip,
+    headerBackground: background, footerBackground: background });
+  const geometry = { frameInsetLeft: 13, frameInsetRight: 17,
+    header: { insetLeft: 0, insetRight: 0, top: 6 },
+    footer: { insetLeft: 0, insetRight: 0, bottom: 28, surface: 'transparent' },
+    content: { nativeEndInset: 0 } };
+  Object.assign(probe.owner, { frameStyle, geometry,
     content: () => slots.push('body'), header: () => slots.push('header'), footer: () => slots.push('footer'), overlayContent: () => slots.push('overlay'),
     onHeaderHeightChange: height => headerHeights.push(height), onFooterHeightChange: height => footerHeights.push(height) });
   probe.owner.initialRender();
   assert.deepEqual(slots, ['body', 'header', 'footer', 'overlay'], 'actual finite host delegates every slot exactly once');
   const root = [...probe.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding?.left === 13 && node.padding?.right === 17);
   assert.deepEqual(root.padding, { left: 13, right: 17 }, 'measured safe/rail offsets go through the common frame');
-  assert.equal(root.clip, variant === 'reader' ? false : true);
+  assert.equal(root.clip, clip);
   const layers = [...probe.owner.nodes.values()].filter(node => [10, 20, 30].includes(node.zIndex));
   assert.deepEqual(layers.map(node => node.zIndex), [10, 20, 30], 'header, footer and overlay have one shared ordering');
   assert.ok(layers.every(node => node.hitTestBehavior === 'HitTestMode.Transparent'), 'empty hosts preserve body hit testing');
@@ -209,10 +216,10 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
 const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
 const findChild = (owner, predicate) => {
@@ -294,10 +301,10 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
 const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
 const findChild = (owner, predicate) => {
@@ -370,9 +377,9 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const coverageContract = JSON.parse(readFileSync('tools/fixtures/reader-page-framework-coverage.json', 'utf8'));
 const coverage = verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract);
 assert.ok(coverage.routes>0);
@@ -381,8 +388,8 @@ const indexSource = source('pages/Index.ets');
 for (const [name, before, after] of [
   ['extra naked text catalog sibling', 'ReaderFullDirectory({', "Column() { Text('unregistered text catalog'); }\n        ReaderFullDirectory({"],
   ['extra unknown text catalog actor', 'ReaderFullDirectory({', 'UnregisteredCatalogPage({});\n        ReaderFullDirectory({'],
-  ['retained reading naked sibling', 'if (this.readingSessionActive && this.detailBook !== undefined) {', "if (this.readingSessionActive && this.detailBook !== undefined) {\n        Text('unregistered retained reader');"],
-  ['new side page outside primary chain', 'if (this.readingSessionActive && this.detailBook !== undefined) {', "if (this.privateCatalogVisible) { Text('unregistered side page'); }\n      if (this.readingSessionActive && this.detailBook !== undefined) {"],
+  ['retained reading naked sibling', 'if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {', "if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {\n        Text('unregistered retained reader');"],
+  ['new side page outside primary chain', 'if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {', "if (this.privateCatalogVisible) { Text('unregistered side page'); }\n      if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {"],
   ['manga preview naked sibling', 'if (this.mangaSourceSwitchSelection !== undefined) {\n      BookDirectoryPage({', "if (this.mangaSourceSwitchSelection !== undefined) {\n      Text('unregistered manga preview');\n      BookDirectoryPage({"],
   ['cold sync returns to private body', "ReaderPageScaffold({ variant: 'standard', content: (): void => { this.syncPreparingContent(); } });", 'this.syncPreparingContent();'],
 ]) {
@@ -393,16 +400,16 @@ for (const [name, before, after] of [
 for (const [name, before, after] of [
   ['quiet feedback cannot claim full screen', ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)", ".height('100%').align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)"],
   ['quiet feedback cannot mask page input', ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Transparent)", ".align(Alignment.Top).zIndex(220).hitTestBehavior(HitTestMode.Block)"],
-  ['quiet feedback cannot drop route admission', 'this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true', 'this.indexRecoveryNotice.visible'],
+  ['quiet feedback cannot drop route admission', 'this.readingEntry.recoveryNoticeVisible()', 'this.readingEntry.recoveryNotice.visible'],
 ]) {
   const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name);
   assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
     file => file === 'pages/Index.ets' ? changed : source(file)), /quiet feedback/, name);
 }
-const readerSource=source('features/shell/ReaderShell.ets');
+const readerSource=source('features/reading/ui/ReaderShell.ets');
 const detachedKind=readerSource.replace('readingContentKind: this.contentKind',"readingContentKind: 'text'");assert.notEqual(detachedKind,readerSource);
-assert.throws(()=>verifyReaderPageFrameworkCoverage(process.cwd(),coverageContract,file=>file==='features/shell/ReaderShell.ets'?detachedKind:source(file)),/exact page\/runtime fact/);
-const missingHostFile = 'features/bookshelf/BookshelfManagementPage.ets';
+assert.throws(()=>verifyReaderPageFrameworkCoverage(process.cwd(),coverageContract,file=>file==='features/reading/ui/ReaderShell.ets'?detachedKind:source(file)),/exact page\/runtime fact/);
+const missingHostFile = 'features/bookshelf/ui/BookshelfManagementPage.ets';
 const original = source(missingHostFile);
 const missingHost = original.replace('ReaderStandardPage({', 'PrivatePageHost({');
 assert.notEqual(missingHost, original);
@@ -433,11 +440,11 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const readWorkspace=file=>readFileSync(file,'utf8');const architectureBaseline=JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
-const fullFile = 'entry/src/main/ets/features/reading/ReaderFullDirectory.ets', fullSource = readWorkspace(fullFile);
+const fullFile = 'entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets', fullSource = readWorkspace(fullFile);
 verifyFullDirectoryLayoutSuccession(architectureBaseline, readWorkspace, sharedProducerShape);
 for (const [before, after] of [
   ['header: (): void => { this.topBar(); }', 'header: (): void => {}'],
@@ -473,10 +480,10 @@ const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots
 const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
 const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
 const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
 const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
 const findChild = (owner, predicate) => {
@@ -501,10 +508,10 @@ for (const [before, after] of [
 for (const ready of [false, true]) {
   const properties = createArkUIPropertyRuntimeProbe();
   class OtherActor { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); this.nodes = new Map(); this.children = new Map(); } }
-  const components = { BookshelfMultiSelectPage: 'features/bookshelf/BookshelfMultiSelectPage.ets', ReaderShell: 'features/shell/ReaderShell.ets',
-    SyncPage: 'features/sync/SyncPage.ets', ReaderLayoutDebugOverlay: 'features/common/ReaderLayoutDebugOverlay.ets', ArkWebExecutionHost: 'app/ArkWebExecutionHost.ets' };
+  const components = { BookshelfMultiSelectPage: 'features/bookshelf/ui/BookshelfMultiSelectPage.ets', ReaderShell: 'features/reading/ui/ReaderShell.ets',
+    SyncPage: 'features/sync/ui/SyncPage.ets', ReaderJourneyRecoveryNotices: 'app/composition/ReaderJourneyRecoveryNotices.ets', ReaderLayoutDebugOverlay: 'app/composition/ReaderLayoutDebugOverlay.ets', ArkWebExecutionHost: 'ui/platform/ArkWebExecutionHost.ets' };
   const metrics = createDefaultReaderWindowMetrics();
-  const { owner } = createReaderBuilderProbe(indexSource, ['build', 'syncContent', 'syncSurface', 'syncPreparingContent', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset', 'detailPendingNoticeVisible'],
+  const { owner } = createReaderBuilderProbe(indexSource, ['build', 'syncContent', 'syncSurface', 'syncPreparingContent', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset'],
     { ...properties.sdk, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
       ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop, isReaderProductSurfaceEnabled: () => true, deviceInfo: { deviceType: 'phone' } },
     { ...properties.hooks, mountChildren: true, childSources: Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) });

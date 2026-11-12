@@ -13,23 +13,36 @@ const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+const { actualReaderFloatingBarMetrics, actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { actualReaderMainTabs, actualReaderPhoneNavigationGeometry } = await import('./lib/reader-phone-navigation-source.mjs');
+const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { READER_EXPANDED_MIN_WIDTH } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
+const { effectiveReaderWideNavigationRail } = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
+const raisedShape = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
+const horizontalGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerContentSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
-  readerInteractiveSafeRight, readerVisualSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+  readerInteractiveSafeRight, readerVisualSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
-const read = file => readFileSync(new URL(file, root), 'utf8');
+const liveSourcePaths = new Map([
+  ['search/SearchSpinner.ets', 'search/ui/SearchSpinner.ets'],
+  ['bookshelf/BookshelfShell.ets', 'bookshelf/ui/BookshelfShell.ets'],
+  ['bookshelf/BookshelfPage.ets', 'bookshelf/ui/BookshelfPage.ets'],
+  ['bookshelf/BookshelfEmptyPage.ets', 'bookshelf/ui/BookshelfEmptyPage.ets'],
+  ['bookshelf/BookshelfStatusContent.ets', 'bookshelf/ui/BookshelfStatusContent.ets'],
+  ['shell/SettingsShell.ets', 'settings/ui/SettingsShell.ets'],
+  ['discover/DiscoverPage.ets', 'discover/ui/DiscoverPage.ets'],
+]);
+const read = file => readFileSync(new URL(liveSourcePaths.get(file) ?? file, root), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
-const metricsSource = read('common/ReaderFloatingBarMetrics.ts').replace(/^import .*;\n/gm, '');
-const floating = new Function('readerInteractiveSafeBottom', `${stripTypeScriptTypes(metricsSource)}; return {
-  READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, readerFloatingTabBottomInset, readerFloatingTabContentInset
-};`.replaceAll('export ', ''))(readerInteractiveSafeBottom);
+const floating = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 let safeBottom = 15;
 let safeLeft = 0;
 let safeRight = 0;
@@ -44,18 +57,22 @@ const metrics = () => ({ windowRect: { width: windowWidth, height: 844 },
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const properties = createArkUIPropertyRuntimeProbe();
 const hooks = { ...properties.hooks, mountChildren: true };
-const deps = { ...properties.sdk, ...floating, ...fontFamilies, readerVisualSafeTop, readerInteractiveSafeBottom, TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
-  BOOKSHELF_WIDE_BREAKPOINT: Number(read('bookshelf/BookshelfShell.ets').match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]),
+const deps = { ...properties.sdk, ...readerFoundationTokens, ...actualReaderPageLayout(), ...raisedShape,
+  ...horizontalGeometry, ...readerSurfaceSpecsForProbe({ densityPixels: 1 }), ...floating, ...fontFamilies,
+  readerVisualSafeTop, readerInteractiveSafeBottom,
   ReaderWindowCoordinator: { metrics }, readerContentSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   MAIN_TABS: [], RSS_FLOATING_HEADER_HEIGHT: 148, RSS_TABLET_RAIL_WIDTH: 100,
   LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
 };
 for (const [name, file, slots] of [
   ['MainTabBar', 'shell/MainTabBar.ets', []],
+  ['ReaderBottomNavigation', '../app/navigation/ReaderBottomNavigation.ets', []],
+  ['ReaderBottomTabBar', '../ui/patterns/ReaderBottomTabBar.ets', []],
+  ['ReaderRaisedSurface', '../ui/surfaces/ReaderRaisedSurface.ets', []],
   ['MainTabShell', 'shell/MainTabShell.ets', ['content']],
-  ['PageBackBar', 'common/PageBackBar.ets', ['trailing']],
-  ['AppTopBar', 'common/AppTopBar.ets', ['trailing']],
-  ['BookshelfEmptyCard', 'bookshelf/BookshelfEmptyCard.ets', []],
+  ['MainNavigationOverlay', 'shell/MainNavigationOverlay.ets', ['overlayContent']],
+  ['PageBackBar', '../ui/chrome/PageBackBar.ets', ['trailing']],
+  ['AppTopBar', '../ui/chrome/AppTopBar.ets', ['trailing']],
   ['SearchSpinner', 'search/SearchSpinner.ets', []],
 ]) {
   const source = read(file);
@@ -74,9 +91,9 @@ function probe(file, members, values) {
 const descendants = owner => [owner, ...[...(owner.children?.values() ?? [])].flatMap(descendants)];
 const nodes = (owner, type) => descendants(owner).flatMap(child => [...(child.nodes?.values() ?? [])]).filter(node => node.type === type);
 const replayTree = owner => { owner.replay?.(); for (const child of owner.children?.values() ?? []) replayTree(child); };
-const sharedHeader = createReaderBuilderProbe(read('common/PageBackBar.ets'), boundedMembers(read('common/PageBackBar.ets')), deps, hooks);
+const sharedHeader = createReaderBuilderProbe(read('../ui/chrome/PageBackBar.ets'), boundedMembers(read('../ui/chrome/PageBackBar.ets')), deps, hooks);
 deps.PageBackBar = sharedHeader.Component;
-deps.AppTopBar = createReaderBuilderProbe(read('common/AppTopBar.ets'), boundedMembers(read('common/AppTopBar.ets')), deps, hooks).Component;
+deps.AppTopBar = createReaderBuilderProbe(read('../ui/chrome/AppTopBar.ets'), boundedMembers(read('../ui/chrome/AppTopBar.ets')), deps, hooks).Component;
 const sharedMain = createReaderBuilderProbe(read('shell/MainTabShell.ets'), boundedMembers(read('shell/MainTabShell.ets')), deps, hooks);
 deps.MainTabShell = class extends sharedMain.Component {
   constructor(owner, params, storage, id, ...rest) { super(owner, params, storage, id, ...rest); this.params = { ...params }; }
@@ -96,42 +113,94 @@ const verifyScroll = (owner, top, bottom) => {
 
 // Actual SDK-emitted Builder/native attribute calls are checked here; native
 // pixel layout and gesture dispatch remain separate evidence layers.
-if(selectedCase==='navigation') for (const bottomNav of [false, true]) {
-  const tabCalls = [];
-  const shell = probe('shell/MainTabShell.ets', ['navigationGeneration', 'mounted', 'requestMainTab', 'aboutToAppear', 'aboutToDisappear', 'content', 'header', 'overlayContent', 'emptySlot', 'headerKind', 'headerTop', 'headerInsetLeft', 'headerInsetRight', 'bottomNavigation', 'mainOverlays', 'build'], {
-    activeTab: 'bookshelf', showTabletRail: false, showBottomNav: bottomNav, content() {}, onMainTab(key, generation) { tabCalls.push([key, generation]); },
-  });
-  shell.aboutToAppear(); shell.initialRender();
-  assert.ok(nodes(shell, 'Column').every(node => node.layoutWeight === undefined), 'shared chrome hosts do not subtract space from the full-height body');
-  assert.ok(nodes(shell, 'Stack').every(node => node.height === '100%'));
-  if (bottomNav) {
-    const bottoms = nodes(shell, 'Stack').filter(node => node.create.alignContent === 'Alignment.Bottom');
+if(selectedCase==='navigation') {
+  const currentMainTabs = actualReaderMainTabs(), pageLayout = actualReaderPageLayout();
+  const currentFloating = actualReaderFloatingBarMetrics();
+  const storage = new Map();
+  const phoneWindow = { metrics: () => ({ ...metrics(), revision: 0, systemFontScale: 1 }) };
+  const policyPorts = { ...currentMainTabs, ...currentFloating, ReaderWindowCoordinator: phoneWindow,
+    AppStorage: { get: key => storage.get(key), setOrCreate: (key, value) => storage.set(key, value) },
+    readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerVisualSafeTop, READER_EXPANDED_MIN_WIDTH,
+    effectiveReaderWideNavigationRail };
+  // Execute the current policy module; no fixture decides rail/bottom placement
+  // or duplicates the viewport/width math. This case supplies phone metrics only.
+  const policyText = stripTypeScriptTypes(read('shell/MainNavigationSpec.ts')
+    .replace(/^import[\s\S]*?;\s*/gm, '')
+    .replace(/^export\s+(?:type\s+)?\{[^}]*\}\s+from\s+['"][^'"]+['"];?\s*/gm, '')
+    .replace(/^export /gm, ''));
+  const phonePolicy = new Function(...Object.keys(policyPorts), `${policyText};
+    return { readerMainNavigationMode, readerMainViewport, publishReaderMainViewport, mainTabBottomWidth };`)(...Object.values(policyPorts));
+  const phoneHooks = { ...hooks, lifecycleChildren: true };
+  const phoneDeps = { ...deps, ...pageLayout, ...currentMainTabs, ...currentFloating, ...phonePolicy,
+    ReaderWindowCoordinator: phoneWindow,
+    registerReaderShelfFonts: font => assert.ok(font && typeof font === 'object', 'real navigation lifecycle receives the native Font port') };
+  const rendererSource = read('../ui/patterns/ReaderBottomTabBar.ets');
+  const Renderer = createReaderBuilderProbe(rendererSource, boundedMembers(rendererSource), phoneDeps, phoneHooks).Component;
+  const navigationSource = read('../app/navigation/ReaderBottomNavigation.ets');
+  const Navigation = createReaderBuilderProbe(navigationSource, boundedMembers(navigationSource),
+    { ...phoneDeps, ReaderBottomTabBar: Renderer }, phoneHooks).Component;
+  const shellSource = read('shell/MainTabShell.ets');
+  for (const generation of [0, 7]) {
+    const tabCalls = [], currentCalls = [];
+    const shell = createReaderBuilderProbe(shellSource, boundedMembers(shellSource),
+      { ...phoneDeps, ReaderBottomNavigation: Navigation }, phoneHooks).owner;
+    Object.assign(shell, { activeTab: 'bookshelf', appThemeScheme: 'day', navigationGeneration: generation,
+      readerWindowMetricsRevision: 0, mainViewportRevision: 0, content() {},
+      onMainTab(key, presented) { tabCalls.push([key, presented]); },
+      onCurrentTabTap(key, presented) { currentCalls.push([key, presented]); } });
+    shell.aboutToAppear(); shell.initialRender();
+    const scaffold = descendants(shell).find(child => typeof child.frameStyle === 'object' && child.geometry?.content);
+    assert.ok(scaffold, 'the current phone shell mounts the real public scaffold');
+    const hostNodes = [...scaffold.nodes.values()];
+    assert.ok(hostNodes.filter(node => node.type === 'Column').every(node => node.layoutWeight === undefined), 'shared chrome hosts do not subtract space from the full-height body');
+    const hostStacks = hostNodes.filter(node => node.type === 'Stack');
+    assert.ok(hostStacks.every(node => node.height === '100%'), 'full-height assertions address page hosts, not tab glyphs');
+    const bottoms = hostStacks.filter(node => node.create.alignContent === 'Alignment.Bottom');
     assert.equal(bottoms.length, 1, 'public scaffold owns one separate full-height bottom-navigation host');
     const overlay = bottoms[0];
-    assert.ok(nodes(shell, 'Stack').some(node => node.backgroundColor === readerAppColor('TOK_PAPER', 'day')), 'public page root retains the approved opaque paper');
+    assert.ok(hostStacks.some(node => node.backgroundColor === readerAppColor('TOK_PAPER', 'day')), 'public page root retains the approved opaque paper');
     assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
     assert.equal(overlay.backgroundColor, undefined);
-    const tab = [...shell.children.values()].find(child => child.params?.onSelect);
-    tab.params.onSelect('settings'); assert.deepEqual(tabCalls, [['settings', 0]], 'actual shared navigation method admits the mounted generation');
-    shell.aboutToDisappear(); tab.params.onSelect('settings');
-    assert.deepEqual(tabCalls, [['settings', 0]], 'retired public navigation refuses its retained callback');
+    assert.equal(descendants(shell).filter(child => child instanceof Navigation).length, 1, 'one product navigation assembles the current phone footer');
+    assert.equal(descendants(shell).filter(child => child instanceof Renderer).length, 1, 'one shared renderer paints the current phone footer');
+    const buttons = nodes(shell, 'Button');
+    const settings = buttons.find(node => node.accessibilityText === '设置');
+    const current = buttons.find(node => node.accessibilityText === '书架，已选中');
+    assert.ok(settings?.onClick && current?.onClick, 'real admitted native tab actions are reachable');
+    settings.onClick(); assert.deepEqual(tabCalls, [['settings', generation]], 'actual shared navigation method admits the mounted generation');
+    current.onClick(); assert.deepEqual(currentCalls, [['bookshelf', generation]], 'current tab reaches the same controlled generation');
+    shell.navigationGeneration = generation + 1; settings.onClick(); current.onClick();
+    assert.deepEqual(tabCalls, [['settings', generation]], 'retained native tab cannot borrow a later generation');
+    assert.deepEqual(currentCalls, [['bookshelf', generation]], 'retained current-tab action cannot borrow a later generation');
+    shell.navigationGeneration = generation; shell.aboutToDisappear(); settings.onClick(); current.onClick();
+    assert.deepEqual(tabCalls, [['settings', generation]], 'retired public navigation refuses its retained callback');
+    assert.deepEqual(currentCalls, [['bookshelf', generation]], 'retired public navigation also refuses the retained current-tab callback');
   }
 }
 
 if(selectedCase==='navigation') {
-const bar = probe('shell/MainTabBar.ets', ['bottomBar', 'bottomInset'], {
-  current: 'bookshelf', bottomBarFrame: () => ({ width: 360 }), bottomBarTranslateX: () => 0,
-});
-bar.bottomBar();
+const currentMainTabs = actualReaderMainTabs();
+const phoneGeometry = actualReaderPhoneNavigationGeometry({ ...deps, AppStorage: { get: () => undefined } });
+const rendererSource = read('../ui/patterns/ReaderBottomTabBar.ets');
+const renderer = createReaderBuilderProbe(rendererSource, boundedMembers(rendererSource),
+  { ...deps, ...actualReaderFloatingBarMetrics() }, hooks);
+const navigationSource = read('../app/navigation/ReaderBottomNavigation.ets');
+const bar = createReaderBuilderProbe(navigationSource, boundedMembers(navigationSource),
+  { ...deps, ...currentMainTabs, ...phoneGeometry, ReaderBottomTabBar: renderer.Component }, hooks).owner;
+Object.assign(bar, { current: 'bookshelf', appThemeScheme: 'day', readerWindowMetricsRevision: 0,
+  mainViewportRevision: 0, bottomBarFrame: () => ({ width: 360 }), bottomBarTranslateX: () => 0 });
+bar.initialRender();
 const surface = nodes(bar, 'Row')[0];
 // a8819e0c adopts the approved 68vp translucent pill with a 34vp radius.
 // Width remains the explicit frame input; the actual 2/3/4-tab frame is covered
 // by test-manga-ui-floating-bars rather than inferred from this fixture's output.
 assert.equal(surface.width,360,'public frame width passes through'); assert.equal(surface.clip,true);
 assert.equal(surface.hitTestBehavior, 'HitTestMode.Transparent');
+const bottomHost = nodes(bar, 'Stack').find(node => node.margin?.bottom !== undefined);
+assert.ok(bottomHost, 'the actual phone renderer owns the bottom inset');
 for (const bottom of [0, 15, 34, 50]) {
-  safeBottom = bottom; bar.readerWindowMetricsRevision++; bar.replay();
-  assert.equal(surface.margin.bottom, Math.max(15, bottom));
+  safeBottom = bottom; bar.readerWindowMetricsRevision++; replayTree(bar);
+  assert.equal(bottomHost.margin.bottom, Math.max(15, bottom));
 }
 
 }
@@ -160,10 +229,12 @@ assert.equal(list.contentEndOffset,floating.readerFloatingTabContentInset(metric
 
 }
 if(selectedCase==='empty-status') {
+const { actualReaderPageShell } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+deps.readerPageAreaLength = actualReaderPageShell().readerPageAreaLength;
 for (const width of [390, 800]) {
   windowWidth = width;
   safeBottom = 34;
-  const empty = probe('bookshelf/BookshelfEmptyPage.ets', ['build', 'bottomContentInset'], {
+  const empty = probe('bookshelf/BookshelfEmptyPage.ets', ['build', 'bottomContentInset', 'emptyCardWidth'], {
     sectionHeader() {}, contentFrame: () => ({ left: 19, right: 19, width: Math.min(352, width - 38) }),
   });
   empty.initialRender();
@@ -177,8 +248,8 @@ windowWidth = 390;
 for (const failed of [false, true]) {
   safeBottom = 34;
   const status = probe('bookshelf/BookshelfStatusContent.ets',
-    ['build', 'minimumContentHeight', 'bottomContentInset', 'numericAreaLength'], {
-      failed, reduceMotion: false, viewportHeight: 0, onRetry() {},
+    ['build', 'minimumContentHeight', 'bottomContentInset'], {
+      failed, viewportHeight: 0, onRetry() {},
     });
   status.initialRender();
   const scroll = nodes(status, 'Scroll')[0];
@@ -191,6 +262,8 @@ for (const failed of [false, true]) {
   for (const height of [400, 180, 100]) {
     scroll.onAreaChange({}, { height: `${height}vp` }); status.replay();
     assert.equal(content.constraintSize.minHeight, height, 'actual host area overrides window fallback');
+    scroll.onAreaChange({}, { height: Infinity }); status.replay();
+    assert.equal(content.constraintSize.minHeight, height, 'invalid area does not replace the current viewport');
     void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
     assert.equal(scroll.height, '100%');
   }
@@ -224,15 +297,61 @@ if(selectedCase==='settings-origin') for (const section of ['home', 'general']) 
 
 if(selectedCase==='discover-header') {
 safeBottom = 34;
-const discover = probe('discover/DiscoverPage.ets', ['build', 'homeTopBar', 'discoverContent', 'bottomContentInset'], {
+// The current AppTopBar consumes the actual shared font-scale resolver.
+// Keep this dependency local to the Discover leaf; navigation's reviewed
+// constructor/semantic scope does not mount this title/header body.
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const surface = pureModuleProbe(read('../ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts',
+  { readerVisualSafeTop }, ['readerScaledBarHeight']);
+const topBarSource = read('../ui/chrome/AppTopBar.ets');
+deps.AppTopBar = createReaderBuilderProbe(topBarSource, boundedMembers(topBarSource), { ...deps, ...surface }, hooks).Component;
+const discoverStorage = new Map(), discoverWindow = { metrics: () => ({ ...metrics(), revision: 0, systemFontScale: 1 }) };
+const discoverPolicyPorts = { ...actualReaderMainTabs(), ...actualReaderFloatingBarMetrics(),
+  ReaderWindowCoordinator: discoverWindow,
+  AppStorage: { get: key => discoverStorage.get(key), setOrCreate: (key, value) => discoverStorage.set(key, value) },
+  readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerVisualSafeTop, READER_EXPANDED_MIN_WIDTH,
+  effectiveReaderWideNavigationRail };
+const discoverPolicyText = stripTypeScriptTypes(read('shell/MainNavigationSpec.ts')
+  .replace(/^import[\s\S]*?;\s*/gm, '')
+  .replace(/^export\s+(?:type\s+)?\{[^}]*\}\s+from\s+['"][^'"]+['"];?\s*/gm, '')
+  .replace(/^export /gm, ''));
+const discoverPolicy = new Function(...Object.keys(discoverPolicyPorts), `${discoverPolicyText};
+  return { readerMainNavigationMode, readerMainViewport, publishReaderMainViewport, mainTabBottomWidth };`)(...Object.values(discoverPolicyPorts));
+const shellSource = read('shell/MainTabShell.ets');
+deps.MainTabShell = createReaderBuilderProbe(shellSource, boundedMembers(shellSource), {
+  ...deps, ...discoverPolicyPorts, ...discoverPolicy,
+}, hooks).Component;
+const discover = probe('discover/DiscoverPage.ets', ['build', 'homeTopBar', 'discoverContent', 'bottomContentInset',
+  'pageGeometry', 'recordHeaderHeight', 'measurements', 'measurementRevision', 'measurementKey', 'mounted'], {
   presentation: { loading: false }, onMainTab() {}, onRefresh() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {}, operationFeedback() {},
   contentFrame: () => ({ left: 19, right: 19, width: 352 }),
+  mounted: true, measurementKey: 7,
 });
 discover.initialRender();
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-const discoverHeaderHost = descendants(discover).find(child => child.params?.kind === 'home');
+const discoverScaffold = descendants(discover).find(child => child.geometry?.content && child.frameStyle?.header);
+assert.ok(discoverScaffold, 'Discover uses the actual public scaffold through MainTabShell');
+const discoverHeaderHost = descendants(discoverScaffold).find(child =>
+  typeof child.areaChangeHandler === 'function' && child.style?.backgroundColor === discoverScaffold.frameStyle.header.backgroundColor &&
+  child.style?.transparent === discoverScaffold.frameStyle.header.transparent);
 assert.ok(discoverHeaderHost, 'Discover title uses the actual shared fixed-header host');
 assert.equal(nodes(discoverHeaderHost, 'Column')[0].hitTestBehavior, 'HitTestMode.Transparent');
+const presented = discoverHeaderHost.areaChangeHandler(discoverHeaderHost.measurementKey);
+presented({}, { height: 68 });
+assert.equal(discover.measurements.readForGeneration('discover:header', 7, 0), 68,
+  'actual shared header callback reaches the current Discover measurement owner');
+discover.measurementKey = 8; replayTree(discover);
+const before = discover.measurementRevision;
+presented({}, { height: 99 });
+assert.equal(discover.measurementRevision, before, 'old header callback cannot publish into the new measurement key');
+const currentHeader = descendants(discover).find(child => typeof child.areaChangeHandler === 'function' && child.measurementKey === 8);
+assert.ok(currentHeader);
+currentHeader.areaChangeHandler(8)({}, { height: 75 });
+assert.equal(discover.measurements.readForGeneration('discover:header', 8, 0), 75);
+discover.mounted = false;
+const retired = discover.measurementRevision;
+currentHeader.areaChangeHandler(8)({}, { height: 80 });
+assert.equal(discover.measurementRevision, retired, 'retired Discover rejects a late shared measurement');
 
 }
 console.log('selected current shell case PASS: '+selectedCase);

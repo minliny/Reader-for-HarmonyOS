@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
-const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
+const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},sourceRuleVersion:'rules',manifestVersion:'version',decodeRevision:'identity-v1',pages:Array.from({length:3},(_,ordinal)=>{const pageId=`mp1:${String(ordinal).padStart(64,'0')}`;return {ordinal,pageId,resourceRef:`manga:${pageId}`};})};
 const chapter={manifest,chapterIndex:0,chapterTitle:'C',cached:false,resources:manifest.pages.map(page=>({resourceRef:page.resourceRef,request:{url:'https://images.test/repeated',requestRule:'https://images.test/repeated,{"method":"POST","body":"page"}'}}))};
@@ -52,7 +52,7 @@ function fixture(decodeRevision='identity-v1'){
 // Production disk-manifest verifier rejects same-size byte corruption.
 {
  const hashes=['a'.repeat(64),'b'.repeat(64)],digest='c'.repeat(64);
- const Cache=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url),['readValidManifest','matchesResourceDigest','resourceFingerprint','assertCurrent'],{fileIo:{stat:async()=>({isFile:()=>true,size:2})}});
+ const Cache=productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts',import.meta.url),['readValidManifest','matchesResourceDigest','resourceFingerprint','assertCurrent'],{fileIo:{stat:async()=>({isFile:()=>true,size:2})}});
  const owner=Object.assign(new Cache(),{verifiedDigests:{get:()=>undefined,remove:()=>{},put:()=>assert.fail('coarse stat cannot cache a digest')},readManifestIdentity:async()=>({manga:true,resourceHashes:hashes,resourceDigests:{[hashes[0]]:digest,[hashes[1]]:digest}}),validResourceFile:async()=>true,readResourceBytes:async()=>new Uint8Array([1,2]),sha256Bytes:async()=>digest});
  assert.ok(await owner.readValidManifest('/private',2,undefined,()=>true,true));owner.sha256Bytes=async()=> 'd'.repeat(64);assert.equal(await owner.readValidManifest('/private',2,undefined,()=>true,true),undefined);
 }
@@ -257,7 +257,7 @@ console.log('PASS actual inflight Core claim is drained through lease registrati
 }
 console.log('PASS actual 25-chapter download splits future contiguous chunks around cancellation without reclaiming excluded chapters or skipping siblings');
 {
- const {MangaChapterPreparationCoordinator}=await import('../entry/src/main/ets/features/manga/MangaChapterPreparationCoordinator.ts');
+ const {MangaChapterPreparationCoordinator}=await import('../entry/src/main/ets/features/manga/application/MangaChapterPreparationCoordinator.ts');
  const f=scopeFixture(),excluded=new Set(),coordinator=MangaChapterPreparationCoordinator.forRuntime(f.runtime);f.holdImage(0);
  const old=f.dataFor(0);await coordinator.activate(old,1,()=>true,true,()=>true);coordinator.startCurrent(old);await scopeTick();
  assert.deepEqual(f.images,[0]);assert.ok([...f.preparationIntents.values()].includes('cache'));

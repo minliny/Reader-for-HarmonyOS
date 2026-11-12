@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"scaffold": {"description": "仅当前features/common/ReaderPageScaffold.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "index": {"description": "仅当前pages/Index.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "reader-shell": {"description": "仅当前features/shell/ReaderShell.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "manga": {"description": "仅当前features/manga/MangaReadingSurface.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "bookshelf": {"description": "仅当前features/bookshelf/BookshelfPage.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "detail": {"description": "仅当前features/bookshelf/LocalBookDetail.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "book-directory": {"description": "仅当前features/bookshelf/BookDirectoryPage.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "source-panel": {"description": "仅当前features/reading/SourceSwitchPanel.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "source-window": {"description": "仅当前features/source/SourceSwitchWindow.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "navigation-surface": {"description": "仅当前features/reading/ReaderDirectoryNavigationSurface.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "navigation-list": {"description": "仅当前features/reading/ReaderDirectoryNavigationList.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "flat-list": {"description": "仅当前features/reading/ReaderDirectoryList.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "observed-metadata": {"description": "实际SourceSwitch retained row Observed缺失10905307负例", "resources": []}, "settings-controls": {"description": "实际settings Toggle/Slider/background/reset事件", "resources": []}};
+const definitions={"scaffold": {"description": "仅当前ui/layout/ReaderPageScaffold.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "index": {"description": "仅当前pages/Index.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "reader-shell": {"description": "仅当前features/reading/ui/ReaderShell.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "manga": {"description": "仅当前features/manga/ui/MangaReadingSurface.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "bookshelf": {"description": "仅当前features/bookshelf/ui/BookshelfPage.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "detail": {"description": "仅当前features/reading/ui/LocalBookDetail.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "book-directory": {"description": "仅当前features/reading/ui/BookDirectoryPage.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "source-panel": {"description": "仅当前features/source/ui/SourceSwitchPanel.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "source-window": {"description": "仅当前features/source/ui/SourceSwitchWindow.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "navigation-surface": {"description": "仅当前features/reading/ui/ReaderDirectoryNavigationSurface.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "navigation-list": {"description": "仅当前features/reading/ui/ReaderDirectoryNavigationList.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "flat-list": {"description": "仅当前features/reading/ui/ReaderDirectoryList.ets root/direct metadata SDK降低与公开字段边", "resources": []}, "observed-metadata": {"description": "实际SourceSwitch retained row Observed缺失10905307负例", "resources": []}, "settings-controls": {"description": "实际settings Toggle/Slider/background/reset事件", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
@@ -18,8 +18,8 @@ const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`), compiler = require(`${sdk}/lib/process_component_class.js`), main = require(`${sdk}/main.js`), utils = require(`${sdk}/lib/utils.js`), ui = require(`${sdk}/lib/process_ui_syntax.js`), componentMap = require(`${sdk}/lib/component_map.js`);
 const root = resolve('entry/src/main/ets');
-const roots={"scaffold": "features/common/ReaderPageScaffold.ets", "index": "pages/Index.ets", "reader-shell": "features/shell/ReaderShell.ets", "manga": "features/manga/MangaReadingSurface.ets", "bookshelf": "features/bookshelf/BookshelfPage.ets", "detail": "features/bookshelf/LocalBookDetail.ets", "book-directory": "features/bookshelf/BookDirectoryPage.ets", "source-panel": "features/reading/SourceSwitchPanel.ets", "source-window": "features/source/SourceSwitchWindow.ets", "navigation-surface": "features/reading/ReaderDirectoryNavigationSurface.ets", "navigation-list": "features/reading/ReaderDirectoryNavigationList.ets", "flat-list": "features/reading/ReaderDirectoryList.ets"};
-const selected=selectedCase==='observed-metadata'?['features/source/SourceSwitchWindow.ets']:selectedCase==='settings-controls'?[]:[roots[selectedCase]];
+const roots={"scaffold": "ui/layout/ReaderPageScaffold.ets", "index": "pages/Index.ets", "reader-shell": "features/reading/ui/ReaderShell.ets", "manga": "features/manga/ui/MangaReadingSurface.ets", "bookshelf": "features/bookshelf/ui/BookshelfPage.ets", "detail": "features/reading/ui/LocalBookDetail.ets", "book-directory": "features/reading/ui/BookDirectoryPage.ets", "source-panel": "features/source/ui/SourceSwitchPanel.ets", "source-window": "features/source/ui/SourceSwitchWindow.ets", "navigation-surface": "features/reading/ui/ReaderDirectoryNavigationSurface.ets", "navigation-list": "features/reading/ui/ReaderDirectoryNavigationList.ets", "flat-list": "features/reading/ui/ReaderDirectoryList.ets"};
+const selected=selectedCase==='observed-metadata'?['features/source/ui/SourceSwitchWindow.ets']:selectedCase==='settings-controls'?[]:[roots[selectedCase]];
 const files=[];
 for(const relative of selected){const file=resolve(root,relative);files.push(file);const src=ts.createSourceFile(file,readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  for(const statement of src.statements.filter(ts.isImportDeclaration)){const name=statement.moduleSpecifier.text;if(!name.startsWith('.'))continue;const target=resolve(file,'..',name);const metadata=[target+'.ets',target+'.ts'].find(existsSync);if(metadata&&!files.includes(metadata))files.push(metadata);}}
@@ -100,7 +100,7 @@ function transformComponent(tree, node) {
 // Negative control: removing the actual retained-row decorator still fails
 // the installed SDK's ObjectLink admission, even when its field names exist.
 if(selectedCase==='observed-metadata') {
-const sourceWindow = trees.get(resolve(root, 'features/source/SourceSwitchWindow.ets'));
+const sourceWindow = trees.get(resolve(root, 'features/source/ui/SourceSwitchWindow.ets'));
 const retainedRow = sourceWindow.statements.find(node => ts.isClassDeclaration(node) &&
     node.name?.getText(sourceWindow) === 'SourceSwitchCandidateRow');
 assert.ok(retainedRow);
@@ -134,7 +134,7 @@ for (const relative of selected) {
     }
 }
 if(selectedCase==='settings-controls') {
-const source = readFileSync('entry/src/main/ets/features/manga/MangaReadingSurface.ets', 'utf8');
+const source = readFileSync('entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', 'utf8');
 for (const background of ['paper', 'ink'])
     for (const enabled of [false, true]) {
         const toggles = [], events = [];
@@ -147,11 +147,12 @@ for (const background of ['paper', 'ink'])
             else if (property !== 'pop') {
                 current[property] = args[0];
             } }; } });
-        const { owner } = createReaderBuilderProbe(source, ['settingsPanel', 'displayedBrightnessPercent', 'sheetChoice', 'sectionTitle', 'choiceIcon', 'isSheetChoiceSelected', 'inkColor', 'surfaceColor', 'paperColor', 'mutedColor', 'lineColor', 'greenColor', 'accentColor', 'softSurfaceColor'], { ...mangaSurfaceSdkDependencies, Toggle, ToggleType: { Switch: 'switch' } });
+        const { owner } = createReaderBuilderProbe(source, ['settingsPanel', 'preferencePanelInputCurrent', 'panelInputCurrent', 'displayedBrightnessPercent', 'sheetChoice', 'sectionTitle', 'choiceIcon', 'isSheetChoiceSelected', 'inkColor', 'surfaceColor', 'paperColor', 'mutedColor', 'lineColor', 'greenColor', 'accentColor', 'softSurfaceColor'], { ...mangaSurfaceSdkDependencies, Toggle, ToggleType: { Switch: 'switch' } });
         Object.assign(owner, { backgroundPreference: background, automaticBrightness: enabled, showPageNumbers: enabled, brightnessPercent: 55,
+            panel: 'settings', panelPhase: 'open', actionPanelPresentationGeneration: 1, readerPanelForeground: () => true,
             setBrightness: percent => events.push(['brightness', percent]), setPageNumbers: value => events.push(['pageNumbers', value]),
             setBackground: value => events.push(['background', value]), resetMangaPreferences: async () => events.push(['reset']) });
-        owner.settingsPanel();
+        owner.settingsPanel(1);
         assert.equal(toggles.length, 1,'the approved demo has one page-number switch');
         assert.ok(toggles.every(toggle => toggle.create.type === 'switch' && toggle.create.isOn === enabled));
 

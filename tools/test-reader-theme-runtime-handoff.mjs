@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
-import {ReaderAppearanceStore} from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as selection from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
-import * as registry from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {ReaderAppearanceStore} from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
+import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import * as selection from '../entry/src/main/ets/app/ReaderThemeSelection.ts';
+import * as registry from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url);

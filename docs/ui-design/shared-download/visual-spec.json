@@ -551,8 +551,6 @@
     "tagLineHeight": 16,
     "bookTitleFontSize": 16,
     "bookTitleLineHeight": 24,
-    "headerTitleFontSize": 18,
-    "headerTitleLineHeight": 26,
     "coverFontSize": 12,
     "coverLineHeight": 18,
     "sheetTitleFontSize": 18,
@@ -576,9 +574,6 @@
     "headerTop": 38,
     "statusBarHeight": 28,
     "headerSide": 16,
-    "headerHeight": 52,
-    "headerRadius": 18,
-    "headerPadding": 3,
     "headerIconWidth": 40,
     "headerIconHeight": 44,
     "headerTextWidth": 40,
@@ -691,12 +686,9 @@
     "sheetFooterTop": 10,
     "sheetFooterSide": 18,
     "sheetFooterBottom": 22,
-    "rangeHeight": 45,
     "rangePaddingY": 8,
-    "rangeGap": 10,
     "settingsHeight": 50,
     "settingsGap": 10,
-    "settingsHintMargin": 12,
     "dialogOuterSide": 24,
     "dialogRadius": 18,
     "dialogTop": 22,
@@ -722,7 +714,6 @@
     "textActionHeight": 34,
     "textActionPaddingY": 4,
     "chapterToolbarSelectMaxWidth": 145,
-    "radioSize": 13,
     "controlLineHeight": 21,
     "metaLineHeight": 21,
     "tabLineHeight": 21,
@@ -731,10 +722,6 @@
     "emptyTitleLineHeight": 21,
     "chapterTitleLineHeight": 21,
     "headerTopGap": 10,
-    "headerSlotWidth": 80,
-    "headerShadowX": 0,
-    "headerShadowY": 2,
-    "headerShadowRadius": 10,
     "tabShadowX": 0,
     "tabShadowY": 1,
     "tabShadowRadius": 4,
@@ -878,16 +865,6 @@
       "property": "line-height",
       "authored": "24px"
     },
-    "headerTitleFontSize": {
-      "selector": ".header h2",
-      "property": "font-size",
-      "authored": "18px"
-    },
-    "headerTitleLineHeight": {
-      "selector": ".header h2",
-      "property": "line-height",
-      "authored": "26px"
-    },
     "coverFontSize": {
       "selector": ".cover",
       "property": "font-size",
@@ -1002,21 +979,6 @@
       "selector": ".header",
       "property": "left",
       "authored": "16px"
-    },
-    "headerHeight": {
-      "selector": ".header",
-      "property": "height",
-      "authored": "52px"
-    },
-    "headerRadius": {
-      "selector": ".header",
-      "property": "border-radius",
-      "authored": "18px"
-    },
-    "headerPadding": {
-      "selector": ".header",
-      "property": "padding-top",
-      "authored": "3px"
     },
     "headerIconWidth": {
       "selector": ".icon-action",
@@ -1578,20 +1540,10 @@
       "property": "padding-bottom",
       "authored": "22px"
     },
-    "rangeHeight": {
-      "selector": ".range-choice",
-      "property": "min-height",
-      "authored": "45px"
-    },
     "rangePaddingY": {
       "selector": ".range-choice",
       "property": "padding-top",
       "authored": "8px"
-    },
-    "rangeGap": {
-      "selector": ".range-choice",
-      "property": "gap",
-      "authored": "10px"
     },
     "settingsHeight": {
       "selector": ".settings-line",
@@ -1602,11 +1554,6 @@
       "selector": ".settings-line",
       "property": "gap",
       "authored": "10px"
-    },
-    "settingsHintMargin": {
-      "selector": ".settings-hint",
-      "property": "margin-top",
-      "authored": "12px"
     },
     "dialogOuterSide": {
       "selector": ".dialog-layer",
@@ -1734,12 +1681,6 @@
       "property": "max-width",
       "authored": "145px"
     },
-    "radioSize": {
-      "selector": ".range-choice input",
-      "property": "width",
-      "browserDefault": true,
-      "boundary": "Measured Chromium HTML radio box; native ring rasterization remains platform-specific."
-    },
     "controlLineHeight": {
       "selector": ".phone",
       "property": "line-height",
@@ -1777,25 +1718,6 @@
     },
     "headerTopGap": {
       "derived": "headerTop - statusBarHeight"
-    },
-    "headerSlotWidth": {
-      "selector": ".header",
-      "property": "grid-template-columns"
-    },
-    "headerShadowX": {
-      "selector": ".header",
-      "property": "box-shadow",
-      "authored": "0 2px 10px var(--shadow)"
-    },
-    "headerShadowY": {
-      "selector": ".header",
-      "property": "box-shadow",
-      "authored": "0 2px 10px var(--shadow)"
-    },
-    "headerShadowRadius": {
-      "selector": ".header",
-      "property": "box-shadow",
-      "authored": "0 2px 10px var(--shadow)"
     },
     "tabShadowX": {
       "selector": ".tabs button[aria-selected=\"true\"]",

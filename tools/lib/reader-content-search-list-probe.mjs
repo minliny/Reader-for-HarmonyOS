@@ -3,19 +3,19 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './reader-motion-method-probe.mjs';
-import * as geometry from '../../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
-import * as scroll from '../../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
-import * as list from '../../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts';
-import * as morph from '../../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as motion from '../../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import { splitReaderSearchSnippet } from '../../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts';
+import * as geometry from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts';
+import * as scroll from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts';
+import * as list from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchListProjection.ts';
+import * as morph from '../../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts';
+import * as motion from '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts';
+import { splitReaderSearchSnippet } from '../../entry/src/main/ets/features/reading/presentation/ReaderSearchHighlight.ts';
 // This ordinary ETS class uses ArkUI's IDataSource/DataChangeListener globals.
 // Execute its unchanged methods after erasing types; native range admission is
 // still outside this probe and is not replaced by a local interface or engine.
 const dataSourceText = readFileSync(new URL(
-  '../../entry/src/main/ets/features/reading/ReaderContentSearchDataSource.ets', import.meta.url), 'utf8');
+  '../../entry/src/main/ets/features/reading/ui/ReaderContentSearchDataSource.ets', import.meta.url), 'utf8');
 const data = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(dataSourceText)).toString('base64')}`);
-export const searchListSourceUrl = new URL('../../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url);
+export const searchListSourceUrl = new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets', import.meta.url);
 export const searchListSource = readFileSync(searchListSourceUrl, 'utf8');
 export const searchListSources = { DRAG: 0, FLING: 1, EDGE_EFFECT: 2, OTHER_USER_INPUT: 3,
   SCROLL_BAR: 4, SCROLL_BAR_FLING: 5, SCROLLER: 6, SCROLLER_ANIMATION: 7 };

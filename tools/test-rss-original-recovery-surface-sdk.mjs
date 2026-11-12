@@ -6,7 +6,7 @@ const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/rss/ui/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
 async function pending(kind='management'){
  if(selectedCase==='surface-admission')return {projection:{generation:7,operationId:'fixture-operation-7',sequence:7,method:kind==='entry'?'rss.favorite.put':kind==='editor'?'rss-source.put':'rss.subscription.setEnabled',scope:kind,subscriptionId:'s',guid:kind==='entry'?'g':'',confirmation:'unknown',writeStage:'core',busy:false,blocked:true,canRetryOriginal:true,message:'原操作未确认'}};
  const {fixture,seedEntry,draft}=await import('./lib/rss-management-durable-probe.mjs');

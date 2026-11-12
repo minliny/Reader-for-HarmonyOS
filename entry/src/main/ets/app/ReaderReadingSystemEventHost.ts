@@ -1,6 +1,6 @@
 import { commonEventManager } from '@kit.BasicServicesKit';
 import { inputConsumer, KeyCode, type KeyEvent } from '@kit.InputKit';
-import type { ReaderPageTurnDirection } from '../features/reading/ReaderPageGestureState';
+import type { ReaderPageTurnDirection } from '../features/reading/ui/ReaderPageGestureState';
 
 const KEY_PRESSED_ACTION = 1;
 

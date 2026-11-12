@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 
-const source = readFileSync(new URL('../entry/src/main/ets/app/HarmonyTtsMediaSession.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/platform/tts/HarmonyTtsMediaSession.ts', import.meta.url), 'utf8');
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture() {

@@ -4,7 +4,7 @@ import {fixture,defaults,settle,deferred} from './lib/general-settings-persisten
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const read=path=>readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8');
-const pageSource=read('features/bookshelf/BookshelfSettingsPage.ets');
+const pageSource=read('features/bookshelf/ui/BookshelfSettingsPage.ets');
 const leafNames=['autoCheckUpdate','onAutoCheckUpdate','operation','navigationGeneration','presentationRevision','mounted','onRetryAccepted','onReconcile',
  'settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','settingsPending','retrySettingsAccepted',
  'onOperationChanged','lastSettingsFeedback'];

@@ -6,9 +6,9 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
-const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const enums = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const typography = { fontFamily: 'ReaderNotoSerifSC', fontWeight: 400, fontSizeFp: 12 };
@@ -19,7 +19,7 @@ const dependencies = {
   TYPE_READER_CONTROL_SOURCE_ACTION: typography,
   resolvePopupSpec,
 };
-const methods = ['topBar', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
+const methods = ['topBar', 'topBarBack', 'topBarActions', 'readerMorePopupOptions', 'moreMenuGeneration', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
   'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
 function fixture(scheme = 'day') {
   const shared = actionMenuProbe(dependencies.resolvePopupSpec);

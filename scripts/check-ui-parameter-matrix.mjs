@@ -7,18 +7,18 @@ import { register } from 'node:module';
 register('./reader-ts-module-loader.mjs', import.meta.url);
 
 const root = '../entry/src/main/ets';
-const widthClass = await import(`${root}/features/common/ReaderWidthClass.ts`);
-const resolvers = await import(`${root}/features/common/ReaderSurfaceResolvers.ts`);
-const layoutCapability = await import(`${root}/features/common/ReaderLayoutCapability.ts`);
-const metricsModule = await import(`${root}/features/common/ReaderWindowMetrics.ts`);
-const feedback = await import(`${root}/features/common/ReaderTransientFeedback.ts`);
-const settlement = await import(`${root}/features/reading/ReaderPageSettlementTimeline.ts`);
-const tts = await import(`${root}/features/reading/ReaderTtsWaveformModel.ts`);
-const launch = await import(`${root}/features/reading/ReaderSessionLaunchPresentation.ts`);
-const launchTimeline = await import(`${root}/features/reading/ReaderSessionLaunchTimeline.ts`);
-const controlMotion = await import(`${root}/features/reading/ReaderControlMotionGeometry.ts`);
-const scrollLayout = await import(`${root}/features/common/ReaderScrollLayout.ts`);
-const frameStyle = await import(`${root}/features/common/ReaderFrameStyle.ts`);
+const widthClass = await import(`${root}/ui/foundation/ReaderWidthClass.ts`);
+const resolvers = await import(`${root}/ui/foundation/ReaderSurfaceResolvers.ts`);
+const layoutCapability = await import(`${root}/ui/layout/ReaderLayoutCapability.ts`);
+const metricsModule = await import(`${root}/ui/foundation/ReaderWindowMetrics.ts`);
+const feedback = await import(`${root}/ui/feedback/ReaderTransientFeedback.ts`);
+const settlement = await import(`${root}/features/reading/ui/ReaderPageSettlementTimeline.ts`);
+const tts = await import(`${root}/features/reading/ui/ReaderTtsWaveformModel.ts`);
+const launch = await import(`${root}/features/reading/ui/ReaderSessionLaunchPresentation.ts`);
+const launchTimeline = await import(`${root}/features/reading/ui/ReaderSessionLaunchTimeline.ts`);
+const controlMotion = await import(`${root}/features/reading/ui/ReaderControlMotionGeometry.ts`);
+const scrollLayout = await import(`${root}/ui/layout/ReaderScrollLayout.ts`);
+const frameStyle = await import(`${root}/ui/layout/ReaderFrameStyle.ts`);
 
 const results = [];
 function check(id, fn) {
@@ -103,12 +103,12 @@ check('keyboard-and-safe-area-available-height', () => {
 
 check('surface-max-height-and-width', () => {
   assert.equal(resolvers.readerSurfaceMaxHeight(812, 200), 612);
-  assert.equal(resolvers.readerSurfaceMaxHeight(812, 200, 700), 700);
+  assert.equal(resolvers.readerSurfaceMaxHeight(200, 320), 0, 'reserved content cannot expand the available height');
   assert.equal(resolvers.readerSurfaceMaxHeight(100, 200), 0);
   assert.equal(resolvers.readerSurfaceMaxHeight(Number.NaN, 20), 0);
   assert.equal(resolvers.readerDynamicSurfaceWidth(640, 390), 390);
   assert.equal(resolvers.readerDynamicSurfaceWidth(640, 800), 640);
-  assert.equal(resolvers.readerDynamicSurfaceWidth(640, 200, 320), 320);
+  assert.equal(resolvers.readerDynamicSurfaceWidth(640, 200), 200, 'the available width is a hard boundary');
   assert.equal(resolvers.readerDynamicSurfaceWidth(Number.NaN, 390), 0);
 });
 

@@ -1,9 +1,10 @@
-import { MangaImageGraphicsHost } from './MangaImageGraphicsHost';
+import { MangaImageGraphicsHost } from '../platform/reading-resources/MangaImageGraphicsHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import statvfs from '@ohos.file.statvfs';
 import { localImportFailure, type LocalImportFailure } from './LocalImportFailure';
 import picker from '@ohos.file.picker';
+import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerActivity';
 import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
@@ -15,12 +16,12 @@ import {
   type ReaderCoreAssetBridge,
   type ReaderCoreHostRequestEvent,
 } from '@reader/core-harmony';
-import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from './HttpExecuteHost';
-import { CookieSessionStore } from './CookieSessionStore';
-import { ArkWebExecutor } from './ArkWebExecutor';
-import { MangaImageDecodeHost, type MangaImageDecodeTransport } from './MangaImageDecodeHost';
-import { MangaImageMetadataHost } from './MangaImageMetadataHost';
-import { ReadingBodyImageHost } from './ReadingBodyImageHost';
+import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
+import { CookieSessionStore } from '../platform/network/CookieSessionStore';
+import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
+import { MangaImageDecodeHost, type MangaImageDecodeTransport } from '../platform/reading-resources/MangaImageDecodeHost';
+import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
+import { ReadingBodyImageHost } from '../platform/reading-resources/ReadingBodyImageHost';
 import type { MangaOfflineNetworkProbe } from './MangaOfflineNetworkProbe';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
@@ -274,7 +275,8 @@ export class ReaderHostRegistry {
    * deliberately confined here because DocumentViewPicker requires a
    * UIAbilityContext. ArkUI pages only ask their gateway to begin an import.
    */
-  async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
+  async selectLocalBookInputs(canOpenPicker: () => boolean): Promise<LocalBookPreparation[]> {
+    const pickerWindowEpoch = ReaderDocumentPickerActivity.windowEpoch();
     await this.ensureStageRecovery();
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [
@@ -282,7 +284,11 @@ export class ReaderHostRegistry {
     ];
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
-    const uris = await new picker.DocumentViewPicker(this.context).select(options);
+    if (!canOpenPicker()) throw new Error('Local book picker opening is no longer current');
+    const pickerActivity = ReaderDocumentPickerActivity.begin(pickerWindowEpoch);
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
+    finally { pickerActivity.finish(); }
     // Picker implementations normally honor maxSelectNumber, but a provider
     // can still return an oversized/malformed result.  Bound the work before
     // allocating the preparation array or starting staging workers.  The
@@ -409,7 +415,7 @@ export class ReaderHostRegistry {
       throw new Error('在线 JSON 响应为空');
     }
     let text = typeof body === 'string' ? body : '';
-    let bytes: Uint8Array = new util.TextEncoder('utf-8').encode(text);
+    let bytes: Uint8Array = new util.TextEncoder('utf-8').encodeInto(text);
     if (text.length === 0 && typeof bodyBase64 === 'string') {
       try {
         bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
@@ -433,7 +439,10 @@ export class ReaderHostRegistry {
     options.fileSuffixFilters = [`${label}|.json`];
     options.maxSelectNumber = 1;
 
-    const uris = await new picker.DocumentViewPicker(this.context).select(options);
+    const pickerActivity = ReaderDocumentPickerActivity.begin();
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).select(options); }
+    finally { pickerActivity.finish(); }
     if (uris.length === 0) {
       return undefined;
     }
@@ -472,7 +481,7 @@ export class ReaderHostRegistry {
     label: string,
     subject: string,
   ): Promise<string | undefined> {
-    const bytes = new util.TextEncoder('utf-8').encode(text);
+    const bytes = new util.TextEncoder('utf-8').encodeInto(text);
     if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
       throw new Error(
         `${subject} export must contain 1-${ReaderHostRegistry.JsonDocumentLimitBytes} UTF-8 bytes`,
@@ -482,7 +491,10 @@ export class ReaderHostRegistry {
     const options = new picker.DocumentSaveOptions();
     options.newFileNames = [safeFileName];
     options.fileSuffixChoices = [`${label}|.json`];
-    const uris = await new picker.DocumentViewPicker(this.context).save(options);
+    const pickerActivity = ReaderDocumentPickerActivity.begin();
+    let uris: string[];
+    try { uris = await new picker.DocumentViewPicker(this.context).save(options); }
+    finally { pickerActivity.finish(); }
     if (uris.length === 0) {
       return undefined;
     }

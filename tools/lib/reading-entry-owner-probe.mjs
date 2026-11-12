@@ -14,21 +14,22 @@ const sdk=await import(pathToFileURL(resolve(coreRoot,'bindings/harmony/sdk/read
 const errors=await import('../../entry/src/main/ets/app/ErrorMessage.ts');
 const receipt=await import('../../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const evidence=await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
-const policy=await import('../../entry/src/main/ets/app/HttpTransportPolicy.ts');
-const category=await import('../../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const policy=await import('../../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
+const category=await import('../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const importFailure=await import('../../entry/src/main/ets/app/LocalImportFailure.ts');
-const coverDisplay=await import('../../entry/src/main/ets/features/common/BookCoverDisplay.ts');
-const local=await import('../../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const remote=await import('../../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const readingEvidence=await import('../../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const position=await import('../../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
-const content=await import('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const bookmarks=await import('../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
-const {ReadingOfflineGateway}=await import('../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
-const {MangaAdmissionGateway}=await import('../../entry/src/main/ets/features/manga/MangaAdmissionGateway.ts');
-const {MangaBookPresentation}=await import('../../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-export const {BookAcquisitionCoordinator}=await import('../../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
-export const {ReadingEntryPreparation}=await import('../../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const coverDisplay=await import('../../entry/src/main/ets/app/library/BookCoverDisplay.ts');
+const local=await import('../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+const remote=await import('../../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const {remoteReadingEntryKind}=await import('../../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts');
+const readingEvidence=await import('../../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+const position=await import('../../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts');
+const content=await import('../../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const bookmarks=await import('../../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
+const {ReadingOfflineGateway}=await import('../../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+const {MangaAdmissionGateway}=await import('../../entry/src/main/ets/features/manga/application/MangaAdmissionGateway.ts');
+const {MangaBookPresentation}=await import('../../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
+export const {BookAcquisitionCoordinator}=await import('../../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
+export const {ReadingEntryPreparation}=await import('../../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 export {readingEvidence,position,content};
 export const read=path=>readFileSync(resolve(root,'entry/src/main/ets',path),'utf8');
 export let currentRuntime;
@@ -47,12 +48,12 @@ function emit(path,name,deps,source=read(path)){
 const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...coverDisplay,...local,...remote,
  ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,MangaAdmissionGateway,MangaBookPresentation,hilog:{warn(){},error(){},info(){}}};
 const ReaderCoreGateway=emit('app/ReaderCoreGateway.ts','ReaderCoreGateway',common);
-const LocalBookImportGateway=emit('features/bookshelf/LocalBookImportGateway.ts','LocalBookImportGateway',{...common,ReaderCoreGateway});
-const BookshelfFlowGateway=emit('features/bookshelf/BookshelfFlowGateway.ts','BookshelfFlowGateway',{...common,ReaderCoreGateway,LocalBookImportGateway});
-const SourceGateway=emit('features/source/SourceGateway.ts','SourceGateway',common);
-const BookAcquisitionProjectionGateway=emit('app/BookAcquisitionProjectionGateway.ts','BookAcquisitionProjectionGateway',common);
-export const ReaderDirectoryHost=emit('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',common);
-const ReadingPrefetchHost=emit('features/reading/ReadingPrefetchHost.ts','ReadingPrefetchHost',common);
-export const compileHost=(source=read('features/reading/ReadingEntryHost.ts'),dependencies={})=>emit('features/reading/ReadingEntryHost.ts','ReadingEntryHost',
- {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,...dependencies},source);
+const LocalBookImportGateway=emit('features/bookshelf/application/LocalBookImportGateway.ts','LocalBookImportGateway',{...common,ReaderCoreGateway});
+const BookshelfFlowGateway=emit('features/bookshelf/application/BookshelfFlowGateway.ts','BookshelfFlowGateway',{...common,ReaderCoreGateway,LocalBookImportGateway});
+const SourceGateway=emit('features/source/application/SourceGateway.ts','SourceGateway',common);
+const BookAcquisitionProjectionGateway=emit('features/reading/application/BookAcquisitionProjectionGateway.ts','BookAcquisitionProjectionGateway',common);
+export const ReaderDirectoryHost=emit('features/reading/application/ReaderDirectoryHost.ts','ReaderDirectoryHost',common);
+const ReadingPrefetchHost=emit('features/reading/application/ReadingPrefetchHost.ts','ReadingPrefetchHost',common);
+export const compileHost=(source=read('features/reading/application/ReadingEntryHost.ts'),dependencies={})=>emit('features/reading/application/ReadingEntryHost.ts','ReadingEntryHost',
+ {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,remoteReadingEntryKind,...dependencies},source);
 export const ProductionHost=compileHost();

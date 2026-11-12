@@ -1,5 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
-import type { MangaPlatformObservation, MangaBodyDiagnosticState } from './MangaPlatformObservation';
+import type { MangaPlatformObservation, MangaBodyDiagnosticState } from '../platform/reading-resources/MangaPlatformObservation';
 
 export type MangaOfflineProbeScope = { sourceId: string; bookId: string };
 export type MangaProbeSelectionMode = 'offline' | 'reading';

@@ -2,12 +2,12 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions=Object.fromEntries([['input-progress','Shared pointer admission, trailing save/exit and programmatic edge ownership'],['image-anchor','Image reflow/row identity, native line and scalar anchor preservation'],['canonical-mode','Saved mode transition, obsolete stop and canonical containing-page measurement'],['data-source','Actual insertion notifications and intermediate full source identity']].map(([id,description])=>[id,{description,resources:[]}]));
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
-const { createReaderPageGestureState }=await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+const { createReaderPageGestureState }=await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
 const { withReaderProgressProducerFixture }=await import('./lib/reader-progress-producer-fixture.mjs');
 const {default:assert}=await import('node:assert/strict');
-const { observeReaderProgressOperation, reconcileReaderControlSelectionProgress }=await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+const { observeReaderProgressOperation, reconcileReaderControlSelectionProgress }=await import('../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
+const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress }=await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 if(selectedCase==='input-progress'||selectedCase==='image-anchor'){
 const InputClock = productionMotionMethods(new URL('ReaderPageInputClock.ts', reading), ['sample']);
@@ -360,7 +360,7 @@ for (const known of ['manifest', 'prefix', 'partial-prefix', 'cold', 'foreign-pr
 }
 console.log('continuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS');
 
-const { ReadingPaginationPrefix, ReadingPaginationIndex } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingPaginationPrefix, ReadingPaginationIndex } = await import('../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts');
 const gapKey = { sourceId: 'local', bookId: 'gap', chapterIndex: 0, contentVersion: '1', layoutSignature: 'exact-layout' };
 const gapPrefix = new ReadingPaginationPrefix(gapKey, { requestScalar: 0, startScalar: 5, endScalarExclusive: 100 });
 assert.equal(gapPrefix.admit({ requestScalar: 100, startScalar: 105, endScalarExclusive: 200 }), true);

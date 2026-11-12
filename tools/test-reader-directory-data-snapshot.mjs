@@ -77,8 +77,8 @@ console.log('PASS complete bookmark excerpt/proof snapshots, every scope field, 
 // Real FullDirectoryPanel methods: a proof-only change queues one safe
 // endpoint rebuild, preserving quote and click scope, without changing offset.
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const {projectReaderBookmarkRows,readerBookmarkLoadState}=await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
-const {projectReaderDirectoryEntries}=await import('../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts');
+const {projectReaderBookmarkRows,readerBookmarkLoadState}=await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
+const {projectReaderDirectoryEntries}=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts');
 const Panel=productionMotionMethods(new URL('FullDirectoryPanel.ets',base),['onEntriesChanged','flushDeferredMutations','rebuildProjection'],{
  sameReaderDirectoryData:same,snapshotReaderDirectoryData:copy,projectReaderBookmarkRows,readerBookmarkLoadState,projectReaderDirectoryEntries});
 let scheduled=0,progress=0.5,restoredOffset;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
 const {directoryFixture:fixture,deferred,until,session}=await import("./lib/reading-operation-durable-probe.mjs");
-const {makeIndex,settled,indexSource,pRecovery}=await import("./lib/reading-directory-sdk-consumer.mjs");
+const {makeIndex,settled,pRecovery}=await import("./lib/reading-directory-sdk-consumer.mjs");
 const checks=[];
 const tick=()=>new Promise(setImmediate);
 
@@ -65,7 +65,7 @@ if(key==='retained-actor'){
  const recovery=pRecovery(x.p,leaf,x.Recovery);const key=recovery.identities()[0];const generation=recovery.capturedGeneration(key);
  recovery.updateStateVars({recovery:{...x.idx.directoryRecovery(),bookmarks:{...x.idx.directoryRecovery().bookmarks,generation:generation+1}}});
  recovery.replayOnly(recovery.observers.map((fn,i)=>String(fn).includes("new ReaderRecoveryAction")&&!String(fn).includes("If.create")?i:-1).filter(i=>i>=0));assert.equal(actor.generation,generation);oldNative();assert.equal(f.writes().length,1);
- f.unset();x.idx.reconcileDirectoryOperation(generation,x.idx.directoryOperationPresentationId(),true);assert.equal(f.writes().length,1);
+ f.unset();x.idx.reconcileDirectoryOperation(generation,x.idx.directoryOperations.presentationId(x.idx.directoryOperationScene()),true);assert.equal(f.writes().length,1);
  checks.push('closed-reopened-old-physical-V1-retained-observer-and-unset-Runtime-reject');
 }
 }
@@ -82,14 +82,14 @@ if(key==='partial-delete'){
 if(key==='offline-physical-failure'){
 {
  const f=await fixture(true),x=makeIndex(f,{remote:true});f.options.status=true;f.options.imageFailure=true;
- x.idx.clearDirectoryBookOffline();await until(()=>f.writes().length===1);await settled(f);
+ x.idx.directoryOperations.clearOffline();await until(()=>f.writes().length===1);await settled(f);
  assert.equal(x.idx.offlineOperation.projection.receipt.confirmation,'confirmed');
  assert.equal(x.idx.offlineOperation.materializationFailure,'image cleanup failed','physical failure remains a private owner fact after the Core ACK');
  assert.match(x.idx.directoryRecovery().offline.message,/缓存操作已确认.*请稍后重试/);
  assert.doesNotMatch(JSON.stringify(x.idx.directoryRecovery()),/image cleanup failed|https?:|Cookie|PRIVATE/,
   'the public recovery excludes raw platform diagnostics while retaining confirmed receipt semantics');
  const leaf=x.render('ReaderFullDirectory');assert.equal(x.idx.directoryRecovery().offlineKind,'result');assert.equal(x.actions(leaf).length,0,'known physical failure keeps the original task result, no persistent pending actor');
- x.idx.reconcileOfflineOperation(x.idx.offlineOperation.generation,x.idx.directoryOperationPresentationId());await settled(f);
+ x.idx.reconcileOfflineOperation(x.idx.offlineOperation.generation,x.idx.directoryOperations.presentationId(x.idx.directoryOperationScene()));await settled(f);
  assert.equal(f.writes().length,1);assert.equal(f.calls.filter(c=>c.platform).length,1);assert.equal(x.idx.detailToc[0].level,2);
  checks.push('cache-Core-ACK-platform-image-failure-independent-native-pure-reconcile');
 }
@@ -97,8 +97,8 @@ if(key==='offline-physical-failure'){
 if(key==='offline-continuation'){
 {
  const f=await fixture(true),x=makeIndex(f,{remote:true});f.options.status=true;f.options.beforeMethod='cache.clear';
- x.idx.clearDirectoryBookOffline();await until(()=>f.writes().length===1);await settled(f);const original=JSON.parse(f.disk('cacheClear'));
- await f.offline.load(x.idx.offlineBinding(f.runtime,session));assert.equal(x.idx.directoryRecovery().canContinueOffline,true);
+ x.idx.directoryOperations.clearOffline();await until(()=>f.writes().length===1);await settled(f);const original=JSON.parse(f.disk('cacheClear'));
+ await f.offline.load(x.idx.directoryOperations.offlineBinding(f.runtime,session));assert.equal(x.idx.directoryRecovery().canContinueOffline,true);
  const leaf=x.render('ReaderFullDirectory');x.click(leaf,'继续原操作');await until(()=>x.idx.offlineOperation.projection.receipt.fact==='confirmedCurrent');
  assert.equal(f.writes().length,2);assert.deepEqual(f.writes()[1].params,original.params);checks.push('cache-original-continuation-uses-shared-domain-exact-head');
 }
@@ -107,11 +107,11 @@ if(key==='latest-owner'){
 for(const domain of ['bookmark','cache']){
  const f=await fixture(true),first=makeIndex(f,{remote:domain==='cache'}),gate=deferred();f.options.status=true;
  f.options.pauseMethod=domain==='bookmark'?'bookmark.create':'cache.clear';f.options.pauseAfterDispatch=true;f.options.gate=gate;
- if(domain==='bookmark')first.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else first.idx.clearDirectoryBookOffline();
+ if(domain==='bookmark')first.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else first.idx.directoryOperations.clearOffline();
  await until(()=>f.writes().length===1);first.idx.shelfReceiptRetired=true;
- const superseded=makeIndex(f,{remote:domain==='cache',mount:2});const staleRead=domain==='bookmark'?f.directory.load(superseded.idx.directoryBinding(f.runtime,superseded.idx.detailBook)):f.offline.load(superseded.idx.offlineBinding(f.runtime,session));
+ const superseded=makeIndex(f,{remote:domain==='cache',mount:2});const staleRead=domain==='bookmark'?f.directory.load(superseded.idx.directoryOperations.bookmarkBinding(f.runtime,superseded.idx.detailBook)):f.offline.load(superseded.idx.directoryOperations.offlineBinding(f.runtime,session));
  superseded.idx.shelfReceiptRetired=true;
- const current=makeIndex(f,{remote:domain==='cache',mount:3});const freshRead=domain==='bookmark'?current.idx.loadControlBookmarks('local','book',()=>true):f.offline.load(current.idx.offlineBinding(f.runtime,session));
+ const current=makeIndex(f,{remote:domain==='cache',mount:3});const freshRead=domain==='bookmark'?current.idx.loadControlBookmarks('local','book',()=>true):f.offline.load(current.idx.directoryOperations.offlineBinding(f.runtime,session));
  gate.resolve();await until(()=>(domain==='bookmark'?current.idx.directoryOperation:current.idx.offlineOperation)?.projection.receipt.fact==='confirmedCurrent');await Promise.all([staleRead,freshRead]);await settled(f);
  const state=domain==='bookmark'?current.idx.directoryOperation:current.idx.offlineOperation;
  assert.equal(state.projection.receipt.confirmation,'confirmed');assert.equal(state.projection.receipt.fact,'confirmedCurrent');assert.equal(f.writes().length,1);
@@ -136,11 +136,14 @@ if(key==='presentation-negative'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.create';x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});
  await until(()=>f.writes().length===1);await settled(f);await x.idx.loadControlBookmarks('local','book',()=>true);
- const oldId=x.idx.directoryOperationPresentationId(),g=x.idx.directoryOperation.generation;const before=f.calls.length;
+ const oldId=x.idx.directoryOperations.presentationId(x.idx.directoryOperationScene()),g=x.idx.directoryOperation.generation;const before=f.calls.length;
  x.idx.directoryPresentationGeneration++;x.idx.reconcileDirectoryOperation(g,oldId,true);assert.equal(f.calls.length,before);
- const permissive=indexSource.replace("this.route === 'directory' && identity === this.directoryOperationPresentationId() &&", "this.route === 'directory' &&");
- const mutant=makeIndex(f,{index:permissive});mutant.idx.directoryPresentationGeneration++;mutant.idx.reconcileDirectoryOperation(g,oldId,true);
+ const { directoryOperationsSource } = await import('./lib/reader-directory-operations-probe.mjs');
+ const permissive = directoryOperationsSource.replace('scene.directoryVisible && identity === this.presentationId(scene) &&', 'scene.directoryVisible &&');
+ assert.notEqual(permissive, directoryOperationsSource);
+ const mutant=makeIndex(f,{operationSource:permissive});mutant.idx.directoryPresentationGeneration++;mutant.idx.reconcileDirectoryOperation(g,oldId,true);
  await until(()=>f.writes().length===2);assert.equal(f.writes()[1].params.operationId,f.writes()[0].params.operationId,'negative control really consumes an obsolete physical intent');
+ await settled(f);
  checks.push('actual-presentation-guard-negative-control-observably-replays-old-intent');
 }
 }

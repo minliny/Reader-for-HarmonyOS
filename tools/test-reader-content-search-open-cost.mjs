@@ -15,16 +15,16 @@ const { stripTypeScriptTypes }=await import('node:module');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe }=await import('./lib/arkui-property-runtime-probe.mjs');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
-const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
-const motion=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
-const { splitReaderSearchSnippet }=await import('../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts');
+const geometry=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts');
+const motion=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+const { splitReaderSearchSnippet }=await import('../entry/src/main/ets/features/reading/presentation/ReaderSearchHighlight.ts');
 // This exact platform module contains only type imports; execute its real body.
 const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
-  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
+  readFileSync(new URL('../entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
 const { searchListDependencies, searchListMethods, searchListRowMembers, searchListLazyRequests }=await import('./lib/reader-content-search-list-probe.mjs');
 
-const file=new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets',import.meta.url);
+const file=new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets',import.meta.url);
 const baseline=selectedCase==='historical-benchmark';
 const source=readFileSync(baseline?new URL('../evidence/2026-09-14-physical-review/search-flow-implementation/ph90-search-content-before.ets',import.meta.url):file,'utf8');
 const legacyMembers=['resultsBody','loadMoreAction','resultRow','resultSnippet','resultTitle','currentResult','currentSnippet',
@@ -95,7 +95,7 @@ for(const count of [0,50,500,2000]){
 }
 if(selectedCase==='entry-zero-core'){
 // Entry and typing execute the actual LRE methods without searching Core.
-const Lre=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const Lre=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
   ['prepareControlPage','updateQuickSearchQuery','publishQuickSearchState','runQuickSearch','loadMoreQuickSearch'],
   {READER_CONTENT_SEARCH_PAGE_SIZE:50});
 const entry=Object.assign(new Lre(),{lifecycleToken:1,searchGeneration:0,quickSearchQuery:'',quickSearchState:{kind:'idle'},

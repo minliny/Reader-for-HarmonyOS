@@ -1,18 +1,28 @@
-import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import * as visual from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import * as directoryState from '../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import * as visual from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
-import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import { mangaDirectoryEntryRows } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import { mangaDirectoryEntryRows } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
+  READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import * as motionTiming from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import { SOURCE_CHROME_VISUAL } from '../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
+import { DIRECTORY_CHROME_VISUAL } from '../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
+const { motionAnimateParam } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
+  'MotionSpec.ets', { ...motionTiming, SOURCE_SWITCH_VISUAL: SOURCE_CHROME_VISUAL,
+    MANGA_DIRECTORY_VISUAL: DIRECTORY_CHROME_VISUAL,
+    Curve: new Proxy({}, { get: (_target, key) => `Curve.${String(key)}` }),
+    curves: { cubicBezierCurve: (...parameters) => ({ parameters }) } }, ['motionAnimateParam']);
+
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
 const names = ['row', 'presentation', 'scheme', 'currentChapterIndex', 'collapsedBranches', 'query', 'showContext',
   'interactionEnabled', 'chapterDownloadEnabled', 'branchControlsEnabled', 'onSelectEntry', 'onToggleBranch', 'onDownloadEntry',
   'fontScale', 'cellHeight', 'windowMetricsRevision', 'liveEntry', 'liveLabel', 'facts', 'color', 'current', 'expanded', 'downloadable', 'title', 'contextTitle', 'status', 'gridLabel', 'accessibility', 'activateEntry',
@@ -20,7 +30,7 @@ const names = ['row', 'presentation', 'scheme', 'currentChapterIndex', 'collapse
 const fonts = { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 };
 function mount(entries, options = {}, candidate = source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, ...directoryState, mangaDirectoryDisplay, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
+  const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, ...directoryState, mangaDirectoryDisplay, motionAnimateParam, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
   const selected = [], folded = [], downloaded = [];
   const presentation = mangaDirectoryPresentation(entries);
   Object.assign(owner, { row: mangaDirectoryEntryRows(entries, presentation)[0], presentation,
@@ -236,7 +246,7 @@ for (const [label, candidate, failure] of [
   const nodes = state.nodes(), title = nodes.find(node => node.type === 'Text' && node.create === '旧卷组');
   const count = nodes.find(node => node.type === 'Text' && String(node.create).includes('个可读条目'));
   const whole = nodes.find(node => node.type === 'Row' && node.onClick && node.accessibilityText);
-  const disclosure = nodes.find(node => node.type === 'Stack' && node.accessibilityText?.includes('子目录'));
+  const disclosure = nodes.find(node => node.type === 'Button' && node.accessibilityText?.includes('子目录'));
   const latest = [{ ...entries[0], title: '更新卷组' }, entries[1], { index: 31, title: '02', level: 2, navigable: true }];
   state.owner.presentation = mangaDirectoryPresentation(latest);
   state.owner.row = mangaDirectoryEntryRows(latest, state.owner.presentation)[0]; state.properties.flush();
@@ -252,7 +262,7 @@ for (const [label, candidate, failure] of [
 const rows = [{ index: 5, title: '外卷', level: 1, navigable: false },
   { index: 17, title: '1', level: 2, navigable: true }, { index: 41, title: '2', level: 2, navigable: true }];
 const presentation = mangaDirectoryPresentation(rows);
-const Page = productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url),
+const Page = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets', import.meta.url),
   ['identity', 'selectMangaEntry', 'rowIsCurrent', 'mangaEntryIsDisplayed'], { sameReaderDirectoryData });
 const selected = [];
 const page = Object.assign(new Page(), { sourceId: 's', bookId: 'b', mounted: true, admittedIdentity: 's\0b',
@@ -268,7 +278,7 @@ page.entries = rows.map(entry => entry.index === 41 ? { ...entry, title: '重新
 page.selectMangaEntry(rows[2], page.identity());
 assert.deepEqual(selected, [41], 'changed live catalog blocks old displayed facts before admission');
 
-const Detail = productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/LocalBookDetail.ets', import.meta.url),
+const Detail = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalBookDetail.ets', import.meta.url),
   ['selectMangaPreviewEntry']);
 const detail = Object.assign(new Detail(), { book: { sourceId: 's', bookId: 'b' }, removing: false,
   collapseIdentity: 's\0b', toc: rows, mangaPreviewRows: mangaDirectoryEntryRows(rows.slice(1), presentation),
@@ -320,7 +330,7 @@ function checkIntrinsicBody(candidate = source, exhaustive = true) {
       assert.ok(state.nodes().some(node => node.type === 'Text' && node.create === '卷甲'), 'search retains authoritative context');
     }
     if (name === 'readable parent horizontal') {
-      const fold = state.nodes().find(node => node.type === 'Stack' && node.accessibilityText?.includes('子目录'));
+      const fold = state.nodes().find(node => node.type === 'Button' && node.accessibilityText?.includes('子目录'));
       assert.equal(fold.width, 32); assert.equal(fold.height, 32);
       body.onClick(); fold.onClick(); assert.deepEqual(state.selected, [7]); assert.deepEqual(state.folded, [7]);
     }

@@ -2,14 +2,16 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import { readerFoundationTokens } from './reader-tokens-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import * as readerFonts from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import { ReaderInsetsVp } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-const read=name=>readFileSync(new URL(`../../entry/src/main/ets/features/common/${name}.ets`,import.meta.url),'utf8');
+import * as readerFonts from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
+import { ReaderInsetsVp, readerVisualSafeTop } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
+const read=(directory,name)=>readFileSync(new URL(`../../entry/src/main/ets/${directory}/${name}.ets`,import.meta.url),'utf8');
 const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`);
 const compilerOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -24,9 +26,19 @@ export function boundedMembers(source,componentName){
   return component.members.filter(m=>m.name).map(m=>m.name.getText(tree));
 }
 const stripped=source=>stripTypeScriptTypes(source).replace(/^export /gm,'');
-const tokenSource=read('ReaderTokens'),tokenNames=[...tokenSource.matchAll(/^export const (\w+)/gm)].map(m=>m[1]);
-const tokens=new Function('readerAppColor','readerThemeDefinition',`${stripped(tokenSource).replace(/^import[^;]+;\s*/gm,'')};return{${tokenNames.join(',')}};`)(readerAppColor,readerThemeDefinition);
-const specs=new Function('TextAlign','SOURCE_SWITCH_VISUAL',`${stripped(read('ReaderSurfaceSpecs')).replace(/^import[^;]+;\s*/gm,'')};return{resolvePopupSpec,resolveSheetSpec,resolveDialogSpec,resolveActionSheetSpec,resolveDrawerSpec};`)({Start:'TextAlign.Start',Center:'TextAlign.Center'},SOURCE_SWITCH_VISUAL);
+const surfaceResolvers = readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8');
+const { readerReadableFontScale, readerScaledControlHeight } = new Function('readerVisualSafeTop',
+  `${stripped(surfaceResolvers.replace(/^import[^;]+;\s*/gm, ''))};return { readerReadableFontScale, readerScaledControlHeight };`)(readerVisualSafeTop);
+export function readerSurfaceSpecsForProbe(metrics = { densityPixels: 1 }) {
+  const textAlign = { Start: 'TextAlign.Start', Center: 'TextAlign.Center' };
+  const { readerWindowMetrics } = readerWindowEnvironmentForProbe(() => metrics);
+  const implementation = stripped(read('ui/surfaces','ReaderSurfaceSpecs')).replace(/^import[^;]+;\s*/gm, '');
+  return new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', 'readerWindowMetrics', 'readerAppColor', 'ShadowType',
+    `${implementation};return { resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveActionSheetSpec,
+      resolveDrawerSpec, readerSurfaceElevation, readerRaisedSurfaceSpec, readerHeaderVeilMaterial, readerHeaderVeilBorder };`)(
+    textAlign, SOURCE_SWITCH_VISUAL, readerWindowMetrics, readerAppColor, { COLOR: 'ShadowType.COLOR' });
+}
+const specs = readerSurfaceSpecsForProbe();
 // Finite native color port for the actual per-book SVG stroke actor. Channel
 // values come from the registry; this records the native constructor inputs,
 // and does not simulate SVG rasterization or claim device pixel acceptance.
@@ -46,19 +58,24 @@ function classOf(source,name,deps){const start=source.indexOf(`export class ${na
  * unchanged. Native scheduling/removal/layout/focus are explicitly outside proof. */
 export function boundedSurfaceSdk(options={}){
   const properties=options.properties??createArkUIPropertyRuntimeProbe();
-  const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderPageState','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderActionMenuSurface','ReaderActionSheetContent'].map(n=>[n,options[n]??read(n)]));
+  const childSources=Object.fromEntries([
+    ...['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderPageState'].map(name=>[name,options[name]??read('ui/feedback',name)]),
+    ...['ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderActionMenuSurface']
+      .map(name=>[name,options[name]??read('ui/surfaces',name)]),
+  ]);
   const typography = {...readerTypographyRoles,...options.typographyRoles};
   const ReaderMenuActionView=classOf(childSources.ReaderActionMenuSurface,'ReaderMenuActionView',{});
   const nativePan = options.panGesture ?? new Proxy({}, {get:()=>()=>{}});
   const nativeGesture = new Proxy({}, {get:()=>()=>{}});
-  const deps={...properties.sdk,...specs,...tokens,...typography,...readerFonts,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
+  const deps={...properties.sdk,...specs,...readerFoundationTokens,...typography,...readerFonts,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
+    readerReadableFontScale,readerScaledControlHeight,
     ColorMetrics:boundedColorMetrics,ColorFilter:BoundedColorFilter,
     PanGesture:nativePan, PanDirection:{Vertical:'vertical'}, GesturePriority:{Low:'low'},
     globalThis:{Gesture:nativeGesture,PanGesture:nativePan},
-    ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor,ReaderInsetsVp}),
+    ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor,ReaderInsetsVp,
+      HitTestMode:{Default:'HitTestMode.Default'},Color:{Transparent:'Color.Transparent'}}),
     ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...typography}),
     ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
-    ReaderActionSheetAction:classOf(childSources.ReaderActionSheetContent,'ReaderActionSheetAction',{ReaderMenuActionView}),
   };
   const hooks={...properties.hooks,childSources,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;

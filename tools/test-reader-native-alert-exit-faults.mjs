@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 let diagnosticFails = false;
-const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['finishExit'], { hilog: { error() { if (diagnosticFails) throw Error('diagnostic unavailable'); }, warn() {} } });
 for (const failure of ['none', 'duration-handoff', 'progress-handoff', 'tts']) {
   for (const diagnostics of [false, true]) {

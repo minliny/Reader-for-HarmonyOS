@@ -4,13 +4,13 @@ import {
   backReaderControlHostSession, readerControlHostCloseCommitted, readerControlHostClosing,
   readerControlHostInputEnabled, readerControlHostPage, readerControlHostVisible,
   setReaderControlHostPage,
-} from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
 import {
   advanceReaderControlSession, createReaderControlSessionState, dismissReaderControlSession,
   holdReaderControlSession, openReaderControlSession, releaseReaderControlSessionHold,
   retargetReaderControlTransition, sampleReaderControlSession, setReaderControlDirectoryTab,
   trackReaderControlTransition,
-} from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 
 const timing = { showDurationMs: 420, dismissDurationMs: 360,
   morphDurationMs: 1150, navigateDurationMs: 0 };
@@ -95,7 +95,7 @@ assert.deepEqual(sampleReaderControlSession(state), midFrame,
 assert.equal(state.transition.durationMs, 1150);
 
 // Wiring checks are structural only; they do not execute ArkUI or prove pixels.
-const host = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+const host = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 assert.match(host, /@State @Watch\('onControlSessionChanged'\) private controlSession:/);
 assert.match(host, /controlSession: \$controlSession/);
 assert.match(host, /inputEnabled: this\.isControlInputEnabled\(\)/);

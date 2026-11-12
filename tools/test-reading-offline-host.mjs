@@ -4,10 +4,10 @@ async function run(id){
 
 const { registerHooks }=await import('node:module');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingOfflineHost}=await import(id.startsWith('sdk-') ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
-const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
-const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
-const {ReadingOfflineMaterializationError}=await import('../entry/src/main/ets/features/reading/ReadingOfflineContract.ts');
+const {ReadingOfflineHost}=await import(id.startsWith('sdk-') ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/application/ReadingOfflineHost.ts');
+const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
+const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+const {ReadingOfflineMaterializationError}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts');
 const clone=structuredClone,tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:()=>resolve()};};
 function fixture(){let route=true,owner=true,entries=[{index:0,title:'Chapter',level:2,downloadState:'missing',bookmarks:[{time:4}]}];const delivered=[];

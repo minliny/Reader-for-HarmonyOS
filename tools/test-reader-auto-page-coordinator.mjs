@@ -1,6 +1,6 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import assert from 'node:assert/strict';
-import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
+import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ui/ReaderAutoPageCoordinator.ts';
 
 function fixture() {
   let now = 10000, serial = 0;

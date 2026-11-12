@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { ReaderTtsAudioSessionLease } from '../entry/src/main/ets/app/ReaderTtsAudioSessionLease.ts';
+import { ReaderTtsAudioSessionLease } from '../entry/src/main/ets/platform/tts/ReaderTtsAudioSessionLease.ts';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => {resolve=a;reject=b;}); return {promise,resolve,reject}; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -60,7 +60,7 @@ for (const ending of ['stop','close','successor']) {
 // Exercise the exact production Harmony adapter with a deferred AudioKit
 // driver. This is code-side native-call ordering, not device audio acceptance.
 {
-  const source=readFileSync(new URL('../entry/src/main/ets/app/HarmonyTtsAudioSessionLease.ts',import.meta.url),'utf8')
+  const source=readFileSync(new URL('../entry/src/main/ets/platform/tts/HarmonyTtsAudioSessionLease.ts',import.meta.url),'utf8')
     .replace(/^import .*;\n/gm,'').replace('export const harmonyTtsAudioSessionLease','const harmonyTtsAudioSessionLease');
   const calls=[];
   const manager={setAudioSessionScene:value=>calls.push(['scene',value]),async activateAudioSession(value){calls.push(['native',value.concurrencyMode]);},async deactivateAudioSession(){calls.push(['release']);}};

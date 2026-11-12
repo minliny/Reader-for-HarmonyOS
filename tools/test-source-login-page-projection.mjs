@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { sourceLoginPageUrl } from '../entry/src/main/ets/app/SourceLoginPageProjection.ts';
-import { httpUrlHostname, isPrivateNetworkTarget } from '../entry/src/main/ets/app/HttpTransportPolicy.ts';
+import { httpUrlHostname, isPrivateNetworkTarget } from '../entry/src/main/ets/platform/network/HttpTransportPolicy.ts';
 
 const app = new URL('../entry/src/main/ets/app/', import.meta.url);
 const read = name => readFileSync(new URL(name, app), 'utf8');
@@ -22,7 +22,7 @@ assert.equal(tree.parseDiagnostics.length, 0);
 const declaration = tree.statements.find(node => node.name?.text === 'ReaderRuntimeOwner');
 const method = declaration.members.find(node => node.name?.text === 'openSourceLogin');
 assert.ok(method, 'production Owner login method must exist');
-const executorCode = stripTypeScriptTypes(read('ArkWebExecutor.ts')
+const executorCode = stripTypeScriptTypes(read('../platform/network/ArkWebExecutor.ts')
   .replace(/^import[\s\S]*?;\n/gm, '')).replace(/^export /gm, '');
 const generations = [];
 const Executor = new Function('httpUrlHostname', 'isPrivateNetworkTarget', 'CookieSessionStore',

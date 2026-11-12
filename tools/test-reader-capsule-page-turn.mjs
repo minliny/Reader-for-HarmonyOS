@@ -5,18 +5,19 @@ async function runCase(selectedCase) {
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
 const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
 const { readFileSync, writeFileSync, mkdtempSync, rmSync } = await import('node:fs');
-const { createRequire } = await import('node:module');
+const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { execFileSync } = await import('node:child_process');
 const { tmpdir } = await import('node:os');
 const { join } = await import('node:path');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
-const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const pageGesture = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
-const { ReaderPageInputClock } = await import('../entry/src/main/ets/features/reading/ReaderPageInputClock.ts');
-const { completeReaderPageGestureSettlement } = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const pageGesture = await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
+const { ReaderPageInputClock } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageInputClock.ts');
+const { completeReaderPageGestureSettlement } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
 
 
 let historyRoot;
@@ -30,12 +31,12 @@ const scope = historical ? 'visibility' : selectedCase;
 const baseline = historical ? process.env.READER_CAPSULE_BASELINE : undefined;
 const sourceOverride = historical ? process.env.READER_CAPSULE_SOURCE : undefined;
 if (historical) assert.ok(baseline || sourceOverride, 'historical case requires an explicit diagnostic ref or source; never a release input');
-let file = sourceOverride ?? new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+let file = sourceOverride ?? new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 if (baseline && !sourceOverride) {
   historyRoot = mkdtempSync(join(tmpdir(), 'reader-ph109-'));
   file = join(historyRoot, 'LocalReadingExperience.ets');
   writeFileSync(file, execFileSync('git',
-    ['show', `${baseline}:entry/src/main/ets/features/reading/LocalReadingExperience.ets`],
+    ['show', `${baseline}:entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets`],
     { cwd: new URL('..', import.meta.url) }));
 }
 const source = readFileSync(file, 'utf8');
@@ -226,9 +227,16 @@ if (scope === 'pointer-routing') {
 // pointer seam verifies emitted attributes/callback dispatch, not native hit
 // testing, compositor order, layout or device interaction acceptance.
 check('SDK capsule parent ownership, real Stage click and Host dispatch', () => {
-  const reading = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
+  const reading = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/ui/${name}.ets`, import.meta.url), 'utf8');
   const panelText = reading('ReaderControlPanel'), stageText = reading('ReaderSessionLaunchStage');
   const rawText = reading('ReaderPageInteractionLayer'), capsuleText = reading('ReaderSessionCapsule');
+  const capsuleTree = ts.createSourceFile(virtualFilePath('ReaderSessionCapsule.ets'), capsuleText,
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const frameSource = capsuleTree.statements.map(statement => statement.getText(capsuleTree))
+    .filter(value => /^export (?:const READER_SESSION_CAPSULE_(?:RADIUS|SHADOW)\b|class ReaderSessionCapsuleFrame\b)/.test(value))
+    .join('\n');
+  const capsuleFrame = new Function('readerAppColor',
+    `${stripTypeScriptTypes(frameSource.replace(/^export /gm, ''))}; return { ReaderSessionCapsuleFrame, READER_SESSION_CAPSULE_RADIUS };`)(readerAppColor);
   let panelStatement, panelCall;
   function locate(node) {
     if (ts.isExpressionStatement(node) && node.getText(tree).startsWith('ReaderControlPanel({')) panelStatement = node;
@@ -244,20 +252,22 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const Parent = createReaderBuilderProbe(`@Component struct CapsuleParentProbe { build() { ${parentText} } }`, ['build'],
     { ReaderControlPanel: CapsuleChild }, { childSources: { ReaderControlPanel: panelText } }).Component;
   const Raw = createReaderBuilderProbe(rawText, ['build']).Component;
-  const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent', 'sourceBlurContent', 'effectiveSurfaceColor', 'effectiveSurfaceBorderColor',
+  const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent', 'sourceBlurContent',
     'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], {
+    ...capsuleFrame,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
-  const Static = createReaderBuilderProbe(capsuleText, ['build', 'finalWidth', 'effectiveSurfaceColor', 'effectiveSurfaceBorderColor',
+  const Static = createReaderBuilderProbe(capsuleText, ['build', 'finalWidth',
     'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength'], {
+    ...capsuleFrame,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     READER_SESSION_CAPSULE_HEIGHT: 24, readerSessionCapsuleMinimumWidth: type => type === 'tts' ? 94 : 96,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { componentName: 'ReaderSessionCapsule', childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
   const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
   let pointerTime = 1000;
-  const Pointer = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets', import.meta.url), [
+  const Pointer = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets', import.meta.url), [
     'handleTouch', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
     'resetRawPointer', 'reportManualInteraction', 'isPageOwner', 'resolveDeferredSegment', 'cancelPan', 'handleRawTap', 'tapOnlyNow',
     'pointerForEvent', 'changedPointerForEvent', 'ownPointer', 'eventViewportWidth', 'eventViewportHeight',
@@ -344,6 +354,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onToggle: () => host.toggleSessionCapsule() });
       stage.initialRender();
       const actor = [...stage.nodes.values()].find(node => node.onClick);
+      assert.equal(actor.type, 'Button', 'the launch proxy has one native action actor');
       assert.equal(actor.hitTestBehavior, 'HitTestMode.Block'); assert.equal(actor.responseRegion.height, launch.sample.proxyHeight + 20);
       assert.equal(actor.position.x, launch.sample.proxyLeft); assert.equal(actor.position.y, launch.sample.proxyTop);
       // One admitted pointer at this actual actor dispatches its actual click.
@@ -388,6 +399,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onMeasured() {}, onToggle: () => host.toggleSessionCapsule() });
     actorOwner.initialRender();
     const actor = [...actorOwner.nodes.values()].find(node => node.onClick);
+    assert.equal(actor.type, 'Button', `${label}: pointer barrier and click share the native actor`);
     exclusiveTap(actor, label); assert.deepEqual(calls, ['pause'], `${label}: recognizer callback reaches real Host once`);
     for (const terminal of [TouchType.Up, TouchType.Cancel]) {
       const pointer = rawPointer();

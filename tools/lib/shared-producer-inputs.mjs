@@ -20,14 +20,17 @@ export function verifySharedProducerInputCalls(producerSource, consumerSource, {
     if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) && node.expression?.getText(consumer) === component) {
       const props = node.arguments?.[0];
       assert.ok(props && ts.isObjectLiteralExpression(props), `${component}: explicit finite Props required`);
+      const values = new Map();
       const keys = props.properties.map(property => {
         assert.ok(!ts.isSpreadAssignment(property), `${component}: spread cannot hide unknown inputs`);
         const name = property.name?.getText(consumer);
         assert.ok(fields.has(name), `${component}: illegal shared input ${name}`);
+        assert.ok(ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property), `${component}: explicit input ${name}`);
+        values.set(name, ts.isPropertyAssignment(property) ? property.initializer.getText(consumer) : name);
         return name;
       });
       assert.equal(new Set(keys).size, keys.length, `${component}: duplicate input`);
-      calls.push({ line: consumer.getLineAndCharacterOfPosition(node.getStart(consumer)).line + 1, keys });
+      calls.push({ line: consumer.getLineAndCharacterOfPosition(node.getStart(consumer)).line + 1, keys, values });
     }
     ts.forEachChild(node, visit);
   };

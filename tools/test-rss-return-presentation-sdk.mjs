@@ -10,11 +10,11 @@ const {deferred,until} = await import('./lib/rules-mutation-durable-probe.mjs');
 const {rssRecoverySurfaceSdk} = await import('./lib/rss-recovery-surface-sdk-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {actualBookshelfOperationTypes,actualBookshelfHostField} = await import('./lib/bookshelf-operation-owner-probe.mjs');
-const {actualSourceManagementTypes,actualSourceManagementHostField} = await import('./lib/source-management-owner-probe.mjs');
+const {actualSourceJourneyTypes} = await import('./lib/source-management-owner-probe.mjs');
 const {actualGeneralSettingsTypes,actualGeneralSettingsHostField} = await import('./lib/general-settings-owner-probe.mjs');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const {projectOperationFacts} = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
-const {RssPresentationProjection} = await import('../entry/src/main/ets/features/rss/RssPresentationProjection.ts');
+const {RssPresentationProjection} = await import('../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts');
 const {isReaderProductSurfaceEnabled} = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
 
 
@@ -33,7 +33,7 @@ const pageMembers=['appThemeScheme','presentation','isTablet','activeMode','orig
  'onSettingsRequested','onDiscoverRequested','managePill'];
 
 function composition(f,enabled=true){
- const sdk=rssRecoverySurfaceSdk(),pageSource=read('features/rss/RssPage.ets');
+ const sdk=rssRecoverySurfaceSdk(),pageSource=read('features/rss/ui/RssPage.ets');
  sdk.childSources.RssPage=pageSource;
  const Page=createReaderBuilderProbe(pageSource,pageMembers,{...sdk.deps,projectOperationFacts},sdk.hooks).Component;
  const p=sdk.consumer(indexSource,indexMethods,{ReaderRuntimeOwner:f.Runtime,RssOrchestrator:f.Orchestrator,RssPage:Page,
@@ -45,7 +45,7 @@ function composition(f,enabled=true){
   rssFeedRead:projectOperationFacts({phase:'idle'}),selectedRssItems:[],nativeAlertOwner:new ReaderNativeAlertOwner()});
  p.bookshelfHost=actualBookshelfHostField(p,actualBookshelfOperationTypes({ReaderRuntimeOwner:f.Runtime}).Host,{setOrCreate(){}});
  p.settingsHost=actualGeneralSettingsHostField(p,actualGeneralSettingsTypes({ReaderRuntimeOwner:f.Runtime}).SettingsHost);
- p.sourceHost=actualSourceManagementHostField(p,actualSourceManagementTypes({ReaderRuntimeOwner:f.Runtime}).SourceHost);
+ p.sourceJourney=new (actualSourceJourneyTypes({ReaderRuntimeOwner:f.Runtime}).SourceJourneyPresentation)();
  let rendered=false;const painted=new WeakSet();
  function paint(){
   if(rendered)p.replay();else{p.rssPageContent();rendered=true;}

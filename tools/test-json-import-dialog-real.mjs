@@ -11,13 +11,13 @@ const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-envir
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
-const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
 const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
-  readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+  readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
@@ -26,11 +26,11 @@ const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const surfaceSource = readFileSync(file('features/common/ReaderDialogSurface.ets'), 'utf8');
-const specSource = readFileSync(file('features/common/ReaderSurfaceSpecs.ets'), 'utf8');
-const jsonSource = readFileSync(file('features/common/JsonImportDialog.ets'), 'utf8');
+const surfaceSource = readFileSync(file('ui/surfaces/ReaderDialogSurface.ets'), 'utf8');
+const specSource = readFileSync(file('ui/surfaces/ReaderSurfaceSpecs.ets'), 'utf8');
+const jsonSource = readFileSync(file('app/composition/JsonImportDialog.ets'), 'utf8');
 const indexSource = readFileSync(file('pages/Index.ets'), 'utf8');
-const selectorSource = readFileSync(file('features/bookshelf/BookshelfGroupSelector.ets'), 'utf8');
+const selectorSource = readFileSync(file('features/bookshelf/ui/BookshelfGroupSelector.ets'), 'utf8');
 const specTree = ts.createSourceFile(virtualFilePath('JsonImportSpecProbe.ets'), specSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 assert.equal(specTree.parseDiagnostics.length, 0, 'production spec registry parses');

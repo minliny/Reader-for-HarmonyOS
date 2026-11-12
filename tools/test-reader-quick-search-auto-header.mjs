@@ -15,8 +15,8 @@ async function case_quick_search() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const search = await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const search = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const read = name => readFileSync(new URL('../entry/src/main/ets/features/reading/' + name + '.ets', import.meta.url), 'utf8');
 const near = (a, b, why = '') => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} vs ${b}`);
 const { owner } = createReaderBuilderProbe(read('ReaderControlSearchContent'),
@@ -61,9 +61,9 @@ async function case_auto_page_header() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const playback = await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const actors = await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
-const scroll = await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
+const playback = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const actors = await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+const scroll = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
 const read = name => readFileSync(new URL('../entry/src/main/ets/features/reading/' + name + '.ets', import.meta.url), 'utf8');
 const near = (a, b, why = '') => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} vs ${b}`);
 for (const sourceOnly of ['none', 'quick']) {

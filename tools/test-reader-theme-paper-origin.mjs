@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function mapping() {
- const {readerThemeDefinition}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
- const {readerAppearanceThemeStyle,readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
- const {readerControlAppearanceThemeSwatch}=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts');
+ const {readerThemeDefinition}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+ const {readerAppearanceThemeStyle,readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+ const {readerControlAppearanceThemeSwatch}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceStyle.ts');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const source=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
  const Surface=productionMotionMethods(source('ReadingSurface.ets'),['themeStyle'],{readerAppearanceThemeStyle});
@@ -28,7 +28,7 @@ async function documentedPalette() {
  assert.ok(record,'the documented optional palette must have a current normative record');
  const colors=Object.fromEntries([...record.matchAll(/\b(day|warm|paper|green)\s+(#[0-9A-Fa-f]{6})/g)].map(([,id,color])=>[id,color.toUpperCase()]));
  assert.deepEqual(Object.keys(colors),['day','warm','paper','green']);
- const {readerThemeDefinition}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+ const {readerThemeDefinition}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
  for(const[id,color]of Object.entries(colors))for(const role of ['paperStart','paperEnd','swatch','statusBackground','paperBack'])assert.equal(readerThemeDefinition(id)[role],'#FF'+color.slice(1),id+' '+role);
  console.log(JSON.stringify({evidence:'specification-record-only',source:'docs/READER_REPAIR_SPEC.md:PH67 已批准基色',scope:'four light palettes/five background roles',unresolved:'Referenced PH67-applied.md and original approval are not supplied; no new user acceptance claimed'}));
 }

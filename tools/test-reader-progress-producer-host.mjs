@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ReaderProgressProducerHost } from '../entry/src/main/ets/features/reading/ReaderProgressProducerHost.ts';
+import { ReaderProgressProducerHost } from '../entry/src/main/ets/features/reading/application/ReaderProgressProducerHost.ts';
 import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};

@@ -1,347 +1,409 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"projection": {"description": "实际3000 canonical目录过滤/排序/identity/scroll意图", "resources": []}, "sdk-callbacks": {"description": "实际目录Builder→tree/flat→row current/retired业务回调", "resources": []}, "measured-frame": {"description": "实际public host vp-string面积与header delta保目录actor", "resources": []}, "manga-header": {"description": "实际漫画目录header asymmetric safe-frame", "resources": []}, "rules-eligibility": {"description": "实际持久format/capability准入及identity撤销", "resources": []}};
+const definitions = {
+  projection: {description: '实际3000 canonical目录过滤/排序/identity/scroll意图', resources: []},
+  'sdk-callbacks': {description: '实际目录Builder→tree/flat→row current/retired业务回调', resources: []},
+  'measured-frame': {description: '实际public host vp-string面积与header delta保目录actor', resources: []},
+  'manga-header': {description: '实际漫画目录header asymmetric safe-frame', resources: []},
+  'rules-eligibility': {description: '实际持久format/capability准入及identity撤销', resources: []},
+};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
 }
+
 async function runSelectedCase(selectedCase) {
+  const {default: assert} = await import('node:assert/strict');
+  const {readFileSync} = await import('node:fs');
+  const {createRequire, registerHooks} = await import('node:module');
+  const {resolveEtsLoaderRoot} = await import('./lib/tool-environment.mjs');
+  const {boundedMembers, boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
+  registerHooks({resolve(specifier, context, next) {
+    try { return next(specifier, context); }
+    catch (error) {
+      if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(specifier+'.ts', context);
+      throw error;
+    }
+  }});
+  const base = new URL('../entry/src/main/ets/', import.meta.url);
+  const read = path => readFileSync(new URL(path, base), 'utf8');
+  const load = path => import(new URL(path, base));
+  const [positioning, markers, snapshots, hierarchy, bookmarkProjection, geometry, frame, scroll,
+    measurements, metricsApi, horizontal, widthClass, directoryProjection, navigation,
+    bookmarkGeometry, recovery, mangaState, mangaVisual, mangaDisplay, mangaLayout, mangaProjection] =
+    await Promise.all([
+      load('features/reading/ui/ReaderControlListPositioning.ts'), load('features/reading/presentation/ReaderDirectoryMarkerState.ts'),
+      load('features/reading/presentation/ReaderDirectoryDataSnapshot.ts'), load('features/reading/ui/ReaderDirectoryHierarchy.ts'),
+      load('features/reading/presentation/ReaderBookmarkProjection.ts'), load('ui/layout/ReaderPageGeometry.ts'),
+      load('ui/layout/ReaderFrameStyle.ts'), load('ui/layout/ReaderScrollLayout.ts'), load('ui/layout/ReaderMeasurements.ts'),
+      load('ui/foundation/ReaderWindowMetrics.ts'), load('ui/layout/SurfaceHorizontalGeometry.ts'),
+      load('ui/foundation/ReaderWidthClass.ts'), load('features/reading/presentation/ReaderDirectoryProjection.ts'),
+      load('features/reading/application/ReaderDirectoryNavigation.ts'), load('features/reading/ui/ReaderControlBookmarkGeometry.ts'),
+      load('features/reading/presentation/ReadingDirectoryRecovery.ts'), load('features/manga/ui/MangaDirectoryState.ts'),
+      load('features/manga/ui/MangaDirectoryVisual.ts'), load('features/manga/ui/MangaDirectoryDisplay.ts'),
+      load('features/manga/ui/MangaDirectoryLayout.ts'), load('features/manga/presentation/MangaDirectoryPresentation.ts'),
+    ]);
 
+  const fullSource = read('features/reading/ui/ReaderFullDirectory.ets');
+  const panelSource = read('features/reading/ui/FullDirectoryPanel.ets');
+  const mangaSource = read('features/reading/ui/BookDirectoryPage.ets');
+  const destinationSource = read('features/reading/ui/ReaderDirectoryDestination.ets');
+  const pending = [], scrollIntents = [], scrollCommands = [];
+  const Edge = {Top: 'top', Bottom: 'bottom'};
+  const metrics = metricsApi.createDefaultReaderWindowMetrics();
+  metrics.windowRect.width = 390;
+  metrics.windowRect.height = 844;
+  metrics.systemInsets = new metricsApi.ReaderInsetsVp(32, 48, 24, 34);
+  const entries = Array.from({length: 3000}, (_, ordinal) => ({
+    index: ordinal * 2 + 1, title: 'Chapter ' + (ordinal + 1), navigable: ordinal !== 2,
+    downloadState: 'missing', bookmarks: ordinal === 1 ? [{time: 10}] : [],
+  }));
+  class Port {
+    constructor(owner, params, _storage, id) {
+      Object.assign(this, {owner, params, id, nodes: new Map(), children: new Map()});
+    }
+    updateStateVars(params) { Object.assign(this.params, params); }
+  }
+  class FullPort extends Port {}
+  class MangaPort extends Port {}
+  class Scroller {
+    constructor() { this.commands = []; }
+    scrollEdge(edge) { this.commands.push(edge); }
+    scrollTo(target) { this.commands.push(target); }
+    currentOffset() { return {xOffset: 0, yOffset: 0}; }
+  }
+  const testRuntime = {supportsCoreCapability: () => false};
+  const deps = {
+    ...positioning, ...markers, ...snapshots, ...hierarchy, ...bookmarkProjection,
+    ...geometry, ...frame, ...scroll, ...measurements, ...metricsApi, ...horizontal, ...widthClass,
+    ...directoryProjection, ...navigation, ...bookmarkGeometry, ...recovery,
+    ...mangaState, ...mangaVisual, ...mangaDisplay, ...mangaLayout, ...mangaProjection,
+    visual: mangaVisual.MANGA_DIRECTORY_VISUAL, Edge, Scroller,
+    ReaderWindowCoordinator: {metrics: () => metrics},
+    ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => testRuntime),
+    registerReaderFonts() {}, prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true,
+    LengthMetrics: {vp: value => ({value})}, ScrollAlign: {START: 'start'},
+    BOOKMARK_ROW_HEIGHT: Number(read('features/reading/ui/ReaderBookmarkRow.ets').match(/BOOKMARK_ROW_HEIGHT = (\d+)/)[1]),
+    readerDirectorySignalScrollIntent: identity => scrollIntents.push(identity),
+    readerDirectorySignalScrollCommand: identity => scrollCommands.push(identity),
+    setTimeout(action) { const timer = {action, cancelled: false}; pending.push(timer); return timer; },
+    clearTimeout(timer) { if (timer && typeof timer === 'object') timer.cancelled = true; },
+    fullDirectoryBackGeneration: 0, bookDirectoryBackGeneration: 0,
+    DirectoryRulesFocusFrame: class { constructor(action) { this.action = action; } },
+    uiContext: {getFont: () => ({}), postFrameCallback: frame => pending.push({action: frame.action})},
+    consumeReaderControlKeyboardBack: () => false, hilog: {warn() {}, error() {}}, inputMethod: {},
+    ReaderDirectoryDestination: Port, ReaderFullDirectory: FullPort, BookDirectoryPage: MangaPort,
+    ReaderDirectoryNavigationSurface: Port, ReaderDirectoryList: Port, ReaderDirectoryToolbar: Port,
+    FullDirectoryPanel: Port, ReaderDirectoryRules: Port, ReaderDirectoryRecoverySurface: Port,
+    PageBackBar: Port, MangaDirectoryCurrentFooter: Port, MangaDirectoryEntryRow: Port, ReaderMangaDownloadPopup: Port,
+  };
+  const sdk = boundedSurfaceSdk({allowEmptyBranchAdmission: true});
+  for (const [name, path] of Object.entries({
+    ReaderDirectoryDestination: 'features/reading/ui/ReaderDirectoryDestination.ets',
+    ReaderFullDirectory: 'features/reading/ui/ReaderFullDirectory.ets',
+    BookDirectoryPage: 'features/reading/ui/BookDirectoryPage.ets',
+    FullDirectoryPanel: 'features/reading/ui/FullDirectoryPanel.ets',
+    ReaderDirectoryNavigationSurface: 'features/reading/ui/ReaderDirectoryNavigationSurface.ets',
+    ReaderDirectoryList: 'features/reading/ui/ReaderDirectoryList.ets',
+    ReaderDirectoryToolbar: 'features/reading/ui/ReaderDirectoryToolbar.ets',
+    ReaderDirectoryChapterRow: 'features/reading/ui/ReaderDirectoryChapterRow.ets',
+    ReaderBookmarkErrorState: 'features/reading/ui/ReaderBookmarkErrorState.ets',
+    ReaderBookmarkLoadingState: 'features/reading/ui/ReaderBookmarkLoadingState.ets',
+    ReaderBookmarkEmptyState: 'features/reading/ui/ReaderBookmarkEmptyState.ets',
+    ReaderBookmarkList: 'features/reading/ui/ReaderBookmarkList.ets',
+    ReaderDirectoryRules: 'features/reading/ui/ReaderDirectoryRules.ets',
+    ReaderDirectoryRecoverySurface: 'features/reading/ui/ReaderDirectoryRecoverySurface.ets',
+    PageBackBar: 'ui/chrome/PageBackBar.ets',
+    MangaDirectoryCurrentFooter: 'features/manga/ui/MangaDirectoryCurrentFooter.ets',
+    MangaDirectoryEntryRow: 'features/manga/ui/MangaDirectoryEntryRow.ets',
+    ReaderMangaDownloadPopup: 'features/manga/ui/ReaderMangaDownloadPopup.ets',
+  })) sdk.hooks.childSources[name] = read(path);
+  const syntax = createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/lib/validate_ui_syntax.js');
+  syntax.builderParamObjectCollection.set('ReaderDirectoryNavigationSurface', new Set(['fallbackBuilder']));
+  syntax.builderParamObjectCollection.set('ReaderDirectoryList', new Set(['rowBuilder']));
+  if (selectedCase === 'sdk-callbacks') {
+    const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+    const chapterSource = read('features/reading/ui/ReaderDirectoryChapterRow.ets');
+    deps.ReaderDirectoryChapterRow = createReaderBuilderProbe(chapterSource, boundedMembers(chapterSource),
+      {...sdk.deps, ...deps}, sdk.hooks).Component;
+  }
 
-const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const directoryState = await import('../entry/src/main/ets/features/manga/MangaDirectoryState.ts');
-const { mangaDirectoryDisplay } = await import('../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts');
-const { mangaDirectoryEntryRows } = await import('../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts');
-const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
-const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } = await import('../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts');
-const {default: assert} = await import('node:assert/strict');
-const { readFileSync } = await import('node:fs');
-const { createRequire, registerHooks } = await import('node:module');
-const { fileURLToPath } = await import('node:url');
-const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { projectReaderDirectoryEntries } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts');
-const { snapshotReaderDirectoryData, sameReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts');
-const { SurfaceWidthSpec, SurfaceHorizontalFrame, resolveHorizontalFrame } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
-const directoryVisual = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
-const { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+  function flush() {
+    let turns = 0;
+    while (pending.length > 0) {
+      assert.ok(++turns < 200, 'actual deferred callbacks settle');
+      const timer = pending.shift();
+      if (!timer.cancelled) timer.action();
+      sdk.properties.flush();
+    }
+  }
+  function component(source, params, extra = {}) {
+    return sdk.consumer(source, boundedMembers(source), {...deps, ...extra}, params);
+  }
+  function panel(params = {}) {
+    const owner = component(panelSource, {
+      entries, currentChapterIndex: -1, allowUnanchoredBrowse: true,
+      panelWidthOverride: 352, panelHeightOverride: 600, ...params,
+    });
+    owner.aboutToAppear();
+    return owner;
+  }
+  function full(params = {}, extra = {}) {
+    const owner = component(fullSource, {
+      sourceId: 'source-a', bookId: 'book', catalogContext: 'detail',
+      entries, currentChapterIndex: -1, ...params,
+    }, extra);
+    owner.aboutToAppear();
+    return owner;
+  }
+  function manga(params = {}) {
+    const owner = component(mangaSource, {
+      sourceId: 'source-a', bookId: 'manga', bookTitle: '漫画',
+      entries: entries.slice(0, 40), currentChapterIndex: -1, ...params,
+    });
+    owner.aboutToAppear();
+    return owner;
+  }
 
-registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+  if (selectedCase === 'projection') {
+    const p = panel();
+    assert.equal(p.projectedEntries.length, 3000, 'complete catalog is not the detail preview');
+    assert.equal(p.projectedEntries[2].navigable, false);
+    assert.equal(p.initialListPositionReady, true, 'detail browsing does not manufacture a reading anchor');
+    p.searchDraft = ' chapter 30 '; p.handleControl('search'); flush();
+    assert.equal(p.projectedEntries[0].index, 59, 'filter keeps Core index, not result ordinal');
+    const ascending = p.projectedEntries.map(entry => entry.index);
+    p.handleControl('sort'); flush();
+    assert.deepEqual(p.projectedEntries.map(entry => entry.index), ascending.toReversed());
+    p.handleControl('bottom'); assert.equal(p.listScroller.commands.at(-1), Edge.Bottom);
+    p.searchDraft = 'not present'; p.handleControl('search');
+    assert.equal(p.projectedEntries.length, 0);
+    assert.equal(p.catalogEmptyMessage(), '没有匹配的章节');
+    p.searchDraft = ''; p.handleControl('search');
+    assert.equal(p.projectedEntries.length, 3000);
+    assert.equal(entries[0].index, 1, 'sort does not mutate host catalog');
+    p.catalogMessage = '目录读取失败，请返回详情重试'; p.entries = [];
+    assert.equal(p.catalogEmptyMessage(), p.catalogMessage);
+    const beforeExit = p.listScroller.commands.length;
+    p.aboutToDisappear(); flush();
+    assert.equal(p.listScroller.commands.length, beforeExit, 'late sort and search scrolls are retired');
 
-const path = fileURLToPath(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url));
-const source = readFileSync(path, 'utf8');
-const pending = [];
-const programmaticScrolls = [];
-const completedScrolls = [];
-const Edge = { Top: 'top', Bottom: 'bottom' };
-let metrics = { windowRect: { width: 390, height: 844 }, systemFontScale: 1, systemInsets: { left: 0, right: 0, top: 48, bottom: 34 },
-  cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
-const deps = { ...directoryState, mangaDirectoryDisplay, ...fonts, ...directoryVisual, visual: directoryVisual.MANGA_DIRECTORY_VISUAL, EMPTY_READING_DIRECTORY_RECOVERY, mangaDirectoryEntryRows, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
-  SurfaceWidthSpec, SurfaceHorizontalFrame, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop,
-  readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
-  TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, Edge, ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) },
-  ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
-  readerDirectoryScopeKey: (_source, book) => book,
-  readerDirectorySignalScrollIntent: bookId => programmaticScrolls.push(bookId),
-  readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
-  setTimeout: action => { pending.push(action); }, $r: value => value };
-const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
-  'supportsDirectoryRules', 'supportsCurrentDirectoryView', 'onRulesKindChanged', 'mangaIsGroup',
-  'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
-  'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'mangaCurrentTitle', 'mangaCurrentPosition',
-  'prepareMangaLayout', 'mangaVisibleEntries', 'mangaLayoutEntries', 'mangaLayoutRow', 'mangaEntryIsDisplayed',
-  'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon',
-  'headerFrame', 'onMangaScrollOffset', 'prepareMangaPageFonts', 'mangaSummaryLabel', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
-const Page = productionMotionMethods(path, methods, deps);
-const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, title: `Chapter ${i + 1}`,
-  navigable: i !== 2, downloadState: 'missing', bookmarks: [] }));
-function fixture() {
-  const edges = [], selected = [], downloaded = [], deleted = [], created = [];
-  const page = Object.assign(new Page(), { sourceId: 'source-a', bookId: 'book', bookKind: '', entries,
-    directoryRecovery: EMPTY_READING_DIRECTORY_RECOVERY, contentKind: 'text', mangaLayoutRows: [], mangaCollapsedGroups: [], mangaToolsHeight: 175, mangaViewportHeight: 800,
-    mangaFontGeneration: 0, mangaFontsReady: false, mangaFontsFailed: false, mangaFooterMeasured: 0, mangaScrollOffset: 0,
-    currentChapterIndex: -1, catalogMessage: '', searchDraft: '', searchQuery: '', ascending: true, projectedEntries: [],
-    admittedEntries: [], admittedIdentity: '', mounted: false, projectionGeneration: 0,
-    scrollGeneration: 0, listReady: false, pendingScrollEdge: undefined, viewportWidth: 390, readerWindowMetricsRevision: 1, appThemeScheme: 'day',
-    listScroller: { scrollEdge: edge => edges.push(edge) }, getUIContext: () => ({ getFont() {} }),
-    onSelectChapter: index => selected.push(index), onDownloadChapter: index => downloaded.push(index),
-    onDeleteBookmarks: times => deleted.push(times), onCreateChapterStartBookmark: request => created.push(request),
-    onBack() {}, chapterStartBookmarkCreationEnabled: true });
-  return { page, edges, selected, downloaded, deleted, created };
-}
-function flush() { while (pending.length) pending.shift()(); }
-if(selectedCase==='projection') {
-{
-  const { page } = fixture();
-  page.prepareMangaLayout = () => assert.fail('text catalog must not calculate manga display rows');
-  page.aboutToAppear(); page.applySearch(); page.toggleSort(); flush(); page.aboutToDisappear();
-}
-{
-  const { page, edges } = fixture(); page.aboutToAppear(); flush(); page.onListFirstLayout(page.identity());
-  assert.equal(page.projectedEntries.length, 3000, 'complete catalog is not the 20-row detail preview');
-  assert.equal(page.projectedEntries[2].navigable, false);
-  page.searchDraft = ' chapter 30 '; page.applySearch(); flush();
-  assert.equal(page.projectedEntries[0].index, 59, 'filter keeps original Core index, not result ordinal');
-  const ascending = page.projectedEntries.map(entry => entry.index);
-  page.toggleSort(); flush(); assert.deepEqual(page.projectedEntries.map(entry => entry.index), ascending.toReversed());
-  page.scrollToEdge(Edge.Bottom); assert.equal(edges.at(-1), Edge.Bottom);
-  page.searchDraft = 'not present'; page.applySearch(); assert.equal(page.emptyMessage(), '没有匹配的章节');
-  page.searchDraft = ''; page.applySearch(); assert.equal(page.projectedEntries.length, 3000);
-  assert.equal(page.entries, entries); assert.equal(entries[0].index, 1, 'sort does not mutate host catalog');
-  page.aboutToDisappear(); const count = edges.length; flush(); assert.equal(edges.length, count, 'late scroll is cancelled on exit');
-}
-{
-  const { page } = fixture(); page.aboutToAppear(); flush(); page.onListFirstLayout(page.identity());
-  const old = page.projectedEntries[0]; assert.equal(page.rowIsCurrent(old, 'source-a\u0000book'), true);
-  page.sourceId = 'source-b'; page.onIdentityChanged(); assert.equal(page.rowIsCurrent(old, 'source-a\u0000book'), false);
-  page.entries = [{ index: 1, title: 'Other source', navigable: true, downloadState: 'missing', bookmarks: [] }];
-  page.onEntriesChanged(); flush();
-  assert.equal(page.searchQuery, ''); assert.equal(page.ascending, true);
-  assert.equal(page.rowIsCurrent(old, 'source-a\u0000book'), false, 'old source row cannot target equal chapter index in the new source');
-  assert.equal(page.rowIsCurrent(page.projectedEntries[0], 'source-b\u0000book'), true);
-  page.entries[0].navigable = false;
-  assert.equal(page.rowIsCurrent(page.projectedEntries[0], 'source-b\u0000book'), false, 'in-place host changes block stale actions before projection flush');
-  page.onEntriesChanged(); page.aboutToDisappear(); flush();
-  assert.equal(page.mounted, false);
-}
-{
-  const { page } = fixture(); page.entries = []; page.catalogMessage = '目录读取失败，请返回详情重试';
-  page.aboutToAppear(); assert.equal(page.emptyMessage(), page.catalogMessage);
-  page.catalogMessage = ''; assert.equal(page.emptyMessage(), '暂无章节信息');
-  assert.equal(page.bottomInset(),metrics.systemInsets.bottom);
-  page.viewportWidth = 1000; const wide=page.contentFrame(); assert.ok(wide.width>0 && wide.width<=page.viewportWidth && wide.left>=0);
-  page.viewportWidth = 500; metrics = { ...metrics, cutoutInsets: { left: 50 }, gestureInsets: { right: 32 } };
-  const frame = page.contentFrame(); assert.equal(frame.left, 50); assert.equal(frame.right, 32); assert.equal(frame.width, 418);
-  void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-}
+    const m = manga();
+    const oldIdentity = m.identity(), [first] = snapshots.snapshotReaderDirectoryData([m.projectedEntries[0]]);
+    flush();
+    assert.equal(m.listScroller.commands.length, 0, 'manga timer cannot assume a native List is bound');
+    m.onListFirstLayout(oldIdentity);
+    assert.equal(m.listScroller.commands.at(-1), Edge.Top);
+    assert.equal(m.rowIsCurrent(first, oldIdentity), true);
+    m.searchDraft = 'no match'; m.applySearch();
+    assert.equal(m.rowIsCurrent(first, oldIdentity), false, 'filtered-out manga row loses action admission');
+    m.searchDraft = ''; m.applySearch(); flush();
+    assert.equal(m.rowIsCurrent(first, oldIdentity), true);
+    m.sourceId = 'source-b'; flush();
+    assert.equal(m.rowIsCurrent(first, oldIdentity), false, 'equal row index in a different source cannot borrow an old handler');
+    const [current] = snapshots.snapshotReaderDirectoryData([m.projectedEntries[0]]);
+    assert.equal(m.rowIsCurrent(current, m.identity()), true);
+    m.entries[0].navigable = false;
+    assert.equal(m.rowIsCurrent(current, m.identity()), false, 'in-place Core fact change invalidates the old manga row before refresh');
+    m.aboutToDisappear(); flush();
+  }
 
-{
-  const { page, edges } = fixture(); page.aboutToAppear(); flush();
-  assert.deepEqual(edges, [], 'timer does not prove the native List is bound');
-  page.onListFirstLayout(page.identity()); assert.deepEqual(edges, [Edge.Top]);
-  page.searchDraft = 'no match'; page.applySearch(); flush();
-  page.searchDraft = ''; page.applySearch(); flush();
-  assert.equal(edges.length, 2, 'empty-to-populated keeps the native List ready without another first layout');
-  page.searchDraft = 'no match'; page.applySearch();
-  page.searchDraft = ''; page.applySearch(); flush();
-  assert.equal(edges.length, 3, 'coalesced empty-to-populated changes still settle the latest scroll intent');
-  page.toggleSort(); page.onListUserScroll(); flush(); assert.equal(edges.length, 3, 'user scroll cancels pending sort positioning');
-  page.aboutToDisappear();
-}
-{
-  const { page } = fixture();
-  page.sourceId = 'local';
-  page.aboutToAppear(); flush();
-  page.searchDraft = 'group only'; page.applySearch();
-  page.toggleSort();
-  assert.equal(page.navigationInteracted, false,
-    'search and sort before initial Core tree answer keep the current generation eligible for tree adoption');
-  page.onListUserScroll();
-  assert.equal(page.navigationInteracted, true, 'real user scrolling still prevents a late tree insertion');
-  const completedBeforeDeferred = completedScrolls.length;
-  page.scrollToEdge(Edge.Top);
-  assert.equal(programmaticScrolls.at(-1), 'book', 'detail toolbar Top fences an in-flight tree view');
-  assert.equal(completedScrolls.length, completedBeforeDeferred, 'a deferred edge command cannot claim that scrolling already ran');
-  page.navigationActive = true;
-  page.onListFirstLayout(page.identity());
-  assert.equal(completedScrolls.at(-1), 'book', 'detail toolbar completes after the actual edge command');
-  page.aboutToDisappear();
-}
+  if (selectedCase === 'sdk-callbacks') {
+    let opening = 8, directoryForeground = true, exits = 0;
+    const actions = [];
+    const destination = component(destinationSource, {
+      opening, catalogContext: 'detail', contentKind: 'text', sourceId: 'source-a', bookId: 'book',
+      entries, bookmarkIdentity: {sourceId: 'source-a', bookId: 'book'}, chapterStartBookmarkCreationEnabled: true,
+      isOpeningCurrent: value => directoryForeground && value === opening,
+      onSelectChapter: index => actions.push(['chapter', index]),
+      onSelectNavigationTarget: (index, offset) => actions.push(['tree', index, offset]),
+      onDownloadChapter: index => actions.push(['download', index]),
+      onDeleteBookmarks: times => actions.push(['delete', times]),
+      onCreateChapterStartBookmark: request => actions.push(['create', request]),
+      onBack: () => { exits += 1; },
+    });
+    destination.aboutToAppear(); destination.initialRender();
+    const route = [...destination.children.values()].find(child => child instanceof FullPort);
+    assert.ok(route, 'the actual text route mounts ReaderFullDirectory');
+    assert.ok(![...destination.children.values()].some(child => child instanceof MangaPort));
+    const host = full(route.params); host.directoryContent();
+    const child = [...host.children.values()].find(actor => actor.params?.allowUnanchoredBrowse);
+    assert.ok(child, 'the actual Full Directory mounts its existing body and detail context');
+    const p = panel(child.params);
+    p.searchControls(); p.chapterList();
+    const toolbar = [...p.children.values()].find(actor => actor.params?.showChapterTools);
+    const tree = [...p.children.values()].find(actor => actor.params?.chapterEntries);
+    assert.ok(toolbar && tree);
+    assert.equal(tree.params.sourceId, 'source-a');
+    assert.equal(tree.params.chapterEntries.length, 3000);
+    assert.equal(tree.params.chapterDownloadEnabled, true);
+    tree.params.onDownloadChapter(7);
+    tree.params.onSelectTarget(17, 2);
+    tree.params.fallbackBuilder();
+    const list = [...p.children.values()].find(actor => actor.params?.entries);
+    assert.equal(list.params.entries.length, 3000);
+    const [first, second] = snapshots.snapshotReaderDirectoryData(list.params.entries.slice(0, 2));
+    list.params.rowBuilder({item: first, index: 0});
+    list.params.rowBuilder({item: second, index: 1});
+    const nodes = sdk.nodes(p);
+    const row = nodes.find(node => node.onClick && node.accessibilityText === hierarchy.readerDirectoryAccessibilityText(first));
+    const download = nodes.find(node => node.onClick && node.accessibilityText === '未下载，点按下载');
+    const create = nodes.find(node => node.onClick && node.accessibilityText === '添加本章章首书签');
+    const remove = nodes.find(node => node.onClick && node.accessibilityText === '删除本章已有书签');
+    assert.ok(row && download && create && remove, 'actual native fallback rows expose the chapter and marker actions');
+    row.onClick(); download.onClick(); create.onClick(); remove.onClick();
+    assert.deepEqual(actions, [['download', 7], ['tree', 17, 2], ['chapter', 1], ['download', 1],
+      ['create', {chapterIndex: 1, chapterTitle: first.title}], ['delete', [10]]]);
+    toolbar.params.onTextChange('no match'); toolbar.params.onSearch();
+    p.replayOnly([list.id]); assert.equal(list.params.entries.length, 0);
+    row.onClick(); download.onClick(); create.onClick(); remove.onClick();
+    assert.equal(actions.length, 6, 'a filtered-out text row cannot act through a retained native callback');
+    toolbar.params.onTextChange(''); toolbar.params.onSearch();
+    p.replayOnly([list.id]); assert.equal(p.children.get(list.id), list); assert.equal(list.params.entries.length, 3000);
+    row.onClick();
+    assert.deepEqual(actions.at(-1), ['chapter', 1], 'the retained cloned row works when its exact facts are visible again');
+    toolbar.params.onTextChange('Chapter 3000'); toolbar.params.onSearch();
+    assert.equal(p.projectedEntries[0].index, 5999);
+    toolbar.params.onToggleSort(); assert.equal(p.ascending, false);
+    toolbar.params.onTop(); toolbar.params.onBottom(); flush();
+    assert.equal(p.listScroller.commands.at(-1), Edge.Bottom);
+    assert.ok(scrollIntents.length > 0 && scrollCommands.length > 0);
+    assert.equal(scrollIntents.at(-1), scrollCommands.at(-1), 'actual edge control completes the canonical scroll intent');
+    directoryForeground = false;
+    child.params.onExit();
+    assert.equal(host.exitRequested, false, 'a covered opening cannot request exit through its retained callback');
+    directoryForeground = true;
+    host.interactive = false;
+    child.params.onExit();
+    assert.equal(host.exitRequested, false, 'a disabled catalog leaves the current exit unconsumed');
+    assert.equal(exits, 0);
+    host.interactive = true;
+    child.params.onExit();
+    assert.equal(exits, 1, 'the same catalog can still return after foreground restores');
+    assert.equal(host.exitRequested, true, 'the actual detail close is admitted synchronously');
+    child.params.onExit();
+    assert.equal(exits, 1, 'the same physical directory can request its synchronous exit only once');
+    opening += 1;
+    row.onClick(); download.onClick(); tree.params.onDownloadChapter(7); create.onClick();
+    assert.equal(actions.length, 7, 'retired route rejects native fallback and tree callbacks');
+    p.aboutToDisappear(); host.aboutToDisappear(); destination.aboutToDisappear();
+  }
 
+  if (selectedCase === 'measured-frame') {
+    const bookTitle = '测量目录书名';
+    const chapterTitle = '测量目录章节';
+    const owner = full({bookTitle, chapterTitle});
+    owner.initialRender();
+    const frameActor = sdk.walk(owner).find(actor => actor.frameStyle !== undefined && actor.geometry !== undefined &&
+      actor !== owner);
+    const hostArea = [...owner.nodes.values()].find(node => node.onAreaChange);
+    assert.ok(frameActor && hostArea, 'actual Full Directory mounts the shared measured page host');
+    const topBars = () => sdk.walk(owner).filter(actor => actor.params?.variant === 'directory' &&
+      actor.params?.bookTitle === bookTitle);
+    assert.equal(topBars().length, 1, 'Full Directory delegates its titles to one actual ReaderReadingTopBar');
+    const [topBar] = topBars();
+    const topBarNodes = [...topBar.nodes.values()];
+    const topBarFrame = topBarNodes.find(node => node.type === 'Row' && node.borderRadius === 24);
+    assert.equal(topBarFrame?.height, 54, 'the shared top bar paints the directory card at its authored height');
+    for (const [label, height, role] of [
+      [bookTitle, 22, sdk.deps.TYPE_READER_DIRECTORY_BOOK_TITLE],
+      [chapterTitle, 17, sdk.deps.TYPE_READER_DIRECTORY_CHAPTER],
+    ]) {
+      const text = topBarNodes.find(node => node.type === 'Text' && node.create === label);
+      assert.equal(text?.height, height, 'the shared directory title keeps its text box height');
+      assert.equal(text.maxLines, 1);
+      assert.equal(text.fontSize, role.fontSizeFp, 'the shared title uses the matching directory role');
+    }
+    const child = sdk.walk(owner).find(actor => actor.params?.allowUnanchoredBrowse);
+    const targets = child.params.entries;
+    hostArea.onAreaChange({}, {width: '365vp', height: '600vp'}); sdk.properties.flush();
+    assert.equal(owner.containerWidth, 365);
+    assert.equal(owner.panelViewportHeight(), owner.fullPanelHeight(), 'the actual detail directory uses its full endpoint');
+    assert.equal(owner.panelTop(), owner.fullPanelTop(), 'the actual detail directory uses its original measured top');
+    assert.ok(owner.panelWidth() > 0 && owner.panelLeft() + owner.panelWidth() <= 365,
+      'measured content follows the host, including its safe margins');
+    const header = sdk.walk(frameActor).find(actor => typeof actor.onHeightChange === 'function' && actor.style !== undefined);
+    assert.ok(header, 'shared fixed-header actor carries the measurement');
+    const area = [...header.nodes.values()].find(node => node.type === 'Column' && node.onAreaChange);
+    assert.ok(area, 'actual native header area is observable');
+    area.onAreaChange({}, {height: '62vp'}); sdk.properties.flush();
+    const start = owner.fullPanelTop();
+    area.onAreaChange({}, {height: '91vp'}); sdk.properties.flush();
+    assert.equal(owner.fullPanelTop() - start, 29, 'header measurement changes the retained body offset exactly once');
+    for (const width of ['invalid', 0, -1, NaN, Infinity]) hostArea.onAreaChange({}, {width, height: '600vp'});
+    sdk.properties.flush();
+    assert.equal(owner.containerWidth, 365, 'invalid Area values preserve the last admitted host width');
+    assert.equal(topBars().length, 1);
+    assert.equal(topBars()[0], topBar, 'measurement keeps the same shared title actor');
+    assert.equal(sdk.walk(owner).find(actor => actor.params?.allowUnanchoredBrowse), child);
+    assert.equal(child.params.entries, targets, 'header measurement cannot replace canonical targets');
+    owner.aboutToDisappear();
+  }
 
-}
-// Exercise the SDK-emitted Builder callbacks, not an independently rewritten UI.
-const require = createRequire(import.meta.url);
-const sdk = resolveEtsLoaderRoot();
-const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-for (const [name, props] of Object.entries({ ReaderDirectoryRecoverySurface: ['recovery'], ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
-  ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode'],
-  ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
-    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode', 'scroller'],
-  ReaderDirectoryChapterRow: ['entry', 'rowHeight', 'currentChapterIndex', 'chapterDownloadEnabled', 'chapterStartBookmarkCreationEnabled'] })) {
-  syntax.componentCollection.customComponents.add(name); syntax.propCollection.set(name, new Set(props));
-}
-class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const searchSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets', import.meta.url), 'utf8');
-const searchProperties = createArkUIPropertyRuntimeProbe();
-const SearchField = createReaderBuilderProbe(searchSource, boundedMembers(searchSource), { ...deps, ...searchProperties.sdk,
-  ReaderTextStyle: readerTypographyRoles.TYPE_SEARCH_BOOK_INPUT.constructor }, searchProperties.hooks).Component;
-syntax.componentCollection.customComponents.add('ReaderSearchField');
-syntax.propCollection.set('ReaderSearchField', new Set([...searchSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
-const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
-const popupSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets', import.meta.url), 'utf8');
-const Footer = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), { ...deps, ...searchProperties.sdk }, searchProperties.hooks).Component;
-const builderNames = ['viewportWidth', 'standardContent', 'standardHeader', 'standardToolbar', 'fontPreparationContent', 'mangaContent', 'mangaHeader', 'mangaFixedFooter', 'build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
-  'mangaFlatList', 'mangaFlatRow', 'mangaEmptyState', 'mangaDownloadMenuButton', 'selectMangaEntry', 'flatList', 'chapterRow'];
-const actualChrome = { ...searchProperties.sdk, MangaDirectoryCurrentFooter: Footer, ReaderMangaDownloadPopup: Child };
-const chromeHooks = { ...searchProperties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
-  ReaderMangaDownloadPopup: popupSource }, mountChildren: true };
+  if (selectedCase === 'manga-header') {
+    const owner = manga();
+    for (let turn = 0; turn < 12; turn++) await Promise.resolve();
+    assert.equal(owner.mangaFontsReady, true, 'actual page font owner admits the loaded fonts');
+    owner.initialRender();
+    const headerRows = sdk.nodes(owner).filter(node => node.type === 'Column' && node.zIndex === 10 && node.padding);
+    assert.equal(headerRows.length, 1, 'one actual scaffold owns the floating title placement');
+    const header = headerRows[0];
+    assert.equal(header.padding.left, owner.headerFrame().left);
+    assert.equal(header.padding.right, owner.headerFrame().right);
+    const visual = mangaVisual.MANGA_DIRECTORY_VISUAL;
+    const insideEdge = visual.headerPadding + visual.borderWidth;
+    assert.ok(header.padding.left + insideEdge >= metricsApi.readerInteractiveSafeLeft(metrics));
+    assert.ok(header.padding.right + insideEdge >= metricsApi.readerInteractiveSafeRight(metrics));
+    owner.aboutToDisappear(); flush();
+  }
 
-if(selectedCase==='sdk-callbacks') {
-  const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
-  const { owner, output } = createReaderBuilderProbe(source, builderNames, {
-    ...deps, ...actualChrome, ReaderSearchField: SearchField, ReaderDirectoryRecoverySurface: Child, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
-    ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child }, chromeHooks);
-  Object.assign(owner, result.page);
-  for (const name of methods.filter(name=>name!=='supportsCurrentDirectoryView')) owner[name] = Page.prototype[name].bind(owner);
-  owner.initialRender();
-  const children = [...owner.children.values()];
-  const bar = children.find(child => child.params.title === '目录'); assert.ok(bar);
-  const toolbar = children.find(child => child.params.showChapterTools); assert.ok(toolbar);
-  const tree = children.find(child => child.params.chapterEntries);
-  assert.equal(tree.params.sourceId, result.page.sourceId);
-  assert.equal(tree.params.chapterDownloadEnabled, true, 'remote tree retains the existing single chapter download action');
-  const previousDownload = owner.onDownloadChapter;
-  let treeDownload;
-  owner.onDownloadChapter = index => { treeDownload = index; };
-  tree.params.onDownloadChapter(7);
-  assert.equal(treeDownload, 7, 'detail tree callback preserves the canonical chapter index');
-  owner.onDownloadChapter = previousDownload;
-  tree.params.fallbackBuilder();
-  const list = [...owner.children.values()].find(child => child.params.entries); assert.equal(list.params.entries.length, 3000);
-  assert.ok(Number.isFinite(list.params.rowHeight) && list.params.rowHeight>0); assert.ok(list.params.listPaddingX>=0);
-  const item = structuredClone(owner.projectedEntries[0]); list.params.rowBuilder({ item, index: 0 });
-  const row = [...owner.children.values()].find(child => child.params.entry === item); assert.ok(row);
-  assert.equal(row.params.currentChapterIndex, undefined, 'standalone catalog never marks a current reading chapter');
-  row.params.onSelectChapter(1); row.params.onDownloadChapter(1); row.params.onDeleteBookmarks([10]);
-  row.params.onCreateChapterStartBookmark({ chapterIndex: 1, chapterTitle: item.title });
-  assert.deepEqual(result.selected, [1]); assert.deepEqual(result.downloaded, [1]); assert.deepEqual(result.deleted, [[10]]); assert.equal(result.created.length, 1);
-  const nativeList = list;
-  toolbar.params.onTextChange('no match'); toolbar.params.onSearch();
-  owner.replayOnly([list.id]); assert.equal(list.params.entries.length, 0);
-  toolbar.params.onTextChange(''); toolbar.params.onSearch();
-  owner.replayOnly([list.id]); assert.equal(owner.children.get(list.id), nativeList); assert.equal(list.params.entries.length, 3000);
-  toolbar.params.onTextChange('no match'); toolbar.params.onSearch();
-  toolbar.params.onTextChange(''); toolbar.params.onSearch();
-  owner.replayOnly([list.id]); assert.equal(owner.children.get(list.id), nativeList, 'coalesced empty/full projection retains List native identity');
-  toolbar.params.onTextChange('Chapter 3000'); toolbar.params.onSearch(); assert.equal(owner.projectedEntries[0].index, 5999);
-  row.params.onSelectChapter(1); assert.deepEqual(result.selected, [1], 'filtered-out row callback is no longer admitted');
-  toolbar.params.onTextChange(''); toolbar.params.onSearch(); row.params.onSelectChapter(1);
-  assert.deepEqual(result.selected, [1, 1], 'a retained cloned row works again after clearing the filter');
-  owner.sourceId = 'source-b'; owner.onIdentityChanged(); flush();
-  row.params.onSelectChapter(1); assert.deepEqual(result.selected, [1, 1], 'retained old book closure cannot target equal index/content in another source');
-  tree.params.onDownloadChapter(7);
-  assert.deepEqual(result.downloaded, [1], 'retained old directory callback cannot download the same index in another source');
-  toolbar.params.onToggleSort(); assert.equal(owner.ascending, false);
-  owner.onListFirstLayout(owner.identity()); toolbar.params.onTop(); toolbar.params.onBottom(); assert.equal(result.edges.at(-1), Edge.Bottom);
-  owner.aboutToDisappear(); toolbar.params.onTop(); row.params.onDownloadChapter(1);
-  assert.deepEqual(result.downloaded, [1]);
-  assert.doesNotMatch(output, /ReaderFullDirectory|FullDirectoryPanel|ReaderShell|ReadingExperience/);
-  const standardPageSource = source.slice(source.indexOf('private standardPage'), source.indexOf('private mangaPage'));
-  assert.doesNotMatch(standardPageSource, /Text\('(?:书签|当前章节|收起)'\)/,
-    'standalone catalog keeps manga-only current chapter footer out of the text branch');
-}
-// Physical window size is not the host size. Exercise the actual public
-// frame wrapper and HeaderHost with the vp-string Area values ArkUI supports.
-if(selectedCase==='measured-frame') {
-  const previousMetrics = metrics;
-  metrics = { ...previousMetrics, windowRect: { width: 1280, height: 800 },
-    systemInsets: { left: 32, right: 24, top: 48, bottom: 34 }, cutoutInsets: {}, gestureInsets: {} };
-  const result=fixture(); result.page.viewportWidth=0; result.page.aboutToAppear(); flush();
-  const {owner}=createReaderBuilderProbe(source,builderNames,{...deps,...actualChrome,ReaderSearchField:SearchField,
-    ReaderDirectoryRecoverySurface:Child,ReaderDirectoryRules:Child,PageBackBar:Child,ReaderDirectoryToolbar:Child,ReaderDirectoryList:Child,
-    ReaderDirectoryNavigationSurface:Child,ReaderDirectoryChapterRow:Child},chromeHooks);
-  Object.assign(owner,result.page);
-  for(const name of methods.filter(name=>name!=='supportsCurrentDirectoryView'))owner[name]=Page.prototype[name].bind(owner);
-  owner.initialRender();
-  const actors=current=>[current,...[...(current.children?.values()??[])].flatMap(actors)];
-  const frame=actors(owner).find(actor=>actor.params?.variant==='directory');
-  const hostArea=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange);
-  const nav=[...owner.children.values()].find(child=>child.params?.chapterEntries),scroller=nav.params.scroller,targets=nav.params.chapterEntries;
-  assert.ok(frame?.nodes&&hostArea,'actual SDK mounts the public directory host and its measurement wrapper');
-  hostArea.onAreaChange({}, {width:'365vp'}); searchProperties.flush();
-  assert.equal(owner.viewportWidth,365);
-  assert.deepEqual(owner.contentFrame(),new SurfaceHorizontalFrame(32,24,309),'narrow measured host overrides the 1280vp physical window and retains asymmetric safety');
-  const header=actors(frame).find(actor=>actor.kind==='standard'&&typeof actor.onHeightChange==='function');
-  const mask=[...header.nodes.values()].find(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange);
-  assert.ok(mask,'actual public HeaderHost owns the opaque measured mask');
-  mask.onAreaChange({}, {height:'132vp'}); searchProperties.flush();
-  const measuredStart=nav.params.contentStartInset; mask.onAreaChange({}, {height:'179vp'}); searchProperties.flush();
-  assert.equal(nav.params.contentStartInset-measuredStart,179-132,'actual header delta propagates to retained directory');
-  for(const width of ['invalid',0,-1,NaN,Infinity])hostArea.onAreaChange({}, {width});
-  searchProperties.flush();assert.equal(owner.viewportWidth,365,'invalid Area values preserve the last admitted host width');
-  assert.equal([...owner.children.values()].find(child=>child.params?.chapterEntries),nav,'measurement preserves the directory actor');
-  assert.equal(nav.params.scroller,scroller);assert.equal(nav.params.chapterEntries,targets,'measurement cannot rebuild canonical targets');
-  owner.aboutToDisappear();metrics=previousMetrics;
-}
-if(selectedCase==='rules-eligibility'){const p=fixture().page;const getter=deps.ReaderRuntimeOwner.current;deps.ReaderRuntimeOwner.current=()=>{throw Error('ReaderRuntimeOwner must be installed by EntryAbility');};assert.equal(p.supportsCurrentDirectoryView(),false);deps.ReaderRuntimeOwner.current=()=>({supportsCoreCapability(){throw Error('provider failure');}});assert.throws(()=>p.supportsCurrentDirectoryView(),/provider failure/,'identity adaptation cannot swallow platform/business failure');deps.ReaderRuntimeOwner.current=getter;}
-console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');
-
-// Manga's full-viewport branch uses the same measured safe frame for the
-// floating title bar.  Exercise the emitted Row attributes under an
-// asymmetric cutout; raw 16vp side padding would overlap the left edge.
-if(selectedCase==='manga-header') {
-  const result = fixture();
-  result.page.contentKind = 'manga';
-  result.page.aboutToAppear(); flush();
-  for (let turn = 0; turn < 12; turn++) await Promise.resolve();
-  assert.equal(result.page.mangaFontsReady, true, 'the real page font owner admits the controlled checked load receipts');
-  const { owner } = createReaderBuilderProbe(source, builderNames, {
-    ...deps, ...actualChrome, ReaderSearchField: SearchField, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
-    ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child }, chromeHooks);
-  Object.assign(owner, result.page);
-  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
-  owner.initialRender();
-  const allNodes = current => [...(current.nodes?.values() ?? []), ...[...(current.children?.values() ?? [])].flatMap(allNodes)];
-  const headerRows = allNodes(owner).filter(node => node.type === 'Column' && node.zIndex === 10 && node.padding);
-  assert.equal(headerRows.length, 1, 'one actual scaffold owns the floating title placement');
-  assert.equal(headerRows[0].padding.left, result.page.headerFrame().left,
-    'manga floating directory header follows the real header frame rather than the wider content inset');
-  assert.equal(headerRows[0].padding.right, result.page.headerFrame().right);
-  const insideEdge = directoryVisual.MANGA_DIRECTORY_VISUAL.headerPadding + directoryVisual.MANGA_DIRECTORY_VISUAL.borderWidth;
-  assert.ok(headerRows[0].padding.left + insideEdge >= readerInteractiveSafeLeft(metrics),
-    'header border and inner padding keep the back action after the measured left cutout');
-  assert.ok(headerRows[0].padding.right + insideEdge >= readerInteractiveSafeRight(metrics),
-    'header border and inner padding keep trailing actions before the measured right cutout');
-  result.page.aboutToDisappear();
-}
-console.log('PASS manga directory header SDK frame: asymmetric cutout preserves the actual header action insets');
-
-// Render the actual page branch with persisted Core format metadata. Filename
-// and title are deliberately misleading: they are not format evidence.
-if(selectedCase==='rules-eligibility') {
-for (const [sourceId, bookKind, capability, expected] of [
-  ['local', 'EPUB', true, false], ['local', 'MOBI', true, false], ['local', 'KF8', true, false],
-  ['local', 'AZW3', true, false], ['local', 'PDF', true, false], ['local', '', true, false],
-  ['local', 'novel.txt', true, false], ['remote', 'TXT', true, false], ['local', 'TXT', false, false],
-  ['local', 'TXT', true, true], ['local', 'txt', true, true], ['local', 'local', true, true],
-]) {
-  const result = fixture();
-  Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
-  result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, builderNames, {
-    ...deps, ...actualChrome, ReaderSearchField: SearchField, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
-    ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
-    ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child }, chromeHooks);
-  Object.assign(owner, result.page);
-  for (const name of methods.filter(name=>name!=='supportsCurrentDirectoryView')) owner[name] = Page.prototype[name].bind(owner);
-  owner.initialRender();
-  assert.equal([...owner.nodes.values()].some(node => node.createWithLabel === '收起层级规则'), expected,
-    `directory rule control eligibility: ${sourceId}/${bookKind}/${capability}`);
-  assert.equal([...owner.children.values()].some(child => typeof child.params.onApplied === 'function'), expected,
-    'unsupported metadata must not mount a rules editor or issue its initial request');
-}
-
-{
-  const { page } = fixture(); Object.assign(page, { sourceId: 'local', bookKind: 'TXT', rulesExpanded: true, rulesRevision: 3 });
-  page.aboutToAppear(); flush();
-  assert.equal(page.supportsDirectoryRules(), true);
-  page.bookId = 'another-txt'; page.onIdentityChanged();
-  assert.equal(page.rulesExpanded, false, 'switching TXT identities closes the previous book editor immediately');
-  assert.equal(page.rulesRevision, 0, 'the new book does not inherit an applied-rule revision');
-  page.rulesExpanded = true; page.bookKind = 'EPUB'; page.onRulesKindChanged();
-  assert.equal(page.rulesExpanded, false); assert.equal(page.supportsDirectoryRules(), false);
-  page.bookKind = 'local'; page.onRulesKindChanged();
-  assert.equal(page.rulesExpanded, false, 'returning to a TXT format cannot reopen an old draft');
-  assert.equal(page.supportsDirectoryRules(), true);
-  page.rulesExpanded = true; page.sourceId = 'remote'; page.onIdentityChanged();
-  assert.equal(page.rulesExpanded, false); assert.equal(page.supportsDirectoryRules(), false);
-  page.aboutToDisappear(); flush();
-}
-}
-console.log('actual directory selected case PASS: '+selectedCase);
-
+  if (selectedCase === 'rules-eligibility') {
+    for (const [sourceId, bookKind, capability, expected] of [
+      ['local', 'EPUB', true, false], ['local', 'MOBI', true, false], ['local', 'KF8', true, false],
+      ['local', 'AZW3', true, false], ['local', 'PDF', true, false], ['local', '', true, false],
+      ['local', 'novel.txt', true, false], ['remote', 'TXT', true, false], ['local', 'TXT', false, false],
+      ['local', 'TXT', true, true], ['local', 'txt', true, true], ['local', 'local', true, true],
+    ]) {
+      const owner = full({sourceId, bookKind, bookId: 'misleading.txt'}, {
+        ReaderRuntimeOwner: {current: () => ({supportsCoreCapability: () => capability})},
+      });
+      owner.topBar();
+      const trigger = [...owner.nodes.values()].find(node => node.accessibilityText === '本书目录层级规则');
+      assert.equal(trigger !== undefined, expected, `actual editor eligibility: ${sourceId}/${bookKind}/${capability}`);
+      if (trigger) trigger.onClick();
+      owner.directoryContent();
+      const editor = [...owner.children.values()].find(actor => typeof actor.params?.onApplied === 'function');
+      assert.equal(editor !== undefined, expected, 'only the admitted text directory opens its rules editor');
+      if (editor) {
+        assert.equal(editor.params.bookId, 'misleading.txt');
+        editor.params.onApplied(); assert.equal(owner.directoryRulesRevision, 1);
+        owner.bookId = 'another-txt';
+        assert.equal(owner.directoryRulesVisible, false);
+        assert.equal(owner.directoryRulesRevision, 0);
+        editor.params.onApplied(); assert.equal(owner.directoryRulesRevision, 0, 'old editor cannot publish into a different book');
+        owner.showDirectoryRules(owner.temporaryBackIdentity, owner.bookId, true);
+        assert.equal(owner.directoryRulesVisible, true);
+        owner.bookKind = 'EPUB';
+        assert.equal(owner.directoryRulesVisible, false);
+        assert.equal(owner.directoryRulesAvailable(), false);
+        owner.bookKind = 'TXT';
+        assert.equal(owner.directoryRulesAvailable(), true);
+        assert.equal(owner.directoryRulesVisible, false, 'restoring eligibility does not reopen the retired editor');
+        owner.showDirectoryRules(owner.temporaryBackIdentity, owner.bookId, true);
+        owner.sourceId = 'remote';
+        assert.equal(owner.directoryRulesVisible, false);
+      }
+      owner.aboutToDisappear(); flush();
+    }
+    const unavailable = full({sourceId: 'local', bookKind: 'TXT'}, {
+      ReaderRuntimeOwner: {current() { throw Error('ReaderRuntimeOwner must be installed by EntryAbility'); }},
+    });
+    assert.equal(unavailable.directoryRulesAvailable(), false);
+    unavailable.aboutToDisappear();
+    const broken = full({sourceId: 'local', bookKind: 'TXT'}, {
+      ReaderRuntimeOwner: {current: () => ({supportsCoreCapability() { throw Error('provider failure'); }})},
+    });
+    assert.throws(() => broken.directoryRulesAvailable(), /provider failure/);
+    broken.aboutToDisappear();
+  }
 }

@@ -1,15 +1,12 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"reader-navigation": {"description": "实际Reader module icon retained 4状态/两scheme", "resources": []}, "reader-quick": {"description": "实际Reader quick3 icon retained scheme", "resources": []}, "main-navigation": {"description": "实际Main Tab inactive/active current资源/颜色", "resources": []}, "quick-directory": {"description": "实际quick目录marker生产方法/资源", "resources": []}, "full-directory": {"description": "实际Full目录download/bookmark marker生产方法/资源", "resources": []}};
+const definitions={"reader-navigation": {"description": "实际Reader module icon retained 4状态/两scheme", "resources": []}, "reader-quick": {"description": "实际Reader quick3 icon retained scheme", "resources": []}, "main-navigation": {"description": "实际Main Tab inactive/active current资源/颜色", "resources": []}, "quick-directory": {"description": "实际阅读控制目录章节行的下载图标及主题资源", "resources": []}, "full-directory": {"description": "实际Full目录download/bookmark marker生产方法/资源", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
-const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
-const { existsSync, readFileSync, readdirSync, writeFileSync } = await import('node:fs');
+const { existsSync, readFileSync } = await import('node:fs');
 const {default: path} = await import('node:path');
-const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 
 const root = path.resolve(import.meta.dirname, '..'), ets = path.join(root, 'entry/src/main/ets');
@@ -48,7 +45,7 @@ function validateNav(owner) {
       active ? 'app.control.onPrimary' : 'TOK_READ_PRIMARY', [image.width, image.height]);
   });
 }
-const panelSource = source('features/reading/ReaderControlPanel.ets');
+const panelSource = source('features/reading/ui/ReaderControlPanel.ets');
 if(selectedCase==='reader-navigation') {
 const panel = panelProbe(panelSource);
 for (const scheme of ['day', 'night', 'day']) for (const [, , module] of nav) {
@@ -56,8 +53,10 @@ for (const scheme of ['day', 'night', 'day']) for (const [, , module] of nav) {
 }
 }
 if(selectedCase==='reader-quick') {
-const quick = createReaderBuilderProbe(panelSource, ['quickAction', 'quickActionIcon'].filter(n => panelSource.includes(`private ${n}(`))).owner;
+const quick = createReaderBuilderProbe(panelSource, ['quickAction', 'quickActionIcon'].filter(n => panelSource.includes(`private ${n}(`)),
+  { ButtonType: { Normal: 'ButtonType.Normal' } }).owner;
 quick.appScheme = 'day'; const quickNames = ['rc_search', 'rc_autopage', 'rc_replace'];
+Object.assign(quick, { inputEnabled: true, controlObscured: false, runtimeMounted: true });
 quickNames.forEach((name, i) => quick.quickAction(name, name, ['search', 'autoPage', 'replace'][i]));
 for (const scheme of ['day', 'night', 'day']) {
   quick.appScheme = scheme; quick.replay();
@@ -65,32 +64,97 @@ for (const scheme of ['day', 'night', 'day']) {
 }
 }
 if(selectedCase==='main-navigation') {
-const main = createReaderBuilderProbe(source('features/shell/MainTabBar.ets'), ['tabIcon', 'tabIconResource']).owner;
+const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+const { actualReaderMainTabs } = await import('./lib/reader-phone-navigation-source.mjs');
+const { actualReaderFloatingBarMetrics } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const mainNames = ['bookshelf_library', 'bookshelf_compass', 'bookshelf_rss', 'bookshelf_settings'];
 const mainKeys = ['bookshelf', 'discover', 'rss', 'settings'];
-mainKeys.forEach(key => { main.tabIcon(key, false); main.tabIcon(key, true); });
+const { readerMainTabIconResource } = actualReaderMainTabs();
+// Keep the original four-key icon matrix, including retained product assets.
+// Scope admission is not inferred from this explicit visual-only tab fixture.
+const Projection = selectedProductionMethods(new URL('../entry/src/main/ets/app/navigation/ReaderBottomNavigation.ets', import.meta.url),
+  'ReaderBottomNavigation', ['items'], { MAIN_TABS: mainKeys.map(key => ({ key, label: key })),
+    readerMainTabIconResource, $r: value => value });
+const projection = Object.assign(new Projection(), { appThemeScheme: 'day', current: '' });
+const rendererSource = source('ui/patterns/ReaderBottomTabBar.ets');
+const mainRows = mainKeys.flatMap((key, index) => [false, true].map(active => {
+  projection.current = active ? key : '';
+  const item = projection.items().find(tab => tab.key === key);
+  const owner = createReaderBuilderProbe(rendererSource, ['tabItem', 'activate'], actualReaderFloatingBarMetrics()).owner;
+  Object.assign(owner, { current: projection.current, scheme: 'day', fontScale: 1, inputEnabled: true, items: [item], mounted: true });
+  owner.tabItem(item);
+  return { owner, item, key, active, index };
+}));
 for (const scheme of ['day', 'night', 'day']) {
-  main.appThemeScheme = scheme; main.replay();
-  [...main.nodes.values()].filter(n => n.type === 'Image').forEach((n, i) => {
-    const active = i % 2 === 1, name = mainNames[Math.floor(i / 2)] + (active ? '_active' : '_outline');
-    checkImage(n.create, name, scheme, active ? 'TOK_ON_PRIMARY' : 'TOK_MUTED', [n.width, n.height]);
+  mainRows.forEach(({ owner, item, key, active, index }) => {
+    projection.current = active ? key : '';
+    projection.appThemeScheme = scheme;
+    Object.assign(item, projection.items().find(tab => tab.key === key));
+    owner.scheme = scheme; owner.replay();
+    const images = [...owner.nodes.values()].filter(n => n.type === 'Image');
+    assert.equal(images.length, 1, 'the actual phone tab item paints its one projected icon');
+    const image = images[0], name = mainNames[index] + (active ? '_active' : '_outline');
+    checkImage(image.create, name, scheme, active ? 'TOK_ON_PRIMARY' : 'TOK_MUTED', [image.width, image.height]);
   });
 }
 }
-for (const file of ['ReaderDirectoryModulePanel.ets', 'FullDirectoryPanel.ets'].filter(file=>selectedCase===(file.startsWith('Full')?'full-directory':'quick-directory'))) {
-  const names = file.startsWith('Full') ? ['downloadMarker', 'bookmarkMarker', 'hasBookmark'] : ['downloadMarker'];
-  const Component = selectedProductionMethods(path.join(ets, 'features/reading', file),file.replace('.ets',''), names), owner = new Component();
+if (selectedCase === 'quick-directory') {
+  const { readerDirectoryAccessibilityText, readerDirectoryIndentVp } =
+    await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts');
+  const { readerDirectoryBookmarkMarkerState } =
+    await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts');
+  const row = source('features/reading/ui/ReaderDirectoryChapterRow.ets');
+  for (const state of ['completed', 'missing', 'cached', 'failed']) {
+    const { owner } = createReaderBuilderProbe(row, ['build', 'chapterTitle', 'marker', 'bookmarkActionEnabled', 'bookmarkActionLabel',
+      'downloadActionEnabled', 'downloadActionLabel'], {
+      readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState,
+    });
+    Object.assign(owner, {
+      appThemeScheme: 'day', chapterDownloadEnabled: true, rowHeight: 40, currentChapterIndex: -1,
+      entry: { index: 0, title: '第一章', navigable: true, downloadState: state },
+    });
+    owner.initialRender();
+    for (const scheme of ['day', 'night', 'day']) {
+      owner.appThemeScheme = scheme;
+      owner.replay();
+      const images = [...owner.nodes.values()].filter(node => node.type === 'Image');
+      assert.equal(images.length, 1, 'one download marker for the current chapter row');
+      const image = images[0];
+      const name = state === 'completed' ? 'reader_directory_marker_check' : 'reader_directory_marker_download';
+      assert.equal(image.create, `app.media.${name}${scheme === 'night' ? '_theme_night' : ''}`);
+      checkImage(image.create, name, scheme, state === 'completed' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED',
+        [image.width, image.height]);
+    }
+  }
+}
+if (selectedCase === 'full-directory') {
+  const { readerDirectoryAccessibilityText, readerDirectoryIndentVp } =
+    await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts');
+  const { readerDirectoryBookmarkMarkerState } =
+    await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts');
+  const row = source('features/reading/ui/ReaderDirectoryChapterRow.ets');
+  function markerFor(entry, scheme) {
+    const { owner } = createReaderBuilderProbe(row, ['build', 'chapterTitle', 'marker', 'bookmarkActionEnabled', 'bookmarkActionLabel',
+      'downloadActionEnabled', 'downloadActionLabel'], {
+      readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState,
+    });
+    Object.assign(owner, { variant: 'standalone', appThemeScheme: scheme, chapterDownloadEnabled: true,
+      rowHeight: 40, currentChapterIndex: -1, entry: { index: 0, title: '第一章', navigable: true, ...entry } });
+    owner.initialRender();
+    const images = [...owner.nodes.values()].filter(node => node.type === 'Image');
+    assert.equal(images.length, 1, 'one marker from the standalone chapter row');
+    return images[0];
+  }
   for (const scheme of ['day', 'night']) {
-    owner.appThemeScheme = scheme;
     for (const state of ['completed', 'missing', 'cached', 'failed']) {
       const name = state === 'completed' ? 'reader_directory_marker_check' : 'reader_directory_marker_download';
-      checkImage('app.media.' + owner.downloadMarker({ downloadState: state }), name, scheme,
-        state === 'completed' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED');
+      const image = markerFor({ downloadState: state }, scheme);
+      checkImage(image.create, name, scheme, state === 'completed' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', [image.width, image.height]);
     }
-    if (file.startsWith('Full')) for (const bookmarked of [false, true]) {
+    for (const bookmarked of [false, true]) {
       const name = 'reader_directory_marker_bookmark' + (bookmarked ? '_active' : '');
-      checkImage('app.media.' + owner.bookmarkMarker({ bookmarks: bookmarked ? [{}] : [] }), name, scheme,
-        bookmarked ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED');
+      const image = markerFor({ downloadState: 'unknown', bookmarks: bookmarked ? [{ time: 12 }] : [] }, scheme);
+      checkImage(image.create, name, scheme, bookmarked ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', [image.width, image.height]);
     }
   }
 }

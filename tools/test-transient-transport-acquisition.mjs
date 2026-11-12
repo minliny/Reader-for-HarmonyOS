@@ -4,9 +4,9 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e}}});
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const path=p=>new URL(p,base);
-const {BookAcquisitionCoordinator}=await import(path('app/BookAcquisitionCoordinator.ts'));
-const {RemoteReadingGatewayError}=await import(path('features/reading/RemoteReadingContract.ts'));
-const {acquisitionCandidateRank}=await import(path('features/common/BookAcquisitionPresentation.ts'));
+const {BookAcquisitionCoordinator}=await import(path('features/reading/application/BookAcquisitionCoordinator.ts'));
+const {RemoteReadingGatewayError}=await import(path('features/reading/application/RemoteReadingContract.ts'));
+const {acquisitionCandidateRank}=await import(path('app/library/BookAcquisitionPresentation.ts'));
 const seed=(i,s='s1')=>({sourceId:s,bookId:`/b${i}`,detailUrl:`/b${i}`,title:'鸣龙',author:'关关公子',sourceVersion:'v1'});
 const candidate=(i,s='s1',ready=false)=>({seed:seed(i,s),catalogReady:ready,failed:false});
 function fixture(){
@@ -40,7 +40,7 @@ function fixture(){
  return {runtime,calls,rows,catalogs,modes,key};
 }
 
-const {classifyRemoteReadingCommandFailure}=await import(path('features/reading/RemoteReadingContract.ts'));
+const {classifyRemoteReadingCommandFailure}=await import(path('features/reading/application/RemoteReadingContract.ts'));
 const sdk=readFileSync(new URL('../entry/vendor/core-harmony/sdk/reader_core.ts',import.meta.url),'utf8');
 const fragment=sdk.slice(sdk.indexOf('function normalizeHostError('),sdk.indexOf('function readTransactionPendingDetails('));
 const normalize=new Function(stripTypeScriptTypes(fragment)+";function isJsonObject(v){return typeof v==='object'&&v!==null&&!Array.isArray(v)};return normalizeHostError;")();
@@ -123,9 +123,9 @@ for(const cause of ['legacy','confirmed','transport']) {
   assert.equal(h.calls.filter(call=>call.method==='search-book.put').length,0);
  }finally{h.runtime.close();}
 }
-const rowSource=readFileSync(path('features/source/CandidateRow.ets'),'utf8');
-const chapterMethod=rowSource.slice(rowSource.indexOf('  private chapterText():'),rowSource.indexOf('  private chapterColor():'));
-const row=new (new Function(stripTypeScriptTypes(`class RowProbe {${chapterMethod}};`)+'return RowProbe;')())();
-row.acquisitionState='attemptFailed';assert.equal(row.chapterText(),'上次读取失败 · 可重试');
-row.acquisitionState='failed';assert.equal(row.chapterText(),'解析失败 · 可重试');
-console.log('PASS legacy/confirmed/HTTP acquisition: raw facts unchanged, only causal parser failures downgrade; unknown attempts get one visible preparation retry and generic previous-failure copy');
+const {sourceSwitchNovelChapter}=await import(path('features/source/ui/SourceSwitchNovelPresentation.ts'));
+for(const acquisitionState of ['attemptFailed','failed']) {
+ assert.equal(sourceSwitchNovelChapter({acquisitionState,latestChapterTitle:' 已知章节 '}),'已知章节');
+ assert.equal(sourceSwitchNovelChapter({acquisitionState}),'暂无最新章节');
+}
+console.log('PASS legacy/confirmed/HTTP acquisition: raw facts unchanged, only causal parser failures downgrade; unknown attempts get one preparation retry and live picker preserves known chapter facts');

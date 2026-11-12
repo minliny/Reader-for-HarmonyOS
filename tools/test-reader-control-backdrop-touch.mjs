@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   createReaderControlBackdropTouchState, reduceReaderControlBackdropTouch,
-} from '../entry/src/main/ets/features/reading/ReaderControlBackdropTouch.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlBackdropTouch.ts';
 
 const config = { tapMaxDurationMs: 500, touchSlopVp: 8 };
 const context = {

@@ -1,0 +1,615 @@
+{
+  "schema": "reader.page-geometry-host-contracts.v1",
+  "date": "2026-11-11",
+  "status": "IMPLEMENTED_SOURCE_CONTRACTS_AND_SELECTED_LOCAL_CHECKS_PASS",
+  "scope": "Current production geometry owners and finite exceptions. Source/lifecycle contract, not native pixels or device acceptance.",
+  "rules": [
+    "ReaderPageGeometry resolves authored facts; ReaderPageScaffold applies one resolved object and owns no resolver.",
+    "Each active body branch has one geometry owner. MainTabShell nonstandard branch composes chrome-only geometry and never resolves a second body.",
+    "measurementKey is a mounted/layout generation; only current keyed receipts define a changed header/footer budget. Environment revision alone does not certify entity lifecycle.",
+    "A rail replaces bottom navigation budget, never adds it twice. Full-height Scroll/List keeps its viewport and consumes internal insets.",
+    "Geometry/Scaffold/Standard roles and native ETS/pure TS boundary remain separate."
+  ],
+  "directHosts": [
+    {
+      "path": "features/shell/MainTabShell.ets",
+      "owner": "Active child body owner; StandardPage when standardScroll=true",
+      "geometry": "readerChromePageGeometry(headerTop, headerInsetLeft, headerInsetRight) only in nonstandard branch",
+      "generation": "Caller headerMeasurementKey/footerMeasurementKey + mounted/navigationGeneration footer guard",
+      "rail": "MainNavigationOverlay owns rail paint; active child owns content rail clearance",
+      "header": "Authored top/insets; measured presented bottom forwarded to child owner",
+      "footer": "Measured navigation occupied extent forwarded to caller, never imposed on body by this chrome adapter",
+      "end": "Zero content/native end budget here; child owns it"
+    },
+    {
+      "path": "features/search/ui/SearchPage.ets",
+      "owner": "SearchPage.pageGeometry",
+      "geometry": "metrics width; resolvedHeaderHeight; searchBottomInset; max tablet rail width",
+      "generation": "searchHeaderMeasurementKey + ownsPageQuery; measurementRevision; external ReaderLibrarySearchSurface header retains same query owner",
+      "rail": "No main navigation rail",
+      "header": "Scaffold headerVisible=false; external shared fixed-header receipt is sole height source",
+      "footer": "No footer actor",
+      "end": "readerScrollLayout(contentOffset); full-height native List/Scroll consumes internal start/end"
+    },
+    {
+      "path": "features/source/ui/SourceManagementPage.ets",
+      "owner": "SourceManagementPage.refreshGeometry",
+      "geometry": "local viewport; sourceManagement max width; horizontal19",
+      "generation": "mounted + measurementKey; readForGeneration source:header/source:footer; viewport/window inputs advance key",
+      "rail": "None",
+      "header": "Current measured header, authored default until current receipt",
+      "footer": "Current measured action footer or footerFallbackHeight",
+      "end": "Content end equals occupied footer extent; List contentOffset"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+      "owner": "BookshelfMultiSelectPage.refreshGeometry",
+      "geometry": "live local width/height; APP_HEADER_BAR_HEIGHT; content gap12",
+      "generation": "mounted + measurementKey; current header/footer reads; viewport/window change invalidates",
+      "rail": "None",
+      "header": "Current selection topbar measured height",
+      "footer": "removeBarClearance: current measured extent or target+padding+safe-bottom fallback",
+      "end": "removeBarClearance +20; native List contentOffset"
+    },
+    {
+      "path": "features/reading/ui/LocalBookDetail.ets",
+      "owner": "LocalBookDetail.refreshGeometry",
+      "geometry": "live viewport; exact text/manga presentation spec; same owner refines header/dock horizontal frames",
+      "generation": "mounted + measurementKey; invalidateFrame on geometry/entity/font inputs; readForGeneration detail:header/detail:dock",
+      "rail": "None",
+      "header": "Top from headerSpec and safe top; current receipt bounded below by authored minimum",
+      "footer": "Current measured dock + safe-bottom/gap; dockFrame from already resolved body frame",
+      "end": "Footer bottom + height + content gap; full-height detail Scroll"
+    },
+    {
+      "path": "features/reading/ui/BookDirectoryPage.ets",
+      "owner": "BookDirectoryPage.refreshGeometry",
+      "geometry": "manga local viewport; interactive safe edges; same owner derives header/footer frames",
+      "generation": "mounted + measurementKey; invalidateFrame; current-generation mangaHeader; separate admittedIdentity/font generation for async work",
+      "rail": "None",
+      "header": "Safe top + headerSafeGap + current header height; tools height contributes content gap",
+      "footer": "Fixed dock on sufficient height; in-flow footer on short viewport; exact manga identity",
+      "end": "mangaListBottomClearance; ReaderDirectoryNavigationSurface receives one scroll layout"
+    },
+    {
+      "path": "features/reading/ui/ReaderFullDirectory.ets",
+      "owner": "ReaderFullDirectory.refreshGeometry",
+      "geometry": "live container width/height; compact/expanded directory frame; same full panel uses resolved top",
+      "generation": "mounted + measurementKey; readForGeneration fullDirectory:header; book/open/layout inputs invalidate",
+      "rail": "No main rail; expanded right-aligned panel remains one directory owner",
+      "header": "topBarTop/insets + current measured header + panelGap",
+      "footer": "No scaffold footer; panel owns safe bottom extent",
+      "end": "No separate scroll end budget at Scaffold; directory panel consumes available native height"
+    },
+    {
+      "path": "features/downloads/ui/SharedDownloadPage.ets",
+      "owner": "SharedDownloadPage.pageGeometry",
+      "geometry": "current metrics + availableHeight; overflow selects inline/overlay",
+      "generation": "Environment-keyed readForGeneration; store cleared on mount/retire; header callback captures presentation/window/detail/managing; dock receipt checks exact raisedDockShapeIdentity",
+      "rail": "No main rail; dock inset is local bounded rail",
+      "header": "PageBackBar owns measured height; headerTop is inside fixed header material once",
+      "footer": "Current dock extent from current environment receipt; native raised surface guards selection/detail identity",
+      "end": "contentBottom includes dock/safe clearance; inline overflow puts chrome in flow and resolver zeroes overlay insets"
+    },
+    {
+      "path": "features/reading/ui/ReaderShell.ets",
+      "owner": "ReadingExperience text layout or MangaReadingSurface manga layout",
+      "geometry": "Explicit readerEmptyPageGeometry",
+      "generation": "Inner reader owns source/book/session, layout/viewport generation and retained actor identity",
+      "rail": "No app navigation rail",
+      "header": "No scaffold header slot; reading/control chrome belongs inner reader",
+      "footer": "No scaffold footer slot",
+      "end": "No scaffold insets; inner reader owns complete frame",
+      "exception": "Retained reading actor must continue real layout when hidden; scaffold supplies background/safe-area/visibility only",
+      "openCondition": "If a scaffold-owned fixed header/footer or scroll body is added, remove inert exception and supply one authored geometry owner. Do not add a second resolver outside reading layout."
+    },
+    {
+      "path": "features/sync/ui/SyncSurface.ets",
+      "owner": "Centered pending configuration placeholder, then SyncPage→StandardPage when ready",
+      "geometry": "Explicit readerEmptyPageGeometry only in !presentation.ready branch",
+      "generation": "presentation.ready/operations(identity) switch controls business ownership; no asynchronous size receipts",
+      "rail": "None",
+      "header": "No header slot in pending branch",
+      "footer": "No footer slot in pending branch",
+      "end": "Full-frame centered placeholder, no scrolling or budgets",
+      "exception": "No content/chrome avoidance is needed before snapshot; ready branch changes to measured StandardPage",
+      "openCondition": "If pending branch gains scrollable content/actions or fixed chrome, move it to StandardPage or supply resolved geometry; never extend the empty exception to the ready page"
+    }
+  ],
+  "standardPolicy": {
+    "owner": "ui/layout/ReaderStandardPage.ets",
+    "body": "One ReaderPageScrollHost/Scroll retains caller scroller; horizontal body frame consumes geometry once",
+    "generation": "mounted + monotonic measurementKey; variant/rail/end/environment/local viewport changes advance key; current-generation header/footer reads; unmount clears store",
+    "header": "APP_HEADER_BAR_HEIGHT fallback; measured header + READER_STANDARD_PAGE_CONTENT_GAP",
+    "footer": "No rail: current measured footer extent. Rail: zero bottom navigation extent.",
+    "end": "Explicit caller override else readerStandardPageContentEndInset(variant,metrics,footerHeight); settingsHome includes measured floating navigation+16; rssDetail includes max62 footer + bottom offset; other variants use safe-bottom/minimum",
+    "rail": "MainTabShell passes readerMainRailLeading and rail bottom inset only in rail mode"
+  },
+  "standardCalls": [
+    {
+      "path": "features/shell/MainTabShell.ets",
+      "slot": "standardScroll",
+      "variant": "standardPageVariant",
+      "entity": "SettingsShell home delegates settingsHome",
+      "rail": "Conditional main rail",
+      "footer": "bottomNavigation"
+    },
+    {
+      "path": "features/settings/ui/SettingsShell.ets",
+      "slot": "general",
+      "variant": "settingsGeneral",
+      "entity": "Settings general branch",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/settings/ui/SettingsPage.ets",
+      "slot": "about",
+      "variant": "settingsGeneral",
+      "entity": "About opening identity",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/settings/ui/SettingsPage.ets",
+      "slot": "developer",
+      "variant": "settingsGeneral",
+      "entity": "Developer opening identity",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/settings/ui/ReaderMessagePreviewPage.ets",
+      "slot": "build",
+      "variant": "settingsGeneral",
+      "entity": "Bounded developer message preview",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/settings/ui/RulesManagementPage.ets",
+      "slot": "build",
+      "variant": "management",
+      "entity": "Rules management",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfManagementPage.ets",
+      "slot": "build",
+      "variant": "management",
+      "entity": "Bookshelf management",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfSettingsPage.ets",
+      "slot": "build",
+      "variant": "settings",
+      "entity": "Bookshelf settings",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/source/ui/SourceToolsPage.ets",
+      "slot": "build",
+      "variant": "tools",
+      "entity": "Source tools temporary opening",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/rss/ui/RssSubscriptionEditorPage.ets",
+      "slot": "build",
+      "variant": "rssEditor",
+      "entity": "RSS editor",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/rss/ui/RssSubscriptionManagementPage.ets",
+      "slot": "build",
+      "variant": "rssManagement",
+      "entity": "RSS subscriptions",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/rss/ui/RssSourceFeedPage.ets",
+      "slot": "build",
+      "variant": "rssFeed",
+      "entity": "RSS source feed",
+      "rail": "None",
+      "footer": "None"
+    },
+    {
+      "path": "features/rss/ui/RssEntryDetailPage.ets",
+      "slot": "build",
+      "variant": "rssDetail",
+      "entity": "RSS entry detail",
+      "rail": "None",
+      "footer": "bottomActions; measured"
+    },
+    {
+      "path": "features/sync/ui/SyncPage.ets",
+      "slot": "build",
+      "variant": "sync",
+      "entity": "Ready sync snapshot",
+      "rail": "None",
+      "footer": "None"
+    }
+  ],
+  "resolverConsumers": [
+    {
+      "path": "ui/layout/ReaderStandardPage.ets",
+      "owner": "Standard wrapper owns complete body contract above",
+      "generation": "measurementKey"
+    },
+    {
+      "path": "features/source/ui/SourceManagementPage.ets",
+      "owner": "Direct host contract above",
+      "generation": "measurementKey"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+      "owner": "Direct host contract above",
+      "generation": "measurementKey"
+    },
+    {
+      "path": "features/reading/ui/LocalBookDetail.ets",
+      "owner": "Direct host contract above",
+      "generation": "measurementKey"
+    },
+    {
+      "path": "features/reading/ui/BookDirectoryPage.ets",
+      "owner": "Direct host contract above",
+      "generation": "measurementKey"
+    },
+    {
+      "path": "features/reading/ui/ReaderFullDirectory.ets",
+      "owner": "Direct host contract above",
+      "generation": "measurementKey"
+    },
+    {
+      "path": "features/downloads/ui/SharedDownloadPage.ets",
+      "owner": "Direct host contract above",
+      "generation": "presentation identity + environment + current callback"
+    },
+    {
+      "path": "features/search/ui/SearchPage.ets",
+      "owner": "Direct host contract above",
+      "generation": "query/header generation"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfPage.ets",
+      "owner": "Populated shelf body only; contentGeometry is sole active populated branch resolver",
+      "generation": "Current measured headerBottom/occupied footer from BookshelfScene/Shell; local viewport and environment revision",
+      "rail": "Existing main rail left/right content gaps encode rail avoidance once; no extra leading rail",
+      "header": "Presented header bottom + authored gap/underlap",
+      "footer": "Current measured bottom navigation+16 or rail minimum; internal List contentOffset"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfEmptyPage.ets",
+      "owner": "Alternative empty shelf body; not nested inside populated shelf body",
+      "generation": "Current route headerBottom/measuredFooterHeight + mainViewport/window revision",
+      "rail": "Same main rail content gaps; centered authored empty card inside this body frame",
+      "header": "Presented headerBottom + TOK_SPACE_XS",
+      "footer": "measured floating navigation occupied extent or rail minimum; full-height Scroll internal tail"
+    },
+    {
+      "path": "features/bookshelf/ui/BookshelfStatusContent.ets",
+      "owner": "Alternative loading/error shelf body; not a competing populated resolver",
+      "generation": "Current headerBottom/measuredFooterHeight + viewport/window revision",
+      "rail": "Main rail content gaps once",
+      "header": "Presented headerBottom; centered full-height status body",
+      "footer": "Measured floating navigation extent or rail minimum; scroll content padding"
+    },
+    {
+      "path": "features/discover/ui/DiscoverPage.ets",
+      "owner": "Discover body under chrome-only MainTabShell",
+      "generation": "mounted measurementKey; window/font/expanded layout changes; captured current header receipt",
+      "rail": "No authored rail; Discover is a bounded disabled product surface until its product contract enables wider navigation",
+      "header": "Current header receipt + TOK_SPACE_XS",
+      "footer": "bottomContentInset safe floating navigation clearance"
+    },
+    {
+      "path": "features/rss/ui/RssPage.ets",
+      "owner": "RSS body under chrome-only MainTabShell",
+      "generation": "Current local width and window facts; header uses authored RSS_FLOATING_HEADER_HEIGHT (no height receipt)",
+      "rail": "readerMainRailLeading only if rail active",
+      "header": "Authored RSS height + TOK_SPACE_XS",
+      "footer": "bottomContentInset navigation/safe clearance",
+      "boundary": "Current disabled RSS product surface; documentation does not enable it or certify its native pixels"
+    }
+  ],
+  "originalEightDirectResolverReview": "Seven authored direct-host resolvers remain; MainTabShell's eighth former resolver is replaced by chrome-only composition. Standard and five branch-body consumers are included explicitly so no current resolver caller is omitted.",
+  "layoutFiles": [
+    {
+      "file": "ReaderLayoutCapability.ts",
+      "decision": "RETAIN",
+      "reason": "Index-only window capability policy; merging with frame/rendering geometry would make route composition depend on unrelated rendering roles.",
+      "actualImporters": [
+        "pages/Index.ets"
+      ]
+    },
+    {
+      "file": "ReaderSurfaceRectMeasurement.ets",
+      "decision": "RETAIN",
+      "reason": "SDK-native node measurement and coordinate conversion; cannot fold into pure Rect types without TS→ETS dependency. Search presentation consumes pure rect identities without SDK.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfNavigationPresentation.ets",
+        "features/bookshelf/ui/BookshelfPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderFixedHeaderHost.ets",
+      "decision": "RETAIN",
+      "reason": "Native measured header shared by Scaffold and external ReaderLibrarySearchSurface. Folding into Scaffold duplicates the external host or changes consumer lifecycle.",
+      "actualImporters": [
+        "features/search/ui/ReaderLibrarySearchSurface.ets",
+        "ui/layout/ReaderPageScaffold.ets"
+      ]
+    },
+    {
+      "file": "ReaderPageShell.ts",
+      "decision": "RETAIN",
+      "reason": "Pure standard-page variants/inset policy and Area numeric conversion consumed by many independent chrome/pages; distinct from frame rendering and resolved geometry.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+        "features/bookshelf/ui/BookshelfPage.ets",
+        "features/bookshelf/ui/BookshelfStatusContent.ets",
+        "features/discover/ui/DiscoverPage.ets",
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/manga/ui/MangaDirectoryCurrentFooter.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/reading/ui/ReaderBookmarkEmptyState.ets",
+        "features/reading/ui/ReaderFullDirectory.ets",
+        "features/rss/ui/RssEntryDetailPage.ets",
+        "features/rss/ui/RssPage.ets",
+        "features/search/ui/ReaderLibrarySearchSurface.ets",
+        "features/search/ui/ReaderSearchFilterPanel.ets",
+        "features/search/ui/ReaderSearchHistoryPanel.ets",
+        "features/search/ui/ReaderSearchTaskPanel.ets",
+        "features/settings/ui/SettingsPage.ets",
+        "features/settings/ui/SettingsShell.ets",
+        "features/shell/MainTabBar.ets",
+        "features/shell/MainTabShell.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "features/sync/ui/SyncPage.ets",
+        "ui/chrome/PageBackBar.ets",
+        "ui/layout/ReaderFixedHeaderHost.ets",
+        "ui/layout/ReaderPageGeometry.ts",
+        "ui/layout/ReaderPageScaffold.ets",
+        "ui/layout/ReaderStandardPage.ets",
+        "ui/patterns/ReaderBottomTabBar.ets"
+      ]
+    },
+    {
+      "file": "ReaderSurfaceRect.ts",
+      "decision": "RETAIN",
+      "reason": "Pure window-space rect/owner/generation contract shared by navigation presentation, Index and search; distinct from page layout arithmetic.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfNavigationPresentation.ets",
+        "features/bookshelf/ui/BookshelfPage.ets",
+        "features/bookshelf/ui/BookshelfScene.ets",
+        "features/search/presentation/LibrarySearchPresentation.ets",
+        "features/search/ui/ReaderLibrarySearchSurface.ets",
+        "pages/Index.ets",
+        "ui/layout/ReaderSurfaceRectMeasurement.ets"
+      ]
+    },
+    {
+      "file": "ReaderPageGeometry.ts",
+      "decision": "RETAIN",
+      "reason": "Sole general page intent→geometry arithmetic plus explicit empty/chrome-only constructors; Scaffold consumes results and Standard authors inputs.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfEmptyPage.ets",
+        "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+        "features/bookshelf/ui/BookshelfPage.ets",
+        "features/bookshelf/ui/BookshelfStatusContent.ets",
+        "features/discover/ui/DiscoverPage.ets",
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/reading/ui/ReaderFullDirectory.ets",
+        "features/reading/ui/ReaderShell.ets",
+        "features/rss/ui/RssPage.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/shell/MainTabShell.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "features/sync/ui/SyncSurface.ets",
+        "ui/layout/ReaderPageScaffold.ets",
+        "ui/layout/ReaderScrollLayout.ts",
+        "ui/layout/ReaderStandardPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderFloatingBarMetrics.ts",
+      "decision": "RETAIN",
+      "reason": "Navigation label/bar/bottom occupied-extent policy shared by navigation and many body owners; different consumer set and change cause from standard-page variants.",
+      "actualImporters": [
+        "app/navigation/ReaderBottomNavigation.ets",
+        "features/bookshelf/ui/BookshelfEmptyPage.ets",
+        "features/bookshelf/ui/BookshelfPage.ets",
+        "features/bookshelf/ui/BookshelfStatusContent.ets",
+        "features/discover/ui/DiscoverPage.ets",
+        "features/rss/ui/RssPage.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/shell/MainNavigationSpec.ts",
+        "features/shell/MainTabBar.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "ui/layout/ReaderPageShell.ts",
+        "ui/patterns/ReaderBottomTabBar.ets"
+      ]
+    },
+    {
+      "file": "SurfaceHorizontalGeometry.ts",
+      "decision": "RETAIN",
+      "reason": "General bounded horizontal-frame algorithm used by dialogs, reading chrome and pages; cannot merge into page geometry without coupling non-page surfaces.",
+      "actualImporters": [
+        "app/navigation/ReaderBottomNavigation.ets",
+        "features/bookshelf/ui/BookshelfEmptyPage.ets",
+        "features/bookshelf/ui/BookshelfPage.ets",
+        "features/bookshelf/ui/BookshelfShell.ets",
+        "features/bookshelf/ui/BookshelfStatusContent.ets",
+        "features/bookshelf/ui/LocalImportDialog.ets",
+        "features/discover/ui/DiscoverPage.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/rss/ui/RssEntryDetailPage.ets",
+        "features/rss/ui/RssPage.ets",
+        "features/search/ui/ReaderSearchFilterPanel.ets",
+        "features/search/ui/ReaderSearchTaskPanel.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "features/sync/ui/SyncPage.ets",
+        "ui/layout/ReaderPageGeometry.ts",
+        "ui/layout/ReaderPageShell.ts",
+        "ui/surfaces/ReaderDialogSurface.ets"
+      ]
+    },
+    {
+      "file": "ReaderPageScrollHost.ets",
+      "decision": "RETAIN",
+      "reason": "Native Scroll inset application only; Standard owns geometry/measurements and arbitrary callers retain scroller. Keep native application separate from pure shared Scroll/List offset model.",
+      "actualImporters": [
+        "ui/layout/ReaderStandardPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderMeasurements.ts",
+      "decision": "RETAIN",
+      "reason": "Reusable current-generation measurement store used by ten owners; no page-specific policy or SDK. Folding into one owner duplicates state or expands imports.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+        "features/bookshelf/ui/BookshelfShell.ets",
+        "features/discover/ui/DiscoverPage.ets",
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/reading/ui/ReaderFullDirectory.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "ui/layout/ReaderStandardPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderStandardPage.ets",
+      "decision": "RETAIN",
+      "reason": "Measured standard-page composition shared by13 files; distinct from low-level Scaffold and pure resolver. Owns mounted viewport/measurement lifecycle.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfManagementPage.ets",
+        "features/bookshelf/ui/BookshelfSettingsPage.ets",
+        "features/rss/ui/RssEntryDetailPage.ets",
+        "features/rss/ui/RssSourceFeedPage.ets",
+        "features/rss/ui/RssSubscriptionEditorPage.ets",
+        "features/rss/ui/RssSubscriptionManagementPage.ets",
+        "features/settings/ui/ReaderMessagePreviewPage.ets",
+        "features/settings/ui/RulesManagementPage.ets",
+        "features/settings/ui/SettingsPage.ets",
+        "features/settings/ui/SettingsShell.ets",
+        "features/shell/MainTabShell.ets",
+        "features/source/ui/SourceToolsPage.ets",
+        "features/sync/ui/SyncPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderRaisedShape.ts",
+      "decision": "RETAIN",
+      "reason": "Pure measured material border-box validation shared by panels/chrome/download/search; distinct from page content geometry and measurement storage.",
+      "actualImporters": [
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/search/ui/ReaderLibrarySearchSurface.ets",
+        "ui/chrome/PageBackBar.ets",
+        "ui/patterns/ReaderBottomTabBar.ets",
+        "ui/surfaces/ReaderPanelFrame.ets",
+        "ui/surfaces/ReaderRaisedSurface.ets"
+      ]
+    },
+    {
+      "file": "ReaderScrollLayout.ts",
+      "decision": "RETAIN",
+      "reason": "Pure inset projection shared by native Scroll/List/Grid/directory and source-switch callers; cannot fold into its single Scroll renderer or page geometry without coupling consumers.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+        "features/bookshelf/ui/BookshelfPage.ets",
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/ReaderDirectoryList.ets",
+        "features/reading/ui/ReaderDirectoryNavigationList.ets",
+        "features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "features/source/ui/SourceSwitchWindow.ets",
+        "ui/layout/ReaderPageScrollHost.ets",
+        "ui/layout/ReaderStandardPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderPageScaffold.ets",
+      "decision": "RETAIN",
+      "reason": "Native common layer ordering, safe-area, header/footer measurement dispatch and visibility; owns no business geometry resolution. Unique consumer/result boundary.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/reading/ui/ReaderFullDirectory.ets",
+        "features/reading/ui/ReaderShell.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/shell/MainTabShell.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "features/sync/ui/SyncSurface.ets",
+        "ui/layout/ReaderStandardPage.ets"
+      ]
+    },
+    {
+      "file": "ReaderPageNativeAttributes.ets",
+      "decision": "RETAIN",
+      "reason": "Actual ArkUI AttributeModifier classes shared by Scaffold/Header. Required ETS boundary; TypeScript re-export is forbidden by actual compiler semantics.",
+      "actualImporters": [
+        "ui/layout/ReaderFixedHeaderHost.ets",
+        "ui/layout/ReaderPageScaffold.ets"
+      ]
+    },
+    {
+      "file": "ReaderFrameStyle.ts",
+      "decision": "RETAIN",
+      "reason": "Pure resolved visual policy shared by all finite host categories and native modifiers. Keep policy DTO independent of SDK rendering.",
+      "actualImporters": [
+        "features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+        "features/downloads/ui/SharedDownloadPage.ets",
+        "features/reading/ui/BookDirectoryPage.ets",
+        "features/reading/ui/LocalBookDetail.ets",
+        "features/reading/ui/ReaderFullDirectory.ets",
+        "features/reading/ui/ReaderShell.ets",
+        "features/search/ui/ReaderLibrarySearchSurface.ets",
+        "features/search/ui/SearchPage.ets",
+        "features/shell/MainTabShell.ets",
+        "features/source/ui/SourceManagementPage.ets",
+        "features/sync/ui/SyncSurface.ets",
+        "ui/layout/ReaderFixedHeaderHost.ets",
+        "ui/layout/ReaderPageNativeAttributes.ets",
+        "ui/layout/ReaderPageScaffold.ets",
+        "ui/layout/ReaderStandardPage.ets"
+      ]
+    }
+  ],
+  "consolidation": {
+    "before": 16,
+    "after": 16,
+    "merged": [],
+    "outcome": "No pair shares both change cause and consumer set. Retained each file with explicit evidence; no forced10–12 target.",
+    "productionReduction": "Removed redundant MainTabShell full-body resolution and its window/viewport dependency. Generation reads/callback ownership corrected without adding another layout framework."
+  },
+  "verification": {
+    "status": "Generation-owners PASS; host inventory PASS; indexed navigation PASS after independent single-item definition review. Historical FAIL retained.",
+    "nativePixels": "NOT_RUN",
+    "build": "NOT_RUN",
+    "device": "NOT_RUN",
+    "productScopeEnablement": "NONE",
+    "packageBoundary": "Root unified build separate; no package/device/user acceptance inferred."
+  }
+}

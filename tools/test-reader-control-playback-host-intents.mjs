@@ -7,17 +7,17 @@ const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
 const { localFilePath }=await import('./lib/tool-environment.mjs');
 const {default:assert}=await import('node:assert/strict');
-const autoPolicy=await import('../entry/src/main/ets/features/reading/ReaderAutoPageState.ts');
-const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts');
-const { readerTtsSessionBlocksAutoPageStart }=await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
-const { buildReaderSessionLaunchGeometry }=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
-const { ReaderSessionLaunchController }=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
-const { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage }=await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
-const { ReaderPageChromeSnapshot }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { copyReaderControlSessionState, createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { ReaderPageChromeMeasurements }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const autoPolicy=await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageState.ts');
+const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageCoordinator.ts');
+const { readerTtsSessionBlocksAutoPageStart }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { buildReaderSessionLaunchGeometry }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { ReaderSessionLaunchController }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+const { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+const { ReaderPageChromeSnapshot }=await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { copyReaderControlSessionState, createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { ReaderPageChromeMeasurements }=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const file=localFilePath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
+const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
 if(selectedCase==='business-intent'){
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
   'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',

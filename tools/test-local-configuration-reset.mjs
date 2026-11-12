@@ -3,13 +3,16 @@ import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-import * as tts from '../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts';
-import * as selection from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
-import * as registry from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
+import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import * as settings from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
+import * as tts from '../entry/src/main/ets/features/reading/application/ReaderTtsPreferencesState.ts';
+import * as selection from '../entry/src/main/ets/app/ReaderThemeSelection.ts';
+import * as registry from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
+import { projectCommitReadback } from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
+import { READER_FEEDBACK_EXTENDED_MS } from '../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 const require=createRequire(import.meta.url);
 const ts=require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
 const base=new URL('../entry/src/main/ets/',import.meta.url);
@@ -38,19 +41,19 @@ async function fixture(){
  const Runtime={ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>current)};
  const themeModule=compile('app/ReaderThemeHost.ts',{
  './ReaderRuntimeOwner':Runtime,'./ReaderWindowCoordinator':{ReaderWindowCoordinator:{updateAppChromeStyle(){}},ReaderWindowChromeStyle:class{}},
- '../features/reading/ReaderAppearanceStore':{ReaderAppearanceStore},'../features/reading/ReaderAppearanceState':appearance,
- '../features/common/ReaderThemeSelection':selection,'../features/common/ReaderThemeRegistry':registry,
+ '../features/reading/application/ReaderAppearanceStore':{ReaderAppearanceStore},'../features/reading/application/ReaderAppearanceState':appearance,
+ './ReaderThemeSelection':selection,'../ui/foundation/ReaderThemeRegistry':registry,
  });
  const {ReaderThemeHost}=themeModule;await ReaderThemeHost.install(owner,'night');
- const settingModule=compile('features/settings/SettingsGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderThemeHost':themeModule});
- const readingModule=compile('features/reading/ReaderSettingsGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./ReaderSettingsState':settings});
- const ttsModule=compile('features/reading/ReaderTtsPreferencesGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./ReaderTtsPreferencesState':tts});
+ const settingModule=compile('features/settings/application/SettingsGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../../app/ReaderThemeHost':themeModule});
+ const readingModule=compile('features/reading/application/ReaderSettingsGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../../app/ReaderRuntimeOwner':Runtime,'../../../app/ReaderThemeHost':themeModule,'./ReaderSettingsState':settings});
+ const ttsModule=compile('features/reading/application/ReaderTtsPreferencesGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../../app/ReaderRuntimeOwner':Runtime,'../../../app/ReaderThemeHost':themeModule,'./ReaderTtsPreferencesState':tts});
  const credentials={saveBookshelfViewMode:async v=>{trace.push('mode');if(fail==='mode'){fail='';throw Error('flush:mode');}mode=v;}};
  const evidenceModule=compile('app/ReaderWriteEvidence.ts',{});
- const modules={'../../app/ReaderWriteEvidence':evidenceModule,'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./SettingsGateway':settingModule,
- '../reading/ReaderSettingsGateway':readingModule,'../reading/ReaderSettingsState':settings,'../reading/ReaderTtsPreferencesGateway':ttsModule,'../reading/ReaderTtsPreferencesState':tts,
- '../sync/WebDavCredentialStore':{WebDavCredentialStore:{instance:credentials}}};
- let Reset=compile('features/settings/LocalConfigurationReset.ts',modules).LocalConfigurationReset;
+ const modules={'../../../app/ReaderWriteEvidence':evidenceModule,'@ohos.data.preferences':{default:preferences},'../../../app/ReaderRuntimeOwner':Runtime,'../../../app/ReaderThemeHost':themeModule,'./SettingsGateway':settingModule,
+ '../../reading/application/ReaderSettingsGateway':readingModule,'../../reading/application/ReaderSettingsState':settings,'../../reading/application/ReaderTtsPreferencesGateway':ttsModule,'../../reading/application/ReaderTtsPreferencesState':tts,
+ '../../sync/application/WebDavCredentialStore':{WebDavCredentialStore:{instance:credentials}}};
+ let Reset=compile('features/settings/application/LocalConfigurationReset.ts',modules).LocalConfigurationReset;
  ReaderThemeHost.setRecoveryBarrier(async()=>{barrierCalls++;trace.push('sync-recovery');await Reset.recover(owner);});
  const appGateway=new settingModule.SettingsGateway(context);
  await appGateway.update({autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false,developerMode:true},true);
@@ -59,7 +62,7 @@ async function fixture(){
  await new readingModule.ReaderSettingsGateway(owner).update({...settings.createDefaultReaderSettingsSnapshot(),pageTransition:'none'},true);
  await new ttsModule.ReaderTtsPreferencesGateway(owner).update({...tts.createDefaultReaderTtsPreferencesSnapshot(),keepScreenOn:true},true);trace.length=0;
  return{owner,context,trace,stores,app,ReaderThemeHost,appGateway,settingModule,readingModule,ttsModule,
- reset:()=>Reset.request(owner),recover:()=>Reset.recover(owner),raceProbe:()=>{const probe=Reset.runShared(owner,false);const request=Reset.runShared(owner,true);return Promise.all([probe,request]);},restart:()=>{Reset=compile('features/settings/LocalConfigurationReset.ts',modules).LocalConfigurationReset;},
+ reset:()=>Reset.request(owner),recover:()=>Reset.recover(owner),raceProbe:()=>{const probe=Reset.runShared(owner,false);const request=Reset.runShared(owner,true);return Promise.all([probe,request]);},restart:()=>{Reset=compile('features/settings/application/LocalConfigurationReset.ts',modules).LocalConfigurationReset;},
  fail:x=>{fail=x;},gate:name=>{const d=deferred();pendingGate={name,...d};return d;},ownerChanged:()=>{current={};},
  mode:()=>mode,appearance:()=>appearanceDisk,barriers:()=>barrierCalls,
  pending:()=>stores.get('reader_configuration_reset_v1')?.memory.get('pending')??'',
@@ -120,10 +123,23 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
  unsubscribe();await other.load();assert.equal(events.length,2,'unmounted consumers release their subscription');
 }
 // Real page confirmation and callback semantics; the native modal/pixels are not simulated.
-const Page=productionMotionMethods(new URL('features/settings/SettingsPage.ets',base),['requestRestoreDefaults','performRestoreDefaults','hasPendingSettings','showFeedbackToast']);
-let dialog,calls=0;const feedback=[];const page=Object.assign(new Page(),{mounted:true,operation:{},resetRevision:0,resetInFlight:false,appThemeScheme:'day',getUIContext:()=>({showAlertDialog:d=>dialog=d,getPromptAction:()=>({showToast:v=>feedback.push(v)})}),onRestoreDefaults:async()=>{calls++;return true;}});
+const runtime={};
+const Page=productionMotionMethods(new URL('features/settings/ui/SettingsPage.ets',base),
+ ['requestRestoreDefaults','performRestoreDefaults','generalConfirmationCurrent','settingsNavigationCurrent','showFeedbackToast'],
+ {ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>runtime),READER_FEEDBACK_EXTENDED_MS});
+let dialog,calls=0,receipt=projectCommitReadback('confirmed','succeeded');
+const feedback=[];
+const page=Object.assign(new Page(),{mounted:true,activeSection:'general',themeOwner:runtime,temporaryBackIdentity:'settings:1',
+ developerPageId:'',resetRevision:0,resetSectionRevision:0,resetInFlight:false,appThemeScheme:'day',
+ isOpeningCurrent:()=>true,nativeAlertOwner:new ReaderNativeAlertOwner(),
+ getUIContext:()=>({showAlertDialog:d=>dialog=d}),
+ transientFeedback:{show(_context,value,current){if(current())feedback.push(value);}},
+ onRestoreDefaults:async()=>{calls++;return receipt;}});
 page.requestRestoreDefaults();dialog.primaryButton.action();assert.equal(calls,0);assert.match(dialog.message,/保留书籍、书源、进度、书签/);
 page.requestRestoreDefaults();dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1);assert.equal(page.resetMessage,'已恢复界面与阅读设置');
 assert.equal(feedback.length,1);assert.equal(feedback[0].message,'已恢复界面与阅读设置');
-page.requestRestoreDefaults();page.mounted=false;dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1,'dismissed page cannot start reset from stale dialog');
+receipt=projectCommitReadback('confirmed','failed');
+page.requestRestoreDefaults();dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));
+assert.equal(calls,2);assert.equal(page.resetMessage,'');assert.equal(feedback.length,1,'confirmed write with failed readback stays on the owner recovery channel');
+page.requestRestoreDefaults();page.mounted=false;dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,2,'dismissed page cannot start reset from stale dialog');
 console.log('PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, accepted-vs-confirmed cache and stale-dialog guard. No Core data/credential mutation.');

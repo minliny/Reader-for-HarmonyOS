@@ -3,17 +3,17 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function run(id){
 
 const { registerHooks }=await import('node:module');registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {readReadingDocumentWindow}=await import('../entry/src/main/ets/features/reading/ReadingDocumentWindow.ts');
+const {readReadingDocumentWindow}=await import('../entry/src/main/ets/features/reading/application/ReadingDocumentWindow.ts');
 
 const scope={sourceId:'s',bookId:'b',chapterIndex:4,bodyVersion:'body',processingVersion:'processed'};
 const answer={kind:'ready',sourceId:'s',bookId:'b',chapterIndex:4,positionScope:scope,startScalar:40,endScalar:44,totalScalars:100,hasMore:true,
  content:'A😀\uFFFCB',baseUrl:'https://example.org/chapter',blocks:[
  {kind:'text',text:'A😀',startScalar:40,endScalar:42},{kind:'image',source:'pic.png',startScalar:42,endScalar:43},{kind:'text',text:'B',startScalar:43,endScalar:44}]};
-const {ReadingSurfaceLayoutMap,readingChapterLayoutMap,prepareReadingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const {completeReadingParagraphWindow,prepareReadingParagraphUtf16Ranges,collectReadingParagraphUtf16Ranges}=await import('../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts');
-const {readReadingEntrySnapshot,qualifyReadingEntryWindow}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
-const {ReadingSessionDocuments}=await import('../entry/src/main/ets/features/reading/ReadingSessionDocuments.ts');
-const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const {ReadingSurfaceLayoutMap,readingChapterLayoutMap,prepareReadingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
+const {completeReadingParagraphWindow,prepareReadingParagraphUtf16Ranges,collectReadingParagraphUtf16Ranges}=await import('../entry/src/main/ets/features/reading/application/ReadingParagraphProjection.ts');
+const {readReadingEntrySnapshot,qualifyReadingEntryWindow}=await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
+const {ReadingSessionDocuments}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionDocuments.ts');
+const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const range={startScalar:40,endScalar:44,totalScalars:100};
 
 if(id==='wire-admission'){
@@ -44,7 +44,7 @@ assert.equal(map.sliceByScalar(41,42),'😀');assert.equal(map.isComplete(),fals
 assert.throws(()=>map.utf16ForScalar(0),/out of range/);assert.throws(()=>map.sliceByScalar(43,45),/out of range/);
 assert.throws(()=>new ReadingSurfaceLayoutMap('A',range),/invalid/);
 const ranged={content:'same',documentRange:{startScalar:1,endScalar:5,totalScalars:10}};
-const shared={...ranged,textLayoutIdentity:(await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts')).readingChapterTextIdentity(ranged)};
+const shared={...ranged,textLayoutIdentity:(await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts')).readingChapterTextIdentity(ranged)};
 assert.equal(readingChapterLayoutMap(ranged),readingChapterLayoutMap(shared));
 assert.notEqual(readingChapterLayoutMap(ranged),readingChapterLayoutMap({...shared,documentRange:{startScalar:2,endScalar:6,totalScalars:10}}));
 assert.deepEqual(completeReadingParagraphWindow('tail\r\n完整😀段\r\nnext\r\nhead','lineSeparated',false,false,9),{startUtf16:6,endUtf16:17});
@@ -87,7 +87,7 @@ assert.equal(docs.read('s','b',4),undefined,'partial range never pollutes the co
 if(id==='map-scheduler'){
 const {withCooperativeTurns}=await import('./fixtures/flows/cooperative-turns.mjs');await withCooperativeTurns(async clock=>{
 {
- const {prepareReadingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+ const {prepareReadingChapterLayoutMap}=await import('../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts');
  const content='甲😀é אבג\r\n'.repeat(4000), chapter={content};
  const beforeTurns=clock.turns;
  const prepared=await prepareReadingChapterLayoutMap(chapter,()=>true);

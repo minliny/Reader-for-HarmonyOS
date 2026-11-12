@@ -107,7 +107,7 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
         const name = node.expression.text;
         if (['ReaderPageScaffold', 'ReaderStandardPage'].includes(name)) {
           const imported = imports.get(declaration.file).get(name);
-          assert.equal(imported?.file, `features/common/${name}.ets`, 'actual dispatcher terminates at the imported common page frame');
+          assert.equal(imported?.file, `ui/layout/${name}.ets`, 'actual dispatcher terminates at the imported common page frame');
           dispatchFrames++;
           return;
         }
@@ -251,42 +251,46 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
   const feedbackActors = contract.nonPageActors.filter(row => row.kind === 'nonmodalFeedback');
   assert.equal(feedbackActors.length, 1, 'only one exact existing Index quiet-feedback slot');
   for (const feedback of feedbackActors) {
-    assert.deepEqual([feedback.method, feedback.component, feedback.contract],
-      ['indexRecoveryNoticeContent', 'ReaderRecoveryNotice', 'tools/test-index-native-alert-consumers.mjs'],
+    assert.deepEqual([feedback.component, feedback.contract],
+      ['ReaderJourneyRecoveryNotices', 'tools/test-index-native-alert-consumers.mjs'],
       'quiet feedback has one finite actual shared consumer and SDK proof');
     assert.ok(readFileSync(path.join(root, feedback.contract), 'utf8').length, 'quiet feedback retains its actual native callback proof');
-    const declaration = declarations.get('pages/Index.ets#Index#' + feedback.method);
-    assert.ok(declaration, 'quiet feedback actual Builder remains present');
+    const binding = imports.get('pages/Index.ets').get(feedback.component);
+    const declaration = declarations.get(`${binding?.file}#${binding?.name}#build`);
+    assert.ok(declaration, 'quiet feedback is imported from the actual composition component');
+    const feedbackTree = declaration.tree;
     const body = declaration.member.body;
     assert.equal(body.statements.length, 1, 'quiet feedback has no unclassified sibling');
     const condition = body.statements[0];
     assert.ok(ts.isIfStatement(condition), 'quiet feedback is conditional, never a new permanent page');
-    assert.equal(normalized(condition.expression.getText(index)), normalized('(this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true) || this.detailPendingNoticeVisible()'),
+    assert.equal(normalized(condition.expression.getText(feedbackTree)), normalized('this.reading.recoveryNoticeVisible() || this.detailNoticeVisible()'),
       'quiet feedback keeps the actual visibility and route/runtime admission');
     const actors = [], modifierCalls = new Map();
     walk(condition.thenStatement, node => {
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
         const property = node.expression.name.text;
         const calls = modifierCalls.get(property) ?? [];
-        calls.push(node.arguments.map(argument => argument.getText(index))); modifierCalls.set(property, calls);
+        calls.push(node.arguments.map(argument => argument.getText(feedbackTree))); modifierCalls.set(property, calls);
       }
       if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && ts.isIdentifier(node.expression) && /^[A-Z]/.test(node.expression.text)) actors.push(node);
     });
-    assert.deepEqual(actors.map(node => node.expression.text), ['Column', 'ForEach', 'ReaderRecoveryNotice'],
+    assert.deepEqual(actors.map(node => node.expression.text), ['Column', 'BookshelfDetailNotice', 'ForEach', 'ReaderRecoveryNotice'],
       'quiet feedback renders one intrinsic shared notice, never an extra page/window');
     assert.equal(modifierCalls.has('height'), false, 'quiet feedback cannot acquire a full-screen height');
-    assert.deepEqual(modifierCalls.get('hitTestBehavior'), [['HitTestMode.Transparent']], 'quiet feedback preserves page input');
+    assert.deepEqual(modifierCalls.get('hitTestBehavior'), [['this.interactive ? HitTestMode.Transparent : HitTestMode.None']],
+      'quiet feedback preserves page input and cannot receive input behind the native overlay');
     for (const property of ['bindSheet', 'bindPopup', 'bindContentCover', 'showAlertDialog', 'onTouch', 'onClick'])
       assert.equal(modifierCalls.has(property), false, 'quiet feedback cannot claim a modal or pointer mask: ' + property);
     const loop = actors.find(node => node.expression.text === 'ForEach');
-    assert.equal(loop.arguments[0].getText(index), '[this.indexRecoveryNotice.generation]', 'quiet feedback actions capture their exact presentation ticket');
-    const notice = actors.find(node => node.expression.text === feedback.component), props = notice.arguments[0];
+    assert.equal(loop.arguments[0].getText(feedbackTree), '[this.reading.recoveryNotice.generation]', 'quiet feedback actions capture their exact presentation ticket');
+    const notice = actors.find(node => node.expression.text === 'ReaderRecoveryNotice'), props = notice.arguments[0];
     assert.ok(ts.isObjectLiteralExpression(props));
-    assert.deepEqual(props.properties.map(property => property.name.getText(index)), ['view', 'actionLabel', 'onReconcile'],
+    assert.deepEqual(props.properties.map(property => property.name.getText(feedbackTree)), ['view', 'actionLabel', 'onReconcile'],
       'quiet feedback passes only actual shared notice inputs');
-    assert.equal(props.properties[0].initializer.getText(index), 'this.indexRecoveryNotice');
-    assert.equal(props.properties[1].initializer.getText(index), 'this.indexRecoveryActionLabel');
-    assert.equal(normalized(props.properties[2].initializer.getText(index)), normalized('(_expected: number): void => this.runIndexRecoveryAction(generation)'),
+    assert.equal(props.properties[0].initializer.getText(feedbackTree), 'this.reading.recoveryNotice');
+    assert.equal(props.properties[1].initializer.getText(feedbackTree), 'this.reading.recoveryActionLabel');
+    assert.equal(normalized(props.properties[2].initializer.getText(feedbackTree)),
+      normalized('(_expected: number): void => { if (this.interactive) this.reading.retryRecoveryNotice(generation); }'),
       'quiet feedback never borrows a successor action generation');
   }
   let bindings = 0, routeBindings = 0;
@@ -302,12 +306,12 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
       const call = calls.find(site => site.component === binding.host && site.variant === binding.variant &&
         (branch.directHostCall === undefined || site.node === branch.directHostCall));
       assert.ok(call, 'actual page category/common-host binding removed or changed: ' + binding.hostMethod);
-      assert.equal(call.target, `features/common/${binding.host}.ets#${binding.host}#build`, 'actual page delegates the imported public host');
+      assert.equal(call.target, `ui/layout/${binding.host}.ets#${binding.host}#build`, 'actual page delegates the imported public host');
       assert.ok(call.fields.includes('content'), 'page body is an actual delegated BuilderParam slot');
       for(const[key,expression]of Object.entries(binding.inputFacts??{}))assert.equal(call.inputFacts[key],expression,
         'exact page/runtime fact reaches the public native host: '+binding.hostMethod+':'+key);
       const scaffold = reachable(call.target);
-      assert.ok([...scaffold].some(method => method === 'features/common/ReaderPageScaffold.ets#ReaderPageScaffold#build'),
+      assert.ok([...scaffold].some(method => method === 'ui/layout/ReaderPageScaffold.ets#ReaderPageScaffold#build'),
         'all finite page hosts terminate at the one actual scaffold');
       bindings++;
   };

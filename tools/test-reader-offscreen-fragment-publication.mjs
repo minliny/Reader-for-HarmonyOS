@@ -109,7 +109,7 @@ async function captureSequence(pages, source = surfaceSource) {
     }
     update(input) { content.update(input); }
   }
-  const Capture = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  const Capture = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
     ['captureBookTurnTexture'], { ComponentContent, BookTurnTextureBuildInput,
       BookTurnTextureBuilder: () => {}, wrapBuilder: value => value, BOOK_TURN_TEXTURE_CURRENT: 0 });
   const capture = new Capture();

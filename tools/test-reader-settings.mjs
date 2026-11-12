@@ -38,7 +38,7 @@ const {
   setReaderScreenDirection,
   setReaderScreenTimeout,
   setReaderSettingsToggle,
-} = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const initial = createDefaultReaderSettingsSnapshot();
 assert.equal(initial.hideStatusBar, false, 'status hiding is an independent opt-in preference');
 assert.deepEqual(initial, {
@@ -222,7 +222,7 @@ const {
   setReaderScreenDirection,
   setReaderScreenTimeout,
   setReaderSettingsToggle,
-} = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const initial=createDefaultReaderSettingsSnapshot(); const readingDir=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
 // Execute the production settings/lifecycle methods: a correct mount-time
 // guard alone cannot stop settings/awake callbacks from reclaiming hidden UI.
@@ -373,9 +373,9 @@ const {
   setReaderScreenDirection,
   setReaderScreenTimeout,
   setReaderSettingsToggle,
-} = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+} = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const initial=createDefaultReaderSettingsSnapshot(); const oldV5={...initial};delete oldV5.hideStatusBar; const independent={...initial,hideStatusBar:true,hideNavigationBar:false,extendIntoCutout:true,mangaPageNumbers:false};
-const gateway=await readFile(new URL('../entry/src/main/ets/features/reading/ReaderSettingsGateway.ts',import.meta.url),'utf8');
+const gateway=await readFile(new URL('../entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts',import.meta.url),'utf8');
 // Execute the existing Preferences Gateway, with a fresh class/static state
 // for each cold process. Only get/put/flush and Runtime ownership are seams.
 function settingsStoreFixture(seed, inherited) {
@@ -443,8 +443,8 @@ const {
   setReaderScreenDirection,
   setReaderScreenTimeout,
   setReaderSettingsToggle,
-} = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
-const sharedContent=await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets',import.meta.url),'utf8');
+} = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
+const sharedContent=await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets',import.meta.url),'utf8');
 {
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   for (const [name, source, members] of [

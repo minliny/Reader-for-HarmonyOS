@@ -20,7 +20,7 @@ const { createHash } = await import('node:crypto');
 const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
-const source = read('features/common/ReaderActionSheetContent.ets');
+const source = read('ui/surfaces/ReaderActionMenuSurface.ets');
 class NativeColorFilter {
   constructor(matrix) { assert.equal(matrix.length,20);this.matrix=[...matrix]; }
 }
@@ -33,23 +33,24 @@ const iconPlatform={ColorMetrics:nativeColorMetrics,ColorFilter:NativeColorFilte
 const applyMatrix=(matrix,rgba)=>Array.from({length:4},(_,row)=>
   rgba.reduce((value,channel,index)=>value+matrix[row*5+index]*channel,matrix[row*5+4]));
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+const action = (id, label, section, { secondary = '', enabled = true, tone = 'default', showChevron = false } = {}) =>
+  new sdk.deps.ReaderMenuActionView(id, label, enabled, undefined, label, section, secondary, '', tone, showChevron);
 const actions = [
-  new sdk.deps.ReaderActionSheetAction('source', '更换书源', '阅读', '', '', true, undefined, 'default', true),
-  new sdk.deps.ReaderActionSheetAction('refresh', '重新打开本话', '阅读'),
-  new sdk.deps.ReaderActionSheetAction('detail', '漫画详情', '阅读', '', '', true, undefined, 'default', true),
-  new sdk.deps.ReaderActionSheetAction('download', '下载本话', '下载'),
-  new sdk.deps.ReaderActionSheetAction('manager', '下载管理', '下载', '', '', true, undefined, 'default', true),
-  new sdk.deps.ReaderActionSheetAction('remove', '移出书架', '书架', '退出阅读，前往详情确认', '', true, undefined, 'danger'),
+  action('source', '更换书源', '阅读', { showChevron: true }),
+  action('refresh', '重新打开本话', '阅读'),
+  action('detail', '漫画详情', '阅读', { showChevron: true }),
+  action('download', '下载本话', '下载'),
+  action('manager', '下载管理', '下载'),
+  action('remove', '移出书架', '书架', { secondary: '退出阅读，前往详情确认', tone: 'danger' }),
 ];
 
 for (const variant of ['grouped', 'quick']) {
   const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
   const calls = [];
-  const owner = sdk.consumer(source, boundedMembers(source), {}, { variant, actions,
+  const owner = sdk.consumer(source, boundedMembers(source), {}, { variant, scheme: 'auto', actions,
     onAction: id => calls.push(id) });
+  owner.aboutToAppear();
   owner.initialRender();
-  const renderer = sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderActionMenuSurface);
-  assert.ok(renderer, `${variant}: compatibility facade constructs the existing action renderer`);
   const nodes = sdk.walk(owner).flatMap(child => [...child.nodes.values()]);
   const text = nodes.filter(node => node.type === 'Text').map(node => node.create);
   for (const label of ['更换书源', '重新打开本话', '漫画详情', '下载本话', '下载管理', '移出书架']) {
@@ -69,7 +70,7 @@ for (const variant of ['grouped', 'quick']) {
   assert.ok(oldRefresh);
   const oldClick = oldRefresh.onClick;
   owner.updateStateVars({ variant, scheme: 'auto', actions: actions.map(item => item.id === 'refresh' ?
-    new sdk.deps.ReaderActionSheetAction('refresh', '重新打开本卷', '阅读', '离线时不可用', '', false) : item) });
+    action('refresh', '重新打开本卷', '阅读', { secondary: '离线时不可用', enabled: false }) : item) });
   sdk.properties.flush();
   assert.ok(sdk.nodes(owner).some(node => node.type === 'Text' && node.create === '重新打开本卷'),
     `${variant}: retained ID renders the live label`);
@@ -82,7 +83,7 @@ for (const variant of ['grouped', 'quick']) {
   // Check dispatch against current data without claiming removed-node layout.
   oldClick();
   assert.equal(calls.length, 1, `${variant}: removed action cannot dispatch through its retained callback`);
-  renderer.aboutToDisappear(); buttons[0].onClick();
+  owner.aboutToDisappear(); buttons[0].onClick();
   assert.equal(calls.length, 1, `${variant}: retired component refuses action dispatch`);
 }
 
@@ -103,12 +104,12 @@ function check(text){const host=ts.createCompilerHost(options),original=host.get
  const diagnostics=[...builder.getSyntacticDiagnostics(),...builder.getSemanticDiagnostics(),...ts.ArkTSLinter_1_1.runArkTSLinter(builder,undefined,()=>{},'1.1')].filter(d=>d.file?.fileName===path);
  return diagnostics.map(d=>({code:d.code,message:ts.flattenDiagnosticMessageText(d.messageText,' ')}));
 }
-const raw=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
+const raw=readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
 const tree=ts.createSourceFile(path,raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const names=new Set(['ActionSheetSpecId','ActionSheetSurfaceSpec','ActionSheetSpecs','ACTION_SHEET_SPECS','ACTION_SHEET_SPEC','resolveActionSheetSpec']);
 const selected=tree.statements.filter(node=>names.has(node.name?.getText(tree))||(ts.isVariableStatement(node)&&node.declarationList.declarations.some(d=>names.has(d.name.getText(tree))))).map(n=>n.getText(tree).replace(/^export /,''));
 assert.ok(selected.some(text=>text.includes('function resolveActionSheetSpec')),'actual production resolver selected');
-const visualRaw=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchVisual.ts',import.meta.url),'utf8');
+const visualRaw=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts',import.meta.url),'utf8');
 const visualTree=ts.createSourceFile(path,visualRaw,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const visual=visualTree.statements.filter(node=>node.name?.getText(visualTree)==='SourceSwitchVisualSpec'||(ts.isVariableStatement(node)&&node.declarationList.declarations.some(d=>d.name.getText(visualTree)==='SOURCE_SWITCH_VISUAL'))).map(n=>n.getText(visualTree).replace(/^export /,'')).join('\n');
 const source="type ReaderAppColorRole = string;\n"+visual+'\n'+selected.join('\n');

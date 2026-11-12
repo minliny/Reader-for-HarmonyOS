@@ -6,14 +6,14 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { bookIntroText } = await import('../entry/src/main/ets/features/common/BookIntroText.ts');
-const { bookAuthorLabel } = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { bookIntroText } = await import('../entry/src/main/ets/app/library/BookIntroText.ts');
+const { bookAuthorLabel } = await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets', import.meta.url), 'utf8');
 const {selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
-const tokens=selectedProductionValues(new URL('../entry/src/main/ets/features/common/ReaderTokens.ets',import.meta.url),['TOK_SPACE_SM','TOK_SPACE_CARD_PADDING','TOK_SPACE_ROW_BLOCK','TOK_BORDER_W']);
+const tokens=selectedProductionValues(new URL('../entry/src/main/ets/ui/foundation/ReaderTokens.ets',import.meta.url),['TOK_SPACE_SM','TOK_SPACE_CARD_PADDING','TOK_SPACE_ROW_BLOCK','TOK_BORDER_W']);
 const card = source.slice(source.indexOf('@Component\nstruct SearchResultCard'))
   .replace('  build() {', '  build() { Column() {} }\n  @Builder\n  resultBody() {');
 for (const category of ['novel','comic'].filter(c=>c===selectedCase)) for (const sourceId of ['source', 'local']) for (const scheme of ['day', 'night']) {

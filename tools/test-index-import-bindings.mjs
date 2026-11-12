@@ -31,11 +31,10 @@ function bindingConflicts(statements) {
 }
 
 assert.deepEqual(bindingConflicts(imports), [], 'production entry imports must have unique bindings');
-const directoryImport = imports.find(text => text.includes("from '../features/reading/ReaderDirectoryNavigation'"));
+const directoryImport = imports.find(text => text.includes("from '../features/reading/application/ReaderDirectoryBackfill'"));
 assert.ok(directoryImport);
 const conflicts = bindingConflicts([...imports, directoryImport]);
-for (const name of ['backfillRetainedReaderDirectoryNavigation', 'readerDirectoryObserveMissingNavigation',
-  'readerDirectoryTakeMissingNavigation']) {
+for (const name of ['ReaderDirectoryBackfill']) {
   assert.ok(conflicts.some(message => message.includes(name)), `compiler must reject repeated ${name}`);
 }
 console.log('Index import bindings: PASS (installed compiler; duplicate directory-navigation imports rejected)');

@@ -2,9 +2,9 @@
 // The real shared owner and physical late-write boundary are tested separately.
 import assert from 'node:assert/strict';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {reconcileReaderControlSelectionProgress} from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+import {reconcileReaderControlSelectionProgress} from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 import {readerPageRecoveryDependencies,readerPageRecoveryPorts} from './lib/reader-page-recovery-fixture.mjs';
-const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),['persistPreparedPageTurn','reconcilePreparedPageTurn','admitPageTurnPersistenceOutcome','isPreparedPageTurnCommitCurrent','invalidatePageTurnRuntime'],{...readerPageRecoveryDependencies,reconcileReaderControlSelectionProgress,CoreReadingAnchor:class{constructor(chapterIndex,chapterOffset,chapterProgress){Object.assign(this,{chapterIndex,chapterOffset,chapterProgress});}},hilog:{error(){}}});
+const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['persistPreparedPageTurn','reconcilePreparedPageTurn','admitPageTurnPersistenceOutcome','isPreparedPageTurnCommitCurrent','invalidatePageTurnRuntime'],{...readerPageRecoveryDependencies,reconcileReaderControlSelectionProgress,CoreReadingAnchor:class{constructor(chapterIndex,chapterOffset,chapterProgress){Object.assign(this,{chapterIndex,chapterOffset,chapterProgress});}},hilog:{error(){}}});
 for(const outcome of ['written-lost-reply','origin','unavailable','foreign']){
  const prepared={context:{chapter:{chapterIndex:2,chapterTitle:'two'},layoutMap:{scalarCount:()=>100}},page:{startScalar:40}};let writes=0,reads=0,dialog,finished=0,handoffs=0;
  const origin={startScalar:10};

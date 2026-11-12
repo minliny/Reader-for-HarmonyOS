@@ -5,15 +5,15 @@ const {default:assert}=await import('node:assert/strict');
 const {readFileSync}=await import('node:fs');
 if(id==='load'){
 const {stripTypeScriptTypes}=await import('node:module');
-const families=await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const source=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderFonts.ets',import.meta.url),'utf8')
+const families=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const source=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderFonts.ets',import.meta.url),'utf8')
  .replace(/import[\s\S]*?from\s+['"][^'"]+['"];\s*/g,'').replace(/^export /gm,'');
 const calls=[], pending=[]; let synchronousFailure=false;
 const text={FontCollection:{getGlobalInstance:()=>({loadFontWithCheck(family,src){
  if(synchronousFailure)throw Error('sync font error');
  calls.push({family,src});return new Promise((resolve,reject)=>pending.push({family,resolve,reject}));
 }})}};
-const loaderSource=readFileSync(new URL('../entry/src/main/ets/app/ReaderFontLoadHost.ts',import.meta.url),'utf8')
+const loaderSource=readFileSync(new URL('../entry/src/main/ets/ui/platform/ReaderFontLoadHost.ts',import.meta.url),'utf8')
  .replace(/^import.*$/gm,'').replace(/^export /gm,'');
 const {loadReaderFontChecked,readerFontLoadReady}=new Function('text',stripTypeScriptTypes(loaderSource)+
  ';return {loadReaderFontChecked,readerFontLoadReady};')(text);
@@ -110,7 +110,7 @@ await registrar.prepareMangaSheetFonts();assert.equal(calls.length,beforeManga+4
 }else if(id==='preview'){
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
 const previewLoads=[];const previewPending=[];const previewReady=new Set(['HarmonyOS Sans']);
-const Preview=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets',import.meta.url), 'ReaderControlAppearanceContent',
+const Preview=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets',import.meta.url), 'ReaderControlAppearanceContent',
  ['previewFamily','fontPreviewReady','visiblePreviewFamily','requestVisibleFontPreview','loadNextFontPreview'],{
   readerAppearanceFontSlotFamily:(_snapshot,font)=>({kai:'HeavyKai',mono:'HeavyMono',import:'ReaderNotoSansSC',custom:'ReaderCustom_hash'}[font]??font),
   readerFontFamilyReady:family=>previewReady.has(family),

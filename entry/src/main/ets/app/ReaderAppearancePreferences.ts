@@ -4,8 +4,8 @@ import {
   createDefaultReaderAppearanceSnapshot,
   normalizeReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
-} from '../features/reading/ReaderAppearanceState';
-import type { ReaderAppearancePersistence } from '../features/reading/ReaderAppearanceStore';
+} from '../features/reading/application/ReaderAppearanceState';
+import type { ReaderAppearancePersistence } from '../features/reading/application/ReaderAppearanceStore';
 
 /** Existing v3 snapshot and preferences keys remain readable across upgrades. */
 export class ReaderAppearancePreferences implements ReaderAppearancePersistence {

@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts';
+import * as scroll from '../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts';
 
-const url = new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url);
+const url = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url);
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
 for (const count of [8, 9, 12, 24]) {
   const rows = Math.max(0, Math.ceil(count / 4) - 2);

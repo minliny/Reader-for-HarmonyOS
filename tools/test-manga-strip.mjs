@@ -2,7 +2,7 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mj
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
-const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(source)};return MangaStripProjection`)();
 const p=new Projection();const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'strip-v1',pages:[{ordinal:0,pageId:'a'},{ordinal:1,pageId:'b'}]};
 const sizes=new Map([[0,{width:1000,height:4500,tileHeight:1000}]]);
@@ -18,7 +18,7 @@ assert.throws(()=>p.index(1,NaN),/ANCHOR_INVALID/);
 console.log('PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion');
 // Execute the actual ArkUI owner's anchor methods against a changing viewport.
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const surfaceURL=new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url);
+const surfaceURL=new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url);
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);

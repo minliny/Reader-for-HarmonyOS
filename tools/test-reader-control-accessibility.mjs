@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import * as session from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import * as hostPolicy from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
-import * as keyboard from '../entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts';
-import * as gesture from '../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts';
-import * as productTiming from '../entry/src/main/ets/features/common/ProductMotionTiming.ts';
+import * as session from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
+import * as hostPolicy from '../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
+import * as keyboard from '../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts';
+import * as gesture from '../entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts';
+import * as productTiming from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
@@ -35,7 +35,7 @@ function harness(state, reduced = false) {
   const h = new Host(); let hides = 0, exits = 0, invalidations = 0;
   let semanticSession = state;
   Object.assign(h, { latestControlVisualSession: session.copyReaderControlSessionState(state), reduceMotion: reduced, controlTemporaryLayer: false,
-    dismissControlTemporaryRevision: 0, invalidateControlBackdrop: () => invalidations++,
+    dismissControlTemporaryRevision: 0, retireControlTemporaryRevision: 0, invalidateControlBackdrop: () => invalidations++,
     controlKeyboardHost: () => ({ hideTextInput: async () => { hides++; }, onFailure() {} }),
     isControlInputEnabled: () => true, beginExit: () => exits++ });
   Object.defineProperty(h, 'controlSession', { configurable: true,
@@ -103,7 +103,8 @@ assert.match(stageSource, /\.accessibilityLevel\('no'\)\s*\.accessibilityVirtual
 assert.doesNotMatch(stageSource, /\.onAccessibilityActionIntercept\(/,
   'old parent click interceptor must not swallow virtual child close actions');
 assert.match(panelSource, /\.onClick\(\(\): void => this\.onDismiss\(\)\)/);
-assert.match(panelSource, /\.accessibilityText\('退出阅读，返回上一页'\)\s*\.onClick\(\(\): void => this\.onExitReading\(\)\)/);
+assert.match(panelSource, /new ReaderActionAccessibility\('退出阅读，返回上一页', this\.inputEnabled && !this\.controlObscured\)/);
+assert.match(panelSource, /if \(this\.inputEnabled && !this\.controlObscured\) this\.onExitReading\(\)/);
 const exitBinding = hostSource.match(/onExitReading: \(\): void => (this\.\w+\(\)),/);
 assert.ok(exitBinding, 'the top arrow has an explicit reading-exit binding');
 const clickTopBack = new Function(`return function () { ${exitBinding[1]}; };`)();
@@ -171,7 +172,9 @@ for (const reduced of [false, true]) {
   const original = x.h.controlSession; x.h.requestExit(); assert.strictEqual(x.h.controlSession, original);
   metrics.keyboardInsets.bottom = 0; x.h.controlTemporaryLayer = true;
   x.h.requestExit(); assert.strictEqual(x.h.controlSession, original);
-  assert.equal(x.h.controlTemporaryLayer, false);
+  assert.equal(x.h.controlTemporaryLayer, true, 'the temporary surface owns Back until its close callback');
+  x.h.requestExit(); assert.strictEqual(x.h.controlSession, original);
+  x.h.controlTemporaryLayer = false; // Current child finishes dismissing.
   x.h.requestExit();
   assert.equal(session.readerControlTargetLocation(x.h.controlSession).level, 'secondary');
   assert.equal(session.readerControlTargetLocation(x.h.controlSession).form, 'quick');

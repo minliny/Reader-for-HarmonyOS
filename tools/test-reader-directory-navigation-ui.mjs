@@ -2,12 +2,12 @@ import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selec
 const selected=selectContractCases({actions:{description:'Actual toolbar scroll, canonical marker/target validation and rank-position methods',resources:[]},'surface-admission':{description:'Actual Surface failure/retry/motion/prefetch/anchor publication and SDK status',resources:[]},'query-disclosure':{description:'Actual SDK query State negative and stable disclosure callback refresh',resources:[]},'target-download':{description:'Actual SDK target download affordance and canonical proof/stale-owner fences',resources:[]},'diagnostic-cancellation':{description:'Trace-only current failure versus disposed cancellation diagnosis',resources:[]}});
 async function run(selectedCase){
 const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
-const { ReaderDirectoryTrace }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts');
+const { ReaderDirectoryTrace }=await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryTrace.ts');
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { fileURLToPath }=await import('node:url');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts');
+const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts');
 
 
 
@@ -16,9 +16,9 @@ const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets
 
 
 
-const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
+const reading = new URL('../entry/src/main/ets/features/reading/ui/', import.meta.url);
 
-const detailPath = fileURLToPath(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url));
+const detailPath = fileURLToPath(new URL('../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets', import.meta.url));
 
 const controlPath = fileURLToPath(new URL('ReaderControlDirectoryContent.ets', reading));
 
@@ -193,24 +193,30 @@ const pending = [], timers = new Map();
 
 let timerId = 0;
 
-let visibleAnchorNodeId;
+let visibleAnchorNodeId, prepareMissing, prepareStandalone;
 
-const Surface = productionMotionMethods(surfacePath,
+const SurfaceProbe = productionMotionMethods(surfacePath,
   ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
     'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages',
-    'retryOpen', 'onIdentityChanged'], {
+    'retryOpen', 'onIdentityChanged', 'notifyReadFailure'], {
   cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
-  openReaderDirectoryNavigation: (_gateway, query) => new Promise((resolve, reject) => pending.push({ query, resolve, reject })),
-  readerDirectoryNoteMissingNavigation: () => {},
+  openReaderDirectoryNavigation: (_gateway, query, _current, unavailable) =>
+    new Promise((resolve, reject) => pending.push({ query, resolve, reject, unavailable })),
+  readerDirectoryNoteMissingNavigation: (...args) => prepareMissing?.(...args),
+  backfillRetainedReaderDirectoryNavigation: (...args) => prepareStandalone(...args),
   readerDirectoryObserveScrollIntent: () => () => {},
   ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => visibleAnchorNodeId === undefined ? undefined :
     { nodeId: visibleAnchorNodeId, navigationRevision: 'r', viewId: 'old-visible', visibleIndex: 6000 },
-  ReaderRuntimeOwner: { current: () => ({}) },
+  ReaderRuntimeOwner: { current: () => ({}), isCurrent: () => true },
   setTimeout: (action, delay) => { assert.equal(delay, 150); const id = ++timerId; timers.set(id, action); return id; },
   clearTimeout: id => { timers.delete(id); },
 });
 
+
+class Surface extends SurfaceProbe {
+  feedback = { reset() {}, show() {} };
+}
 
 // One event-loop boundary drains the controlled promise chains; assertions below
 // inspect each owner's actual admission/failure condition, never elapsed time.
@@ -225,12 +231,63 @@ function retrySurface(view) {
   settledFlat: false, interacted: false, interactionEnabled: true,
   pendingRefresh: false, pendingQueryRefresh: false, loadPending: false, loadFailed: false,
   queryTimer: -1, lastQuery: '', lastAscending: true, lastChapterIndex: 95,
-  view, onTreeStateChange() {} });
+  view, chapterEntries: [], onTreeStateChange() {} });
 }
 
 function readyCatalog(viewId) {
   return { viewId, navigationRevision: 'catalog-948', visibleTotal: 948, currentVisibleIndex: 95,
     nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `chapter-${index}` })) };
+}
+if (selectedCase === 'surface-admission') {
+  for (const [result, flat] of [
+    [{ status: 'unavailable', reason: 'NoStructure' }, true],
+    [{ status: 'unavailable', reason: 'bodyMissingOrBudget' }, false],
+    [{ status: 'ready' }, false],
+  ]) {
+    const start = pending.length, surface = retrySurface();
+    surface.chapterEntries = [{ index: 0, title: '第一章' }];
+    let complete;
+    prepareMissing = () => new Promise(resolve => { complete = resolve; });
+    surface.openTree(true);
+    pending[start].unavailable('navigationMissingOrStale');
+    pending[start].resolve(undefined);
+    await flushSurface();
+    assert.equal(surface.loadPending, true, 'wait for the current retained structure outcome');
+    assert.equal(surface.loadFailed, false);
+    complete(result);
+    await flushSurface();
+    if (result.status === 'ready') {
+      assert.equal(pending.length, start + 2, 'successful repair automatically reopens once');
+      pending[start + 1].resolve(readyCatalog('local-repaired'));
+      await flushSurface();
+      assert.equal(surface.view.viewId, 'local-repaired');
+    } else {
+      assert.equal(pending.length, start + 1);
+      assert.equal(surface.settledFlat, flat, 'only the exact NoStructure result admits populated flat chapters');
+      assert.equal(surface.loadFailed, !flat);
+    }
+    assert.equal(surface.loadPending, false);
+  }
+  const standalone = retrySurface(), start = pending.length;
+  const runtime = {};
+  Object.assign(standalone, { prepareLocalTxt: true, runtimeOwner: runtime,
+    chapterEntries: [{ index: 0, title: '第一章' }] });
+  prepareMissing = () => assert.fail('standalone TXT does not need a reader-frame observer');
+  prepareStandalone = async (owner, bookId, current, format) => {
+    assert.equal(owner, runtime);
+    assert.equal(bookId, standalone.bookId);
+    assert.equal(current(), true);
+    assert.equal(format, 'txt');
+    return { status: 'unavailable', reason: 'NoStructure' };
+  };
+  standalone.openTree(true);
+  pending[start].unavailable('navigationMissingOrStale');
+  pending[start].resolve(undefined);
+  await flushSurface();
+  assert.equal(standalone.settledFlat, true);
+  assert.equal(standalone.loadFailed, false);
+  prepareStandalone = undefined;
+  prepareMissing = undefined;
 }
 if(selectedCase==="surface-admission")
 {
@@ -574,6 +631,7 @@ if(selectedCase==="query-disclosure")
   function state(row) {
     const text=[...row.nodes.values()].filter(record=>record.type==='Text');
     return { arrow:text.find(record=>record.create==='⌄'||record.create==='›'),
+      action:[...row.nodes.values()].find(record=>record.type==='Button'&&record.accessibilityText?.includes('子目录')),
       title:text.find(record=>record.create==='卷一') };
   }
   const expanded=publish([baseGroup,unrelated],'view-expanded');
@@ -583,9 +641,9 @@ if(selectedCase==="query-disclosure")
   assert.notEqual(folded[0],expanded[0], 'changed disclosure replaces its stale Builder capture');
   assert.equal(folded[1],expanded[1], 'unrelated row survives a new viewId unchanged');
   assert.equal(state(folded[0]).arrow.create,'›');
-  assert.match(state(folded[0]).arrow.accessibilityText,/展开卷一子目录/);
+  assert.match(state(folded[0]).action.accessibilityText,/展开卷一子目录/);
   assert.match(state(folded[0]).title.accessibilityText,/已折叠/);
-  state(folded[0]).arrow.onClick();
+  state(folded[0]).action.onClick();
   assert.equal(toggles.at(-1).expanded,false, 'new arrow captures the current row; toggle business remains unchanged');
   const unfolded=publish([baseGroup,unrelated],'view-unfolded');
   assert.equal(state(unfolded[0]).arrow.create,'⌄');
@@ -662,15 +720,17 @@ if(selectedCase==="surface-admission")
   const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
   syntax.componentCollection.customComponents.add('ReaderRecoveryAction');
+  syntax.componentCollection.customComponents.add('ReaderPageState');
   class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+  class PageState { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   for (const total of [0, 1]) {
-    const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'], { ReaderDirectoryNavigationList: Child });
+    const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'], { ReaderDirectoryNavigationList: Child, ReaderPageState: PageState });
     Object.assign(owner, { appThemeScheme: 'day', view: { visibleTotal: total }, sourceId: 'local', bookId: 'fixture',
       fallbackBuilder: () => assert.fail('a ready tree must not call the flat fallback') });
     owner.initialRender();
     assert.equal([...owner.children.values()].filter(child => child instanceof Child).length, 1,
       'empty result retains list lifecycle');
-    const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' && node.create === '没有匹配的目录项');
+    const messages = [...owner.children.values()].filter(child => child instanceof PageState && child.params.message === '没有匹配的目录项');
     assert.equal(messages.length, total === 0 ? 1 : 0, 'ready empty navigation shows an explicit empty result');
   }
   class Recovery { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
@@ -680,14 +740,14 @@ if(selectedCase==="surface-admission")
       { ReaderDirectoryNavigationList: Child, ReaderRecoveryAction: Recovery });
     Object.assign(owner, { appThemeScheme: 'day', view: undefined, mangaDisplay: false,
       sourceId: 'local', bookId: 'fixture', loadFailed: failed, loadPending: pending,
-      showLoadStatus: showStatus, interactionEnabled: true,
+      showLoadStatus: showStatus, interactionEnabled: true, hasRetainedContent: () => true,
       fallbackBuilder: () => fallbackCalls++, retryOpen: () => retryCalls++ });
     owner.initialRender();
     assert.equal(fallbackCalls, 1, 'status presentation preserves the existing chapter fallback');
     const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' &&
-      ['目录加载失败，已保留当前条目', '正在加载目录'].includes(node.create));
-    assert.equal(messages.length, showStatus ? 1 : 0,
-      'current request state is explicit and the partial-catalog owner may suppress duplicate status');
+      node.create === '正在加载目录');
+    assert.equal(messages.length, pending && showStatus ? 1 : 0,
+      'the pending row stays explicit and the partial-catalog owner may suppress duplicate status');
     const recovery = [...owner.children.values()].find(child => child instanceof Recovery);
     assert.equal(recovery !== undefined, failed && showStatus, 'only a failed visible request offers the retry action');
     if (recovery !== undefined) {
@@ -713,7 +773,7 @@ if(selectedCase==="diagnostic-cancellation")
   for (const current of [false, true]) {
     traces.length = 0;
     const owner = Object.assign(new Probe(), { mounted: true, gateway: {}, bookId: 'fixture', generation: 0,
-      query: '', currentChapterIndex: 0, interactionEnabled: true, onTreeStateChange() {} });
+      query: '', currentChapterIndex: 0, interactionEnabled: true, onTreeStateChange() {}, notifyReadFailure() {} });
     owner.openTree(true);
     if (!current) { owner.mounted = false; owner.generation += 1; }
     rejectOpen(new Error('cancelled-or-failed'));
@@ -756,6 +816,7 @@ if(selectedCase==="target-download")
     const {owner,button,calls}=render(listSource,target,state,true,scheme);
     if (state==='unknown') {assert.equal(button,undefined);continue;}
     assert.ok(button,`target ${state} retains a download status marker`);
+    assert.equal(button.type,'Button','the independent download accessory uses native action admission');
     assert.equal(button.enabled,['missing','cached','failed','cancelled'].includes(state));
     const image=[...owner.nodes.values()].find(node=>node.type==='Image');
     assert.equal(image.create,`app.media.reader_directory_marker_${state==='completed'?'check':'download'}${scheme==='night'?'_theme_night':''}`);
@@ -801,6 +862,8 @@ if(selectedCase==="target-download")
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationSurface');
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
+  for (const name of ['ReaderBookmarkErrorState','ReaderBookmarkLoadingState','ReaderBookmarkEmptyState'])
+    syntax.componentCollection.customComponents.add(name);
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   const calls=[];
   const shared={chapterDownloadEnabled:true,onDownloadChapter:index=>calls.push(index),

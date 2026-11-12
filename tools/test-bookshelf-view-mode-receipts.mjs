@@ -10,24 +10,24 @@ import {ReaderWriteEvidence} from '../entry/src/main/ets/app/ReaderWriteEvidence
 import {projectOperationFacts,projectCommitReadback} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {readerFloatingTabContentInset} from './lib/reader-floating-bar-metrics-probe.mjs';
-import {createDefaultReaderWindowMetrics} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {createDefaultReaderWindowMetrics} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 const file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),source=p=>readFileSync(file(p),'utf8');
 const projectPersistedReceipt=new Function('projectOperationFacts','projectCommitReadback',stripTypeScriptTypes(source('app/ReaderPersistedReceiptProjection.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return projectPersistedReceipt;')(projectOperationFacts,projectCommitReadback);
 const tick=()=>new Promise(resolve=>setImmediate(resolve)),defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 let runtime;
-const Store=productionMotionMethods(file('features/sync/WebDavCredentialStore.ts'),['attachContext','currentBookshelfViewMode','bookshelfModeContextGeneration',
+const Store=productionMotionMethods(file('features/sync/application/WebDavCredentialStore.ts'),['attachContext','currentBookshelfViewMode','bookshelfModeContextGeneration',
  'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','validateRestoreJournal'],
  {LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 const Host=new Function('WebDavCredentialStore','ReaderThemeHost','ReaderRuntimeOwner','ReaderWriteEvidence','errorMessageOf','projectOperationFacts','projectPersistedReceipt',
- stripTypeScriptTypes(source('features/bookshelf/BookshelfViewModeHost.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return BookshelfViewModeHost;')(
+ stripTypeScriptTypes(source('features/bookshelf/application/BookshelfViewModeHost.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return BookshelfViewModeHost;')(
  {instance:{}},{prepareUserChange:async()=>{}},runtimeOwnerIdentityProbe(()=>runtime),ReaderWriteEvidence,e=>e.message,projectOperationFacts,projectPersistedReceipt);
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js'),maps=require(sdk+'/lib/component_map.js');
-for(const name of ['ReaderRecoveryNotice','ReaderRecoveryAction','PageBackBar']){
+for(const [name,directory] of [['ReaderRecoveryNotice','ui/feedback'],['ReaderRecoveryAction','ui/feedback'],['PageBackBar','ui/chrome']]){
  syntax.componentCollection.customComponents.add(name);
- syntax.propCollection.set(name,new Set([...source('features/common/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+ syntax.propCollection.set(name,new Set([...source(directory+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
-for(const path of ['features/bookshelf/BookshelfPage.ets','features/bookshelf/BookshelfSettingsPage.ets'])
+for(const path of ['features/bookshelf/ui/BookshelfPage.ets','features/bookshelf/ui/BookshelfSettingsPage.ets'])
  for(const m of source(path).matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))maps.CUSTOM_BUILDER_METHOD.add(m[1]);
 class Child {constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 function fixture(){
@@ -40,7 +40,7 @@ function fixture(){
   context:{},ensureLocalPreferences:async()=>backend,load:async()=>null});
  const host=new Host(store,()=>prepare());
  const page=(settings=false)=>{
-  const path=settings?'features/bookshelf/BookshelfSettingsPage.ets':'features/bookshelf/BookshelfPage.ets';
+  const path=settings?'features/bookshelf/ui/BookshelfSettingsPage.ets':'features/bookshelf/ui/BookshelfPage.ets';
   const toasts=[];
   const names=settings?['selectMode','persistRequestedMode','viewModeRecovery','applyModeSnapshot','retryMode','loadMode','aboutToDisappear','modePending','modeFeedback']:
    ['setViewMode','persistRequestedViewMode','viewModeRecovery','applyViewModeSnapshot','retryViewMode','loadViewMode','aboutToDisappear','viewModePending','modeFeedback'];
@@ -65,11 +65,11 @@ function fixture(){
 // Mount the actual settings lifecycle and SDK content together: selecting a
 // mode before rendering would warm the Host and hide this first-mount defect.
 function settingsLifecycleSdk(f){
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),definition=source('features/bookshelf/BookshelfSettingsPage.ets');
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),definition=source('features/bookshelf/ui/BookshelfSettingsPage.ets');
  const names=['appThemeScheme','mode','autoCheckUpdate','operation','navigationGeneration','presentationRevision','error','viewModeSnapshot',
   'viewModeHost','revision','confirmed','requestedMode','mounted','modeLoadBusy','modeReconcileBusy','lastModeFeedback','lastSettingsFeedback',
   'aboutToAppear','aboutToDisappear','settingsPending','modePending','onOperationChanged','viewModeRecovery','modeFeedback','loadMode',
-  'applyModeSnapshot','pageContent','modeOption','selectMode','persistRequestedMode','pendingOverlay','settingsRecovery','retryMode'];
+  'applyModeSnapshot','pageContent','preferenceControlIdentity','selectMode','persistRequestedMode','pendingOverlay','settingsRecovery','retryMode'];
  const page=sdk.consumer(definition,names,{readerRecoveryView,BookshelfViewModeHost:{instance:f.host},WebDavCredentialStore:{instance:f.store},registerReaderFonts(){}},
   {operation:{action:'load',readFacts:projectOperationFacts({phase:'idle'})}});
  Object.assign(page,{getUIContext:()=>({getFont:()=>({}),getPromptAction:()=>({showToast(){}})})});
@@ -152,7 +152,7 @@ for(const unknown of [false,true]){
 
 // Actual SDK page → Notice → native action during the real preference read.
 function modeSdk(f,settings){
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),path=settings?'features/bookshelf/BookshelfSettingsPage.ets':'features/bookshelf/BookshelfPage.ets';
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),path=settings?'features/bookshelf/ui/BookshelfSettingsPage.ets':'features/bookshelf/ui/BookshelfPage.ets';
  const common=['modeReconcileBusy','viewModeSnapshot','viewModeRecovery','mounted','lastModeFeedback','modeFeedback'];
  const names=settings?[...common,'pendingOverlay','modePending','retryMode','revision','applyModeSnapshot','aboutToDisappear']:
   [...common,'bookshelfTabContent','viewModePending','retryViewMode','viewModeRevision','applyViewModeSnapshot','aboutToDisappear'];

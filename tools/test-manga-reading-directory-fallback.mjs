@@ -1,25 +1,26 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import * as directoryState from '../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
 import assert from 'node:assert/strict';
-import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
-import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
-import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { ReaderDirectoryNavigationGateway, openReaderDirectoryNavigation } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
+import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
+import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { ReaderDirectoryNavigationGateway } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { openReaderDirectoryNavigation } from './lib/reader-directory-navigation-session-probe.mjs';
+import { mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
 import { mangaDirectoryEntryRowSdk, mangaDirectoryEntryRowSource } from './lib/manga-directory-entry-row-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 
-const path = fileURLToPath(new URL('../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets', import.meta.url));
+const path = fileURLToPath(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets', import.meta.url));
 const source = readFileSync(path, 'utf8');
 const timers = [];
 const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryScale, mangaDirectoryColor, ReaderWindowCoordinator: {metrics: () => ({systemFontScale: 1})}, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600, projectReaderDirectoryEntries, sameReaderDirectoryData, snapshotReaderDirectoryData,
@@ -198,7 +199,7 @@ assert.equal(requests[0].method, 'reading.directory.view.open.v2');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const listSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryList.ets', import.meta.url), 'utf8');
+const listSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderDirectoryList');
 syntax.propCollection.set('ReaderDirectoryList', new Set([...listSource.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(match => match[1])));
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }

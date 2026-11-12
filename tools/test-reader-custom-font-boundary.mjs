@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
+import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
+import { ReaderDocumentPickerActivity } from '../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts';
+
+ReaderDocumentPickerActivity.bind(9203);
+ReaderDocumentPickerActivity.setForeground(true);
 
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -67,7 +71,8 @@ const fileIo = {
   async unlink(path) { files.delete(path); retiredCount++; },
 };
 const deps = {
-  './ReaderFontLoadHost': { loadReaderFontChecked: async () => {
+  '../platform/ReaderDocumentPickerActivity': { ReaderDocumentPickerActivity },
+  '../ui/platform/ReaderFontLoadHost': { loadReaderFontChecked: async () => {
     if (failNativeLoad) throw Error('native font rejected');
   } },
   '@ohos.file.fs': { default: fileIo },
@@ -80,7 +85,7 @@ const deps = {
     const hash = createHash('sha256');
     return { async update(input) { hash.update(input.data); }, async digest() { return { data: hash.digest() }; } };
   } } },
-  '../features/reading/ReaderAppearanceState': appearance,
+  '../features/reading/application/ReaderAppearanceState': appearance,
 };
 const module = { exports: {} };
 new Function('require', 'module', 'exports', compiled)(id => deps[id] ?? {}, module, module.exports);
@@ -116,7 +121,7 @@ await host.retireUnusedFont(descriptor, undefined);
 assert.equal(files.has(finalPath), false, 'a replaced, owned font can be removed after durable admission');
 assert.ok(retiredCount >= 3);
 
-const gatewaySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderAppearanceGateway.ts', import.meta.url), 'utf8');
+const gatewaySource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderAppearanceGateway.ts', import.meta.url), 'utf8');
 const gatewayCompiled = ts.transpileModule(gatewaySource, {
   compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
 }).outputText;
@@ -134,7 +139,7 @@ const store = new ReaderAppearanceStore({
 await store.load();
 const retirements = [];
 const gatewayDeps = {
-  '../../app/ReaderCustomFontHost': { ReaderCustomFontHost: class {
+  '../../../app/ReaderCustomFontHost': { ReaderCustomFontHost: class {
     async retireUnusedFont(old, active) { retirements.push({ old, active }); }
   } },
   '@kit.PerformanceAnalysisKit': { hilog: { warn() {} } },

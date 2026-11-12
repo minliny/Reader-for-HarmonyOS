@@ -7,12 +7,12 @@ import { stripTypeScriptTypes } from 'node:module';
 const app = new URL('../entry/src/main/ets/app/', import.meta.url);
 const lower = name => stripTypeScriptTypes(readFileSync(new URL(name, app), 'utf8')
   .replace(/^import[\s\S]*?;\n/gm, '')).replace(/^export /gm, '');
-const policy = lower('HttpTransportPolicy.ts');
-const route = lower('NetworkRoutePolicy.ts');
-const source = lower('ArkWebExecutor.ts');
+const policy = lower('../platform/network/HttpTransportPolicy.ts');
+const route = lower('../platform/network/NetworkRoutePolicy.ts');
+const source = lower('../platform/network/ArkWebExecutor.ts');
 const NetworkEnvironmentError = new Function(`${route}\nreturn NetworkEnvironmentError;`)();
 const Store = new Function('url', 'util', 'hilog', 'errorMessageOf',
-  `${lower('CookieSecurityPolicy.ts')}\n${lower('CookieSessionStore.ts')}\nreturn CookieSessionStore;`)(
+  `${lower('../platform/network/CookieSecurityPolicy.ts')}\n${lower('../platform/network/CookieSessionStore.ts')}\nreturn CookieSessionStore;`)(
   { URL: { parseURL: (value, base) => new URL(value, base) } }, { TextEncoder }, { warn() {}, error() {} },
   error => error instanceof Error ? error.message : String(error));
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));

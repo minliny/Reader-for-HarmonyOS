@@ -11,13 +11,21 @@ const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const layout = await import('../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts');
-const { readerDirectoryScopeKey } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts');
+const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const layout = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts');
+const { readerDirectoryScopeKey } = await import('../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const timing = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const { SOURCE_CHROME_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts');
+const { MANGA_DIRECTORY_VISUAL } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
 
 
-const path = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
+const path = new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url);
 const source = readFileSync(path, 'utf8');
+const { motionAnimateParam } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
+  'MotionSpec.ets', { ...timing, SOURCE_SWITCH_VISUAL: SOURCE_CHROME_VISUAL, MANGA_DIRECTORY_VISUAL,
+    Curve: new Proxy({}, { get: (_target, key) => `Curve.${String(key)}` }),
+    curves: new Proxy({}, { get: (_target, key) => (...args) => ({ nativeCurve: String(key), args }) }) }, ['motionAnimateParam']);
 class LRUCache {
   constructor(limit) { this.limit = limit; this.data = new Map(); }
   get(key) { const value = this.data.get(key); if (value !== undefined) { this.data.delete(key); this.data.set(key, value); } return value; }
@@ -186,6 +194,30 @@ console.log('PASS actual manga Core-paged Grid SDK spans, 44vp cells/day/night/c
 
 }
 if(selectedCase==='retained-paint') {
+// Keep the real phone named-row callback and real target resolver together.
+// Only the Core RPC is controlled; no selection or identity algorithm is copied.
+{
+  const f = probe('day', true, 390, 1), delivered = [], requests = [];
+  const selection = createReaderBuilderProbe(source, ['selectTarget'], {}).owner;
+  const proof = { sourceId: 'manga', bookId: 'book', chapterIndex: 5006,
+    nodeId: 'n6', catalogRevision: 'catalog', structureRevision: 'structure', url: '/chapter-6' };
+  Object.assign(f.owner, { mounted: true, generation: 1, selectionGeneration: 0,
+    selectTarget: selection.selectTarget,
+    gateway: { async resolveTarget(book, view, id, current) {
+      requests.push([book, view, id]); assert.equal(current(), true);
+      return { chapterIndex: 5006, chapterOffsetScalar: 0, directoryTargetProof: proof };
+    } },
+    onSelectTarget: (...args) => delivered.push(args), onInvalidated: () => assert.fail('the current phone target must resolve') });
+  f.owner.mangaRow(gridData.getData(6));
+  const row = [...f.owner.nodes.values()].find(node => node.type === 'Row' && node.onClick &&
+    node.accessibilityText?.includes('命名章节'));
+  assert.ok(row, 'actual SDK emits the phone named chapter Row');
+  row.onClick(); await Promise.resolve(); await Promise.resolve();
+  assert.deepEqual(requests, [['book', 'grid', 'n6']], 'native row reaches the actual current resolver');
+  assert.deepEqual(delivered, [[5006, 0, undefined, proof]], 'the actual row preserves canonical chapter and proof through delivery');
+  f.owner.interactionEnabled = false; row.onClick(); await Promise.resolve();
+  assert.equal(requests.length, 1, 'a retained closing phone row cannot resolve again');
+}
 // Equal LazyForEach keys retain the first itemGenerator argument. Exercise the
 // actual SDK observers and V1 property dependency delivery instead of invoking
 // a fresh row Builder after each publication. Native layout remains separate.
@@ -281,8 +313,12 @@ assert.throws(() => retainedMangaPaint(ghostPaint), /withdrawn cached actors can
   const first = { ...view, viewId: 'retained-group-old', visibleTotal: 1, nodes: [oldGroup] };
   const groupData = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('group is resident'));
   groupData.replace(first); const captured = groupData.getData(0), properties = createArkUIPropertyRuntimeProbe();
+  // The V1 property runtime has its own global object. Forward the SDK's
+  // Context animation instructions to the existing native observer recorder.
+  const nativeGlobals = Object.create(globalThis);
+  Object.defineProperty(nativeGlobals, 'Context', { get: () => globalThis.Context });
   const result = createReaderBuilderProbe(source, [...new Set([...names, 'view', 'onViewChanged', 'mangaPresentationRevision'])],
-    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
+    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk, globalThis: nativeGlobals, motionAnimateParam }, properties.hooks);
   const owner = result.owner, toggles = [];
   Object.assign(owner, { mounted: false, dataSource: groupData, view: first, mangaDisplay: true,
     mangaQuickDisplay: false, mangaSearchActive: false, mangaPresentationRevision: 0,

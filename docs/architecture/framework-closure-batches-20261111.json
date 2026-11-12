@@ -1,0 +1,611 @@
+{
+  "schema": "reader.framework-closure.batches.v1",
+  "date": "2026-11-11",
+  "sourceHead": "14444eac0feb182d38f16ef8ffb40c43cb749434",
+  "status": "CODE_LOCAL_CURRENT_CLONE_COMPLETE_FINAL_SIGNED_ARTIFACT_BOUND_NOT_INSTALLED",
+  "scope": "用户后续明确全量完成，已实施本计划可独立代码/本地批次，P2采用REFERENCE_ONLY。新授权停态pair及独立Linuxdebug克隆观察完成：两章无candidate，与当前0/2一致；旧38/new47内容差分和历史0/2因果未建立。无压力capacity合同缺口已修，17行为+2SDK通过；最终规范构建与指定签名通过，见本地交付记录。正式发布全量及用户验收不自动触发。",
+  "executionOwner": "主代理协调；P1/P3/P4按独占文件授权子代理实施，每个生产文件只有一个当前修改者。",
+  "invariants": [
+    "用户消息复用既有类别组件；语义/业务写入authority不转交视觉壳。",
+    "不重开视觉范围，不改分页/手势算法，不新建通用动画引擎。",
+    "不默认运行矩阵中的全部case、whole-file、构建或CI检查；执行前逐项记录实际入口、嵌套、范围、风险、不可省略依据。",
+    "旧证据绑定旧输入，方法/编译/产物/设备/用户验收分层；前期受控像素授权已经结束。",
+    "保留Core治理WIP、用户数据及UNKNOWN，不清树、不降schema、不改计数/迁移，不自动操作设备。"
+  ],
+  "batchExitProtocol": {
+    "before": "核对本批源码身份及WIP；固定唯一代码修改者；只对本批选择必要检查。",
+    "success": "该批具体退出条件全部成立，有实际回执；不把索引列出或源码审读记为方法PASS。",
+    "failure": "记录现象、输入版本、失败回执和未决点，留在本批；不扩大测试、不转设备。",
+    "rollback": "只回退本批代码和对应接线，保留业务owner、既有用户数据与其他WIP；不通过数据回滚恢复UI。"
+  },
+  "batches": [
+    {
+      "id": "P0",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "ReadingExperience / ReaderControlRuntime",
+      "singleRisk": "生产职责与验证路径混淆",
+      "dependsOn": [],
+      "status": "COMPLETE_SOURCE_INVENTORY_AND_DECISION",
+      "actions": [
+        "固定生产装配、状态/测量/翻页准备职责与19项行为矩阵",
+        "已采用B先抽seam，P1后P2最终选择REFERENCE_ONLY，不采用Stage生产接管"
+      ],
+      "exitCriteria": [
+        "一页决策、函数/源摘要、矩阵及后续子批次均已记录",
+        "明确生产只有一个控制时钟；Stage为REFERENCE_ONLY参考用途，原验证入口已处理"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": []
+    },
+    {
+      "id": "P1.1",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "原measurement准入owner",
+      "singleRisk": "纯测量事实与SDK对象混层",
+      "dependsOn": [
+        "P0"
+      ],
+      "status": "COMPLETE_CODE_LOCAL_AND_HAP",
+      "actions": [
+        "抽CoreReadingAnchor/InitialReadingToc/CoreReadingLayout及纯context事实到application/measurement",
+        "ArkUILineMetric接收LineMetrics的转换留在ui/platform；复用现有paragraph/pagination owner"
+      ],
+      "exitCriteria": [
+        "application无ArkUI类型、SDK或ui反向依赖，模块依赖无环",
+        "TextController/Native节点take/dispose唯一，scalar和资源归属不变",
+        "身份或generation失效的测量和图片回调被原准入拒绝"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p1-result.json"
+    },
+    {
+      "id": "P1.2",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "原reading presentation/handoff owner",
+      "singleRisk": "呈现状态抽取造成会话或业务重复owner",
+      "dependsOn": [
+        "P0"
+      ],
+      "status": "COMPLETE_CODE_LOCAL_AND_HAP",
+      "actions": [
+        "抽ReaderRetainedPresentation、playback、selection display及必要纯依赖，保留retained gateway lease",
+        "建立稀疏host语义端口；每帧样本留局部",
+        "区分纯display数据与携带PhysicalReadingPage、Native对象或gateway lease的retained适配；后者保留在ui/presentation边界，不能作为纯DTO下沉application。"
+      ],
+      "exitCriteria": [
+        "每个状态只有一份定义，LRE不再携带对应声明/纯helper实现",
+        "同book/lifecycle的对象与有效性回调保留，无新写入authority",
+        "Back优先级、closeRevision/module visit和旧回调失效不变"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p1-result.json"
+    },
+    {
+      "id": "P1.3",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "原page-turn preparation owner",
+      "singleRisk": "相邻页准备与可见页/持久提交交叉",
+      "dependsOn": [
+        "P1.1"
+      ],
+      "status": "COMPLETE_CODE_LOCAL_AND_HAP",
+      "actions": [
+        "抽PreparedReaderPageTurn/ReaderPageTurnPreparation/ReaderPageTurnTarget/ReaderDeferredChapterSelection必要DTO和context lease",
+        "仅抽request/result及准备协调seam，保留原measurement lane与gesture owner",
+        "application只接纯request/target/身份结果；携带Native页、measurement lane和UI资源的prepared/context适配保留ui/presentation，避免反向import UI。"
+      ],
+      "exitCriteria": [
+        "source/book/origin/target/body/processing/layout/generation身份完整",
+        "取消/字体/viewport变化/失败恢复旧可见context",
+        "准备不发布可见页、不预写进度，UNKNOWN及ACK交接不重放",
+        "原文件实质减少对应职责，提取定义无重复；行数不是行为验收"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p1-result.json"
+    },
+    {
+      "id": "P1.4",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "原control minimum provider owner",
+      "singleRisk": "测量提供者和面板渲染相互回灌",
+      "dependsOn": [
+        "P1.1",
+        "P1.2"
+      ],
+      "status": "COMPLETE_CODE_LOCAL_AND_HAP",
+      "actions": [
+        "分开minimum provider、带身份测量回执与Panel shell适配",
+        "只按稳定actor边界减法，保留现有Settings/TTS/Search/Replace/Directory/Appearance/AutoPage组件"
+      ],
+      "exitCriteria": [
+        "provider身份包含实体/lifecycle/open/module visit/viewport/metrics",
+        "旧字体/provider回执不解锁新手势，无测量反馈环",
+        "List/TextInput保持实例身份，topbar/shell/content/backdrop各自唯一绘制owner"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p1-result.json"
+    },
+    {
+      "id": "P2.1",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "ReaderControlRuntime",
+      "singleRisk": "验证Stage与生产适配持续漂移",
+      "dependsOn": [
+        "P1.2",
+        "P1.4"
+      ],
+      "status": "NOT_APPLICABLE_REFERENCE_ONLY_BRANCH",
+      "actions": [
+        "本轮未选择ADOPT，不执行Stage生产等价接管；生产继续由Panel/ReaderControlRuntime拥有",
+        "未来重开ADOPT时才先复用既有Runtime/P1端口并逐项补齐矩阵及真实模块装配等价证据"
+      ],
+      "exitCriteria": [
+        "本轮按REFERENCE_ONLY分支退出，不把未执行的ADOPT等价验证记PASS",
+        "未来ADOPT的必要条件保留为重开条件；本轮参考用途/入口处理实际结果见P2.2"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": []
+    },
+    {
+      "id": "P2.2",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "ReaderControlRuntime（REFERENCE_ONLY已选分支的唯一生产clock/gesture owner）",
+      "singleRisk": "两个完整时钟长期并存",
+      "dependsOn": [
+        "P1.2",
+        "P1.4"
+      ],
+      "status": "COMPLETE_REFERENCE_ONLY_ENTRY_RETIRED",
+      "actions": [
+        "选择采用Stage时同时退役重复生产适配；否则明确REFERENCE_ONLY并处理验证入口",
+        "不新写动画引擎，不把Stage验证页结果当生产验收"
+      ],
+      "exitCriteria": [
+        "同一生产actor仅一份clock/gesture/ticket推进",
+        "未采用时参考入口和保留原因明确，不能以长期双实现宣称完成"
+      ],
+      "stopIf": [
+        "ADOPT分支：等价缺口未闭合或最终采用决定未形成",
+        "REFERENCE_ONLY分支：参考保留/退役决定或入口处理边界未形成"
+      ],
+      "productChecksExecuted": [],
+      "conditionalPrerequisites": {
+        "ADOPT": [
+          "P2.1等价证据退出",
+          "用户约定的最终采用决定形成"
+        ],
+        "REFERENCE_ONLY": [
+          "差异与保留/退役原因已记录",
+          "参考用途和验证入口处理决定明确；无需先证明不采用方案的生产等价"
+        ]
+      },
+      "selectedBranch": "REFERENCE_ONLY",
+      "implementationEvidence": "docs/architecture/reading-control-reference-retirement-20261111.json"
+    },
+    {
+      "id": "P3.1",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "ArkWeb诊断入口owner",
+      "singleRisk": "诊断源码缺类型影响实际生产编译输入",
+      "dependsOn": [
+        "P0"
+      ],
+      "status": "COMPLETE_MISSING_TYPES_ZERO_IN_SUCCESSFUL_BUILD",
+      "actions": [
+        "确认ReaderRendererPilot的DEBUG运行准入与编译输入边界",
+        "选择受控移出生产编译输入或按当前SDK修正类型；不能仅屏蔽warning/any断言"
+      ],
+      "exitCriteria": [
+        "20项missing-type/member逐条绑定源码和处理",
+        "运行只在DEBUG不冒充已排除编译，修改文件无新增同类风险"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": "docs/architecture/platform-warning-triage-20261111.json"
+    },
+    {
+      "id": "P3.2",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "HarmonyTtsBackgroundSession",
+      "singleRisk": "TTS能力缺失与资源释放不完整",
+      "dependsOn": [
+        "P0"
+      ],
+      "status": "COMPLETE_RUNTIME_GUARDS_STATIC_SEVEN_WARNINGS_REMAIN",
+      "actions": [
+        "复用activate已有canIUse，不重复添加同功能guard",
+        "逐条审7处capability warning对应监听/查询/取消/释放路径，保留owned task身份和失败状态"
+      ],
+      "exitCriteria": [
+        "能力不可用路径有明确降级且不调用不可用API",
+        "取消先于ACK、卸载、释放失败与已撤销task不误记成功",
+        "修改路径无新增warning；不因全局try/catch掩盖真实失败"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": "docs/architecture/platform-warning-triage-20261111.json"
+    },
+    {
+      "id": "P3.3",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "各触达平台适配owner（每次仅一个API族）",
+      "singleRisk": "触达路径使用弃用接口",
+      "dependsOn": [
+        "P1.1",
+        "P1.2"
+      ],
+      "status": "COMPLETE_ALL32_DEPRECATED_ZERO_IN_SUCCESSFUL_BUILD",
+      "actions": [
+        "按onScroll、onDataChanged、animateTo、编码API逐族建立消费者与替代合同",
+        "先阅读/搜索/书架/漫画实际触达路径；每族单独子批，不一次迁移全部32处"
+      ],
+      "exitCriteria": [
+        "本次触达API族无弃用残留且行为不变",
+        "同SDK/同编译口径比较修改文件warning delta，不用历史374当本次编译结果"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": "docs/architecture/platform-warning-triage-20261111.json"
+    },
+    {
+      "id": "P3.4",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "各平台/网络/数据库/用户输入边界owner",
+      "singleRisk": "用户可见失败缺接收边界",
+      "dependsOn": [
+        "P0"
+      ],
+      "status": "COMPLETE_BOUNDARY_INVENTORY_AND_PROVEN_DIAGNOSTIC_FIX",
+      "actions": [
+        "313项throws按外部边界与纯函数区分，列边界接收者/消息类别/操作身份",
+        "仅改缺失的用户可见边界；纯函数上抛保持"
+      ],
+      "exitCriteria": [
+        "边界清单覆盖本次触达调用，未知写入不报成功",
+        "不全局吞异常，不为数量清零泛加catch"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": "docs/architecture/platform-warning-triage-20261111.json"
+    },
+    {
+      "id": "P4.1",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "页面实际geometry owner",
+      "singleRisk": "wrapper与页面重复解析几何",
+      "dependsOn": [
+        "P0"
+      ],
+      "status": "COMPLETE_HOST_CONTRACTS_AND_GEOMETRY_GENERATION_FIX",
+      "actions": [
+        "按当前静态调用清单补宿主表：页面、宿主、geometry owner、测量代次、rail/end inset、头尾预算",
+        "11处Scaffold调用含StandardPage wrapper，另有14处StandardPage调用分布13文件；先解析页面实体，不把调用数当页面数",
+        "补8个resolver消费者合同，ReaderShell/SyncSurface固定空几何理由逐项审定"
+      ],
+      "exitCriteria": [
+        "每个实际页面仅一个几何resolver，Scaffold只消费结果",
+        "固定空几何有适用范围与失效条件，测量代次不跨实体"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": "docs/architecture/page-geometry-host-contracts-20261111.json"
+    },
+    {
+      "id": "P4.2",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "同变更原因的layout模块owner",
+      "singleRisk": "无依据文件合并造成万能壳",
+      "dependsOn": [
+        "P4.1"
+      ],
+      "status": "COMPLETE_EVIDENCE_BASED_LAYOUT_RETENTION",
+      "actions": [
+        "仅合并相同变更原因、消费者集合重合的纯metrics/rect职责",
+        "保留Geometry、Scaffold、StandardPage三角色及阅读/漫画/List专用宿主"
+      ],
+      "exitCriteria": [
+        "无页面内第二resolver，合并有消费者及依赖证据",
+        "16→10–12仅评估目标；无可安全合并职责时记录保留理由，不强凑文件数"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": "docs/architecture/page-geometry-host-contracts-20261111.json"
+    },
+    {
+      "id": "P5.0",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "只读证据审计owner",
+      "singleRisk": "不公平差分掩盖格式/谱系差异",
+      "dependsOn": [],
+      "status": "COMPLETE_SOURCE_AND_ADMISSION_AUDIT",
+      "actions": [
+        "已核旧max38拒绝更高schema、可用后继clone47、缺旧Linux身份与Host资源谱系",
+        "已比对三个读取函数源段，两个commit一致；未FFI/SQL"
+      ],
+      "exitCriteria": [
+        "兼容准入对照与内容语义差分分开",
+        "P5.1/P5.2/P5.3的输入阻断和证据边界明确"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": []
+    },
+    {
+      "id": "P5.1",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "正式Core格式准入owner",
+      "singleRisk": "把格式拒绝当状态missing",
+      "dependsOn": [
+        "P5.0"
+      ],
+      "status": "FORMAT_INADMISSIBLE_BY_SOURCE_NOT_RUNTIME_EXECUTED",
+      "actions": [
+        "先固定旧dirty输入闭包与实际Linux binary的ABI/协议/SQLite上限/sidecar身份",
+        "如明确选择做格式准入对照，仅在新disposable分支走正式open，拒绝即结束，不继续status"
+      ],
+      "exitCriteria": [
+        "拒绝明确记FORMAT_INADMISSIBLE，不算cached/missing差分",
+        "不开原库/raw/UNKNOWN，不改user_version，不自动编译或替换候选"
+      ],
+      "stopIf": [
+        "旧可追溯Linux产物缺失",
+        "拟查询内容而所选baseline超过旧schema上限"
+      ],
+      "productChecksExecuted": []
+    },
+    {
+      "id": "P5.2",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "cache.book.status正式读取owner",
+      "singleRisk": "不同输入/启动写入造成伪回归",
+      "dependsOn": [
+        "P5.0"
+      ],
+      "status": "COMPLETE_CURRENT_CLONE_OBSERVATION_OLD_NEW_CONTENT_DIFF_INADMISSIBLE",
+      "actions": [
+        "当前数据分支已完成：经新一次明确授权取得停态DB/WAL，主库仅在SHA匹配当前源时复用字节，WAL来自当前源；原pair复制前后不变，应用恢复书架、租约与操作额度结束",
+        "captured只作字节校验/复制；stage→一致性backup→immutable SQL，独立writable ffi运行后销毁，再作postbackup/SQL；captured和前后SQL快照各自不变",
+        "当前分支仅core.info→bookshelf.list→cache.book.status三方法；两章missing、无version/candidate，按条件不调用manga.entry.get，无Host或网络dispatch",
+        "SQL在Runtime打开前已见目标书heads/retention/receipts全0，manifest3与evicted3身份集合相同；目标投影pre/post相同，数据库字节可因bootstrap变化，不能声称全库不变",
+        "旧新内容差分是未准入的独立分支：须先有两个可正式打开同一固定baseline的可追溯artifact；历史因果另需有回执的pre-change快照，不以本次当前数据观察替代"
+      ],
+      "exitCriteria": [
+        "当前克隆观察退出：精确copy回执及源/捕获SHA绑定、固定Linuxdebug身份、三方法结果、销毁和Host请求0均有实际回执",
+        "当前两章无candidate与当前0/2一致；不把旧clone cached、Host文件存在或此诊断推成当前应1/2",
+        "历史撤销者/时间与旧0/2因果未建立；不是安装中release或当前进程直接查询，既有evicted数据未恢复",
+        "旧2a301653 max38与可用47baseline不具内容差分准入，旧新分支记FORMAT_INADMISSIBLE/NOT_RUN，不阻断已完成的当前数据观察，也不标内容差分PASS"
+      ],
+      "stopIf": [
+        "格式不兼容或baseline谱系/哈希不可信",
+        "复用同一writable working/ffi目录",
+        "意外Host请求、超时、身份/TOC漂移、结果缺失；不重试扩域"
+      ],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/current-core-observation/interpretation.json",
+      "additionalImplementationEvidence": ".local/framework-closure-implementation-20261111/current-core-observation/result.json",
+      "branchStatus": {
+        "CURRENT_DATA": "COMPLETE_BOUNDED_CLONE_OBSERVATION",
+        "OLD_NEW_CONTENT_DIFF": "FORMAT_INADMISSIBLE_NOT_RUN",
+        "HISTORICAL_CAUSE": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "id": "P5.3",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "Host manifest与登记文件合同",
+      "singleRisk": "完整性检查暗含写入/清理",
+      "dependsOn": [
+        "P5.0"
+      ],
+      "status": "COMPLETE_HOST_FILE_FACTS_AND_INDEPENDENT_RECOVERY_REVISION_FIX",
+      "actions": [
+        "已在单独明确授权的原VM只读范围核对旧chapter1 scope/version/profile的Host manifest及6个登记文件；只限定路径/stat/size/digest，未取回资源payload，不遍历无关资料",
+        "Host文件事实与当前Core有效版本分开：当前克隆无candidate，旧scope文件完整不能重建Core准入或证明localComplete",
+        "未实例化会finishPendingClear的实际isChapterComplete读取；不写清理标记、不删除资源、不下载、不迁移",
+        "独立实际Host/Gateway/Disk方法复现并修复负结果长期复用及迟到R1删除R2完整索引的竞态；恢复性17组与旧source/mutant有单独回执",
+        "manga.entry窗口3/总6本身不是资源缺失证据，本轮当前数据无candidate时未直接绕过调用entry"
+      ],
+      "exitCriteria": [
+        "有授权旧scope的manifest身份与6个登记文件存在/长度/digest实际回执，Host文件事实观察完成；不再沿用仅DB/WAL而缺Host回执的旧判断",
+        "文件观察与实际Host SDK完整性调用、当前Core准入、历史0/2因果分别记账；未把任一局部事实当业务确认",
+        "独立恢复性缺陷的旧源码失败、当前17组及R1/R2负对照通过，未证明它是历史VM0/2原因",
+        "本轮Host只读与两次分别授权停启范围均已结束；不自动继续设备、资源恢复或漫画冷续读"
+      ],
+      "stopIf": [
+        "拟追加Host资源或live sandbox读取而没有新的准确授权/计划",
+        "symlink/path escape/登记集不一致/pending-clear",
+        "拟从旧Host文件事实推定当前Core可读、自动修复或恢复既有evicted记录"
+      ],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p5-host-readonly-bound/result.json",
+      "additionalImplementationEvidence": "/home/administrator/Reader/.local/p5-negative-revision-result.json"
+    },
+    {
+      "id": "P5.4",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "漫画真实localComplete准入owner",
+      "singleRisk": "像素路径绕过离线准入或重复触原意图",
+      "dependsOn": [
+        "P5.2",
+        "P5.3"
+      ],
+      "status": "NOT_RUN_REQUIRED_OFFLINE_ADMISSION_UNMET_NO_BYPASS",
+      "actions": [
+        "当前克隆无有效candidate已按代码/本地证据记录；历史0/2原因未建立，不以额外设备操作追查或绕过准入",
+        "只有localComplete正式准入且有新的有界设备计划时才冷续读；不使用标题入口绕过",
+        "现有受控执行已结束，不能沿用其操作额度"
+      ],
+      "exitCriteria": [
+        "代码/本地/VM/物理机/用户验收分层",
+        "冷续读仅在同scope/时点localComplete正式准入及新计划/授权下可执行；本轮无candidate保持NOT_RUN，不把历史0/2或evicted恢复写成已完成"
+      ],
+      "stopIf": [
+        "原因尚能由代码或克隆定位",
+        "localComplete不满足或无有效设备计划/授权"
+      ],
+      "productChecksExecuted": []
+    },
+    {
+      "id": "P5.5",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "ReadingImageDiskCache公共预算owner与原Core grant owner",
+      "singleRisk": "无压力capacity维护无条件claim普通缓存",
+      "dependsOn": [
+        "P5.0",
+        "P5.2"
+      ],
+      "status": "COMPLETE_CAPACITY_CODE_17_BEHAVIOR_2_SDK_CANONICAL_BUILD_SIGNED",
+      "actions": [
+        "只在reason=capacity且没有显式enough时，复用既有inventory/buckets/capacity给出默认总预算/系统余量谓词；Gateway不增加第二owner",
+        "ordinaryBytes+ordinaryReservedBytes<=cacheBudgetBytes且freeBytes>=systemReserveBytes+allReservedBytes时停止新回收；分区、新bytes和headroom继续由reserveExternalWrite自定义enough拥有",
+        "pending grant先恢复，每候选后及derived阶段复用停止条件；不改Core候选/LRU/优先级、expiry/clear、保护栅栏、schema或迁移，不新增队列/actor",
+        "旧生产无压力claim已实际失败复现；当前17组行为及2组SDK通过，SDK工具解析失败保留，最终规范HAP语义编译及指定签名已通过，单独绑定实际候选"
+      ],
+      "exitCriteria": [
+        "固定Disk源码SHA256 552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f；17行为+2SDK及旧失败回执分别登记，不写成设备或规范构建PASS",
+        "正常startup可达旧错误路径只证明当前合同缺口，历史撤销者/时间和旧0/2因果未建立",
+        "既有evicted数据没有恢复；不新增原库/clone SQL、FFI、设备或文件恢复动作"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": [],
+      "implementationEvidence": ".local/framework-closure-implementation-20261111/p5-capacity-eviction-result.json",
+      "productionSourceSha256": "552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
+      "finalArtifact": {
+        "appBuildId": "0.2.0.DEV.0511f567914d",
+        "runId": "20261111T034526Z-def50fbc-02199dc7",
+        "manifest": "/home/administrator/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20261111T034526Z-def50fbc-02199dc7/manifest.json",
+        "install": "NOT_RUN"
+      }
+    },
+    {
+      "id": "P6",
+      "executionOwner": "Codex主代理",
+      "productionOwner": "发布/整体验收owner",
+      "singleRisk": "分项PASS被误作整体交付",
+      "dependsOn": [
+        "P1.1",
+        "P1.2",
+        "P1.3",
+        "P1.4",
+        "P2.2",
+        "P3.1",
+        "P3.2",
+        "P3.3",
+        "P3.4",
+        "P4.2",
+        "P5.4",
+        "P5.5"
+      ],
+      "status": "NOT_TRIGGERED_NO_FORMAL_RELEASE_SCOPE",
+      "actions": [
+        "仅在明确发布/整体验收目标后固定候选和平台",
+        "按需求组合准确case、必要设备问题与用户验收，不调用旧full目录"
+      ],
+      "exitCriteria": [
+        "每个证据层有本候选结果，未选/未执行如实记账",
+        "不存在以局部通过推导整体完成"
+      ],
+      "stopIf": [],
+      "productChecksExecuted": []
+    }
+  ],
+  "optionalCheckCatalog": "reading-renderer-behavior-matrix-20261111.json contains candidates, NOT selected execution list; inspect actual change and definition fingerprint before one exact --id --run.",
+  "currentExecution": {
+    "productionModified": true,
+    "sourceOwnersFrozen": true,
+    "signedCandidate": "0.2.0.DEV.0511f567914d",
+    "warningTotal": 322,
+    "warningClasses": {
+      "throws": 313,
+      "capability-availability": 7,
+      "native-verification": 2,
+      "deprecated": 0,
+      "missing-type-or-member": 0
+    },
+    "device": "已结束的单独授权Host只读事实观察，以及两次分别明确授权的停态复制；首轮失败后恢复、第二轮成功后恢复；不含本次capacity修复的设备复验",
+    "P5CoreDifference": "Inadmissible old38/new47; not executed or declaredPASS",
+    "fullProductRegression": "NOT_RUN",
+    "physicalDevice": "NOT_RUN",
+    "userAcceptance": "NOT_RUN",
+    "originalCopyAttempt": {
+      "first": "Failedshelltransportunderfirstcap,restored",
+      "retry": "Successundernewexplicitcap;sourcepairunchanged,mainexacthashreuse+currentWAL;intentstat/hashsame,Shelfrestored,leaseReleased",
+      "scope": "Bothconsumed;nodeviceactionsremain"
+    },
+    "latestProductionFix": "无压力capacity维护默认总预算/物理余量gate；旧生产失败+17行为+2SDK通过，DiskSHA=552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
+    "currentCoreObservation": {
+      "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/current-core-observation/result.json",
+      "states": [
+        "missing",
+        "missing"
+      ],
+      "candidates": 0,
+      "headsRetentionReceipts": 0,
+      "manifestsAndEvictions": 3,
+      "targetFactsPrePostEqual": true,
+      "runtime": "PinnedLinuxdebugclonenotinstalledrelease",
+      "entry": "NOT_RUN_NOCANDIDATE",
+      "historicalRevocationCause": "NOT_ESTABLISHED",
+      "versionPresent": [
+        false,
+        false
+      ],
+      "targetMetadataAlreadyAbsentBeforeRuntime": true,
+      "historicalZeroCause": "NOT_ESTABLISHED",
+      "evictedDataRestored": false,
+      "scopeBoundary": "Current stopped data in fixed Linuxdebug clone; not installed release/current-process query"
+    },
+    "candidateBinding": {
+      "status": "PASS_FINAL_CANONICAL_BUILD_AND_SPECIFIED_SIGNATURE",
+      "record": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/candidate.json",
+      "manifest": "/home/administrator/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20261111T034526Z-def50fbc-02199dc7/manifest.json",
+      "buildCommit": "def50fbc5c1d53252b103441420ef9e4fb55c18a",
+      "installed": "NOT_RUN_BLOCKED_BY_FAILED_REQUIRED_INSPECT"
+    },
+    "warningBoundary": "最后capacity源码实际规范ArkTS构建322：313throws、7capability、2native，missing/deprecated0；不替代设备或整体验收。",
+    "previousIndependentRecoveryFix": "迟到R1负结果不能删除R2完整索引；独立恢复性17组/旧生产失败/负对照回执保留",
+    "capacityFix": {
+      "result": ".local/framework-closure-implementation-20261111/p5-capacity-eviction-result.json",
+      "sourceSha256": "552915bbf2b141f9b582b37ae3e6bb87fddd52345e4e05ee2edb10282418929f",
+      "behaviorGroups": 17,
+      "sdkGroups": 2,
+      "canonicalHap": "PASS_FINAL_CANDIDATE_SIGNED_NOT_INSTALLED",
+      "historicalOwner": "NOT_ESTABLISHED",
+      "historicalTime": "NOT_ESTABLISHED",
+      "historicalZeroCause": "NOT_ESTABLISHED",
+      "evictedDataRestored": false
+    },
+    "latestAdmission": {
+      "canonicalInspect": "FAIL",
+      "exitCode": 3,
+      "reason": "target-sqlite-version-unresolved",
+      "result": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/final-vm-0511/result.json",
+      "installs": 0,
+      "starts": 0,
+      "uiActions": 0,
+      "scopeClosed": true,
+      "laterReadonlyDiagnostic": "CURRENT_DIRECT_BLOCKER_LINEAGE_LOG_EMPTY_NOT_CANONICAL_RECHECK",
+      "diagnosticObservation": "/home/administrator/Reader/.local/framework-closure-implementation-20261111/storage-admission-live-20261111/observation.json",
+      "remoteHilogExit": "NOT_SEPARATELY_OBSERVED",
+      "loggingEmptyMechanism": "NOT_ESTABLISHED",
+      "diagnosticScopeClosed": true
+    },
+    "fullAudit": {
+      "report": "/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-full-audit-20261111.md",
+      "plan": "/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-delivery-remediation-plan-20261111.md",
+      "mode": "READ_ONLY_SOURCE_AND_EXISTING_EVIDENCE_NO_NEW_PRODUCT_OR_DEVICE_EXECUTION",
+      "productionRemediation": "PLAN_ONLY_EXCEPT_CURRENT_SUMMARY_DOCUMENT_CORRECTIONS"
+    },
+    "residualAnalysis": {
+      "report": "/home/administrator/Reader/Reader-for-HarmonyOS/docs/architecture/reader-open-issues-analysis-and-resolution-20261111.md",
+      "status": "PLAN_ONLY_NO_NEW_PRODUCT_OR_DEVICE_EXECUTION",
+      "fingerprintUpgrade": "DECOUPLED_FROM_COMMON_CRITICAL_PATH",
+      "passiveOwnerTransport": "NOT_ESTABLISHED_DESIGN_PREREQUISITE",
+      "mangaHydration": "SOURCE_GAP_LOCALIZED_NOT_HISTORICAL_ZERO_CAUSE_NOT_IMPLEMENTED",
+      "originalFindings": "F01_F11_OPEN_F12_DOCUMENT_ONLY_CLOSED"
+    }
+  }
+}

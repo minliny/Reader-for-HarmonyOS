@@ -5,16 +5,16 @@ import {createRequire, stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder} from './lib/manga-surface-sdk-probe.mjs';
-import {createDefaultReaderWindowMetrics, readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import {createDefaultReaderWindowMetrics, readerInteractiveSafeInsets} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import {mangaUserError} from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
 import {MangaRetainedTileCache} from './lib/manga-retained-tile-cache-probe.mjs';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 
 // Real Controller/Coordinator and SDK-emitted Surface/Image callbacks. Core,
 // decoding, native rectangles, render delivery and imported children are ports;
 // this proves candidate liveness/admission, not native pixels or VM ordering.
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-const controllerSource = readFileSync(new URL('MangaSessionController.ts', root), 'utf8');
-function load(name, dependencies = {}, text = readFileSync(new URL(`${name}.ts`, root), 'utf8')) {
+const controllerSource = readFileSync(mangaSourceUrl('MangaSessionController.ts'), 'utf8');
+function load(name, dependencies = {}, text = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8')) {
   const source = text.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)};return ${name}`)(...Object.values(dependencies));
 }
@@ -36,7 +36,7 @@ const unfencedCandidateSource = controllerSource
   .replaceAll('(!this.candidatePendingPresentation || this.candidateCurrent())', 'true');
 assert.notEqual(unfencedCandidateSource, controllerSource, 'counterfactual removes the exact production candidate intention fences');
 const UnfencedCandidateController = load('MangaSessionController', dependencies, unfencedCandidateSource);
-const source = readFileSync(new URL('MangaReadingSurface.ets', root), 'utf8');
+const source = readFileSync(mangaSourceUrl('MangaReadingSurface.ets'), 'utf8');
 const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const tree = ts.createSourceFile(virtualFilePath('MangaCandidateVisibleMetadata.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,

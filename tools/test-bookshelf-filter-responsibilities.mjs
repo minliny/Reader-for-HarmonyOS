@@ -2,11 +2,11 @@ import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-const path = name => new URL(`../entry/src/main/ets/features/bookshelf/${name}.ets`, import.meta.url);
+const path = name => new URL(`../entry/src/main/ets/features/bookshelf/ui/${name}.ets`, import.meta.url);
 const source = name => readFileSync(path(name), 'utf8');
 const books = [
   { sourceId: 'local', bookId: 'a', group: '', readProgress: 0 },
@@ -27,57 +27,84 @@ assert.equal(books[2].group, '历史');
 
 const shelfSource = source('BookshelfPage');
 const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
-  'onShelfFiltersChanged','queueShelfProjection','isSectionActionActive','sectionActionLabel','sectionActionAsset','canonicalFilterActiveAsset'];
+  'onShelfFiltersChanged','queueShelfProjection','setFilterExpanded','settleFilterPanel'];
 const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames]);
 Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',contentFilter:'all',sourceFilter:'all',
-  filterRowVisible:true, viewMode:'list', mounted:true,projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
+  filterRowVisible:true, viewMode:'list', mounted:true,reduceMotion:true,viewState:{},filterMotionGeneration:0,
+  projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
 shelf.filterRow();
-const texts = owner => [...owner.nodes.values()].filter(n => n.type === 'Text');
-const button = label => texts(shelf).find(n => n.create === label);
+const button = label => [...shelf.nodes.values()].find(n => n.type === 'Button' &&
+  (n.accessibilityText === '清除内容类型和来源筛选' && label === '清除' ||
+    n.accessibilityText?.endsWith(`：${label}`)));
+assert.equal(button('清除').enabled,false,'the actual native clear actor preserves its inactive state');
+assert.equal([...shelf.nodes.values()].filter(n=>n.type==='Button'&&n.accessibilityText?.includes('：')).length,6,
+  'each controlled filter chip has exactly one native actor');
+assert.ok(![...shelf.nodes.values()].some(n=>n.type==='Text'&&typeof n.onClick==='function'),
+  'filter labels do not retain a second custom click actor');
 button('漫画').onClick(); shelf.onShelfFiltersChanged(); button('在线').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,1,'same gesture/storage notifications publish the final projection only once');
 assert.equal(shelf.readingFilter,'all','content selection clears obsolete reading-state filtering');assert.equal(shelf.contentFilter,'manga');assert.equal(shelf.sourceFilter,'online');
 assert.equal(button('漫画').backgroundColor, readerAppColor('TOK_PRIMARY_SOFT','day'));
 assert.equal(button('小说').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
+assert.equal(button('漫画').accessibilitySelected,true);
+assert.equal(button('小说').accessibilitySelected,false);
 shelf.filterRowVisible=false;
-assert.equal(shelf.isSectionActionActive('bookshelf_filter'),true,'closed filter keeps active-condition indication');
-assert.match(shelf.sectionActionLabel('bookshelf_filter',true),/已有筛选条件/);
+const Header = productionMotionMethods(path('BookshelfSectionHeader'), ['isActive','actionLabel','activate']);
+const header = Object.assign(new Header(),{viewMode:shelf.viewMode,actionsEnabled:true,filterExpanded:false,
+  hasActiveFilters:shelf.hasActiveFilters()});
+assert.equal(header.isActive('bookshelf_filter'),true,'closed filter keeps active-condition indication');
+assert.match(header.actionLabel('bookshelf_filter'),/已有筛选条件/);
 button('清除').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,2,'clearing both dimensions is one reload');
 assert.equal(shelf.readingFilter,'all');assert.equal(shelf.contentFilter,'all');assert.equal(shelf.sourceFilter,'all');
-assert.equal(shelf.isSectionActionActive('bookshelf_filter'),false);
+header.hasActiveFilters=shelf.hasActiveFilters();
+assert.equal(header.isActive('bookshelf_filter'),false);
 // Run the surviving production filter closure after the group entry is removed.
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const tree = ts.createSourceFile('BookshelfPage.ets',shelfSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const callbacks = new Map();
-const visit = node => { if(ts.isCallExpression(node) && node.expression.getText(tree)==='this.sectionAction') {
-  callbacks.set(node.arguments[0].text,node.arguments[1].getText(tree));
+const visit = node => { if(ts.isCallExpression(node) && node.expression.getText(tree)==='BookshelfSectionHeader') {
+  for(const property of node.arguments[0].properties) if(['onCover','onList','onFilter'].includes(property.name?.getText(tree)))
+    callbacks.set(property.name.getText(tree),property.initializer.getText(tree));
 } ts.forEachChild(node,visit); }; visit(tree);
 const invoke = key => new Function(stripTypeScriptTypes(`const action = ${callbacks.get(key)};`)+'; action();').call(shelf);
-assert.deepEqual([...callbacks.keys()],['bookshelf_grid','bookshelf_list','bookshelf_filter']);
-invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
-invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
-const Shell = productionMotionMethods(path('BookshelfShell'), ['dismissMoreMenu','requestCheckUpdates']);
+assert.deepEqual([...callbacks.keys()],['onCover','onList','onFilter']);
+header.onFilter=()=>invoke('onFilter');header.activate('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
+header.activate('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
+const Shell = productionMotionMethods(path('BookshelfShell'), ['dismissMoreMenu','requestCheckUpdates','moreIntentAction','isCurrentMoreSheet','releaseMoreSheetChrome']);
 const shell = new Shell();
-let updates=0; Object.assign(shell,{moreMenuVisible:true,moreSelectionId:"live-menu",canCheckUpdates:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
-shell.requestCheckUpdates(); assert.equal(updates,1);assert.equal(shell.moreMenuVisible,false);assert.equal(shell.moreSelectionId,'');
+let updates=0; Object.assign(shell,{mounted:true,navigationGeneration:7,moreSheetNavigation:7,
+  moreMenuVisible:true,moreSelectionId:'live-menu',moreSheetCurrentId:'live-menu',moreSheetChromeId:'',
+  canCheckUpdates:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
+const shellSource=source('BookshelfShell'),shellTree=ts.createSourceFile('BookshelfShell.ets',shellSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+let checkUpdatesCallback;
+const findUpdates=node=>{if(ts.isPropertyAssignment(node)&&node.name.getText(shellTree)==='onCheckUpdates'&&ts.isCallExpression(node.initializer))
+  checkUpdatesCallback=node.initializer.arguments[1].getText(shellTree);ts.forEachChild(node,findUpdates);};findUpdates(shellTree);
+assert.ok(checkUpdatesCallback,'actual current More sheet update intent');
+const updateIntent=new Function(stripTypeScriptTypes(`const action = ${checkUpdatesCallback};`)+';return action;').call(shell);
+shell.moreIntentAction('live-menu',updateIntent)(); assert.equal(updates,1);assert.equal(shell.moreMenuVisible,false);assert.equal(shell.moreSelectionId,'');
 shell.backgroundUpdateRunning=true;shell.requestCheckUpdates();assert.equal(updates,1);
 shell.backgroundUpdateRunning=false;shell.canCheckUpdates=false;shell.requestCheckUpdates();assert.equal(updates,1);
 assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow()'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));
 
-const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection','toggleBook','hasBookKey','toggleAll','allSelected'],{ShelfBookPresentation});
+const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection',
+  'toggleBook','hasBookKey','toggleAll','allSelected','selectionInputEnabled','canRemoveSelection'],{ShelfBookPresentation});
 let removed=[];
-const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,onRemoveSelected:k=>removed.push(k)});
+const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,mounted:true,onRemoveSelected:k=>removed.push(k)});
 assert.equal(ids(batch.visibleBooks()),'bd');batch.toggleAll();assert.equal(batch.selectedKeys.length,2);
 batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000}:b);
 batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000d']],'a selected book hidden by a new progress value is never removed');
 batch.sourceFilter='local';batch.reconcileSelection();assert.equal(batch.selectedKeys.length,0);
 batch.toggleBook(books[1]);assert.equal(batch.selectedKeys.length,0,'stale recycled clicks cannot select hidden books');
 batch.removeVisibleSelection();assert.equal(removed.length,1);
-for(const text of [shelfSource,source('BookshelfMultiSelectPage')]) {
+batch.sourceFilter='online';batch.mounted=false;
+batch.toggleBook(books[3]);assert.equal(batch.selectedKeys.length,0,'a retired selection route rejects a retained visible-row callback');
+for(const text of [source('BookshelfMultiSelectPage')]) {
   for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter','readerBookshelfSourceFilter'])assert.ok(text.includes(`@StorageLink('${key}')`));
 }
+for(const key of ['readerBookshelfSelectedGroup','readerBookshelfSourceFilter'])assert.ok(shelfSource.includes(`@StorageLink('${key}')`));
+assert.ok(!shelfSource.includes("@StorageLink('readerBookshelfReadingFilter')"),'current shelf filters do not resurrect the retired reading-state producer');
 assert.ok(shelfSource.includes("@StorageLink('readerBookshelfContentFilter')"),'content type has its own storage dimension');
 console.log('PASS shelf filters: content/origin dimensions and live chips survive gear removal; shared order, legacy data and hidden batch-selection safety');

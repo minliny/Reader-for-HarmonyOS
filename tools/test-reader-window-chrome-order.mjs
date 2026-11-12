@@ -3,15 +3,15 @@ const definitions={"manga-toggle": {"description": "manga actual SDK State Watch
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
-const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } = await import('./lib/manga-directory-adaptive-probe.mjs');
+const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies, mangaPanelOpeningMembers } = await import('./lib/manga-directory-adaptive-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire, registerHooks} = await import('node:module');
 const {createHash} = await import('node:crypto');
 const {ReaderBrightnessWriter} = await import('../entry/src/main/ets/app/ReaderBrightnessWriter.ts');
-const metrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const {readerAppearanceThemeStyle, readerAppearanceChromeTone} = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const metrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const {readerAppearanceThemeStyle, readerAppearanceChromeTone} = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
@@ -19,9 +19,9 @@ const {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} = await import('
 
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const controlSession=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const {readerControlHostVisible}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const readerSettingsState=await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const controlSession=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const {readerControlHostVisible}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const readerSettingsState=await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const {createDefaultReaderSettingsSnapshot}=readerSettingsState;
 const require=createRequire(import.meta.url);
 const ts=require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
@@ -31,7 +31,7 @@ async function settle(){for(let i=0;i<8;i++)await tick();}
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};}
 async function confirmedSettingsGateway(initial,saved){
  const runtime={getUIAbilityContext:()=>({})},Runtime=runtimeOwnerIdentityProbe(()=>runtime),cache=new Map(),durable=new Map();
- const source=readFileSync(new URL('features/reading/ReaderSettingsGateway.ts',base),'utf8').replace(/^import[\s\S]*?;\n/gm,'');
+ const source=readFileSync(new URL('features/reading/application/ReaderSettingsGateway.ts',base),'utf8').replace(/^import[\s\S]*?;\n/gm,'');
  const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});
  assert.deepEqual(out.diagnostics,[],'the complete production settings Gateway supplies accepted/saved facts');
  const store={async get(key,fallback){return cache.get(key)??fallback;},async put(key,value){cache.set(key,value);saved.push(JSON.parse(value));},
@@ -46,17 +46,17 @@ const {createWindowCoordinatorFixture}=await import('./lib/reader-window-coordin
 const allFixtures=[];
 try{
 async function fixture(){const f=await createWindowCoordinatorFixture();allFixtures.push(f);
- let E;if(selectedCase.startsWith('novel-setting-')){const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending','persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,readerAppearanceThemeStyle,readerAppearanceChromeTone,setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});}
- else{const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');E=selectedProductionMethods(new URL('features/reading/LocalReadingExperience.ets',base),'ReadingExperience',['applyWindowChrome'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,readerAppearanceThemeStyle,readerAppearanceChromeTone});}
+ let E;if(selectedCase.startsWith('novel-setting-')){const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');E=productionMotionMethods(new URL('features/reading/ui/LocalReadingExperience.ets',base),['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending','persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,readerAppearanceThemeStyle,readerAppearanceChromeTone,setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});}
+ else{const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');E=selectedProductionMethods(new URL('features/reading/ui/LocalReadingExperience.ets',base),'ReadingExperience',['applyWindowChrome'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,readerAppearanceThemeStyle,readerAppearanceChromeTone});}
  return{...f,E,theme(id,overlay=true){const e=Object.assign(new E(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});e.applyWindowChrome();}};
 }
 const caseNames={"manga-toggle": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "manga-forced-ui": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "manga-auth-viewport": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "manga-panel-props": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "manga-mask-lifecycle": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "manga-mask-resize": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "manga-mask-negative": "negative: original opaque phone bars cannot pass authored mask composition", "manga-viewport-negative": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "manga-area-negative": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "manga-metric-retry": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "manga-metric-negative": "negative: omitted metrics chrome refresh strands the failed native wide color", "manga-inactive": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "manga-old-identity": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "manga-late-native": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "manga-theme": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "manga-shell-props": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "historical-manga": "negative: frozen R5 production source fails immersive native three-bar assertion", "historical-shell": "negative: frozen R5 Shell fails actual active-child propagation", "manga-watch-negative": "negative: missing control State Watch is rejected by actual production toggle", "manga-bars-negative": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "manga-dispose-negative": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "coordinator-transparency": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "novel-palettes": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "coordinator-color-queue": "new theme is drained after the previous native color write rejects", "coordinator-reapply-color": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "coordinator-visible-retry": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "novel-setting-cutout": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "novel-status-controls": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "novel-setting-status": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "novel-setting-rollback": "failed status preference requests reflow after restoring the original setting", "novel-cutout-negative": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "novel-default-negative": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "coordinator-geometry": "pending status reveal never borrows another window geometry or replacement window measurement", "coordinator-show-ack": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "coordinator-reader-reapply": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "coordinator-app-reapply": "explicit App policy reapply restores captured orientation awake and visible system bars", "coordinator-reapply-failure": "native policy reapply rejection is handled without looping and a later explicit retry converges", "coordinator-owner-queue": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "coordinator-rotation": "show superseded by hide converges and same-size rotation does not reuse the pending band", "coordinator-old-window-reject": "old window reject cannot strand new window chrome", "coordinator-old-window-success": "old window success cannot strand new window chrome"};
 async function check(name,run){if(name!==caseNames[selectedCase])return;await run();}
-const mangaPath=new URL('features/manga/MangaReadingSurface.ets',base);
-const shellPath=new URL('features/shell/ReaderShell.ets',base);
+const mangaPath=new URL('features/manga/ui/MangaReadingSurface.ets',base);
+const shellPath=new URL('features/reading/ui/ReaderShell.ets',base);
 const mangaSource=readFileSync(mangaPath,'utf8');
 const shellSource=readFileSync(shellPath,'utf8');
-const novelSource=readFileSync(new URL('features/reading/LocalReadingExperience.ets',base),'utf8');
+const novelSource=readFileSync(new URL('features/reading/ui/LocalReadingExperience.ets',base),'utf8');
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 const sdkEvidence={mangaSourceSHA:sha256(mangaSource),shellSourceSHA:sha256(shellSource)};
 let baselineManga,baselineShell;
@@ -108,7 +108,8 @@ function novelSdkFixture(f,theme,extendIntoCutout,text=novelSource){
 }
 // Select unchanged production members; the R5 negative selects only members it
 // actually has so its failure is the observed native visibility, not missing code.
-const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isReaderIdentityCurrent','windowChromeOwned',
+const mangaChromeMembers=[...mangaPanelOpeningMembers,'appForeground','readerPanelForeground',
+ 'windowChromeActive','windowChromeOverlayActive','isReaderIdentityCurrent','windowChromeOwned',
  'mounted','runtime','settingsGateway','appThemeScheme','controlsVisible','error','openingRetry','recovering','chapterEnd','panel',
  'backgroundPreference','loginRequiredForControls','aboutToAppear','aboutToDisappear','toggleControls','controlsPresentedForWindow',
  'refreshLoginRequiredForControls','onWindowChromeChanged','applyWindowChrome','applyWindowPolicyForChromeOwner','restoreAppWindowChrome',
@@ -116,7 +117,9 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth',
  'rollbackChapterController','rollbackChapterImages','previousChapterPixels'];
 const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'mutedColor','displayError','chapterLoadState','build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
- 'isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody',
+ 'actionPanelPresentationGeneration','panelInputCurrent','phonePanelBackgroundEnabled',
+ 'isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody','actionHeaderHeight','actionHeaderMeasuredHeight',
+ 'directorySheet','directoryBottomHeader','directorySideHeader','measureDirectorySheetHeader','chromeScheme',
  'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
  'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',
  'beginPanelDrag','updatePanelDrag','finishPanelDrag','panelTravel','panelHeight','panelWidth','panelContentHeight',
@@ -150,7 +153,7 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
   hilog:{warn(){}},AppStorage:globalThis.AppStorage,
   uiContext,curves:{interpolatingSpring:(...args)=>({kind:'native-spring',args})},Curve:{EaseInOut:'easeInOut'},
   MangaBookPresentation:{revision:0,useOwner(){}},MangaSessionController:SessionPort};
- const built=createReaderBuilderProbe(text,[...mangaChromeMembers,...(maskScene?mangaMaskSceneMembers:[])].filter(n=>available.has(n)),deps,
+ const built=createReaderBuilderProbe(text,[...new Set([...mangaChromeMembers,...(maskScene?mangaMaskSceneMembers:[])])].filter(n=>available.has(n)),deps,
   // Preserve the existing retained-scene boundary: native occupied-branch
   // removal is outside this chrome probe; shared children use actual code.
   {...shared.hooks,allowEmptyBranchAdmission:false,

@@ -3,15 +3,15 @@ import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function preferences() {
- const {createDefaultReaderTtsPreferencesSnapshot,normalizeReaderTtsPreferencesSnapshot,isReaderTtsVoiceInstalled}=await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
+ const {createDefaultReaderTtsPreferencesSnapshot,normalizeReaderTtsPreferencesSnapshot,isReaderTtsVoiceInstalled}=await import('../entry/src/main/ets/features/reading/application/ReaderTtsPreferencesState.ts');
  const fallback=createDefaultReaderTtsPreferencesSnapshot();assert.deepEqual(fallback,{version:1,language:'zh-CN',person:0,pauseOnInterruption:true,allowMixing:false,failurePolicy:'stop',followHighlight:true,backgroundPlayback:true,keepScreenOn:false});
  assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({version:1,language:' en-US ',person:7,pauseOnInterruption:false,allowMixing:true,failurePolicy:'skip',followHighlight:false,backgroundPlayback:true,keepScreenOn:false}),{version:1,language:'en-US',person:7,pauseOnInterruption:false,allowMixing:true,failurePolicy:'skip',followHighlight:false,backgroundPlayback:true,keepScreenOn:false});
  assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({version:1,language:'',person:-1,pauseOnInterruption:'invalid',allowMixing:'invalid',failurePolicy:'retry',followHighlight:'invalid'}),fallback);
  for(const status of ['INSTALLED',' installed ',undefined])assert.equal(isReaderTtsVoiceInstalled(status),true);assert.equal(isReaderTtsVoiceInstalled('GA'),false);
 }
 async function systemVoice() {
- const {isReaderTtsVoiceInstalled}=await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
- const source=readFileSync(new URL('../entry/src/main/ets/app/HarmonySystemTtsHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
+ const {isReaderTtsVoiceInstalled}=await import('../entry/src/main/ets/features/reading/application/ReaderTtsPreferencesState.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
  const requests=[],spoken=[];let voices=[];
  const textToSpeech={async createEngine(params){requests.push(params);if(params.language==='unavailable')throw Error('not installed');return {setListener(){},speak(text,params){spoken.push({text,params});},stop(){},shutdown(){}};},async listVoices(){return voices;}};
  const Host=new Function('textToSpeech','audio','hilog','harmonyTtsAudioSessionLease','isReaderTtsVoiceInstalled','errorMessageOf',stripTypeScriptTypes(source)+';return HarmonySystemTtsHost;')(textToSpeech,{}, {error(){}},{createOwner:()=> 'system',deactivate:async()=>{}},isReaderTtsVoiceInstalled,e=>e.message);

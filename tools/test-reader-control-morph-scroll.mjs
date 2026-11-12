@@ -12,10 +12,10 @@ async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { registerHooks, stripTypeScriptTypes }=await import('node:module');
-const policy=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const { readerControlUnit }=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
-const { readerControlAppearanceEndpoint }=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
-const { readerControlPlaybackMeasuredSource, readerControlPlaybackSourceKind }=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
+const policy=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const { readerControlUnit }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+const { readerControlAppearanceEndpoint }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts');
+const { readerControlPlaybackMeasuredSource, readerControlPlaybackSourceKind }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
 const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if (specifier.startsWith('./') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context);
@@ -23,7 +23,7 @@ const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   }
 } });
 try {
-const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
+const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 function method(source, name) {

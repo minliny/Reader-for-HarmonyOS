@@ -3,7 +3,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function run(id){
 const owned=[];const createCoordinator=(...args)=>{const c=new ReaderTtsSessionCoordinator(...args);owned.push(c);return c;};
 const { readFile }=await import("node:fs/promises");
-const { ReaderTtsSessionCoordinator }=await import("../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts");
+const { ReaderTtsSessionCoordinator }=await import("../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts");
 const { chapter, canonicalRemoteContent, plan, FakeGateway, FakeHost }=await import("./lib/reader-tts-fixtures.mjs");
 async function startBlockedSession(contentVersion) {
   const blockedGateway = new FakeGateway();
@@ -159,6 +159,63 @@ for (const scenario of immediateTransportIntents) {
   await blocked.startTask;
   await intentTask;
   await blocked.coordinator.dispose();
+}
+
+for (const failure of ['hostStop', 'corePause']) {
+  const gateway = new FakeGateway();
+  const host = new FakeHost();
+  const coordinator = createCoordinator(gateway, host);
+  await coordinator.start({chapter, content: canonicalRemoteContent, contentVersion: 70, scalarPosition: 0});
+  host.emit({type: 'start', requestId: host.requests.at(-1).requestId});
+  await coordinator.whenSettled();
+  const cause = new Error(failure);
+  if (failure === 'hostStop') host.stop = async () => { throw cause; };
+  else gateway.pause = async () => { throw cause; };
+  await assert.rejects(coordinator.pauseForBackground(), error => error === cause);
+  assert.equal(host.calls.filter(call => call === 'deactivate').length, 1, failure);
+  assert.ok(host.calls.includes('media:error'), 'native media controls must stop advertising playing on pause failure');
+  assert.equal(coordinator.getTransportState().audioSession, 'inactive');
+  host.stop = FakeHost.prototype.stop;
+  await coordinator.dispose();
+}
+
+{
+  const host = new FakeHost();
+  const gateway = new FakeGateway();
+  const states = [];
+  const coordinator = createCoordinator(gateway, host, undefined, state => states.push(state));
+  const replacement = {...chapter, chapterIndex: 1};
+  let plannedChapter = chapter;
+  gateway.slice = async selected => ({...plan, chapter: selected});
+  const play = gateway.play.bind(gateway);
+  gateway.play = (nextPlan, index) => { plannedChapter = nextPlan.chapter; return play(nextPlan, index); };
+  const snapshot = gateway.snapshot.bind(gateway);
+  gateway.snapshot = (...args) => ({...snapshot(...args), chapter: plannedChapter});
+  let entered, release;
+  const pauseEntered = new Promise(resolve => { entered = resolve; });
+  const pauseBlocked = new Promise(resolve => { release = resolve; });
+  gateway.pause = async () => {
+    const oldPause = gateway.snapshot('paused');
+    entered();
+    await pauseBlocked;
+    return oldPause;
+  };
+  await coordinator.start({chapter, content: canonicalRemoteContent, contentVersion: 71, scalarPosition: 0});
+  host.emit({type: 'start', requestId: host.requests.at(-1).requestId});
+  await coordinator.whenSettled();
+  const pausing = coordinator.pauseForBackground();
+  await pauseEntered;
+  const replacing = coordinator.start({chapter: replacement, content: canonicalRemoteContent, contentVersion: 72, scalarPosition: 0});
+  const stateBoundary = states.length;
+  const mediaBoundary = host.calls.length;
+  release();
+  await Promise.all([pausing, replacing]);
+  assert.equal(coordinator.getState().chapterIndex, replacement.chapterIndex);
+  assert.ok(states.slice(stateBoundary).every(state => state.chapterIndex === replacement.chapterIndex),
+    'a pause ACK for the old chapter cannot publish inside the new session');
+  assert.ok(!host.calls.slice(mediaBoundary).includes('media:paused'), 'a retired pause ACK cannot republish AVSession state');
+  assert.ok(host.calls.slice(mediaBoundary).includes('deactivate'), 'retired playback still releases before the new acquisition');
+  await coordinator.dispose();
 }
 
 

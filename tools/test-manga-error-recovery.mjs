@@ -11,10 +11,10 @@ const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { mangaUserError } = await import('../entry/src/main/ets/features/manga/MangaUserError.ts');
+const { mangaUserError } = await import('../entry/src/main/ets/features/manga/presentation/MangaUserError.ts');
 
 
-const file = new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const Surface = productionMotionMethods(file,
   ['requestedLast', 'imageError', 'rowHasError', 'nativeFailureKey', 'wholeImageUnavailable', 'unavailableMarkerTile', 'unavailableMarkerTop', 'rowDisplayWidth', 'rowDisplayHeight', 'unavailableImageWidth', 'unavailableImageHeight', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery', 'notifyPreparationFailure']);
@@ -117,8 +117,9 @@ async function openedErrorSdkProof(surfaceSource=source) {
   const sdk=boundedSurfaceSdk(),messages=[];
   const members=['error','opened','mounted','openedErrorNoticeKey','presentationGeneration',
     'onErrorPresentationChanged','onWindowChromeChanged','notifyOpenedError','controlsPresentedForWindow','loginRequired',
-    'requestedLast','rowHasError','imageError','nativeFailureKey','nativeImageFailures','topControls'];
-  const owner=sdk.consumer(surfaceSource,members,{TOK_BORDER_W:1});
+    'requestedLast','rowHasError','imageError','nativeFailureKey','nativeImageFailures','topControls',
+    'mangaTopBarBack','mangaTopBarActions','chromeScheme','readerPanelForeground'];
+  const owner=sdk.consumer(surfaceSource,members,{TOK_BORDER_W:1,ButtonType:{Normal:'ButtonType.Normal'}});
   let live=true;
   const tile={image:{fileUri:'file://retained',revision:'v1'}},row={key:'page:0',ordinal:0,tileIndex:0};
   Object.assign(owner,{getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
@@ -127,7 +128,7 @@ async function openedErrorSdkProof(surfaceSource=source) {
     data:{totalCount:()=>1,getData:()=>row},first:0,last:0,iconAction(){},
     inkColor:()=> '#111111',mutedColor:()=> '#666666',surfaceColor:()=> '#F8F4EC',lineColor:()=> '#DDD8D0',
     appThemeScheme:'day',backgroundPreference:'paper',bookTitle:'漫画',title:'本话',offlineProbeStatus:'',
-    mounted:true,windowChromeActive:true,controlsVisible:false,chapterEnd:false,presentationGeneration:1,
+    mounted:true,appForeground:true,windowChromeActive:true,controlsVisible:false,chapterEnd:false,presentationGeneration:1,
     recovering:false,openingRetry:false,loginRequiredForControls:false,panel:'',offline:false});
   owner.opened=true;owner.topControls();sdk.properties.flush();
   const code='MANGA_PREFERENCE_SAVE_FAILED';owner.error=code;sdk.properties.flush();

@@ -271,7 +271,7 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(resolve(repo, rel), 'utf8');
-const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+const authorMetadataModule = read('entry/src/main/ets/app/library/BookAuthorMetadata.ts');
 
 // SearchOrchestrator imports SearchGateway by value and ReaderRuntimeOwner /
 // hilog from Harmony-only modules. Strip the runtime imports, concatenate the
@@ -284,7 +284,7 @@ const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/Err
 const errorMessageImport =
   /^import \{[^\n]*errorMessageOf[^\n]*\} from ['"][^'"]*ErrorMessage(\.ts)?['"];\n/m;
 const sourceCategoryModule = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+  read('entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'),
 ).replace(/^export /gm, '');
 const sourceCategoryImport =
   /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
@@ -295,15 +295,15 @@ const operationFactsModule = stripTypeScriptTypes(
 ).replace(/^export /gm, '');
 const operationFactsImport =
   /^import \{ projectOperationFacts \} from ['"][^'"]*ReaderOperationFacts['"];\n/m;
-const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
+const gatewaySource = read('entry/src/main/ets/features/search/application/SearchGateway.ts')
   .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () =>
-    read('entry/src/main/ets/features/common/BookSearchTiming.ts'))
+    read('entry/src/main/ets/app/library/BookSearchTiming.ts'))
   .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
-      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/application/SearchBookProjection.ts'), 'utf8'))
   .replace(errorMessageImport, '')
   .replace(sourceCategoryImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
-const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrchestrator.ets')
+const orchestratorSource = read('entry/src/main/ets/features/search/application/SearchOrchestrator.ets')
   .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () => read('entry/src/main/ets/app/BookRequestScheduler.ts'))
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
   .replace(errorMessageImport, '')
@@ -714,7 +714,7 @@ case "source-cooldown-retry": {
 };break;
 case "page-retry-admission": {
   const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
-  const Retry=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',['retryOperation']);const retryPage=Retry.prototype.retryOperation;
+  const Retry=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'SearchPage',['retryOperation']);const retryPage=Retry.prototype.retryOperation;
   for (const reason of ['healthFailed', 'cooldown']) {
     const checkedAtMs = Date.now();
     const sources = makeSources(2).map((source) => ({ ...source, sourceVersion: `v-${source.sourceId}`,
@@ -960,18 +960,45 @@ case "source-refresh-retained": {
   const owner = fakeOwner({ sources, delayForSource: () => 5, resultsFor: () => [] });
   const { orchestrator, presentations, sourcesSnapshots } = capture();
   const search = orchestrator(owner);
-  search.open();
-  search.search('无结果');
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const intents = [];
+  const LibrarySearchPresentation = bookshelfOperationClass('features/search/presentation/LibrarySearchPresentation.ets',
+    'LibrarySearchPresentation', { Observed: value => value, ReaderLibrarySearchModel: class {
+        suspend() { intents.push('suspend'); }
+      },
+      readerPageInitialHeaderHeight: () => 0, SearchHost: class {
+        viewState = { keywordDraft: '' };
+        open() { intents.push('open'); search.open(); }
+        presentation() { return last(presentations); }
+        search(keyword) { intents.push(keyword); search.search(keyword); }
+        refreshSources() { intents.push('refresh'); search.refreshSources(); }
+        resume() { intents.push('resume'); search.resume(); }
+      } });
+  const library = new LibrarySearchPresentation(() => true, () => true);
+  library.open(() => {});
+  library.host.viewState.keywordDraft = '  离开前的输入  ';
+  const draft = library.sourceManagementKeyword();
+  assert.equal(draft, '离开前的输入');
+  library.search('   ');
+  assert.deepEqual(intents, ['open'], 'blank intent does not suspend the retained input');
+  library.search('无结果');
   await settle(owner.state, 3);
   assert.equal(last(presentations).kind, 'empty');
+  assert.equal(library.sourceManagementKeyword(), '无结果', 'result mode captures the submitted keyword');
 
   sources.push({ sourceId: 'source-3', name: '源3', enabled: true });
-  search.refreshSources();
+  library.returnFromSourceManagement();
   await waitUntil(owner.state, () =>
     sourcesSnapshots.length > 0 && sourcesSnapshots[sourcesSnapshots.length - 1].length === 4);
 
   assert.equal(last(presentations).kind, 'empty', 'refreshSources keeps the current surface');
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 4, 'chips projection refreshed');
+  assert.deepEqual(intents, ['open', 'suspend', '无结果', 'refresh', 'resume'], 'ordinary return neither submits nor suspends again');
+  library.returnFromSourceManagement(draft);
+  await waitUntil(owner.state, () => last(presentations).kind === 'empty' && last(presentations).keyword === draft);
+  assert.deepEqual(intents, ['open', 'suspend', '无结果', 'refresh', 'resume', 'suspend', draft],
+    'explicit return suspends before submitting once without reopening the retained entry');
+  assert.equal(library.mode, 'results');
 };break;
 case "source-refresh-resolved": {
   const sources = makeSources(2).map((source) => ({ ...source, enabled: false }));
@@ -1706,14 +1733,14 @@ case "retry-failed-local": {
 case "empty-source-sdk-publication": {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
   const execute = source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
-  const pageSource = read('entry/src/main/ets/features/search/SearchPage.ets');
+  const pageSource = read('entry/src/main/ets/features/search/ui/SearchPage.ets');
   const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts}=installedEtsCompiler();const tree=ts.createSourceFile('SearchPage.ets',pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
   const classes=tree.statements.filter(n=>ts.isClassDeclaration(n)&&['SearchBookGroup','SearchResultDataSource'].includes(n.name?.text)).map(n=>n.getText(tree).replace('@Observed','')).join('\n');assert.equal(tree.statements.filter(n=>ts.isClassDeclaration(n)&&['SearchBookGroup','SearchResultDataSource'].includes(n.name?.text)).length,2);
-  const {SearchBookGroup,SearchResultDataSource,SearchViewState}=await execute(`const DataOperationType={ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`);
-  const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
+  const {SearchBookGroup,SearchResultDataSource,SearchViewState}=await execute(`const DataOperationType={ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};${authorMetadataModule}\n${read('entry/src/main/ets/features/search/presentation/SearchViewState.ts')}\n${classes}\nexport {SearchBookGroup,SearchResultDataSource};`);
+  const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
   let counting = false;let groupBuilds = 0;let rowUpdates = 0;let notices = 0;let flattenRows = 0;let identityLookups = 0;
   class CountedGroup extends SearchBookGroup { constructor(...args){super(...args);if(counting)groupBuilds++;} }
-  const Page = productionMotionMethods(resolve(repo,'entry/src/main/ets/features/search/SearchPage.ets'),['groupResults'],
+  const Page = productionMotionMethods(resolve(repo,'entry/src/main/ets/features/search/ui/SearchPage.ets'),['groupResults'],
     {SearchBookGroup:CountedGroup,SearchResultProjection});
   const page = Object.assign(new Page(),{shelfBooks:[],selectedGroupName:'全部',viewState:new SearchViewState()});
   const ds = new SearchResultDataSource();ds.registerDataChangeListener({onDatasetChange(){if(counting)notices++;}});

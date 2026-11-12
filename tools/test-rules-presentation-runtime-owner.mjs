@@ -6,8 +6,8 @@ const {fixture,compile,until,deferred,ReaderWriteEvidence}=await import('./lib/r
 const facts=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const projection=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 function orchestrator(f,official){
-  const Source=compile('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:f.Runtime},official);
-  return compile('features/settings/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',
+  const Source=compile('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:f.Runtime},official);
+  return compile('features/settings/application/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',
     {ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,RulesManagementGateway:f.Gateway,SourceGateway:Source,
       RssGateway:class{observeWrites(){}},...facts,...projection,hilog:{error(){}}},official);
 }

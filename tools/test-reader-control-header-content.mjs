@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { readerControlHeaderFrame } from '../entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts';
+import { readerControlHeaderFrame } from '../entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
@@ -22,7 +22,7 @@ for (const [nodes, id] of [[searchNodes, '1938:5075'], [playback.autoPage.motion
   assert.match(css, /0% \{ translate: 0px 18px;/);
   assert.match(css, /100% \{ translate: 0px 0px;/);
 }
-const fileSource = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
+const fileSource = read('entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets');
 const source = fileSource.slice(fileSource.indexOf('@Component\nexport struct ReaderControlPanel'));
 const members = ['contentLocation', 'controlHeader', 'replaceHeader', 'replaceHeaderFrame',
   ...(source.includes('private headerFrame(') ? ['headerFrame'] : []),
@@ -71,5 +71,5 @@ for (const p of [NaN, -1, 0, .5, 1, 2]) {
     assert.ok(f.width >= 0);
   }
 }
-assert.doesNotMatch(read('entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts'), /setTimeout|animateTo/);
+assert.doesNotMatch(read('entry/src/main/ets/features/reading/ui/ReaderControlHeaderGeometry.ts'), /setTimeout|animateTo/);
 console.log('reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS');
