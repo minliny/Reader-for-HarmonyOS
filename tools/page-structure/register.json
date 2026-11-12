@@ -97,7 +97,7 @@
               "symbol": "tools-retention"
             }
           ],
-          "knownGap": "Current SourceJourney owner retains management/Tools state in method tests. ReaderNavigation system-Back/captured-parent journey and native loginWeb Back/focus remain NOT_RUN. Historical evidence remains in governance-history/pre-confluence-register.json."
+          "knownGap": "SourceJourney retains current state in method tests. Real Source→Tools→Source preserves four filters and restores the selected header/footer entry focus. Native loginWeb Back and the complete parent-route matrix remain open."
         },
         "scaffold": {
           "applicability": "applicable",
@@ -193,7 +193,7 @@
           },
           "result": "NOT_RUN",
           "evidence": [],
-          "knownGap": "Current actual Source capture/restore methods preserve finite signed offsets and current-layout header clearance. SourceJourney retained-state methods and controlled-frame restoration cases pass. Post-merge native scrolling, filter/header alignment, system Back and gestures remain NOT_RUN; earlier HAP receipts remain historical."
+          "knownGap": "Scoped methods preserve finite signed offsets and header clearance. Native filter clearing and group Back were observed. Complete Source scroll restoration, alignment and gesture coverage remain open."
         },
         "content": {
           "applicability": "applicable",
@@ -227,7 +227,7 @@
           },
           "result": "FAIL",
           "evidence": [],
-          "knownGap": "Stage 4 SDK budget matrix passes; adaptive inline/stacked-actions/stacked-leading preserves text minimum and actions. Native Reader glyph calibration/system font-scale page matrix is not accepted yet."
+          "knownGap": "Current SDK budgets and selected native Source rows at widths320/365.7 and font1/1.45 are recorded. The complete native width/font/state matrix remains open."
         },
         "query": {
           "applicability": "applicable",
@@ -300,7 +300,7 @@
           },
           "result": "NOT_RUN",
           "evidence": [],
-          "knownGap": "D1用户本轮暂不修改入口；主次/上下文合法性尚未裁决，保持B1 NOT_RUN；S5实际可见性尚未验。"
+          "knownGap": "D1 retains current entries by user decision. Scoped native Tools journeys and equal footer carrier allocation passed. B1 and complete S5 contextual/action coverage remain open."
         },
         "overlay": {
           "applicability": "applicable",
@@ -326,7 +326,7 @@
           },
           "result": "NOT_RUN",
           "evidence": [],
-          "knownGap": "页面临时返回有身份保护；平台宿主Back与焦点恢复未验证。"
+          "knownGap": "Native group Back dismisses the panel while retaining the Source presentation. Platform-host Back and complete overlay/focus lifecycle coverage remain open."
         },
         "states": {
           "applicability": "applicable",
@@ -402,7 +402,7 @@
               "result": "PASS"
             }
           ],
-          "knownGap": "Current metadata/count use existing12/18 role and TOK_CONTROL_INK, not old10fp/TOK_MUTED. Six opaque role contrast pairs >=4.5 by source calculation; native compositing/glyph calibration remains NOT_RUN."
+          "knownGap": "Metadata/count use12/18 and TOK_CONTROL_INK. Six opaque contrast pairs pass source calculation. Selected native glyphs at1/1.45 were observed; complete compositing, theme and glyph calibration remain open."
         },
         "interaction": {
           "applicability": "applicable",
@@ -523,7 +523,7 @@
               "result": "PASS"
             }
           ],
-          "knownGap": "Current complete SDK coverage proves lower bounds for all22 interactive control references:176 width/font samples,24 region budgets and200+48 actual carrier records. Native pointer dispatch, touch hit, clipping, gesture, focus and screen-reader behavior are not executed for this confluence candidate. The source-group parent proof pays outer46 minus2 borders to provide inner44 and retains clamp/other-variant behavior. The whole interaction layer and E2 remain FAIL pending native evidence."
+          "knownGap": "Current complete SDK coverage proves lower bounds for22 references,176 samples and24 budgets. Earlier group-trigger claims with an injected44 were invalidated; production sourceGroup now pays44. Scoped native group/filter/detect/busy/focus observations are recorded in docs/architecture/framework-confluence-20261112.md. E2 remains FAIL pending complete coverage."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -556,7 +556,7 @@
               "result": "PASS"
             }
           ],
-          "knownGap": "Current system configuration chain and Source SDK budgets are separately selected. Complete actual Native width/system-font/glyph coverage for the confluence candidate remains OPEN."
+          "knownGap": "Current configuration and SDK budgets are bound separately. Native1/1.45 and same-actor Source reflow were observed, followed by restored system2/1/1 and native1. Exact1.3/1.6/2 native cells and complete page adaptation remain open."
         },
         "accessibility": {
           "applicability": "applicable",
@@ -600,7 +600,7 @@
           },
           "result": "NOT_RUN",
           "evidence": [],
-          "knownGap": "状态徽标已有非颜色可访问标签（SDK属性检查通过）；焦点顺序仅登记，原生读屏、焦点恢复、2.0×仍NOT_RUN。"
+          "knownGap": "Status labels have non-color SDK properties. Scoped native entry-focus restoration passed. Complete focus ordering, screen-reader behavior and2.0 native accessibility remain open."
         },
         "measurement": {
           "applicability": "applicable",
