@@ -125,6 +125,18 @@ bool GetInt32(napi_env env, napi_value value, int32_t& result)
     return napi_get_value_int32(env, value, &result) == napi_ok;
 }
 
+bool GetGeneration(napi_env env, napi_value value, uint64_t& result)
+{
+    double number = 0;
+    int64_t integer = 0;
+    if (!GetDouble(env, value, number) || !std::isfinite(number) || number <= 0 ||
+        number > 9007199254740991.0 || number != std::floor(number) ||
+        napi_get_value_int64(env, value, &integer) != napi_ok) return false;
+    // The validated JS safe integer is positive and fits signed int64 exactly.
+    result = static_cast<uint64_t>(integer);
+    return true;
+}
+
 bool GetBool(napi_env env, napi_value value, bool& result)
 {
     return napi_get_value_bool(env, value, &result) == napi_ok;
@@ -369,9 +381,10 @@ napi_value UpdateInput(napi_env env, napi_callback_info info)
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
     double values[8] = {};
+    uint64_t generation = 0;
     int32_t direction = -1;
     bool vertical = false;
-    if (count != 11 || !GetString(env, arguments[0], id) || !GetDouble(env, arguments[1], values[0]) ||
+    if (count != 11 || !GetString(env, arguments[0], id) || !GetGeneration(env, arguments[1], generation) ||
         !GetInt32(env, arguments[2], direction) || !GetBool(env, arguments[3], vertical)) {
         return Boolean(env, false);
     }
@@ -383,7 +396,7 @@ napi_value UpdateInput(napi_env env, napi_callback_info info)
     // Raw gesture sample only (contract V2 §5.3): the chased edge is native
     // state advanced on VSync, so ArkTS no longer sends edge/velocity fields.
     BookTurnSample sample;
-    sample.generation = static_cast<uint64_t>(std::max(0.0, values[0]));
+    sample.generation = generation;
     sample.direction = DecodeDirection(direction);
     sample.verticalPrevious = vertical;
     sample.width = static_cast<float>(values[1]);
@@ -403,9 +416,10 @@ napi_value EndGesture(napi_env env, napi_callback_info info)
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
     double values[8] = {};
+    uint64_t generation = 0;
     int32_t direction = -1;
     bool vertical = false;
-    if (count != 12 || !GetString(env, arguments[0], id) || !GetDouble(env, arguments[1], values[0]) ||
+    if (count != 12 || !GetString(env, arguments[0], id) || !GetGeneration(env, arguments[1], generation) ||
         !GetInt32(env, arguments[2], direction) || !GetBool(env, arguments[3], vertical)) {
         return Boolean(env, false);
     }
@@ -417,7 +431,7 @@ napi_value EndGesture(napi_env env, napi_callback_info info)
     // Raw gesture sample only (contract V2 §5.3): the chased edge is native
     // state advanced on VSync, so ArkTS no longer sends edge/velocity fields.
     BookTurnSample sample;
-    sample.generation = static_cast<uint64_t>(std::max(0.0, values[0]));
+    sample.generation = generation;
     sample.direction = DecodeDirection(direction);
     sample.verticalPrevious = vertical;
     sample.width = static_cast<float>(values[1]);
@@ -439,9 +453,10 @@ napi_value Regrab(napi_env env, napi_callback_info info)
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
     double values[8] = {};
+    uint64_t generation = 0;
     int32_t direction = -1;
     bool vertical = false;
-    if (count != 12 || !GetString(env, arguments[0], id) || !GetDouble(env, arguments[1], values[0]) ||
+    if (count != 12 || !GetString(env, arguments[0], id) || !GetGeneration(env, arguments[1], generation) ||
         !GetInt32(env, arguments[2], direction) || !GetBool(env, arguments[3], vertical)) {
         return Undefined(env);
     }
@@ -453,7 +468,7 @@ napi_value Regrab(napi_env env, napi_callback_info info)
     // Raw gesture sample only (contract V2 §5.3): the chased edge is native
     // state advanced on VSync, so ArkTS no longer sends edge/velocity fields.
     BookTurnSample sample;
-    sample.generation = static_cast<uint64_t>(std::max(0.0, values[0]));
+    sample.generation = generation;
     sample.direction = DecodeDirection(direction);
     sample.verticalPrevious = vertical;
     sample.width = static_cast<float>(values[1]);
@@ -463,9 +478,9 @@ napi_value Regrab(napi_env env, napi_callback_info info)
     sample.pointerX = static_cast<float>(values[5]);
     sample.pointerY = static_cast<float>(values[6]);
     sample.eventTimeNs = static_cast<int64_t>(values[7] * 1000000.0);
-    double previousGeneration = 0;
-    if (!GetDouble(env, arguments[11], previousGeneration)) return Undefined(env);
-    const auto frame = host->Regrab(sample, static_cast<uint64_t>(previousGeneration));
+    uint64_t previousGeneration = 0;
+    if (!GetGeneration(env, arguments[11], previousGeneration)) return Undefined(env);
+    const auto frame = host->Regrab(sample, previousGeneration);
     if (!frame.has_value()) return Undefined(env);
     napi_value result = nullptr;
     napi_create_object(env, &result);
@@ -509,11 +524,11 @@ napi_value Settle(napi_env env, napi_callback_info info)
     napi_value arguments[3] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
+    uint64_t generation = 0;
     bool commit = false;
     const std::shared_ptr<BookTurnHost> host = count == 3 && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) && GetBool(env, arguments[2], commit) ? HostForId(id) : nullptr;
-    return Boolean(env, host != nullptr && host->Settle(static_cast<uint64_t>(generation), commit));
+        GetGeneration(env, arguments[1], generation) && GetBool(env, arguments[2], commit) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr && host->Settle(generation, commit));
 }
 
 napi_value StartProgrammatic(napi_env env, napi_callback_info info)
@@ -522,17 +537,20 @@ napi_value StartProgrammatic(napi_env env, napi_callback_info info)
     napi_value arguments[4] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
-    double direction = -1;
-    double profile = 0;
-    if (count == 4 && (!GetDouble(env, arguments[3], profile) || !std::isfinite(profile) ||
-        profile != std::floor(profile) || profile < 0 || profile > 2)) return Boolean(env, false);
+    uint64_t generation = 0;
+    double directionValue = -1;
+    int32_t direction = -1;
+    int32_t profile = 0;
+    double profileValue = 0;
+    if (count == 4 && (!GetDouble(env, arguments[3], profileValue) || !std::isfinite(profileValue) ||
+        profileValue != std::floor(profileValue) || profileValue < 0 || profileValue > 2 ||
+        !GetInt32(env, arguments[3], profile))) return Boolean(env, false);
     const std::shared_ptr<BookTurnHost> host = (count == 3 || count == 4) && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) && std::isfinite(generation) && generation > 0 &&
-        generation <= 9007199254740991.0 && generation == std::floor(generation) &&
-        GetDouble(env, arguments[2], direction) && (direction == -1 || direction == 1) ? HostForId(id) : nullptr;
+        GetGeneration(env, arguments[1], generation) &&
+        GetDouble(env, arguments[2], directionValue) && (directionValue == -1 || directionValue == 1) &&
+        GetInt32(env, arguments[2], direction) ? HostForId(id) : nullptr;
     return Boolean(env, host != nullptr &&
-        host->StartProgrammatic(static_cast<uint64_t>(generation), DecodeDirection(static_cast<int32_t>(direction)),
+        host->StartProgrammatic(generation, DecodeDirection(direction),
             static_cast<ProgrammaticProfile>(profile)));
 }
 
@@ -542,15 +560,15 @@ napi_value StartAutomaticTimeline(napi_env env, napi_callback_info info)
     napi_value arguments[3] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
-    double token = 0;
+    uint64_t generation = 0;
+    double tokenValue = 0;
+    int32_t token = 0;
     const std::shared_ptr<BookTurnHost> host = count == 3 && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) && std::isfinite(generation) && generation > 0 &&
-        generation <= 9007199254740991.0 && generation == std::floor(generation) &&
-        GetDouble(env, arguments[2], token) && std::isfinite(token) && token > 0 && token <= INT32_MAX &&
-        token == std::floor(token) ? HostForId(id) : nullptr;
+        GetGeneration(env, arguments[1], generation) &&
+        GetDouble(env, arguments[2], tokenValue) && std::isfinite(tokenValue) && tokenValue > 0 && tokenValue <= INT32_MAX &&
+        tokenValue == std::floor(tokenValue) && GetInt32(env, arguments[2], token) ? HostForId(id) : nullptr;
     return Boolean(env, host != nullptr &&
-        host->StartAutomaticTimeline(static_cast<uint64_t>(generation), static_cast<int32_t>(token)));
+        host->StartAutomaticTimeline(generation, token));
 }
 
 napi_value CommitSlots(napi_env env, napi_callback_info info)
@@ -559,12 +577,12 @@ napi_value CommitSlots(napi_env env, napi_callback_info info)
     napi_value arguments[3] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
+    uint64_t generation = 0;
     int32_t direction = -1;
     const std::shared_ptr<BookTurnHost> host = count == 3 && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) && GetInt32(env, arguments[2], direction) ? HostForId(id) : nullptr;
+        GetGeneration(env, arguments[1], generation) && GetInt32(env, arguments[2], direction) ? HostForId(id) : nullptr;
     return Boolean(env, host != nullptr &&
-        host->CommitSlots(static_cast<uint64_t>(generation), DecodeDirection(direction)));
+        host->CommitSlots(generation, DecodeDirection(direction)));
 }
 
 napi_value RetainTerminalFrame(napi_env env, napi_callback_info info)
@@ -573,10 +591,10 @@ napi_value RetainTerminalFrame(napi_env env, napi_callback_info info)
     napi_value arguments[2] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
+    uint64_t generation = 0;
     const std::shared_ptr<BookTurnHost> host = count == 2 && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) ? HostForId(id) : nullptr;
-    return Boolean(env, host != nullptr && host->RetainTerminalFrame(static_cast<uint64_t>(generation)));
+        GetGeneration(env, arguments[1], generation) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr && host->RetainTerminalFrame(generation));
 }
 
 napi_value ReleaseTerminalFrame(napi_env env, napi_callback_info info)
@@ -585,10 +603,10 @@ napi_value ReleaseTerminalFrame(napi_env env, napi_callback_info info)
     napi_value arguments[2] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
+    uint64_t generation = 0;
     const std::shared_ptr<BookTurnHost> host = count == 2 && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) ? HostForId(id) : nullptr;
-    return Boolean(env, host != nullptr && host->ReleaseTerminalFrame(static_cast<uint64_t>(generation)));
+        GetGeneration(env, arguments[1], generation) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr && host->ReleaseTerminalFrame(generation));
 }
 
 napi_value ClearSurface(napi_env env, napi_callback_info info)
@@ -597,10 +615,10 @@ napi_value ClearSurface(napi_env env, napi_callback_info info)
     napi_value arguments[2] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double generation = 0;
+    uint64_t generation = 0;
     const std::shared_ptr<BookTurnHost> host = count == 2 && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) ? HostForId(id) : nullptr;
-    return Boolean(env, host != nullptr && host->ClearSurface(static_cast<uint64_t>(generation)));
+        GetGeneration(env, arguments[1], generation) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr && host->ClearSurface(generation));
 }
 
 napi_value RetainedTerminalGeneration(napi_env env, napi_callback_info info)

@@ -55,8 +55,11 @@ double TerminalRetainTimeoutMs()
 float Percentile(std::vector<float>& values, float fraction)
 {
     if (values.empty()) return 0.0F;
+    // Preserve the previous nonnegative floor(x + 0.5) index. Diagnostics
+    // contain at most kFrameDiagCapacity entries, so the integral floor
+    // value stays within long for the standard integer-returning conversion.
     const size_t index = std::min(values.size() - 1,
-        static_cast<size_t>(fraction * static_cast<float>(values.size() - 1) + 0.5F));
+        static_cast<size_t>(std::lround(std::floor(fraction * static_cast<float>(values.size() - 1) + 0.5F))));
     std::nth_element(values.begin(), values.begin() + static_cast<std::ptrdiff_t>(index), values.end());
     return values[index];
 }
