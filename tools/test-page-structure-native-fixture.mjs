@@ -6,6 +6,8 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 const selected = selectContractCases({
   'safe-area': 'Actual SDK fixture root consumes App top exactly once, reader/manga/control own edges, live metrics revision/320/366/explicit122/168/190 child viewports/default release; no native pixel claim.',
+  'native-font-observation': 'Actual same-instance SDK Root record and metrics callback reread readonly UIContext font policy/conversions after dynamic change; unavailable observations drop prior values and retired metrics emit nothing. No font or AppStorage write.',
+  'menu-safe-area': 'Actual SDK menu Scroll viewport subtracts current interactive system/cutout/gesture/navigation bottom, clips buttons at its safe edge, updates on metrics revision and leaves actor stages intact; exact before-source100% negative. No Native hit claim.',
   admission: 'Exact debug-only internal fixture/launcher routing, unique registration, no new cold Want or runtime Core/Host import.',
   'font-gate': 'Actual fixture lifecycle and SDK Source initializer: pending/failed/retired font preparation cannot mount; only current checked completion permits Source.',
   'source-callbacks': 'Actual Source initializer callbacks: memory-only intents, scene generations, temporary Back before menu and real-area vs requested width. No native rendering or business receipt evidence.',
@@ -40,7 +42,7 @@ if (selected.length) {
   const directoryFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDirectoryStructureFixture.ets',import.meta.url),'utf8');
   const downloadFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets',import.meta.url),'utf8');
   const toolsFixture = readFileSync(new URL('../entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets',import.meta.url),'utf8');
-  const {createDefaultReaderWindowMetrics,readerContentSafeTop}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const {createDefaultReaderWindowMetrics,readerContentSafeTop,readerInteractiveSafeBottom}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const tick=()=>new Promise(resolve=>setImmediate(resolve));
   const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
   // Same compile-only ID scoping used by other SDK fixture composers. Preserve
@@ -52,22 +54,22 @@ if (selected.length) {
     ids.clear();
     try{return body();}finally{ids.clear();for(const [key,value]of saved)ids.set(key,value);}
   }
-  function fixture({debug=true,mode='debug',fonts=()=>Promise.resolve(),metrics}={}) {
+  function fixture({debug=true,mode='debug',fonts=()=>Promise.resolve(),metrics,nativeContext,sourceText=source}={}) {
     const sdk=boundedSurfaceSdk(),children=[],states=[],routes=[],events=[];let fontCalls=0;
     const liveMetrics=metrics??createDefaultReaderWindowMetrics();if(metrics===undefined)liveMetrics.systemFontScale=1.6;
     const child = kind => class {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;this.kind=kind;this.hostAtCreation={...[...owner.nodes.values()].filter(n=>n.type==='Stack').at(-1)};children.push(this);}updateStateVars(params){Object.assign(this.params,params);}};
     const SourceChild=child('source'), DirectoryChild=child('directory'), DownloadChild=child('downloads'), ToolsChild=child('tools');
     class StateChild {constructor(owner,params,_storage,id){this.owner=owner;this.params=params;this.id=id;states.push(this);}updateStateVars(params){Object.assign(this.params,params);}}
-    const {owner:page}=compile(()=>createReaderBuilderProbe(source,boundedMembers(source),{
+    const {owner:page}=compile(()=>createReaderBuilderProbe(sourceText,boundedMembers(sourceText),{
       ...sdk.deps,DEBUG:debug,BUILD_MODE_NAME:mode,SourceManagementPage:SourceChild,ReaderPageState:StateChild,
       ReaderDirectoryStructureFixture:DirectoryChild,ReaderDownloadStructureFixture:DownloadChild,ReaderSourceToolsStructureFixture:ToolsChild,
       defaultSourceManagementFilters,projectPersistedReceipt,projectCommitReadback,projectOperationFacts,readerPageAreaLength,
-      readerContentSafeTop,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
+      readerContentSafeTop,readerInteractiveSafeBottom,readerWindowMetrics:()=>liveMetrics,ReaderWindowCoordinator:{metrics:()=>liveMetrics},
       prepareReaderFonts:()=>{fontCalls++;return fonts();},
       hilog:{info(_domain,_tag,_format,payload){events.push(JSON.parse(payload));},error(){}},
     },{...sdk.hooks,childSources:{...sdk.childSources,SourceManagementPage:sourceActor,ReaderPageState:stateActor,
       ReaderDirectoryStructureFixture:directoryFixture,ReaderDownloadStructureFixture:downloadFixture,ReaderSourceToolsStructureFixture:toolsFixture}}));
-    page.getUIContext=()=>({getRouter:()=>({replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})})});
+    page.getUIContext=()=>({...nativeContext?.(),getRouter:()=>({replaceUrl:route=>routes.push({kind:'replace',...route}),back:()=>routes.push({kind:'back'})})});
     return{page,children,states,routes,events,sdk,fontCalls:()=>fontCalls,props:()=>children.at(-1)?.params};
   }
   async function admission() {
@@ -292,6 +294,99 @@ if (selected.length) {
     const denied=fixture({debug:false});denied.page.aboutToAppear();await tick();denied.page.initialRender();assert.equal(denied.children.length,0);assert.equal(denied.routes[0].url,'pages/Index');
     const neutral=fixture();neutral.page.aboutToAppear();await tick();assert.equal(neutral.page.appContentTopInset(),0,'default zero metrics introduce no invented top inset');
   }
-  const cases={'safe-area':safeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes};
+  async function nativeFontObservation() {
+    const metrics=createDefaultReaderWindowMetrics();metrics.systemFontScale=1;
+    const reads=[],writes=[];
+    let unavailable=false;
+    let sample={following:true,max:2147483648,vp:3.5,fp:3.5};
+    const readonlyContext=()=>({
+      isFollowingSystemFontScale:()=>{reads.push('following');return sample.following;},
+      getMaxFontScale:()=>{reads.push('max');return sample.max;},
+      vp2px:value=>{assert.equal(value,1);reads.push('vp');return sample.vp;},
+      fp2px:value=>{assert.equal(value,1);reads.push('fp');return sample.fp;},
+      setFontScale:()=>{writes.push('scale');assert.fail('diagnostic must not set scale');},
+      setMaxFontScale:()=>{writes.push('max');assert.fail('diagnostic must not set max');},
+    });
+    let context=readonlyContext();
+    const f=fixture({metrics,nativeContext:()=>{
+      if(unavailable)throw Error('current native context unavailable');
+      return context;
+    }});
+    f.page.aboutToAppear();await tick();
+    assert.equal(f.page.fontState,'ready');
+    let observation=f.events.at(-1);
+    assert.equal(observation.kind,'fonts-checked');assert.equal(observation.nativeFontScaleVp,1);
+    assert.deepEqual(reads,['following','max','vp','fp']);
+
+    // Same actor, same current context object, fresh native conversion values.
+    metrics.systemFontScale=1.45;sample.fp=5.075;
+    f.page.windowMetricsRevision=2;
+    observation=f.events.at(-1);
+    assert.equal(observation.kind,'window-metrics');assert.equal(observation.systemFontScale,1.45);
+    assert.equal(observation.nativeFontObservationStatus,'ready');assert.equal(observation.nativeFontScaleVp,1.45);
+    assert.deepEqual(reads.slice(4),['following','max','vp','fp'],'metric callback reacquires all readonly facts');
+
+    // A subsequent record must use the replacement context and report a
+    // genuine policy/conversion discrepancy without copying Coordinator facts.
+    sample={following:false,max:1.6,vp:4,fp:8};context=readonlyContext();
+    f.page.record('current-native-context');observation=f.events.at(-1);
+    assert.equal(observation.nativeFontFollowing,false);assert.equal(observation.nativeFontMaxScale,1.6);
+    assert.equal(observation.nativeFontScaleVp,2);assert.equal(observation.systemFontScale,1.45);
+    assert.equal(reads.length,12,'every record performs four current readonly reads');
+
+    unavailable=true;f.page.windowMetricsRevision=3;
+    observation=f.events.at(-1);assert.equal(observation.nativeFontObservationStatus,'unavailable');
+    for(const key of['nativeFontFollowing','nativeFontMaxScale','nativeFontScaleVp'])
+      assert.equal(Object.hasOwn(observation,key),false,'unavailable record must not retain earlier native values');
+    unavailable=false;sample.fp=NaN;f.page.record('invalid-native-context');observation=f.events.at(-1);
+    assert.equal(observation.nativeFontObservationStatus,'unavailable');assert.equal(Object.hasOwn(observation,'nativeFontScaleVp'),false);
+    assert.equal(f.page.fontState,'ready','diagnostic availability does not replace font loading state');
+    assert.equal(metrics.systemFontScale,1.45);assert.deepEqual(writes,[]);
+    const count=f.events.length;f.page.aboutToDisappear();f.page.windowMetricsRevision=4;
+    assert.equal(f.events.length,count,'retired metric callback does not produce a fresh-looking observation');
+    console.log(JSON.stringify({kind:'root-native-font-observation',sameActorDynamicRefresh:true,
+      contextReplacement:true,readonlyPolicy:true,unavailableClearsPrevious:true,retiredCallbackRejected:true,
+      boundary:'Actual SDK Root methods and finite readonly UIContext ports. Native system propagation remains target evidence.'}));
+  }
+  async function menuSafeArea() {
+    const before=readFileSync(new URL('./fixtures/design/directory-confluence-before/root-menu-bottom.ets.txt',import.meta.url),'utf8');
+    const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=366;metrics.windowRect.height=844;
+    metrics.systemInsets.top=39;metrics.systemInsets.bottom=8;metrics.cutoutInsets.bottom=11;
+    metrics.gestureInsets.bottom=40;metrics.navigationInsets.bottom=24;
+    const old=fixture({metrics,sourceText:before});old.page.aboutToAppear();await tick();old.page.initialRender();
+    const oldScroll=old.sdk.nodes(old.page).find(node=>node.type==='Scroll');
+    assert.equal(oldScroll.height,'100%','exact before-source menu consumes the gesture-owned bottom');
+    assert.equal(oldScroll.clip,undefined,'old source declares no menu safe viewport clipping');
+    for(const width of[320,366])for(const scale of[1,1.45,2]) {
+      metrics.systemFontScale=scale;metrics.windowRect.width=width;metrics.gestureInsets.bottom=40;
+      const f=fixture({metrics});f.page.aboutToAppear();await tick();f.page.selectWidth(width,f.page.presentation);f.page.initialRender();
+      const scroll=f.sdk.nodes(f.page).find(node=>node.id==='reader-page-structure-menu-scroll');assert(scroll);
+      assert.equal(scroll.type,'Scroll');assert.equal(scroll.height,'calc(100% - 40vp)');assert.equal(scroll.clip,true);
+      assert.equal(f.page.menuBottomInset(),40,'current shared helper owns inset selection');
+      const root=f.sdk.nodes(f.page).find(node=>node.type==='Stack'&&node.expandSafeArea!==undefined);
+      assert.equal(root.padding.top,39);assert.deepEqual(root.expandSafeArea[1],['SafeAreaEdge.BOTTOM']);
+      metrics.navigationInsets.bottom=52;f.page.windowMetricsRevision+=1;f.sdk.properties.flush();
+      assert.equal(scroll.height,'calc(100% - 52vp)','actual SDK dependency delivery updates same Scroll viewport');
+      assert.equal(f.page.requestedWidth,width);assert.equal(metrics.systemFontScale,scale,'menu never changes scale');
+      metrics.navigationInsets.bottom=24;
+    }
+    const neutral=createDefaultReaderWindowMetrics();
+    neutral.systemInsets.bottom=NaN;neutral.cutoutInsets.bottom=-1;
+    neutral.gestureInsets.bottom=Infinity;neutral.navigationInsets.bottom=-5;
+    const zero=fixture({metrics:neutral});zero.page.aboutToAppear();await tick();zero.page.initialRender();
+    assert.equal(zero.sdk.nodes(zero.page).find(node=>node.id==='reader-page-structure-menu-scroll').height,'calc(100% - 0vp)');
+    // The subtraction exists only inside the diagnostic menu branch.
+    for(const scene of['default','directory-manga','directory-control-short-122','source-tools']) {
+      const f=fixture({metrics});f.page.aboutToAppear();await tick();
+      if(scene==='default')f.page.launchSource(scene,f.page.presentation);else f.page.launchFixture(scene,f.page.presentation);
+      f.page.initialRender();assert.equal(f.sdk.nodes(f.page).some(node=>node.id==='reader-page-structure-menu-scroll'),false);
+      const stage=f.sdk.nodes(f.page).find(node=>node.id==='reader-page-structure-source-stage'||node.id==='reader-page-structure-fixture-stage');
+      assert.equal(stage.height,'100%');if(scene==='directory-control-short-122')assert.equal(f.props().controlViewportHeight,122);
+    }
+    console.log(JSON.stringify({kind:'qa-menu-safe-scroll-viewport',beforeSourceFullViewport:true,
+      widths:[320,366],scales:[1,1.45,2],liveBottomInsets:[40,52],sameScrollDependencyUpdate:true,
+      actorStagesRetained:true,boundary:'Actual SDK viewport/clip declarations and real inset helper. Native gesture routing/hit testing remains Root target verification.'}));
+  }
+  const cases={'safe-area':safeArea,'native-font-observation':nativeFontObservation,'menu-safe-area':menuSafeArea,admission,'font-gate':fontGate,'source-callbacks':sourceCallbacks,'source-states':sourceStates,'downloads-short':downloadsShort,'fixture-scenes':fixtureScenes};
   for(const id of selected){await cases[id]();recordContractCasePass(id);}
 }

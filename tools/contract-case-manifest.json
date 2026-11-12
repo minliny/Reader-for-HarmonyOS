@@ -2587,7 +2587,7 @@
       }
     },
     "test-reader-font-demand.mjs": {
-      "sourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "sourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
       "cases": {
         "load": {
           "resources": [],
@@ -2602,6 +2602,10 @@
           "qualification": "QUALIFIED"
         },
         "manga-progress": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-publication": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -11139,6 +11143,52 @@
           "qualification": "QUALIFIED"
         },
         "tools-focus-echo": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-control-directory-short-content.mjs": {
+      "sourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "cases": {
+        "short-sdk": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "prefix-anchors": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "directory-focus": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "measured-profile": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "keyboard-ack-delay": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "keyboard-transfer": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "keyboard-observation": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-source-group-border-budget.mjs": {
+      "sourceSha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a",
+      "cases": {
+        "parent-chain": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "trigger-parent": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

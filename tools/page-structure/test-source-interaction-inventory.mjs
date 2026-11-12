@@ -147,9 +147,10 @@ if (selected.includes('sdk-targets')) {
     response: node.responseRegion ?? null, nativeResult: 'NOT_RUN', ...extra });
   for (const width of [320, 366]) for (const scale of [1, 1.3, 1.6, 2]) {
     const metrics = { systemFontScale: scale, windowRect: { width, height: 844 }, systemInsets: { left: 0, right: 0 } };
-    const sourceConstants = selectedProductionValues(new URL(pagePath, root), ['GROUP_FILTER_WIDTH','GROUP_SELECT_WIDTH']);
-    const SourceWidths = selectedProductionMethods(new URL(pagePath, root), 'SourceManagementPage', ['filterControlWidth', 'groupSelectWidth'], {...readerTypographyRoles,...sourceConstants});
-    const sourceWidths = Object.assign(new SourceWidths(), { expandedLayout: false, contentFrame: () => ({ width: width - 38 }), fontScale: () => scale });
+    const sourceConstants = selectedProductionValues(new URL(pagePath, root), ['GROUP_ICON_WIDTH','GROUP_LABEL_GAP','GROUP_TRIGGER_GAP']);
+    const SourceWidths = selectedProductionMethods(new URL(pagePath, root), 'SourceManagementPage', ['filterControlWidth', 'groupSelectWidth', 'groupLabelWidth'], {...readerTypographyRoles,...sourceConstants});
+    const sourceWidths = Object.assign(new SourceWidths(), { expandedLayout: false, contentFrame: () => ({ width: width - 38 }), fontScale: () => scale,
+      getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({ measureText: () => readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontSizeFp * 2 * scale }) }) });
     const panelConstants = selectedProductionValues(new URL(common('ReaderSelectPanel'), root), ['SELECT_PAD','CHEVRON_GAP','CHEVRON_W','SELECT_CHROME'], readerFoundationTokens);
     const PanelWidth = selectedProductionMethods(new URL(common('ReaderSelectPanel'), root), 'ReaderSelectPanel', ['resolvedWidth','resolvedChrome'], {
       ...readerFoundationTokens,...panelConstants,readerSelectMenuWidth,readerSelectAvailableWidth,readerWindowMetrics:()=>metrics,ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft:()=>0,readerInteractiveSafeRight:()=>0 });
@@ -291,7 +292,8 @@ if (selected.includes('sdk-targets')) {
 
     const selectProps = createArkUIPropertyRuntimeProbe();
     const select = createReaderBuilderProbe(read(common('ReaderSelect')), ['phoneTrigger','trigger','sourceGroupTrigger','triggerEnabled','triggerHeight','measuredValueHeight','dropdownAnimation'],
-      { ...selectProps.sdk, ...readerFoundationTokens, ...readerTypographyRoles, ...accessibility, readerAppColor, TRIGGER_H: 44,
+      { ...selectProps.sdk, ...readerFoundationTokens, ...readerTypographyRoles, ...accessibility, readerAppColor,
+        ...selectedProductionValues(new URL(common('ReaderSelect'), root), ['TRIGGER_H']),
         readerMotionAnimateParam: () => ({ duration: 0 }) }, selectProps.hooks).owner;
     Object.assign(select, { value:'全部分组',variant:'sourceGroup',isOpen:false,reduceMotion:true,appThemeScheme:'day',mounted:true,actionEnabled:true,focusId:'source-group',options:['全部分组','A'],
       resolvedWidth: () => sourceWidths.groupSelectWidth(),

@@ -64,8 +64,9 @@ import {
   TOK_SURFACE_SOLID,
 } from '../../../ui/foundation/ReaderTokens';
 
-const GROUP_FILTER_WIDTH = 350;
-const GROUP_SELECT_WIDTH = 276;
+const GROUP_ICON_WIDTH = 15;
+const GROUP_LABEL_GAP = 12;
+const GROUP_TRIGGER_GAP = 22;
 let sourceTemporaryGeneration: number = 0;
 
 class SourceListLayoutFrame extends FrameCallback {
@@ -752,9 +753,10 @@ export struct SourceManagementPage {
   @Builder
   private groupFilter() {
     Row() {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'))).width(15).height(15);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'))).width(GROUP_ICON_WIDTH).height(15);
       Text('分组')
-        .margin({ left: 12 })
+        .margin({ left: GROUP_LABEL_GAP })
+        .width(this.groupLabelWidth())
         .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
         .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
         .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
@@ -770,7 +772,7 @@ export struct SourceManagementPage {
         focusId: this.groupTriggerFocusId(),
         onToggle: (): void => this.toggleGroupSelection(),
       })
-      .margin({ left: 22 })
+      .margin({ left: GROUP_TRIGGER_GAP })
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
         this.groupX = Number(newValue.globalPosition.x);
@@ -1375,7 +1377,16 @@ export struct SourceManagementPage {
 
 
   private groupSelectWidth(): number {
-    return Math.max(0, this.filterControlWidth() - (GROUP_FILTER_WIDTH - GROUP_SELECT_WIDTH));
+    return Math.max(0, this.filterControlWidth() - GROUP_ICON_WIDTH - GROUP_LABEL_GAP - this.groupLabelWidth() - GROUP_TRIGGER_GAP);
+  }
+
+  private groupLabelWidth(): number {
+    const style = TYPE_FORM_LABEL_ACTION;
+    const fallback = Math.ceil(style.fontSizeFp * 2 * this.fontScale());
+    const context = this.getUIContext();
+    const width = context.px2vp(context.getMeasureUtils().measureText({ textContent: '分组',
+      fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
+    return Number.isFinite(width) && width > 0 ? Math.ceil(width) : fallback;
   }
 
   private numericAreaLength(value: Length | undefined): number {

@@ -187,28 +187,33 @@ export struct BookDirectoryPage {
     ReaderPageScaffold({ frameStyle: this.mangaFrameStyle(),
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
-      content: (): void => {
-        if (this.mangaFontsReady) {
-          this.mangaContent();
-        } else {
-          this.fontPreparationContent();
-        }
-      },
+      content: (): void => { this.mangaContentSlot(); },
       header: (): void => { this.mangaHeader(); },
-      footer: (): void => {
-        if (this.mangaFontsReady) {
-          this.mangaFixedFooter();
-        }
-      },
-      overlayContent: (): void => {
-        if (this.mangaFontsReady) {
-          this.pageRecoveryOverlay();
-        }
-      },
+      footer: (): void => { this.mangaFooterSlot(); },
+      overlayContent: (): void => { this.mangaOverlaySlot(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
         this.recordHeaderHeight('bookDirectory:mangaHeader', height, presentedKey);
       },
     }).onAreaChange((_old: Area, area: Area): void => this.recordViewport(area));
+  }
+
+  @Builder
+  private mangaContentSlot() {
+    if (this.mangaFontsReady) {
+      this.mangaContent();
+    } else {
+      this.fontPreparationContent();
+    }
+  }
+
+  @Builder
+  private mangaFooterSlot() {
+    if (this.mangaFontsReady) { this.mangaFixedFooter(); }
+  }
+
+  @Builder
+  private mangaOverlaySlot() {
+    if (this.mangaFontsReady) { this.pageRecoveryOverlay(); }
   }
 
   @Builder
@@ -271,11 +276,12 @@ export struct BookDirectoryPage {
       onBack: (): void => {
         if (this.directoryInputIsCurrent() && !this.consumeTemporaryBack(this.temporaryBackIdentity)) this.onBack();
       },
-      trailing: (): void => {
-        if (this.mangaFontsReady) {
-          this.mangaDownloadMenuButton();
-        }
-      } });
+      trailing: (): void => { this.mangaHeaderTrailingSlot(); } });
+  }
+
+  @Builder
+  private mangaHeaderTrailingSlot() {
+    if (this.mangaFontsReady) { this.mangaDownloadMenuButton(); }
   }
 
   @Builder

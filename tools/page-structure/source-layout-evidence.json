@@ -10,7 +10,7 @@
   "inputs": [
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+      "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
     },
     {
       "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
@@ -94,7 +94,7 @@
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
-      "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+      "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
@@ -134,7 +134,7 @@
     },
     {
       "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-      "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
+      "sha256": "90fc2103aeb810114f4f38c84d84b6e0be25bf3ac2539c93886df2eda5a84013"
     },
     {
       "path": "tools/fixtures/reader-control-native-tree.mjs",
@@ -158,11 +158,11 @@
     },
     {
       "path": "tools/page-structure/evidence/source-layout-matrix.json",
-      "sha256": "65f8dff0dda9940ecd0599c32cd79cd0d9a69c54d286bed6227c709a5d650956"
+      "sha256": "bd5a1194e682c8fa56135ca42f6043dc9b883b905e137099776c84a32841a51a"
     },
     {
       "path": "tools/page-structure/evidence/source-interaction.json",
-      "sha256": "85ce5ec0094b72efcacb77a9d97c06e11c9b6d92502b592a198c92e27719f466"
+      "sha256": "9784aee70efae83142851c116df68b2bc8387ef1a56431a1e96a296de8d3eaed"
     },
     {
       "path": "tools/page-structure/source-e2-evidence.mjs",
@@ -182,7 +182,7 @@
     },
     {
       "path": "tools/test-source-group-border-budget.mjs",
-      "sha256": "821806598aeb800905673b955056cff927ac3222bfd1ab13575adaa24c417e94"
+      "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
     },
     {
       "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
@@ -899,7 +899,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 208,
+        "width": 207,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -915,7 +915,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 208,
+        "width": 199,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -931,7 +931,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 208,
+        "width": 191,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -947,7 +947,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 208,
+        "width": 181,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -963,7 +963,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 254,
+        "width": 253,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -979,7 +979,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 254,
+        "width": 245,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -995,7 +995,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 254,
+        "width": 237,
         "height": 44
       },
       "basis": "percentage-parent-minimum",
@@ -1011,7 +1011,7 @@
       "visual": null,
       "response": null,
       "minimum": {
-        "width": 254,
+        "width": 227,
         "height": 44
       },
       "basis": "percentage-parent-minimum",

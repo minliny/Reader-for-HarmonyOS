@@ -290,7 +290,7 @@ export struct ReaderSelect {
       return Math.max(TRIGGER_H, this.measuredValueHeight(style.fontSizeFp, style.fontFamily, style.fontWeight, style.lineHeightFp) + 16);
     }
     if (this.variant === 'appearanceLibrary') return this.appearanceLibraryTriggerHeight(this.readerWindowMetricsRevision);
-    if (this.variant === 'sourceGroup') return Math.max(TRIGGER_H,
+    if (this.variant === 'sourceGroup') return Math.max(44,
       this.measuredValueHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp, TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily,
         TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight, TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp) + 20);
     if (this.isSettingsVariant()) return Math.max(34,

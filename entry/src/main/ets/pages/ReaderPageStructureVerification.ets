@@ -11,7 +11,7 @@ import { prepareReaderFonts } from '../ui/foundation/ReaderFonts';
 import { ReaderPageState } from '../ui/feedback/ReaderPageState';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { readerContentSafeTop } from '../ui/foundation/ReaderWindowMetrics';
+import { readerContentSafeTop, readerInteractiveSafeBottom } from '../ui/foundation/ReaderWindowMetrics';
 import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
 import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOperationFacts';
 import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixture';
@@ -321,6 +321,11 @@ struct ReaderPageStructureVerification {
     if (this.mounted && this.admitted) this.record('window-metrics');
   }
 
+  private menuBottomInset(): number {
+    if (this.windowMetricsRevision < 0) return 0;
+    return readerInteractiveSafeBottom(readerWindowMetrics());
+  }
+
   private retryFonts(attempt: number, menuPresentation: number): void {
     if (!this.mounted || !this.admitted || !this.debugBuild() || this.scene !== 'menu' || this.fontState !== 'failed' ||
       attempt !== this.fontAttempt || menuPresentation !== this.presentation) return;
@@ -416,7 +421,8 @@ struct ReaderPageStructureVerification {
       Text(`夹具意图 ${this.intentCount} · ${this.lastIntent}`).fontSize(12);
       Button('返回诊断菜单').id('reader-page-structure-back-pilot').onClick((): void => this.returnToPilot(menuPresentation));
     }.width('100%').padding(20);
-    }.width('100%').height('100%');
+    }.width('100%').height(`calc(100% - ${this.menuBottomInset()}vp)`)
+      .clip(true).id('reader-page-structure-menu-scroll');
     }, (menuPresentation: number): string => `fixture-menu-${menuPresentation}`);
   }
 

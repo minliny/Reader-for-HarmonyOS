@@ -44,7 +44,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+        "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
       },
       "layers": {
         "route": {
@@ -515,6 +515,12 @@
               "path": "tools/test-source-journey-retention.mjs",
               "symbol": "tools-focus-echo",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-source-group-border-budget.mjs",
+              "symbol": "trigger-parent",
+              "result": "PASS"
             }
           ],
           "knownGap": "Current complete SDK coverage proves lower bounds for all22 interactive control references:176 width/font samples,24 region budgets and200+48 actual carrier records. Native pointer dispatch, touch hit, clipping, gesture, focus and screen-reader behavior are not executed for this confluence candidate. The source-group parent proof pays outer46 minus2 borders to provide inner44 and retains clamp/other-variant behavior. The whole interaction layer and E2 remain FAIL pending native evidence."
@@ -975,6 +981,12 @@
               "path": "tools/page-structure/test-source-e2-evidence.mjs",
               "symbol": "complete-targets,rejection-boundaries",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-source-group-border-budget.mjs",
+              "symbol": "trigger-parent",
+              "result": "PASS"
             }
           ],
           "followUp": {
@@ -1067,7 +1079,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
@@ -1147,7 +1159,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
-          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+          "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
@@ -1183,7 +1195,7 @@
         },
         {
           "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-          "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
+          "sha256": "90fc2103aeb810114f4f38c84d84b6e0be25bf3ac2539c93886df2eda5a84013"
         },
         {
           "path": "tools/fixtures/reader-control-native-tree.mjs",
@@ -1271,7 +1283,7 @@
         },
         {
           "path": "tools/test-source-group-border-budget.mjs",
-          "sha256": "821806598aeb800905673b955056cff927ac3222bfd1ab13575adaa24c417e94"
+          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
         },
         {
           "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
@@ -1435,16 +1447,24 @@
         },
         {
           "path": "tools/page-structure/evidence/source-layout-matrix.json",
-          "sha256": "65f8dff0dda9940ecd0599c32cd79cd0d9a69c54d286bed6227c709a5d650956"
+          "sha256": "bd5a1194e682c8fa56135ca42f6043dc9b883b905e137099776c84a32841a51a"
         },
         {
           "path": "tools/page-structure/evidence/source-interaction.json",
-          "sha256": "85ce5ec0094b72efcacb77a9d97c06e11c9b6d92502b592a198c92e27719f466"
+          "sha256": "9784aee70efae83142851c116df68b2bc8387ef1a56431a1e96a296de8d3eaed"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/ReaderSelect.ets",
+          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/SourceManagementPage.ets",
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         }
       ],
       "layoutEvidence": {
         "path": "tools/page-structure/source-layout-evidence.json",
-        "sha256": "697f6d2bd88f3d5b0b3e3505962e5e55ce7200948d049d1fd39841afc235563a"
+        "sha256": "1757ca390305721d539c016968ce2c929b97aaf149f35ac2e8bed95fe452aafe"
       }
     },
     {
@@ -1539,7 +1559,20 @@
             ]
           },
           "result": "NOT_RUN",
-          "evidence": [],
+          "evidence": [
+            {
+              "kind": "test",
+              "path": "tools/test-reader-font-demand.mjs",
+              "symbol": "manga-publication",
+              "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-book-directory-page.mjs",
+              "symbol": "manga-header",
+              "result": "PASS"
+            }
+          ],
           "knownGap": "本轮只登记实际源码装配；未执行原生/设备/读屏/系统Back/2×或用户验收。"
         },
         "informationArchitecture": {
@@ -2351,7 +2384,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+          "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
           "symbol": "mangaPage"
         },
         {
@@ -2729,7 +2762,7 @@
         },
         {
           "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+          "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
         },
         {
           "path": "tools/test-directory-native-fixture.mjs",
@@ -2757,7 +2790,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
         },
         {
           "path": "tools/test-book-directory-page.mjs",
@@ -2766,6 +2799,10 @@
         {
           "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
           "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+          "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
         }
       ],
       "variants": [
@@ -2824,7 +2861,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -2876,7 +2913,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本轮只登记实际源码装配；未执行原生/设备/读屏/系统Back/2×或用户验收。"
               },
               "informationArchitecture": {
@@ -3626,7 +3676,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -4004,7 +4054,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -4033,6 +4083,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -4921,7 +4983,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -5299,7 +5361,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -5387,7 +5449,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -5439,7 +5501,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本轮只登记实际源码装配；未执行原生/设备/读屏/系统Back/2×或用户验收。"
               },
               "informationArchitecture": {
@@ -6189,7 +6264,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -6567,7 +6642,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -6596,6 +6671,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -7445,7 +7532,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -7823,7 +7910,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -7908,7 +7995,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -7962,7 +8049,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "SelectionPage推导要求Contextual，实际Back+直接点行选择；保留模型不适配，不能伪装browse。"
               },
               "informationArchitecture": {
@@ -8623,7 +8723,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -9001,7 +9101,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -9030,6 +9130,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -9086,7 +9198,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -9143,7 +9255,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "SelectionPage推导要求Contextual，实际Back+直接点行选择；保留模型不适配，不能伪装browse。"
               },
               "informationArchitecture": {
@@ -9804,7 +9929,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -10182,7 +10307,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -10211,6 +10336,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -10270,7 +10407,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -10322,7 +10459,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本轮只登记实际源码装配；未执行原生/设备/读屏/系统Back/2×或用户验收。"
               },
               "informationArchitecture": {
@@ -11072,7 +11222,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -11450,7 +11600,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -11479,6 +11629,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -11538,7 +11700,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -11590,7 +11752,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "本轮只登记实际源码装配；未执行原生/设备/读屏/系统Back/2×或用户验收。"
               },
               "informationArchitecture": {
@@ -12340,7 +12515,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -12718,7 +12893,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -12747,6 +12922,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -12803,7 +12990,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -12857,7 +13044,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "SelectionPage推导要求Contextual，实际Back+直接点行选择；保留模型不适配，不能伪装browse。"
               },
               "informationArchitecture": {
@@ -13518,7 +13718,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -13896,7 +14096,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -13925,6 +14125,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -13981,7 +14193,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
             },
             "layers": {
               "route": {
@@ -14038,7 +14250,20 @@
                   ]
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-font-demand.mjs",
+                    "symbol": "manga-publication",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-book-directory-page.mjs",
+                    "symbol": "manga-header",
+                    "result": "PASS"
+                  }
+                ],
                 "knownGap": "SelectionPage推导要求Contextual，实际Back+直接点行选择；保留模型不适配，不能伪装browse。"
               },
               "informationArchitecture": {
@@ -14699,7 +14924,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -15077,7 +15302,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -15106,6 +15331,18 @@
               {
                 "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
                 "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+              },
+              {
+                "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+              },
+              {
+                "path": "tools/test-reader-font-demand.mjs",
+                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+              },
+              {
+                "path": "tools/test-book-directory-page.mjs",
+                "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
               }
             ]
           }
@@ -15979,7 +16216,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -16357,7 +16594,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -17254,7 +17491,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e",
+                "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3",
                 "symbol": "mangaPage"
               },
               {
@@ -17632,7 +17869,7 @@
               },
               {
                 "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
-                "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+                "sha256": "f76839cf3c3501e260a24be0fed05c318ef0577652ae9a07edd8087c8ea56ac0"
               },
               {
                 "path": "tools/test-directory-native-fixture.mjs",
@@ -26890,7 +27127,7 @@
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
           "symbol": "build",
-          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+          "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderFormField.ets",
@@ -26977,7 +27214,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -27025,7 +27262,7 @@
         },
         {
           "path": "tools/test-source-group-border-budget.mjs",
-          "sha256": "821806598aeb800905673b955056cff927ac3222bfd1ab13575adaa24c417e94"
+          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
         },
         {
           "path": "tools/test-source-management-typography.mjs",
@@ -27037,7 +27274,7 @@
         },
         {
           "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-          "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
+          "sha256": "90fc2103aeb810114f4f38c84d84b6e0be25bf3ac2539c93886df2eda5a84013"
         },
         {
           "path": "tools/lib/source-management-owner-probe.mjs",
@@ -27206,6 +27443,14 @@
         {
           "path": "entry/src/main/ets/ui/layout/ReaderPageNativeAttributes.ets",
           "sha256": "99e18d64330b49cabf7b4025be902ebf64937e056d6a1587a01a335e0b1bfe53"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/ReaderSelect.ets",
+          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/SourceManagementPage.ets",
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
         }
       ]
     }

@@ -4,9 +4,9 @@
   "reviewedDefinitionsFrozen": true,
   "scope": "703-file historical review; 39 user-approved retirements excluded from active execution. Two UI-framework leaves have current definition qualification; navigation-owner remains NEEDS_EVIDENCE. Default OFF; source review is not product or release acceptance.",
   "reviewedFiles": 703,
-  "inventoryFiles": 666,
+  "inventoryFiles": 668,
   "qualificationCounts": {
-    "NAVIGATION": 324,
+    "NAVIGATION": 326,
     "QUALIFIED": 342
   },
   "defaultPolicy": "No full gate for ordinary feature work, vulnerability fixes, builds or installs.",
@@ -41203,7 +41203,7 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "reviewedSourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
       "estimatedCostType": "sdk-transpile",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -41237,7 +41237,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -41250,7 +41250,8 @@
         "H-reader-font-demand#load",
         "H-reader-font-demand#preview",
         "H-reader-font-demand#assets",
-        "H-reader-font-demand#manga-progress"
+        "H-reader-font-demand#manga-progress",
+        "H-reader-font-demand#manga-publication"
       ],
       "coverageAdoption": [],
       "implementationEvidence": {
@@ -78089,7 +78090,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
@@ -78119,6 +78120,303 @@
         "fixtures": "REUSED_EXACT_RESULTS",
         "otherSuites": "NOT_RUN"
       }
+    },
+    {
+      "file": "tools/test-control-directory-short-content.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-control-directory-short-content.mjs"
+      ],
+      "needs": [
+        "Directory short content",
+        "input focus",
+        "observed keyboard policy",
+        "IME transfer"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite Native/Scroller/frame ports",
+        "controlled before-source fixtures"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
+          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
+          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
+          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
+          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
+          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
+          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
+          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
+          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
+          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
+          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
+          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-control-directory-short-content",
+      "qualification": "NAVIGATION",
+      "protectedBehavior": "Exact Directory short-content focus/keyboard/prefix behavior cases.",
+      "mechanism": "Parent only navigates to the five reviewed manual cases. Seven script declarations are published, two remain REVIEW_NEEDED.",
+      "productionBinding": "ReaderControlDirectoryContent, ReaderSearchField and ReaderDirectoryToolbar actual SDK callbacks.",
+      "minimumTrigger": "Choose only one or more exact reviewed cases for the current change.",
+      "necessityReason": "Manual focused leaves prevent an unqualified file from listing cases and being treated as PASS.",
+      "limitations": "SDK method/frame/Native port evidence. Actual IME visibility, focus and native scrolling are separate.",
+      "repairAction": "Select an exact reviewed case",
+      "repair": "Choose a focused manual leaf. short-sdk and measured-profile remain declared but unqualified.",
+      "focusedEntries": [
+        "H-control-directory-short-content#prefix-anchors",
+        "H-control-directory-short-content#directory-focus",
+        "H-control-directory-short-content#keyboard-observation",
+        "H-control-directory-short-content#keyboard-transfer",
+        "H-control-directory-short-content#keyboard-ack-delay"
+      ],
+      "declaredUnqualifiedCases": [
+        "short-sdk",
+        "measured-profile"
+      ],
+      "validationEvidence": {
+        "caseResults": "REUSED_EXACT_RECORDS",
+        "metadata": "PREPARED_ONLY",
+        "newBusinessExecution": "NOT_RUN"
+      }
+    },
+    {
+      "file": "tools/test-source-group-border-budget.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-group-border-budget.mjs"
+      ],
+      "needs": [
+        "Source group trigger",
+        "parent width payment",
+        "sourceGroup minimum",
+        "select panel border"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite native measurement ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-group-border-budget.mjs",
+          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/reader-foundation-control-probe.mjs",
+          "sha256": "f8122805933cdf9a8fbda0c56e65c7d0252e155f4dfa4e348700bb2f098e2895"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/fixtures/reader-control-native-tree.mjs",
+          "sha256": "1766255bb85ef75bfdf2afe0d55322a8a970beed4800ae20dafa8ef6ca3d09f6"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+          "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+          "sha256": "291626355e1c53db37e39580b487f0c39a7474b448ba01b653633539da14b810"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+          "sha256": "f01592ac0ef8407db894a430c39cc0ad24f3b72ce4c65c92555b4cc0cbddf834"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
+          "sha256": "5babe7c38231be23bb950ba93329436bd1069b4ad145fe53d2bc10c338bbf3c8"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/SourceManagementPage.ets",
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/ReaderSelect.ets",
+          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-source-group-border-budget",
+      "qualification": "NAVIGATION",
+      "protectedBehavior": "Source group actual target minimum and parent width/border payment.",
+      "mechanism": "Two exact manual cases; no parent dispatch.",
+      "productionBinding": "Actual SourceManagementPage group row and ReaderSelect/Panel/ChoiceRow carriers.",
+      "minimumTrigger": "Select only the exact changed group contract.",
+      "necessityReason": "Default OFF exact leaves keep source target and panel border regressions independent.",
+      "limitations": "SDK attributes and declared parent payment. Native glyphs and hit verification remain separate.",
+      "focusedEntries": [
+        "H-source-group-border-budget#parent-chain",
+        "H-source-group-border-budget#trigger-parent"
+      ],
+      "repairAction": "Select an exact manual case",
+      "repair": "Choose parent-chain or trigger-parent explicitly."
     }
   ],
   "auditBaselineFiles": 703,
@@ -135895,7 +136193,7 @@
       "mechanism": "Actual checked font-load readiness, lazy faces and failed receipt retry; owner implementation record: [\"Separate checked load receipts, actual serialized visible preview and asset validity.\", \"Asset case uses upstream fontTools real cmap, static weight, outlines and name tables plus provenance hash; JSON counters alone do not qualify.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "reviewedSourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -135927,7 +136225,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
         }
       ],
       "definitionInputProblems": [],
@@ -135979,7 +136277,7 @@
       "evidenceBoundary": "Controlled platform font-load receipts and actual preview methods; asset case parses real cmap/static weight/outline/name and hashes, without generation or native raster/coverage acceptance.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf"
+      "resourceDefinitionSha256": "41fc8537cd2a919e735c7bd6f3a53f56fa61b939550d3f33fdbe9b802cb92795"
     },
     {
       "file": "tools/test-reader-font-demand.mjs",
@@ -136018,7 +136316,7 @@
       "mechanism": "Actual visible preview serialized loading and fallback admission; owner implementation record: [\"Separate checked load receipts, actual serialized visible preview and asset validity.\", \"Asset case uses upstream fontTools real cmap, static weight, outlines and name tables plus provenance hash; JSON counters alone do not qualify.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "reviewedSourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -136050,7 +136348,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
         }
       ],
       "definitionInputProblems": [],
@@ -136102,7 +136400,7 @@
       "evidenceBoundary": "Controlled platform font-load receipts and actual preview methods; asset case parses real cmap/static weight/outline/name and hashes, without generation or native raster/coverage acceptance.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf"
+      "resourceDefinitionSha256": "41fc8537cd2a919e735c7bd6f3a53f56fa61b939550d3f33fdbe9b802cb92795"
     },
     {
       "file": "tools/test-reader-font-demand.mjs",
@@ -136142,7 +136440,7 @@
       "mechanism": "Manifest hashes and actual upstream fontTools tables/cmap/static weights; owner implementation record: [\"Separate checked load receipts, actual serialized visible preview and asset validity.\", \"Asset case uses upstream fontTools real cmap, static weight, outlines and name tables plus provenance hash; JSON counters alone do not qualify.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "reviewedSourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -136174,7 +136472,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
         }
       ],
       "definitionInputProblems": [],
@@ -136234,7 +136532,7 @@
         }
       ],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf"
+      "resourceDefinitionSha256": "41fc8537cd2a919e735c7bd6f3a53f56fa61b939550d3f33fdbe9b802cb92795"
     },
     {
       "file": "tools/test-reader-fragment-authority.mjs",
@@ -369902,7 +370200,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
@@ -370019,7 +370317,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
@@ -370136,7 +370434,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
@@ -370208,7 +370506,7 @@
       "limitations": "Method/registrar evidence. Native pending stage still needs one controlled scene on the new candidate.",
       "estimatedCostType": "sdk-transpile",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663",
+      "reviewedSourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -370228,7 +370526,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "5abe44b9b48c09e384a69127833da1cb2976b0851ba7651537b4780f8551a663"
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",
@@ -370244,7 +370542,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+          "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderFonts.ets",
@@ -370257,7 +370555,7 @@
       ],
       "definitionInputProblems": [],
       "definitionIdentityState": "REVIEWED",
-      "resourceDefinitionSha256": "6a5b4be785cfb64847b5fff3b3881d4def94c08d23da2b3ce72721f693bdd7bf",
+      "resourceDefinitionSha256": "41fc8537cd2a919e735c7bd6f3a53f56fa61b939550d3f33fdbe9b802cb92795",
       "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
       "validationEvidence": {
         "case": "PASS",
@@ -370271,6 +370569,1321 @@
       "nestedCalls": [],
       "repair": null,
       "repairAction": null
+    },
+    {
+      "file": "tools/test-control-directory-short-content.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-control-directory-short-content.mjs"
+      ],
+      "needs": [
+        "Directory short content",
+        "input focus",
+        "observed keyboard policy",
+        "IME transfer"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite Native/Scroller/frame ports",
+        "controlled before-source fixtures"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
+          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
+          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
+          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
+          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
+          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
+          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
+          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
+          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
+          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
+          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
+          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-control-directory-short-content#prefix-anchors",
+      "parentId": "H-control-directory-short-content",
+      "caseId": "prefix-anchors",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-control-directory-short-content.mjs": [
+          "prefix-anchors"
+        ]
+      },
+      "protectedBehavior": "Actual Content owner and retained SDK Surface preserve Native/data indices and delegate Tree anchor ownership through authored/short layout changes, with retired frame/focus rejection.",
+      "mechanism": "Actual owner methods and SDK retained Surface reference across authored/short: Native/data index, header-not-chapter, Tree anchor delegation, retired idle/focus and actual current action callbacks.",
+      "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
+      "failureExample": "Actual Content owner and retained SDK Surface preserve Native/data indices and delegate Tree anchor ownership through authored/short layout changes, with retired frame/focus rejection.",
+      "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
+      "necessityReason": "The selected leaf never expands to the other six cases.",
+      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": [],
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "newBusinessExecution": "NOT_RUN",
+        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+      }
+    },
+    {
+      "file": "tools/test-control-directory-short-content.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-control-directory-short-content.mjs"
+      ],
+      "needs": [
+        "Directory short content",
+        "input focus",
+        "observed keyboard policy",
+        "IME transfer"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite Native/Scroller/frame ports",
+        "controlled before-source fixtures"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
+          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
+          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
+          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
+          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
+          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
+          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
+          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
+          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
+          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
+          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
+          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-control-directory-short-content#directory-focus",
+      "parentId": "H-control-directory-short-content",
+      "caseId": "directory-focus",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-control-directory-short-content.mjs": [
+          "directory-focus"
+        ]
+      },
+      "protectedBehavior": "Actual SearchField opt-in target/focus modifiers and Toolbar callbacks enforce current id/revision/mounted admission and keep default consumers inactive.",
+      "mechanism": "Actual SearchField opt-in modifier and finite after-layout focus, current id/revision/mounted guards, cancel/old callback and default disabled/no setter negative controls; Toolbar local opt-in lifetime.",
+      "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
+      "failureExample": "Actual SearchField opt-in target/focus modifiers and Toolbar callbacks enforce current id/revision/mounted admission and keep default consumers inactive.",
+      "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
+      "necessityReason": "The selected leaf never expands to the other six cases.",
+      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": [],
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "newBusinessExecution": "NOT_RUN",
+        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+      }
+    },
+    {
+      "file": "tools/test-control-directory-short-content.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-control-directory-short-content.mjs"
+      ],
+      "needs": [
+        "Directory short content",
+        "input focus",
+        "observed keyboard policy",
+        "IME transfer"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite Native/Scroller/frame ports",
+        "controlled before-source fixtures"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
+          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
+          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
+          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
+          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
+          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
+          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
+          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
+          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
+          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
+          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
+          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-control-directory-short-content#keyboard-observation",
+      "parentId": "H-control-directory-short-content",
+      "caseId": "keyboard-observation",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-control-directory-short-content.mjs": [
+          "keyboard-observation"
+        ]
+      },
+      "protectedBehavior": "Actual Content and Field distinguish unknown fresh zero inset from observed-visible then hidden; same-instance policy and old opening/frame rejection.",
+      "mechanism": "Actual SDK Content and Field modifier distinguish fresh unknown keyboard inset0 from observed-visible then hidden, retain policy across same-instance layout migration and retire old opening callbacks/frames. No Native keyboard service or IME claim.",
+      "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
+      "failureExample": "Actual Content and Field distinguish unknown fresh zero inset from observed-visible then hidden; same-instance policy and old opening/frame rejection.",
+      "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
+      "necessityReason": "The selected leaf never expands to the other six cases.",
+      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": [],
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "newBusinessExecution": "NOT_RUN",
+        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+      }
+    },
+    {
+      "file": "tools/test-control-directory-short-content.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-control-directory-short-content.mjs"
+      ],
+      "needs": [
+        "Directory short content",
+        "input focus",
+        "observed keyboard policy",
+        "IME transfer"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite Native/Scroller/frame ports",
+        "controlled before-source fixtures"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
+          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
+          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
+          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
+          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
+          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
+          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
+          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
+          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
+          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
+          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
+          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-control-directory-short-content#keyboard-transfer",
+      "parentId": "H-control-directory-short-content",
+      "caseId": "keyboard-transfer",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-control-directory-short-content.mjs": [
+          "keyboard-transfer"
+        ]
+      },
+      "protectedBehavior": "Actual Content/Field/Toolbar callbacks retain editing intent across a retiring input, issue one public show request after Native focus and reject Back/disabled/stale/failed restore.",
+      "mechanism": "Actual shipping Content/Field/Toolbar callbacks preserve visible editing through a retiring input inset0, request public showTextInput once after new Native focus, and reject explicit Back/stale/disabled/failed restore. Finite Native API ports only.",
+      "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
+      "failureExample": "Actual Content/Field/Toolbar callbacks retain editing intent across a retiring input, issue one public show request after Native focus and reject Back/disabled/stale/failed restore.",
+      "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
+      "necessityReason": "The selected leaf never expands to the other six cases.",
+      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": [],
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "newBusinessExecution": "NOT_RUN",
+        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+      }
+    },
+    {
+      "file": "tools/test-control-directory-short-content.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-control-directory-short-content.mjs"
+      ],
+      "needs": [
+        "Directory short content",
+        "input focus",
+        "observed keyboard policy",
+        "IME transfer"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite Native/Scroller/frame ports",
+        "controlled before-source fixtures"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020",
+      "definitionInputs": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkEmptyState.ets",
+          "sha256": "b7842116634a7b7091ea2a25a3723b45f829ddfd3c0560c7be7cf734756fe379"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkErrorState.ets",
+          "sha256": "7d7350d93ebf10f631ec8cf49f501f40487c604aacbae40fc61cfdc8b004f4ee"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkLoadingState.ets",
+          "sha256": "c4d53fd393df3e6d4ebcb53cd134a47b61709fe89c23c42d51393ef1d49ddad1"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets",
+          "sha256": "be96b64057a516c6a67b9d8e17db294ae262b37d86f7397a80a252cce3a40459"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts",
+          "sha256": "49e38005e19891f6a89e9b0da9f30d4172f1445e3a4b21c826ac4091e2f2e44d"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "sha256": "04e9af5d6a95b59e8a40425d61f42d4fb9e41aad3d0140cffa594dc483d3b0f4"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
+          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
+          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts",
+          "sha256": "b9e648a23507b82efc1c4ce7f7d4232c686bb5d73e15eaaf93f16d60b88a5fbf"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts",
+          "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets",
+          "sha256": "17afcc60fc23ab9cceecf6d45bab40821c6962f1e307d8db7cd2b1089858456a"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
+          "sha256": "6cb37583bb56276fb56218eeb3fc78a769ba99f3e727a1f308561b12e924d870"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
+          "sha256": "1ce1578cdc2b7688057675b26c3587f8acd78d9733cb198460b4f2f59d827d71"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets",
+          "sha256": "4f48f26006881a0a35b9c43fd4dd0334d17528628281571ad7d5220d06add7b8"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+          "sha256": "d946d6ff57abfe7642a88f1461104bf02f3c39ac770fd7494086e9f3c4c221f0"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+          "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "sha256": "0974f780cd72c56bbc8434780105aad5c7dd89a50c2daa1ef05dd2c3762c1f1c"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-ack-delay-field.ets.txt",
+          "sha256": "24fe9ab0d4787c61d4e3351fcbfdfbd181562de2a9eda472a7ecd0cd2bac9e62"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-observation.ets.txt",
+          "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-content.ets.txt",
+          "sha256": "b57c3fc609a033d82e85650110984133e39d19ddce71617c6f6866187bc5eb84"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/keyboard-transfer-field.ets.txt",
+          "sha256": "b1d312df9002d25d3d2793cd48eabc55bd7b483996e100021de019bd5519e2be"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manifest.json",
+          "sha256": "25238f9c5f013ceaa418fde84a41a8b28b3758bf13dc3dd4c90f54377c4e6fc0"
+        },
+        {
+          "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+          "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/tool-environment.mjs",
+          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
+        },
+        {
+          "path": "tools/test-control-directory-short-content.mjs",
+          "sha256": "bf05e137a1cf082696467c4d2002153ac8ff63ce0165af6bca306375eb392020"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "id": "H-control-directory-short-content#keyboard-ack-delay",
+      "parentId": "H-control-directory-short-content",
+      "caseId": "keyboard-ack-delay",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-control-directory-short-content.mjs": [
+          "keyboard-ack-delay"
+        ]
+      },
+      "protectedBehavior": "Actual before-source loses delayed focus ACK; current pending revision/ticket schedules exactly one frame after acknowledged Native focus and rejects repeated or retired ACK.",
+      "mechanism": "Actual SDK before-source delayed Native focus ACK loses one-shot keyboard restore, while current pending request schedules once only after acknowledged focus; finite current/retired/repeated ACK ports.",
+      "productionBinding": "Actual ReaderControlDirectoryContent/ReaderSearchField/ReaderDirectoryToolbar SDK declarations with bounded frame, Native focus, input-method and Scroller ports.",
+      "failureExample": "The exact24fe before-source emits no show request after late Native ACK, while the current scheduler emits one.",
+      "minimumTrigger": "Select this exact manual case only when its protected behavior changes.",
+      "necessityReason": "The selected leaf never expands to the other six cases.",
+      "limitations": "Finite SDK/property/native API ports. Physical IME visibility, glyphs, native scrolling and complete-page acceptance remain separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "c263d161a2f68878fdf8c7a7e8328fb6db2c79ed30fe5367459eba1c37ac48bb",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": [],
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "newBusinessExecution": "NOT_RUN",
+        "source": ".reader-artifacts/framework-confluence-20261112/directory/ime-ack-delay-verification.json and ime-transfer-verification.json"
+      }
+    },
+    {
+      "id": "H-reader-font-demand#manga-publication",
+      "parentId": "H-reader-font-demand",
+      "caseId": "manga-publication",
+      "file": "tools/test-reader-font-demand.mjs",
+      "qualification": "QUALIFIED",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-reader-font-demand.mjs"
+      ],
+      "caseSelection": {
+        "test-reader-font-demand.mjs": [
+          "manga-publication"
+        ]
+      },
+      "protectedBehavior": "Accepted font readiness publishes catalog, footer, overlay and header-menu after initial loading while retaining the same Scaffold.",
+      "mechanism": "Actual Page/Scaffold SDK-emitted slots and V1 properties. Controlled plain-arrow before-source stays loading despite true state; four named Builder If observers publish with normal dependency delivery.",
+      "productionBinding": "BookDirectoryPage mangaPage/mangaHeader and four manga*Slot Builders, actual ReaderPageScaffold/ReaderFixedHeaderHost.",
+      "failureExample": "The8355 before-source emits ordinary JavaScript conditionals in slot arrows, so readytrue has no content If dependency; actual old rendering stays preparation.",
+      "minimumTrigger": "Only mutable UI control-flow publication through Builder slots changes. Select this exact case.",
+      "necessityReason": "Exact subscription regression avoids font asset parsing, font retry loops and unrelated directory cases.",
+      "needs": [
+        "Builder slot publication",
+        "async font readiness",
+        "Page-owned reactive If"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony SDK compiler/property runtime",
+        "finite terminal content/header markers"
+      ],
+      "limitations": "SDK/state delivery evidence with finite terminal markers. Native repaint, Grid geometry and actual glyphs remain separate.",
+      "estimatedCostType": "sdk-transpile",
+      "resourceNeeds": [],
+      "reviewedSourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-reader-font-demand.mjs",
+          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/reader-page-builder-slots.mjs",
+          "sha256": "2251794243816f47db01a06f8ff4d86ffc98566bd72e8b08952b03f00aa54454"
+        },
+        {
+          "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
+          "sha256": "bf2ae8ee3d7da1ed2fc294ad521d0e138da4824f84e7a5d1a9d73c1a1dab1ff3"
+        },
+        {
+          "path": "tools/fixtures/design/directory-confluence-before/manga-font-publication.ets.txt",
+          "sha256": "8355ca112700280af8c259d1103d126fcc893651bfe7ea4c0b627d3954eec68e"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+          "sha256": "f925b1a3c4ff19dc59e4a159e27389b02c9f94a783c6bb145b181fa2754815a2"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderFixedHeaderHost.ets",
+          "sha256": "7cb5b38c5dc3d876fd4c7be2dbdb235a46859c94d03d9877257d89582c7dbf2e"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageNativeAttributes.ets",
+          "sha256": "99e18d64330b49cabf7b4025be902ebf64937e056d6a1587a01a335e0b1bfe53"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderFrameStyle.ts",
+          "sha256": "b6e0c159270f6698f0b2a0a855edf99e92b77d304749c69773ebaf453ca18c59"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+          "sha256": "5c7de53b01b820ebd2420361eb6e61430595e7ed5f21a34ff9cc5f8059457016"
+        },
+        {
+          "path": "entry/src/main/ets/ui/chrome/PageBackBar.ets",
+          "sha256": "4905c4781765abd76565d7b081d7e2e7cd6291f85e04f08005de388db8ddde8f"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
+          "sha256": "7fb080e91605df401b7d1983e54dfff7de777d684eeb82f7cb88297707cc7749"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets",
+          "sha256": "f579762d249b9f01dfc2d78e58210091fb5f47079f83fd3c8e94b58ce709a203"
+        },
+        {
+          "path": "entry/src/main/ets/features/manga/ui/MangaDirectoryCurrentFooter.ets",
+          "sha256": "56a690a9f854c8325adc103ad6d34b2733bd55e7b8f44a30273ae3aa93428132"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "resourceDefinitionSha256": "41fc8537cd2a919e735c7bd6f3a53f56fa61b939550d3f33fdbe9b802cb92795",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "validationEvidence": {
+        "case": "PASS",
+        "native": "PENDING_NEW_CANDIDATE",
+        "otherFontCases": "REUSED_OR_NOT_RUN"
+      },
+      "nestedActions": [],
+      "nestedCalls": [],
+      "repair": null,
+      "repairAction": null
+    },
+    {
+      "file": "tools/test-source-group-border-budget.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-group-border-budget.mjs"
+      ],
+      "needs": [
+        "Source group trigger",
+        "parent width payment",
+        "sourceGroup minimum",
+        "select panel border"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite native measurement ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-group-border-budget.mjs",
+          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/reader-foundation-control-probe.mjs",
+          "sha256": "f8122805933cdf9a8fbda0c56e65c7d0252e155f4dfa4e348700bb2f098e2895"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/fixtures/reader-control-native-tree.mjs",
+          "sha256": "1766255bb85ef75bfdf2afe0d55322a8a970beed4800ae20dafa8ef6ca3d09f6"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+          "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+          "sha256": "291626355e1c53db37e39580b487f0c39a7474b448ba01b653633539da14b810"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+          "sha256": "f01592ac0ef8407db894a430c39cc0ad24f3b72ce4c65c92555b4cc0cbddf834"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
+          "sha256": "5babe7c38231be23bb950ba93329436bd1069b4ad145fe53d2bc10c338bbf3c8"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/SourceManagementPage.ets",
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/ReaderSelect.ets",
+          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "protectedBehavior": "Panel outer border leaves an actual44vp inner ChoiceRow at current46vp outer; old44 outer pays only42vp.",
+      "mechanism": "Actual SDK Panel/Scroll/Column/ChoiceRow parent chain and current/old widths; ordinary variants preserve their geometry.",
+      "productionBinding": "ReaderSelectPanel resolvedWidth/build and actual ReaderChoiceRow native Button.",
+      "validationEvidence": {
+        "case": "REUSED_PASS",
+        "boundary": "Existing parent-chain production/assertion body is unchanged by the new trigger case."
+      },
+      "id": "H-source-group-border-budget#parent-chain",
+      "parentId": "H-source-group-border-budget",
+      "caseId": "parent-chain",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-source-group-border-budget.mjs": [
+          "parent-chain"
+        ]
+      },
+      "minimumTrigger": "Only the exact changed group contract; no sibling fallback.",
+      "necessityReason": "The actual source constant and parent carrier catch the known Native discrepancy.",
+      "limitations": "SDK/property/finite measurement evidence only. Actual glyph/edge-hit validation remains separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "87f275bb3ee5aa64ed8ea84552fbcbbd3878e202931c837a3e3cee0bb8eca2be",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": []
+    },
+    {
+      "file": "tools/test-source-group-border-budget.mjs",
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "tests": [
+        "test-source-group-border-budget.mjs"
+      ],
+      "needs": [
+        "Source group trigger",
+        "parent width payment",
+        "sourceGroup minimum",
+        "select panel border"
+      ],
+      "prerequisites": [
+        "Node",
+        "installed Harmony ETS compiler",
+        "finite native measurement ports"
+      ],
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/test-source-group-border-budget.mjs",
+          "sha256": "b58cf19ac59dce1abeb20d3816b25e8071beef9915b3f7b6617087d10d9fba2a"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+        },
+        {
+          "path": "tools/lib/arkui-property-runtime-probe.mjs",
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+        },
+        {
+          "path": "tools/lib/reader-foundation-control-probe.mjs",
+          "sha256": "f8122805933cdf9a8fbda0c56e65c7d0252e155f4dfa4e348700bb2f098e2895"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/fixtures/reader-control-native-tree.mjs",
+          "sha256": "1766255bb85ef75bfdf2afe0d55322a8a970beed4800ae20dafa8ef6ca3d09f6"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+          "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+          "sha256": "291626355e1c53db37e39580b487f0c39a7474b448ba01b653633539da14b810"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+          "sha256": "f01592ac0ef8407db894a430c39cc0ad24f3b72ce4c65c92555b4cc0cbddf834"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets",
+          "sha256": "5babe7c38231be23bb950ba93329436bd1069b4ad145fe53d2bc10c338bbf3c8"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/SourceManagementPage.ets",
+          "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+        },
+        {
+          "path": "tools/fixtures/design/source-group-trigger-before/ReaderSelect.ets",
+          "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+        }
+      ],
+      "definitionInputProblems": [],
+      "definitionIdentityState": "REVIEWED",
+      "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
+      "protectedBehavior": "Source group Row pays actual label growth, gaps and Select width; sourceGroup native target and response are at least44vp.",
+      "mechanism": "Actual Page/Select SDK parents at320/366 ×1/1.3/1.45/1.6/2 with finite/nonfinite measurement ports; old74 and actual36 negatives; shared TRIGGER_H remains36 and other variants retain height.",
+      "productionBinding": "SourceManagementPage groupFilter/groupLabelWidth/groupSelectWidth; ReaderSelect triggerHeight/phoneTrigger/sourceGroupTrigger.",
+      "validationEvidence": {
+        "case": "NEW_PASS",
+        "samples": 20,
+        "negativeOld74": true,
+        "negativeActual36": true,
+        "native": "PENDING_NEW_CANDIDATE"
+      },
+      "id": "H-source-group-border-budget#trigger-parent",
+      "parentId": "H-source-group-border-budget",
+      "caseId": "trigger-parent",
+      "qualification": "QUALIFIED",
+      "caseSelection": {
+        "test-source-group-border-budget.mjs": [
+          "trigger-parent"
+        ]
+      },
+      "minimumTrigger": "Only the exact changed group contract; no sibling fallback.",
+      "necessityReason": "The actual source constant and parent carrier catch the known Native discrepancy.",
+      "limitations": "SDK/property/finite measurement evidence only. Actual glyph/edge-hit validation remains separate.",
+      "resourceNeeds": [],
+      "resourceDefinitionSha256": "87f275bb3ee5aa64ed8ea84552fbcbbd3878e202931c837a3e3cee0bb8eca2be",
+      "repair": null,
+      "repairAction": null,
+      "nestedActions": [],
+      "nestedCalls": []
     }
   ],
   "externalEntries": [
@@ -371147,7 +372760,7 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 2327,
+    "QUALIFIED": 2335,
     "REVIEW_NEEDED": 7,
     "DIAGNOSTIC_ONLY": 22,
     "NEEDS_EVIDENCE": 1

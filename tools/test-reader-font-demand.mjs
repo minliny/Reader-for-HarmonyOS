@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const selected=selectContractCases({load:{description:'Actual checked font-load readiness, lazy faces and failed receipt retry',resources:[]},preview:{description:'Actual visible preview serialized loading and fallback admission',resources:[]},assets:{description:'Manifest hashes and actual upstream fontTools tables/cmap/static weights',resources:[]},'manga-progress':{description:'Actual manga font preparation DEBUG stages distinguish pending Serif/individual faces, current acceptance and retired completion; release remains silent',resources:[]}});
+const selected=selectContractCases({load:{description:'Actual checked font-load readiness, lazy faces and failed receipt retry',resources:[]},preview:{description:'Actual visible preview serialized loading and fallback admission',resources:[]},assets:{description:'Manifest hashes and actual upstream fontTools tables/cmap/static weights',resources:[]},'manga-progress':{description:'Actual manga font preparation DEBUG stages distinguish pending Serif/individual faces, current acceptance and retired completion; release remains silent',resources:[]},'manga-publication':{description:'Actual Page/Scaffold SDK slot conditionals subscribe to font readiness and update the retained catalog/footer/overlay/header-menu after initial preparation, with plain-arrow before-source negative',resources:[]}});
 async function run(id){
 const {default:assert}=await import('node:assert/strict');
 const {readFileSync}=await import('node:fs');
@@ -183,6 +183,51 @@ assert.deepEqual([...defaultBatch.pending.keys()],mangaFamilies);
 for(const family of mangaFamilies)defaultBatch.pending.get(family).resolve();
 assert.equal(await direct,true,'default callers retain checked all-face admission without a progress consumer');
 console.log(JSON.stringify({pendingStages:2,mangaFaces:7,releaseSilent:true,retiredCompletions:4,nativeResult:'NOT_RUN'}));
+
+}else if(id==='manga-publication'){
+const {registerHooks}=await import('node:module');
+const {fileURLToPath}=await import('node:url');
+const {existsSync}=await import('node:fs');
+registerHooks({resolve(s,c,n){if(s.startsWith('.')&&!/\.[a-z]+$/i.test(s)){const u=new URL(s+'.ts',c.parentURL);if(existsSync(fileURLToPath(u)))return n(u.href,c);}return n(s,c);}});
+const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+const {ReaderPageGeometry}=await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
+const {readerFrameStyle}=await import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
+const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets',import.meta.url),'utf8');
+const before=readFileSync(new URL('./fixtures/design/directory-confluence-before/manga-font-publication.ets.txt',import.meta.url),'utf8');
+function publication(candidate){
+ const properties=createArkUIPropertyRuntimeProbe(),calls=[];
+ class Child{
+  constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id,nodes:new Map(),children:new Map()});}
+  updateStateVars(params){Object.assign(this.params,params);}
+ }
+ class Header extends Child{initialRender(){this.params.trailing();}}
+ const childPaths={PageBackBar:'ui/chrome/PageBackBar.ets',ReaderDirectoryNavigationSurface:'features/reading/ui/ReaderDirectoryNavigationSurface.ets',ReaderDirectoryRecoverySurface:'features/reading/ui/ReaderDirectoryRecoverySurface.ets',MangaDirectoryCurrentFooter:'features/manga/ui/MangaDirectoryCurrentFooter.ets'};
+ const childSources=Object.fromEntries(Object.entries(childPaths).map(([name,path])=>[name,readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8')]));
+ const names=['mangaPage','mangaHeader','mangaFontsReady','mangaFontsFailed','geometry','measurementKey'];
+ for(const name of ['mangaContentSlot','mangaFooterSlot','mangaOverlaySlot','mangaHeaderTrailingSlot'])if(candidate.includes('private '+name+'('))names.push(name);
+ const probe=createReaderBuilderProbe(candidate,names,{
+  ...properties.sdk,ReaderPageGeometry,...Object.fromEntries(Object.keys(childPaths).map(name=>[name,name==='PageBackBar'?Header:Child])),
+ },{...properties.hooks,childSources,mountChildren:true,allowEmptyBranchAdmission:true});
+ const owner=probe.owner;
+ Object.assign(owner,{mangaFrameStyle:()=>readerFrameStyle({backgroundColor:'white',headerBackground:'white',footerBackground:'white'}),recordViewport(){},recordHeaderHeight(){},
+  mangaContent:()=>calls.push('catalog'),fontPreparationContent:()=>calls.push('preparation'),mangaFixedFooter:()=>calls.push('footer'),pageRecoveryOverlay:()=>calls.push('overlay'),mangaDownloadMenuButton:()=>calls.push('header-menu')});
+ owner.mangaPage();
+ assert.deepEqual(calls,['preparation'],'fonts are pending at initial actual Scaffold build');
+ const frame=[...owner.children.values()].find(child=>child.params?.geometry);assert.ok(frame);
+ owner.mangaFontsReady=true;properties.flush();
+ return{calls,owner,frame,output:probe.output,dependencies:properties.dependencies.get(owner)?.get('mangaFontsReady')};
+}
+const old=publication(before);
+assert.deepEqual(old.calls,['preparation'],'exact before-source keeps initial loading despite accepted true state');
+assert.equal(old.owner.mangaFontsReady,true);
+const current=publication(source);
+assert.equal(current.calls[0],'preparation');
+assert.deepEqual(current.calls.slice(1).sort(),['catalog','footer','header-menu','overlay']);
+assert.equal([...current.owner.children.values()].find(child=>child.params?.geometry),current.frame,'font admission retains the same actual Scaffold actor');
+assert.ok(current.dependencies?.size>=4,'four named Builder conditions register actual Page-owned state dependencies');
+assert.match(current.output,/mangaContentSlot\(parent = null\)[\s\S]*?observeComponentCreation2[\s\S]*?If\.create\(\)/,'actual SDK emits a reactive If for the named content Builder');
+console.log(JSON.stringify({beforeAcceptedButUnpainted:true,reactiveSlots:4,scaffoldRetained:true,boundary:'Actual SDK/property subscription delivery with finite terminal content/header slot markers. Native repaint and Grid geometry remain separate.'}));
 
 }else if(id==='preview'){
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');

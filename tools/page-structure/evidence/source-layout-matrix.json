@@ -10,7 +10,7 @@
   "inputs": [
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+      "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
     },
     {
       "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",

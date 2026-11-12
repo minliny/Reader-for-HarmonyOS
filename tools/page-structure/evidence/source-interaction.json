@@ -16,7 +16,7 @@
     },
     {
       "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+      "sha256": "1df5a3113af54a8288cabc397393b1c52bef74411e2229e004a368c28416f390"
     },
     {
       "path": "entry/src/main/ets/ui/chrome/PageBackBar.ets",
@@ -36,7 +36,7 @@
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
-      "sha256": "3356c28b1dfd3e679e0834cba47748b84723d87c75014eb71643493df2b7d985"
+      "sha256": "f83c6171e5970a0c2e3c1ca2cebb0c92fa55a0a52bc954fe8a03036d78a0636a"
     },
     {
       "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
@@ -96,7 +96,7 @@
     },
     {
       "path": "tools/page-structure/test-source-interaction-inventory.mjs",
-      "sha256": "bd6a807a499bb7ec1721449a070529130347b0158f80e8133fc8cd9d9d176ea2"
+      "sha256": "90fc2103aeb810114f4f38c84d84b6e0be25bf3ac2539c93886df2eda5a84013"
     },
     {
       "path": "tools/fixtures/reader-control-native-tree.mjs",
@@ -587,7 +587,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 208,
+      "parentWidthMinimum": 207,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -1019,7 +1019,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 208,
+      "parentWidthMinimum": 199,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -1451,7 +1451,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 208,
+      "parentWidthMinimum": 191,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -1883,7 +1883,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 208,
+      "parentWidthMinimum": 181,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -2315,7 +2315,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 254,
+      "parentWidthMinimum": 253,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -2747,7 +2747,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 254,
+      "parentWidthMinimum": 245,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -3179,7 +3179,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 254,
+      "parentWidthMinimum": 237,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
@@ -3611,7 +3611,7 @@
         "height": 44
       },
       "nativeResult": "NOT_RUN",
-      "parentWidthMinimum": 254,
+      "parentWidthMinimum": 227,
       "parentBasis": "actual Source groupSelectWidth/filterControlWidth compact allocation",
       "boundary": "native measure port returns NaN to exercise existing 15vp fallback/minimum; no font measurement claim"
     },
