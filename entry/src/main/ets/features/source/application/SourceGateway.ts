@@ -15,6 +15,7 @@ export type BookSource = {
   enabled: boolean;
   enabledExplore: boolean;
   group?: string;
+  sourceVersion?: string;
   /** Stable media category; novel is the only category admitted by the text reader. */
   category: ReaderSourceCategory;
   loginUrl?: string;
@@ -128,6 +129,14 @@ export type SourceDebugOutcome = {
   durationMs: number;
 };
 
+/** Source definition at one authoritative read boundary, excluding diagnostic projections. */
+export interface SourceDefinitionSnapshot {
+  sourceId: string;
+  sourceVersion?: string;
+  text: string;
+  identity: string;
+}
+
 const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
 
 /**
@@ -138,6 +147,8 @@ const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
 export class SourceGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private writeEvidence: ReaderWriteEvidence | undefined;
+  private editableSourceId: string = '';
+  private editableDefinitionIdentity: string | undefined;
 
   observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
@@ -223,9 +234,18 @@ export class SourceGateway {
         group,
         category: classifyReaderSource({ bookSourceType, name, group, sourceId, baseUrl }),
         loginUrl,
+        sourceVersion: this.optionalString(source, 'sourceVersion'),
       };
       if (checkReports !== undefined) entry.checkReports = checkReports;
       if (lastCheckSummary !== undefined) entry.lastCheckSummary = lastCheckSummary;
+      // Current-rule persisted diagnostics drive the unified status filter.
+      // Expired/cancelled reports do not make a source look freshly checked.
+      if (latest !== undefined && !latest.stale) {
+        const requested = latest.report.steps.filter((step: SourceCheckReportStep): boolean => step.requested);
+        if (requested.length > 0 && requested.every((step: SourceCheckReportStep): boolean => step.status === 'pass')) entry.checkState = 'passed';
+        else if (requested.some((step: SourceCheckReportStep): boolean => step.status === 'fail' || step.status === 'blocked' || step.status === 'not_supported')) entry.checkState = 'failed';
+        else entry.checkState = 'unchecked';
+      }
       sources.push(entry);
     }
     return sources;
@@ -427,12 +447,41 @@ export class SourceGateway {
   }
 
   async loadEditableSource(sourceId: string, current?: () => boolean): Promise<string> {
-    const exported = await this.exportBookSources([sourceId], current);
-    const parsed = JSON.parse(exported.data) as unknown[];
-    if (parsed.length !== 1) {
-      throw new Error('source.export did not return exactly one source for editing');
+    const definition = await this.readSourceDefinition(sourceId, current);
+    if (definition === undefined) throw new Error('原始书源已删除，请重新选择');
+    this.editableSourceId = sourceId;
+    this.editableDefinitionIdentity = definition.identity;
+    return definition.text;
+  }
+
+  async readSourceDefinition(sourceId: string,
+    admitted?: () => boolean): Promise<SourceDefinitionSnapshot | undefined> {
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner);
+    const active = (): boolean => current() && (admitted?.() ?? true);
+    const result = await this.runtimeOwner.request('source.list', { sourceId }, { canDispatch: active, canContinue: active });
+    const rows = result.data['sources'];
+    if (!Array.isArray(rows) || rows.length > 1 || (rows.length === 1 && (rows[0] === null || typeof rows[0] !== 'object' || Array.isArray(rows[0]))))
+      throw new Error('原始书源读取不完整，请重试');
+    if (!active()) throw new Error('原始书源身份已变化');
+    if (rows.length === 0) return undefined;
+    const source = rows[0] as JsonObject;
+    if (source['sourceId'] !== sourceId) throw new Error('原始书源身份已变化');
+    const raw = source['bookSource'];
+    let text: string;
+    if (raw !== undefined && raw !== null) {
+      if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('原始书源 JSON 无效');
+      text = JSON.stringify(raw, null, 2);
+    } else {
+      // Older list DTOs omit raw rules. Preserve the existing exact Core export
+      // capability so editing never reconstructs a partial BookSource.
+      const exported = await this.exportBookSources([sourceId], active);
+      const entries = JSON.parse(exported.data) as unknown[];
+      if (!active() || entries.length !== 1) throw new Error('原始书源读取不完整，请重试');
+      text = JSON.stringify(this.requireBookSourceObject(entries[0], 0), null, 2);
     }
-    return JSON.stringify(parsed[0], null, 2);
+    return { sourceId, sourceVersion: this.optionalString(source, 'sourceVersion'), text,
+      identity: JSON.stringify([sourceId, source['sourceVersion'] ?? null, source['name'] ?? null,
+        source['baseUrl'] ?? null, source['enabled'] ?? null, source['enabledExplore'] ?? null, text]) };
   }
 
   /**
@@ -458,6 +507,14 @@ export class SourceGateway {
     if (editedId !== sourceId) {
       throw new Error('书源地址是主键；编辑器不允许隐式迁移 bookSourceUrl');
     }
+    const baseline = this.editableSourceId === sourceId ? this.editableDefinitionIdentity : undefined;
+    if (baseline === undefined) throw new Error('请先重新读取书源，再保存编辑');
+    const currentDefinition = await this.readSourceDefinition(sourceId);
+    if (currentDefinition === undefined || currentDefinition.identity !== baseline) {
+      throw new Error('书源已被修改或删除；草稿保留，请重新读取后核对');
+    }
+    // source.import has no expected-version field. This protects observed
+    // drift at the read boundary while Core retains the write transaction.
     const document = JSON.stringify(bookSource);
     const summary = this.supportsOriginalSourceImport() ?
       await this.importOriginalSourceDocument(document, (): boolean => true, identifyOriginal) :
@@ -468,6 +525,8 @@ export class SourceGateway {
     if (summary.importedCount !== 1 || summary.sourceIds[0] !== sourceId) {
       throw new Error('source.import did not confirm the edited source identity');
     }
+    this.editableSourceId = '';
+    this.editableDefinitionIdentity = undefined;
   }
 
   /** Replay-only compatibility API. Product debug uses real `source.check.run` evidence. */
@@ -646,6 +705,7 @@ export class SourceGateway {
     const result = await this.runtimeOwner.request('source.check.run', params, {
       timeoutMs: timeoutMs + 5000,
       canDispatch: shouldContinue,
+      canContinue: shouldContinue,
       shouldCancel: (): boolean => !shouldContinue(),
     });
     const diagnostics = this.runtimeOwner.takeSourceHttpDiagnostics(result.requestId);

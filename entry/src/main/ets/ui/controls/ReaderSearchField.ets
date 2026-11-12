@@ -1,3 +1,6 @@
+import { readerActionTouchRegion } from './ReaderActionAccessibility';
+import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
+import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
@@ -38,6 +41,39 @@ export type ReaderSearchFieldMode = 'submit' | 'live' | 'passive';
  * actions, not properties of an input field. A typed variant selects one
  * audited visual contract; callers cannot compose contradictory boolean flags.
  */
+class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
+  private variant: ReaderSearchFieldVariant;
+  private height: number;
+  private fontScale: number;
+  private focusId: string;
+  private focusChanged: ((focused: boolean) => void) | undefined;
+  private inputArea: ((area: Area) => void) | undefined;
+  private keyboardOnFocus: boolean;
+  constructor(variant: ReaderSearchFieldVariant, height: number, fontScale: number = 1, focusId: string = '',
+    focusChanged?: (focused: boolean) => void, inputArea?: (area: Area) => void, keyboardOnFocus: boolean = true) {
+    this.variant = variant;
+    this.height = height;
+    this.fontScale = fontScale;
+    this.focusId = focusId;
+    this.focusChanged = focusChanged; this.inputArea = inputArea;
+    this.keyboardOnFocus = keyboardOnFocus;
+  }
+  applyNormalAttribute(instance: TextInputAttribute): void {
+    if (this.variant === 'sourceManagement' || this.variant === 'readerDirectory') instance.responseRegion(readerActionTouchRegion('100%', this.height));
+    if (this.variant === 'readerDirectory') {
+      instance.minFontScale(1);
+      instance.maxFontScale(this.fontScale);
+      if (this.focusId.length > 0) {
+        instance.id(this.focusId);
+        instance.enableKeyboardOnFocus(this.keyboardOnFocus);
+        instance.onFocus((): void => this.focusChanged?.(true));
+        instance.onBlur((): void => this.focusChanged?.(false));
+        instance.onAreaChange((_old: Area, area: Area): void => this.inputArea?.(area));
+      }
+    }
+  }
+}
+
 class ReaderSearchFocusFrame extends FrameCallback {
   private action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
@@ -61,6 +97,17 @@ export struct ReaderSearchField {
   @Prop focusOnAppear: boolean = false;
   @Prop naturalFieldHeightVp: number = 0;
   @Prop naturalInputHeightVp: number = 0;
+  @Prop @Watch('onDirectoryFocusRequest') directoryFocusId: string = '';
+  @Prop @Watch('onDirectoryFocusRequest') directoryFocusAllowed: boolean = false;
+  @Prop @Watch('onDirectoryFocusRequest') directoryFocusRevision: number = 0;
+  @Prop directoryKeyboardOnFocus: boolean = true;
+  directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
+  onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
+  private directoryLayoutId: string = '';
+  private directoryInputLoaded: boolean = false;
+  private directoryFocusTicket: number = 0;
+  private directoryFocusScheduledRevision: number = -1;
+  private directoryFocusAppliedRevision: number = -1;
   private mounted: boolean = false;
   private focusGeneration: number = 0;
   private readonly bookInputController: TextInputController = new TextInputController();
@@ -88,6 +135,55 @@ export struct ReaderSearchField {
     this.bookInputFocused = false;
     this.bookInputScrollPending = false;
     this.bookInputScrollGeneration += 1;
+    this.directoryFocusTicket += 1;
+    this.directoryInputLoaded = false;
+    this.directoryLayoutId = '';
+    this.directoryFocusScheduledRevision = -1;
+  }
+
+
+  private directoryFocusEnabled(id: string): boolean {
+    return this.mounted && this.variant === 'readerDirectory' && this.mode !== 'passive' &&
+      this.directoryFocusAllowed && id.length > 0 && id === this.directoryFocusId && this.directoryFocusCurrent(id);
+  }
+
+  private onDirectoryFocusRequest(): void {
+    this.directoryFocusTicket += 1;
+    this.directoryFocusScheduledRevision = -1;
+    if (this.mounted && this.variant === 'readerDirectory' && !this.directoryFocusAllowed &&
+      this.directoryFocusId.length > 0 && this.directoryLayoutId === this.directoryFocusId) {
+      this.onDirectoryFocusChanged(this.directoryFocusId, false);
+    }
+    this.queueDirectoryFocus();
+  }
+
+  private onDirectoryInputArea(id: string, area: Area): void {
+    if (!this.directoryFocusEnabled(id)) return;
+    if (!(readerPageAreaLength(area.width) > 0) || !(readerPageAreaLength(area.height) > 0)) return;
+    this.directoryLayoutId = id;
+    this.directoryInputLoaded = true;
+    this.queueDirectoryFocus();
+  }
+
+  private onDirectoryInputFocus(id: string, focused: boolean): void {
+    if (!this.directoryFocusEnabled(id) || !this.directoryInputLoaded || this.directoryLayoutId !== id) return;
+    this.onDirectoryFocusChanged(id, focused);
+  }
+
+  private queueDirectoryFocus(): void {
+    const id = this.directoryFocusId, revision = this.directoryFocusRevision;
+    if (!this.directoryFocusEnabled(id) || !this.directoryInputLoaded || this.directoryLayoutId !== id ||
+      revision <= 0 || revision === this.directoryFocusAppliedRevision || revision === this.directoryFocusScheduledRevision) return;
+    const ticket = ++this.directoryFocusTicket;
+    this.directoryFocusScheduledRevision = revision;
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (!this.directoryFocusEnabled(id) || ticket !== this.directoryFocusTicket || revision !== this.directoryFocusRevision ||
+        !this.directoryInputLoaded || this.directoryLayoutId !== id) return;
+      this.directoryFocusScheduledRevision = -1;
+      this.directoryFocusAppliedRevision = revision;
+      // One request after the real native input layout. No polling or retry.
+      this.getUIContext().getFocusController().requestFocus(id);
+    }));
   }
 
   private onBookInputFocus(focused: boolean): void {
@@ -228,7 +324,7 @@ export struct ReaderSearchField {
   }
 
   @Builder
-  private autoLineHeightField() {
+  private autoLineHeightField(inputFocusId: string = this.directoryFocusId ?? '') {
     Row({ space: this.iconGap() }) {
       Image(this.searchIcon())
         .width(this.iconSize())
@@ -236,6 +332,10 @@ export struct ReaderSearchField {
       TextInput({ placeholder: this.placeholder, text: this.text })
         .layoutWeight(1)
         .height(this.inputHeight())
+        .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.variant === 'readerDirectory' ? this.directoryFontScale() : 1,
+          this.directoryFocusAllowed ? inputFocusId : '',
+          (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
+          (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus))
         .padding(0)
         .borderRadius(0)
         .fontFamily(this.textStyle().fontFamily)
@@ -323,7 +423,8 @@ export struct ReaderSearchField {
       return 44;
     }
     if (this.variant === 'readerDirectory') {
-      return Number.isFinite(this.naturalFieldHeightVp) ? Math.max(32, this.naturalFieldHeightVp) : 32;
+      return Math.max(readerScaledControlHeight(44, 24, this.directoryFontScale()),
+        Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
     }
     return 44;
   }
@@ -336,7 +437,8 @@ export struct ReaderSearchField {
       return 42;
     }
     if (this.variant === 'readerDirectory') {
-      return Number.isFinite(this.naturalInputHeightVp) ? Math.max(24, this.naturalInputHeightVp) : 24;
+      return Math.max(this.fieldHeight() - this.fieldBorderWidth() * 2,
+        Number.isFinite(this.naturalInputHeightVp) ? this.naturalInputHeightVp : 0);
     }
     return this.fieldHeight();
   }
@@ -426,6 +528,11 @@ export struct ReaderSearchField {
   private bookFontScale(): number {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  private directoryFontScale(): number {
+    return !Number.isFinite(this.readerWindowMetricsRevision) || this.readerWindowMetricsRevision < 0 ? 1 :
+      readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
 
   private bookTextStyle(): ReaderTextStyle {

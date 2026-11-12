@@ -27,7 +27,7 @@ export struct ReaderRecoveryAction {
       }
     }.accessibilityLevel('no-hide-descendants');
     }
-      .constraintSize({ minHeight: this.variant === 'notice' ? 28 : 44, minWidth: 30, maxWidth: '100%' })
+      .constraintSize({ minHeight: 44, minWidth: 44, maxWidth: '100%' })
       .padding({ top: 0, bottom: 0, left: this.variant === 'notice' || this.variant === 'text' ? 2 : 16, right: this.variant === 'notice' || this.variant === 'text' ? 2 : 16 })
       .backgroundColor(this.variant === 'notice' || this.variant === 'text' ? Color.Transparent : readerAppColor('TOK_MESSAGE_SOFT', this.appThemeScheme))
       .borderRadius(this.variant === 'notice' ? 4 : 12)

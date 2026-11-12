@@ -239,8 +239,13 @@ export struct ReaderSelectPanel {
     if (this.variant !== 'default' && this.variant !== 'sourceGroup') return naturalWidth;
     const metrics = readerWindowMetrics();
     const viewportWidth = this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width;
-    return readerSelectMenuWidth(naturalWidth, viewportWidth, readerSelectAvailableWidth(viewportWidth,
-      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)), this.menuKind);
+    const available = readerSelectAvailableWidth(viewportWidth,
+      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics));
+    // The panel border consumes one vp on each side of the 44vp option lane.
+    const minimum = 44 + TOK_BORDER_W * 2;
+    const contentWidth = this.variant === 'sourceGroup' && available >= minimum ?
+      Math.max(minimum, naturalWidth) : naturalWidth;
+    return readerSelectMenuWidth(contentWidth, viewportWidth, available, this.menuKind);
   }
 
   private panelX(): number {

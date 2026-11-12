@@ -272,7 +272,16 @@ function normalizeV2DirectoryNodes(rows: ReaderDirectoryNavigationNode[]): Reade
   return rows.map((item): ReaderDirectoryNavigationNode => ({ ...item, depth: item.depth + 1 }));
 }
 
-export class ReaderDirectoryNavigationGateway {
+/** Existing directory read boundary, also used by the bounded debug fixture. */
+export interface ReaderDirectoryNavigationPort {
+  open(query: ReaderDirectoryNavigationQuery, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationOpen>;
+  page(bookId: string, viewId: string, offset: number, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationPage>;
+  resolveTarget(bookId: string, viewId: string, nodeId: string,
+    isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationTarget>;
+}
+export type ReaderDirectoryNavigationPortFactory = () => ReaderDirectoryNavigationPort;
+
+export class ReaderDirectoryNavigationGateway implements ReaderDirectoryNavigationPort {
   private readonly runtime: ReadingGatewayRuntime;
   private static views: Map<string, ReaderDirectoryIdentity> = new Map<string, ReaderDirectoryIdentity>();
   constructor(runtime: ReadingGatewayRuntime) { this.runtime = runtime; }

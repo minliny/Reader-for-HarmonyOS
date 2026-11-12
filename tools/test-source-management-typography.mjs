@@ -11,12 +11,12 @@ async function metadata() {
  const roles=loadReaderTypographyRoles(read('ui/foundation/ReaderTypography.ets')),source=read('features/source/ui/SourceManagementPage.ets');
  const original=roles.TYPE_SOURCE_MANAGEMENT_META;
  for(const scheme of ['day','night'])for(const role of [original,{...original,fontFamily:'ReaderTestRole',fontWeight:500,fontSizeFp:original.fontSizeFp+2,lineHeightFp:original.lineHeightFp+3}]) {
-  const {owner}=createReaderBuilderProbe(source,['sourceRow','sourceRowToggle'],{...readerFoundationTokens,...roles,TYPE_SOURCE_MANAGEMENT_META:role,readerAppColor,readerSourceCategoryLabel,Alignment:{Center:'center'},VerticalAlign:{Center:'center'},HorizontalAlign:{Start:'start'},TextOverflow:{Ellipsis:'ellipsis'}});
-  Object.assign(owner,{appThemeScheme:scheme,contentFrame:()=>({width:320}),detectButton(){},statusBadge(){},statusBadgeBackground(){return '';},statusBadgeDot(){return '';},sourceSwitch(){}});
-  const bookSource={sourceId:'s',name:'书源',category:'novel',baseUrl:'https://metadata.test',enabled:true,checkMessage:'检测摘要',checkState:'passed'};owner.sourceRow(bookSource);
+  const {owner}=createReaderBuilderProbe(source,['sourceInfo'],{...readerFoundationTokens,...roles,TYPE_SOURCE_MANAGEMENT_META:role,readerAppColor,readerSourceCategoryLabel,Alignment:{Center:'center'},VerticalAlign:{Center:'center'},HorizontalAlign:{Start:'start'},TextOverflow:{Ellipsis:'ellipsis'}});
+  Object.assign(owner,{appThemeScheme:scheme,fontScale:()=>2,layoutBudget:()=>({rowForm:'inline'})});
+  const bookSource={sourceId:'s',name:'书源',category:'novel',baseUrl:'https://metadata.test',enabled:true,checkMessage:'检测摘要',checkState:'passed'};owner.sourceInfo(bookSource);
   for(const text of [readerSourceCategoryLabel('novel'),bookSource.baseUrl,bookSource.checkMessage]) {
    const node=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===text);assert.ok(node,text);
-   assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);assert.equal(node.fontColor,readerAppColor('TOK_MUTED',scheme));
+   assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);assert.equal(node.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));assert.equal(node.maxFontScale,2);
   }
  }
 }

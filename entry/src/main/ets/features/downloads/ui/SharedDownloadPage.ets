@@ -60,6 +60,20 @@ interface SharedDownloadScrollAnchor {
   presentation: number;
   fonts: number;
   windowRevision: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}
+interface SharedDownloadListRestore {
+  epoch: number;
+  offset: number;
+  identity: string;
+  presentation: number;
+  fonts: number;
+  windowRevision: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  fontScale: number;
+  managing: boolean;
 }
 class SharedDownloadIdleFrame extends FrameCallback {
   private action: () => void;
@@ -74,7 +88,7 @@ export struct SharedDownloadPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') @Watch('onInputEligibilityChanged') private appForeground: boolean = true;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('onListGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBooksChanged') books: DownloadBookView[] = [];
   @Prop storageSummary: DownloadStorageSummary = {};
   @Prop storagePolicy: DownloadStoragePolicyView | undefined = undefined;
@@ -130,10 +144,10 @@ export struct SharedDownloadPage {
   @State private rangeCatalogChanged: boolean = false;
   @State private fontsReady: boolean = false;
   @State private fontsFailed: boolean = false;
-  @State private pageHeight: number = 0;
-  // topBar renders in the fixed host or inline when chrome overflows; its own
-  // measurement survives both placements. Wiring the scaffold callback would
-  // feed back into mainChromeOverflow and oscillate.
+  @State @Watch('onListGeometryChanged') private pageWidth: number = 0;
+  @State @Watch('onListGeometryChanged') private pageHeight: number = 0;
+  // Ordinary chrome belongs to the active List. A viable management dock
+  // alone may occupy the footer; its inner geometry survives placement changes.
   @State private measurementRevision: number = 0;
   @State private storageDockShape: ReaderRaisedShape | undefined = undefined;
   @State private selectionDockShape: ReaderRaisedShape | undefined = undefined;
@@ -148,8 +162,11 @@ export struct SharedDownloadPage {
   private listScroller: Scroller = new Scroller();
   private chapterScroller: Scroller = new Scroller();
   private listOffset: number = 0;
+  private listScrollRestoreEpoch: number = 0;
+  private listScrollRestorePending: SharedDownloadListRestore | undefined;
   private chapterOffset: number = 0;
   private chapterLayoutReady: boolean = false;
+  private chapterScrollRestoreEpoch: number = 0;
   private chapterScrollRestorePending: boolean = false;
   private chapterScrollRestoreScheduled: boolean = false;
   private managingScrollRestore: SharedDownloadScrollAnchor | undefined;
@@ -180,6 +197,8 @@ export struct SharedDownloadPage {
   private readingReturnFocus: SharedDownloadReadingFocus | undefined;
 
   aboutToAppear(): void {
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     this.presentationGeneration += 1;
     this.measurements.clear();
     this.storageDockShape = undefined;
@@ -206,6 +225,8 @@ export struct SharedDownloadPage {
   }
 
   aboutToDisappear(): void {
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     this.transientFeedback.reset();
     this.fontPreparationGeneration += 1;
     this.publishViewState();
@@ -235,11 +256,13 @@ export struct SharedDownloadPage {
     ReaderPageScaffold({
       frameStyle: this.frameStyle(),
       geometry: this.pageGeometry(),
+      headerVisible: false,
       content: (): void => { this.pageContent(); },
-      header: (): void => { this.fixedHeader(); },
       footer: (): void => { this.fixedDock(); },
       overlayContent: (): void => { this.pageOverlays(); },
     }).onAreaChange((_old: Area, area: Area): void => {
+      const width = readerPageAreaLength(area.width);
+      if (Number.isFinite(width) && width > 0 && Math.abs(width - this.pageWidth) > 0.5) this.pageWidth = width;
       const height = readerPageAreaLength(area.height);
       if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeight) > 0.5) this.pageHeight = height;
     });
@@ -270,23 +293,9 @@ export struct SharedDownloadPage {
   }
 
   @Builder
-  private fixedHeader() {
-    if (this.fontsReady && !this.mainChromeOverflow()) {
-      Column() { this.topBar(); }.width('100%')
-        .padding({ top: this.headerTop(), left: this.leftInset(), right: this.rightInset() })
-        .enabled(!this.modalBlocking())
-        .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
-        .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Transparent);
-    }
-  }
-
-  @Builder
   private fixedDock() {
-    if (this.fontsReady && !this.mainChromeOverflow()) {
-      Column() {
-        if (this.managing || this.detail() !== undefined) { this.selectionDock(); }
-        else { this.storageDock(); }
-      }.width('100%').enabled(!this.modalBlocking())
+    if (this.fixedSelectionDockVisible()) {
+      Column() { this.selectionDock(); }.width('100%').enabled(!this.modalBlocking())
         .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
         .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Transparent);
     }
@@ -391,9 +400,9 @@ export struct SharedDownloadPage {
   }
 
   @Builder
-  private bookPage() {
+  private bookPage(ownerGeneration: number = this.presentationGeneration) {
     List({ scroller: this.listScroller }) {
-      if (this.mainChromeOverflow()) { ListItem() { this.compactHeader(); } }
+      ListItem() { this.compactHeader(); }
       ListItem() { Column() { this.listControls(); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
       if (this.loading && this.books.length === 0) {
         ListItem() { Column() { ReaderPageState({ title: '正在读取书架…', loading: true }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
@@ -404,14 +413,16 @@ export struct SharedDownloadPage {
         ListItem() {
           Column() {
             ReaderPageState({ title: this.books.length === 0 ? '书架为空' : '没有匹配的书籍',
-              message: this.books.length === 0 ? '加入书架后，可在这里管理下载' : '调整搜索关键词或筛选条件' });
+              message: this.books.length === 0 ? '加入书架后，可在这里管理下载' : '调整搜索关键词或筛选条件',
+              actionLabel: this.books.length === 0 ? '' : '清除筛选',
+              onAction: (): void => this.clearFilters(ownerGeneration) });
           }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
         }
       }
       ForEach(this.visibleBooks(), (book: DownloadBookView) => {
         ListItem() { Column() { this.bookRow(this.bookGetter(book), false); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
       }, (book: DownloadBookView): string => book.key);
-      if (this.mainChromeOverflow()) { ListItem() { this.compactDock(); } }
+      if (!this.fixedSelectionDockVisible()) { ListItem() { this.compactDock(); } }
     }.width('100%').height('100%').scrollBar(BarState.Auto).onScrollStop((): void => this.publishViewState())
       .onTouch((event: TouchEvent): void => this.onListTouch(event))
       .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
@@ -429,44 +440,112 @@ export struct SharedDownloadPage {
         this.typeTab('novel', '小说', identity);
       }.width('100%').padding(DOWNLOAD_VISUAL.tabsPadding).backgroundColor(downloadVisualColor('soft', this.appThemeScheme)).borderRadius(DOWNLOAD_VISUAL.tabsRadius)
         .margin({ top: DOWNLOAD_VISUAL.tabsTop, bottom: DOWNLOAD_VISUAL.tabsBottom });
-      Row({ space: DOWNLOAD_VISUAL.listToolsGap }) {
-        Button({ type: ButtonType.Normal }) {
-          Row({ space: DOWNLOAD_VISUAL.listToolIconGap }) {
-            Image(this.visualIcon('filter'))
-              .width(DOWNLOAD_VISUAL.listToolIconSize).height(DOWNLOAD_VISUAL.listToolIconSize);
-            Text(this.filterLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
-              .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
-              .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-          }
-        }.padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY }).constraintSize({ minHeight: DOWNLOAD_VISUAL.listToolHeight }).borderRadius(0).backgroundColor(Color.Transparent)
-          .responseRegion({ x: 0, y: (DOWNLOAD_VISUAL.listToolHeight - DOWNLOAD_VISUAL.touchTarget) / 2, width: '100%', height: DOWNLOAD_VISUAL.touchTarget }).id(this.focusKey('filter')).onClick((): void => {
-            if (this.searchInputIsCurrent(identity)) this.openSheet('filter', 'filter');
-          });
-        Row({ space: DOWNLOAD_VISUAL.sortPairGap }) {
-          Button({ type: ButtonType.Normal }) { this.sortBars(); }
-            .width(DOWNLOAD_VISUAL.sortWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.listToolHeight }).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY }).borderRadius(0).backgroundColor(Color.Transparent)
-            .responseRegion({ x: (DOWNLOAD_VISUAL.sortWidth - DOWNLOAD_VISUAL.touchTarget) / 2, y: (DOWNLOAD_VISUAL.listToolHeight - DOWNLOAD_VISUAL.touchTarget) / 2, width: DOWNLOAD_VISUAL.touchTarget, height: DOWNLOAD_VISUAL.touchTarget })
-            .accessibilityText(this.sortDirection === 'asc' ? '当前正序，切换为倒序' : '当前倒序，切换为正序')
-            .onClick((): void => {
-              if (this.searchInputIsCurrent(identity)) this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-            });
-          Button({ type: ButtonType.Normal }) {
-            Text(this.sortLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
-              .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
-              .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-          }.padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY }).constraintSize({ minHeight: DOWNLOAD_VISUAL.listToolHeight }).borderRadius(0).backgroundColor(Color.Transparent)
-            .responseRegion({ x: 0, y: (DOWNLOAD_VISUAL.listToolHeight - DOWNLOAD_VISUAL.touchTarget) / 2, width: '100%', height: DOWNLOAD_VISUAL.touchTarget }).id(this.focusKey('sort')).onClick((): void => {
-              if (this.searchInputIsCurrent(identity)) this.openSheet('sort', 'sort');
-            });
-        }
-        Blank().layoutWeight(1);
-        Text(`${this.visibleBooks().length} / ${this.books.length} 本书`)
-          .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('muted', this.appThemeScheme));
-      }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.listToolsHeight }).margin({ bottom: DOWNLOAD_VISUAL.listToolsBottom });
+      this.listTools(identity);
     }.width('100%');
     }, (identity: string): string => identity);
+  }
+
+  @Builder
+  private listTools(identity: string = this.searchInputIdentity()) {
+    if (this.listToolsInline()) {
+      Row({ space: DOWNLOAD_VISUAL.listToolsGap }) {
+        this.listFilterControl(identity);
+        this.listSortControls(identity);
+        Blank().layoutWeight(1);
+        this.listToolCount();
+      }.width('100%').constraintSize({ minHeight: this.listToolControlHeight() })
+        .margin({ bottom: DOWNLOAD_VISUAL.listToolsBottom });
+    } else {
+      Column({ space: DOWNLOAD_VISUAL.listToolsGap }) {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          Column() { this.listFilterControl(identity); }.width(this.listFilterWidth())
+            .margin({ right: DOWNLOAD_VISUAL.listToolsGap, bottom: DOWNLOAD_VISUAL.listToolsGap });
+          Column() { this.listSortControls(identity); }.width(this.listSortWidth())
+            .margin({ right: DOWNLOAD_VISUAL.listToolsGap, bottom: DOWNLOAD_VISUAL.listToolsGap });
+        }.width('100%').constraintSize({ minHeight: this.listToolControlHeight() });
+        Row() { Blank().layoutWeight(1); this.listToolCount(); }.width('100%');
+      }.width('100%').margin({ bottom: DOWNLOAD_VISUAL.listToolsBottom });
+    }
+  }
+
+  @Builder
+  private listFilterControl(identity: string = this.searchInputIdentity()) {
+    Button({ type: ButtonType.Normal }) {
+      Row({ space: DOWNLOAD_VISUAL.listToolIconGap }) {
+        Image(this.visualIcon('filter')).width(DOWNLOAD_VISUAL.listToolIconSize).height(DOWNLOAD_VISUAL.listToolIconSize);
+        Text(this.filterLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
+          .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
+          .minFontScale(1).maxFontScale(this.fontScale()).fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
+      }.width('100%');
+    }.width(this.listFilterWidth()).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY })
+      .constraintSize({ minHeight: this.listToolControlHeight() }).borderRadius(0).backgroundColor(Color.Transparent)
+      .accessibilityText('筛选书籍').id(this.focusKey('filter')).onClick((): void => {
+        if (this.searchInputIsCurrent(identity)) this.openSheet('filter', 'filter');
+      });
+  }
+
+  @Builder
+  private listSortControls(identity: string = this.searchInputIdentity()) {
+    Row({ space: DOWNLOAD_VISUAL.sortPairGap }) {
+      Button({ type: ButtonType.Normal }) {
+        Stack({ alignContent: Alignment.Center }) { this.sortBars(); }.width(DOWNLOAD_VISUAL.sortWidth).height(DOWNLOAD_VISUAL.sortWidth);
+      }.width(DOWNLOAD_VISUAL.touchTarget).constraintSize({ minHeight: this.listToolControlHeight() }).padding(0)
+        .borderRadius(0).backgroundColor(Color.Transparent)
+        .accessibilityText(this.sortDirection === 'asc' ? '当前正序，切换为倒序' : '当前倒序，切换为正序')
+        .onClick((): void => {
+          if (this.searchInputIsCurrent(identity)) this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        });
+      Button({ type: ButtonType.Normal }) {
+        Text(this.sortLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
+          .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
+          .minFontScale(1).maxFontScale(this.fontScale()).fontColor(downloadVisualColor('ink', this.appThemeScheme));
+      }.width(this.listSortLabelWidth()).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY })
+        .constraintSize({ minHeight: this.listToolControlHeight() }).borderRadius(0).backgroundColor(Color.Transparent)
+        .accessibilityText('选择排序字段').id(this.focusKey('sort')).onClick((): void => {
+          if (this.searchInputIsCurrent(identity)) this.openSheet('sort', 'sort');
+        });
+    }.width(this.listSortWidth()).constraintSize({ minHeight: this.listToolControlHeight() });
+  }
+
+  @Builder
+  private listToolCount() {
+    Text(`${this.visibleBooks().length} / ${this.books.length} 本书`)
+      .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
+      .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
+      .minFontScale(1).maxFontScale(this.fontScale()).width(this.listToolCountWidth()).textAlign(TextAlign.End)
+      .fontColor(downloadVisualColor('muted', this.appThemeScheme));
+  }
+
+  private listToolsAvailableWidth(): number {
+    return Math.max(0, this.pageViewportWidth() - this.contentLeftInset() - this.contentRightInset());
+  }
+
+  private listToolControlHeight(): number {
+    return this.textControlHeight(DOWNLOAD_VISUAL.touchTarget, TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number,
+      DOWNLOAD_VISUAL.toolPaddingY * 2);
+  }
+
+  private listFilterWidth(): number {
+    return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap),
+      Math.max(DOWNLOAD_VISUAL.touchTarget, this.filterLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.fontScale() +
+        DOWNLOAD_VISUAL.listToolIconSize + DOWNLOAD_VISUAL.listToolIconGap));
+  }
+
+  private listSortLabelWidth(): number {
+    return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap -
+      DOWNLOAD_VISUAL.touchTarget - DOWNLOAD_VISUAL.sortPairGap),
+      Math.max(DOWNLOAD_VISUAL.touchTarget, this.sortLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.fontScale()));
+  }
+
+  private listSortWidth(): number { return DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.sortPairGap + this.listSortLabelWidth(); }
+  private listToolCountWidth(): number {
+    return Math.min(this.listToolsAvailableWidth(), `${this.visibleBooks().length} / ${this.books.length} 本书`.length *
+      TYPE_DOWNLOAD_META.fontSizeFp * this.fontScale());
+  }
+
+  private listToolsInline(): boolean {
+    return this.listFilterWidth() + this.listSortWidth() + this.listToolCountWidth() + DOWNLOAD_VISUAL.listToolsGap * 3 <=
+      this.listToolsAvailableWidth();
   }
 
   @Builder
@@ -487,8 +566,8 @@ export struct SharedDownloadPage {
       if (this.query.length > 0) {
         Button({ type: ButtonType.Normal }) {
           Image(this.visualIcon('clear')).width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-        }.width(DOWNLOAD_VISUAL.searchClearWidth).height(DOWNLOAD_VISUAL.headerIconHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-          .responseRegion({ x: (DOWNLOAD_VISUAL.searchClearWidth - DOWNLOAD_VISUAL.touchTarget) / 2, y: 0, width: DOWNLOAD_VISUAL.touchTarget, height: DOWNLOAD_VISUAL.touchTarget }).accessibilityText('清除搜索')
+        }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+          .accessibilityText('清除搜索')
           .onClick((): void => this.clearSearchInput(identity));
       }
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.searchHeight }).padding({ left: DOWNLOAD_VISUAL.searchPaddingX, right: DOWNLOAD_VISUAL.searchPaddingX }).borderRadius(DOWNLOAD_VISUAL.searchRadius)
@@ -532,7 +611,7 @@ export struct SharedDownloadPage {
         .fontWeight(this.bookType === id ? TYPE_DOWNLOAD_TAB_SELECTED.fontWeight : TYPE_DOWNLOAD_TAB.fontWeight)
         .fontSize(TYPE_DOWNLOAD_TAB.fontSizeFp).lineHeight(TYPE_DOWNLOAD_TAB.lineHeightFp as number).halfLeading(true)
         .fontColor(this.tabInk(id));
-    }.constraintSize({ minHeight: DOWNLOAD_VISUAL.tabHeight }).padding({ top: DOWNLOAD_VISUAL.tabPaddingY, bottom: DOWNLOAD_VISUAL.tabPaddingY, left: DOWNLOAD_VISUAL.tabPaddingX, right: DOWNLOAD_VISUAL.tabPaddingX }).layoutWeight(1).borderRadius(DOWNLOAD_VISUAL.tabRadius)
+    }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).padding({ top: DOWNLOAD_VISUAL.tabPaddingY, bottom: DOWNLOAD_VISUAL.tabPaddingY, left: DOWNLOAD_VISUAL.tabPaddingX, right: DOWNLOAD_VISUAL.tabPaddingX }).layoutWeight(1).borderRadius(DOWNLOAD_VISUAL.tabRadius)
       .fontColor(this.tabInk(id))
       .backgroundColor(this.bookType === id ? downloadVisualColor('surface', this.appThemeScheme) : Color.Transparent)
       .shadow({ radius: this.bookType === id ? DOWNLOAD_VISUAL.tabShadowRadius : 0, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.tabShadowX, offsetY: DOWNLOAD_VISUAL.tabShadowY })
@@ -575,7 +654,7 @@ export struct SharedDownloadPage {
             }.width('100%');
           }.id(secondary ? '' : this.focusKey('book-title:' + book().key))
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent).layoutWeight(1)
-            .constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight }).onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
+            .constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
           if (book().contentKind !== undefined) {
             Text(book().contentKind === 'manga' ? '漫画' : '小说')
               .fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -585,7 +664,9 @@ export struct SharedDownloadPage {
           }
           if (!secondary) {
             if (this.managing) {
+              Stack({ alignContent: Alignment.Center }) {
               Checkbox().select(this.selectedBookKeys.includes(book().key)).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
+                .responseRegion(readerActionTouchRegion(DOWNLOAD_VISUAL.chapterCheckSize, DOWNLOAD_VISUAL.chapterCheckSize))
                 .selectedColor(downloadVisualColor('green', this.appThemeScheme))
                 .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
                 .mark({ strokeColor: downloadVisualColor('greenInk', this.appThemeScheme) })
@@ -593,6 +674,7 @@ export struct SharedDownloadPage {
                   const current = this.eventBook(book, ownerGeneration);
                   if (current !== undefined) this.toggleBook(current.key, selected);
                 });
+              }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget);
             } else {
               this.moreButton((): string => `${book().title}的书籍操作`, (): void => {
                 const current = this.eventBook(book, ownerGeneration);
@@ -602,16 +684,18 @@ export struct SharedDownloadPage {
               }, false, (): string => 'book-menu:' + book().key);
             }
           }
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight }).width('100%').alignItems(VerticalAlign.Center);
+        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).width('100%').alignItems(VerticalAlign.Center);
         Text(this.authorSource(book())).fontFamily(TYPE_DOWNLOAD_SOURCE.fontFamily).fontWeight(TYPE_DOWNLOAD_SOURCE.fontWeight)
           .fontSize(TYPE_DOWNLOAD_SOURCE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SOURCE.lineHeightFp as number).halfLeading(true)
           .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%').wordBreak(WordBreak.BREAK_WORD)
-          .constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() }).margin({ top: DOWNLOAD_VISUAL.sourceTop })
+          .constraintSize({ minHeight: secondary ? DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() :
+            Math.max(DOWNLOAD_VISUAL.touchTarget, DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale()) }).margin({ top: DOWNLOAD_VISUAL.sourceTop })
           .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
         Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
           Text(this.downloadCount(book(), secondary)).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
             .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
             .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1)
+            .constraintSize({ minHeight: secondary ? DOWNLOAD_VISUAL.sourceLineHeight : DOWNLOAD_VISUAL.touchTarget })
             .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
           if (secondary) {
             Text(book().stateLabel === '下载失败' ? '下载失败' : book().totalChapters === undefined ? '' : `目录 ${book().totalChapters}${this.unit(book())}`)
@@ -624,7 +708,7 @@ export struct SharedDownloadPage {
           } else {
             Blank().width(DOWNLOAD_VISUAL.statusWidth).height(DOWNLOAD_VISUAL.statusHeight);
           }
-        }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight }).margin({ top: DOWNLOAD_VISUAL.progressTop });
+        }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).margin({ top: DOWNLOAD_VISUAL.progressTop });
         if (book().stateLabel === '下载失败' && (book().downloadError?.trim().length ?? 0) > 0) {
           Text(book().downloadError ?? '').fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
             .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
@@ -669,10 +753,9 @@ export struct SharedDownloadPage {
           .fontColor(this.statusInk(book()))
           .textAlign(TextAlign.Center).layoutWeight(1);
       }.width('100%');
-    }.id(this.focusKey('book-status:' + book().key)).width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight }).padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
+    }.id(this.focusKey('book-status:' + book().key)).width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
       .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
       .enabled(!this.managing).opacity(this.managing ? DOWNLOAD_VISUAL.disabledOpacity : 1)
-      .responseRegion({ x: 0, y: (DOWNLOAD_VISUAL.statusHeight - DOWNLOAD_VISUAL.touchTarget) / 2, width: '100%', height: DOWNLOAD_VISUAL.touchTarget })
       .accessibilityText(`${book().title}，${book().stateLabel}${this.bookIsRunning(book()) ? '，暂停' : book().stateLabel === '下载失败' ? '，重试' : ''}`)
       .onClick((): void => {
         const current = this.eventBook(book, ownerGeneration);
@@ -713,7 +796,7 @@ export struct SharedDownloadPage {
   @Builder
   private chapterPage(book: () => DownloadBookView, ownerGeneration: number = this.presentationGeneration) {
     List({ scroller: this.chapterScroller }) {
-      if (this.mainChromeOverflow()) { ListItem() { this.compactHeader(); } }
+      ListItem() { this.compactHeader(); }
       ListItem() { Column() { this.bookRow(book, true, ownerGeneration); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
       ListItem() { Column() { this.chapterToolbar(book, ownerGeneration); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
       if (book().projectionStatus === 'unloaded' && book().chapters.length === 0) {
@@ -730,7 +813,7 @@ export struct SharedDownloadPage {
           }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
         }
       }, (chapter: DownloadChapterView): string => JSON.stringify([chapter.key, chapter.chapterId]));
-      if (this.mainChromeOverflow()) { ListItem() { this.compactDock(); } }
+      if (!this.fixedSelectionDockVisible()) { ListItem() { this.compactDock(); } }
     }.width('100%').height('100%').scrollBar(BarState.Auto)
       .onScrollStop((): void => { this.captureChapterOffset(); this.publishViewState(); })
       .onTouch((event: TouchEvent): void => this.onListTouch(event))
@@ -754,7 +837,7 @@ export struct SharedDownloadPage {
         Button({ type: ButtonType.Normal }) {
           Text('选择本卷').fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
             .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.textActionHeight }).padding({ left: DOWNLOAD_VISUAL.progressGap, right: 0,
+        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget }).padding({ left: DOWNLOAD_VISUAL.progressGap, right: 0,
           top: DOWNLOAD_VISUAL.textActionPaddingY, bottom: DOWNLOAD_VISUAL.textActionPaddingY })
           .backgroundColor(Color.Transparent).borderRadius(0)
           .onClick((): void => {
@@ -771,7 +854,9 @@ export struct SharedDownloadPage {
   private chapterRow(book: () => DownloadBookView, chapter: () => DownloadChapterView, ownerGeneration: number = this.presentationGeneration) {
     Row({ space: DOWNLOAD_VISUAL.chapterGap }) {
       if (this.managing) {
+        Stack({ alignContent: Alignment.Center }) {
         Checkbox().select(this.chapterSelected(chapter())).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
+          .responseRegion(readerActionTouchRegion(DOWNLOAD_VISUAL.chapterCheckSize, DOWNLOAD_VISUAL.chapterCheckSize))
           .enabled(chapter().chapterId.length > 0)
           .selectedColor(downloadVisualColor('green', this.appThemeScheme))
           .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
@@ -780,6 +865,7 @@ export struct SharedDownloadPage {
             const current = this.eventChapter(book, chapter, ownerGeneration);
             if (current !== undefined) this.toggleChapter(current, selected);
           });
+        }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget);
       }
       Column({ space: 0 }) {
         Row({ space: DOWNLOAD_VISUAL.statusGap }) {
@@ -787,6 +873,7 @@ export struct SharedDownloadPage {
             .fontSize(TYPE_DOWNLOAD_CHAPTER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number).halfLeading(true)
             .fontColor(downloadVisualColor(!chapter().localComplete && chapter().queueState === 'inProgress' ? 'green' : 'ink', this.appThemeScheme)).layoutWeight(1)
             .id(this.focusKey(this.chapterReadingFocusKey(chapter(), 'title'))).focusable(!this.managing)
+            .constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget })
             .onClick((): void => { if (!this.managing) this.showReadTarget(book(), chapter(), ownerGeneration); });
           if (this.currentChapterForBook(book())?.key === chapter().key) {
             Text('当前阅读').fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -805,12 +892,11 @@ export struct SharedDownloadPage {
         Button({ type: ButtonType.Normal }) {
           Text(this.chapterButtonLabel(chapter())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
             .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.chapterActionHeight })
+        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget })
           .id(chapter().localComplete ? this.focusKey(this.chapterReadingFocusKey(chapter(), 'action')) : '')
           .fontColor(this.primaryInk())
           .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
           .padding({ left: DOWNLOAD_VISUAL.chapterActionPaddingX, right: DOWNLOAD_VISUAL.chapterActionPaddingX, top: DOWNLOAD_VISUAL.chapterActionPaddingY, bottom: DOWNLOAD_VISUAL.chapterActionPaddingY }).borderRadius(DOWNLOAD_VISUAL.chapterActionRadius)
-          .responseRegion({ x: 0, y: (DOWNLOAD_VISUAL.chapterActionHeight - DOWNLOAD_VISUAL.touchTarget) / 2, width: '100%', height: DOWNLOAD_VISUAL.touchTarget })
           .enabled(chapter().queueState !== 'unknown' || chapter().localComplete)
           .onClick((): void => {
             const currentBook = this.eventBook(book, ownerGeneration);
@@ -840,11 +926,9 @@ export struct SharedDownloadPage {
     Button({ type: ButtonType.Normal }) {
       Image(this.visualIcon('more'))
         .width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-    }.id(this.focusKey(focusTarget())).width(chapter ? DOWNLOAD_VISUAL.chapterMoreWidth : DOWNLOAD_VISUAL.moreWidth)
-      .height(chapter ? DOWNLOAD_VISUAL.chapterMoreHeight : DOWNLOAD_VISUAL.moreHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .responseRegion({ x: ((chapter ? DOWNLOAD_VISUAL.chapterMoreWidth : DOWNLOAD_VISUAL.moreWidth) - DOWNLOAD_VISUAL.touchTarget) / 2,
-        y: ((chapter ? DOWNLOAD_VISUAL.chapterMoreHeight : DOWNLOAD_VISUAL.moreHeight) - DOWNLOAD_VISUAL.touchTarget) / 2,
-        width: DOWNLOAD_VISUAL.touchTarget, height: DOWNLOAD_VISUAL.touchTarget }).accessibilityText(label()).onClick((): void => action());
+    }.id(this.focusKey(focusTarget())).width(DOWNLOAD_VISUAL.touchTarget)
+      .height(DOWNLOAD_VISUAL.touchTarget).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+      .accessibilityText(label()).onClick((): void => action());
   }
 
   @Builder
@@ -906,18 +990,19 @@ export struct SharedDownloadPage {
   private selectionDock() {
     Stack({ alignContent: Alignment.TopStart }) {
     Column({ space: DOWNLOAD_VISUAL.selectionSummaryBottom }) {
-      Row({ space: DOWNLOAD_VISUAL.selectionSummaryGap }) {
+      Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
         Text(this.selectionLabel()).fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
           .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
+          .fontColor(downloadVisualColor('ink', this.appThemeScheme)).flexGrow(1).flexShrink(0)
+          .constraintSize({ maxWidth: '100%' }).padding({ right: DOWNLOAD_VISUAL.selectionSummaryGap });
         if (this.managing) {
           Button({ type: ButtonType.Normal }) {
             Text(this.allSelected() ? '取消全选' : '全选').fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
               .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-          }.id(this.focusKey('select-all')).constraintSize({ minHeight: DOWNLOAD_VISUAL.textActionHeight })
+          }.id(this.focusKey('select-all')).constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget })
             .padding({ top: DOWNLOAD_VISUAL.textActionPaddingY, bottom: DOWNLOAD_VISUAL.textActionPaddingY }).backgroundColor(Color.Transparent).borderRadius(0)
-            .responseRegion({ x: 0, y: (DOWNLOAD_VISUAL.textActionHeight - DOWNLOAD_VISUAL.touchTarget) / 2, width: '100%', height: DOWNLOAD_VISUAL.touchTarget })
             .onClick(this.manageSelectAllAction(this.managementGeneration));
+          this.managementDone(this.managementGeneration);
         }
       }.width('100%');
       Row({ space: DOWNLOAD_VISUAL.actionGap }) {
@@ -956,9 +1041,25 @@ export struct SharedDownloadPage {
     }.width('100%').clip(false);
   }
 
+  @Builder
+  private managementDone(management: number) {
+    Button({ type: ButtonType.Normal }) {
+      Text('完成').fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
+        .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number)
+        .halfLeading(true).fontColor(this.primaryInk());
+    }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget })
+      .padding({ left: DOWNLOAD_VISUAL.selectionSummaryGap, right: DOWNLOAD_VISUAL.selectionSummaryGap,
+        top: DOWNLOAD_VISUAL.textActionPaddingY, bottom: DOWNLOAD_VISUAL.textActionPaddingY })
+      .backgroundColor(Color.Transparent).borderRadius(0).accessibilityText('完成批量管理')
+      .onClick((): void => {
+        if (this.uiInputIsCurrent() && !this.modalBlocking() && this.managing && management === this.managementGeneration)
+          this.setManaging(false);
+      });
+  }
+
   private raisedDockShapeIdentity(selection: boolean): string {
     return JSON.stringify(['download-dock', selection, this.mountedIdentity, this.presentationGeneration,
-      this.detailKey, this.managing, this.readerWindowMetricsRevision]);
+      this.detailKey, this.managing, this.readerWindowMetricsRevision, this.pageViewportWidth(), this.fontScale()]);
   }
 
   private currentRaisedDockShape(selection: boolean): ReaderRaisedShape | undefined {
@@ -991,7 +1092,7 @@ export struct SharedDownloadPage {
       if (selection) this.selectionDockShape = shape;
       else this.storageDockShape = shape;
     }
-    this.recordDockHeight(height);
+    this.recordDockHeight(height, identity);
   }
 
   @Builder
@@ -1812,6 +1913,8 @@ export struct SharedDownloadPage {
   }
 
   private onPresentationIdentityChanged(): void {
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     if (!this.mounted || this.presentationIdentity === this.mountedIdentity) return;
     this.presentationGeneration += 1;
     this.cancelManagingScroll();
@@ -1857,6 +1960,17 @@ export struct SharedDownloadPage {
     const expected = chapter();
     return currentBook.chapters.find((current: DownloadChapterView): boolean =>
       current.key === expected.key && current.chapterId === expected.chapterId);
+  }
+
+  private clearFilters(ownerGeneration: number = this.presentationGeneration): void {
+    if (!this.uiInputIsCurrent(ownerGeneration) || this.modalBlocking()) return;
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
+    this.cancelManagingScroll();
+    this.query = ''; this.bookType = 'all'; this.stateFilter = 'all'; this.sourceFilter = 'all';
+    this.selectedBookKeys = [];
+    this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    this.publishViewState();
   }
 
   private filters(): SharedDownloadFilters {
@@ -1965,6 +2079,8 @@ export struct SharedDownloadPage {
   private openBook(snapshot: DownloadBookView, generation: number = this.presentationGeneration): void {
     const book = this.eventBook(this.bookGetter(snapshot), generation);
     if (book === undefined) return;
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     if (this.managing) { this.toggleBook(book.key, !this.selectedBookKeys.includes(book.key)); return; }
     this.captureListOffset();
     this.cancelManagingScroll();
@@ -1995,6 +2111,7 @@ export struct SharedDownloadPage {
       const trigger = 'book-title:' + this.detailKey;
       const offset = this.listOffset;
       this.cancelManagingScroll();
+      this.cancelChapterScrollRestore();
       this.chapterLayoutReady = false; this.chapterScrollRestorePending = false;
       this.detailKey = ''; this.selectedChapters = new Map<number, string>();
       this.restoreListOffset(offset, trigger);
@@ -2009,6 +2126,8 @@ export struct SharedDownloadPage {
   }
   private setManaging(managing: boolean, triggerKey: string = 'manage'): void {
     if (this.managing === managing || !this.presentationIsCurrent() || !this.fontsReady || this.modalBlocking()) return;
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     const retained = this.managingScrollAnchor;
     const offset = retained !== undefined && this.managingScrollIsCurrent(retained) ? retained.offset :
       this.detailKey.length > 0 ? this.captureChapterOffset() : this.captureListOffset();
@@ -2029,7 +2148,8 @@ export struct SharedDownloadPage {
     if (offset !== undefined) {
       const anchor: SharedDownloadScrollAnchor = { detailKey: this.detailKey, offset, managing,
         identity: this.mountedIdentity, presentation: this.presentationGeneration,
-        fonts: this.fontPreparationGeneration, windowRevision: this.readerWindowMetricsRevision };
+        fonts: this.fontPreparationGeneration, windowRevision: this.readerWindowMetricsRevision,
+        viewportWidth: this.pageViewportWidth(), viewportHeight: this.availableHeight() };
       this.managingScrollAnchor = anchor;
       this.managingScrollRestore = anchor;
       this.managingDockMeasured = false;
@@ -2045,7 +2165,8 @@ export struct SharedDownloadPage {
   private managingScrollIsCurrent(anchor: SharedDownloadScrollAnchor): boolean {
     return this.presentationIsCurrent(anchor.presentation) && this.fontsReady &&
       this.mountedIdentity === anchor.identity && this.fontPreparationGeneration === anchor.fonts &&
-      this.readerWindowMetricsRevision === anchor.windowRevision && this.managing === anchor.managing &&
+      this.readerWindowMetricsRevision === anchor.windowRevision && this.pageViewportWidth() === anchor.viewportWidth &&
+      this.availableHeight() === anchor.viewportHeight && this.managing === anchor.managing &&
       this.detailKey === anchor.detailKey && (anchor.detailKey.length === 0 || this.detail() !== undefined);
   }
 
@@ -2064,7 +2185,7 @@ export struct SharedDownloadPage {
         return;
       }
       this.managingScrollRestore = undefined;
-      if (this.managingDockMeasured) this.managingScrollAnchor = undefined;
+      if (this.managingDockMeasured || !this.fixedSelectionDockVisible()) this.managingScrollAnchor = undefined;
     }));
   }
 
@@ -2075,8 +2196,9 @@ export struct SharedDownloadPage {
 
   private onListTouch(event: TouchEvent): void {
     if (event.type === TouchType.Down) {
+      this.cancelListScrollRestore();
       this.cancelManagingScroll();
-      this.chapterScrollRestorePending = false;
+      this.cancelChapterScrollRestore();
       this.readingReturnFocus = undefined;
     }
   }
@@ -2084,6 +2206,8 @@ export struct SharedDownloadPage {
   private onListFilterChanged(): void {
     // Keyboard edits and overlay selections do not necessarily touch the
     // List. Their new content owns the viewport just like a direct gesture.
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     this.cancelManagingScroll();
     this.publishViewState();
   }
@@ -2138,8 +2262,9 @@ export struct SharedDownloadPage {
   }
   private locateCurrent(): void {
     const chapter = this.currentChapter(); const book = this.detail(); if (chapter === undefined || book === undefined) return;
+    this.cancelChapterScrollRestore();
     this.cancelManagingScroll();
-    this.chapterScroller.scrollToIndex(2 + Number(this.mainChromeOverflow()) + book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key), true, ScrollAlign.CENTER);
+    this.chapterScroller.scrollToIndex(3 + book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key), true, ScrollAlign.CENTER);
   }
   private allSelected(): boolean {
     const book = this.detail();
@@ -2234,12 +2359,16 @@ export struct SharedDownloadPage {
   }
 
   private onInputEligibilityChanged(): void {
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     this.searchInputRevision += 1;
     this.invalidateReadingHandoff();
     if (!this.appForeground || this.covered) this.focusGeneration += 1;
   }
 
   private onDetailChanged(): void {
+    this.cancelListScrollRestore();
+    this.cancelChapterScrollRestore();
     this.searchInputRevision += 1;
     this.invalidateReadingHandoff();
     this.publishViewState();
@@ -2430,21 +2559,46 @@ export struct SharedDownloadPage {
     return undefined;
   }
   private restoreListOffset(offset: number = this.listOffset, focusTarget: string = ''): void {
-    if (!this.mounted || !this.fontsReady) return;
-    const presentation = this.presentationGeneration;
-    const generation = this.fontPreparationGeneration;
+    if (!this.presentationIsCurrent() || !this.fontsReady || this.detailKey.length > 0) return;
+    this.cancelListScrollRestore();
     const focusGeneration = focusTarget.length > 0 ? ++this.focusGeneration : this.focusGeneration;
+    const pending: SharedDownloadListRestore = { epoch: this.listScrollRestoreEpoch, offset,
+      identity: this.mountedIdentity, presentation: this.presentationGeneration, fonts: this.fontPreparationGeneration,
+      windowRevision: this.readerWindowMetricsRevision, viewportWidth: this.pageViewportWidth(),
+      viewportHeight: this.availableHeight(), fontScale: this.fontScale(), managing: this.managing };
+    this.listScrollRestorePending = pending;
     try {
       this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
-        if (!this.presentationIsCurrent(presentation) || !this.fontsReady ||
-          generation !== this.fontPreparationGeneration || this.detailKey.length > 0 ||
-          (focusTarget.length > 0 && focusGeneration !== this.focusGeneration)) return;
-        try { this.listScroller.scrollTo({ xOffset: 0, yOffset: offset }); } catch (_unboundList) {}
-        // Let the restored list lay out the row before looking up its title.
+        if (this.listScrollRestorePending !== pending || this.listScrollRestoreEpoch !== pending.epoch) return;
+        if (!this.presentationIsCurrent(pending.presentation) || !this.fontsReady || this.mountedIdentity !== pending.identity ||
+          this.fontPreparationGeneration !== pending.fonts || this.detailKey.length > 0 || this.managing !== pending.managing ||
+          this.readerWindowMetricsRevision !== pending.windowRevision || this.pageViewportWidth() !== pending.viewportWidth ||
+          this.availableHeight() !== pending.viewportHeight || this.fontScale() !== pending.fontScale ||
+          (focusTarget.length > 0 && focusGeneration !== this.focusGeneration)) {
+          this.cancelListScrollRestore(); return;
+        }
+        this.listScrollRestorePending = undefined;
+        try { this.listScroller.scrollTo({ xOffset: 0, yOffset: pending.offset }); } catch (_unboundList) { return; }
         if (focusTarget.length > 0 && !this.modalBlocking() && !this.managing) this.syncOverlayFocus(focusTarget);
       }));
-    } catch (_unmounted) {}
+    } catch (_unmounted) { this.cancelListScrollRestore(); }
   }
+  private cancelListScrollRestore(): void {
+    this.listScrollRestoreEpoch += 1;
+    this.listScrollRestorePending = undefined;
+  }
+  private onListGeometryChanged(): void {
+    const pending = this.listScrollRestorePending;
+    if (pending !== undefined && (this.readerWindowMetricsRevision !== pending.windowRevision ||
+      this.pageViewportWidth() !== pending.viewportWidth || this.availableHeight() !== pending.viewportHeight ||
+      this.fontScale() !== pending.fontScale)) this.cancelListScrollRestore();
+  }
+  private cancelChapterScrollRestore(): void {
+    this.chapterScrollRestoreEpoch += 1;
+    this.chapterScrollRestorePending = false;
+    this.chapterScrollRestoreScheduled = false;
+  }
+
   private restoreChapterOffset(): void {
     if (!this.mounted || !this.fontsReady || !this.chapterScrollRestorePending || this.chapterScrollRestoreScheduled) return;
     if (this.detail()?.projectionStatus !== 'ready') {
@@ -2458,11 +2612,21 @@ export struct SharedDownloadPage {
     const presentation = this.presentationGeneration;
     const detailKey = this.detailKey;
     const offset = this.chapterOffset;
+    const epoch = this.chapterScrollRestoreEpoch;
+    const windowRevision = this.readerWindowMetricsRevision;
+    const viewportWidth = this.pageViewportWidth();
+    const viewportHeight = this.availableHeight();
+    const fontScale = this.fontScale();
+    const managing = this.managing;
     this.chapterScrollRestoreScheduled = true;
     this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
-      if (!this.presentationIsCurrent(presentation) || this.mountedIdentity !== identity ||
+      if (epoch !== this.chapterScrollRestoreEpoch || !this.presentationIsCurrent(presentation) || this.mountedIdentity !== identity ||
         generation !== this.fontPreparationGeneration) return;
       this.chapterScrollRestoreScheduled = false;
+      if (windowRevision !== this.readerWindowMetricsRevision || viewportWidth !== this.pageViewportWidth() ||
+        viewportHeight !== this.availableHeight() || fontScale !== this.fontScale() || managing !== this.managing) {
+        this.cancelChapterScrollRestore(); return;
+      }
       if (!this.fontsReady || !this.chapterLayoutReady || !this.chapterScrollRestorePending ||
         this.detailKey !== detailKey || this.detail()?.projectionStatus !== 'ready') return;
       try {
@@ -2476,6 +2640,7 @@ export struct SharedDownloadPage {
     }));
   }
   private prepareFonts(): void {
+    this.cancelListScrollRestore();
     const identity = this.mountedIdentity;
     const generation = ++this.fontPreparationGeneration;
     this.chapterScrollRestoreScheduled = false;
@@ -2559,9 +2724,25 @@ export struct SharedDownloadPage {
     return this.measurements.readForGeneration('download:header', this.measurementGeneration(), DOWNLOAD_HEADER_HEIGHT);
   }
   private resolvedDockHeight(): number {
-    return this.measurements.readForGeneration('download:dock', this.measurementGeneration(),
-      DOWNLOAD_VISUAL.dockPaddingY * 2 + DOWNLOAD_VISUAL.headerIconHeight + DOWNLOAD_VISUAL.borderWidth * 2);
+    return this.measurements.readForGeneration(this.raisedDockShapeIdentity(this.managing || this.detail() !== undefined),
+      this.measurementGeneration(), this.dockFallbackHeight());
   }
+  private dockFallbackHeight(): number {
+    if (!this.managing && this.detail() === undefined)
+      return DOWNLOAD_VISUAL.dockPaddingY * 2 + DOWNLOAD_VISUAL.headerIconHeight + DOWNLOAD_VISUAL.borderWidth * 2;
+    const scale = this.fontScale();
+    // Both summary text and its management controls may occupy their own line.
+    // The actual inner dock Area replaces this conservative first-frame budget.
+    const summaryText = (TYPE_DOWNLOAD_CONTROL.lineHeightFp as number) * scale * 2;
+    const summaryControls = this.managing ? this.textControlHeight(DOWNLOAD_VISUAL.touchTarget,
+      (TYPE_DOWNLOAD_CONTROL.lineHeightFp as number), DOWNLOAD_VISUAL.textActionPaddingY * 2) : 0;
+    const summary = summaryText + summaryControls;
+    const actions = this.textControlHeight(DOWNLOAD_VISUAL.buttonHeight,
+      DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.buttonPaddingY * 2);
+    return DOWNLOAD_VISUAL.selectionPadding * 2 + summary + DOWNLOAD_VISUAL.selectionSummaryBottom +
+      actions + DOWNLOAD_VISUAL.borderWidth * 2;
+  }
+
   private headerContentGap(): number {
     return DOWNLOAD_VISUAL.contentTop - DOWNLOAD_VISUAL.headerTopGap - DOWNLOAD_HEADER_HEIGHT;
   }
@@ -2578,25 +2759,19 @@ export struct SharedDownloadPage {
 
   private pageGeometry(): ReaderPageGeometry {
     const metrics = this.currentMetrics();
-    const overflow = this.mainChromeOverflow();
+    const fixedDock = this.fixedSelectionDockVisible();
     const input = new ReaderPageGeometryInput(metrics);
-    input.viewportWidth = metrics.windowRect.width;
+    input.viewportWidth = this.pageViewportWidth();
     input.viewportHeight = this.availableHeight();
     input.measurementRevision = this.measurementRevision;
-    input.chromeMode = overflow ? 'inline' : 'overlay';
-    // The existing fixed-header material also owns its top/side breathing
-    // room, so scrolled search borders cannot paint through that lane.
-    // Moving those offsets into the slot preserves the bar and list bounds.
-    input.headerTop = 0;
-    input.headerHeight = this.headerTop() + this.resolvedHeaderHeight();
-    input.headerInsetLeft = 0;
-    input.headerInsetRight = 0;
-    input.contentGap = this.headerContentGap();
-    input.footerHeight = this.resolvedDockHeight();
-    input.footerBottom = this.bottomInset();
-    input.footerInsetLeft = this.dockLeftInset();
-    input.footerInsetRight = this.dockRightInset();
-    input.contentEndInset = this.contentBottom(DOWNLOAD_VISUAL.contentBottom);
+    // The List always owns its header. Overlay mode represents only the
+    // selection footer, so it must not reserve an absent fixed header.
+    input.chromeMode = fixedDock ? 'overlay' : 'inline';
+    input.footerHeight = fixedDock ? this.resolvedDockHeight() : 0;
+    input.footerBottom = fixedDock ? this.bottomInset() : 0;
+    input.footerInsetLeft = fixedDock ? this.dockLeftInset() : 0;
+    input.footerInsetRight = fixedDock ? this.dockRightInset() : 0;
+    input.contentEndInset = fixedDock ? this.contentBottom(0) : 0;
     return resolveReaderPageGeometry(input);
   }
   // Approved 2026-10-20 amendment: header frames the 18vp body rail;
@@ -2612,6 +2787,10 @@ export struct SharedDownloadPage {
     return sharedDownloadContentInsets(readerVisualSafeLeft(this.currentMetrics()), readerVisualSafeRight(this.currentMetrics())).right;
   }
   private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerInteractiveSafeBottom(this.currentMetrics())); }
+  private pageViewportWidth(): number {
+    return this.pageWidth > 0 ? this.pageWidth : this.currentMetrics().windowRect.width;
+  }
+
   private availableHeight(): number {
     // UIContext owns keyboard OFFSET/RESIZE. Measured page height already
     // reflects any platform resize; never subtract keyboardInsets a second time.
@@ -2628,8 +2807,24 @@ export struct SharedDownloadPage {
     return this.sheetHasFooter() ? DOWNLOAD_VISUAL.sheetBodyBottom :
       Math.max(DOWNLOAD_VISUAL.sheetBodyBottom, readerInteractiveSafeBottom(this.currentMetrics()));
   }
-  private mainChromeOverflow(): boolean {
-    return this.contentTop() + this.contentBottom(DOWNLOAD_VISUAL.contentBottom) >= this.availableHeight();
+  private selectionDockMinimumContentHeight(): number {
+    const scale = this.fontScale();
+    if (this.detail() !== undefined) {
+      return Math.max(DOWNLOAD_VISUAL.chapterHeight,
+        Math.max(DOWNLOAD_VISUAL.touchTarget, (TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number) * scale) +
+        (TYPE_DOWNLOAD_TAG.lineHeightFp as number) * scale + DOWNLOAD_VISUAL.sourceLineHeight * scale +
+        DOWNLOAD_VISUAL.chapterPaddingY * 2 + DOWNLOAD_VISUAL.borderWidth);
+    }
+    const copy = Math.max(DOWNLOAD_VISUAL.touchTarget, (TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number) * scale) + DOWNLOAD_VISUAL.sourceTop +
+      Math.max(DOWNLOAD_VISUAL.touchTarget, DOWNLOAD_VISUAL.sourceLineHeight * scale) + Math.max(DOWNLOAD_VISUAL.touchTarget,
+        this.textControlHeight(DOWNLOAD_VISUAL.statusHeight, (TYPE_DOWNLOAD_META.lineHeightFp as number), 0)) +
+      DOWNLOAD_VISUAL.progressTop + DOWNLOAD_VISUAL.progressHeight;
+    return Math.max(DOWNLOAD_VISUAL.coverHeight, DOWNLOAD_VISUAL.bookMinHeight, copy) +
+      DOWNLOAD_VISUAL.bookPaddingY * 2 + DOWNLOAD_VISUAL.borderWidth;
+  }
+  private fixedSelectionDockVisible(): boolean {
+    return this.fontsReady && this.managing &&
+      this.contentBottom(0) + this.selectionDockMinimumContentHeight() <= this.availableHeight();
   }
   private sheetChromeHeight(): number {
     const grip = DOWNLOAD_VISUAL.gripTop + DOWNLOAD_VISUAL.gripHeight + DOWNLOAD_VISUAL.gripBottom;
@@ -2689,13 +2884,15 @@ export struct SharedDownloadPage {
     if (this.measurements.record('download:header', height, this.measurementGeneration(), 0.5))
       this.measurementRevision += 1;
   }
-  private recordDockHeight(height: number): void {
-    if (!Number.isFinite(height) || height <= 0) return;
-    if (this.measurements.record('download:dock', height, this.measurementGeneration(), 0.5))
+  private recordDockHeight(height: number, identity: string = this.raisedDockShapeIdentity(this.managing || this.detail() !== undefined)): void {
+    if (!this.presentationIsCurrent() || identity !== this.raisedDockShapeIdentity(this.managing || this.detail() !== undefined) ||
+      !Number.isFinite(height) || height <= 0) return;
+    if (this.measurements.record(identity, height, this.measurementGeneration(), 0.5))
       this.measurementRevision += 1;
     const anchor = this.managingScrollAnchor;
     if (anchor === undefined) return;
     if (!this.managingScrollIsCurrent(anchor)) { this.cancelManagingScroll(); return; }
+    if (!this.fixedSelectionDockVisible()) return;
     // The dock may report its final size after the first frame restored the
     // List. Repeat once with the same proven offset, then retire the anchor.
     this.managingDockMeasured = true;

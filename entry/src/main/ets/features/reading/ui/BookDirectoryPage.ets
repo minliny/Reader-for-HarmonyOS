@@ -1,3 +1,4 @@
+import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
@@ -9,7 +10,7 @@ import { MangaDirectoryCurrentFooter } from '../../manga/ui/MangaDirectoryCurren
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterHeight, mangaDirectoryHeaderHeight, mangaDirectoryFullFlowFooter } from '../../manga/ui/MangaDirectoryVisual';
 import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
-import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts, prepareMangaSheetFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
@@ -48,6 +49,7 @@ export struct BookDirectoryPage {
   @Prop @Watch('onIdentityChanged') sourceId: string = '';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
+  navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   @Prop interactive: boolean = true;
@@ -156,7 +158,7 @@ export struct BookDirectoryPage {
           this.recoveryContent();
         }.width('100%').hitTestBehavior(HitTestMode.Transparent);
       }.width(this.geometry.content.frame.width)
-        .constraintSize({ maxHeight: Math.max(0, ReaderWindowCoordinator.metrics().windowRect.height / 3) })
+        .constraintSize({ maxHeight: Math.max(0, readerWindowMetrics().windowRect.height / 3) })
         .margin({ left: this.geometry.content.frame.left, right: this.geometry.content.frame.right,
           top: this.geometry.header.bottom })
         .visibility(this.downloadMenuVisible ? Visibility.Hidden : Visibility.Visible)
@@ -214,13 +216,13 @@ export struct BookDirectoryPage {
     // the fixed header and current-chapter dock are owned by the scaffold.
     Stack({ alignContent: Alignment.Top }) {
       ForEach([this.admittedIdentity], (identity: string) => {
-        ReaderDirectoryNavigationSurface({
+        ReaderDirectoryNavigationSurface({ navigationPortFactory: this.navigationPortFactory,
           sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
           currentChapterIndex: this.currentChapterIndex, openRevision: identity,
           interactionEnabled: this.interactive,
           locateCurrentRevision: this.locateCurrentRevision,
           interacted: this.navigationInteracted, mangaDisplay: true,
-          mangaInitialViewportWidth: this.viewportWidth > 0 ? this.viewportWidth : ReaderWindowCoordinator.metrics().windowRect.width,
+          mangaInitialViewportWidth: this.viewportWidth > 0 ? this.viewportWidth : readerWindowMetrics().windowRect.width,
           mangaVisibleTopInset: this.mangaVisibleTopInset(), mangaCatalogNarrow: this.mangaNarrow(),
           rowHeight: visual.gridHeight, listPaddingX: this.geometry.content.frame.left,
           listPaddingRight: this.geometry.content.frame.right,
@@ -332,7 +334,7 @@ export struct BookDirectoryPage {
   }
 
   private mangaNarrow(): boolean {
-    const width = this.viewportWidth > 0 ? this.viewportWidth : ReaderWindowCoordinator.metrics().windowRect.width;
+    const width = this.viewportWidth > 0 ? this.viewportWidth : readerWindowMetrics().windowRect.width;
     return width > 0 && width <= visual.narrowWidth;
   }
 
@@ -341,7 +343,7 @@ export struct BookDirectoryPage {
   }
 
   private mangaFlowFooter(): boolean {
-    const height = this.mangaViewportHeight > 0 ? this.mangaViewportHeight : ReaderWindowCoordinator.metrics().windowRect.height;
+    const height = this.mangaViewportHeight > 0 ? this.mangaViewportHeight : readerWindowMetrics().windowRect.height;
     return mangaDirectoryFullFlowFooter(height, this.mangaFontScale(), this.topInset(), this.mangaBottomInset(), this.mangaFooterHeight());
   }
 
@@ -360,11 +362,11 @@ export struct BookDirectoryPage {
 
   private mangaFontScale(): number {
     const revision = this.readerWindowMetricsRevision;
-    return mangaDirectoryScale(revision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale);
+    return mangaDirectoryScale(revision < 0 ? 1 : readerWindowMetrics().systemFontScale);
   }
 
   private mangaFooterHeight(): number { return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured : mangaDirectoryFooterHeight(this.mangaFontScale(), this.mangaFooterFrame().width, this.mangaCurrentPosition()); }
-  private mangaBottomInset(): number { return Math.max(0, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics())); }
+  private mangaBottomInset(): number { return Math.max(0, readerInteractiveSafeBottom(readerWindowMetrics())); }
   /** The footer follows the safe area closely; the released 4vp is usable list space. */
   private mangaFooterBottomOffset(): number { return Math.max(0, visual.footerBottom - 4); }
   private mangaBottomClearance(): number { return this.mangaBottomInset() + (this.mangaFlowFooter() ? 0 : this.mangaFooterHeight()) + this.mangaFooterBottomOffset() * 2; }
@@ -382,7 +384,7 @@ export struct BookDirectoryPage {
 
   private headerFrame(): SurfaceHorizontalFrame {
     const frame = this.contentFrame();
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     const expansion = 18 - 8;
     const left = Math.max(readerInteractiveSafeLeft(metrics), frame.left - expansion);
     const right = Math.max(readerInteractiveSafeRight(metrics), frame.right - expansion);
@@ -523,7 +525,7 @@ export struct BookDirectoryPage {
 
   private consumeTemporaryBack(identity: string): boolean {
     if (!this.mounted || identity.length === 0 || identity !== this.temporaryBackIdentity) return false;
-    if (consumeReaderControlKeyboardBack(ReaderWindowCoordinator.metrics(), {
+    if (consumeReaderControlKeyboardBack(readerWindowMetrics(), {
       hideTextInput: (): Promise<void> => inputMethod.getController().hideTextInput(),
       onFailure: (error: Error): void => {
         if (this.mounted && identity === this.temporaryBackIdentity) {
@@ -628,7 +630,7 @@ export struct BookDirectoryPage {
 
   private topInset(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;
-    return readerInteractiveSafeTop(ReaderWindowCoordinator.metrics());
+    return readerInteractiveSafeTop(readerWindowMetrics());
   }
 
   private locateCurrent(): void {
@@ -793,7 +795,7 @@ export struct BookDirectoryPage {
   }
 
   private contentFrame(): SurfaceHorizontalFrame {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     const width = this.viewportWidth > 0 ? this.viewportWidth :
       (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);
     return resolveHorizontalFrame(width, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics),
@@ -835,7 +837,7 @@ export struct BookDirectoryPage {
   }
 
   private refreshGeometry(): void {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.viewportWidth > 0 ? this.viewportWidth :
       (this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width);

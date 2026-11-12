@@ -1,5 +1,14 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
+const confluenceCases = new Set(['list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset']);
+Object.assign(definitions, {
+  'list-layout': { description: '实际新宿主 SDK 常态单List/管理footer/短高预算与RaiseShape身份；含旧fixed header结构负例', resources: [] },
+  'list-restore': { description: '实际普通List一次性epoch恢复，touch/filter/geometry/opening/font/retire取消并保留阅读返回焦点；反例移除epoch会重复恢复', resources: [] },
+  'chapter-locate-restore': { description: '实际章节定位取消旧idle并计入三个prefix，保留当前detail身份及独立章节恢复', resources: [] },
+  'private-tool-budget': { description: '实际筛选/排序native carrier及父预算320/366/720 x1/1.3/1.6/2/3.2；24vp旧排序carrier负例', resources: [] },
+  'touch-targets': { description: '实际tabs/search-clear/management完成44vp原生carrier及陈旧管理epoch拒绝', resources: [] },
+  'filter-reset': { description: '实际筛选空PageState清条件/保排序，current opening准入与retired callback拒绝', resources: [] },
+});
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
@@ -104,6 +113,9 @@ if (selectedCase === 'native-bindings') {
   assert.ok(methods.includes('filterSourceOptions') && methods.includes('sheetActors'),
     'the real filter and Native sheet actor initializers are in the current dependency closure');
 }
+if (confluenceCases.has(selectedCase) || ['area-receipts','management-scroll'].includes(selectedCase)) {
+  methods.splice(0, methods.length, ...page.members.filter(node => node.name).map(node => node.name.getText(tree)));
+}
 const frameSource = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadIdleFrame');
 assert.ok(frameSource, 'the production idle-frame adapter is retained');
 const frameBody = ts.transpileModule(frameSource.getText(tree), {
@@ -132,7 +144,7 @@ let windowMetrics = Object.assign(metricsExports.createDefaultReaderWindowMetric
 let platformFontScale = 1;
 const fontReceipts = [], scheduledFrames = [];
 const chromeRequests = [];
-const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerSurfaceSpecsForProbe, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const surfaces = readerSurfaceSpecsForProbe(new Proxy({}, { get: (_target, name) => windowMetrics[name] }));
 // Controlled native ColorMetrics receipts bind actual role inputs and blend
 // order. These RGB identifiers are not a second alpha-compositing engine and
@@ -211,6 +223,7 @@ const probeDependencies = { resolveReaderRaisedShape,
   ButtonType: enumValue('ButtonType'), ImageFit: enumValue('ImageFit'), InputType: enumValue('InputType'),
   WordBreak: enumValue('WordBreak'), ScrollAlign: enumValue('ScrollAlign'), ControlSize: enumValue('ControlSize'),
   TouchType: enumValue('TouchType'),
+  Scroller: class { scrollTo() {} scrollToIndex() {} currentOffset() { return { yOffset: 0 }; } },
   // This case observes static material attributes with reduceMotion enabled;
   // it passes the native identity recipe through without simulating frames.
   TransitionEffect: { IDENTITY: 'TransitionEffect.IDENTITY' },
@@ -250,6 +263,24 @@ probeDependencies.PageBackBar = class extends BackBar {
     this.appThemeScheme = parent.appThemeScheme;
   }
 };
+const bounded = boundedSurfaceSdk({ properties: propertyRuntime, allowEmptyBranchAdmission: true });
+const boundedHeaderSource = readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets', import.meta.url), 'utf8');
+const { ReaderDrawerCloseFocusModifier } = pureModuleProbe(boundedHeaderSource.slice(0, boundedHeaderSource.indexOf('@Component')),
+  'ReaderBoundedHeaderModifiers.ets', { readerAppColor, ...readerTypographyRoles }, ['ReaderDrawerCloseFocusModifier']);
+probeHooks.childSources.ReaderBoundedSurfaceHeader = boundedHeaderSource;
+probeDependencies.ReaderBoundedSurfaceHeader = createReaderBuilderProbe(boundedHeaderSource, boundedMembers(boundedHeaderSource),
+  { ...bounded.deps, ReaderDrawerCloseFocusModifier }, { ...bounded.hooks, ...probeHooks }).Component;
+const { readerActionIcon } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderActionIconResources.ets', import.meta.url), 'utf8'),
+  'ReaderActionIconResources.ets', { $r: value => value }, ['readerActionIcon']);
+probeDependencies.readerActionIcon = readerActionIcon;
+const noCoverSource = readFileSync(new URL('../entry/src/main/ets/ui/patterns/NoCoverCover.ets', import.meta.url), 'utf8');
+probeHooks.childSources.NoCoverCover = noCoverSource;
+probeDependencies.NoCoverCover = createReaderBuilderProbe(noCoverSource, boundedMembers(noCoverSource),
+  probeDependencies, probeHooks).Component;
+const coverSource = readFileSync(new URL('../entry/src/main/ets/features/downloads/ui/SharedDownloadBookCover.ets', import.meta.url), 'utf8');
+probeHooks.childSources.SharedDownloadBookCover = coverSource;
+probeDependencies.SharedDownloadBookCover = createReaderBuilderProbe(coverSource, boundedMembers(coverSource),
+  probeDependencies, probeHooks).Component;
 const probe = createReaderBuilderProbe(source, methods, probeDependencies, probeHooks);
 const book = {
   ...projection.createDownloadBookView({ sourceId: 'source-one', bookId: 'book-one', title: '晚唐浮生',
@@ -314,6 +345,241 @@ function admitListItems(result) {
 const countActor = result => find(result, node => node.type === 'Text' && node.layoutWeight === 1 &&
   node.fontSize===readerTypographyRoles.TYPE_DOWNLOAD_META.fontSizeFp && typeof node.onClick === 'function', 'the retained download-count actor');
 
+
+if (selectedCase === 'list-layout') {
+    function assertListHeader(body) {
+        const syntaxTree = ts.createSourceFile('download-layout.ets', body, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(sdk + '/lib/ets_checker.js').compilerOptions);
+        const actor = syntaxTree.statements.find(node => node.name?.getText(syntaxTree) === 'SharedDownloadPage');
+        for (const name of ['bookPage', 'chapterPage']) {
+            const builder = actor.members.find(node => node.name?.getText(syntaxTree) === name);
+            let header;
+            const visit = node => { if (ts.isCallExpression(node) && node.expression.getText(syntaxTree) === 'this.compactHeader')
+                header = node; ts.forEachChild(node, visit); };
+            visit(builder);
+            assert.ok(header, name + ' actual header');
+            let item = false, list = false;
+            for (let node = header.parent; node && node !== builder; node = node.parent) {
+                assert.equal(ts.isIfStatement(node), false, name + ' header always belongs to list');
+                if (ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) {
+                    item ||= node.expression?.getText(syntaxTree) === 'ListItem';
+                    list ||= node.expression?.getText(syntaxTree) === 'List';
+                }
+            }
+            assert.ok(item && list, name + ' header owner');
+        }
+    }
+    assertListHeader(source);
+    const legacy = source.replace('ListItem() { this.compactHeader(); }', 'if (this.managing) { ListItem() { this.compactHeader(); } }');
+    assert.notEqual(legacy, source);
+    assert.throws(() => assertListHeader(legacy), /header always belongs/);
+    const samples = [];
+    for (const width of [320, 366])
+        for (const scale of [1, 1.3, 1.6, 2])
+            for (const height of [80, 844])
+                for (const detail of [false, true])
+                    for (const managing of [false, true]) {
+                        windowMetrics = { ...originalWindowMetrics, windowRect: { left: 0, top: 0, width, height }, systemFontScale: scale };
+                        const catalog = { ...book, chapters: [completeChapter] };
+                        const f = owner('day', { books: [catalog, another], fontsReady: true, managing, detailKey: detail ? catalog.key : '', pageWidth: width, pageHeight: height });
+                        f.initialRender();
+                        admitListItems(f);
+                        const frame = [...f.children.values()].find(child => child.params?.headerVisible === false);
+                        assert.ok(frame, 'real scaffold has no fixed header host');
+                        assert.equal(records(f).filter(node => node.type === 'List').length, 1, 'one active native list');
+                        const geom = f.pageGeometry(), fixed = f.fixedSelectionDockVisible();
+                        assert.equal(fixed, managing && height === 844, 'management fixes only with minimum content budget');
+                        assert.deepEqual([geom.header.height, geom.content.startInset], [0, 0]);
+                        assert.equal(geom.chromeMode, fixed ? 'overlay' : 'inline');
+                        assert.equal(geom.footer.height, fixed ? f.resolvedDockHeight() : 0);
+                        assert.equal(geom.content.endInset, fixed ? f.contentBottom(0) : 0);
+                        const docks = records(f).filter(node => node.border?.color === readerAppColor('app.navigation.floatingBorder', 'day') && typeof node.onAreaChange === 'function');
+                        assert.equal(docks.length, 1, 'one current raised dock material');
+                        samples.push({ width, scale, height, detail, managing, fixed });
+                        f.aboutToDisappear();
+                    }
+    windowMetrics = originalWindowMetrics;
+    const m = owner('day', { fontsReady: true });
+    m.storageDock();
+    const old = find(m, node => node.type === 'Row' && node.onAreaChange && node.borderRadius === visual.DOWNLOAD_VISUAL.dockRadius, 'storage Area').onAreaChange;
+    old({}, { width: '306vp', height: '83vp' });
+    assert.equal(m.resolvedDockHeight(), 83);
+    m.setManaging(true);
+    m.selectionDock();
+    const current = records(m).findLast(node => node.type === 'Column' && node.onAreaChange && node.borderRadius === visual.DOWNLOAD_VISUAL.dockRadius).onAreaChange;
+    current({}, { width: '306vp', height: '137vp' });
+    assert.equal(m.resolvedDockHeight(), 137);
+    old({}, { width: '306vp', height: '999vp' });
+    assert.equal(m.resolvedDockHeight(), 137, 'retired storage area cannot overwrite management');
+    const key = m.raisedDockShapeIdentity(true);
+    windowMetrics = { ...originalWindowMetrics, windowRect: { ...originalWindowMetrics.windowRect, height: 80 } };
+    assert.equal(m.raisedDockShapeIdentity(true), key, 'placement-only height change keeps inner measured geometry');
+    windowMetrics = { ...originalWindowMetrics, systemFontScale: 2 };
+    const fallback = m.resolvedDockHeight();
+    current({}, { width: '306vp', height: '999vp' });
+    assert.equal(m.resolvedDockHeight(), fallback, 'old font area rejected');
+    windowMetrics = originalWindowMetrics;
+    m.aboutToDisappear();
+    console.log(JSON.stringify({ kind: 'download-confluence-layout', samples: samples.length }));
+}
+if (selectedCase === 'list-restore') {
+    const invalidators = {
+        touch: f => f.onListTouch({ type: 'TouchType.Down' }),
+        filter: f => f.onListFilterChanged(),
+        geometry: f => { f.pageWidth = 320; f.onListGeometryChanged(); },
+        opening: f => { f.presentationGeneration++; },
+        fonts: f => { f.fontPreparationGeneration++; },
+        detail: f => { f.detailKey = book.key; f.onDetailChanged(); },
+        retired: f => f.aboutToDisappear(),
+    };
+    for (const [name, invalidate] of Object.entries(invalidators)) {
+        scheduledFrames.length = 0;
+        const moves = [];
+        const f = owner('day', { fontsReady: true, listScroller: { scrollTo: v => moves.push(v), currentOffset: () => ({ yOffset: 87 }) } });
+        f.restoreListOffset(87);
+        const frame = scheduledFrames.at(-1);
+        assert.ok(frame, name + ' scheduled');
+        invalidate(f);
+        frame.onIdle();
+        assert.deepEqual(moves, [], name + ' cannot pull successor viewport');
+    }
+    scheduledFrames.length = 0;
+    const moves = [], focused = [];
+    const f = owner('day', { fontsReady: true, listScroller: { scrollTo: v => moves.push(v), currentOffset: () => ({ yOffset: 87 }) } });
+    f.syncOverlayFocus = (...args) => focused.push(args);
+    f.restoreListOffset(87, 'book-title:' + book.key);
+    const frame = scheduledFrames.at(-1);
+    frame.onIdle();
+    frame.onIdle();
+    assert.deepEqual(moves, [{ xOffset: 0, yOffset: 87 }]);
+    assert.deepEqual(focused, [['book-title:' + book.key]], 'reading return focus survives the admitted restore');
+    scheduledFrames.length = 0;
+    const staleFocus = owner('day', { fontsReady: true, listScroller: { scrollTo: v => moves.push(v) } });
+    staleFocus.restoreListOffset(14, 'book-title');
+    const pending = scheduledFrames.at(-1);
+    staleFocus.focusGeneration++;
+    pending.onIdle();
+    assert.equal(moves.length, 1);
+    const badSource = source.replace('        this.listScrollRestorePending = undefined;', '        void this.listScrollRestorePending;');
+    assert.notEqual(badSource, source);
+    const badProbe = createReaderBuilderProbe(badSource, methods, probeDependencies, probeHooks), badMoves = [];
+    const bad = owner('day', { fontsReady: true, listScroller: { scrollTo: v => badMoves.push(v) } }, badProbe.Component);
+    bad.restoreListOffset(87);
+    const badFrame = scheduledFrames.at(-1);
+    badFrame.onIdle();
+    badFrame.onIdle();
+    assert.equal(badMoves.length, 2, 'missing spent-ticket negative control exposes repeated restore');
+}
+if (selectedCase === 'chapter-locate-restore') {
+    const catalog = { ...book, shelfBook: { ...book.shelfBook, readingPosition: { chapterIndex: 0 } }, chapters: [completeChapter] };
+    const moves = [], indices = [];
+    scheduledFrames.length = 0;
+    const f = owner('day', { books: [catalog], fontsReady: true, detailKey: catalog.key, chapterLayoutReady: true, chapterScrollRestorePending: true,
+        chapterScroller: { scrollTo: v => moves.push(v), scrollToIndex: (...v) => indices.push(v) } });
+    f.chapterOffset = 77;
+    f.restoreChapterOffset();
+    const pending = scheduledFrames.at(-1);
+    assert.ok(pending);
+    f.locateCurrent();
+    pending.onIdle();
+    assert.deepEqual(moves, []);
+    assert.deepEqual(indices[0], [3, true, 'ScrollAlign.CENTER']);
+    const badSource = source.replace('    this.cancelChapterScrollRestore();\n    this.cancelManagingScroll();\n    this.chapterScroller.scrollToIndex', '    this.cancelManagingScroll();\n    this.chapterScroller.scrollToIndex');
+    assert.notEqual(badSource, source);
+    const badProbe = createReaderBuilderProbe(badSource, methods, probeDependencies, probeHooks), badMoves = [];
+    const bad = owner('day', { books: [catalog], fontsReady: true, detailKey: catalog.key, chapterLayoutReady: true, chapterScrollRestorePending: true,
+        chapterScroller: { scrollTo: v => badMoves.push(v), scrollToIndex() { } } }, badProbe.Component);
+    bad.restoreChapterOffset();
+    const badFrame = scheduledFrames.at(-1);
+    bad.locateCurrent();
+    badFrame.onIdle();
+    assert.equal(badMoves.length, 1, 'missing explicit-position cancellation resurrects old chapter offset');
+    const pendingMoves = [];
+    const restored = owner('day', { books: [catalog], initialViewState: { query: '', type: 'all', state: 'all', sourceId: 'all', sort: 'recent', direction: 'desc', detailKey: catalog.key, chapterScroll: 63 },
+        chapterScroller: { scrollTo: value => pendingMoves.push(value) } });
+    restored.aboutToAppear();
+    assert.equal(restored.chapterScrollRestorePending, true, 'font preparation retains an explicit restored chapter intent');
+    fontReceipts.at(-1).resolve(true);
+    await microtasks();
+    restored.chapterLayoutReady = true;
+    restored.restoreChapterOffset();
+    scheduledFrames.at(-1).onIdle();
+    assert.deepEqual(pendingMoves, [{ xOffset: 0, yOffset: 63 }]);
+    restored.aboutToDisappear();
+}
+if (selectedCase === 'private-tool-budget') {
+    let samples = 0;
+    for (const width of [320, 366, 720])
+        for (const scale of [1, 1.3, 1.6, 2, 3.2]) {
+            windowMetrics = { ...originalWindowMetrics, windowRect: { left: 0, top: 0, width, height: 844 }, systemFontScale: scale };
+            const f = owner('day', { fontsReady: true, pageWidth: width });
+            f.listTools();
+            const buttons = records(f).filter(node => node.type === 'Button');
+            assert.equal(buttons.length, 3);
+            for (const node of buttons) {
+                assert.ok(node.width >= 44, 'actual tool carrier width');
+                assert.ok(node.constraintSize.minHeight >= 44, 'actual tool carrier height');
+                assert.equal(node.responseRegion, undefined, 'carrier owns its paid frame');
+            }
+            assert.ok(f.listFilterWidth() <= f.listToolsAvailableWidth());
+            assert.ok(f.listSortWidth() <= f.listToolsAvailableWidth());
+            if (f.listToolsInline())
+                assert.ok(f.listFilterWidth() + f.listSortWidth() + f.listToolCountWidth() + visual.DOWNLOAD_VISUAL.listToolsGap * 3 <= f.listToolsAvailableWidth());
+            const captured = buttons[0].onClick;
+            f.appForeground = false;
+            captured();
+            assert.equal(f.sheet, '', 'hidden opening rejects new tools');
+            samples++;
+        }
+    windowMetrics = originalWindowMetrics;
+    const badSource = source.replace('}.width(DOWNLOAD_VISUAL.touchTarget).constraintSize({ minHeight: this.listToolControlHeight() }).padding(0)', '}.width(DOWNLOAD_VISUAL.sortWidth).constraintSize({ minHeight: this.listToolControlHeight() }).padding(0)');
+    assert.notEqual(badSource, source);
+    const badProbe = createReaderBuilderProbe(badSource, methods, probeDependencies, probeHooks);
+    const bad = owner('day', { fontsReady: true }, badProbe.Component);
+    bad.listTools();
+    assert.ok(records(bad).some(node => node.type === 'Button' && node.width < 44), 'legacy 24vp sort carrier negative rejected');
+    console.log(JSON.stringify({ kind: 'download-confluence-tools', samples }));
+}
+if (selectedCase === 'touch-targets') {
+    const f = owner('day', { fontsReady: true, query: 'book' });
+    f.typeTab('all', '全部');
+    f.searchField();
+    f.managing = true;
+    f.selectionDock();
+    const tab = records(f).find(node => node.type === 'Button' && node.accessibilityText === '全部，已选择');
+    assert.ok(tab.constraintSize.minHeight >= 44);
+    const clear = find(f, node => node.type === 'Button' && node.accessibilityText === '清除搜索', 'clear actual button');
+    assert.ok(clear.width >= 44 && clear.height >= 44);
+    const done = find(f, node => node.type === 'Button' && node.accessibilityText === '完成批量管理', 'management done');
+    assert.ok(done.constraintSize.minWidth >= 44 && done.constraintSize.minHeight >= 44);
+    const old = done.onClick;
+    f.managementGeneration++;
+    old();
+    assert.equal(f.managing, true, 'old management action rejects successor');
+    f.managementDone(f.managementGeneration);
+    records(f).findLast(node => node.type === 'Button' && node.accessibilityText === '完成批量管理').onClick();
+    assert.equal(f.managing, false);
+}
+if (selectedCase === 'filter-reset') {
+    const moves = [];
+    const f = owner('day', { fontsReady: true, query: 'missing', bookType: 'manga', stateFilter: 'none', sourceFilter: 'none', sortField: 'title', sortDirection: 'asc', selectedBookKeys: [book.key],
+        listScroller: { scrollTo: v => moves.push(v), currentOffset: () => ({ yOffset: 0 }) } });
+    f.bookPage();
+    admitListItems(f);
+    const state = [...f.children.values()].find(child => child.title === '没有匹配的书籍');
+    assert.ok(state);
+    assert.equal(state.actionLabel, '清除筛选');
+    const reset = state.onAction;
+    reset();
+    assert.deepEqual([f.query, f.bookType, f.stateFilter, f.sourceFilter], ['', 'all', 'all', 'all']);
+    assert.deepEqual([f.sortField, f.sortDirection], ['title', 'asc']);
+    assert.deepEqual(Array.from(f.selectedBookKeys), []);
+    f.query = 'successor';
+    f.presentationGeneration++;
+    reset();
+    assert.equal(f.query, 'successor');
+    assert.equal(moves.length, 1);
+}
+
 if(selectedCase==='native-bindings'){
 for(const scheme of ['day','night']){
  const header=owner(scheme);header.topBar();const heading=text(header,'下载管理');assert.ok(heading.fontSize>0&&heading.lineHeight>0);const headerBox=find(header,n=>n.constraintSize?.minHeight===DOWNLOAD_HEADER_HEIGHT&&n.onAreaChange,'actual header');const before=header.contentTop();headerBox.onAreaChange({}, {height:DOWNLOAD_HEADER_HEIGHT+18});assert.equal(header.contentTop(),before+18);
@@ -339,7 +605,7 @@ for(const scheme of ['day','night']){
   const accepted=dock.currentRaisedDockShape(selection);
   assert.deepEqual([accepted.width,accepted.height],[326,91],'actual vp receipt reaches the retained material shape unchanged');
   assert.equal(box.borderRadius,accepted.radius,'Native material and measured shape share their effective radius');
-  assert.equal(dock.measurements.read('download:dock'),91,'the same dock receipt still owns existing content avoidance');
+  assert.equal(dock.resolvedDockHeight(),91,'the same dock receipt still owns existing content avoidance');
   const oldMeasure=box.onAreaChange;dock.presentationGeneration++;
   oldMeasure({}, {width:999,height:999});propertyRuntime.flush();
   assert.equal(dock.currentRaisedDockShape(selection),accepted,'retired dock geometry identity cannot overwrite accepted material bounds');
@@ -378,7 +644,7 @@ for(const scheme of ['day','night']){
  closing.onSheetExitFinished(attachment,actorOwner);
  assert.equal(closing.sheetActorAttachment,successor,'old exit callbacks cannot retire the next opening');
  assert.deepEqual(closing.sheetActors,['scrim'],'old exit callback leaves the next Native actor admitted');
- const row=owner(scheme);row.bookRow(()=>book,false);const title=text(row,book.title),meta=text(row,row.authorSource(book));assert.ok(title.maxLines===undefined||title.maxLines>1);assert.ok(meta.maxLines===undefined||meta.maxLines>1);const image=find(row,n=>n.type==='Image'&&n.create===book.coverUrl,'actual cover'),copy=find(row,n=>n.type==='Column'&&n.layoutWeight===1&&n.onAreaChange,'measured book copy');assert.equal(copy.height,undefined);const old=image.height;copy.onAreaChange({}, {height:old+57});row.replay();assert.equal(image.height,old+57);
+ const row=owner(scheme);row.bookRow(()=>book,false);const title=text(row,book.title),meta=text(row,row.authorSource(book));assert.ok(title.maxLines===undefined||title.maxLines>1);assert.ok(meta.maxLines===undefined||meta.maxLines>1);const image=find(row,n=>n.type==='Image'&&n.create===book.coverUrl,'actual cover'),copy=find(row,n=>n.type==='Column'&&n.layoutWeight===1&&n.onAreaChange,'measured book copy');assert.equal(copy.height,undefined);const old=image.height;copy.onAreaChange({}, {height:old+57});row.replay();propertyRuntime.flush();assert.equal(image.height,old+57);
  const status=owner(scheme);status.statusButton(()=>book);assert.equal(argb(text(status,'下载中').fontColor),argb(visual.downloadVisualColor('green',scheme)));const failed=owner(scheme);failed.statusButton(()=>({...book,stateLabel:'下载失败'}));assert.equal(argb(text(failed,'重试').fontColor),argb(visual.downloadVisualColor('danger',scheme)));
  assert.match(find(failed,n=>n.type==='Button'&&typeof n.accessibilityText==='string','failure action keeps its state semantics').accessibilityText,/下载失败.*重试/);
  for (const result of [header, row, status, failed]) {
@@ -420,28 +686,29 @@ function checkDownloadArea(candidate = source) {
   const Component = candidate === source ? probe.Component : createReaderBuilderProbe(candidate, methods, probeDependencies, probeHooks).Component;
   for (const unit of [false, true]) {
     const length = value => unit ? `${value}vp` : value;
-    const page = owner('day', { fontsReady: true }, Component); page.initialRender();
+    const page = owner('day', { fontsReady: true }, Component); page.initialRender(); admitListItems(page);
     const list = find(page, node => node.type === 'List', 'actual download list before Area measurements');
     const scroller = page.listScroller;
     const host = [...page.nodes.values()].find(node => node.type === '__Common__' && typeof node.onAreaChange === 'function');
     assert.ok(host, 'the actual public download host owns its viewport Area callback');
-    host.onAreaChange({}, { height: length(720) });
+    host.onAreaChange({}, { width: length(366), height: length(720) });
+    assert.equal(page.pageWidth, 366, 'download Area viewport width accepts numeric and vp receipts');
     assert.equal(page.pageHeight, 720, 'download Area viewport accepts numeric and vp receipts');
     const header = find(page, node => node.constraintSize?.minHeight===DOWNLOAD_HEADER_HEIGHT && typeof node.onAreaChange === 'function', 'actual header measurement');
     header.onAreaChange({}, { height: length(70) });
-    assert.equal(page.headerMeasuredHeight, 70, 'download Area header accepts numeric and vp receipts');
+    assert.equal(page.resolvedHeaderHeight(), 70, 'download Area header accepts numeric and vp receipts');
     const storage = find(page, node => node.type === 'Row' && node.constraintSize === undefined && node.borderRadius === visual.DOWNLOAD_VISUAL.dockRadius && typeof node.onAreaChange === 'function', 'actual storage dock measurement');
-    storage.onAreaChange({}, { height: length(111) });
-    assert.equal(page.dockMeasuredHeight, 111, 'download Area storage dock accepts numeric and vp receipts');
+    storage.onAreaChange({}, { width: length(306), height: length(111) });
+    assert.equal(page.resolvedDockHeight(), 111, 'download Area storage dock accepts numeric and vp receipts');
     page.replay(); propertyRuntime.flush();
     assert.equal(page.nodes.get(list.id), list, 'download Area measurements retain the native book List');
     assert.equal(list.create.scroller, scroller); assert.equal(page.listScroller, scroller);
-    assert.equal(list.padding.top, page.contentTop()); assert.equal(list.padding.bottom, page.contentBottom(visual.DOWNLOAD_VISUAL.contentBottom));
+    assert.equal(list.contentStartOffset, 0); assert.equal(list.contentEndOffset, 0, 'ordinary dock has no fixed inset');
 
-    const selection = owner('day', { managing: true }, Component); selection.selectionDock();
+    const selection = owner('day', { fontsReady: true, managing: true }, Component); selection.selectionDock();
     const selectedDock = find(selection, node => node.type === 'Column' && node.borderRadius === visual.DOWNLOAD_VISUAL.dockRadius && typeof node.onAreaChange === 'function', 'actual selection dock measurement');
-    selectedDock.onAreaChange({}, { height: length(123) });
-    assert.equal(selection.dockMeasuredHeight, 123, 'download Area selection dock accepts numeric and vp receipts');
+    selectedDock.onAreaChange({}, { width: length(306), height: length(123) });
+    assert.equal(selection.resolvedDockHeight(), 123, 'download Area selection dock accepts numeric and vp receipts');
     const row = owner('day', {}, Component); row.bookRow(() => book, false);
     const copy = find(row, node => node.type === 'Column' && node.layoutWeight === 1 && typeof node.onAreaChange === 'function', 'actual book copy measurement');
     copy.onAreaChange({}, { height: length(137) });
@@ -463,6 +730,19 @@ function checkDownloadArea(candidate = source) {
       assert.equal(panel.nodes.get(scroll.id), scroll, 'sheet Area receipts retain the native body Scroll');
       assert.equal(scroll.constraintSize.maxHeight, panel.sheetBodyMaxHeight());
     }
+    const chapterPage=owner('day',{books:[{...book,chapters:[completeChapter]}],fontsReady:true,detailKey:book.key},Component);
+    chapterPage.chapterPage(chapterPage.bookGetter(chapterPage.books[0]));admitListItems(chapterPage);
+    const chapterList=find(chapterPage,node=>node.type==='List'&&typeof node.onAreaChange==='function','actual chapter viewport');
+    chapterList.onAreaChange({}, {height:length(320)});
+    assert.equal(chapterPage.chapterLayoutReady,true,'download Area chapter viewport accepts numeric and vp receipts');
+    const operations=owner('day',{sheet:'book-actions'},Component);operations.operationsHeader(operations.sheetOpeningGeneration);
+    const operationHeader=find(operations,node=>node.type==='Column'&&typeof node.onAreaChange==='function','actual operations header');
+    operationHeader.onAreaChange({}, {height:length(79)});
+    assert.equal(operations.operationsHeaderMeasuredHeight,79,'download Area operations header accepts numeric and vp receipts');
+    operations.operationsBody(operations.sheetOpeningGeneration);
+    const operationBody=find(operations,node=>node.type==='Column'&&node.padding?.bottom===0&&typeof node.onAreaChange==='function','actual operations body');
+    operationBody.onAreaChange({}, {height:length(135)});
+    assert.equal(operations.bookOperationsBodyMeasuredHeight,135,'download Area operations body accepts numeric and vp receipts');
     const dialog = owner('day', { confirmation: 'cancel', pageHeight: 720 }, Component); dialog.confirmationContent(false);
     const actions = find(dialog, node => node.type === 'Row' && typeof node.onAreaChange === 'function', 'actual confirmation action measurement');
     actions.onAreaChange({}, { height: length(91) });
@@ -808,15 +1088,15 @@ function listInputOwner(Component=probe.Component) {
 const flushListInput=f=>propertyRuntime.flush(actor=>actor===f.page);
 const currentInput=listInputOwner();
 currentInput.mangaTab().onClick();
-assert.equal(currentInput.page.bookType,'manga');assert.deepEqual(currentInput.page.selectedBookKeys,[]);
+assert.equal(currentInput.page.bookType,'manga');assert.deepEqual(Array.from(currentInput.page.selectedBookKeys),[]);
 const oldDirection=currentInput.page.sortDirection;currentInput.direction().onClick();
 assert.notEqual(currentInput.page.sortDirection,oldDirection,'the current direction control retains its original toggle');
 currentInput.page.selectedBookKeys=[book.key];
 currentInput.input().onChange('current query');
-assert.equal(currentInput.page.query,'current query');assert.deepEqual(currentInput.page.selectedBookKeys,[]);
+assert.equal(currentInput.page.query,'current query');assert.deepEqual(Array.from(currentInput.page.selectedBookKeys),[]);
 assert.deepEqual(currentInput.positions,[{xOffset:0,yOffset:0}],'accepted edits retain the original single list reset');
 currentInput.page.selectedBookKeys=[book.key];currentInput.clear().onClick();
-assert.equal(currentInput.page.query,'');assert.deepEqual(currentInput.page.selectedBookKeys,[]);
+assert.equal(currentInput.page.query,'');assert.deepEqual(Array.from(currentInput.page.selectedBookKeys),[]);
 assert.equal(currentInput.positions.length,1,'clear retains its original no-scroll behavior');
 currentInput.page.aboutToDisappear();
 
@@ -834,10 +1114,10 @@ for(const [name,invalidate]of[
   const lateTab=f.mangaTab().onClick,lateDirection=f.direction().onClick;
   invalidate(f);flushListInput(f);
   const revision=f.page.searchInputRevision,frames=scheduledFrames.length,scrolls=f.positions.length;
-  const selection=f.page.selectedBookKeys.slice(),bookType=f.page.bookType,sortDirection=f.page.sortDirection;
+  const selection=Array.from(f.page.selectedBookKeys),bookType=f.page.bookType,sortDirection=f.page.sortDirection;
   lateChange('late edit');lateClear();lateTab();lateDirection();flushListInput(f);
   assert.equal(f.page.query,'kept query',`${name}: old native input cannot change the retained query`);
-  assert.deepEqual(f.page.selectedBookKeys,selection,`${name}: old native input cannot clear selection`);
+  assert.deepEqual(Array.from(f.page.selectedBookKeys),selection,`${name}: old native input cannot clear selection`);
   assert.equal(f.positions.length,scrolls,`${name}: old native input cannot scroll`);
   assert.equal(scheduledFrames.length,frames,`${name}: old native input cannot schedule focus/restore`);
   assert.equal(f.page.searchInputRevision,revision,`${name}: a retired field cannot rebuild a successor`);
@@ -859,6 +1139,11 @@ assert.equal(successor.page.query,'successor edit','the current replacement fiel
 successor.clear().onClick();assert.equal(successor.page.query,'');successor.page.aboutToDisappear();
 
 const closingInput=listInputOwner();closingInput.page.sheet='filter';flushListInput(closingInput);
+// The real owner waits only for Native actors that have actually appeared.
+// Supply these explicit platform receipts before testing a closing barrier.
+closingInput.page.onSheetActorAppeared(closingInput.page.sheetActorAttachment,closingInput.page.sheetActorOwner,'scrim');
+closingInput.page.onSheetActorAppeared(closingInput.page.sheetActorAttachment,closingInput.page.sheetActorOwner,
+  'sheet:'+closingInput.page.sheetOpeningGeneration,closingInput.page.sheetOpeningGeneration);
 closingInput.page.sheet='';flushListInput(closingInput);assert.equal(closingInput.page.sheetExitPending,true);
 const rejected=closingInput.input(),rejectedRevision=closingInput.page.searchInputRevision;
 rejected.onChange('native painted while closing');flushListInput(closingInput);
@@ -877,7 +1162,7 @@ function filterInputOwner() {
   return {...f,selectState:state.onSelect,stateIndex:state.options.indexOf('下载中')};
 }
 const currentFilter=filterInputOwner();currentFilter.selectState(currentFilter.stateIndex,'下载中');
-assert.equal(currentFilter.page.stateFilter,'downloading');assert.deepEqual(currentFilter.page.selectedBookKeys,[]);
+assert.equal(currentFilter.page.stateFilter,'downloading');assert.deepEqual(Array.from(currentFilter.page.selectedBookKeys),[]);
 currentFilter.page.aboutToDisappear();
 for(const [name,invalidate]of[
   ['another sheet',f=>{f.page.sheet='sort';}],
@@ -889,9 +1174,9 @@ for(const [name,invalidate]of[
   ['unmount',f=>f.page.aboutToDisappear()],
 ]) {
   const f=filterInputOwner(),lateSelect=f.selectState;invalidate(f);flushListInput(f);
-  const selection=f.page.selectedBookKeys.slice();lateSelect(f.stateIndex,'下载中');flushListInput(f);
+  const selection=Array.from(f.page.selectedBookKeys);lateSelect(f.stateIndex,'下载中');flushListInput(f);
   assert.equal(f.page.stateFilter,'all',`${name}: old actual select callback cannot change the filter`);
-  assert.deepEqual(f.page.selectedBookKeys,selection,`${name}: old select callback cannot clear selection`);
+  assert.deepEqual(Array.from(f.page.selectedBookKeys),selection,`${name}: old select callback cannot clear selection`);
   f.page.aboutToDisappear();
 }
 

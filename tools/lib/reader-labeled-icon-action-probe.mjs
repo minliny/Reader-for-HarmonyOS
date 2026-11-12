@@ -1,7 +1,7 @@
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import{readFileSync}from'node:fs';import{createRequire}from'node:module';
-import{foundationControls,readerFoundationTokens}from'./reader-foundation-control-probe.mjs';
+import{foundationControls,readerFoundationTokens,surfaceFontResolvers}from'./reader-foundation-control-probe.mjs';
 import{readerTypographyRoles}from'./reader-typography-probe.mjs';
 import{readerAppColor}from'../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import{productionReaderPressFeedback}from'./reader-press-feedback-probe.mjs';
@@ -13,7 +13,7 @@ function run(source,names,deps){const tree=ts.createSourceFile('LabeledIcon.ets'
 export function labeledIconSpecs(roles=readerTypographyRoles,source=labeledIconSpecSource){return run(source,['resolveReaderLabeledIconActionSpec'],{...readerFoundationTokens,...roles});}
 export function labeledIconControls({specs=labeledIconSpecs(),source=labeledIconSource,foundation=foundationControls(),ColorMetrics}={}){
  const shared=foundation,enums={VerticalAlign:{Center:'VerticalAlign.Center'},FlexAlign:{Center:'FlexAlign.Center'}},ReaderPressFeedback=productionReaderPressFeedback({ColorMetrics});
- const modifiers=run(source.slice(0,source.indexOf('@Component')),['ReaderLabeledIconLabelModifier','ReaderLabeledIconRowModifier','ReaderLabeledIconHitModifier'],{...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback,...enums});
+ const modifiers=run(source.slice(0,source.indexOf('@Component')),['ReaderLabeledIconLabelModifier','ReaderLabeledIconRowModifier','ReaderLabeledIconHitModifier'],{...readerFoundationTokens,...specs,...surfaceFontResolvers(),readerAppColor,ReaderPressFeedback,...enums});
  const deps={...shared.dependencies,...specs,...modifiers,...enums},hooks={...shared.hooks,childSources:{...shared.hooks.childSources,ReaderLabeledIconAction:source}};
  const component=createReaderBuilderProbe(source,boundedMembers(source),deps,hooks).Component;deps.ReaderLabeledIconAction=component;
  return{...shared,dependencies:deps,hooks,component};

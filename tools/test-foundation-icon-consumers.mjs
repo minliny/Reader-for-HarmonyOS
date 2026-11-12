@@ -17,12 +17,12 @@ const baseline=JSON.parse(readFileSync(new URL('./fixtures/design/foundation-ico
 const physical=n=>Object.fromEntries(props.filter(k=>Object.hasOwn(n,k)).map(k=>[k,n[k]])),cases=[];
 for(const f of baseline.files)for(const method of f.names)for(const scheme of['day','night'])for(const state of[false,true])cases.push({f,method,scheme,state});let count=0;
 function runCase({f,method,scheme,state}){
- const shared=labeledIconControls(),old=labeledIconControls(),original='@Component struct OriginalIconFamily {\n'+f.methods.join('\n')+'\nbuild(){Column(){}}\n}',source=readFileSync(new URL('../'+f.path,import.meta.url),'utf8');
+ const shared=labeledIconControls(),old=labeledIconControls(),original='@Component struct OriginalIconFamily {\n'+f.methods.join('\n')+'\nbuild(){Column(){}}\n}',source=readFileSync(new URL('../'+f.path.replace(/features\/(rss|sync)\/(?=[^/]+\.ets$)/, 'features/$1/ui/'),import.meta.url),'utf8');
  const before=createReaderBuilderProbe(original,f.names,old.dependencies,old.hooks).owner,after=createReaderBuilderProbe(source,f.names,shared.dependencies,shared.hooks).owner,oldCalls=[],calls=[];
  const prepare=(owner,log)=>Object.assign(owner,{appThemeScheme:scheme,filterValue:state?'当前':'其他',webdavPass:'fixture-password',backupPass:'fixture-backup-password',snapshot:{facts:{canMutate:!state}},canMutate:()=>!state,effectiveWebdavUrl:()=> ' https://dav.test ',effectiveWebdavUser:()=> ' user ',effectiveWebdavPath:()=> ' /Reader ',onTestConnection:(...v)=>log.push(['test',...v]),onSaveConfig:(...v)=>log.push(['save',...v]),onManage:()=>log.push('manage'),onSourceOperations:()=>log.push('source'),onModeRequested:m=>log.push(['mode',m])});prepare(before,oldCalls);prepare(after,calls);
  const args=method==='actionTarget'?(f.path.endsWith('RssSubscriptionManagementPage.ets')?['实际操作','actual-icon',state,state,()=>calls.push('action')]:['实际操作','actual-icon',()=>calls.push('action')]):method==='filterPill'?['当前']:[];
  const oldArgs=args.slice();if(method==='actionTarget')oldArgs[oldArgs.length-1]=()=>oldCalls.push('action');before[method](...oldArgs);after[method](...args);
- const a=old.orderedNodes(before).filter(n=>['Text','Image','Row','Stack'].includes(n.type)),b=shared.orderedNodes(after).filter(n=>['Text','Image','Row','Stack'].includes(n.type));
+ const a=old.orderedNodes(before).filter(n=>['Text','Image','Row','Stack','Button'].includes(n.type)),b=shared.orderedNodes(after).filter(n=>['Text','Image','Row','Stack','Button'].includes(n.type));
 
 
  const aa=a.filter(n=>n.onClick),bb=b.filter(n=>n.onClick);assert.equal(bb.length,aa.length);aa.forEach(n=>{if(n.enabled!==false)n.onClick();});bb.forEach(n=>n.onClick());assert.deepEqual(calls,oldCalls,method+': real callbacks, disabled config and trimmed complete params retain original');

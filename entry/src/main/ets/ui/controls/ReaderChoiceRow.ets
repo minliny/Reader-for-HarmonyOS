@@ -300,7 +300,8 @@ export struct ReaderChoiceRow {
         }
       }.width('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.width('100%').constraintSize({ minHeight: this.specId === 'default-selected' || this.specId === 'default-option' ? 44 : this.spec().height })
+    }.width('100%').constraintSize({ minHeight: this.specId === 'default-selected' || this.specId === 'default-option' ||
+      this.specId === 'source-group-selected' || this.specId === 'source-group-option' ? 44 : this.spec().height })
       .padding({ left: this.spec().layout === 'positioned' ? this.spec().textLeft : this.spec().padding,
         right: this.spec().layout === 'positioned' ? this.spec().iconRight - this.spec().iconWidth : this.spec().padding,
         top: this.specId === 'appearance-library' ? 6 : 10, bottom: this.specId === 'appearance-library' ? 6 : 10 })

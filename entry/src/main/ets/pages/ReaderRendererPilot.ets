@@ -1,3 +1,4 @@
+import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 // Explicit debug cold-start route only. Uses an original frozen Core export;
 // never imports a user book, persists a position, or replaces the native reader.
 import webview from '@ohos.web.webview';
@@ -23,6 +24,11 @@ struct ReaderRendererPilot {
 
   aboutToDisappear(): void {
     this.resourceDiagnostic.dispose();
+  }
+
+  private openPageStructureVerification(): void {
+    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug') return;
+    this.getUIContext().getRouter().pushUrl({ url: 'pages/ReaderPageStructureVerification' });
   }
 
   private async returnToBookshelf(): Promise<void> {
@@ -74,6 +80,11 @@ struct ReaderRendererPilot {
           ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide });
         }.width('100%').layoutWeight(1);
       } else {
+      if (DEBUG === true && BUILD_MODE_NAME === 'debug') {
+        Button('页面结构验证').id('reader-page-structure-open').onClick((): void => {
+          this.openPageStructureVerification();
+        });
+      }
       Button('漫画平台图像诊断').id('reader-manga-probe-open').onClick((): void => { this.mangaMode = true; });
       Button('原生 Text 同节点诊断').id('reader-textnode-open').onClick((): void => {
         this.textNodeMode = true;

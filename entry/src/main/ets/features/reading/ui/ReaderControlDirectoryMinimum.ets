@@ -1,3 +1,5 @@
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderInheritedTextStyle, TYPE_READER_DIRECTORY_TAB_COMPACT, TYPE_READER_DIRECTORY_TITLE,
   TYPE_SEARCH_DIRECTORY_INPUT, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION,
@@ -50,7 +52,7 @@ function form(context: UIContext, width: number, full: boolean,
     Math.max(1, (width - (full ? 18 : 32)) / 2 - 20));
   const title = measureReaderControlText(context, facts.title, TYPE_READER_DIRECTORY_TITLE,
     Math.max(1, width - (full ? 22 : 34) - 86));
-  const fieldWidth = width - 2 - TOK_SPACE_CONTROL_INLINE * 2 - (facts.tab === 'directory' ? 148 : 37);
+  const fieldWidth = width - 2 - TOK_SPACE_CONTROL_INLINE * 2 - (facts.tab === 'directory' ? 196 : 49);
   const field = measureReaderControlText(context, facts.tab === 'bookmarks' ? '搜索书签内容' : '搜索章节名称',
     TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth - 39));
   const fieldGlyph = measureReaderControlText(context, '字', TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth - 39));
@@ -71,10 +73,11 @@ function form(context: UIContext, width: number, full: boolean,
   if (tab === undefined || bookmarkTab === undefined || title === undefined || field === undefined || fieldGlyph === undefined || bookmarkTitle === undefined ||
     bookmarkLine === undefined || meta === undefined || pending === undefined || footerLabel === undefined || footerPosition === undefined || footerTitle === undefined)
     return undefined;
+  const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
   const tabBase = full ? 36 : 31;
-  const tabHeight = Math.max(tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
-  const inputHeight = Math.max(24, field.heightVp);
-  const fieldHeight = inputHeight + 8;
+  const tabHeight = Math.max(readerScaledControlHeight(44, TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, scale), tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
+  const inputHeight = Math.max(readerScaledControlHeight(42, 24, scale), field.heightVp);
+  const fieldHeight = Math.max(readerScaledControlHeight(44, 24, scale), inputHeight + 2);
   const toolbarHeight = Math.max(52, fieldHeight + 20);
   const bookmark: ReaderControlBookmarkNaturalSize = {
     titleHeightVp: Math.max(14, bookmarkTitle.heightVp, meta.heightVp, pending.heightVp),
@@ -82,10 +85,10 @@ function form(context: UIContext, width: number, full: boolean,
   };
   const bookmarkHeight = Math.max(full ? 74 : 54, (full ? 9 : 7) + bookmark.titleHeightVp +
     (full ? 9 : 2) + bookmark.excerptHeightVp + (full ? 14 : 7));
-  const rowHeight = facts.tab === 'bookmarks' ? bookmarkHeight : Math.max(full ? 40 : 32, title.heightVp, 32);
+  const rowHeight = facts.tab === 'bookmarks' ? bookmarkHeight : Math.max(readerScaledControlHeight(44, 20, scale), title.heightVp);
   const listTop = (full ? 99 : facts.tab === 'bookmarks' ? 47 : 48) + tabHeight - tabBase +
     (full ? toolbarHeight - 52 : 0);
-  const footerHeight = facts.tab === 'directory' ? Math.max(48,
+  const footerHeight = facts.tab === 'directory' ? Math.max(readerScaledControlHeight(48, 16, scale),
     2 + Math.max(footerLabel.heightVp, footerPosition.heightVp, footerTitle.heightVp)) : 0;
   let viewport = rowHeight;
   let statusHeight = 0;
@@ -113,7 +116,7 @@ function form(context: UIContext, width: number, full: boolean,
     viewport += statusHeight;
   }
   const minWidth = Math.max((Math.max(tab.singleLineWidthVp, bookmarkTab.singleLineWidthVp) + 20) * 2 + (full ? 18 : 32),
-    full ? TOK_SPACE_CONTROL_INLINE * 2 + (facts.tab === 'directory' ? 148 : 37) + 39 + fieldGlyph.singleLineWidthVp : 0,
+    full ? TOK_SPACE_CONTROL_INLINE * 2 + (facts.tab === 'directory' ? 196 : 49) + 39 + fieldGlyph.singleLineWidthVp : 0,
     full && facts.tab === 'directory' ? TOK_SPACE_SM * 2 + 20 + footerLabel.singleLineWidthVp + footerPosition.singleLineWidthVp + 16 : 0);
   return { minimum: { heightVp: listTop + viewport + 1 + (full ? footerHeight : 0), minWidthVp: minWidth,
     fits: width + .1 >= minWidth }, tabHeightVp: tabHeight, rowHeightVp: rowHeight, listTopVp: listTop,

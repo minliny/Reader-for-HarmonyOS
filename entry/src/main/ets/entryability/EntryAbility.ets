@@ -32,6 +32,7 @@ const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
+  private activeWindowStage: window.WindowStage | undefined = undefined;
   private coreCopyProbeGeneration: number = 0;
   private coreCopyOnly: boolean = false;
   private startupContent: ReaderStartupContentOwner | undefined = undefined;
@@ -269,13 +270,14 @@ export default class EntryAbility extends UIAbility {
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
     if (this.coreCopyOnly) return;
+    this.activeWindowStage = windowStage;
     ReaderStartupTrace.current()?.mark('window.create');
     const generation = ++this.windowStageGeneration;
     this.startupContent?.close();
     let windowReady: Promise<boolean>;
     try {
       const win = windowStage.getMainWindowSync();
-      windowReady = ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
+      windowReady = ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win, this.context.config))
         .catch((error: Error): boolean => {
           hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
           return false;
@@ -312,6 +314,7 @@ export default class EntryAbility extends UIAbility {
     this.startupContent?.close();
     this.startupContent = undefined;
     this.windowStageGeneration += 1;
+    this.activeWindowStage = undefined;
     ReaderWindowCoordinator.destroyWindow();
   }
 
@@ -322,10 +325,11 @@ export default class EntryAbility extends UIAbility {
       void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')
         .catch((error: Error): void => hilog.error(DOMAIN, 'Reader', 'System theme write failed: %{private}s', error.message));
     }
-    // scaledDensity can change without a window-size callback. Refreshing the
-    // shared snapshot advances its revision, so the reading pagination
-    // signature is recomputed before the next visible page is admitted.
-    ReaderWindowCoordinator.refreshConfiguration();
+    // Configuration can change while Display density and window size stay fixed.
+    const stage = this.activeWindowStage;
+    if (stage !== undefined) {
+      try { ReaderWindowCoordinator.refreshConfiguration(newConfig, stage.getMainWindowSync()); } catch (_error) {}
+    }
   }
 
   onForeground(): void {
@@ -364,6 +368,7 @@ export default class EntryAbility extends UIAbility {
     this.startupContent = undefined;
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
+    this.activeWindowStage = undefined;
     ReaderWindowCoordinator.destroyWindow();
     AppStorage.setOrCreate('readerAppForeground', false);
     ReaderDocumentPickerActivity.setForeground(false);

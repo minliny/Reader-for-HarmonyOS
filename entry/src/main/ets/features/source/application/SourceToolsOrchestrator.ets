@@ -186,6 +186,7 @@ export class SourceToolsOrchestrator {
   private operationTail: Promise<void> = Promise.resolve();
   /** Counts admitted operations, including those queued behind a prior page session. */
   private pendingOperations: number = 0;
+  private initialized: boolean = false;
 
   constructor(
     emit: (snapshot: SourceToolsSnapshot) => void,
@@ -206,6 +207,15 @@ export class SourceToolsOrchestrator {
       this.snapshot.receipt?.receipt.fact === 'confirmedRefreshFailed') {
       this.deliver(); return;
     }
+    if (this.initialized) {
+      // Presentation retirement preserves this Runtime's draft, selection,
+      // parameters and results. Refresh only authoritative library facts.
+      this.deliver();
+      const session = this.session;
+      this.enqueue(async (): Promise<void> => { await this.reloadManagement(session, '已刷新书源'); }, true);
+      return;
+    }
+    this.initialized = true;
     this.session += 1;
     this.batchCheckRun += 1;
     this.batchCheckCancelRequested = false;
@@ -345,13 +355,12 @@ export class SourceToolsOrchestrator {
       return;
     }
     const session = this.session;
-    const presentation = this.presentationIdentity;
     const key = this.snapshot.debugKey.trim();
     const mode = this.snapshot.checkMode;
     const levels = this.selectedCheckLevels();
     const run = this.batchCheckRun + 1;
-    const current = (): boolean => this.presentationIdentity === presentation &&
-      this.isCurrentSession(session) && this.batchCheckRun === run;
+    const current = (): boolean => this.isAcceptedSession(session) &&
+      ReaderRuntimeOwner.isCurrent(this.owner) && this.batchCheckRun === run;
     this.batchCheckRun = run;
     this.batchCheckCancelRequested = false;
     this.enqueue(async (): Promise<void> => {

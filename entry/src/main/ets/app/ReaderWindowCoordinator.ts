@@ -1,4 +1,5 @@
 import { display, window, KeyboardAvoidMode } from '@kit.ArkUI';
+import type { Configuration } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { deviceInfo, type BusinessError } from '@kit.BasicServicesKit';
 import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';
@@ -136,6 +137,7 @@ export class ReaderWindowCoordinator {
         Promise.resolve(win);
     });
   private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();
+  private static configurationFontScale: number | undefined = undefined;
   private static uiConfigurationRevision: number = 0;
   private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();
   private static statusBarHiddenApplied: boolean = false;
@@ -172,11 +174,12 @@ export class ReaderWindowCoordinator {
    */
   private static installEpoch: number = 0;
 
-  static async install(win: window.Window): Promise<boolean> {
+  static async install(win: window.Window, configuration?: Configuration): Promise<boolean> {
     ReaderWindowCoordinator.detach();
     ReaderWindowCoordinator.installEpoch += 1;
     const epoch = ReaderWindowCoordinator.installEpoch;
     ReaderWindowCoordinator.mainWindow = win;
+    ReaderWindowCoordinator.configurationFontScale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
     // Listener reinstall can reuse the same live window. Only the Ability's
     // actual destruction path retires its native dialog attachments.
     const windowId = win.getWindowProperties().id;
@@ -250,6 +253,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.displayChangeListener = undefined;
     ReaderWindowCoordinator.installEpoch += 1;
     ReaderWindowCoordinator.mainWindow = undefined;
+    ReaderWindowCoordinator.configurationFontScale = undefined;
     ReaderWindowCoordinator.windowPolicyRevision += 1;
     ReaderWindowCoordinator.windowSizeListener = undefined;
     ReaderWindowCoordinator.avoidAreaListener = undefined;
@@ -407,10 +411,20 @@ export class ReaderWindowCoordinator {
     void ReaderWindowCoordinator.flushChrome();
   }
 
-  /** Refresh density/font-scale facts after an Ability configuration change. */
-  static refreshConfiguration(): void {
+  /** Ability Configuration owns app font scale; Display owns px/vp density.
+   * A configuration receipt must identify the exact currently installed window. */
+  static refreshConfiguration(configuration?: Configuration, expectedWindow?: window.Window): void {
+    const win = ReaderWindowCoordinator.mainWindow;
+    if (win === undefined || (expectedWindow !== undefined && expectedWindow !== win) ||
+      (configuration !== undefined && expectedWindow !== win)) return;
+    const scale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
+    if (scale !== undefined) ReaderWindowCoordinator.configurationFontScale = scale;
     try { ReaderWindowCoordinator.refreshMetrics(); }
     finally { ReaderWindowCoordinator.publishUiConfigurationRevision(); }
+  }
+
+  private static validConfigurationFontScale(value: number | undefined): number | undefined {
+    return value !== undefined && Number.isFinite(value) && value > 0 ? value : undefined;
   }
 
   private static publishUiConfigurationRevision(): void {
@@ -552,7 +566,7 @@ export class ReaderWindowCoordinator {
     const navigationInsets =
       ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR, density);
     const keyboardInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density);
-    const systemFontScale = scaledDensity / density;
+    const systemFontScale = ReaderWindowCoordinator.configurationFontScale ?? scaledDensity / density;
     const previous = ReaderWindowCoordinator.metricsSnapshot;
     // The status-bar measurement belongs to the physical display/orientation,
     // not to the app window rectangle.  Full-screen/immersive transitions

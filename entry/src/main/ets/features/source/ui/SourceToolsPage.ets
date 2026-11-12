@@ -1,8 +1,13 @@
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
+import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { resolveSourceToolsRowLayout, type SourceToolsRowLayout } from '../presentation/SourceToolsLayout';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
@@ -181,6 +186,8 @@ class SourceDebugLogDataSource implements IDataSource {
 export struct SourceToolsPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private sourceListWidth: number = 0;
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   isOpeningCurrent: (() => boolean) | undefined = undefined;
@@ -605,20 +612,35 @@ export struct SourceToolsPage {
           `source-tool-${row.sourceListRevision}-${row.source.sourceId}-${row.selected ? 1 : 0}-${row.actionsEnabled ? 1 : 0}`);
       }
       .width('100%')
-      .height(Math.min(420, Math.max(58, this.snapshot.sources.length * 58)))
+      .height(this.sourceListHeight())
+      .onAreaChange((_old: Area, next: Area): void => this.recordSourceListWidth(next))
       .scrollBar(BarState.Off);
     }
   }
 
   @Builder
   private sourceRow(row: SourceToolListRow) {
-        Row({ space: TOK_SPACE_XS }) {
+        Flex({ direction: this.sourceRowLayout(row.source).inline ? FlexDirection.Row : FlexDirection.Column,
+          space: { main: LengthMetrics.vp(TOK_SPACE_XS) } }) {
+          this.sourceRowInfo(row);
+          this.sourceRowButtons(row);
+        }
+        .width('100%')
+        .constraintSize({ minHeight: this.sourceRowLayout(row.source).rowMinHeight })
+        .padding(TOK_SPACE_XS)
+        .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+  }
+
+  @Builder
+  private sourceRowInfo(row: SourceToolListRow) {
           Column({ space: 3 }) {
             Text(row.source.name)
               .width('100%')
               .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
               .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
               .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
+              .lineHeight(TYPE_SOURCE_TOOLS_ACTION.lineHeightFp ?? TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5)
+              .maxFontScale(this.toolsFontScale())
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -626,6 +648,8 @@ export struct SourceToolsPage {
               .width('100%')
               .fontFamily(TYPE_SOURCE_TOOLS_URL.fontFamily as string)
               .fontSize(TYPE_SOURCE_TOOLS_URL.fontSizeFp)
+              .lineHeight(TYPE_SOURCE_TOOLS_URL.lineHeightFp ?? TYPE_SOURCE_TOOLS_URL.fontSizeFp * 1.5)
+              .maxFontScale(this.toolsFontScale())
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -633,22 +657,65 @@ export struct SourceToolsPage {
               Text(row.source.lastCheckSummary)
                 .width('100%')
                 .fontSize(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp)
+                .lineHeight(TYPE_SOURCE_TOOLS_INHERITED_META.lineHeightFp ?? TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp * 1.5)
+                .maxFontScale(this.toolsFontScale())
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
           }
-          .layoutWeight(1)
+          .layoutWeight(this.sourceRowLayout(row.source).inline ? 1 : 0)
+          .width(this.sourceRowLayout(row.source).inline ? undefined : '100%')
+          .constraintSize({ minWidth: this.sourceRowLayout(row.source).inline ?
+            this.sourceRowLayout(row.source).textMinWidth : 0 })
           .alignItems(HorizontalAlign.Start);
+  }
+
+  @Builder
+  private sourceRowButtons(row: SourceToolListRow) {
+        Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap,
+          space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
           this.smallButton(row.selected ? '已选' : '选择', row.actionsEnabled,
             this.sourceRowAction(row, 'select'));
           this.smallButton('编辑', row.actionsEnabled && this.canWriteSources(), this.sourceRowAction(row, 'edit'));
           this.smallButton('调试', row.actionsEnabled, this.sourceRowAction(row, 'debug'));
         }
-        .width('100%')
-        .height(58)
-        .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-        .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+        .width(this.sourceRowLayout(row.source).actionsWidth)
+        .constraintSize({ minHeight: this.sourceRowLayout(row.source).actionsMinHeight })
+        .flexShrink(0);
+  }
+
+  private toolsFontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
+
+  private sourceRowLayout(source: BookSource): SourceToolsRowLayout {
+    const action = resolveReaderButtonSpec('source-tools-compact');
+    const scale = this.toolsFontScale();
+    const titleHeight = TYPE_SOURCE_TOOLS_ACTION.lineHeightFp ?? TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5;
+    const urlHeight = TYPE_SOURCE_TOOLS_URL.lineHeightFp ?? TYPE_SOURCE_TOOLS_URL.fontSizeFp * 1.5;
+    const summaryHeight = source.lastCheckSummary === undefined ? 0 :
+      (TYPE_SOURCE_TOOLS_INHERITED_META.lineHeightFp ?? TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp * 1.5) * scale + 3;
+    return resolveSourceToolsRowLayout({ listWidth: this.sourceListWidth, fontScale: scale,
+      actionWidth: action.fixedWidth * scale,
+      actionHeight: readerScaledControlHeight(action.height ?? 44,
+        action.text.lineHeightFp ?? action.text.fontSizeFp * 1.5, scale),
+      infoHeight: (titleHeight + urlHeight) * scale + 3 + summaryHeight,
+      rowPadding: TOK_SPACE_XS, bottomBorderWidth: TOK_BORDER_W, gap: TOK_SPACE_XS });
+  }
+
+  private sourceListHeight(): number {
+    const height = this.snapshot.sources.reduce((total: number, source: BookSource): number =>
+      total + this.sourceRowLayout(source).rowMinHeight, 0);
+    return Math.min(420, Math.max(58, height));
+  }
+
+  private recordSourceListWidth(area: Area): void {
+    if (!this.mounted) return;
+    const width = readerPageAreaLength(area.width);
+    if (Number.isFinite(width) && width > 0 && Math.abs(width - this.sourceListWidth) > 0.1)
+      this.sourceListWidth = width;
   }
 
   private sourceRowAction(row: SourceToolListRow, action: 'select' | 'edit' | 'debug'): () => void {
@@ -798,12 +865,12 @@ export struct SourceToolsPage {
 
   @Builder
   private smallButton(label: string, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-compact', label, actionEnabled: enabled, onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-compact', label, actionEnabled: enabled, onAction: action });
   }
 
   @Builder
   private actionButton(label: string, primary: boolean, enabled: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-action', label, primary, actionEnabled: enabled, layout: 'equal', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: enabled, layout: 'equal', onAction: action });
   }
 
   private canWriteSources(): boolean {
@@ -854,7 +921,7 @@ export struct SourceToolsPage {
 
   @Builder
   private fullWidthActionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-action', label, primary, actionEnabled: !this.snapshot.busy, layout: 'full', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: !this.snapshot.busy, layout: 'full', onAction: action });
   }
 
   /**

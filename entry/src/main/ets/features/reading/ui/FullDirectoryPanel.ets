@@ -1,3 +1,7 @@
+import { readerFullDirectoryHeights, type ReaderFullDirectoryHeights } from '../presentation/ReaderFullDirectoryBudget';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { mangaDirectoryContextEntries } from '../../manga/ui/MangaDirectoryState';
 import { mangaDirectoryPresentation } from '../../manga/presentation/MangaDirectoryPresentation';
@@ -73,9 +77,11 @@ import {
  */
 @Component
 export struct FullDirectoryPanel {
+  @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
+  navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   onRetryCatalog: () => void = (): void => {};
@@ -93,7 +99,7 @@ export struct FullDirectoryPanel {
   // ReaderShell lays out below the status bar. Phone full-sheet geometry is
   // therefore capped by the real host viewport while retaining the Figma
   // 20vp bottom anchor; zero keeps the source-exact standalone endpoint.
-  @Prop panelHeightOverride: number = 0;
+  @Prop panelHeightOverride: number = -1;
   // Optional endpoint bounds from ReaderControlPanel. The live panel
   // overrides above are sampled per visual frame; these values let a virtual
   // List keep one stable native viewport while the outer clip follows p.
@@ -400,14 +406,14 @@ export struct FullDirectoryPanel {
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
-      .height(30)
+      .height(this.panelHeaderHeight())
       .alignItems(VerticalAlign.Center);
 
       if (this.expandedLayout) {
         Stack({ alignContent: Alignment.Center }) {
           this.collapseLabel();
         }
-        .width(40).height(26)
+        .width(44).height(this.panelHeaderHeight())
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
         .attributeModifier(new ReaderActionAccessibility('收起目录'))
         .onClick((): void => this.onExit());
@@ -415,14 +421,14 @@ export struct FullDirectoryPanel {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           this.collapseLabel();
         }
-        .width(40).height(26).padding(0)
+        .width(44).height(this.panelHeaderHeight()).padding(0)
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
         .attributeModifier(new ReaderActionAccessibility('收起目录', true, false, true, undefined, 'nativeButton'))
         .onClick((): void => this.onExit());
       }
     }
     .width(this.innerWidth())
-    .height(30)
+    .height(this.panelHeaderHeight())
     .alignItems(VerticalAlign.Center);
   }
 
@@ -486,7 +492,7 @@ export struct FullDirectoryPanel {
         this.bookmarkTab();
       }
       .width('100%')
-      .height(41)
+      .height(this.tabStripHeight() - 1)
       .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS, top: 5 });
       Text('')
         .width('100%')
@@ -494,7 +500,7 @@ export struct FullDirectoryPanel {
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
     .width('100%')
-    .height(42);
+    .height(this.tabStripHeight());
   }
 
   @Builder
@@ -601,7 +607,8 @@ export struct FullDirectoryPanel {
     Column({ space: 0 }) {
       ReaderDirectoryToolbar({
         variant: 'full-directory', text: this.searchDraft, placeholder: this.searchPlaceholder(),
-        ascending: this.ascending, showChapterTools: this.activeTab === 'directory',
+        ascending: this.ascending, showChapterTools: this.activeTab === 'directory', availableWidthVp: this.innerWidth(),
+        naturalFieldHeightVp: this.queryHeight(), naturalToolbarHeightVp: this.searchControlsHeight() - (this.embeddedInControl ? 0 : 1),
         onTextChange: (value: string): void => { this.searchDraft = value; },
         onSearch: (): void => this.handleControl('search'),
         onTop: (): void => this.handleControl('top'),
@@ -616,7 +623,7 @@ export struct FullDirectoryPanel {
       }
     }
     .width('100%')
-    .height(this.embeddedInControl ? 52 : 51);
+    .height(this.searchControlsHeight());
   }
 
   @Builder
@@ -626,7 +633,7 @@ export struct FullDirectoryPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
         if (this.bookmarkIdentity !== undefined) {
-          ReaderDirectoryNavigationSurface({
+          ReaderDirectoryNavigationSurface({ navigationPortFactory: this.navigationPortFactory,
             sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey, prepareLocalTxt: this.prepareLocalTxt,
             refreshRevision: this.directoryRulesRevision,
@@ -1282,31 +1289,52 @@ export struct FullDirectoryPanel {
   }
 
   private panelHeight(): number {
-    if ((this.embeddedInControl || !this.expandedLayout) && this.panelHeightOverride > 0) {
+    if (this.panelHeightOverride >= 0) {
       return this.panelHeightOverride;
     }
     return this.embeddedInControl ? this.controlValue(190, 666) : (this.expandedLayout ? 852 : 736);
   }
 
+  private fontScale(): number { return readerReadableFontScale(readerWindowMetrics().systemFontScale); }
+  private panelHeaderHeight(): number { return readerScaledControlHeight(44, 20, this.fontScale()); }
+  private queryHeight(): number { return readerScaledControlHeight(44, 24, this.fontScale()); }
+  private tabStripHeight(): number { return this.tabHeight() + 6; }
+  private queryStacked(): boolean {
+    const count = this.activeTab === 'directory' ? 4 : 1;
+    return this.innerWidth() - TOK_SPACE_CONTROL_INLINE * 2 - count * (44 + 5) < 44;
+  }
+  private searchControlsHeight(): number {
+    return this.queryHeight() + 6 + (this.queryStacked() ? 50 : 0) + (this.embeddedInControl ? 0 : 1);
+  }
+  private heights(): ReaderFullDirectoryHeights {
+    const heights = readerFullDirectoryHeights(this.panelHeight());
+    const headerGrowth = this.panelHeaderHeight() - 30;
+    const queryGrowth = this.searchControlsHeight() - (this.embeddedInControl ? 52 : 51);
+    const tabGrowth = this.tabStripHeight() - 42;
+    return { panel: heights.panel, content: heights.content, body: Math.max(0, heights.body - headerGrowth),
+      chapterList: Math.max(0, heights.chapterList - headerGrowth - queryGrowth - tabGrowth),
+      bookmarkList: Math.max(0, heights.bookmarkList - headerGrowth - queryGrowth - tabGrowth) };
+  }
+
   private contentHeight(): number {
-    return Math.max(298, this.panelHeight() - 32);
+    return this.heights().content;
   }
 
   private bodyContentHeight(): number {
     if (this.embeddedInControl) return this.panelHeight();
-    return Math.max(260, this.contentHeight() - 38);
+    return this.heights().body;
   }
 
   private chapterListHeight(): number {
     if (this.embeddedInControl) {
       return Math.max(0, this.panelHeight() - this.controlValue(48, 99) - 48 * this.controlProgress() - 1);
     }
-    return Math.max(117, this.bodyContentHeight() - 143);
+    return this.heights().chapterList;
   }
 
   private bookmarkListHeight(): number {
     if (this.embeddedInControl) return Math.max(0, this.panelHeight() - this.controlValue(47, 99) - 1);
-    return Math.max(117, this.bodyContentHeight() - 93);
+    return this.heights().bookmarkList;
   }
 
   private bookmarkBodyViewportHeight(): number {
@@ -1330,7 +1358,7 @@ export struct FullDirectoryPanel {
   }
 
   private directoryRowHeight(): number {
-    return this.embeddedInControl ? this.controlValue(32, 40) : 40;
+    return readerScaledControlHeight(44, 20, this.fontScale());
   }
 
   private directoryListRowHeight(): number {
@@ -1478,7 +1506,7 @@ export struct FullDirectoryPanel {
   }
 
   private tabHeight(): number {
-    return this.embeddedInControl ? this.controlValue(31, 36) : 36;
+    return readerScaledControlHeight(44, TYPE_READER_DIRECTORY_TAB.lineHeightFp as number, this.fontScale());
   }
 
   private embeddedTabWidth(): number {

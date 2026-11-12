@@ -6,6 +6,10 @@ import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, readerPageContentStartInset, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
+import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { resolveSourceManagementLayout, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
+import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
@@ -50,7 +54,6 @@ import {
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_INK,
-  TOK_MUTED,
   TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_ROW_DIVIDER,
@@ -114,9 +117,6 @@ export struct SourceManagementPage {
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSourcesChanged') sources: BookSource[];
   @Prop initialViewState: SourceManagementViewState | undefined = undefined;
-  // 额外分组可由调用方补充；常规选项直接来自 Core 返回的原始
-  // bookSource.bookSourceGroup，不按启用状态等 UI 属性伪造。
-  @Prop groups: string[] = [];
   @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onMessageChanged') operation: SourceManagementProjection = { action: 'load', sourceId: '' };
@@ -159,6 +159,11 @@ export struct SourceManagementPage {
   private firstVisibleSourceId: string = '';
   private pendingSourceAnchor: string = '';
   private anchorRestoreScheduled: boolean = false;
+  private pendingScroll: SourceManagementScrollState | undefined;
+  private capturedScroll: SourceManagementScrollState | undefined;
+  private scrollRestoreEpoch: number = 0;
+  private firstVisibleListIndex: number = 0;
+  private lastProjectionFilterKey: string = '';
   private pendingToolsFocus: SourceToolsEntry | undefined;
   private toolsFocusReady: boolean = false;
   private toolsFocusScheduled: boolean = false;
@@ -182,7 +187,8 @@ export struct SourceManagementPage {
     this.statusValue = this.initialViewState?.status ?? '全部';
     this.categoryValue = this.initialViewState?.category ?? 'all';
     this.groupValue = this.initialViewState?.group ?? '全部分组';
-    this.pendingSourceAnchor = this.initialViewState?.anchorSourceId ?? '';
+    this.pendingScroll = copySourceManagementScroll(this.initialViewState?.scroll);
+    this.pendingSourceAnchor = this.pendingScroll?.anchorId ?? this.initialViewState?.anchorSourceId ?? '';
     this.pendingToolsFocus = this.initialViewState?.toolsEntry;
     this.toolsFocusRevision += 1;
     this.toolsFocusAttempt = 0;
@@ -202,6 +208,8 @@ export struct SourceManagementPage {
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
     this.listMounted = false;
+    this.cancelScrollRestore();
+    this.capturedScroll = undefined;
     this.firstVisibleSourceId = '';
     this.pendingSourceAnchor = '';
     this.anchorRestoreScheduled = false;
@@ -320,16 +328,17 @@ export struct SourceManagementPage {
   }
 
   private requestOpenTools(entry: SourceToolsEntry): void {
-    if (!this.mounted || this.groupOpen) return;
+    if (!this.managementBackIsCurrent(this.temporaryBackIdentity) || this.isInputAllowed?.() === false || this.groupOpen) return;
+    this.captureScroll();
     this.cancelToolsReturnFocus('open-tools');
-    const pending = this.pendingSourceAnchor.length > 0 && this.sourceReturnFiltersMatch();
-    const anchorSourceId = pending ? this.pendingSourceAnchor : this.firstVisibleSourceId;
+    const pending = (this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0) && this.sourceReturnFiltersMatch();
+    const scroll = copySourceManagementScroll(pending ? this.pendingScroll : this.capturedScroll);
+    const anchorSourceId = scroll?.anchorId ?? (pending ? this.pendingSourceAnchor : this.firstVisibleSourceId);
     const index = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === anchorSourceId);
     this.onOpenTools({ searchQuery: this.searchQuery, status: this.statusValue,
-      category: this.categoryValue, group: this.groupValue,
-      anchorSourceId,
+      category: this.categoryValue, group: this.groupValue, anchorSourceId,
       anchorFallbackIndex: pending ? this.initialViewState?.anchorFallbackIndex ?? index : index,
-      toolsEntry: entry });
+      toolsEntry: entry, scroll });
   }
 
   private toolsFocusId(entry: SourceToolsEntry): string { return `${this.temporaryBackIdentity}:tools:${entry}`; }
@@ -512,13 +521,13 @@ export struct SourceManagementPage {
         }, (identity: string): string => identity);
       }
       .layoutWeight(1)
-      .height(44);
+      .height(this.layoutBudget().filterHeight);
 
       ForEach([this.temporaryBackIdentity], (identity: string): void => { this.importAction(identity); },
         (identity: string): string => identity);
     }
     .width(this.contentFrame().width)
-    .height(44)
+    .height(this.layoutBudget().filterHeight)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS });
   }
@@ -544,14 +553,16 @@ export struct SourceManagementPage {
 
   @Builder
   private importAction(identity: string) {
-    ReaderIconButton({ icon: $r('app.media.source_add'), specId: 'form-primary-icon', accessibilityLabel: '导入书源',
-      focusId: this.importFocusId(identity, 'header'),
-      onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
-      actionEnabled: this.mounted,
-      onTap: (): void => {
-        if (this.mounted && identity === this.temporaryBackIdentity)
-          this.onAddSource(this.importFocusId(identity, 'header'), this.toolsFocusId('header'));
-      } });
+    Stack({ alignContent: Alignment.Center }) {
+      ReaderIconButton({ icon: $r('app.media.source_add'), specId: 'form-primary-icon', accessibilityLabel: '导入书源',
+        focusId: this.importFocusId(identity, 'header'),
+        onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
+        actionEnabled: this.mounted,
+        onTap: (): void => {
+          if (this.mounted && identity === this.temporaryBackIdentity)
+            this.onAddSource(this.importFocusId(identity, 'header'), this.toolsFocusId('header'));
+        } });
+    }.width(44).height(44);
   }
 
   private importFocusId(identity: string, entry: 'header' | 'footer'): string { return `${identity}:import:${entry}`; }
@@ -564,7 +575,7 @@ export struct SourceManagementPage {
       .fontWeight(TYPE_SOURCE_MANAGEMENT_COUNT.fontWeight)
       .fontSize(TYPE_SOURCE_MANAGEMENT_COUNT.fontSizeFp)
       .lineHeight(TYPE_SOURCE_MANAGEMENT_COUNT.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
       .maxLines(1)
       .margin({ top: TOK_SPACE_XS });
   }
@@ -685,7 +696,8 @@ export struct SourceManagementPage {
           ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-category',
             onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
             label: category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory),
-            primary: this.categoryValue === category,
+            primary: this.categoryValue === category, selectionSemantic: true,
+            actionAccessibilityLabel: `书源类型，${category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory)}`,
             onAction: (): void => {
               this.cancelToolsReturnFocus('selection');
               this.categoryValue = category;
@@ -698,30 +710,37 @@ export struct SourceManagementPage {
     .scrollable(ScrollDirection.Horizontal)
     .scrollBar(BarState.Off)
     .width(this.contentFrame().width)
-    .height(40)
+    .height(this.layoutBudget().filterHeight)
     .margin({ top: TOK_SPACE_XS });
   }
 
   @Builder
   private statusFilter() {
+    Scroll() {
     Row({ space: TOK_SPACE_XS }) {
-      this.chip('全部', 58, this.statusValue === '全部', true);
-      this.chip('启用', 58, this.statusValue === '启用', true);
-      this.chip('异常', 58, this.statusValue === '异常', true);
-      this.chip('未检测', 72, this.statusValue === '未检测', true);
+      this.chip('全部', 58, true);
+      this.chip('启用', 58, true);
+      this.chip('异常', 58, true);
+      this.chip('未检测', 72, true);
       // 原稿保留该视觉位，但没有稳定业务定义；禁用比伪造筛选语义更诚实。
-      this.chip('自定义', 72, false, false);
+      this.chip('自定义', 72, false);
+    }
+    .width(this.layoutBudget().statusContentWidth)
+    .height(this.layoutBudget().filterHeight)
+    .alignItems(VerticalAlign.Center);
     }
     .width(this.filterControlWidth())
-    .height(32)
-    .alignItems(VerticalAlign.Center);
+    .height(this.layoutBudget().filterHeight)
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off);
   }
 
   @Builder
-  private chip(label: string, width: number, active: boolean, enabled: boolean) {
+  private chip(label: string, width: number, enabled: boolean) {
     ReaderButton({ scheme: this.appThemeScheme, specId: width === 58 ? 'source-management-status-compact' : 'source-management-status-wide',
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
-      label, primary: active, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
+      label, primary: enabled && this.statusValue === label, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
+      selectionSemantic: true, actionAccessibilityLabel: `书源状态，${label}${enabled ? '' : '，暂不可用'}`,
       onAction: (): void => {
         if (!enabled) return;
         this.cancelToolsReturnFocus('selection');
@@ -802,6 +821,14 @@ export struct SourceManagementPage {
             } });
         }
       }
+      if (this.sources.length > 0 && this.projectedSources.length === 0 &&
+        this.statusKind !== 'loading' && this.operation.original?.blocked !== true &&
+        this.operation.receipt?.receipt.confirmation !== 'unknown') {
+        ListItem() {
+          ReaderPageState({ title: '没有匹配的书源', message: '调整搜索、状态、分类或分组',
+            actionLabel: '清除筛选', onAction: (): void => this.clearFilters() });
+        }
+      }
       // LazyForEach owns an explicit data source so an empty-to-populated Core
       // load and later filter replacements can notify ArkUI after mount. A
       // reusable Repeat over a derived array retained zero stale rows on API
@@ -818,16 +845,25 @@ export struct SourceManagementPage {
     .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
     .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .scrollBar(BarState.Off)
-    .onAppear((): void => { this.listMounted = true; this.scheduleSourceAnchorRestore(); })
+    .onAppear((): void => {
+      this.listMounted = true;
+      if (this.pendingScroll === undefined && this.pendingSourceAnchor.length === 0) {
+        try { this.sourceScroller.scrollEdge(Edge.Top); } catch (_unbound) {}
+      } else this.scheduleSourceAnchorRestore();
+    })
+    .onAreaChange((): void => this.scheduleSourceAnchorRestore())
     .onDisAppear((): void => { this.listMounted = false; })
     .onScrollIndex((start: number): void => {
-      if (!this.listMounted || this.pendingSourceAnchor.length > 0) return;
+      if (!this.listMounted || this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0) return;
+      this.firstVisibleListIndex = Math.max(0, start);
       // The permanent filter header is the first native ListItem.
       this.firstVisibleSourceId = start > 0 ? this.projectedSources[start - 1]?.sourceId ?? '' : '';
     })
+    .onScrollStop((): void => this.captureScroll())
+    .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.cancelScrollRestore(); })
     .onWillScroll((_offset: number, _state: ScrollState, source: ScrollSource): void => {
       if (source === ScrollSource.DRAG || source === ScrollSource.OTHER_USER_INPUT || source === ScrollSource.SCROLL_BAR) {
-        this.pendingSourceAnchor = '';
+        this.cancelScrollRestore();
         this.cancelToolsReturnFocus('scroll');
       }
     });
@@ -835,27 +871,87 @@ export struct SourceManagementPage {
 
   private scheduleSourceAnchorRestore(): void {
     if (!this.managementOpeningIsCurrent() || !this.listMounted || this.anchorRestoreScheduled ||
-      this.pendingSourceAnchor.length === 0 || this.sourceAnchorReadPending()) return;
-    const identity = this.temporaryBackIdentity;
+      (this.pendingScroll === undefined && this.pendingSourceAnchor.length === 0) || this.sourceAnchorReadPending()) return;
+    if (!this.sourceReturnFiltersMatch()) { this.cancelScrollRestore(); return; }
+    const pending = this.pendingScroll;
+    if (pending !== undefined && pending.filterKey !== this.currentFilterKey()) { this.cancelScrollRestore(); return; }
+    const identity = this.temporaryBackIdentity, epoch = ++this.scrollRestoreEpoch;
     this.anchorRestoreScheduled = true;
+    const current = (): boolean => this.managementOpeningIsCurrent() && this.listMounted &&
+      identity === this.temporaryBackIdentity && epoch === this.scrollRestoreEpoch && this.sourceReturnFiltersMatch();
     try {
       this.getUIContext().postFrameCallback(new SourceListLayoutFrame((): void => {
-        if (!this.mounted || identity !== this.temporaryBackIdentity) return;
-        this.anchorRestoreScheduled = false;
-        const sourceId = this.pendingSourceAnchor;
-        if (!this.managementOpeningIsCurrent() || !this.listMounted || sourceId.length === 0 || this.sourceAnchorReadPending()) return;
-        this.pendingSourceAnchor = '';
-        if (!this.sourceReturnFiltersMatch() || this.projectedSources.length === 0) return;
+        if (!current()) return;
+        if (this.sourceAnchorReadPending()) { this.anchorRestoreScheduled = false; return; }
+        const sourceId = pending?.anchorId ?? this.pendingSourceAnchor;
+        if (sourceId.length === 0 || this.projectedSources.length === 0) {
+          try {
+            if (sourceId.length === 0 && pending !== undefined && this.projectedSources.length > 0 &&
+              pending.layoutKey === this.scrollLayoutKey()) {
+              this.sourceScroller.scrollTo({ xOffset: 0, yOffset: pending.offset, animation: false });
+            } else this.sourceScroller.scrollEdge(Edge.Top);
+          } catch (_unbound) {}
+          this.cancelScrollRestore();
+          return;
+        }
         const exact = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === sourceId);
-        const index = exact >= 0 ? exact :
-          Math.min(this.initialViewState?.anchorFallbackIndex ?? -1, this.projectedSources.length - 1);
-        if (index < 0) return;
-        try {
-          this.sourceScroller.scrollToIndex(index + 1, false, ScrollAlign.START);
-          this.firstVisibleSourceId = this.projectedSources[index].sourceId;
-        } catch (_unbound) {}
+        const fallback = pending === undefined ? this.initialViewState?.anchorFallbackIndex ?? -1 : pending.firstIndex - 1;
+        const index = exact >= 0 ? exact : Math.min(Math.max(0, fallback), this.projectedSources.length - 1);
+        const targetId = this.projectedSources[index].sourceId;
+        try { this.sourceScroller.scrollToIndex(index + 1, false, ScrollAlign.START); }
+        catch (_unbound) { this.cancelScrollRestore(); return; }
+        this.getUIContext().postFrameCallback(new SourceListLayoutFrame((): void => {
+          if (!current()) return;
+          try {
+            const latest = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === sourceId);
+            const latestIndex = latest >= 0 ? latest : Math.min(Math.max(0, fallback), this.projectedSources.length - 1);
+            if (latestIndex < 0) this.sourceScroller.scrollEdge(Edge.Top);
+            else if (latestIndex !== index || this.projectedSources[index]?.sourceId !== targetId) {
+              this.sourceScroller.scrollToIndex(latestIndex + 1, false, ScrollAlign.START);
+            } else {
+              const rect = this.sourceScroller.getItemRect(index + 1);
+              const desired = pending !== undefined && pending.layoutKey === this.scrollLayoutKey() ?
+                pending.itemY : readerScrollStartOffset(this.scrollLayout());
+              if (rect.height > 0 && Number.isFinite(rect.y)) this.sourceScroller.scrollBy(0, rect.y - desired);
+              this.firstVisibleSourceId = targetId;
+              this.firstVisibleListIndex = index + 1;
+            }
+          } catch (_unbound) {}
+          this.cancelScrollRestore();
+        }));
       }));
-    } catch (_unmounted) { this.anchorRestoreScheduled = false; }
+    } catch (_unmounted) { this.cancelScrollRestore(); }
+  }
+
+  private currentFilterKey(): string {
+    return sourceManagementFilterKey({ searchQuery: this.searchQuery, status: this.statusValue,
+      category: this.categoryValue, group: this.groupValue });
+  }
+
+  private scrollLayoutKey(): string {
+    return `${this.contentFrame().width}:${this.fontScale()}:${this.readerWindowMetricsRevision}`;
+  }
+
+  private cancelScrollRestore(): void {
+    this.scrollRestoreEpoch += 1;
+    this.pendingScroll = undefined;
+    this.pendingSourceAnchor = '';
+    this.anchorRestoreScheduled = false;
+  }
+
+  private captureScroll(): void {
+    if (!this.managementOpeningIsCurrent() || !this.listMounted || this.pendingScroll !== undefined ||
+      this.pendingSourceAnchor.length > 0 || this.anchorRestoreScheduled) return;
+    try {
+      const offset = this.sourceScroller.currentOffset();
+      if (offset === undefined || !Number.isFinite(offset.yOffset)) return;
+      const firstIndex = Math.max(0, this.firstVisibleListIndex);
+      const source = firstIndex > 0 ? this.projectedSources[firstIndex - 1] : undefined;
+      const itemY = source === undefined ? 0 : this.sourceScroller.getItemRect(firstIndex).y;
+      if (!Number.isFinite(itemY)) return;
+      this.capturedScroll = { anchorId: source?.sourceId ?? '', firstIndex, itemY,
+        offset: offset.yOffset, filterKey: this.currentFilterKey(), layoutKey: this.scrollLayoutKey() };
+    } catch (_unbound) {}
   }
 
   private sourceAnchorReadPending(): boolean {
@@ -871,16 +967,45 @@ export struct SourceManagementPage {
 
   @Builder
   private sourceRow(source: BookSource) {
-    Row({ space: TOK_SPACE_XS }) {
+    Column({ space: TOK_SPACE_XS }) {
+      if (this.layoutBudget(source).rowForm === 'stacked-leading') {
+        this.sourceLeading();
+        this.sourceInfo(source);
+        this.sourceActions(source);
+      } else {
+        Row({ space: TOK_SPACE_XS }) {
+          this.sourceLeading();
+          this.sourceInfo(source);
+          if (this.layoutBudget(source).rowForm === 'inline') {
+            this.sourceActions(source);
+          }
+        }.width('100%').alignItems(VerticalAlign.Center);
+        if (this.layoutBudget(source).rowForm === 'stacked-actions') {
+          this.sourceActions(source);
+        }
+      }
+    }
+    .width(this.contentFrame().width)
+    .constraintSize({ minHeight: this.layoutBudget(source).rowMinHeight })
+    .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS, right: TOK_SPACE_XS })
+    .alignItems(HorizontalAlign.Start)
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+  }
+
+  @Builder
+  private sourceLeading() {
       Stack({ alignContent: Alignment.Center }) {
         Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')))
-          .width(20).height(20);
+          .width(20).height(20).accessibilityLevel('no');
       }
       .width(36)
       .height(40)
       .borderRadius(10)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme));
+  }
 
+  @Builder
+  private sourceInfo(source: BookSource) {
       Column({ space: TOK_SPACE_XS }) {
         Row({ space: 6 }) {
           Text(source.name)
@@ -888,44 +1013,55 @@ export struct SourceManagementPage {
             .fontFamily(TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily)
             .fontWeight(TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight)
             .fontSize(TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp)
+            .maxFontScale(this.fontScale())
             .lineHeight(TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(readerSourceCategoryLabel(source.category))
             .flexShrink(0)
-            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
-            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily as string)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight ?? 400)
             .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
-            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxFontScale(this.fontScale())
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
             .maxLines(1);
         }.width('100%').alignItems(VerticalAlign.Center);
         Text(source.baseUrl)
           .width('100%')
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
-          .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily as string)
+          .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight ?? 400)
           .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
-          .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .maxFontScale(this.fontScale())
+          .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (source.checkMessage !== undefined && source.checkMessage.trim().length > 0 &&
           source.checkState !== undefined && source.checkState !== 'unchecked') {
           Text(source.checkMessage)
             .width('100%')
-            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
-            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily as string)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight ?? 400)
             .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
-            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxFontScale(this.fontScale())
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }
       }
-      .layoutWeight(1)
-      .constraintSize({ minWidth: 0 })
+      .layoutWeight(this.layoutBudget(source).rowForm === 'stacked-leading' ? 0 : 1)
+      .width(this.layoutBudget(source).rowForm === 'stacked-leading' ? '100%' : undefined)
+      .constraintSize({ minWidth: this.layoutBudget(source).textMinWidth })
+      .accessibilityGroup(true)
+      .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
       .alignItems(HorizontalAlign.Start);
+  }
 
+  @Builder
+  private sourceActions(source: BookSource) {
+    Row({ space: TOK_SPACE_XS }) {
       if (source.loginUrl !== undefined && source.loginUrl.trim().length > 0) {
         this.loginButton(source);
       }
@@ -934,14 +1070,12 @@ export struct SourceManagementPage {
 
       this.statusBadge(source);
 
-      this.sourceSwitch(source.enabled, this.sourceRowToggle(source), source.sourceId);
+      this.sourceSwitch(source.enabled, this.sourceRowToggle(source), source.sourceId, source.name);
 
     }
-    .width(this.contentFrame().width)
-    .height(76)
-    .padding({ left: 0, right: TOK_SPACE_XS })
-    .alignItems(VerticalAlign.Center)
-    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+    .width(this.layoutBudget(source).trailingWidth)
+    .constraintSize({ minHeight: this.layoutBudget(source).filterHeight })
+    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -949,6 +1083,8 @@ export struct SourceManagementPage {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-detect',
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
       label: source.checkState === 'checking' ? '检测中' : '检测', isBusy: source.checkState === 'checking',
+      actionEnabled: this.sourceDetectEnabled(source.sourceId),
+      actionAccessibilityLabel: this.sourceActionLabel(source, '检测', this.sourceDetectEnabled(source.sourceId), source.checkState === 'checking'),
       onAction: this.sourceRowCommand(source, 'check') });
   }
 
@@ -956,11 +1092,14 @@ export struct SourceManagementPage {
   private loginButton(source: BookSource) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-login', label: '登录',
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
+      isBusy: source.checkState === 'checking',
+      actionEnabled: this.sourceActionEnabled() && source.checkState !== 'checking',
+      actionAccessibilityLabel: this.sourceActionLabel(source, '登录', this.sourceActionEnabled() && source.checkState !== 'checking', source.checkState === 'checking'),
       onAction: this.sourceRowCommand(source, 'login') });
   }
 
   private sourceRowIsCurrent(source: BookSource, opening: string): boolean {
-    if (!this.managementBackIsCurrent(opening) || this.groupOpen) return false;
+    if (!this.managementBackIsCurrent(opening) || this.isInputAllowed?.() === false || this.groupOpen) return false;
     const current = this.projectedSources.find((candidate: BookSource): boolean => candidate.sourceId === source.sourceId);
     return current !== undefined && this.sourceRenderKey(current) === this.sourceRenderKey(source);
   }
@@ -970,8 +1109,8 @@ export struct SourceManagementPage {
     return (): void => {
       if (!this.sourceRowIsCurrent(source, opening)) return;
       if (command === 'check') {
-        if (source.checkState !== 'checking') this.onDetectSource(source.sourceId);
-      } else if (source.loginUrl !== undefined) {
+        if (this.sourceDetectEnabled(source.sourceId)) this.onDetectSource(source.sourceId);
+      } else if (source.loginUrl !== undefined && this.sourceActionEnabled() && source.checkState !== 'checking') {
         this.onLoginSource(source.sourceId, source.loginUrl);
       }
     };
@@ -990,12 +1129,12 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private sourceSwitch(value: boolean, onTap: (next: boolean) => void, sourceId: string) {
+  private sourceSwitch(value: boolean, onTap: (next: boolean) => void, sourceId: string, sourceName: string = '') {
     ForEach([`${this.temporaryBackIdentity}:${sourceId}`], (identity: string): void => {
       ReaderToggle({ value, specId: 'standard-toggle', inputIdentity: identity,
-        accessibilityLabel: '启用书源', actionEnabled: this.sourceToggleEnabled(), isBusy: this.sourceToggleBusy(),
+        accessibilityLabel: `${sourceName.trim().length > 0 ? sourceName : sourceId}，启用书源${this.sourceToggleBusy() ? '，忙碌' : this.sourceActionEnabled() ? '' : '，暂不可用'}`, actionEnabled: this.sourceActionEnabled(), isBusy: this.sourceToggleBusy(),
         onToggle: (next: boolean): void => {
-          if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceToggleEnabled() && !this.sourceToggleBusy()) onTap(next);
+          if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceActionEnabled() && !this.sourceToggleBusy()) onTap(next);
         } });
     }, (identity: string): string => identity);
   }
@@ -1004,8 +1143,21 @@ export struct SourceManagementPage {
     return this.operation.original?.busy === true || this.operation.receipt?.facts.fact === 'refreshing';
   }
 
-  private sourceToggleEnabled(): boolean {
-    return this.mounted && this.operation.original?.blocked !== true && this.operation.receipt?.receipt.confirmation !== 'unknown';
+  private sourceActionEnabled(): boolean {
+    return this.managementBackIsCurrent(this.temporaryBackIdentity) && this.isInputAllowed?.() !== false &&
+      !this.groupOpen && this.operation.original?.blocked !== true && this.operation.receipt?.receipt.confirmation !== 'unknown';
+  }
+
+  private sourceActionLabel(source: BookSource, action: string, enabled: boolean, busy: boolean): string {
+    const entity = source.name.trim().length > 0 ? source.name : source.sourceId;
+    return `${entity}，${action}${busy ? '，忙碌' : enabled ? '' : '，暂不可用'}`;
+  }
+
+  private sourceDetectEnabled(sourceId: string): boolean {
+    if (!this.managementBackIsCurrent(this.temporaryBackIdentity) || this.isInputAllowed?.() === false || this.groupOpen) return false;
+    const current = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === sourceId);
+    // Diagnostic intent neither confirms nor replays an unresolved source write.
+    return current !== undefined && current.checkState !== 'checking';
   }
 
   @Builder
@@ -1023,7 +1175,7 @@ export struct SourceManagementPage {
         } });
     }
     .width(this.contentFrame().width)
-    .constraintSize({ minHeight: 48 })
+    .constraintSize({ minHeight: this.layoutBudget().footerHeight })
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
     .hitTestBehavior(HitTestMode.Transparent);
@@ -1036,7 +1188,7 @@ export struct SourceManagementPage {
 
   private sourceRenderKey(source: BookSource): string {
     return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-${source.category}-` +
-      `${source.loginUrl ?? ''}-${source.enabled}-${source.checkState ?? 'unchecked'}-` +
+      `${source.loginUrl ?? ''}-${source.sourceVersion ?? ''}-${source.enabled}-${source.checkState ?? 'unchecked'}-` +
       `${source.checkMessage ?? ''}`;
   }
 
@@ -1054,15 +1206,15 @@ export struct SourceManagementPage {
     return '未检查';
   }
 
-  private enabledCount(): number {
-    return this.sources.filter((source) => source.enabled).length;
+  private filteredEnabledCount(): number {
+    return this.projectedSources.filter((source) => source.enabled).length;
   }
 
   private statsText(): string {
     const filteredCount = this.projectedSources.length;
     const prefix = filteredCount === this.sources.length ? `${this.sources.length} 个书源` :
       `显示 ${filteredCount}/${this.sources.length} 个书源`;
-    return `${prefix} · ${this.enabledCount()} 个启用`;
+    return `${prefix} · ${this.filteredEnabledCount()} 个启用`;
   }
 
   private filteredSources(): BookSource[] {
@@ -1070,25 +1222,32 @@ export struct SourceManagementPage {
     return this.sources.filter((source: BookSource): boolean => {
       const matchesQuery = query.length === 0 || source.name.toLowerCase().includes(query) ||
         source.baseUrl.toLowerCase().includes(query);
-      const matchesGroup = this.groupValue === '全部分组' || source.group === this.groupValue;
+      const matchesGroup = this.groupValue === '全部分组' || this.normalizedSourceGroup(source) === this.groupValue;
       const matchesCategory = this.categoryValue === 'all' || source.category === this.categoryValue;
       return matchesQuery && matchesGroup && matchesCategory && this.matchesStatus(source);
     });
   }
 
   private onSourcesChanged(): void {
-    if (this.groupValue !== '全部分组' && this.groupOptions().indexOf(this.groupValue) < 0) {
-      this.groupValue = '全部分组';
-    }
     this.rebuildSourceProjection();
   }
 
   private rebuildSourceProjection(): void {
-    if (this.pendingSourceAnchor.length > 0 && !this.sourceReturnFiltersMatch()) this.pendingSourceAnchor = '';
+    const key = this.currentFilterKey();
+    const changed = this.lastProjectionFilterKey.length > 0 && this.lastProjectionFilterKey !== key;
+    this.lastProjectionFilterKey = key;
     const projected = this.filteredSources();
-    this.projectedSources = projected;
     this.sourceDataSource.replace(projected);
-    this.scheduleSourceAnchorRestore();
+    this.projectedSources = projected;
+    if (changed && this.mounted) {
+      this.cancelScrollRestore();
+      this.capturedScroll = undefined;
+      this.firstVisibleListIndex = 0;
+      this.firstVisibleSourceId = '';
+      if (this.listMounted) {
+        try { this.sourceScroller.scrollEdge(Edge.Top); } catch (_unbound) {}
+      }
+    } else this.scheduleSourceAnchorRestore();
   }
 
   private matchesStatus(source: BookSource): boolean {
@@ -1099,26 +1258,32 @@ export struct SourceManagementPage {
       return source.checkState === 'failed';
     }
     if (this.statusValue === '未检测') {
-      return source.checkState === undefined || source.checkState === 'unchecked';
+      return source.checkState === undefined || source.checkState === 'unchecked' || source.checkState === 'checking';
     }
     return true;
   }
 
+  private normalizedSourceGroup(source: BookSource): string {
+    return source.group?.trim() ?? '';
+  }
+
   private groupOptions(): string[] {
     const options: string[] = ['全部分组'];
-    for (let i = 0; i < this.groups.length; i++) {
-      const group = this.groups[i].trim();
-      if (group !== '' && group !== '全部分组' && options.indexOf(group) < 0) {
-        options.push(group);
-      }
-    }
     for (const source of this.sources) {
-      const group = source.group?.trim() ?? '';
+      const group = this.normalizedSourceGroup(source);
       if (group !== '' && group !== '全部分组' && options.indexOf(group) < 0) {
         options.push(group);
       }
     }
     return options;
+  }
+
+  private clearFilters(): void {
+    this.searchQuery = '';
+    this.statusValue = '全部';
+    this.categoryValue = 'all';
+    this.groupValue = '全部分组';
+    this.rebuildSourceProjection();
   }
 
   private recordViewport(area: Area): void {
@@ -1147,7 +1312,32 @@ export struct SourceManagementPage {
   }
 
   private footerFallbackHeight(): number {
-    return 48 + TOK_SPACE_SM + this.actionBottomInset();
+    return this.footerControlHeight() + TOK_SPACE_SM + this.actionBottomInset();
+  }
+
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+  }
+
+  private layoutBudget(source?: BookSource): SourceManagementLayout {
+    const scale = this.fontScale();
+    const action = resolveReaderButtonSpec('source-management-detect');
+    const actionHeight = readerScaledControlHeight(action.height ?? 44,
+      action.text.lineHeightFp ?? action.text.fontSizeFp * 1.5, scale);
+    return resolveSourceManagementLayout({ availableWidth: this.contentFrame().width, fontScale: scale,
+      hasLogin: source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
+      hasSummary: source?.checkMessage !== undefined && source.checkMessage.trim().length > 0 && source.checkState !== 'unchecked',
+      actionWidth: action.fixedWidth * scale, actionHeight, filterHeight: actionHeight, footerHeight: this.footerControlHeight(),
+      titleLineHeight: Math.max(TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp * 1.5,
+        TYPE_SOURCE_MANAGEMENT_META.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_META.fontSizeFp * 1.5),
+      metaLineHeight: TYPE_SOURCE_MANAGEMENT_META.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_META.fontSizeFp * 1.5 });
+  }
+
+  private footerControlHeight(): number {
+    const footer = resolveReaderButtonSpec('source-management-manage');
+    return Math.max(48, readerScaledControlHeight(footer.height ?? 44,
+      footer.text.lineHeightFp ?? footer.text.fontSizeFp * 1.5, this.fontScale()), readerScaledControlHeight(44, 20, this.fontScale()));
   }
 
   private scrollLayout(): ReaderScrollLayout {

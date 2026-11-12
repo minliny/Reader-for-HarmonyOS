@@ -11,13 +11,15 @@ export async function createWindowCoordinatorFixture(){
  const extensionHook=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
  const {ReaderStatusBarMeasurement}=await import('../../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
  const {ts}=installedEtsCompiler();
- const app=new Map(),appWrites=[],priorStorage=globalThis.AppStorage;globalThis.AppStorage={setOrCreate:(k,v)=>{app.set(k,v);appWrites.push([k,v]);}};
+ const app=new Map(),appWrites=[],priorStorage=globalThis.AppStorage;globalThis.AppStorage={get:key=>app.get(key),setOrCreate:(k,v)=>{app.set(k,v);appWrites.push([k,v]);}};
  const warnings=[];
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
  const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
    AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
    display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
- const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
+ const deps={'@kit.ArkUI':kit,'@kit.BasicServicesKit':{deviceInfo:{deviceType:'phone'}},
+   '../ui/platform/ReaderNativeAlertWindow':{ReaderNativeAlertWindow:{bind(){},destroy(){}}},
+   '../platform/ReaderDocumentPickerActivity':{ReaderDocumentPickerActivity:{bind(){},destroy(){},setForeground(){}}},'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
    '../ui/foundation/ReaderThemeRegistry':{findReaderTheme},
    './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
    '../ui/foundation/ReaderWindowMetrics':metrics,

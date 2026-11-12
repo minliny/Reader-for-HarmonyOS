@@ -1,4 +1,4 @@
-import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
@@ -50,11 +50,11 @@ export struct MangaDirectoryEntryRow {
 
   private fontScale(): number {
     const revision = this.windowMetricsRevision;
-    return revision >= 0 ? mangaDirectoryScale(ReaderWindowCoordinator.metrics().systemFontScale) : 1;
+    return revision >= 0 ? mangaDirectoryScale(readerWindowMetrics().systemFontScale) : 1;
   }
 
   private cellHeight(): number {
-    return Math.max(MANGA_DIRECTORY_VISUAL.gridHeight,
+    return Math.max(44 + MANGA_DIRECTORY_VISUAL.gridBorder * 2, MANGA_DIRECTORY_VISUAL.gridHeight,
       MANGA_DIRECTORY_VISUAL.gridPaddingY * 2 + MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale() +
       MANGA_DIRECTORY_VISUAL.gridBorder * 2);
   }
@@ -120,8 +120,8 @@ export struct MangaDirectoryEntryRow {
           (this.scheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
           (this.scheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
           .width(grid ? 12 : 15).height(grid ? 12 : 15).accessibilityLevel('no');
-      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
-        Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
+      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
+        Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
         .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .accessibilityText(`管理${this.title(entry)}下载`)
         .enabled(this.interactionEnabled)
@@ -129,8 +129,8 @@ export struct MangaDirectoryEntryRow {
           const current = this.liveEntry(entry);
           if (current !== undefined && this.interactionEnabled && this.downloadable(current)) this.onDownloadEntry(current);
         });
-      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28)
-        .height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
+      }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44)
+        .height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
         // Native child clicks win the default exclusive arena. If the child
         // is disabled, this inert actor prevents a chapter click behind it.
         .focusable(false).accessibilityLevel('no').onClick((): void => {});
@@ -184,12 +184,10 @@ export struct MangaDirectoryEntryRow {
         Image(this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_down_theme_night') :
           $r('app.media.manga_sheet_chevron_down')).width(16).height(16)
           .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation(motionAnimateParam('manga.directory.fold')).accessibilityLevel('no');
-      }.width(this.facts(entry)?.group === true ? 16 : 32).height(this.facts(entry)?.group === true ? 16 : 32)
+      }.width(44).height(44)
         .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .margin({ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 })
-        .responseRegion({ x: this.facts(entry)?.group === true ? -10 : 0,
-          y: this.facts(entry)?.group === true ? -14 : 0,
-          width: this.facts(entry)?.group === true ? 36 : 32, height: this.facts(entry)?.group === true ? 44 : 32 })
+        .responseRegion({ x: 0, y: 0, width: 44, height: 44 })
         .enabled(this.interactionEnabled && this.query.trim().length === 0)
         .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && this.query.trim().length === 0,
           this.facts(entry)?.group !== true, this.scheme, 'nativeButton'))

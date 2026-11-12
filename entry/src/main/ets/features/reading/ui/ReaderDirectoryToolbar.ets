@@ -1,3 +1,5 @@
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { LengthMetrics } from '@kit.ArkUI';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -13,6 +15,7 @@ type ReaderDirectoryTool = 'search' | 'top' | 'bottom' | 'sort';
 /** Shared directory tools. The owner retains query, scrolling and motion state. */
 @Component
 export struct ReaderDirectoryToolbar {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop text: string = '';
   @Prop placeholder: string = '搜索章节名称';
@@ -21,9 +24,16 @@ export struct ReaderDirectoryToolbar {
   @Prop variant: 'standard' | 'full-directory' | 'manga-catalog' = 'standard';
   @Prop mangaFontScale: number = 1;
   @Prop locateEnabled: boolean = false;
+  @Prop availableWidthVp: number = 0;
   @Prop naturalFieldHeightVp: number = 0;
   @Prop naturalInputHeightVp: number = 0;
   @Prop naturalToolbarHeightVp: number = 0;
+  @Prop directoryFocusId: string = '';
+  @Prop directoryFocusAllowed: boolean = false;
+  @Prop directoryFocusRevision: number = 0;
+  @Prop directoryKeyboardOnFocus: boolean = true;
+  directoryFocusCurrent: (id: string) => boolean = (_id: string): boolean => true;
+  onDirectoryFocusChanged: (id: string, focused: boolean) => void = (_id: string, _focused: boolean): void => {};
   onTextChange: (value: string) => void = (_value: string): void => {};
   onSearch: () => void = (): void => {};
   onTop: () => void = (): void => {};
@@ -31,15 +41,23 @@ export struct ReaderDirectoryToolbar {
   onToggleSort: () => void = (): void => {};
   onLocateCurrent: () => void = (): void => {};
 
+  private directoryMounted: boolean = false;
+  aboutToAppear(): void { this.directoryMounted = true; }
+  aboutToDisappear(): void { this.directoryMounted = false; }
+  private currentDirectoryInput(id: string): boolean {
+    return id.length === 0 || (this.directoryMounted && id === this.directoryFocusId && this.directoryFocusCurrent(id));
+  }
+
   private iconSize(): number { return this.variant === 'standard' ? 24 : 16; }
   private controlFieldHeight(): number {
-    return this.variant === 'standard' && Number.isFinite(this.naturalFieldHeightVp) ?
-      Math.max(32, this.naturalFieldHeightVp) : 32;
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerReadableFontScale(readerWindowMetrics().systemFontScale);
+    return Math.max(readerScaledControlHeight(44, 24, scale),
+      Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
   }
   private controlToolbarHeight(): number {
     return this.variant === 'standard' && Number.isFinite(this.naturalToolbarHeightVp) ?
-      Math.max(READER_DIRECTORY_TOOLBAR_HEIGHT, this.naturalToolbarHeightVp) :
-      this.variant === 'manga-catalog' ? 32 : READER_DIRECTORY_TOOLBAR_HEIGHT;
+      Math.max(this.controlFieldHeight() + 6, this.naturalToolbarHeightVp) :
+      this.variant === 'manga-catalog' ? 44 : Math.max(READER_DIRECTORY_TOOLBAR_HEIGHT, this.controlFieldHeight() + 6);
   }
 
   private mangaSortIcon(): Resource {
@@ -100,45 +118,74 @@ export struct ReaderDirectoryToolbar {
           Image($r('app.media.reader_directory_sort_descending')).width(this.iconSize()).height(this.iconSize());
         }
       }
-      }.width(32).height(this.controlFieldHeight())
+      }.width(this.variant === 'standard' ? 44 : 32).height(this.variant === 'standard' ? this.controlFieldHeight() : 32)
+        .backgroundColor(this.variant === 'manga-catalog' ? mangaDirectoryColor('soft', this.appThemeScheme) :
+          readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }
-      .width(32).height(this.controlFieldHeight())
+      .width(44).height(this.controlFieldHeight())
       .padding(0)
-      .backgroundColor(this.variant === 'manga-catalog' ? mangaDirectoryColor('soft', this.appThemeScheme) :
-        readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+      .backgroundColor(Color.Transparent).borderRadius(8)
       .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), true, false, true,
         new MangaDirectoryPressFeedback(true, this.variant === 'manga-catalog', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
-      .responseRegion(this.variant === 'manga-catalog' ? { x: -5, y: -6, width: 44, height: 44 } :
-        { x: 0, y: 0, width: 32, height: this.controlFieldHeight() })
+      .responseRegion({ x: 0, y: 0, width: 44, height: this.controlFieldHeight() })
       .onClick(action);
   }
 
+  private queryStacked(): boolean {
+    const count = this.showChapterTools ? 4 : 1;
+    return this.variant !== 'manga-catalog' && this.availableWidthVp > 0 &&
+      this.availableWidthVp - TOK_SPACE_CONTROL_INLINE * 2 - count * 49 < 44;
+  }
+
   @Builder
-  private searchRow() {
-    Row({ space: 5 }) {
+  private queryField(inputFocusId: string) {
       Row() {
         ReaderSearchField({ variant: 'readerDirectory', mode: this.variant === 'manga-catalog' ? 'live' : 'submit', text: this.text,
           naturalFieldHeightVp: this.variant === 'standard' ? this.naturalFieldHeightVp : 0,
           naturalInputHeightVp: this.variant === 'standard' ? this.naturalInputHeightVp : 0,
           placeholder: this.placeholder, accessibilityLabel: this.placeholder,
           clearable: this.variant === 'manga-catalog',
-          onTextChange: (value: string): void => this.onTextChange(value),
-          onSubmit: (): void => this.onSearch() });
+          directoryFocusId: inputFocusId, directoryFocusAllowed: this.directoryFocusAllowed,
+          directoryFocusRevision: this.directoryFocusRevision, directoryKeyboardOnFocus: this.directoryKeyboardOnFocus,
+          directoryFocusCurrent: (id: string): boolean => this.currentDirectoryInput(id),
+          onDirectoryFocusChanged: (id: string, focused: boolean): void => {
+            if (this.currentDirectoryInput(inputFocusId)) this.onDirectoryFocusChanged(id, focused);
+          },
+          onTextChange: (value: string): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTextChange(value); },
+          onSubmit: (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); } });
       }.layoutWeight(1).height(this.controlFieldHeight()).alignItems(VerticalAlign.Center);
+  }
+
+  @Builder
+  private queryTools(inputFocusId: string) {
       if (this.variant !== 'manga-catalog') {
-        this.tool('search', (): void => this.onSearch());
+        this.tool('search', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); });
         if (this.showChapterTools) {
-          this.tool('top', (): void => this.onTop());
-          this.tool('bottom', (): void => this.onBottom());
+          this.tool('top', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTop(); });
+          this.tool('bottom', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onBottom(); });
         }
       }
       if (this.variant === 'manga-catalog' || this.showChapterTools) {
-        this.tool('sort', (): void => this.onToggleSort());
+        this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
       }
-    }.width('100%').height(this.controlToolbarHeight())
-      .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
-        { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 9 });
+  }
+
+  @Builder
+  private searchRow(inputFocusId: string = '') {
+    if (this.queryStacked()) {
+      Column({ space: 0 }) {
+        Row() { this.queryField(inputFocusId); }.width('100%').height(this.controlFieldHeight() + 6)
+          .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });
+        Row({ space: 5 }) { this.queryTools(inputFocusId); }.width('100%').height(50)
+          .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });
+      }.width('100%').height(this.controlFieldHeight() + 56);
+    } else {
+      Row({ space: 5 }) { this.queryField(inputFocusId); this.queryTools(inputFocusId); }
+        .width('100%').height(this.controlToolbarHeight())
+        .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
+          { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });
+    }
   }
 
   @Builder
@@ -155,7 +202,7 @@ export struct ReaderDirectoryToolbar {
             .fontColor(mangaDirectoryColor('accent', this.appThemeScheme));
         }.accessibilityLevel('no-hide-descendants');
       }.padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .constraintSize({ minHeight: mangaDirectoryLineBox(manga.toolHeight, manga.toolLineHeight, manga.toolPaddingY * 2, this.mangaFontScale) })
+        .constraintSize({ minWidth: 44, minHeight: Math.max(44, mangaDirectoryLineBox(manga.toolHeight, manga.toolLineHeight, manga.toolPaddingY * 2, this.mangaFontScale)) })
         .opacity(this.locateEnabled ? 1 : manga.disabledOpacity)
         .attributeModifier(new ReaderActionAccessibility('定位当前条目', this.locateEnabled, false, true,
           new MangaDirectoryPressFeedback(this.locateEnabled, true, this.appThemeScheme, 'nativeButton'), 'nativeButton'))
@@ -170,7 +217,9 @@ export struct ReaderDirectoryToolbar {
         this.locateTool();
       }.width('100%');
     } else {
-      this.searchRow();
+      if (this.directoryFocusId.length > 0) {
+        ForEach([this.directoryFocusId], (id: string): void => { this.searchRow(id); }, (id: string): string => id);
+      } else { this.searchRow(); }
     }
   }
 }

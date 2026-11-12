@@ -14,6 +14,7 @@ const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { selectedProductionValues, selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
 const appearance = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
 const render = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts');
@@ -66,6 +67,8 @@ for (const custom of [false, true]) for (const endpoint of [0, 1]) {
   const { owner } = createReaderBuilderProbe(source, members, {
     ...appearance, ...render, ...geometry, ...style, ...presentation, ...scroll, ...select,
     ...runtime.sdk, MotionPointTrack,
+    ...selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url), ['nextReaderAppearanceSelectFocusIdentity']),
+    ...selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url), ['ReaderAppearanceTextMaximum']),
     Scroller: class {
       currentOffset() { native.reads++; return native.offset; }
       scrollTo(value) { native.writes.push(value); native.offset = { xOffset: value.xOffset, yOffset: value.yOffset }; }

@@ -2,6 +2,7 @@ import {
   SourceGateway,
   type BookSource,
   type SourceCheckOutcome,
+  type SourceDefinitionSnapshot,
 } from './SourceGateway';
 import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
@@ -15,6 +16,14 @@ import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
 let sourceProjectionGeneration: number = 0;
+
+interface SourceCheckCapture {
+  sourceId: string;
+  sourceVersion?: string;
+  signature: string;
+  session: number;
+  definition?: SourceDefinitionSnapshot;
+}
 
 export interface SourceManagementProjection {
   action: string;
@@ -113,7 +122,7 @@ export class SourceOrchestrator {
   private importActive: boolean = false;
   /** Session-local source-check projections; Core remains authoritative. */
   private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
-  private checkingSourceIds: Set<string> = new Set<string>();
+  private checkingSourceIds: Map<string, SourceCheckCapture> = new Map<string, SourceCheckCapture>();
   private emitProjection: (projection: SourceManagementProjection) => void = (_projection: SourceManagementProjection): void => {};
   private latestProjection: SourceManagementProjection = { action: 'load', sourceId: '' };
   private hasRead: boolean = false;
@@ -260,58 +269,53 @@ export class SourceOrchestrator {
 
   /** Queue one production L1-L5 diagnostic; repeated taps never duplicate it. */
   checkSource(id: string): void {
-    if (!this.isCurrentSession(this.session) || this.checkingSourceIds.has(id)) {
-      return;
-    }
-    const session = this.session;
-    this.checkingSourceIds.add(id);
+    const capture = this.captureSourceCheck(id);
+    if (capture === undefined) return;
     this.setCheckProjection(id, 'checking', [], '检测中');
     this.operationChain = this.operationChain
-      .then((): Promise<void> => this.applySourceCheck(id, session))
-      .catch((error: Error): void => {
-        if (this.isCurrentSession(session)) {
-          this.setCheckProjection(id, 'failed', [], error.message);
-        }
+      .then((): Promise<void> => this.applySourceCheck(capture))
+      .catch(async (error: Error): Promise<void> => {
+        await this.publishSourceCheckFailure(capture, 'failed', error.message);
         hilog.error(DOMAIN, 'Reader',
           'Source check failed: sourceId=%{private}s err=%{private}s', id, error.message);
       })
       .finally((): void => {
-        this.checkingSourceIds.delete(id);
+        if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
       });
   }
 
   /** Open the source-owned login/challenge URL on the shared Host session. */
   loginSource(id: string, loginUrl: string): void {
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
-    if (!this.isCurrentSession(this.session) || source === undefined || source.loginUrl !== loginUrl ||
-      loginUrl.trim().length === 0 || this.checkingSourceIds.has(id)) {
-      return;
-    }
-    const session = this.session;
-    const current = (): boolean => this.isCurrentSession(session) &&
-      this.sources.some((candidate: BookSource): boolean => candidate.sourceId === id && candidate.loginUrl === loginUrl);
-    this.checkingSourceIds.add(id);
+    if (source === undefined || source.loginUrl !== loginUrl || loginUrl.trim().length === 0 ||
+      this.gateway.originalMutationSnapshot()?.blocked === true ||
+      this.latestProjection.receipt?.receipt.confirmation === 'unknown') return;
+    const capture = this.captureSourceCheck(id);
+    if (capture === undefined) return;
     this.setCheckProjection(id, 'checking', [], '等待登录 / 验证');
     this.operationChain = this.operationChain
       .then(async (): Promise<void> => {
-        if (!current()) return;
-        await this.owner.openSourceLogin(source.sourceId, loginUrl, source.name, current);
-        if (!current()) return;
-        const outcome = await this.gateway.checkSource(source.sourceId, current);
-        if (current()) {
-          this.applySourceCheckOutcome(outcome);
+        const definition = await this.validateSourceCheck(capture);
+        if (definition === undefined) return;
+        await this.owner.openSourceLogin(source.sourceId, loginUrl, source.name,
+          (): boolean => this.isCurrentSourceCheck(capture));
+        if (await this.validateSourceCheck(capture, definition) === undefined) return;
+        const outcome = await this.gateway.checkSource(
+          source.sourceId,
+          (): boolean => this.isCurrentSourceCheck(capture),
+        );
+        if (await this.validateSourceCheck(capture, definition) !== undefined) {
+          this.applySourceCheckOutcome(outcome, capture);
         }
       })
-      .catch((error: Error): void => {
-        if (this.isCurrentSession(session)) {
-          this.setCheckProjection(id, 'unchecked', [], '登录 / 验证已取消');
-        }
+      .catch(async (error: Error): Promise<void> => {
+        await this.publishSourceCheckFailure(capture, 'unchecked', '登录 / 验证已取消');
         hilog.warn(DOMAIN, 'Reader',
           'Source login/challenge ended without completion: sourceId=%{private}s err=%{private}s',
           id, error.message);
       })
       .finally((): void => {
-        this.checkingSourceIds.delete(id);
+        if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
       });
   }
 
@@ -570,25 +574,94 @@ export class SourceOrchestrator {
     }
   }
 
-  private async applySourceCheck(id: string, session: number): Promise<void> {
-    if (!this.isCurrentSession(session)) {
-      return;
+  private sourceCheckSignature(source: BookSource): string {
+    return JSON.stringify([source.sourceId, source.sourceVersion ?? null, source.name, source.baseUrl,
+      source.enabled, source.enabledExplore, source.category, source.loginUrl ?? null,
+      source.group ?? null]);
+  }
+
+  private captureSourceCheck(id: string): SourceCheckCapture | undefined {
+    const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
+    if (!this.isCurrentSession(this.session) || source === undefined) return undefined;
+    const previous = this.checkingSourceIds.get(id);
+    if (previous !== undefined && this.isCurrentSourceCheck(previous)) return undefined;
+    const capture: SourceCheckCapture = { sourceId: id, sourceVersion: source.sourceVersion,
+      signature: this.sourceCheckSignature(source), session: this.session };
+    this.checkingSourceIds.set(id, capture);
+    return capture;
+  }
+
+  private isCurrentSourceCheck(capture: SourceCheckCapture): boolean {
+    const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === capture.sourceId);
+    return this.isCurrentSession(capture.session) && this.checkingSourceIds.get(capture.sourceId) === capture &&
+      source !== undefined && this.sourceCheckSignature(source) === capture.signature;
+  }
+
+  private async validateSourceCheck(capture: SourceCheckCapture,
+    expected?: SourceDefinitionSnapshot): Promise<SourceDefinitionSnapshot | undefined> {
+    if (!this.isCurrentSourceCheck(capture)) return undefined;
+    const definition = await this.gateway.readSourceDefinition(capture.sourceId,
+      (): boolean => this.isCurrentSourceCheck(capture));
+    if (!this.isCurrentSourceCheck(capture)) return undefined;
+    const baseline = expected ?? capture.definition;
+    if (definition !== undefined &&
+      (capture.sourceVersion === undefined || definition.sourceVersion === capture.sourceVersion) &&
+      (baseline === undefined || definition.identity === baseline.identity)) {
+      capture.definition = definition;
+      return definition;
     }
+    // Re-read authoritative row metadata only for a changed/deleted definition.
+    // A stale diagnostic must not stamp the replacement with its old outcome.
+    const rows = await this.gateway.loadSources(capture.sourceId, false,
+      (): boolean => this.isCurrentSourceCheck(capture));
+    if (!this.isCurrentSourceCheck(capture)) return undefined;
+    const replacement = rows.find((source: BookSource): boolean => source.sourceId === capture.sourceId);
+    const current: BookSource[] = [];
+    for (const source of this.sources) {
+      if (source.sourceId !== capture.sourceId) current.push(source);
+      else if (replacement !== undefined) current.push(replacement);
+    }
+    this.checkResults.delete(capture.sourceId);
+    this.checkingSourceIds.delete(capture.sourceId);
+    this.presentSources(current);
+    return undefined;
+  }
+
+  private async publishSourceCheckFailure(capture: SourceCheckCapture,
+    state: 'unchecked' | 'failed', message: string): Promise<void> {
+    if (!this.isCurrentSourceCheck(capture)) return;
+    try {
+      if (await this.validateSourceCheck(capture) !== undefined && this.isCurrentSourceCheck(capture))
+        this.setCheckProjection(capture.sourceId, state, [], message);
+    } catch (_) {
+      // Without a current definition read, neither success nor failure belongs
+      // to a verified rule version. Retire the busy projection as unverified.
+      if (this.isCurrentSourceCheck(capture)) this.setCheckProjection(capture.sourceId, 'unchecked', [], message);
+    }
+  }
+
+  private async applySourceCheck(capture: SourceCheckCapture): Promise<void> {
+    const definition = await this.validateSourceCheck(capture);
+    if (definition === undefined) return;
     const outcome = await this.gateway.checkSource(
-      id,
-      (): boolean => this.isCurrentSession(session),
+      capture.sourceId,
+      (): boolean => this.isCurrentSourceCheck(capture),
     );
-    if (!this.isCurrentSession(session)) {
-      return;
-    }
-    this.applySourceCheckOutcome(outcome);
+    if (await this.validateSourceCheck(capture, definition) === undefined) return;
+    this.applySourceCheckOutcome(outcome, capture);
     hilog.info(DOMAIN, 'Reader',
       'Source check completed: sourceId=%{private}s available=%{private}s levels=%{private}s durationMs=%{public}d reason=%{private}s',
-      id, outcome.available, outcome.levelsPassed.join(','), outcome.durationMs,
+      capture.sourceId, outcome.available, outcome.levelsPassed.join(','), outcome.durationMs,
       outcome.failureReason ?? '');
   }
 
-  private applySourceCheckOutcome(outcome: SourceCheckOutcome): void {
+  private applySourceCheckOutcome(outcome: SourceCheckOutcome, capture: SourceCheckCapture): void {
+    if (!this.isCurrentSourceCheck(capture) || outcome.sourceId !== capture.sourceId) return;
+    if (outcome.report?.ruleDigest !== undefined && capture.definition?.sourceVersion !== undefined &&
+      outcome.report.ruleDigest !== capture.definition.sourceVersion) {
+      this.setCheckProjection(capture.sourceId, 'unchecked', [], '检测结果与当前书源版本不一致');
+      return;
+    }
     if (outcome.available) {
       this.setCheckProjection(
         outcome.sourceId,
@@ -623,6 +696,7 @@ export class SourceOrchestrator {
       enabled: source.enabled,
       enabledExplore: source.enabledExplore,
       group: source.group,
+      sourceVersion: source.sourceVersion,
       category: source.category,
       loginUrl: source.loginUrl,
       checkState: state,
@@ -699,8 +773,17 @@ export class SourceOrchestrator {
   }
 
   private presentSources(sources: BookSource[]): void {
+    this.checkingSourceIds.forEach((capture: SourceCheckCapture, id: string): void => {
+      if (capture.session !== this.session || !sources.some((source: BookSource): boolean =>
+        source.sourceId === id && this.sourceCheckSignature(source) === capture.signature)) this.checkingSourceIds.delete(id);
+    });
+    this.checkResults.forEach((checked: BookSource, id: string): void => {
+      if (!sources.some((source: BookSource): boolean => source.sourceId === id &&
+        this.sourceCheckSignature(source) === this.sourceCheckSignature(checked))) this.checkResults.delete(id);
+    });
     this.sources = sources.map((source: BookSource): BookSource => {
-      const checked = this.checkResults.get(source.sourceId);
+      const previous = this.checkResults.get(source.sourceId);
+      const checked = previous !== undefined && this.sourceCheckSignature(previous) === this.sourceCheckSignature(source) ? previous : undefined;
       return {
         sourceId: source.sourceId,
         name: source.name,
@@ -708,11 +791,14 @@ export class SourceOrchestrator {
         enabled: source.enabled,
         enabledExplore: source.enabledExplore,
         group: source.group,
+        sourceVersion: source.sourceVersion,
         category: source.category,
         loginUrl: source.loginUrl,
         checkState: checked?.checkState ?? source.checkState ?? 'unchecked',
         checkLevels: checked?.checkLevels ?? source.checkLevels ?? [],
         checkMessage: checked?.checkMessage ?? source.checkMessage,
+        checkReports: source.checkReports,
+        lastCheckSummary: source.lastCheckSummary,
       };
     });
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }

@@ -1,0 +1,20 @@
+{
+  "purpose": "Finite production negative fixtures for directory merge checks",
+  "fixtures": [
+    {
+      "fixture": "keyboard-observation.ets.txt",
+      "sha256": "388133303a89dc2259b5821a77715f7d3857ec033427200d0e7636ba61e94ab8",
+      "sourceBoundary": "Frozen production source negative fixture only. No device or user data."
+    },
+    {
+      "fixture": "focus-ancestor.ets.txt",
+      "sha256": "ac605184c589c3856e193176447224447bd6728f6bd648b2f9a7bad2e29f9a0a",
+      "sourceBoundary": "Frozen production source negative fixture only. No device or user data."
+    },
+    {
+      "fixture": "reading-topbar.ets.txt",
+      "sha256": "c8989539878ae44840266fd705c89b5ac09053effc77d00bb0577ab67a13f88f",
+      "sourceBoundary": "PR22 production top-bar title negative/default-equivalence fixture only."
+    }
+  ]
+}

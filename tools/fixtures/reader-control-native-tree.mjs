@@ -1,7 +1,12 @@
 // Finite native-call recorder for actual SDK Builder closures. This records
 // authored parentage/attributes only; it performs no layout, paint or hit test.
-export function readerControlNativeTree(types=['Stack','Row','Column','Text']) {
-  const stack=[],parents=new Map();let active,owner,order=0;
+export function readerControlNativeTree(types=['Stack','Row','Column','Text'], {crossComponent=false}={}) {
+  const stack=[],parents=new Map(),ownerIds=new WeakMap();let active,owner,order=0,nextOwnerId=0;
+  const keyFor=(value,id)=>{
+    if(!crossComponent)return id;
+    if(!ownerIds.has(value))ownerIds.set(value,++nextOwnerId);
+    return `${ownerIds.get(value)}:${id}`;
+  };
   const hooks={onObserverEnter(value,id){owner=value;active=id;},onObserverExit(){owner=undefined;active=undefined;}};
   const dependencies=Object.fromEntries(types.map(type=>{
     const native=new Proxy({name:type},{get(_target,property){
@@ -11,9 +16,11 @@ export function readerControlNativeTree(types=['Stack','Row','Column','Text']) {
       return(...args)=>{
         if(owner===undefined)throw Error('native attribute outside SDK observer');
         const node=owner.nodes.get(active);
-        if(property==='create'&&!parents.has(active)){
+        const key=keyFor(owner,active);
+        if((property==='create'||property.startsWith('createWith'))&&!parents.has(key)){
           node.type=type;node.parentId=stack.at(-1)?.id;node.creationOrder=order++;
-          parents.set(active,node.parentId);stack.push({id:active,type});
+          if(crossComponent)node.nativeKey=key;
+          parents.set(key,node.parentId);stack.push({id:key,type});
         }
         node[property]=args.length===1?args[0]:args;
         owner.attributeCalls.push({id:active,property,args});return native;

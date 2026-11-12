@@ -1,3 +1,4 @@
+import { copySourceManagementScroll, type SourceManagementScrollState } from './SourceManagementScrollState';
 import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import type { BookSource } from '../application/SourceGateway';
 import { SourceHost } from '../application/SourceHost';
@@ -16,6 +17,7 @@ export interface SourceManagementViewState {
   anchorSourceId: string;
   anchorFallbackIndex?: number;
   toolsEntry?: SourceToolsEntry;
+  scroll?: SourceManagementScrollState;
 }
 
 interface SourceToolsReturn {
@@ -95,13 +97,13 @@ export class SourceJourneyPresentation {
   }
 
   initialManagementViewState(identity: string): SourceManagementViewState | undefined {
-    return this.isManagementCurrent(identity) ? this.managementViewState : undefined;
+    return this.isManagementCurrent(identity) && this.managementViewState !== undefined ? this.copyManagementViewState(this.managementViewState) : undefined;
   }
 
   retainManagementViewForTools(identity: string, viewState: SourceManagementViewState): boolean {
     const owner = this.managementOwner;
     if (owner === undefined || !this.isManagementCurrent(identity)) return false;
-    this.toolsReturn = { owner, viewState, toolsOpened: false };
+    this.toolsReturn = { owner, viewState: this.copyManagementViewState(viewState), toolsOpened: false };
     return true;
   }
 
@@ -186,6 +188,12 @@ export class SourceJourneyPresentation {
       this.view.tools.sourceListRevision === listRevision && this.view.tools.selectionRevision === selectionRevision &&
       selection.every((id: string): boolean => this.view.tools.sources.some((source: BookSource): boolean => source.sourceId === id));
     show(selection.length, (): void => { if (current()) host.deleteSelected(selection); }, current);
+  }
+
+  private copyManagementViewState(value: SourceManagementViewState): SourceManagementViewState {
+    return { searchQuery: value.searchQuery, status: value.status, category: value.category, group: value.group,
+      anchorSourceId: value.anchorSourceId, anchorFallbackIndex: value.anchorFallbackIndex,
+      toolsEntry: value.toolsEntry, scroll: copySourceManagementScroll(value.scroll) };
   }
 
   private retireManagement(): void {

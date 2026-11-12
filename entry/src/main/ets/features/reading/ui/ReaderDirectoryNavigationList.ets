@@ -1,4 +1,5 @@
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { mangaDirectoryDisplay } from '../../manga/ui/MangaDirectoryDisplay';
 import { mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../../manga/ui/MangaDirectoryState';
 import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../../../ui/foundation/ReaderTypography';
@@ -8,18 +9,18 @@ import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } fr
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600 } from '../../../ui/foundation/ReaderFontFamilies';
-import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from '../../manga/ui/MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
-import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, type ReaderDirectoryNavigationNode,
+import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationPort, type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey, type ReaderDirectoryNavigationNode,
   type ReaderDirectoryNavigationReady, type ReaderDirectoryNavigationPage } from '../application/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import { readerDirectoryBookmarkMarkerState, type ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import { LengthMetrics } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
-import { readerDirectoryObserveScrollCommand, readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor,
+import { readerDirectoryObserveScrollCommand, readerDirectoryObserveScrollIntent, readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor,
   type ReaderDirectoryViewportAnchor } from '../presentation/ReaderDirectoryViewport';
 import { mangaDirectoryNodePlacement, mangaDirectoryNodePlacements, mangaDirectorySameNodeRun,
   type MangaDirectoryNodePlacement } from '../../manga/ui/MangaDirectoryLayout';
@@ -245,7 +246,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop @Watch('onViewChanged') view: ReaderDirectoryNavigationReady;
   @Prop bookId: string = '';
   @Prop sourceId: string = 'local';
-  @Prop @Watch('onControlRowHeightChanged') rowHeight: number = 40;
+  @Prop @Watch('onControlRowHeightChanged') rowHeight: number = 44;
   @Prop mangaDisplay: boolean = false;
   @Prop @Watch('onMangaQuickChanged') mangaQuickDisplay: boolean = false;
   @Prop mangaRowMinHeight: number = 58;
@@ -271,6 +272,13 @@ export struct ReaderDirectoryNavigationList {
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  /** One optional native-only prefix; Core/page ranks stay zero based. */
+  @Prop @Watch('onPrefixChanged') headerCount: number = 0;
+  @Prop @Watch('onPrefixChanged') prefixHeight: number = 0;
+  @Prop @Watch('onPrefixChanged') prefixIdentity: string = '';
+  @Prop @Watch('onPrefixReveal') prefixRevealRevision: number = 0;
+  @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
+  @BuilderParam emptyBuilder: () => void = this.emptyPrefix;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
@@ -287,7 +295,9 @@ export struct ReaderDirectoryNavigationList {
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   private dataSource: ReaderDirectoryNavigationDataSource =
     new ReaderDirectoryNavigationDataSource((offset: number): void => this.loadPage(offset));
-  private gateway: ReaderDirectoryNavigationGateway | undefined = undefined;
+  /** Optional dependency only; absent callers keep the production Gateway. */
+  navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
+  private gateway: ReaderDirectoryNavigationPort | undefined = undefined;
   private mounted: boolean = false;
   private generation: number = 0;
   private layoutReady: boolean = false;
@@ -297,6 +307,17 @@ export struct ReaderDirectoryNavigationList {
   private initialPositionPending: boolean = true;
   private positionPlan: ReaderDirectoryPositionPlan | undefined = undefined;
   private firstVisibleIndex: number = 0;
+  private boundHeaderCount: number = 0;
+  private boundPrefixIdentity: string = '';
+  private boundPrefixHeight: number = 0;
+  private prefixLayoutGeneration: number = 0;
+  private prefixChangePending: boolean = false;
+  private prefixChangeHadHeader: boolean = false;
+  private prefixChangeIdentity: string = '';
+  private prefixChangeOffset: number = 0;
+  private prefixRevealActive: boolean = false;
+  private prefixEverMounted: boolean = false;
+  private prefixScrollIntentUnsubscribe: (() => void) | undefined = undefined;
   private selectionGeneration: number = 0;
   private pendingPages: ReaderDirectoryNavigationPendingPage[] = [];
   private scrollCommandUnsubscribe: (() => void) | undefined = undefined;
@@ -315,7 +336,17 @@ export struct ReaderDirectoryNavigationList {
     this.initialPositionPending = true;
     this.mangaDragging = false;
     this.pendingPages = [];
-    this.gateway = new ReaderDirectoryNavigationGateway(ReaderRuntimeOwner.current());
+    this.boundHeaderCount = this.nativeHeaderCount();
+    if (this.boundHeaderCount === 1) this.prefixEverMounted = true;
+    this.boundPrefixIdentity = this.prefixIdentity;
+    this.boundPrefixHeight = this.prefixHeight;
+    this.prefixRevealActive = false; this.prefixChangePending = false;
+    this.bindPrefixScrollIntent();
+    if (this.navigationPortFactory !== undefined) {
+      this.gateway = this.navigationPortFactory();
+    } else {
+      this.gateway = new ReaderDirectoryNavigationGateway(ReaderRuntimeOwner.current());
+    }
     this.scrollCommandUnsubscribe = readerDirectoryObserveScrollCommand(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onScrollCommand());
     this.dataSource.replace(this.view);
@@ -328,7 +359,8 @@ export struct ReaderDirectoryNavigationList {
     this.captureViewportAnchor();
     this.scrollCommandUnsubscribe?.();
     this.scrollCommandUnsubscribe = undefined;
-    this.mounted = false; this.generation += 1; this.selectionGeneration += 1; this.pendingPages = [];
+    this.prefixScrollIntentUnsubscribe?.(); this.prefixScrollIntentUnsubscribe = undefined;
+    this.mounted = false; this.generation += 1; this.selectionGeneration += 1; this.prefixLayoutGeneration += 1; this.pendingPages = [];
     this.mangaLayoutByNode.clear(); this.mangaGridSpans.clear(); this.mangaLayoutPageRefs.clear(); this.mangaLayoutSignature = '';
   }
 
@@ -346,7 +378,9 @@ export struct ReaderDirectoryNavigationList {
   private onViewChanged(): void {
     if (!this.mounted) return;
     if (this.dataSource.currentView()?.viewId === this.view.viewId) return;
-    this.captureViewportAnchor();
+    if (!this.prefixChangePending) this.captureViewportAnchor();
+    this.prefixLayoutGeneration += 1; this.prefixChangePending = false;
+    this.prefixRevealActive = false;
     this.generation += 1;
     this.selectionGeneration += 1;
     this.pendingPages = [];
@@ -382,6 +416,7 @@ export struct ReaderDirectoryNavigationList {
   private onInteractionChanged(): void {
     if (!this.mounted) return;
     if (!this.interactionEnabled) {
+      this.retirePrefixPosition();
       this.mangaDragging = false;
       this.selectionGeneration += 1;
       this.captureViewportAnchor();
@@ -407,14 +442,96 @@ export struct ReaderDirectoryNavigationList {
     }, 0);
   }
 
-  private captureViewportAnchor(): void {
+  @Builder
+  private emptyPrefix() {}
+
+  private nativeHeaderCount(): number { return !this.mangaDisplay && this.headerCount === 1 ? 1 : 0; }
+
+  private retirePrefixPosition(): void {
+    if (this.nativeHeaderCount() !== 1 && !this.prefixChangePending) return;
+    this.prefixLayoutGeneration += 1; this.prefixChangePending = false;
+    this.prefixRevealActive = false;
+    this.initialPositionPending = false; this.positionPlan = undefined;
+  }
+
+  private onPrefixReveal(): void {
+    this.retirePrefixPosition();
+    if (this.nativeHeaderCount() === 1) this.prefixRevealActive = true;
+  }
+
+  private bindPrefixScrollIntent(): void {
+    this.prefixScrollIntentUnsubscribe?.(); this.prefixScrollIntentUnsubscribe = undefined;
+    if (this.nativeHeaderCount() === 1) {
+      this.prefixScrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
+        (): void => this.retirePrefixPosition());
+    }
+  }
+
+  private nativeDisplayIndex(index: number, headerCount: number = this.nativeHeaderCount()): number | undefined {
+    const total = this.dataSource.currentView()?.visibleTotal ?? this.view.visibleTotal;
+    if (!Number.isInteger(index) || index < 0 || index >= total) return undefined;
+    const display = this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive ?
+      this.dataSource.displayIndex(index) : index;
+    return display === undefined ? undefined : display + headerCount;
+  }
+
+  private dataIndex(nativeIndex: number): number {
+    const index = nativeIndex - this.nativeHeaderCount();
+    if (!Number.isInteger(index) || index < 0) return -1;
+    return this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive ?
+      this.dataSource.coreIndex(index) : index < this.view.visibleTotal ? index : -1;
+  }
+
+  private onPrefixChanged(): void {
+    if (!this.mounted) return;
+    const count = this.nativeHeaderCount();
+    if (count === 1) this.prefixEverMounted = true;
+    if (count === this.boundHeaderCount && this.prefixIdentity === this.boundPrefixIdentity &&
+      this.prefixHeight === this.boundPrefixHeight) return;
+    // One reconciliation may update count, identity and measured height. Only
+    // its first watch still owns the old native index space.
+    if (!this.prefixChangePending) {
+      this.captureViewportAnchor(this.boundHeaderCount);
+      this.prefixChangeHadHeader = this.prefixRevealActive || this.boundHeaderCount > 0 && this.firstVisibleIndex < 0;
+      this.prefixChangeIdentity = this.boundPrefixIdentity;
+      this.prefixChangeOffset = 0;
+      if (this.prefixChangeHadHeader && !this.prefixRevealActive) {
+        try { this.prefixChangeOffset = Math.max(0, this.scroller?.currentOffset().yOffset ?? 0); } catch (_error) {}
+      }
+      this.prefixChangePending = true;
+    }
+    if (count !== this.boundHeaderCount) this.layoutReady = false;
+    this.boundHeaderCount = count; this.boundPrefixIdentity = this.prefixIdentity; this.boundPrefixHeight = this.prefixHeight;
+    this.bindPrefixScrollIntent();
+    const epoch = ++this.prefixLayoutGeneration, generation = this.generation, viewId = this.view.viewId;
+    setTimeout((): void => {
+      if (!this.mounted || !this.interactionEnabled || epoch !== this.prefixLayoutGeneration ||
+        generation !== this.generation || viewId !== this.view.viewId) return;
+      const prefixWasVisible = this.prefixChangeHadHeader;
+      const prefixOffset = this.prefixChangeIdentity === this.prefixIdentity ? this.prefixChangeOffset : 0;
+      this.prefixChangePending = false;
+      if (prefixWasVisible) {
+        // Prefix pixels are UI state only. Never save them as Core rank zero.
+        this.initialPositionPending = false; this.positionPlan = undefined;
+        try {
+          if (count > 0) this.scroller?.scrollTo({ xOffset: 0, yOffset: Math.min(prefixOffset, Math.max(0, this.prefixHeight)) });
+          else if (this.view.visibleTotal > 0) this.scroller?.scrollToIndex(0, false, ScrollAlign.START);
+        } catch (_error) {}
+      } else {
+        this.positionPlan = this.planPosition();
+        this.initialPositionPending = this.positionPlan !== undefined;
+        this.positionInitialCurrent();
+      }
+    }, 0);
+  }
+
+  private captureViewportAnchor(headerCount: number = this.nativeHeaderCount()): void {
     const view = this.dataSource.currentView();
     const index = this.firstVisibleIndex;
     const node = this.dataSource.loadedNode(index);
     if (view === undefined || node === undefined || this.scroller === undefined) return;
     try {
-      const displayIndex = this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive ?
-        this.dataSource.displayIndex(index) : index;
+      const displayIndex = this.nativeDisplayIndex(index, headerCount);
       if (displayIndex === undefined) return;
       const rect = this.scroller.getItemRect(displayIndex);
       if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) return;
@@ -450,9 +567,9 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private schedulePosition(): void {
-    const generation = this.generation;
+    const generation = this.generation, prefixEpoch = this.prefixLayoutGeneration;
     setTimeout((): void => {
-      if (this.mounted && generation === this.generation) this.positionInitialCurrent();
+      if (this.mounted && generation === this.generation && prefixEpoch === this.prefixLayoutGeneration) this.positionInitialCurrent();
     }, 0);
   }
 
@@ -529,8 +646,7 @@ export struct ReaderDirectoryNavigationList {
     if (!this.initialPositionPending || this.scroller === undefined) return;
     const plan = this.positionPlan ?? this.planPosition();
     if (plan === undefined || plan.viewId !== this.view.viewId) return;
-    const displayIndex = this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive ?
-      this.dataSource.displayIndex(plan.index) : plan.index;
+    const displayIndex = this.nativeDisplayIndex(plan.index);
     if (displayIndex === undefined) return;
     try {
       if (plan.align === ScrollAlign.START) {
@@ -540,12 +656,12 @@ export struct ReaderDirectoryNavigationList {
         // viewport geometry; canonical Core ranks and target proofs stay intact.
         this.scroller.scrollToIndex(displayIndex, plan.smooth === true, ScrollAlign.START,
           { extraOffset: LengthMetrics.vp(plan.currentInset === undefined ?
-            startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight) :
+            startOffset + plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : Math.max(44, this.rowHeight)) :
             startOffset - visibleTop - plan.currentInset) });
       } else if (this.mangaDisplay && this.mangaQuickDisplay && !this.mangaSearchActive) {
         this.scroller.scrollToIndex(displayIndex, false, ScrollAlign.CENTER);
       } else {
-        this.scroller.scrollToIndex(plan.index, false, ScrollAlign.CENTER);
+        this.scroller.scrollToIndex(displayIndex, false, ScrollAlign.CENTER);
       }
       this.initialPositionPending = false;
       this.positionPlan = undefined;
@@ -789,15 +905,18 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private positionRowHeight(index: number): number {
-    if (!this.mangaDisplay) return this.rowHeight;
+    if (!this.mangaDisplay) return Math.max(44, this.rowHeight);
     try {
-      const displayIndex = this.mangaQuickDisplay && !this.mangaSearchActive ? this.dataSource.displayIndex(index) : index;
+      const displayIndex = this.nativeDisplayIndex(index);
       const rect = displayIndex === undefined ? undefined : this.scroller?.getItemRect(displayIndex);
       if (rect !== undefined && Number.isFinite(rect.height) && rect.height > 0) return rect.height;
     } catch (_error) { /* A row outside the materialized viewport uses its minimum. */ }
     const node = this.dataSource.loadedNode(index);
     if (node !== undefined && this.mangaCellPlacement({ key: node.nodeId, node, index })?.kind !== 'row') return this.mangaCellHeight() + MANGA_DIRECTORY_VISUAL.gridGap;
-    return node?.kind === 'group' ? MANGA_DIRECTORY_VISUAL.groupMinHeight + this.mangaGroupSpacing({ node, index, key: node.nodeId }) :
+    return node?.kind === 'group' ? Math.max(MANGA_DIRECTORY_VISUAL.groupMinHeight,
+      44 + MANGA_DIRECTORY_VISUAL.groupPaddingY * 2,
+      MANGA_DIRECTORY_VISUAL.groupLineHeight * this.mangaFontScale() + MANGA_DIRECTORY_VISUAL.groupPaddingY * 2) +
+      this.mangaGroupSpacing({ node, index, key: node.nodeId }) :
       Math.max(MANGA_DIRECTORY_VISUAL.namedMinHeight, MANGA_DIRECTORY_VISUAL.namedPaddingY * 2 +
         MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale() + MANGA_DIRECTORY_VISUAL.gridBorder);
   }
@@ -814,7 +933,7 @@ export struct ReaderDirectoryNavigationList {
 
   private mangaFontScale(): number {
     const revision = this.windowMetricsRevision;
-    return revision >= 0 ? mangaDirectoryScale(ReaderWindowCoordinator.metrics().systemFontScale) : 1;
+    return revision >= 0 ? mangaDirectoryScale(readerWindowMetrics().systemFontScale) : 1;
   }
 
   private mangaContentWidth(): number {
@@ -835,7 +954,8 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private mangaCellHeight(): number {
-    return Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, MANGA_DIRECTORY_VISUAL.gridPaddingY * 2 +
+    return Math.max(44 + MANGA_DIRECTORY_VISUAL.gridBorder * 2,
+      MANGA_DIRECTORY_VISUAL.gridHeight, MANGA_DIRECTORY_VISUAL.gridPaddingY * 2 +
       MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale() + MANGA_DIRECTORY_VISUAL.gridBorder * 2);
   }
 
@@ -988,10 +1108,10 @@ export struct ReaderDirectoryNavigationList {
         Text('清除搜索').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
           .fontSize(MANGA_DIRECTORY_VISUAL.quietEmptyFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.quietEmptyLineHeight)
           .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
-          .constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyClearHeight })
+          .constraintSize({ minHeight: Math.max(44, MANGA_DIRECTORY_VISUAL.quietEmptyClearHeight) })
           .fontColor(this.mangaColor('accent')).textAlign(TextAlign.Center).accessibilityLevel('no');
       }.padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .constraintSize({ minHeight: MANGA_DIRECTORY_VISUAL.quietEmptyClearHeight })
+        .constraintSize({ minHeight: Math.max(44, MANGA_DIRECTORY_VISUAL.quietEmptyClearHeight) })
         .accessibilityText('清除搜索').enabled(this.interactionEnabled)
         .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme, 'nativeButton'))
         .onClick((): void => {
@@ -1079,6 +1199,9 @@ export struct ReaderDirectoryNavigationList {
               .padding(0).borderRadius(0).backgroundColor(Color.Transparent).enabled(this.canDownloadTarget(this.mangaPaintNode(item.node)))
               .accessibilityText(this.chapterDownloadActionsEnabled ? `管理${this.mangaTitle(item.node)}下载` :
                 this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节')
+      .responseRegion( readerActionTouchRegion(MANGA_DIRECTORY_VISUAL.downloadGridWidth, this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2))
+      .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? `管理${this.mangaTitle(item.node)}下载` :
+                this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.mangaPaintNode(item.node)), false))
               .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.mangaPaintNode(item.node)); });
             }.width(MANGA_DIRECTORY_VISUAL.downloadGridWidth).height(this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2)
               .focusable(false).accessibilityLevel('no').onClick((): void => {});
@@ -1096,9 +1219,10 @@ export struct ReaderDirectoryNavigationList {
         .border({ width: MANGA_DIRECTORY_VISUAL.gridBorder, color: this.mangaColor('line') }).borderRadius(MANGA_DIRECTORY_VISUAL.gridRadius)
         .backgroundColor(this.mangaColor(this.isCurrentMangaNode(item) ? 'active' : 'soft'))
         .enabled(this.interactionEnabled)
-        .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
+        .attributeModifier(new ReaderActionAccessibility(this.mangaRowAccessibility(item, true), this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme)))
         .enabled(this.interactionEnabled)
         .accessibilityText(this.mangaRowAccessibility(item, true))
+      .responseRegion( readerActionTouchRegion(this.mangaCellWidth(item), this.mangaCellHeight()))
         .onClick((): void => this.selectMangaRow(item));
     }.width('100%').justifyContent(FlexAlign.Start)
       .visibility(this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden)
@@ -1118,10 +1242,11 @@ export struct ReaderDirectoryNavigationList {
             .width(MANGA_DIRECTORY_VISUAL.groupIconSize).height(MANGA_DIRECTORY_VISUAL.groupIconSize)
             .rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
             .animation(motionAnimateParam('manga.directory.fold')).accessibilityLevel('no');
-        }.width(32).height(32).padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8, right: 8 })
+        }.width(44).height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8, right: 8 })
           .enabled(this.interactionEnabled && !this.mangaSearchActive)
           .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && !this.mangaSearchActive, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme, 'nativeButton'))
           .accessibilityText(`${this.mangaPaintNode(item.node).title}，展开或收起子目录`)
+      .responseRegion( readerActionTouchRegion(44, 44))
           .onClick((): void => this.toggleMangaRow(item));
       }.width('100%').visibility(this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden).border({ width: { top: this.mangaFirstDisplayRow(item) ? MANGA_DIRECTORY_VISUAL.gridBorder : 0,
         bottom: MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.mangaColor('line') });
@@ -1189,13 +1314,16 @@ export struct ReaderDirectoryNavigationList {
               ((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ?
                 $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
               .width(15).height(15).accessibilityLevel('no');
-          }.width(26).height(Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
+          }.width(44).height(Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节')
             .enabled(this.canDownloadTarget(this.mangaPaintNode(item.node)))
+      .responseRegion( readerActionTouchRegion(44, Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale())))
+      .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
+              this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.mangaPaintNode(item.node)), false))
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.mangaPaintNode(item.node)); });
-          }.width(26).height(Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
+          }.width(44).height(Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
             .focusable(false).accessibilityLevel('no').onClick((): void => {});
         }
         if (item.node.kind === 'group' && this.mangaGroupNode(item.node).hasChildren && !this.mangaQuickDisplay) {
@@ -1204,8 +1332,10 @@ export struct ReaderDirectoryNavigationList {
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(16).height(16).rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
             .animation(motionAnimateParam('manga.directory.fold')).accessibilityLevel('no');
-          }.width(16).height(16).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+          }.width(44).height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`)
+            .responseRegion(readerActionTouchRegion(44, 44))
+            .attributeModifier(new ReaderActionAccessibility(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`, this.interactionEnabled && !this.mangaSearchActive, false))
             .onClick((): void => this.toggleMangaRow(item));
         } else if (item.node.kind === 'target' && this.isCurrentMangaNode(item)) {
           Text('正在读').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
@@ -1237,11 +1367,12 @@ export struct ReaderDirectoryNavigationList {
       .visibility(this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden)
       .opacity(item.node?.kind === 'disabled' ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1)
       .enabled(this.interactionEnabled && item.node?.kind !== 'disabled' && !(item.node?.kind === 'group' && this.mangaSearchActive))
-      .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && item.node?.kind !== 'disabled' &&
+      .attributeModifier(new ReaderActionAccessibility(this.mangaRowAccessibility(item, false), this.interactionEnabled && item.node?.kind !== 'disabled' && !(item.node?.kind === 'group' && this.mangaSearchActive), false, true, new MangaDirectoryPressFeedback(this.interactionEnabled && item.node?.kind !== 'disabled' &&
         (item.node?.kind !== 'group' || !this.mangaSearchActive),
         item.node?.kind !== 'group' || this.interactionEnabled && !this.mangaSearchActive,
-        this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
+        this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme)))
       .accessibilityText(this.mangaRowAccessibility(item, false))
+      .responseRegion( readerActionTouchRegion('100%', 44))
       .onClick((): void => this.selectMangaRow(item));
   }
 
@@ -1252,10 +1383,11 @@ export struct ReaderDirectoryNavigationList {
         Text('…').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       } else {
         if (this.isCurrentNode(item)) {
-          Row().width(3).height(this.rowHeight).borderRadius(999)
+          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(999)
             .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         Text(item.node.title)
+          .height(Math.max(44, this.rowHeight))
           .layoutWeight(1)
           .padding({ left: 9 + Math.min(3, this.displayLevel(item.node) - 1) * 12, right: 9 })
           .fontFamily(TYPE_READER_DIRECTORY_TITLE.fontFamily).fontSize(TYPE_READER_DIRECTORY_TITLE.fontSizeFp).fontWeight(TYPE_READER_DIRECTORY_TITLE.fontWeight)
@@ -1264,6 +1396,10 @@ export struct ReaderDirectoryNavigationList {
           .accessibilityText(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`)
+      .responseRegion( readerActionTouchRegion('100%', Math.max(44, this.rowHeight)))
+      .attributeModifier(new ReaderActionAccessibility(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
+            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
+            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`, this.interactionEnabled && item.node.kind !== 'disabled', false))
           .onClick((): void => {
             const node = item.node;
             if (node === undefined) return;
@@ -1276,8 +1412,10 @@ export struct ReaderDirectoryNavigationList {
               .width(34).height(this.rowHeight).fontSize(TYPE_READER_DIRECTORY_DISCLOSURE.fontSizeFp)
               .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
               .textAlign(TextAlign.Center).accessibilityLevel('no');
-          }.width(34).height(this.rowHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+          }.width(44).height(Math.max(44, this.rowHeight)).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`)
+      .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+      .attributeModifier(new ReaderActionAccessibility(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`, true, false))
             .onClick((): void => { if (item.node !== undefined) this.toggleNode(item.node); });
         }
         if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled &&
@@ -1289,11 +1427,14 @@ export struct ReaderDirectoryNavigationList {
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
               .width(15).height(15).accessibilityLevel('no');
-          }.width(26).height(this.rowHeight)
+          }.width(44).height(Math.max(44, this.rowHeight))
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节')
             .enabled(this.canDownloadTarget(item.node))
+      .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+      .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
+              this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(item.node), false))
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(item.node); });
         }
         if (item.node.kind === 'target' && item.node.chapterIndex !== undefined &&
@@ -1303,10 +1444,13 @@ export struct ReaderDirectoryNavigationList {
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
               (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
               .width(15).height(15).accessibilityLevel('no');
-          }.width(26).height(this.rowHeight)
+          }.width(44).height(Math.max(44, this.rowHeight))
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签')
+      .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+      .attributeModifier(new ReaderActionAccessibility((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?
+              '删除本章已有书签' : '添加本章章首书签', true, false))
             .onClick((): void => {
               const chapter = this.chapterByIndex.get(item.node?.chapterIndex ?? -1);
               if (chapter !== undefined) this.marker(chapter);
@@ -1314,7 +1458,7 @@ export struct ReaderDirectoryNavigationList {
         }
       }
     }
-    .width('100%').height(this.rowHeight).borderRadius(6)
+    .width('100%').height(Math.max(44, this.rowHeight)).borderRadius(6)
     .backgroundColor(this.isCurrentNode(item) ?
       readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent);
   }
@@ -1361,11 +1505,17 @@ export struct ReaderDirectoryNavigationList {
         });
     } else {
       List({ space: 0, scroller: this.scroller }) {
+      if (this.nativeHeaderCount() === 1) {
+        ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: Math.max(0, this.prefixHeight) });
+        if (this.view.visibleTotal === 0) {
+          ListItem() { this.emptyBuilder(); }.width('100%').constraintSize({ minHeight: 44 });
+        }
+      }
       LazyForEach(this.dataSource, (item: ReaderDirectoryNavigationItem) => {
         ListItem() {
           if (this.mangaDisplay) this.mangaRow(item);
           else this.row(item);
-        }.width('100%').height(this.mangaDisplay ? undefined : this.rowHeight);
+        }.width('100%').height(this.mangaDisplay ? undefined : Math.max(44, this.rowHeight));
       }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
     }
     .width('100%').height('100%')
@@ -1384,18 +1534,24 @@ export struct ReaderDirectoryNavigationList {
     .enableScrollInteraction(this.interactionEnabled)
     .cachedCount(4)
     .onWillStartDragging((): void => {
+      if (this.prefixEverMounted && !this.mounted) return;
+      this.prefixLayoutGeneration += 1;
+      this.prefixChangePending = false;
+      this.prefixRevealActive = false;
       this.initialPositionPending = false;
       this.positionPlan = undefined;
       this.onUserScrollIntent();
     })
     .onScrollIndex((start: number, _end: number, _center: number): void => {
-      this.firstVisibleIndex = start;
+      if (this.prefixEverMounted && !this.mounted) return;
+      this.firstVisibleIndex = this.dataIndex(start);
       if (!this.initialPositionPending) this.captureViewportAnchor();
     })
     .onDidScroll((): void => this.publishMangaScrollOffset())
-    .onScrollStop((): void => { this.publishMangaScrollOffset(); this.captureViewportAnchor(); this.onScrollSettled(); })
+    .onScrollStop((): void => { if (this.prefixEverMounted && !this.mounted) return; this.publishMangaScrollOffset(); this.captureViewportAnchor(); this.onScrollSettled(); })
     .onAreaChange((_oldArea: Area, newArea: Area): void => {
-      if (!this.layoutReady && Number(newArea.height) > 0) {
+      if (this.prefixEverMounted && !this.mounted) return;
+      if (Number(newArea.height) > 0 && (!this.layoutReady || this.nativeHeaderCount() === 1)) {
         this.layoutReady = true;
         this.onFirstLayout();
         this.positionInitialCurrent();

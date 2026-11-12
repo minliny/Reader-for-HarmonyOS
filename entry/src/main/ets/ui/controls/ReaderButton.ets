@@ -27,7 +27,8 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
     const weight = this.primary ? (spec.selectedWeight ?? text.fontWeight) : text.fontWeight;
     if (weight !== undefined) instance.fontWeight(weight);
     instance.fontSize(text.fontSizeFp);
-    if (this.id.startsWith('search-')) {
+    if (this.id.startsWith('search-') || this.id.startsWith('source-management-') ||
+      this.id === 'source-tools-action' || this.id === 'source-tools-compact') {
       instance.minFontScale(Math.min(1, this.fontScale));
       instance.maxFontScale(Math.max(1, this.fontScale));
     }
@@ -51,7 +52,8 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
   private fontScale: number;
   private busy: boolean;
   private availableWidth: number;
-  constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0, fontScale: number = 1) {
+  private selectionSemantic: boolean;
+  constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0, fontScale: number = 1, selectionSemantic: boolean = false) {
     this.id = id;
     this.primary = primary;
     this.enabled = enabled;
@@ -60,6 +62,7 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     this.fontScale = fontScale;
     this.busy = busy;
     this.availableWidth = availableWidth;
+    this.selectionSemantic = selectionSemantic;
   }
   applyNormalAttribute(instance: CommonAttribute): void {
     const spec = resolveReaderButtonSpec(this.id);
@@ -72,7 +75,11 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
       instance.height(readerSearchControlHeight(this.fontScale));
     }
     if (this.id === 'search-history-keyword') instance.height(readerSearchHistoryControlHeight(this.fontScale));
-    if (spec.fixedWidth > 0) instance.width(spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);
+    if (spec.fixedWidth > 0) {
+      const width = spec.scaleWidth ? spec.fixedWidth * this.fontScale : spec.fixedWidth;
+      instance.width(spec.responsiveStatusWidth ? width * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : width);
+    }
+    if (spec.minWidth !== undefined) instance.constraintSize({ minWidth: spec.minWidth });
     if (spec.maxWidthKind === 'scope') instance.constraintSize({ maxWidth: 160 });
     else if (spec.maxWidthKind === 'history') instance.constraintSize({ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' });
     if (spec.outerMargin !== undefined) instance.margin(spec.outerMargin);
@@ -88,6 +95,7 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
       width: '100%', height: readerScaledControlHeight(spec.responseHeight, lineHeight, this.fontScale) });
     if (spec.hasSurface) this.feedback().applyNormalAttribute(instance);
     else if (spec.outerRadius) instance.borderRadius(spec.radius);
+    if (this.selectionSemantic) instance.accessibilityRole(AccessibilityRoleType.RADIO).accessibilitySelected(this.primary);
   }
   applyPressedAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderButtonSpec(this.id).hasSurface) this.feedback().applyPressedAttribute(instance); }
   applyDisabledAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderButtonSpec(this.id).hasSurface) this.feedback().applyDisabledAttribute(instance); }
@@ -129,6 +137,18 @@ class ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {
   }
   applyDisabledAttribute(instance: TextAttribute): void { this.applyNormalAttribute(instance); }
 }
+/** Native Button keeps its default semantics until a caller declares a choice. */
+class ReaderButtonSelectionModifier implements AttributeModifier<CommonAttribute> {
+  private choice: boolean;
+  private selected: boolean;
+  constructor(choice: boolean, selected: boolean) {
+    this.choice = choice;
+    this.selected = selected;
+  }
+  applyNormalAttribute(instance: CommonAttribute): void {
+    if (this.choice) instance.accessibilityRole(AccessibilityRoleType.RADIO).accessibilitySelected(this.selected);
+  }
+}
 @Component
 export struct ReaderButton {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -139,10 +159,11 @@ export struct ReaderButton {
   @Prop actionEnabled: boolean = true;
   @Prop layout: ReaderButtonLayout = 'intrinsic';
   @Prop isBusy: boolean = false;
-  // Measured layout authority only; finite Source status variants own the
-  // admitted 58/72 design widths and existing 318vp shrink formula.
+  // Available width remains an input for the variants that author a width cap.
+  // Source management reserves its scaled status widths in the parent layout.
   @Prop availableWidth: number = 0;
   @Prop actionAccessibilityLabel: string = '';
+  @Prop selectionSemantic: boolean = false;
   @Prop focusId: string = '';
   @BuilderParam leading: () => void = this.emptyLeading;
   onAction: () => void = (): void => {};
@@ -169,6 +190,7 @@ export struct ReaderButton {
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
         .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .attributeModifier(new ReaderButtonSelectionModifier(this.selectionSemantic, this.primary))
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label)
         .onClick((): void => this.commit());
     } else if (resolveReaderButtonSpec(this.specId).stacked) {
@@ -182,22 +204,22 @@ export struct ReaderButton {
           }
         }.accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
-        .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.selectionSemantic))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
-        .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
-        .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.selectionSemantic))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
-        .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     }
   }

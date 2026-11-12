@@ -1,3 +1,4 @@
+import {copySourceManagementScroll} from '../../entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts';
 import {bookshelfOperationClass} from './bookshelf-operation-owner-probe.mjs';
 import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 import {projectOperationFacts,projectCommitReadback} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
@@ -40,5 +41,5 @@ export function actualSourceJourneyTypes(deps) {
    '({SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT})',
    {...deps,...sourceTypes,...facts,ReaderWriteEvidence,projectPersistedReceipt});
  return {...sourceTypes,...tools,...bookshelfOperationClass('features/source/presentation/SourceJourneyPresentation.ets',
-   '({SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY})',{...sourceTypes,...tools})};
+   '({SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY})',{...sourceTypes,...tools,copySourceManagementScroll})};
 }

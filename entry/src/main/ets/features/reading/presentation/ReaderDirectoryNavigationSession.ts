@@ -1,4 +1,4 @@
-import { readerDirectoryScopeKey, type ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationQuery,
+import { readerDirectoryScopeKey, type ReaderDirectoryNavigationPort, type ReaderDirectoryNavigationQuery,
   type ReaderDirectoryNavigationReady } from '../application/ReaderDirectoryNavigation';
 import { readerDirectoryBookState, clearReaderDirectoryBookStates } from './ReaderDirectorySessionState';
 
@@ -28,7 +28,7 @@ export function readerDirectoryToggleCollapsed(bookId: string, revision: string,
 
 export function readerDirectoryClearSessionState(): void { clearReaderDirectoryBookStates(); }
 
-export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavigationGateway,
+export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavigationPort,
   query: ReaderDirectoryNavigationQuery, isCurrent: () => boolean,
   onUnavailable?: (reason: string) => void): Promise<ReaderDirectoryNavigationReady | undefined> {
   const stateKey = readerDirectoryScopeKey(query.sourceId ?? 'local', query.bookId);

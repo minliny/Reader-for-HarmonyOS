@@ -23,7 +23,7 @@ export function compileReaderChoiceLabelModifier(resolve=resolveReaderChoiceSpec
 export function choiceRowProbe(resolve=resolveReaderChoiceSpec,source=choiceSource,properties=createArkUIPropertyRuntimeProbe()) {
   const modifier=compileReaderChoiceLabelModifier(resolve,source);
   const probe=createReaderBuilderProbe(source,boundedMembers(source),
-    {...properties.sdk,...surfaceFontResolvers(),ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
+    {...properties.sdk,...surfaceFontResolvers(),readerWindowMetrics:()=>({systemFontScale:1}),ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
       resolveReaderChoiceSpec:resolve,ReaderChoiceLabelModifier:modifier},properties.hooks);
   return {...probe,properties,dependencies:{ReaderChoiceRow:probe.Component,resolveReaderChoiceSpec:resolve},
     hooks:{childSources:{ReaderChoiceRow:source},mountChildren:true,lifecycleChildren:true},

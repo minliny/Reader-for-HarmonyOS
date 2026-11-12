@@ -1,3 +1,5 @@
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { FrameCallback } from '@kit.ArkUI';
@@ -23,7 +25,7 @@ import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
-import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import {
   readerInteractiveSafeBottom,
@@ -116,6 +118,7 @@ export struct ReaderFullDirectory {
     readerAppColor('app.window.background', 'day');
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') readerWindowMetricsRevision: number = 0;
+  navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @Prop bookTitle: string = '';
   @Prop @Watch('retireDirectoryRules') bookId: string = '';
   @Prop @Watch('retireDirectoryRules') bookKind: string = '';
@@ -289,7 +292,7 @@ export struct ReaderFullDirectory {
   private directoryContent(identity: string = this.temporaryBackIdentity, bookId: string = this.bookId) {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.BottomStart }) {
-        FullDirectoryPanel({
+        FullDirectoryPanel({ navigationPortFactory: this.navigationPortFactory,
           entries: this.entries,
           catalogMessage: this.catalogMessage,
           catalogBusy: this.catalogBusy,
@@ -442,7 +445,7 @@ export struct ReaderFullDirectory {
 
   @Builder
   private topBar(identity: string = this.temporaryBackIdentity, bookId: string = this.bookId) {
-    ReaderReadingTopBar({ variant: 'directory', barHeight: this.headerSpec.barHeight,
+    ReaderReadingTopBar({ variant: 'directory', barHeight: this.headerBarHeight(),
       bookTitle: this.bookTitle, subtitle: this.chapterTitle, scheme: this.appThemeScheme,
       leading: (): void => { this.topBarBack(identity); }, trailing: (): void => { this.topBarActions(identity, bookId); },
     });
@@ -455,7 +458,7 @@ export struct ReaderFullDirectory {
         this.topBarBackIcon();
       }
       .width(44)
-      .height(this.headerSpec.controlHeight)
+      .height(this.headerControlHeight())
       .margin({ left: 13 })
       .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? '返回目录' : '收起目录'))
       .onClick((): void => { this.consumeBack(identity); });
@@ -464,7 +467,7 @@ export struct ReaderFullDirectory {
         this.topBarBackIcon();
       }
       .width(44)
-      .height(this.headerSpec.controlHeight)
+      .height(this.headerControlHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
       .margin({ left: 13 })
       .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? '返回目录' : '收起目录', true, false, true, undefined, 'nativeButton'))
@@ -485,14 +488,14 @@ export struct ReaderFullDirectory {
       Column({ space: 3.5 }) {
         this.topBarSourceContent();
       }
-      .width(62).height(this.headerSpec.controlHeight).margin({ left: 8 })
+      .width(62).height(this.headerControlHeight()).margin({ left: 8 })
       .opacity(this.isLocalBook() ? 0.4 : 1)
       .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook()))
       .onClick((): void => { this.switchDirectorySource(); });
       Stack({ alignContent: Alignment.Center }) {
         this.topBarMoreIcon();
       }
-      .width(34).height(this.headerSpec.controlHeight).margin({ left: 8 })
+      .width(44).height(this.headerControlHeight()).margin({ left: 8 })
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
       .opacity(!this.directoryRulesAvailable() && (this.isLocalBook() || this.offlineBookOperationActive) ? 0.4 : 1)
       .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled()))
@@ -502,10 +505,10 @@ export struct ReaderFullDirectory {
         Column({ space: 3.5 }) {
           this.topBarSourceContent();
         }
-        .width(62).height(this.headerSpec.controlHeight)
+        .width(62).height(this.headerControlHeight())
         .accessibilityLevel('no-hide-descendants');
       }
-      .width(62).height(this.headerSpec.controlHeight)
+      .width(62).height(this.headerControlHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8 })
       .opacity(this.isLocalBook() ? 0.4 : 1)
       .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook(), false, true, undefined, 'nativeButton'))
@@ -513,7 +516,7 @@ export struct ReaderFullDirectory {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.topBarMoreIcon();
       }
-      .width(34).height(this.headerSpec.controlHeight)
+      .width(44).height(this.headerControlHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8 })
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
       .opacity(!this.directoryRulesAvailable() && (this.isLocalBook() || this.offlineBookOperationActive) ? 0.4 : 1)
@@ -546,6 +549,17 @@ export struct ReaderFullDirectory {
       .width(20).height(20)
       .accessibilityLevel(this.usesExpandedLayout() ? 'auto' : 'no');
   }
+
+  private fontScale(): number { return readerReadableFontScale(readerWindowMetrics().systemFontScale); }
+  private headerBarHeight(): number {
+    return Math.max(this.headerSpec.barHeight, this.headerControlHeight(), Math.ceil(22 * this.fontScale()) + Math.ceil(17 * this.fontScale()) + 6);
+  }
+  private offlineMenuWidth(): number {
+    return Math.min(Math.max(0, this.liveContainerWidth() - this.topBarLeft() - this.topBarRight()),
+      142 * this.fontScale());
+  }
+  private headerControlHeight(): number { return readerScaledControlHeight(44, 20, this.fontScale()); }
+  private menuRowHeight(): number { return readerScaledControlHeight(44, 16, this.fontScale()); }
 
   private switchDirectorySource(): void {
     if (this.mounted && !this.exitRequested && !this.isLocalBook()) this.onSwitchSource();
@@ -586,8 +600,8 @@ export struct ReaderFullDirectory {
           .strokeWidth(TOK_BORDER_W);
         this.offlineBookMenuRow('清除本书离线', '清除本书离线内容', this.offlineBookAction(this.offlineMenuGeneration, this.onClearBookOffline));
       }
-      .width(142)
-      .height(85)
+      .width(this.offlineMenuWidth())
+      .height(this.menuRowHeight() * 2 + 1)
       .attributeModifier(new ReaderPanelFrame('reader-menu', this.appThemeScheme))
       .position({ x: this.offlineMenuLeft(), y: this.offlineMenuTop() })
       .zIndex(8);
@@ -598,7 +612,7 @@ export struct ReaderFullDirectory {
   private offlineBookMenuRow(label: string, accessibilityLabel: string, action: () => void) {
     if (this.usesExpandedLayout()) {
       Text(label)
-        .width('100%').height(this.headerSpec.menuRowHeight).padding({ left: 16 })
+        .width('100%').height(this.menuRowHeight()).padding({ left: 16 })
         .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
         .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
         .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
@@ -607,14 +621,14 @@ export struct ReaderFullDirectory {
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(label)
-          .width('100%').height(this.headerSpec.menuRowHeight).padding({ left: 16 })
+          .width('100%').height(this.menuRowHeight()).padding({ left: 16 })
           .fontFamily(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
           .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Start)
           .accessibilityLevel('no');
       }
-      .width('100%').height(this.headerSpec.menuRowHeight)
+      .width('100%').height(this.menuRowHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
       .attributeModifier(new ReaderActionAccessibility(accessibilityLabel, true, false, true, undefined, 'nativeButton')).onClick(action);
     }
@@ -629,19 +643,19 @@ export struct ReaderFullDirectory {
   }
 
   private topBarLeft(): number {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     return Math.max(this.usesExpandedLayout() ? 28 : 14, readerVisualSafeLeft(metrics));
   }
 
   private topBarRight(): number {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     return Math.max(this.usesExpandedLayout() ? 30 : 16, readerVisualSafeRight(metrics));
   }
 
   private topBarTop(): number {
     if (this.readerWindowMetricsRevision < 0) return this.headerSpec.topGap;
     if (this.catalogContext === 'detail') return this.headerSpec.topGap;
-    return Math.max(this.headerSpec.topGap, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));
+    return Math.max(this.headerSpec.topGap, readerVisualSafeTop(readerWindowMetrics()));
   }
 
   private requestExit(): void {
@@ -653,7 +667,7 @@ export struct ReaderFullDirectory {
   }
 
   private dismissDirectoryKeyboard(identity: string): boolean {
-    return consumeReaderControlKeyboardBack(ReaderWindowCoordinator.metrics(), {
+    return consumeReaderControlKeyboardBack(readerWindowMetrics(), {
       hideTextInput: (): Promise<void> => inputMethod.getController().hideTextInput(),
       onFailure: (error: Error): void => {
         if (this.mounted && identity === this.temporaryBackIdentity) {
@@ -684,13 +698,13 @@ export struct ReaderFullDirectory {
   private offlineMenuLeft(): number {
     const figmaLeft = this.usesExpandedLayout() ? 548 : 206;
     return Math.max(this.topBarLeft(), Math.min(figmaLeft,
-      this.liveContainerWidth() - this.topBarRight() - 142));
+      this.liveContainerWidth() - this.topBarRight() - this.offlineMenuWidth()));
   }
 
   private offlineMenuTop(): number {
     if (this.usesExpandedLayout()) return this.geometry.header.bottom + this.headerSpec.menuGap;
     const topBarHeight = this.headerMeasurements.readForGeneration('fullDirectory:topbar', this.measurementKey,
-      this.headerSpec.barHeight);
+      this.headerBarHeight());
     return this.geometry.header.top + topBarHeight + this.headerSpec.menuGap;
   }
 
@@ -711,7 +725,7 @@ export struct ReaderFullDirectory {
 
   private fullPanelHeight(): number {
     const designHeight = this.usesExpandedLayout() ? 852 : 736;
-    const safeBottom = Math.max(20, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
+    const safeBottom = Math.max(20, readerInteractiveSafeBottom(readerWindowMetrics()));
     const available = Math.max(0, this.liveContainerHeight() - this.fullPanelTop() - safeBottom);
     return Math.min(designHeight, available);
   }
@@ -791,7 +805,7 @@ export struct ReaderFullDirectory {
   }
 
   private headerLayoutInputKey(): string {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     return [this.liveContainerWidth(), this.topBarLeft(), this.topBarRight(),
       metrics.densityPixels, metrics.systemFontScale].join('|');
   }
@@ -819,14 +833,14 @@ export struct ReaderFullDirectory {
   }
 
   private refreshGeometry(): void {
-    const metrics = ReaderWindowCoordinator.metrics();
+    const metrics = readerWindowMetrics();
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.liveContainerWidth();
     input.viewportHeight = this.liveContainerHeight();
     input.measurementRevision = this.measurementKey;
     input.headerTop = this.topBarTop();
     input.headerHeight = this.headerMeasurements.readForGeneration('fullDirectory:header', this.measurementKey,
-      this.headerSpec.barHeight);
+      this.headerBarHeight());
     input.headerInsetLeft = this.topBarLeft();
     input.headerInsetRight = this.topBarRight();
     input.contentGap = this.headerSpec.panelGap;
@@ -849,7 +863,7 @@ export struct ReaderFullDirectory {
     if (this.readerWindowMetricsRevision < 0) {
       return 0;
     }
-    const width = ReaderWindowCoordinator.metrics().windowRect.width;
+    const width = readerWindowMetrics().windowRect.width;
     return Number.isFinite(width) && width > 0 ? width : 0;
   }
 
@@ -860,7 +874,7 @@ export struct ReaderFullDirectory {
     if (this.readerWindowMetricsRevision < 0) {
       return 0;
     }
-    const height = ReaderWindowCoordinator.metrics().windowRect.height;
+    const height = readerWindowMetrics().windowRect.height;
     return Number.isFinite(height) && height > 0 ? height : 0;
   }
 

@@ -34,10 +34,10 @@ export struct ReaderDirectoryList {
   // Compare chapter data at an endpoint, where the owning panel admits it.
   @Prop @Watch('onEntriesChanged') deferEntriesDuringMotion: boolean = false;
   private readonly dataSource: DirectoryListDataSource = new DirectoryListDataSource();
-  @Prop @Watch('onRowHeightChanged') rowHeight: number = 40;
+  @Prop @Watch('onRowHeightChanged') rowHeight: number = 44;
   /** Manga titles wrap naturally; text keeps its existing fixed virtual extent. */
   @Prop naturalRowHeight: boolean = false;
-  @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(40);
+  @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(44);
   @Prop listPaddingX: number = 0;
   @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 0;

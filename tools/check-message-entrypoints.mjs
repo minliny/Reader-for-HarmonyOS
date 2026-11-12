@@ -20,6 +20,7 @@ const scopeBoundary = [
 const components = new Map([
   ['ReaderTransientToast', 'shared.transient-presentation'],
   ['ReaderRecoveryNotice', 'shared.recovery-notice'],
+  ['ReaderRecoveryAction', 'shared.recovery-action'],
   ['ReaderPageState', 'shared.page-state'],
   ['ReaderDialogSurface', 'shared.dialog-surface'],
 ]);
@@ -28,7 +29,7 @@ const owners = new Map([
   ['ReaderNativeAlertOwner', 'shared.alert-owner'],
 ]);
 const idFor = (file, owner, member, family) => `${file}#${owner}.${member}::${family}`;
-const usage = 'node tools/check-message-entrypoints.mjs --inventory | --check';
+const usage = 'node tools/check-message-entrypoints.mjs --inventory | --check [--file entry/src/main/ets/<exact-file>] [--require-retained <scope>]';
 
 function sourceFiles(directory) {
   return readdirSync(resolve(root, directory), { withFileTypes: true }).flatMap(entry => {
@@ -37,12 +38,15 @@ function sourceFiles(directory) {
   }).sort();
 }
 
-export function inventoryMessageEntrypoints() {
+export function inventoryMessageEntrypoints({ files } = {}) {
+  if (files !== undefined && (!Array.isArray(files) || files.length === 0 || new Set(files).size !== files.length)) throw new Error('Selected message files must be a nonempty unique list');
+  const selected = files ?? sourceFiles(sourceRoot);
+  for (const file of selected) if (!file.startsWith(`${sourceRoot}/`) || file.includes('..') || !['.ets', '.ts'].includes(extname(file)) || !existsSync(resolve(root,file))) throw new Error(`Invalid selected message file: ${file}`);
   const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
   const ts = require(`${sdk}/node_modules/typescript`);
   const compilerOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
   const entries = new Map(), declarations = [], parseErrors = [];
-  for (const file of sourceFiles(sourceRoot)) {
+  for (const file of selected) {
     const text = readFileSync(resolve(root, file), 'utf8');
     const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true,
       extname(file) === '.ets' ? ts.ScriptKind.ETS : ts.ScriptKind.TS, compilerOptions);
@@ -245,12 +249,25 @@ export function inventoryMessageEntrypoints() {
     }
     visit(tree);
   }
-  return { schemaVersion: 1, scopeBoundary, parser: { source: 'installed HarmonyOS ETS SDK', version: ts.version },
+  return { schemaVersion: 1, scopeBoundary, selectedFiles: files ?? null, parser: { source: 'installed HarmonyOS ETS SDK', version: ts.version },
     entries: [...entries.values()].sort((a, b) => a.id.localeCompare(b.id)), declarations, parseErrors };
 }
 
-export function compareMessageEntrypoints(inventory, registry) {
+export function compareMessageEntrypoints(inventory, registry, { requiredRetainedScopes = [] } = {}) {
+  if (!Array.isArray(requiredRetainedScopes) || requiredRetainedScopes.some(scope=>typeof scope!=='string'||!scope) || new Set(requiredRetainedScopes).size!==requiredRetainedScopes.length) throw new Error('Expected retained scopes must be unique nonempty IDs');
+  if (inventory.selectedFiles) {
+    const files = new Set(inventory.selectedFiles);
+    registry = { ...registry, entries: registry.entries?.filter(row=>files.has(row.file)),
+      dedicatedExceptions: registry.dedicatedExceptions?.filter(row=>files.has(row.file)),
+      retainedScopes: registry.retainedScopes?.filter(row=>files.has(row.authority)) };
+  }
   const failures = [...inventory.parseErrors.map(error => ({ kind: 'parse-error', ...error }))];
+  const retainedIds = new Set();
+  for (const row of registry.retainedScopes ?? []) {
+    if (retainedIds.has(row.scope)) failures.push({kind:'duplicate-retained-scope',scope:row.scope});
+    retainedIds.add(row.scope);
+  }
+  for (const scope of requiredRetainedScopes) if (!retainedIds.has(scope)) failures.push({kind:'missing-retained-scope',scope});
   const registered = new Map();
   for (const row of registry.entries ?? []) {
     if (registered.has(row.id)) failures.push({ kind: 'duplicate-registration', id: row.id });
@@ -264,7 +281,10 @@ export function compareMessageEntrypoints(inventory, registry) {
   for (const row of inventory.entries) {
     const registration = registered.get(row.id);
     if (!registration) failures.push({ kind: 'unregistered-entry', id: row.id, family: row.family });
-    if (row.family === 'native.toast') failures.push({ kind: 'toast-bypasses-adapter', id: row.id });
+    // Short feedback is rendered by ReaderTransientToast. A native Toast is
+    // therefore never an allowed outlet; any new direct call is a hard
+    // registration failure rather than another adapter exception.
+    if (row.family === 'native.toast') failures.push({ kind: 'native-toast-forbidden', id: row.id });
     if (row.family === 'native.alert' && (!row.nativeOwnerCallback || registration?.bridge !== 'owned-alert-native-callback')) {
       failures.push({ kind: 'alert-bypasses-owner', id: row.id });
     }
@@ -275,6 +295,11 @@ export function compareMessageEntrypoints(inventory, registry) {
   for (const retained of registry.retainedScopes ?? []) {
     if (typeof retained.authority !== 'string' || !retained.authority.startsWith(`${sourceRoot}/`) ||
       !existsSync(resolve(root, retained.authority))) failures.push({ kind: 'missing-retained-scope-authority', scope: retained.scope, authority: retained.authority });
+    if (retained.status === 'retained-unreachable' && retained.scope.includes('.')) {
+      const [owner, member] = retained.scope.split('.');
+      const declaration = inventory.declarations.find(row=>row.file===retained.authority && row.owner===owner);
+      if (!declaration?.members.includes(member)) failures.push({kind:'stale-retained-member',scope:retained.scope,authority:retained.authority});
+    }
   }
   for (const exception of registry.dedicatedExceptions ?? []) {
     const declaration = inventory.declarations.find(row => row.file === exception.file && row.owner === exception.owner);
@@ -283,20 +308,28 @@ export function compareMessageEntrypoints(inventory, registry) {
       if (typeof exception[field] !== 'string' || exception[field].trim().length === 0) failures.push({ kind: 'incomplete-dedicated-exception', id: exception.id, field });
     }
   }
-  return { status: failures.length === 0 ? 'PASS' : 'FAIL', scopeBoundary, registeredGroups: registered.size,
+  return { status: failures.length === 0 ? 'PASS' : 'FAIL', scopeBoundary, selectedFiles: inventory.selectedFiles ?? null, registeredGroups: registered.size,
     observedGroups: inventory.entries.length, failures };
 }
 
 function main() {
   const args = process.argv.slice(2);
   if (args.length === 0) { console.log(JSON.stringify({ status: 'NOT_RUN', usage, scopeBoundary }, null, 2)); return; }
-  if (args.length !== 1 || !['--inventory', '--check'].includes(args[0])) {
+  const options = {}, requiredRetainedScopes = [];
+  let valid = ['--inventory','--check'].includes(args[0]);
+  for (let i=1;i<args.length;i+=2) {
+    const option=args[i], value=args[i+1];
+    if (!value || !['--file','--require-retained'].includes(option) || (option==='--file' && options.files)) {valid=false;break;}
+    if (option==='--file') options.files=[value];
+    else requiredRetainedScopes.push(value);
+  }
+  if (!valid) {
     console.error(JSON.stringify({ status: 'FAIL', error: 'explicit mode required', usage }, null, 2)); process.exitCode = 2; return;
   }
   try {
-    const inventory = inventoryMessageEntrypoints();
+    const inventory = inventoryMessageEntrypoints(options);
     const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
-    const comparison = compareMessageEntrypoints(inventory, registry);
+    const comparison = compareMessageEntrypoints(inventory, registry, {requiredRetainedScopes});
     if (args[0] === '--inventory') {
       console.log(JSON.stringify({ status: 'INVENTORY', scopeBoundary, parser: inventory.parser,
         entries: inventory.entries, unknown: comparison.failures.filter(row => row.kind === 'unregistered-entry'),

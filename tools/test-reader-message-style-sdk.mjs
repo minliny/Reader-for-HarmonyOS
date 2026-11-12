@@ -63,7 +63,8 @@ assert.equal(actions().length, 2, 'independent original actions remain on the sa
 for (const action of actions()) {
   assert.equal(action.variant, 'notice');
   const hit = [...action.nodes.values()].find(node => node.onClick);
-  assert.equal(hit.type, 'Stack'); hit.onClick();
+  assert.equal(hit.type, 'Button');
+  assert.ok(hit.constraintSize.minWidth >= 44 && hit.constraintSize.minHeight >= 44); hit.onClick();
 }
 assert.equal(first, 1); assert.equal(second, 1);
 const retainedAction = actions()[0];

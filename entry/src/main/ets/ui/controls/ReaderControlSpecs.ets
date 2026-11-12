@@ -50,7 +50,7 @@ export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderI
   throw new Error('Unknown ReaderIconButton specification');
 }
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-wide' | 'search-history-keyword' | 'search-filter-option' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
+export type ReaderButtonSpecId = 'source-tools-action' | 'source-tools-compact' | 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-wide' | 'search-history-keyword' | 'search-filter-option' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonMargin { top?: number; right?: number; bottom?: number; left?: number; }
 export interface ReaderButtonSpec {
@@ -75,6 +75,8 @@ export interface ReaderButtonSpec {
   allPadding: number | undefined;
   maxLines: number;
   fixedWidth: number;
+  scaleWidth?: boolean;
+  minWidth?: number;
   responseOffset: number | undefined;
   busyOpacity: number;
   centerText: boolean;
@@ -95,7 +97,8 @@ const SOURCE_ACTION: ReaderButtonSpec = {
 };
 // Named variants retain current physical tuples; callers receive no style bag.
 function copyReaderButtonSpec(): ReaderButtonSpec {
-  return { text: SOURCE_ACTION.text, height: SOURCE_ACTION.height, radius: SOURCE_ACTION.radius,
+  return { scaleWidth: SOURCE_ACTION.scaleWidth, minWidth: SOURCE_ACTION.minWidth,
+    text: SOURCE_ACTION.text, height: SOURCE_ACTION.height, radius: SOURCE_ACTION.radius,
     horizontalPadding: SOURCE_ACTION.horizontalPadding, stacked: SOURCE_ACTION.stacked,
     primarySurface: SOURCE_ACTION.primarySurface, secondarySurface: SOURCE_ACTION.secondarySurface,
     primaryBorder: SOURCE_ACTION.primaryBorder, secondaryBorder: SOURCE_ACTION.secondaryBorder,
@@ -107,6 +110,17 @@ function copyReaderButtonSpec(): ReaderButtonSpec {
 const SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
 SOURCE_COMPACT.height = 30; SOURCE_COMPACT.radius = 7; SOURCE_COMPACT.horizontalPadding = 10;
+// Tools actions pay their own target width without changing retained source variants.
+const SOURCE_TOOLS_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_TOOLS_ACTION.height = 44;
+SOURCE_TOOLS_ACTION.minWidth = 44;
+const SOURCE_TOOLS_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_TOOLS_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
+SOURCE_TOOLS_COMPACT.height = 44;
+SOURCE_TOOLS_COMPACT.fixedWidth = 44;
+SOURCE_TOOLS_COMPACT.minWidth = 44;
+SOURCE_TOOLS_COMPACT.scaleWidth = true;
+
 const RULES_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
 RULES_ACTION.text = TYPE_RULES_MANAGEMENT_ACTION; RULES_ACTION.height = 40;
 const RULES_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
@@ -199,32 +213,35 @@ SOURCE_MANAGEMENT_RETRY.hasSurface = false; SOURCE_MANAGEMENT_RETRY.hasBorder = 
 SOURCE_MANAGEMENT_RETRY.outerRadius = false; SOURCE_MANAGEMENT_RETRY.centerText = false;
 SOURCE_MANAGEMENT_RETRY.disabledOpacity = 1;
 const SOURCE_MANAGEMENT_CATEGORY: ReaderButtonSpec = copyReaderButtonSpec();
-SOURCE_MANAGEMENT_CATEGORY.text = TYPE_FORM_HINT; SOURCE_MANAGEMENT_CATEGORY.height = 32;
+SOURCE_MANAGEMENT_CATEGORY.text = TYPE_FORM_HINT; SOURCE_MANAGEMENT_CATEGORY.height = 44;
+SOURCE_MANAGEMENT_CATEGORY.minWidth = 44;
 SOURCE_MANAGEMENT_CATEGORY.radius = 16; SOURCE_MANAGEMENT_CATEGORY.horizontalPadding = 12;
 SOURCE_MANAGEMENT_CATEGORY.centerText = false; SOURCE_MANAGEMENT_CATEGORY.hasBorder = false;
 SOURCE_MANAGEMENT_CATEGORY.disabledOpacity = 1; SOURCE_MANAGEMENT_CATEGORY.secondarySurface = 'TOK_CARD_BG';
 SOURCE_MANAGEMENT_CATEGORY.secondaryText = 'TOK_INK';
 const SOURCE_MANAGEMENT_STATUS: ReaderButtonSpec = copyReaderButtonSpec();
-SOURCE_MANAGEMENT_STATUS.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_STATUS.height = 32;
+SOURCE_MANAGEMENT_STATUS.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_STATUS.height = 44;
 SOURCE_MANAGEMENT_STATUS.radius = 16; SOURCE_MANAGEMENT_STATUS.maxLines = 1;
 SOURCE_MANAGEMENT_STATUS.disabledOpacity = 0.45; SOURCE_MANAGEMENT_STATUS.secondarySurface = 'TOK_CARD_BG';
-SOURCE_MANAGEMENT_STATUS.fixedWidth = 58; SOURCE_MANAGEMENT_STATUS.responsiveStatusWidth = true;
+SOURCE_MANAGEMENT_STATUS.fixedWidth = 58; SOURCE_MANAGEMENT_STATUS.scaleWidth = true;
 SOURCE_MANAGEMENT_STATUS.secondaryBorder = 'app.border.sourceGroup'; SOURCE_MANAGEMENT_STATUS.secondaryText = 'TOK_INK';
 const SOURCE_MANAGEMENT_STATUS_WIDE: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_MANAGEMENT_STATUS_WIDE.text = SOURCE_MANAGEMENT_STATUS.text; SOURCE_MANAGEMENT_STATUS_WIDE.height = SOURCE_MANAGEMENT_STATUS.height;
 SOURCE_MANAGEMENT_STATUS_WIDE.radius = SOURCE_MANAGEMENT_STATUS.radius; SOURCE_MANAGEMENT_STATUS_WIDE.maxLines = SOURCE_MANAGEMENT_STATUS.maxLines;
 SOURCE_MANAGEMENT_STATUS_WIDE.disabledOpacity = SOURCE_MANAGEMENT_STATUS.disabledOpacity; SOURCE_MANAGEMENT_STATUS_WIDE.secondarySurface = SOURCE_MANAGEMENT_STATUS.secondarySurface;
 SOURCE_MANAGEMENT_STATUS_WIDE.secondaryBorder = SOURCE_MANAGEMENT_STATUS.secondaryBorder; SOURCE_MANAGEMENT_STATUS_WIDE.secondaryText = SOURCE_MANAGEMENT_STATUS.secondaryText;
-SOURCE_MANAGEMENT_STATUS_WIDE.fixedWidth = 72; SOURCE_MANAGEMENT_STATUS_WIDE.responsiveStatusWidth = true;
+SOURCE_MANAGEMENT_STATUS_WIDE.fixedWidth = 72; SOURCE_MANAGEMENT_STATUS_WIDE.scaleWidth = true;
 const SOURCE_MANAGEMENT_DETECT: ReaderButtonSpec = copyReaderButtonSpec();
-SOURCE_MANAGEMENT_DETECT.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_DETECT.height = 28;
+SOURCE_MANAGEMENT_DETECT.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_DETECT.height = 44;
+SOURCE_MANAGEMENT_DETECT.scaleWidth = true;
 SOURCE_MANAGEMENT_DETECT.radius = 7; SOURCE_MANAGEMENT_DETECT.fixedWidth = 44; SOURCE_MANAGEMENT_DETECT.stacked = true;
 SOURCE_MANAGEMENT_DETECT.centerText = false; SOURCE_MANAGEMENT_DETECT.maxLines = 1;
 SOURCE_MANAGEMENT_DETECT.disabledOpacity = 1; SOURCE_MANAGEMENT_DETECT.busyOpacity = 0.62;
 SOURCE_MANAGEMENT_DETECT.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_DETECT.secondaryBorder = 'app.border.sourceGroup';
 SOURCE_MANAGEMENT_DETECT.secondaryText = 'TOK_INK';
 const SOURCE_MANAGEMENT_LOGIN: ReaderButtonSpec = copyReaderButtonSpec();
-SOURCE_MANAGEMENT_LOGIN.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_LOGIN.height = 28;
+SOURCE_MANAGEMENT_LOGIN.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_LOGIN.height = 44;
+SOURCE_MANAGEMENT_LOGIN.scaleWidth = true;
 SOURCE_MANAGEMENT_LOGIN.radius = 7; SOURCE_MANAGEMENT_LOGIN.fixedWidth = 44; SOURCE_MANAGEMENT_LOGIN.stacked = true;
 SOURCE_MANAGEMENT_LOGIN.centerText = false; SOURCE_MANAGEMENT_LOGIN.maxLines = 1; SOURCE_MANAGEMENT_LOGIN.disabledOpacity = 1;
 SOURCE_MANAGEMENT_LOGIN.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_LOGIN.secondaryBorder = 'app.border.sourceGroup';
@@ -290,6 +307,7 @@ SYNC_EMPTY_BACKUP.outerMargin = { bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, righ
 
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'search-field-wide': SEARCH_FIELD_WIDE, 'search-history-keyword': SEARCH_HISTORY_KEYWORD, 'search-filter-option': SEARCH_FILTER_OPTION, 'search-retry-progress': SEARCH_RETRY_PROGRESS, 'search-error-retry': SEARCH_ERROR_RETRY, 'search-error-source': SEARCH_ERROR_SOURCE, 'discover-category': DISCOVER_CATEGORY, 'sync-empty-backup': SYNC_EMPTY_BACKUP,
+  'source-tools-action': SOURCE_TOOLS_ACTION, 'source-tools-compact': SOURCE_TOOLS_COMPACT,
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
   'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,
   'form-action': FORM_ACTION, 'form-busy-action': FORM_BUSY_ACTION, 'form-document-action': FORM_DOCUMENT_ACTION,

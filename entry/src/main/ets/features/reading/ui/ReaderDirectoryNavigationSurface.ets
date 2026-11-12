@@ -10,7 +10,7 @@ import { ReaderScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
 import { prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
-import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey,
+import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationPort, type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey,
   backfillRetainedReaderDirectoryNavigation, readerDirectoryNoteMissingNavigation,
   type ReaderDirectoryBackfillResult, type ReaderDirectoryNavigationNode, type ReaderDirectoryNavigationReady,
   type ReaderDirectoryNavigationPreparedPage } from '../application/ReaderDirectoryNavigation';
@@ -68,6 +68,12 @@ export struct ReaderDirectoryNavigationSurface {
   /** Manga uses existing markers to manage active/retained downloads. */
   @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  /** Optional native-only prefix used by the constrained text control host. */
+  @Prop headerCount: number = 0;
+  @Prop prefixHeight: number = 0;
+  @Prop prefixIdentity: string = '';
+  @Prop prefixRevealRevision: number = 0;
+  @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
@@ -88,7 +94,9 @@ export struct ReaderDirectoryNavigationSurface {
   @State private mangaFontsReady: boolean = false;
   private mangaFontGeneration: number = 0;
   private mangaFontTask: Promise<boolean> | undefined = undefined;
-  private gateway: ReaderDirectoryNavigationGateway | undefined = undefined;
+  /** Optional dependency only; absent callers keep the production Gateway. */
+  navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
+  private gateway: ReaderDirectoryNavigationPort | undefined = undefined;
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
   private readonly feedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private mounted: boolean = false;
@@ -115,8 +123,13 @@ export struct ReaderDirectoryNavigationSurface {
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
     this.lastChapterIndex = this.currentChapterIndex;
-    this.runtimeOwner = ReaderRuntimeOwner.current();
-    this.gateway = new ReaderDirectoryNavigationGateway(this.runtimeOwner);
+    if (this.navigationPortFactory !== undefined) {
+      this.runtimeOwner = undefined;
+      this.gateway = this.navigationPortFactory();
+    } else {
+      this.runtimeOwner = ReaderRuntimeOwner.current();
+      this.gateway = new ReaderDirectoryNavigationGateway(this.runtimeOwner);
+    }
     this.openTree(true);
   }
 
@@ -306,7 +319,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.openTree(this.view === undefined);
   }
 
-  private async prepareVisiblePages(gateway: ReaderDirectoryNavigationGateway, bookId: string,
+  private async prepareVisiblePages(gateway: ReaderDirectoryNavigationPort, bookId: string,
     ready: ReaderDirectoryNavigationReady, generation: number): Promise<ReaderDirectoryNavigationPreparedPage[]> {
     const pageSize = 256;
     if (ready.nodes.length !== Math.min(pageSize, ready.visibleTotal))
@@ -530,6 +543,34 @@ export struct ReaderDirectoryNavigationSurface {
     this.notifyReadFailure(this.generation, this.sourceId, this.bookId);
   }
 
+  @Builder
+  private emptyPrefix() {}
+
+  private hasPrefix(): boolean { return !this.mangaDisplay && this.headerCount === 1; }
+
+  private prefixClearAction(): () => void {
+    const generation = this.generation, bookId = this.bookId, sourceId = this.sourceId, viewId = this.view?.viewId;
+    return (): void => {
+      if (this.mounted && this.interactionEnabled && generation === this.generation && bookId === this.bookId &&
+        sourceId === this.sourceId && viewId === this.view?.viewId) this.onClearSearch();
+    };
+  }
+
+  private prefixRetryAction(): () => void {
+    const generation = this.generation, bookId = this.bookId, sourceId = this.sourceId;
+    return (): void => {
+      if (this.mounted && this.interactionEnabled && generation === this.generation && bookId === this.bookId &&
+        sourceId === this.sourceId) this.retryOpen();
+    };
+  }
+
+  @Builder
+  private treePrefixEmptyState() {
+    ReaderPageState({ message: '没有匹配的目录项', padded: false,
+      actionLabel: this.query.trim().length > 0 ? '清除搜索' : '', actionEnabled: this.interactionEnabled,
+      onAction: this.prefixClearAction(), mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
+  }
+
   build() {
     Column() {
       if (this.showLoadStatus && (this.loadPending || this.loadFailed) &&
@@ -554,17 +595,31 @@ export struct ReaderDirectoryNavigationSurface {
           Blank().width('100%').height('100%');
         } else if (this.showLoadStatus && !this.hasRetainedContent() &&
           (this.loadPending || this.loadFailed)) {
-          Column() {
-            ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
-              actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.interactionEnabled,
-              mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
-              onAction: (): void => this.retryOpen() });
-          }.width('100%').height('100%').justifyContent(FlexAlign.Center);
+          if (this.hasPrefix()) {
+            List({ space: 0, scroller: this.scroller }) {
+              ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: Math.max(0, this.prefixHeight) });
+              ListItem() {
+                ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
+                  actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.interactionEnabled,
+                  mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme), onAction: this.prefixRetryAction() });
+              }.width('100%').constraintSize({ minHeight: 44 });
+            }.width('100%').height('100%').scrollBar(BarState.Off).edgeEffect(this.edgeEffectMode)
+              .enableScrollInteraction(this.interactionEnabled).onWillStartDragging((): void => { if (this.mounted) this.onTreeUserScrollIntent(); })
+              .onAreaChange((_old: Area, area: Area): void => { if (this.mounted && Number(area.height) > 0) this.onFirstLayout(); });
+          } else {
+            Column() {
+              ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
+                actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.interactionEnabled,
+                mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+                onAction: (): void => this.retryOpen() });
+            }.width('100%').height('100%').justifyContent(FlexAlign.Center);
+          }
         } else if (this.view === undefined) {
           this.fallbackBuilder();
         } else {
           Stack({ alignContent: this.mangaDisplay ? Alignment.TopStart : Alignment.Center }) {
             ReaderDirectoryNavigationList({
+              navigationPortFactory: this.navigationPortFactory,
               view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
               mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,
               mangaCatalogDisplay: this.mangaCatalogDisplay, mangaCatalogNarrow: this.mangaCatalogNarrow,
@@ -582,6 +637,10 @@ export struct ReaderDirectoryNavigationSurface {
               chapterDownloadEnabled: this.chapterDownloadEnabled,
               chapterDownloadActionsEnabled: this.chapterDownloadActionsEnabled,
               chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+              headerCount: this.headerCount, prefixHeight: this.prefixHeight, prefixIdentity: this.prefixIdentity,
+              prefixRevealRevision: this.prefixRevealRevision,
+              prefixBuilder: (): void => this.prefixBuilder(),
+              emptyBuilder: (): void => this.treePrefixEmptyState(),
               scroller: this.scroller,
               onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
                 if (!this.awaitingRulesRefresh) this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
@@ -591,7 +650,7 @@ export struct ReaderDirectoryNavigationSurface {
               },
               onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
               onScrollSettled: (): void => this.onTreeScrollSettled(),
-              onFirstLayout: (): void => this.onFirstLayout(),
+              onFirstLayout: (): void => { if (this.mounted) this.onFirstLayout(); },
               onScrollOffset: (offset: number): void => this.onScrollOffset(offset),
               onClearSearch: (): void => this.onClearSearch(),
               onInvalidated: (): void => { if (!this.awaitingRulesRefresh) this.invalidate(); },
@@ -605,7 +664,7 @@ export struct ReaderDirectoryNavigationSurface {
                 if (!this.awaitingRulesRefresh) this.onCreateChapterStartBookmark(request);
               },
             });
-            if (this.view.visibleTotal === 0 && !this.mangaDisplay) {
+            if (this.view.visibleTotal === 0 && !this.mangaDisplay && !this.hasPrefix()) {
               ReaderPageState({ message: '没有匹配的目录项', padded: false,
                 mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) })
                 .hitTestBehavior(HitTestMode.None);

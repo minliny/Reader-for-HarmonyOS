@@ -1,3 +1,5 @@
+import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderLabeledIconActionSpecId, resolveReaderLabeledIconActionSpec } from './ReaderLabeledIconActionSpecs';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -7,16 +9,22 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
   private id: ReaderLabeledIconActionSpecId;
   private danger: boolean;
   private scheme: string;
-  constructor(id: ReaderLabeledIconActionSpecId, danger: boolean, scheme: string) {
+  private scale: number;
+  constructor(id: ReaderLabeledIconActionSpecId, danger: boolean, scheme: string, scale: number = 1) {
     this.id = id;
     this.danger = danger;
     this.scheme = scheme;
+    this.scale = scale;
   }
   applyNormalAttribute(instance: TextAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id), text = spec.text;
     if (text.fontFamily !== undefined) instance.fontFamily(text.fontFamily);
     if (text.fontWeight !== undefined) instance.fontWeight(text.fontWeight);
     instance.fontSize(text.fontSizeFp);
+    if (this.id === 'source-management-add') {
+      instance.minFontScale(1);
+      instance.maxFontScale(readerReadableFontScale(this.scale));
+    }
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     if (spec.labelMarginLeft !== undefined) instance.margin({ left: spec.labelMarginLeft });
@@ -27,16 +35,20 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   private id: ReaderLabeledIconActionSpecId;
   private divider: boolean;
   private scheme: string;
+  private scale: number;
   private enabled: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean) {
+  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean, scale: number = 1) {
     this.id = id;
     this.divider = divider;
     this.scheme = scheme;
+    this.scale = scale;
     this.enabled = enabled;
   }
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
-    if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
+    if (this.id === 'source-management-add') {
+      instance.height(readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale));
+    } else if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
     instance.alignItems(VerticalAlign.Center);
     if (spec.rowWidth !== undefined) instance.width(spec.rowWidth);
     if (spec.horizontalPadding !== undefined) {
@@ -74,15 +86,18 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
 class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute> {
   private id: ReaderLabeledIconActionSpecId;
   private scheme: string;
+  private scale: number;
   private enabled: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean) {
+  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean, scale: number = 1) {
     this.id = id;
     this.scheme = scheme;
+    this.scale = scale;
     this.enabled = enabled;
   }
   applyNormalAttribute(instance: ButtonAttribute): void {
-    instance.height(44);
     const spec = resolveReaderLabeledIconActionSpec(this.id);
+    instance.height(this.id === 'source-management-add' ?
+      readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale) : 44);
     if (typeof spec.rowWidth === 'number') instance.width(spec.rowWidth);
     if (spec.equalLayout) instance.layoutWeight(1);
     if (spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
@@ -100,6 +115,7 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute>
  * Domain callbacks and presentation admission stay at each actual owner. */
 @Component
 export struct ReaderLabeledIconAction {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderLabeledIconActionSpecId = 'rss-feed';
   @Prop label: string = '';
@@ -117,27 +133,31 @@ export struct ReaderLabeledIconAction {
     Image(this.icon).width(resolveReaderLabeledIconActionSpec(this.specId).iconSize).height(resolveReaderLabeledIconActionSpec(this.specId).iconSize)
       .objectFit(ImageFit.Contain).opacity(this.actionEnabled ? 1 : (resolveReaderLabeledIconActionSpec(this.specId).disabledIconOpacity ?? 0.45))
       .accessibilityLevel('no');
-    Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme));
+    Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme, this.fontScale()));
   }
   build() {
     if (resolveReaderLabeledIconActionSpec(this.specId).outerHit) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
-          .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled));
+          .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()));
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).clip(false)
-        .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled))
+        .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale()))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.label).onClick((): void => this.commit());
     } else {
       Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
-        .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled))
+        .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()))
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .id(this.focusId)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityText(this.label).onClick((): void => this.commit());
     }
+  }
+  private fontScale(): number {
+    if (this.readerWindowMetricsRevision < 0) return 1;
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

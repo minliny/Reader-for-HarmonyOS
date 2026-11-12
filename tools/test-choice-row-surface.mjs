@@ -15,7 +15,7 @@ const {boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 const read=file=>readFileSync(new URL(`../entry/src/main/ets/features/${file}.ets`,import.meta.url),'utf8');
 function settings(tablet,resolve=resolveReaderChoiceSpec) {
   const shared=choiceRowProbe(resolve),commits=[];
-  const source=read('settings/SettingsSelectOverlay');
+  const source=read('settings/ui/SettingsSelectOverlay');
   const {owner}=createReaderBuilderProbe(source,
     ['phoneOption','tabletOption','isSelected','ownsOpening','choose','dismiss'],shared.dependencies,shared.hooks);
   Object.assign(owner,{mounted:true,closed:false,field:'language',selectionId:'language:1',value:'中文',options:['中文','English'],appThemeScheme:'day',

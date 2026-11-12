@@ -1,0 +1,762 @@
+{
+  "schemaVersion": "1.0",
+  "pageId": "source-management",
+  "command": {
+    "entry": "tools/test-source-management-layout.mjs",
+    "cases": [
+      "matrix"
+    ]
+  },
+  "inputs": [
+    {
+      "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+      "sha256": "405cdc1a02bc2263ac8f530bdc662257b736ccb2af473286b6b3bbe4d43bc641"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+      "sha256": "ed54e846ae327aee5834a7e09abe26b01427b3f411c3548501bc1f8289c3a156"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+      "sha256": "634f0e4ba5879408ed7311bf36b0592e4c5451446c709ddef7b60278c6d6d4db"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+      "sha256": "91fc825cb04693d952259d86a6202278df5deadf8ac6b6fda9c5872f10e0d25b"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
+      "sha256": "c99cf340838faf7b2f97002bdb00de67786f6fb3974650efaba11849d2877b12"
+    },
+    {
+      "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconActionSpecs.ets",
+      "sha256": "bf36a4e145a0810151015bed32a939813e3ae6b95262cc29d292dccfcf895561"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets",
+      "sha256": "760c4285cae3a2444afec22a6590bca07becaafafa0c32565d4f1aa3a22bef00"
+    },
+    {
+      "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts",
+      "sha256": "674ccfb80387bc526c0c5748c4b529fb92bc2a8b553a10c576d0d3a942f60f3d"
+    },
+    {
+      "path": "tools/test-source-management-layout.mjs",
+      "sha256": "35c145f8392279f95c8a6b158723e01bd59d9d16f607706a3fd4a3eca6ca9547"
+    },
+    {
+      "path": "tools/lib/source-layout-control-probe.mjs",
+      "sha256": "1645eae4c9eda583632931f68f58ce496e4a645f770376ea8e017b1da93d9e1a"
+    },
+    {
+      "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
+      "sha256": "e1f11bdb5430bd0a20fd61cf6e5638e474d92714f51f13976b4967b2717351fb"
+    },
+    {
+      "path": "tools/lib/reader-foundation-control-probe.mjs",
+      "sha256": "f8122805933cdf9a8fbda0c56e65c7d0252e155f4dfa4e348700bb2f098e2895"
+    },
+    {
+      "path": "tools/lib/reader-control-builder-probe.mjs",
+      "sha256": "cdeb92cbb50a2cb2923436d8828753498c3ecd8516eb874dfa487f03d306b226"
+    },
+    {
+      "path": "tools/lib/bounded-surface-sdk-probe.mjs",
+      "sha256": "22263f729f4ec2f2449f30a30ee9e9e18292a37848a73bf4284ce0c661a47359"
+    },
+    {
+      "path": "tools/lib/selected-production-methods.mjs",
+      "sha256": "8f5b367f9eb88bef6d706f3fd3cb92030bc74da4b9c241e3f07f2d3a31164e58"
+    },
+    {
+      "path": "tools/lib/reader-typography-probe.mjs",
+      "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+    },
+    {
+      "path": "tools/lib/ets-pure-module-probe.mjs",
+      "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+    }
+  ],
+  "widths": [
+    320,
+    366
+  ],
+  "fontScales": [
+    1,
+    1.3,
+    1.6,
+    2
+  ],
+  "results": {
+    "E2": "PASS",
+    "E3": "NOT_RUN"
+  },
+  "targets": [
+    {
+      "controlRef": "source-detect",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 72,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 136,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 1,
+      "visual": {
+        "width": 136,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 93.60000000000001,
+        "height": 49
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 136,
+        "height": 50
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 136,
+        "height": 50
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 115.2,
+        "height": 54
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 136,
+        "height": 56
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 136,
+        "height": 56
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 144,
+        "height": 61
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 136,
+        "height": 64
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 320,
+      "fontScale": 2,
+      "visual": {
+        "width": 136,
+        "height": 64
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 44,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 72,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 159,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 366,
+      "fontScale": 1,
+      "visual": {
+        "width": 159,
+        "height": 44
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 57.2,
+        "height": 49
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 93.60000000000001,
+        "height": 49
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 159,
+        "height": 50
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 366,
+      "fontScale": 1.3,
+      "visual": {
+        "width": 159,
+        "height": 50
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 70.4,
+        "height": 54
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 115.2,
+        "height": 54
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 159,
+        "height": 56
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 366,
+      "fontScale": 1.6,
+      "visual": {
+        "width": 159,
+        "height": 56
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-detect",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-login",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 88,
+        "height": 61
+      },
+      "response": null
+    },
+    {
+      "controlRef": "source-filter-chip",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 144,
+        "height": 61
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-batch",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 159,
+        "height": 64
+      },
+      "response": null
+    },
+    {
+      "controlRef": "footer-add",
+      "width": 366,
+      "fontScale": 2,
+      "visual": {
+        "width": 159,
+        "height": 64
+      },
+      "response": null
+    }
+  ],
+  "budgets": [
+    {
+      "region": "row",
+      "width": 320,
+      "fontScale": 1,
+      "availableWidth": 282,
+      "requiredWidth": 188,
+      "availableHeight": 138,
+      "requiredHeight": 138,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 320,
+      "fontScale": 1,
+      "availableWidth": 350,
+      "requiredWidth": 350,
+      "availableHeight": 44,
+      "requiredHeight": 44,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 320,
+      "fontScale": 1,
+      "availableWidth": 282,
+      "requiredWidth": 282,
+      "availableHeight": 48,
+      "requiredHeight": 44,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 320,
+      "fontScale": 1.3,
+      "availableWidth": 282,
+      "requiredWidth": 214.4,
+      "availableHeight": 160,
+      "requiredHeight": 160,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 320,
+      "fontScale": 1.3,
+      "availableWidth": 446,
+      "requiredWidth": 445.40000000000003,
+      "availableHeight": 49,
+      "requiredHeight": 49,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 320,
+      "fontScale": 1.3,
+      "availableWidth": 282,
+      "requiredWidth": 282,
+      "availableHeight": 50,
+      "requiredHeight": 50,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 320,
+      "fontScale": 1.6,
+      "availableWidth": 282,
+      "requiredWidth": 244,
+      "availableHeight": 181,
+      "requiredHeight": 181,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 320,
+      "fontScale": 1.6,
+      "availableWidth": 541,
+      "requiredWidth": 540.8000000000001,
+      "availableHeight": 54,
+      "requiredHeight": 54,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 320,
+      "fontScale": 1.6,
+      "availableWidth": 282,
+      "requiredWidth": 282,
+      "availableHeight": 56,
+      "requiredHeight": 56,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 320,
+      "fontScale": 2,
+      "availableWidth": 282,
+      "requiredWidth": 276,
+      "availableHeight": 257,
+      "requiredHeight": 257,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 320,
+      "fontScale": 2,
+      "availableWidth": 668,
+      "requiredWidth": 668,
+      "availableHeight": 61,
+      "requiredHeight": 61,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 320,
+      "fontScale": 2,
+      "availableWidth": 282,
+      "requiredWidth": 282,
+      "availableHeight": 64,
+      "requiredHeight": 64,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 366,
+      "fontScale": 1,
+      "availableWidth": 328,
+      "requiredWidth": 188,
+      "availableHeight": 138,
+      "requiredHeight": 138,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 366,
+      "fontScale": 1,
+      "availableWidth": 350,
+      "requiredWidth": 350,
+      "availableHeight": 44,
+      "requiredHeight": 44,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 366,
+      "fontScale": 1,
+      "availableWidth": 328,
+      "requiredWidth": 328,
+      "availableHeight": 48,
+      "requiredHeight": 44,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 366,
+      "fontScale": 1.3,
+      "availableWidth": 328,
+      "requiredWidth": 214.4,
+      "availableHeight": 160,
+      "requiredHeight": 160,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 366,
+      "fontScale": 1.3,
+      "availableWidth": 446,
+      "requiredWidth": 445.40000000000003,
+      "availableHeight": 49,
+      "requiredHeight": 49,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 366,
+      "fontScale": 1.3,
+      "availableWidth": 328,
+      "requiredWidth": 328,
+      "availableHeight": 50,
+      "requiredHeight": 50,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 366,
+      "fontScale": 1.6,
+      "availableWidth": 328,
+      "requiredWidth": 244,
+      "availableHeight": 181,
+      "requiredHeight": 181,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 366,
+      "fontScale": 1.6,
+      "availableWidth": 541,
+      "requiredWidth": 540.8000000000001,
+      "availableHeight": 54,
+      "requiredHeight": 54,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 366,
+      "fontScale": 1.6,
+      "availableWidth": 328,
+      "requiredWidth": 328,
+      "availableHeight": 56,
+      "requiredHeight": 56,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "row",
+      "width": 366,
+      "fontScale": 2,
+      "availableWidth": 328,
+      "requiredWidth": 292,
+      "availableHeight": 209,
+      "requiredHeight": 209,
+      "rowForm": "stacked",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "chip",
+      "width": 366,
+      "fontScale": 2,
+      "availableWidth": 668,
+      "requiredWidth": 668,
+      "availableHeight": 61,
+      "requiredHeight": 61,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    },
+    {
+      "region": "footer",
+      "width": 366,
+      "fontScale": 2,
+      "availableWidth": 328,
+      "requiredWidth": 328,
+      "availableHeight": 64,
+      "requiredHeight": 64,
+      "rowForm": "single-line",
+      "measurementKind": "sdk"
+    }
+  ]
+}

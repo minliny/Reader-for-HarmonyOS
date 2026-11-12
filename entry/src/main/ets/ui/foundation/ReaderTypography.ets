@@ -271,7 +271,7 @@ export const TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW = new ReaderTextSt
 // the optional latest-check summary. They remain a single role so those three
 // fields cannot drift while the primary source title keeps its own role.
 export const TYPE_SOURCE_MANAGEMENT_META = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC, 400, 10, 12.5, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC, 400, 12, 18, undefined, 'system', 'appBaseline');
 
 // Source-tools is migrated as one complete text family. AUTO is deliberate:
 // default weights, inherited list metadata and natural line boxes preserve the
@@ -547,7 +547,7 @@ export const TYPE_SETTINGS_CACHE_ACTION = new ReaderTextStyle(
 export const TYPE_SETTINGS_DANGER_LABEL = new ReaderTextStyle(
   READER_FONT_INTER, 400, 16, 19.2, undefined, 'system', 'appBaseline');
 export const TYPE_SOURCE_MANAGEMENT_COUNT = new ReaderTextStyle(
-  READER_FONT_INTER, 400, 10, 12.5, undefined, 'system', 'appBaseline');
+  READER_FONT_INTER, 400, 12, 18, undefined, 'system', 'appBaseline');
 export const TYPE_SOURCE_MANAGEMENT_STATUS = new ReaderInheritedTextStyle(
   READER_FONT_NOTO_SANS_SC, undefined, 11, 16, undefined, 'system', 'appBaseline');
 export const TYPE_FORM_COMPACT_ACTION = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
