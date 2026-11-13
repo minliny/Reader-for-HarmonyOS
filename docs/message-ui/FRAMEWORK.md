@@ -52,6 +52,8 @@
 
 同一事项的组件key使用原宿主、实体、展示身份及原操作身份。busy和提示文案通过现有原身份actor更新，可重试事实决定当前动作资格及条件入退场。动作再次核对当前资格，已经退场或被新展示替代的闭包停止转交。源装配检查、真实SDK属性和回调、Native命中与读屏分别记录证据，检查入口见页面结构契约§6.4。
 
+行内动作的装饰占位与业务文案之间须保留合法换行边界，测量和绘制使用一致规则。装饰NBSP组保持自己的动作预留职责，正文按原生断行及既有长文展开规则呈现。当前精确回归为 `H-recovery-notice-flow#reservation-boundary`，默认关闭。
+
 ## 系统 Toast 的适用边界
 
 API 23 可通过 `UIContext.getPromptAction()` 显示系统 Toast。`openToast` 和 `closeToast` 可以凭 ID 关闭，位置和窗口层级也有独立选项。公开参数只接收一条 `message`，缺少当前短反馈所需的独立标题、语义图标、Reader 字体和可替换的内容槽。当前短反馈统一由 `ReaderTransientToast` 承载这些语义，原生确认仍按其登记的窗口 owner 接入。原生 cover 或 sheet 内的反馈按实际前景窗口核对可见性、去重和退役，再决定同一呈现组件需要挂载的位置。[华为 PromptAction API](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/arkts-apis-uicontext-promptaction/)
