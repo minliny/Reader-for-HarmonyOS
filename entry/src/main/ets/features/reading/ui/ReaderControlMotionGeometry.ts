@@ -155,7 +155,8 @@ export function sampleReaderControlMotionComposition(frame: ReaderControlVisualF
   const brightnessWidth = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH;
   const brightnessRight = READER_CONTROL_CONTENT_PADDING_RIGHT;
   const brightnessHeight = bounds.contentBudget === undefined ? Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT,
-    Math.max(0, bounds.quickHeight - navigationBottom - READER_CONTROL_MOTION_CONTENT_TOP_QUICK)) : quickContentHeight;
+    Math.max(0, bounds.quickHeight - navigationBottom - READER_CONTROL_MOTION_CONTENT_TOP_QUICK)) :
+    bounds.contentBudget.brightnessContentHeightVp ?? quickContentHeight;
   return {
     progress: p, visibility: visibility,
     topBar: whole.topBar, dock: whole.dock,

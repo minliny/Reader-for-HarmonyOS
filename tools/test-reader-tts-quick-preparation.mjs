@@ -166,7 +166,7 @@ for (const invalidate of [o => { o.exitRequested = true; }, o => { o.lifecycleTo
 // label/play glyph/control; probing and ACK are state updates, never a new tree.
 const content = readFileSync(new URL('ReaderControlTtsContent.ets', root), 'utf8');
 const members = ['quickLabel', 'quickLabelActor', 'playbackLabel', 'roundControl', 'controlText', 'isActivelySpeaking',
-  'hasActiveQueue', 'sharedInput', 'transport', 'p', 'frame', 'effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'];
+  'hasActiveQueue', 'sharedInput', 'transport', 'transportPaint', 'transportGlyphSize', 'p', 'frame', 'effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'];
 const { owner: ui } = createReaderBuilderProbe(content, members, { ...geometry, ...actors, ...state,
   readerTtsPlayGradientStart: () => '#2F6373' });
 let toggles = 0;

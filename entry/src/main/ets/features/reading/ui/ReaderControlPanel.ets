@@ -389,6 +389,8 @@ export struct ReaderControlPanel {
   private moreMenuRecoveryIdentity: string = '';
   private previousTopBarVisibility: boolean = true;
   private moreMenuMeasuredWidth: number = 0;
+  private moreMenuWidthKey: string = '';
+  private moreMenuOwnerScope: string = '';
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -951,14 +953,14 @@ export struct ReaderControlPanel {
   private accessibleControlActions() {
     Text('关闭控制栏并返回阅读').width(1).height(1)
       .accessibilityRole(AccessibilityRoleType.BUTTON)
-      .enabled(this.frame().visibility > 0 && this.inputEnabled)
-      .onClick((): void => this.onDismiss());
+      .enabled(this.controlActionInputEnabled())
+      .onClick((): void => { if (this.controlActionInputEnabled()) this.onDismiss(); });
     if (this.contentLocation().level === 'secondary') {
       Text(this.contentLocation().form === 'full' ? '收回快捷控制栏' : '展开完整控制栏')
         .width(1).height(1).accessibilityRole(AccessibilityRoleType.BUTTON)
-        .enabled(this.contentInputEnabled() && !this.temporaryLayerActive)
+        .enabled(this.controlActionInputEnabled() && this.contentInputEnabled())
         .onClick((): void => {
-          if (!this.contentInputEnabled() || this.temporaryLayerActive) return;
+          if (!this.controlActionInputEnabled() || !this.contentInputEnabled()) return;
           this.applySemanticSession(toggleReaderControlSession(this.visualSession,
             readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)));
         });
@@ -1132,8 +1134,14 @@ export struct ReaderControlPanel {
     this.onPageChange(page);
   }
 
+  private controlActionInputEnabled(): boolean {
+    return this.runtimeMounted && this.inputEnabled && !this.controlObscured &&
+      !this.temporaryLayerActive && !this.moreMenuVisible && this.visualVisibilityProgress > 0 &&
+      this.visualHeldPointerId < 0;
+  }
+
   private collapseControl(): void {
-    if (this.temporaryLayerActive) return;
+    if (!this.controlActionInputEnabled() || this.contentLocation().level !== 'secondary') return;
     this.onInputActivity();
     // A collapse button can be tapped while a handle transition is still in
     // flight. Retarget from the exact local visual sample, not the sparse host
@@ -1386,15 +1394,22 @@ export struct ReaderControlPanel {
 
   private setMoreMenuVisible(visible: boolean): void {
     if (this.moreMenuVisible === visible) return;
-    if (visible && (!this.inputEnabled || this.controlObscured || this.temporaryLayerActive || this.frame().visibility <= 0)) return;
+    if (visible && (!this.runtimeMounted || !this.inputEnabled || this.controlObscured || this.temporaryLayerActive || this.frame().visibility <= 0)) return;
     if (visible) {
       this.moreMenuGeneration += 1;
       this.moreMenuRecoveryIdentity = this.recoveryIdentity;
+      this.moreMenuOwnerScope = this.currentMoreMenuOwnerScope();
       this.moreMenuMeasuredWidth = 0;
+      this.moreMenuWidthKey = '';
     }
     this.moreMenuVisible = visible;
     this.syncProgressInput();
     this.onTemporaryLayerChange(visible);
+  }
+
+  private currentMoreMenuOwnerScope(): string {
+    return JSON.stringify([this.sourceId, this.sourceBookId, this.bookmarkIdentity?.libraryBookId ?? '',
+      this.controlOpenRevision, this.runtimeLifecycle]);
   }
 
   private dismissMoreMenu(generation: number = this.moreMenuGeneration): void {
@@ -1402,7 +1417,9 @@ export struct ReaderControlPanel {
   }
 
   private performMoreAction(action: 'info' | 'refresh' | 'download' | 'recovery', generation: number = this.moreMenuGeneration): void {
-    if (generation !== this.moreMenuGeneration || !this.moreMenuVisible || !this.inputEnabled || this.controlObscured) return;
+    if (generation !== this.moreMenuGeneration || !this.moreMenuVisible || !this.runtimeMounted ||
+      !this.inputEnabled || this.controlObscured || this.frame().visibility <= 0 ||
+      this.moreMenuOwnerScope !== this.currentMoreMenuOwnerScope()) return;
     if (action === 'refresh' && !this.chapterRefreshEnabled) return;
     if (action === 'download' && !this.bookDownloadEnabled) return;
     if (action === 'recovery' && (!this.recoveryAvailable || this.moreMenuRecoveryIdentity.length === 0 ||
@@ -1417,23 +1434,34 @@ export struct ReaderControlPanel {
 
   private readerMoreMenuWidth(): number {
     const surface = this.readerMoreSurfaceSpec();
-    // Measure only on opening; progress/motion publications reuse this width.
-    // Native popup placement owns target tracking and window-edge avoidance.
-    if (this.moreMenuVisible && this.moreMenuMeasuredWidth <= 0) {
-      const context = this.getUIContext();
-      const labels: string[] = ['书籍信息', '刷新本章', '下载全部章节'];
-      if (this.recoveryAvailable) labels.push('待处理事项');
-      let width: number = 0;
-      labels.forEach((label: string): void => {
-        const measured = context.getMeasureUtils().measureTextSize({
-          textContent: label, fontFamily: surface.actionFontFamily,
-          fontSize: `${surface.actionFontSize}fp`, fontWeight: '500',
+    const labels = this.readerMoreActions().map((action: ReaderMenuActionView): string => action.label);
+    const key = JSON.stringify([labels, this.minimumMetricsRevision, this.minimumKey,
+      surface.actionFontFamily, surface.actionFontSize, surface.actionFontWeight]);
+    // Reuse ordinary motion publications. A live label/font publication owns
+    // a new measurement even while the same native popup remains open.
+    if (this.moreMenuVisible && key !== this.moreMenuWidthKey) {
+      this.moreMenuWidthKey = key;
+      this.moreMenuMeasuredWidth = 0;
+      try {
+        const context = this.getUIContext();
+        let width: number = 0;
+        labels.forEach((label: string): void => {
+          const measured = context.getMeasureUtils().measureTextSize({
+            textContent: label, fontFamily: surface.actionFontFamily,
+            fontSize: `${surface.actionFontSize}fp`, fontWeight: `${surface.actionFontWeight}`,
+          });
+          const measuredWidth = context.px2vp(Number(measured.width));
+          if (!Number.isFinite(measuredWidth) || measuredWidth <= 0) throw new Error('Invalid More label width');
+          width = Math.max(width, measuredWidth);
         });
-        width = Math.max(width, context.px2vp(Number(measured.width)));
-      });
-      this.moreMenuMeasuredWidth = Math.ceil(width) + 36;
+        this.moreMenuMeasuredWidth = Math.ceil(width) + surface.actionPaddingLeft + surface.actionPaddingRight;
+      } catch (_) {
+        // Native text measurement can be unavailable during window changes.
+        // Keep the authored bounded menu until the next font/input revision.
+        this.moreMenuMeasuredWidth = surface.width;
+      }
     }
-    return Math.min(this.moreMenuMeasuredWidth > 0 ? this.moreMenuMeasuredWidth : surface.width,
+    return Math.min(Math.max(surface.width, this.moreMenuMeasuredWidth),
       Math.max(0, this.layout.viewportWidth - 24));
   }
 
@@ -1469,6 +1497,7 @@ export struct ReaderControlPanel {
 
   private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download' | 'recovery'): boolean {
     return this.inputEnabled && !this.controlObscured &&
+      (!this.moreMenuVisible || this.moreMenuOwnerScope === this.currentMoreMenuOwnerScope()) &&
       (action !== 'refresh' || this.chapterRefreshEnabled) &&
       (action !== 'download' || this.bookDownloadEnabled) &&
       (action !== 'recovery' || this.recoveryAvailable);
@@ -1769,7 +1798,7 @@ export struct ReaderControlPanel {
   }
 
   private secondaryModuleInputEnabled(module: string): boolean {
-    return this.contentLocation().level === 'secondary' &&
+    return this.runtimeMounted && !this.moreMenuVisible && this.contentLocation().level === 'secondary' &&
       this.contentLocation().module === module && this.contentInputEnabled();
   }
 
@@ -1972,7 +2001,7 @@ export struct ReaderControlPanel {
 
   @Builder
   private topBarBack() {
-    // The 44×42 actor retains its alignment inside a 44vp action target.
+    // The 24vp Back glyph retains its alignment inside a 44vp action target.
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back'))
         .width(24)
@@ -1989,7 +2018,10 @@ export struct ReaderControlPanel {
     });
   }
 
-  private topBarInputEnabled(): boolean { return this.inputEnabled && this.layout.topBarVisible; }
+  private topBarInputEnabled(): boolean {
+    return this.runtimeMounted && this.inputEnabled && !this.controlObscured &&
+      this.layout.topBarVisible && this.frame().topBar.opacity > 0;
+  }
 
   private sourceActionHeight(): number {
     return Math.max(44, this.layout.topBarHeight - 10);
@@ -2029,7 +2061,7 @@ export struct ReaderControlPanel {
       }
     });
 
-    // 20vp 图标在 34×42 的布局中居中。
+    // 20vp 图标在独立的 44vp 响应区内居中。
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots'))
         .width(20)
@@ -2046,7 +2078,7 @@ export struct ReaderControlPanel {
   }
 
   private shortWindowActionInput(): boolean {
-    return !this.layout.topBarVisible && this.contentLocation().level === 'home' && this.contentInputEnabled();
+    return this.runtimeMounted && !this.layout.topBarVisible && this.contentLocation().level === 'home' && this.contentInputEnabled();
   }
 
   @Builder
@@ -2064,7 +2096,9 @@ export struct ReaderControlPanel {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: 6 }) {
           Image($r(this.appScheme === 'night' ? 'app.media.rc_switch_horizontal_theme_night' : 'app.media.rc_switch_horizontal')).width(20).height(20);
-          Text('换源').fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily).fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
+          Text('换源').fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily)
+            .fontWeight(TYPE_READER_CONTROL_SOURCE_ACTION.fontWeight, { enableVariableFontWeight: true })
+            .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp).lineHeight(TYPE_READER_CONTROL_SOURCE_ACTION.lineHeightFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
         }.justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
       }.width(76).height(44).padding(0).backgroundColor(Color.Transparent)
@@ -2128,10 +2162,10 @@ export struct ReaderControlPanel {
     .padding(0)
     .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
     .borderRadius(8)
-    .enabled(this.inputEnabled && !this.controlObscured)
+    .enabled(this.progressInputEnabled())
     .accessibilityText(label)
     .onClick((): void => {
-      if (!this.runtimeMounted || !this.contentInputEnabled()) return;
+      if (!this.progressInputEnabled()) return;
       if (action === 'search') {
         this.promoteSearch();
       } else if (action === 'autoPage') {
@@ -2153,7 +2187,7 @@ export struct ReaderControlPanel {
   }
 
   private homeContentMinimumHeight(): number {
-    return this.homeMetric('minimumHeight', READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT + READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT +
+    return this.homeMetric('minimumHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT) + Math.max(50, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT) +
       READER_CONTROL_HOME_QUICK_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP) + (this.layout.topBarVisible ? 0 : 52);
   }
 
@@ -2163,8 +2197,8 @@ export struct ReaderControlPanel {
       (this.layout.quickPanelHeight === undefined || viewportHeight >= READER_CONTROL_HOME_TOP_ROW_HEIGHT)) {
       return READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT;
     }
-    return Math.max(this.homeMetric('chapterRowHeight', READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT) +
-      this.homeMetric('progressHeight', READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT),
+    return Math.max(this.homeMetric('chapterRowHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT)) +
+      this.homeMetric('progressHeight', Math.max(50, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT)),
       Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT, viewportHeight) +
         (READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT + READER_CONTROL_HOME_QUICK_ACTION_HEIGHT +
           READER_CONTROL_HOME_SECTION_GAP - READER_CONTROL_HOME_TOP_ROW_HEIGHT) -
@@ -2188,8 +2222,8 @@ export struct ReaderControlPanel {
     Row({ space: 8 }) {
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_left_theme_night' : 'app.media.rc_chevron_left'),
-        accessibilityLabel: '上一章', actionEnabled: this.canStepChapter(-1),
-        onTap: (): void => { if (this.contentInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
+        accessibilityLabel: '上一章', actionEnabled: this.progressInputEnabled() && this.canStepChapter(-1),
+        onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
       });
 
       // ChapterTitle Inter Bold 13 居中 (layoutWeight 吃剩余宽)。
@@ -2208,12 +2242,12 @@ export struct ReaderControlPanel {
 
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_right_theme_night' : 'app.media.rc_chevron_right'),
-        accessibilityLabel: '下一章', actionEnabled: this.canStepChapter(1),
-        onTap: (): void => { if (this.contentInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
+        accessibilityLabel: '下一章', actionEnabled: this.progressInputEnabled() && this.canStepChapter(1),
+        onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
       });
     }
     .width('100%')
-    .height(this.homeMetric('chapterRowHeight', READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT))
+    .height(this.homeMetric('chapterRowHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT)))
     .padding({ left: 11, right: 11, top: 10 })
     .alignItems(VerticalAlign.Center);
   }
@@ -2271,7 +2305,7 @@ export struct ReaderControlPanel {
         .margin({ left: 5.5   });
     }
     .width('100%')
-    .height(this.homeMetric('progressHeight', READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT))
+    .height(this.homeMetric('progressHeight', Math.max(50, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT)))
     .padding({ left: 11, right: 11, top: 6 })
     .alignItems(VerticalAlign.Center);
   }
@@ -2383,7 +2417,8 @@ export struct ReaderControlPanel {
       .height(this.brightnessTrackHeight())
       .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP })
       .hitTestBehavior(HitTestMode.Block)
-      .accessibilityText('阅读亮度')
+      .accessibilityText('阅读亮度').accessibilityLevel('no')
+      .accessibilityVirtualNode(this.accessibleBrightnessActions)
       .gesture(
         GestureGroup(
           GestureMode.Exclusive,
@@ -2429,7 +2464,7 @@ export struct ReaderControlPanel {
       .opacity(this.brightnessAutomatic ? 1 : 0.72)
       .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启，点击改为手动' : '手动亮度，点击跟随系统')
       .onClick((): void => {
-        if (this.temporaryLayerActive || !this.minimumInputReady()) return;
+        if (!this.brightnessInputEnabled()) return;
         this.brightnessDragging = false;
         this.brightnessPreviewPercent = -1;
         this.onBrightnessAuto();
@@ -2458,8 +2493,32 @@ export struct ReaderControlPanel {
       this.clampBrightness(this.brightnessPercent);
   }
 
+  @Builder
+  private accessibleBrightnessActions() {
+    Text(`降低阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.brightnessAutomatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .enabled(this.brightnessInputEnabled() && this.effectiveBrightnessPercent() > READER_CONTROL_BRIGHTNESS_MIN)
+      .onClick((): void => this.stepBrightness(-1));
+    Text(`提高阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.brightnessAutomatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .enabled(this.brightnessInputEnabled() && this.effectiveBrightnessPercent() < READER_CONTROL_BRIGHTNESS_MAX)
+      .onClick((): void => this.stepBrightness(1));
+  }
+
+  private stepBrightness(direction: number): void {
+    if (!this.brightnessInputEnabled()) return;
+    const current = this.effectiveBrightnessPercent();
+    const value = this.roundBrightness(current + direction);
+    if (value !== current) this.onBrightnessChange(value);
+  }
+
+  private brightnessInputEnabled(): boolean {
+    return this.runtimeMounted && this.contentInputEnabled() && !this.temporaryLayerActive &&
+      !this.moreMenuVisible && this.frame().brightness.opacity > 0;
+  }
+
   private beginBrightnessDrag(): void {
-    if (this.temporaryLayerActive || !this.minimumInputReady()) return;
+    if (!this.brightnessInputEnabled()) return;
     this.brightnessDragStartPercent = this.effectiveBrightnessPercent();
     this.brightnessPreviewPercent = this.brightnessDragStartPercent;
     this.brightnessDragging = true;
@@ -2467,7 +2526,7 @@ export struct ReaderControlPanel {
   }
 
   private updateBrightnessDrag(offsetY: number): void {
-    if (this.temporaryLayerActive || !this.minimumInputReady()) {
+    if (!this.brightnessInputEnabled()) {
       this.cancelBrightnessDrag();
       return;
     }
@@ -2489,7 +2548,7 @@ export struct ReaderControlPanel {
 
   private finishBrightnessDrag(offsetY: number): void {
     if (!this.brightnessDragging) return;
-    if (this.temporaryLayerActive || !this.minimumInputReady()) {
+    if (!this.brightnessInputEnabled()) {
       this.cancelBrightnessDrag();
       return;
     }
@@ -2514,7 +2573,7 @@ export struct ReaderControlPanel {
   }
 
   private commitBrightnessTap(event: GestureEvent): void {
-    if (this.temporaryLayerActive || !this.minimumInputReady() || event.fingerList.length === 0) {
+    if (!this.brightnessInputEnabled() || event.fingerList.length === 0) {
       return;
     }
     const localY = event.fingerList[0].localY;
@@ -2533,6 +2592,10 @@ export struct ReaderControlPanel {
     const stepped = Math.round(value / READER_CONTROL_BRIGHTNESS_STEP) * READER_CONTROL_BRIGHTNESS_STEP;
     return this.clampBrightness(stepped);
   }
+  private navigationInputEnabled(): boolean {
+    return this.controlActionInputEnabled() && this.contentInputEnabled() && this.frame().navigation.opacity > 0;
+  }
+
   @Builder
   private moduleNavBar() {
     Row({ space: 4 }) {
@@ -2569,12 +2632,12 @@ export struct ReaderControlPanel {
       .backgroundColor(this.isActiveModule(module) ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
       .borderRadius(21);
 
-      // Make v17 imported Quick navigation: Noto Sans SC Bold 10, normal line height.
+      // Original Make V17 navigation uses Black 10/13.889; the complete bundled Sans face owns its 900 axis.
       Text(label)
         .width('100%')
-        .height(this.selectedMinimumProfile()?.navigationLabelHeight ?? 15)
+        .height(this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889)
         .fontFamily(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontFamily)
-        .fontWeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontWeight)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontWeight, { enableVariableFontWeight: true })
         .fontSize(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontSizeFp)
         .lineHeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.lineHeightFp as number)
         .fontColor(this.isActiveModule(module) ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_ICON', this.appScheme))
@@ -2585,13 +2648,13 @@ export struct ReaderControlPanel {
     }.width('100%').height('100%').alignItems(HorizontalAlign.Center);
     }
     .layoutWeight(1)
-    .height(62 + (this.selectedMinimumProfile()?.navigationLabelHeight ?? 15) - 15)
+    .height(62 + (this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889) - 13.889)
     .padding(0).backgroundColor(Color.Transparent)
     .borderRadius(12)
     .opacity(module === 'tts' && this.ttsState.status === 'unavailable' ? 0.72 : 1)
-    .attributeModifier(new ReaderActionAccessibility(label, true, this.isActiveModule(module), true, undefined, 'nativeButton'))
+    .attributeModifier(new ReaderActionAccessibility(label, this.navigationInputEnabled(), this.isActiveModule(module), true, undefined, 'nativeButton'))
     .onClick((): void => {
-      if (this.contentInputEnabled() && !this.temporaryLayerActive && this.frame().navigation.opacity > 0) this.activateModule(module);
+      if (this.navigationInputEnabled()) this.activateModule(module);
     });
   }
 

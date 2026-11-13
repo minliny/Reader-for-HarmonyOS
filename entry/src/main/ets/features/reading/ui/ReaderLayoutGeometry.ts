@@ -217,11 +217,17 @@ export interface ReaderControlChromeMinimum {
   brightnessAutoWidthVp: number;
 }
 
+export interface ReaderControlSharedShellMinimum {
+  minimum: ReaderControlModuleMinimum;
+  chrome: ReaderControlChromeMinimum;
+}
+
 export interface ReaderControlCandidateMinimum {
   key: string;
   widths: ReaderControlCandidateWidths;
   minimum: ReaderControlModuleMinimum;
   chrome: ReaderControlChromeMinimum;
+  sharedShell?: ReaderControlSharedShellMinimum;
 }
 
 export type ReaderControlModuleMeasurer = (widths: ReaderControlCandidateWidths,
@@ -291,6 +297,7 @@ export interface ReaderControlContentBudget {
   key: string;
   quickContentHeightVp: number;
   fullContentHeightVp: number;
+  brightnessContentHeightVp?: number;
   navigationHeightVp: number;
   headerHeightVp: number;
   brightnessAutoHeightVp: number;
@@ -460,18 +467,12 @@ export function readerControlCandidateWidths(viewportWidth: number, viewportHeig
   });
 }
 
-function validControlCandidate(value: ReaderControlCandidateMinimum, availableWidth: number): boolean {
-  const q = value.minimum.quick;
-  const f = value.minimum.full;
-  const c = value.chrome;
-  const inset = Math.min(READER_CONTROL_MOTION_CONTENT_INSET_MAX, value.widths.panelWidthVp / 4);
-  const fullWidth = Math.max(0, value.widths.panelWidthVp - inset * 2);
-  return value.key.length > 0 && Number.isFinite(value.widths.panelWidthVp) &&
-    value.widths.panelWidthVp > 0 && value.widths.panelWidthVp <= availableWidth + 0.01 &&
-    Number.isFinite(value.widths.fullContentWidthVp) && Math.abs(value.widths.fullContentWidthVp - fullWidth) < 0.01 &&
-    Number.isFinite(value.widths.quickContentWidthVp) && Math.abs(value.widths.quickContentWidthVp -
-      Math.max(0, fullWidth - READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE)) < 0.01 &&
-    Number.isFinite(q.heightVp) && q.heightVp >= 0 && Number.isFinite(q.minWidthVp) && q.minWidthVp >= 0 &&
+function validControlMinimum(value: ReaderControlSharedShellMinimum): boolean {
+  const q = value?.minimum?.quick;
+  const f = value?.minimum?.full;
+  const c = value?.chrome;
+  if (q === undefined || f === undefined || c === undefined) return false;
+  return Number.isFinite(q.heightVp) && q.heightVp >= 0 && Number.isFinite(q.minWidthVp) && q.minWidthVp >= 0 &&
     Number.isFinite(f.heightVp) && f.heightVp >= 0 && Number.isFinite(f.minWidthVp) && f.minWidthVp >= 0 &&
     Number.isFinite(c.quickReserveVp) && c.quickReserveVp >= 0 &&
     Number.isFinite(c.fullReserveVp) && c.fullReserveVp >= 0 &&
@@ -479,6 +480,24 @@ function validControlCandidate(value: ReaderControlCandidateMinimum, availableWi
     Number.isFinite(c.headerHeightVp) && c.headerHeightVp > 0 &&
     Number.isFinite(c.brightnessAutoHeightVp) && c.brightnessAutoHeightVp > 0 &&
     Number.isFinite(c.brightnessAutoWidthVp) && c.brightnessAutoWidthVp > 0;
+}
+
+function validControlCandidate(value: ReaderControlCandidateMinimum, availableWidth: number): boolean {
+  const inset = Math.min(READER_CONTROL_MOTION_CONTENT_INSET_MAX, value.widths.panelWidthVp / 4);
+  const fullWidth = Math.max(0, value.widths.panelWidthVp - inset * 2);
+  return value.key.length > 0 && Number.isFinite(value.widths.panelWidthVp) &&
+    value.widths.panelWidthVp > 0 && value.widths.panelWidthVp <= availableWidth + 0.01 &&
+    Number.isFinite(value.widths.fullContentWidthVp) && Math.abs(value.widths.fullContentWidthVp - fullWidth) < 0.01 &&
+    Number.isFinite(value.widths.quickContentWidthVp) && Math.abs(value.widths.quickContentWidthVp -
+      Math.max(0, fullWidth - READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE)) < 0.01 &&
+    validControlMinimum(value) && (value.sharedShell === undefined ||
+      (value.sharedShell?.minimum?.module === 'home' && validControlMinimum(value.sharedShell)));
+}
+
+/** Content modules scroll within one measured Home/chrome shell. Their natural
+ * content minimum remains on the original candidate for viewport/fit truth. */
+function controlShellMinimum(value: ReaderControlCandidateMinimum): ReaderControlSharedShellMinimum {
+  return value.sharedShell ?? value;
 }
 
 function resolveMeasuredPortraitControlPanelSize(width: number, height: number,
@@ -491,40 +510,45 @@ function resolveMeasuredPortraitControlPanelSize(width: number, height: number,
     Math.abs(a.widths.panelWidthVp - preferred) - Math.abs(b.widths.panelWidthVp - preferred) ||
       a.widths.panelWidthVp - b.widths.panelWidthVp);
   for (const candidate of ordered) {
+    const shell = controlShellMinimum(candidate);
     const panelWidth = candidate.widths.panelWidthVp;
     if (panelWidth < width * 0.91 - 0.01 || panelWidth > width * 0.96 + 0.01 ||
-      !candidate.minimum.quick.fits || !candidate.minimum.full.fits ||
-      candidate.minimum.quick.minWidthVp > candidate.widths.quickContentWidthVp + 0.01 ||
-      candidate.minimum.full.minWidthVp > candidate.widths.fullContentWidthVp + 0.01) continue;
+      !shell.minimum.quick.fits || !shell.minimum.full.fits ||
+      shell.minimum.quick.minWidthVp > candidate.widths.quickContentWidthVp + 0.01 ||
+      shell.minimum.full.minWidthVp > candidate.widths.fullContentWidthVp + 0.01) continue;
     const quickHeight = pixelWithin(panelWidth / PHONE_QUICK_RATIO,
-      Math.max(height * 0.37, candidate.minimum.quick.heightVp + candidate.chrome.quickReserveVp, panelWidth / 1.15),
+      Math.max(height * 0.37, shell.minimum.quick.heightVp + shell.chrome.quickReserveVp, panelWidth / 1.15),
       Math.min(height * 0.42, availableHeight, panelWidth / 1.05), density);
     const fullHeight = pixelWithin(panelWidth / PHONE_FULL_RATIO,
-      Math.max(height * 0.8, candidate.minimum.full.heightVp + candidate.chrome.fullReserveVp, panelWidth / 0.55),
+      Math.max(height * 0.8, shell.minimum.full.heightVp + shell.chrome.fullReserveVp, panelWidth / 0.55),
       Math.min(height * 0.87, availableHeight, panelWidth / 0.49), density);
     if (quickHeight !== undefined && fullHeight !== undefined) {
       return { width: panelWidth, quickHeight: quickHeight, fullHeight: fullHeight,
         measured: candidate, preferred: true };
     }
   }
-  const contentReady = ordered.filter((value: ReaderControlCandidateMinimum): boolean => value.minimum.quick.fits &&
-    value.minimum.full.fits && value.minimum.quick.minWidthVp <= value.widths.quickContentWidthVp + 0.01 &&
-    value.minimum.full.minWidthVp <= value.widths.fullContentWidthVp + 0.01);
+  const contentReady = ordered.filter((value: ReaderControlCandidateMinimum): boolean => {
+    const shell = controlShellMinimum(value);
+    return shell.minimum.quick.fits && shell.minimum.full.fits &&
+      shell.minimum.quick.minWidthVp <= value.widths.quickContentWidthVp + 0.01 &&
+      shell.minimum.full.minWidthVp <= value.widths.fullContentWidthVp + 0.01;
+  });
   const fallbackCandidates = contentReady.length > 0 ? contentReady : ordered;
   let selected: ReaderControlPanelSize | undefined = undefined;
   let selectedNormalCount = -1;
   for (const candidate of fallbackCandidates) {
+    const shell = controlShellMinimum(candidate);
     const panelWidth = candidate.widths.panelWidthVp;
     const normalWidth = panelWidth >= width * 0.91 - 0.01 && panelWidth <= width * 0.96 + 0.01;
-    const quickFitsWidth = candidate.minimum.quick.fits &&
-      candidate.minimum.quick.minWidthVp <= candidate.widths.quickContentWidthVp + 0.01;
-    const fullFitsWidth = candidate.minimum.full.fits &&
-      candidate.minimum.full.minWidthVp <= candidate.widths.fullContentWidthVp + 0.01;
+    const quickFitsWidth = shell.minimum.quick.fits &&
+      shell.minimum.quick.minWidthVp <= candidate.widths.quickContentWidthVp + 0.01;
+    const fullFitsWidth = shell.minimum.full.fits &&
+      shell.minimum.full.minWidthVp <= candidate.widths.fullContentWidthVp + 0.01;
     const quickNormal = normalWidth && quickFitsWidth ? pixelWithin(panelWidth / PHONE_QUICK_RATIO,
-      Math.max(height * 0.37, candidate.minimum.quick.heightVp + candidate.chrome.quickReserveVp, panelWidth / 1.15),
+      Math.max(height * 0.37, shell.minimum.quick.heightVp + shell.chrome.quickReserveVp, panelWidth / 1.15),
       Math.min(height * 0.42, availableHeight, panelWidth / 1.05), density) : undefined;
     const fullNormal = normalWidth && fullFitsWidth ? pixelWithin(panelWidth / PHONE_FULL_RATIO,
-      Math.max(height * 0.8, candidate.minimum.full.heightVp + candidate.chrome.fullReserveVp, panelWidth / 0.55),
+      Math.max(height * 0.8, shell.minimum.full.heightVp + shell.chrome.fullReserveVp, panelWidth / 0.55),
       Math.min(height * 0.87, availableHeight, panelWidth / 0.49), density) : undefined;
     const normalCount = (quickNormal === undefined ? 0 : 1) + (fullNormal === undefined ? 0 : 1);
     // Content admission precedes proportions. Among those measured widths,
@@ -532,10 +556,10 @@ function resolveMeasuredPortraitControlPanelSize(width: number, height: number,
     // exception for the other. ordered already owns distance/tie preference.
     if (normalCount <= selectedNormalCount) continue;
     const fullHeight = fullNormal ?? pixelWithin(Math.max(panelWidth / PHONE_FULL_RATIO,
-      candidate.minimum.full.heightVp + candidate.chrome.fullReserveVp, quickNormal ?? 0),
+      shell.minimum.full.heightVp + shell.chrome.fullReserveVp, quickNormal ?? 0),
       0, availableHeight, density) ?? 0;
     const quickHeight = quickNormal ?? pixelWithin(Math.max(panelWidth / PHONE_QUICK_RATIO,
-      candidate.minimum.quick.heightVp + candidate.chrome.quickReserveVp), 0, fullHeight, density) ?? 0;
+      shell.minimum.quick.heightVp + shell.chrome.quickReserveVp), 0, fullHeight, density) ?? 0;
     selected = { width: panelWidth, quickHeight: quickHeight, fullHeight: fullHeight,
       measured: candidate, preferred: false };
     selectedNormalCount = normalCount;
@@ -633,11 +657,12 @@ export function resolveReaderControlLayout(
   const otherCandidate = candidates?.find((value: ReaderControlCandidateMinimum): boolean =>
     validControlCandidate(value, Math.max(0, width - safeHorizontal * 2)) &&
     Math.abs(value.widths.panelWidthVp - defaultPanelWidth) < 0.01);
-  const otherPanel: ReaderControlPanelSize | undefined = portraitPanel === undefined && otherCandidate !== undefined ? {
+  const otherShell = otherCandidate === undefined ? undefined : controlShellMinimum(otherCandidate);
+  const otherPanel: ReaderControlPanelSize | undefined = portraitPanel === undefined && otherCandidate !== undefined && otherShell !== undefined ? {
     width: otherCandidate.widths.panelWidthVp,
     fullHeight: availablePanelHeight,
-    quickHeight: Math.min(availablePanelHeight, Math.max(otherCandidate.minimum.quick.heightVp +
-      otherCandidate.chrome.quickReserveVp, 330)), measured: otherCandidate, preferred: false,
+    quickHeight: Math.min(availablePanelHeight, Math.max(otherShell.minimum.quick.heightVp +
+      otherShell.chrome.quickReserveVp, 330)), measured: otherCandidate, preferred: false,
   } : undefined;
   const selectedPanel = portraitPanel ?? otherPanel;
   const snapshot = new ReaderControlLayoutSnapshot(
@@ -668,7 +693,9 @@ export function resolveReaderControlLayout(
     snapshot.fullMinimumFits = measured.minimum.full.fits &&
       measured.minimum.full.heightVp <= fullHeight + 0.01 &&
       measured.minimum.full.minWidthVp <= measured.widths.fullContentWidthVp + 0.01;
+    const sharedShell = controlShellMinimum(measured);
     snapshot.contentBudget = { key: measured.key, quickContentHeightVp: quickHeight,
+      brightnessContentHeightVp: Math.max(0, selectedPanel.quickHeight - sharedShell.chrome.quickReserveVp),
       fullContentHeightVp: fullHeight, navigationHeightVp: measured.chrome.navigationHeightVp,
       headerHeightVp: measured.chrome.headerHeightVp,
       brightnessAutoHeightVp: measured.chrome.brightnessAutoHeightVp,

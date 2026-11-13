@@ -87,6 +87,8 @@ export struct ReaderControlReplaceContent {
   @State private localPending: boolean = false;
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   private readonly scroller: Scroller = new Scroller();
+  private readonly quickScroller: Scroller = new Scroller();
+  @State private quickScrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   private presentationRevision: number = 0;
   private mounted: boolean = false;
   private editorFocusRuleId: number | undefined = undefined;
@@ -105,6 +107,7 @@ export struct ReaderControlReplaceContent {
   private publishedMinimumIdentity: string = '';
   private cachedMinimumKey: string = '';
   private cachedQuickContentHeight: number = -1;
+  private cachedQuickFlowExtra: number = -1;
   private readonly minimumMeasurer: ReaderControlModuleMeasurer =
     (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => this.measureMinimum(widths, key);
   private currentInputEnabled(): boolean {
@@ -171,6 +174,10 @@ export struct ReaderControlReplaceContent {
       this.dismissTemporaryLayer();
       this.localError = '';
       this.sourceScrollResetPending = true;
+      this.quickScrollMotion = createReaderControlMorphScroll();
+      const quickOffset = this.quickScroller.currentOffset()?.yOffset;
+      if (quickOffset !== undefined && Number.isFinite(quickOffset) && quickOffset > 0)
+        this.quickScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: false });
     }
     if (!this.sourceScrollResetPending) return;
     const offset = this.scroller.currentOffset()?.yOffset;
@@ -183,6 +190,7 @@ export struct ReaderControlReplaceContent {
   }
   private onMotionChanged(): void {
     this.syncMorphScroll();
+    this.syncQuickScroll();
     // Motion samples arrive on every control-bar frame.  Invalidating the
     // replace transaction when no editor/confirmation is open only writes
     // local state and can cancel an unrelated async callback; keep the
@@ -192,16 +200,52 @@ export struct ReaderControlReplaceContent {
       (this.layer !== '' || this.localPending)) this.dismissTemporaryLayer();
   }
   private frame(): ReaderControlReplaceFrame {
+    const quickExtra = this.quickFlowExtra();
     if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||
       this.cachedHeight !== this.availableHeight || this.cachedMinimumKey !== this.minimumKey ||
-      this.cachedQuickContentHeight !== this.quickContentHeight) {
+      this.cachedQuickContentHeight !== this.quickContentHeight || this.cachedQuickFlowExtra !== quickExtra) {
       this.cachedProgress = this.motionProgress;
       this.cachedWidth = this.availableWidth;
       this.cachedHeight = this.availableHeight;
-      this.cachedMinimumKey = this.minimumKey; this.cachedQuickContentHeight = this.quickContentHeight;
-      this.cachedFrame = sampleReaderControlReplace(this.motionProgress, this.availableWidth, this.availableHeight, this.minimumProfiles.get(this.minimumKey), this.quickContentHeight);
+      this.cachedMinimumKey = this.minimumKey; this.cachedQuickContentHeight = this.quickContentHeight; this.cachedQuickFlowExtra = quickExtra;
+      this.cachedFrame = sampleReaderControlReplace(this.motionProgress, this.availableWidth, this.availableHeight + quickExtra * (1 - readerControlUnit(this.motionProgress)), this.minimumProfiles.get(this.minimumKey), this.quickContentHeight + quickExtra);
     }
     return this.cachedFrame;
+  }
+  private quickFlowExtra(): number {
+    const minimum = this.minimumProfiles.get(this.minimumKey)?.quick;
+    if (minimum === undefined) return 0;
+    const count = Math.max(1, Math.min(3, this.state.rules.length));
+    const status = this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0;
+    const rowsHeight = Math.max(minimum.rowHeight * count, status ? minimum.statusHeight : 0);
+    const listTop = Math.max(47.55, 14.55 + minimum.backHeight + 9);
+    return Math.max(0, listTop + rowsHeight + minimum.actionHeight + 30.45 - this.quickContentHeight);
+  }
+  private quickFlowContentHeight(): number {
+    return this.availableHeight + this.quickFlowExtra() * (1 - readerControlUnit(this.motionProgress));
+  }
+  private quickFlowInput(): boolean {
+    return this.quickInput() && this.layer === '' && this.quickFlowExtra() > .1;
+  }
+  private syncQuickScroll(): void {
+    const offset = this.quickScroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
+    const update = advanceReaderControlMorphScroll(this.quickScrollMotion, 1 - this.motionProgress,
+      this.currentInputEnabled(), offset);
+    this.quickScrollMotion = update.state;
+    if (update.targetOffset !== undefined) this.quickScroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
+  }
+  private onQuickDidScroll(): void {
+    const offset = this.quickScroller.currentOffset()?.yOffset;
+    if (offset !== undefined && Number.isFinite(offset)) this.quickScrollMotion = observeReaderControlMorphScroll(
+      this.quickScrollMotion, offset, this.quickFlowInput());
+  }
+  private quickScrollDelta(y: number, source: ScrollSource): OffsetResult {
+    return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.quickScrollMotion,
+      this.quickFlowInput(), source === ScrollSource.SCROLLER) ? y : 0 };
+  }
+  private quickScrollTranslation(): number {
+    return readerControlMorphScrollTranslation(this.quickScrollMotion, 1 - this.motionProgress);
   }
   private listContentMinHeight(): number {
     // Keep the same native offset legal while 77px rows become 28px rows.
@@ -214,7 +258,7 @@ export struct ReaderControlReplaceContent {
   }
   private rowClip(index: number): PathShape {
     const f = sampleReaderControlReplace(1, this.availableWidth, this.fullContentHeight, this.minimumProfiles.get(this.minimumKey), this.quickContentHeight);
-    const q = sampleReaderControlReplace(0, this.availableWidth, this.quickContentHeight, this.minimumProfiles.get(this.minimumKey), this.quickContentHeight);
+    const q = sampleReaderControlReplace(0, this.availableWidth, this.quickContentHeight + this.quickFlowExtra(), this.minimumProfiles.get(this.minimumKey), this.quickContentHeight + this.quickFlowExtra());
     const b = this.frame();
     const full: ReaderControlMotionClipRect = { x: 0, y: index * (f.rowHeight + f.rowGap) - this.scrollMotion.fullScrollOffset,
       width: f.list.width, height: f.rowHeight };
@@ -417,52 +461,61 @@ export struct ReaderControlReplaceContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Row().width(this.availableWidth).height(this.availableHeight)
         .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme)).hitTestBehavior(HitTestMode.None);
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.quickBack();
-        this.ruleToolbar();
-        Scroll(this.scroller) {
-          Column({ space: this.frame().rowGap }) {
-            // Do not replace this with state.rules.slice(0, 3). Same row identity
-            // and same source collection must remain mounted throughout morph.
-            ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
-              this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));
-            }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);
-            if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {
-              this.statusContent();
+      Scroll(this.quickScroller) {
+        Stack({ alignContent: Alignment.TopStart }) {
+          this.quickBack();
+          this.ruleToolbar();
+          Scroll(this.scroller) {
+            Column({ space: this.frame().rowGap }) {
+              // Do not replace this with state.rules.slice(0, 3). Same row identity
+              // and same source collection must remain mounted throughout morph.
+              ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
+                this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));
+              }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);
+              if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {
+                this.statusContent();
+              }
+              // Complete preview business remains reachable without altering the
+              // recovered three-button Toolbar; this footer is a declared overlay.
+              Row() {
+                this.textAction('预览当前章节已保存规则', (): void => { this.preview(); }, (): boolean => this.readyInput() && this.fullInput());
+              }.width('100%').height(Math.max(32, this.frame().actionHeight)).opacity(this.frame().progress)
+                .translate({ y: this.fullOnlyScrollTranslation() - this.sharedScrollTranslation() })
+                .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
             }
-            // Complete preview business remains reachable without altering the
-            // recovered three-button Toolbar; this footer is a declared overlay.
-            Row() {
-              this.textAction('预览当前章节已保存规则', (): void => { this.preview(); }, (): boolean => this.readyInput() && this.fullInput());
-            }.width('100%').height(Math.max(32, this.frame().actionHeight)).opacity(this.frame().progress)
-              .translate({ y: this.fullOnlyScrollTranslation() - this.sharedScrollTranslation() })
-              .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
+            .width(this.frame().list.width).alignItems(HorizontalAlign.Start)
+            .constraintSize({ minHeight: this.listContentMinHeight() })
+            .translate({ y: this.sharedScrollTranslation() });
           }
-          .width(this.frame().list.width).alignItems(HorizontalAlign.Start)
-          .constraintSize({ minHeight: this.listContentMinHeight() })
-          .translate({ y: this.sharedScrollTranslation() });
+          .width(this.frame().list.width).height(this.frame().list.height)
+          .position({ x: this.frame().list.x, y: this.frame().list.y })
+          .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.layer === '')
+          .edgeEffect(EdgeEffect.None)
+          .onAppear((): void => { this.onSourceChanged(); this.syncMorphScroll(); })
+          .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
+            this.nativeScrollDelta(y, source))
+          .onDidScroll((): void => this.onFullDidScroll())
+          .clip(true);
+          if (this.state.rules.length > 0 && (this.state.errorMessage.length > 0 || this.localError.length > 0)) {
+            Column() { this.statusContent(); }
+              .width(this.frame().list.width).height(Math.min(this.frame().statusHeight, this.frame().list.height))
+              .position({ x: this.frame().list.x, y: this.frame().list.y })
+              .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(8);
+          }
+          this.quickFooter();
         }
-        .width(this.frame().list.width).height(this.frame().list.height)
-        .position({ x: this.frame().list.x, y: this.frame().list.y })
-        .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.layer === '')
-        .edgeEffect(EdgeEffect.None)
-        .onAppear((): void => { this.onSourceChanged(); this.syncMorphScroll(); })
+        .width(this.availableWidth)
+        .height(Math.max(this.quickFlowContentHeight(), this.availableHeight + readerControlMorphScrollExtent(this.quickScrollMotion)))
+        .translate({ y: this.quickScrollTranslation() })
+        .enabled(this.layer === '')
+        .hitTestBehavior(this.layer === '' ? HitTestMode.Default : HitTestMode.None)
+        .accessibilityLevel(this.layer === '' ? 'auto' : 'no-hide-descendants');
+      }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.quickFlowInput())
+        .onAppear((): void => this.syncQuickScroll())
         .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
-          this.nativeScrollDelta(y, source))
-        .onDidScroll((): void => this.onFullDidScroll())
-        .clip(true);
-        if (this.state.rules.length > 0 && (this.state.errorMessage.length > 0 || this.localError.length > 0)) {
-          Column() { this.statusContent(); }
-            .width(this.frame().list.width).height(Math.min(this.frame().statusHeight, this.frame().list.height))
-            .position({ x: this.frame().list.x, y: this.frame().list.y })
-            .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(8);
-        }
-        this.quickFooter();
-      }
-      .width(this.availableWidth).height(this.availableHeight)
-      .enabled(this.layer === '')
-      .hitTestBehavior(this.layer === '' ? HitTestMode.Default : HitTestMode.None)
-      .accessibilityLevel(this.layer === '' ? 'auto' : 'no-hide-descendants');
+          this.quickScrollDelta(y, source))
+        .onDidScroll((): void => this.onQuickDidScroll()).clip(true);
       if (this.layer !== '') {
         ForEach([this.presentationRevision], (opening: number): void => {
           this.temporaryOverlay(opening);
@@ -529,10 +582,10 @@ export struct ReaderControlReplaceContent {
       }.width(this.frame().toggleWidth).height(this.frame().rowHeight).alignItems(VerticalAlign.Center);
       }.width(this.frame().toggleWidth).height(this.frame().rowHeight).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
         .position({ x: this.frame().rowPadding, y: 0 })
-        .enabled(this.layer === '' && this.readyInput() && index() >= 0)
+        .enabled(this.layer === '' && this.readyInput() && index() >= 0 && (this.fullInput() || index() < 3))
         .accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)
         .onClick((): void => {
-          if (this.layer === '' && this.readyInput() && index() >= 0) {
+          if (this.layer === '' && this.readyInput() && index() >= 0 && (this.fullInput() || index() < 3)) {
             const current = rule();
             this.perform(async (): Promise<void> => this.onToggle(current, !current.isEnabled));
           }

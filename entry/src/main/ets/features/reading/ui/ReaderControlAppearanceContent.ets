@@ -1,3 +1,4 @@
+import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
@@ -872,9 +873,10 @@ export struct ReaderControlAppearanceContent {
       .zIndex(this.draggedFontId === font ? 3 : 1).enabled(this.fontInput(font))
       .accessibilityLevel(this.fontInput(font) ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.fontInput(font) ? HitTestMode.Default : HitTestMode.None)
-      .accessibilityText(font === 'import' && this.importLayout === 'source-overlap-pending' ?
+      .attributeModifier(new ReaderActionAccessibility(font === 'import' && this.importLayout === 'source-overlap-pending' ?
         '原始设计重叠位置，仅供对照' : font === 'import' ? '导入自定义字体' :
-        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`)
+        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`,
+        this.fontInput(font), this.activeFont(font)))
       .onVisibleAreaChange([0, 0.25], (visible: boolean, ratio: number): void => {
         if (visible && ratio >= 0.25) this.requestVisibleFontPreview(font);
       })

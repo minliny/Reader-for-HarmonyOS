@@ -1,5 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 const definitions = {
+    'tts-paint-target-sdk': { description: 'Approved Make paint sizes stay separate from real44 carriers, with centered Full stop, paid spacing, actual glyph recipes and native choice ownership', resources: [] },
+    'module-shell-sdk': { description: 'Current Home and all module receipts retain the common measured outer shell while content budgets, stale fencing and true metric reflow remain current', resources: [] },
     'admission-sdk': { description: 'Current experience scheduling to measured Panel admission across orientations and wide windows, render-safe readiness and stale frame negatives', resources: [] },
     'module-minimum-budget': { description: 'Shipping measured appearance/settings/search/replace/autopage budgets at four scales and exact narrow/wide widths', resources: [] },
     'native-targets-sdk': { description: 'Actual SDK control target attributes and paid parent geometry for reading modules', resources: [] },
@@ -102,7 +104,7 @@ async function run(id) {
     const st = pure('ReaderControlSettingsMinimum.ets', ['measureReaderControlSettingsMinimum']);
     const se = pure('ReaderControlSearchMinimum.ets', ['measureReaderSearchMinimum']);
     const rp = pure('ReaderControlReplaceMinimum.ets', ['measureReaderControlReplaceMinimum']);
-    const tt = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum']);
+    const tt = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum', 'readerTtsTimerCardLayout']);
     const au = pure('ReaderControlAutoPageMinimum.ets', ['measureReaderControlAutoPageMinimum']);
     const searchFacts = { query: '查找很长的正文关键字', title: '第一章 长章节', snippet: '正文命中关键字', message: '', hasResults: true, resultsMode: true, loading: false, loadMoreLabel: '加载更多结果', loadMoreMessage: '' };
     const optionLabels = [['从左到右', '从右到左', '跟随系统'], ['覆盖', '仿真', '滑动', '滚动', '无动画'], ['30秒', '1分钟', '5分钟', '10分钟', '永不']];
@@ -111,6 +113,344 @@ async function run(id) {
     const nodes = (owner, type) => [...owner.nodes.values()].filter(n => n.type === type);
     const deepNodes = owner => [...owner.nodes.values(), ...[...owner.children.values()].filter(child => child.nodes).flatMap(deepNodes)];
     const target = (node, why) => { assert.ok(node, why); assert.ok(node.width >= 44 && node.height >= 44, `${why} pays >=44, got ${node.width}x${node.height}`); };
+    if (id === 'tts-paint-target-sdk') {
+        const { createHash } = await import('node:crypto');
+        const oracle = JSON.parse(read('tools/fixtures/reader-control-tts-make-20260911.json'));
+        const makeSource = read('tools/fixtures/tts-reference/PhoneScreen.tsx');
+        assert.equal(createHash('sha256').update(makeSource).digest('hex'), '731582c1ac493d48f1ebdaae1e5527de5dfe3f391d37d8c85a51643ce72b4a3c');
+        assert.match(makeSource, /function StepButton[\s\S]*?size-\[30px\][\s\S]*?<svg width="14" height="14"/);
+        assert.match(makeSource, /className="h-\[36px\] rounded-\[10px\] text-\[12px\] leading-none/);
+        const accessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url),
+            ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
+        const ttsSource = ui('ReaderControlTtsContent.ets');
+        const presetPaint = pureModuleProbe(ttsSource.slice(0, ttsSource.indexOf('@Component')), 'ReaderTtsPaint.ets',
+            { ...deps, ...accessibility, FrameCallback: class {}, Color: { Transparent: 'Color.Transparent' } }, ['ReaderTtsPresetModifier', 'readerTtsPresetLabelColor']);
+        const state = await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
+        const ttsMaterial = pure('ReaderControlTtsStyle.ts', ['readerTtsPlayGradientStart']);
+        const methods = ['p', 'transport', 'transportPaint', 'transportGlyphSize', 'roundControl', 'timer', 'timerCardLayout',
+            'timerPreset', 'timerPresetLabel', 'timerPresetSelected', 'timerPresetIsSelected', 'chooseTimerPreset',
+            'timerStepButton', 'timerStepper', 'stepTimer', 'twoDigits', 'ratePreset', 'ratePresetWidth', 'chooseRatePreset'];
+        const paintOwner = source => createReaderBuilderProbe(source, methods,
+            { ...deps, ...tt, ...accessibility, ...presetPaint, ...state, ...ttsMaterial }).owner;
+        const owner = paintOwner(ttsSource);
+        let profile, progress = 0, availableWidth = 286, admitted = true, speaking = false;
+        const commands = [];
+        Object.assign(owner, { appScheme: 'day', state: { status: 'idle' }, serviceBusy: false, configField: '',
+            timerMode: 'duration', timerMinutes: 25, timerSeconds: 20,
+            p: () => progress, frame: () => playback.sampleReaderControlTts(progress, availableWidth, 1 / 3, 0, false, profile),
+            textMinimum: () => tt.sampleReaderTtsTextMinimum(profile, progress),
+            sharedInput: () => admitted && (progress === 0 || progress === 1), fullInput: () => admitted && progress === 1,
+            isActivelySpeaking: () => speaking, onlineServicePage: () => false, isHttpEngineSelected: () => false,
+            hasActiveQueue: () => true, controlText: kind => kind,
+            sectionSurface() {}, moduleHeader() {}, quickLabel() {}, sharedScrollTranslation: () => 0, sharedClip: () => 'retained-motion-mask',
+            presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), timerCaption: () => '不开启',
+            cycleQuickTimer: () => commands.push('quickTimer'), effectiveRate: () => 1,
+            onPrevious: () => commands.push('previous'), onNext: () => commands.push('next'),
+            onToggle: () => commands.push('toggle'), onStop: () => commands.push('stop'),
+            onTimerChange: (...args) => commands.push(['timer', ...args]), onRateChange: rate => commands.push(['rate', rate]),
+        });
+        const emitted = fn => { const before = owner.nodes.size; fn(); return [...owner.nodes.values()].slice(before); };
+        let transportSamples = 0, stateSamples = 0;
+        for (const factor of [1, 1.3, 1.6, 2]) for (const fullWidth of [338, 286]) {
+            scale = factor;
+            const w = { panelWidthVp: fullWidth + 26, fullContentWidthVp: fullWidth, quickContentWidthVp: fullWidth - 52 };
+            for (const facts of [ttsFacts, { ...ttsFacts, seek: true }, { ...ttsFacts, error: '朗读服务暂时不可用，请稍后重试。'.repeat(3) },
+                { ...ttsFacts, online: true }]) {
+                profile = tt.measureReaderTtsMinimum(context, w, facts);
+                assert.ok(profile);
+                const base = oracle.shared.stop[1];
+                const headerGrowth = profile.fullText.header - 18;
+                assert.equal(profile.full.stop.y + profile.full.stop.height / 2, base[1] + base[3] / 2 + headerGrowth);
+                assert.ok(profile.full.stop.y >= 0 && profile.full.stop.y + profile.full.stop.height <= profile.full.playback.height);
+                assert.ok(profile.full.timerCard.height >= 168 && profile.full.speed.height >= 147.5);
+                for (const p of [0, .37, 1]) {
+                    progress = p; availableWidth = w.quickContentWidthVp + (w.fullContentWidthVp - w.quickContentWidthVp) * p;
+                    for (const kind of ['previous', 'toggle', 'stop', 'next']) {
+                        const created = emitted(() => owner.roundControl(kind));
+                        const button = created.find(node => node.type === 'Button');
+                        const paint = created.find(node => node.type === 'Stack' && typeof node.width === 'number');
+                        const glyph = created.find(node => node.type === 'Image');
+                        assert.ok(button.width >= 44 && button.height >= 44);
+                        assert.equal(button.backgroundColor, 'Color.Transparent');
+                        assert.ok(paint.width <= button.width && paint.height <= button.height);
+                        assert.deepEqual(paint.position, { x: (button.width - paint.width) / 2, y: (button.height - paint.height) / 2 });
+                        assert.equal(glyph.width, kind === 'stop' ? 10 : kind === 'toggle' ? 14 + 8 * p : 17 + 9 * p);
+                        if (factor === 1 && fullWidth === 338 && (p === 0 || p === 1)) {
+                            const expected = oracle.shared[kind][p];
+                            assert.equal(paint.width, expected[2], kind + ' approved paint width');
+                            assert.equal(paint.height, expected[3], kind + ' approved paint height');
+                        }
+                        transportSamples++;
+                    }
+                    stateSamples++;
+                }
+                progress = 1; availableWidth = w.fullContentWidthVp;
+                const timerNodes = emitted(() => owner.timer());
+                const timerPaint = timerNodes.filter(node => node.type === 'Stack' && node.height === profile.fullText.timerPresetPaint && node.borderRadius === 10);
+                assert.equal(timerPaint.length, 6);
+                assert.equal(timerNodes.find(node => node.type === 'Column' && node.height === owner.frame().timerCard.height && node.width === owner.frame().timer.width)?.padding.top,
+                    owner.timerCardLayout().topPadding);
+                assert.ok(timerNodes.filter(node => node.type === 'Button' && node.enabled !== false && node.opacity !== 0).every(button => button.height >= 44));
+                const rateNodes = emitted(() => owner.ratePreset(1.25));
+                assert.equal(rateNodes.find(node => node.type === 'Stack').height, profile.fullText.ratePresetPaint);
+                const stepNodes = emitted(() => owner.timerStepButton(false, 5));
+                assert.equal(stepNodes.find(node => node.type === 'Stack').width, 30);
+                assert.equal(stepNodes.find(node => node.type === 'Image').width, 14);
+                const step = stepNodes.find(node => node.type === 'Button');
+                const before = commands.length;
+                owner.configField = 'voice'; step.onClick();
+                assert.equal(commands.length, before, 'old step callback cannot write under a successor configuration layer');
+                owner.configField = ''; admitted = false; step.onClick();
+                assert.equal(commands.length, before, 'retired module callback is fenced');
+                admitted = true; step.onClick(); assert.equal(commands.length, before + 1);
+                progress = 0; availableWidth = w.quickContentWidthVp;
+                const quickNodes = emitted(() => owner.timer());
+                const captionPaint = quickNodes.find(node => node.type === 'Stack' && node.height === profile.quickText.quickTimerPaintHeight && node.border?.width === .5);
+                assert.ok(captionPaint);
+                assert.ok(profile.quickText.quickTimerPaintHeight <= profile.quick.quickTimerSelect.height);
+                if (factor === 1 && fullWidth === 338 && facts === ttsFacts) {
+                    assert.equal(captionPaint.height, oracle.quickOnly.quickTimerSelect[3]);
+                    assert.equal(profile.full.playback.height, oracle.shared.playback[1][3]);
+                    assert.equal(profile.full.timerCard.height, oracle.fullOnly.timerCard[3]);
+                    assert.equal(profile.full.speedPresets.y + (profile.fullText.ratePreset - profile.fullText.ratePresetPaint) / 2,
+                        oracle.fullOnly.speedPresets[1]);
+                    assert.equal(profile.fullText.ratePresetPaint, oracle.fullOnly.speedPresets[3]);
+                }
+            }
+        }
+        progress = 0; speaking = true;
+        assert.equal(owner.transportGlyphSize('toggle'), 13);
+        progress = 1; assert.equal(owner.transportGlyphSize('toggle'), 20);
+        const currentMinimum = ui('ReaderControlTtsMinimum.ets');
+        const uncentered = pure('ReaderControlTtsMinimum.ets', ['measureReaderTtsMinimum'],
+            currentMinimum.replace('frame.stop.y -= (frame.stop.height - stopPaintHeight) / 2;', 'frame.stop.y += 0;'));
+        scale = 1;
+        const wrong = uncentered.measureReaderTtsMinimum(context, { panelWidthVp: 364, quickContentWidthVp: 286, fullContentWidthVp: 338 }, ttsFacts);
+        assert.notEqual(wrong.full.stop.y + wrong.full.stop.height / 2, 161 + 21 / 2);
+        const targetPaintMutant = paintOwner(ttsSource.replace('.height(this.textMinimum()?.timerPresetPaint ?? 36)', '.height(this.textMinimum()?.timerPreset ?? 44)'));
+        Object.assign(targetPaintMutant, owner, { p: () => 1, textMinimum: () => wrong.fullText });
+        targetPaintMutant.timerPreset(15);
+        assert.notEqual(nodes(targetPaintMutant, 'Stack').at(-1).height, 36, 'old paint-equals-target is rejected by independent reference36');
+        const metrics = { revision: 1, systemFontScale: 1 };
+        const picker = native('ReaderTtsConfigOverlay.ets', ['choiceRow', 'choiceHeight', 'panelWidth', 'previewActionWidth',
+            'previewActionHeight', 'previewPaintHeight', 'choose', 'preview', 'stopPreview'], {
+            ReaderWindowCoordinator: { metrics: () => metrics },
+        });
+        const choice = { id: 'voice:one', label: '清晰女声 · 标准温润' };
+        const choiceCalls = [], previewCalls = [], closeCalls = [];
+        Object.assign(picker, { voicePicker: true, manager: false, availableWidth: 338, availableHeight: 666,
+            mounted: true, busy: false, choices: [choice], selectedId: choice.id, selectionId: 'current-opening',
+            previewId: '', previewGeneration: 0, generation: 0, getUIContext: () => context, appThemeScheme: 'day',
+            onChoose: async (...args) => choiceCalls.push(args), onClose: id => closeCalls.push(id),
+            onPreview: (...args) => { previewCalls.push(args); return new Promise(() => {}); },
+            onPreviewStop: id => previewCalls.push(['stop', id]),
+        });
+        picker.choiceRow(choice);
+        const choiceButtons = nodes(picker, 'Button');
+        assert.equal(choiceButtons.length, 2, 'selection and preview have two native input owners');
+        const selection = choiceButtons.find(node => node.accessibilityText === choice.label);
+        const preview = choiceButtons.find(node => node !== selection);
+        assert.equal(selection.accessibilitySelected, true);
+        assert.ok(selection.height >= 44 && preview.height >= 44);
+        assert.ok(nodes(picker, 'Row').some(node => node.height === 26 && node.backgroundColor !== undefined));
+        assert.ok(nodes(picker, 'Image').some(node => node.width === 16 && node.height === 16));
+        picker.busy = true; picker.replay();
+        assert.ok(nodes(picker, 'Button').every(button => button.enabled === false), 'each native owner declares its current busy availability');
+        selection.onClick(); preview.onClick();
+        assert.equal(choiceCalls.length, 0); assert.equal(previewCalls.length, 0);
+        picker.busy = false; picker.replay();
+        preview.onClick(); assert.equal(previewCalls.length, 1); assert.equal(choiceCalls.length, 0);
+        preview.onClick(); assert.equal(previewCalls.length, 2);
+        selection.onClick();
+        await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+        assert.deepEqual(choiceCalls, [[choice.id, 'current-opening']]);
+        assert.deepEqual(closeCalls, ['current-opening']);
+        picker.choices = [{ id: 'voice:successor', label: '后继音色' }];
+        picker.previewId = 'voice:successor'; picker.previewSelectionId = 'current-opening';
+        selection.onClick(); preview.onClick();
+        assert.equal(picker.previewId, 'voice:successor', 'removed row callbacks cannot stop the current audition');
+        assert.equal(choiceCalls.length, 1); assert.equal(previewCalls.length, 2, 'removed row cannot start or stop an audition');
+        picker.mounted = false; selection.onClick(); preview.onClick();
+        assert.equal(choiceCalls.length, 1); assert.equal(previewCalls.length, 2);
+        console.log(JSON.stringify({ kind: 'tts-approved-paint-and-native-targets', transportSamples, stateSamples,
+            reference: 'Make V17 exact original plus44vp target successor', defaultFullPlayback: 198,
+            defaultTimerCard: 168, previewPaintHeight: 26, nativeRaster: 'NOT_RUN' }));
+        return;
+    }
+    if (id === 'module-shell-sdk') {
+        const directoryBudget = await import('../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts');
+        const directory = pureModuleProbe(ui('ReaderControlDirectoryMinimum.ets'), 'ReaderControlDirectoryMinimum.ets',
+            { ...deps, ...directoryBudget, readerWindowMetrics: () => metrics }, ['measureReaderDirectoryMinimum']);
+        let metrics = createDefaultReaderWindowMetrics();
+        const frames = [];
+        const panel = native('ReaderControlPanel.ets', ['measureHomeForm', 'measureControlMinimum', 'minimumModule',
+            'publishMinimumMeasurer', 'bindModuleMinimum', 'headerInter', 'contentTitle', 'minimumInputReady', 'contentInputEnabled'], { ...geo, ...minimum, DEBUG: false });
+        const current = native('LocalReadingExperience.ets', ['controlMinimumIdentity', 'controlMinimumCurrent',
+            'controlMinimumReceiptCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
+            ...geo, ...receipt, ...session, ReaderWindowCoordinator: { metrics: () => metrics },
+            ReaderUIFrameCallback: class { constructor(fn) { this.onFrame = fn; } },
+        });
+        Object.assign(current, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
+            appForeground: true, windowChromeActive: true, windowChromeOverlayActive: false,
+            interactionBlocked: false, controlObscured: false, controlOpenRevision: 1,
+            controlModuleVisitRevision: 0, controlMinimumRevision: 0, controlMinimumGeneration: 0,
+            controlMinimumCandidates: [], controlMinimumReady: false,
+            controlSession: { location: { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' } },
+            isSessionActive: token => token === 1,
+            effectiveViewportWidth() { return this.width; }, effectiveViewportHeight() { return this.height; },
+            pageTurnInputPhase: () => 'idle', invalidateControlBackdrop() {},
+            getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
+        });
+        Object.assign(panel, { runtimeMounted: true, minimumFontsReady: true, minimumProfiles: new Map(),
+            minimumProfileTicket: '', minimumIdentity: '', minimumKey: '', minimumMetricsRevision: 0,
+            chapterTitle: 'Chapter One', totalChapters: 1, minimumReady: false, contentMotionProgress: 0,
+            inputEnabled: true, controlObscured: false, visualVisibilityProgress: 1, visualTransitionKind: '',
+            visualHeldPointerId: -1, hasCurrentTemporaryInput: () => false,
+            minimumReceiptCurrent: key => current.controlMinimumReceiptCurrent(key),
+            getUIContext: () => context, contentLocation: () => session.readerControlContentLocation(current.controlSession),
+            onMinimumMeasurerReady: (identity, provider) => current.bindControlMinimum(identity, provider),
+        });
+        const directoryFacts = { tab: 'directory', title: 'Chapter One', excerpt: '', currentTitle: 'Chapter One',
+            currentPosition: '1 / 1', hasRows: true, loading: false, message: '', action: '', bookmarkError: false,
+            catalogStatus: '', catalogAction: '' };
+        const settingsOwner = native('ReaderControlSettingsContent.ets', ['measureMinimum', 'groupLabel', 'groupOptions', 'optionLabel'],
+            { ...st, ...selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url),
+                ['SETTINGS_DIRECTION_OPTIONS', 'SETTINGS_PAGE_OPTIONS', 'SETTINGS_TIMEOUT_OPTIONS'], deps) });
+        Object.assign(settingsOwner, { getUIContext: () => context, minimumProfiles: new Map(), minimumKey: '', minimumCacheTicket: '' });
+        const replaceOwner = native('ReaderControlReplaceContent.ets', ['measureMinimum'], { ...rp });
+        Object.assign(replaceOwner, { getUIContext: () => context, minimumProfiles: new Map(), minimumKey: '', minimumCacheTicket: '',
+            state: { rules: [{ name: '替换', pattern: '原文', replacement: '替换' }], recoveryLabel: '', errorMessage: '' },
+            statusText: () => '', scopeSummary: () => '正文', temporaryTitle: () => '替换规则', layer: '', localError: '', fullContentHeight: 666 });
+        const delegateFor = (module, tab) => (w, key) => {
+            if (module === 'directory') {
+                const profile = directory.measureReaderDirectoryMinimum(context, w, { ...directoryFacts, tab });
+                return { module, quick: profile.quick.minimum, full: profile.full.minimum };
+            }
+            if (module === 'appearance') return ap.measureReaderControlAppearanceMinimum(context, w, appInput).minimum;
+            if (module === 'tts') return tt.measureReaderTtsMinimum(context, w, ttsFacts).minimum;
+            if (module === 'autoPage') return au.measureReaderControlAutoPageMinimum(context, w, '未开始', '未设置').minimum;
+            if (module === 'search') {
+                const profile = se.measureReaderSearchMinimum(context, w, searchFacts);
+                return { module, quick: profile.quick.minimum, full: profile.full.minimum };
+            }
+            if (module === 'settings') return settingsOwner.measureMinimum(w, key);
+            return replaceOwner.measureMinimum(w, key);
+        };
+        const outer = layout => [layout.fullPanelWidth, layout.quickPanelHeight, layout.fullPanelHeight,
+            layout.fullPanelTop, layout.dockBottomGap, layout.topBarTop, layout.topBarHeight];
+        const visit = (module, tab = 'directory', override) => {
+            const before = current.controlLayout(metrics.revision);
+            const previousProvider = current.controlMinimumProvider;
+            current.controlModuleVisitRevision++;
+            current.controlSession.location = { level: module === 'home' ? 'home' : 'secondary',
+                module: module === 'home' ? 'directory' : module, directoryTab: tab, form: 'quick' };
+            current.controlLayoutCache = undefined;
+            const pending = current.controlLayout(metrics.revision);
+            if (before.minimumStatus !== 'legacy') assert.deepEqual(outer(pending), outer(before), 'pending successor preserves the already measured shell');
+            panel.layout = pending;
+            panel.minimumIdentity = current.controlMinimumIdentity();
+            panel.minimumMetricsRevision = metrics.revision;
+            if (module === 'home') panel.publishMinimumMeasurer();
+            else panel.bindModuleMinimum(module, panel.minimumIdentity, override ?? delegateFor(module, tab));
+            if (previousProvider) assert.equal(previousProvider(geo.readerControlCandidateWidths(current.width, current.height,
+                current.expandedLayout, metrics)[0], 'retired|1'), undefined, 'old module provider cannot measure the successor');
+            assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), false, 'new visit fences the old key synchronously');
+            while (frames.length) frames.shift().onFrame(0);
+            const layout = current.controlLayout(metrics.revision);
+            assert.notEqual(layout.minimumStatus, 'legacy', JSON.stringify({ module, tab, candidates: current.controlMinimumCandidates, identity: panel.minimumIdentity, measuredHome: panel.measureHomeForm(263) }));
+            assert.ok(current.controlMinimumCandidates.every(candidate => candidate.sharedShell?.minimum.module === 'home'));
+            assert.ok(layout.minimumKey.startsWith(panel.minimumIdentity + '|'));
+            assert.equal(current.controlMinimumReceiptCurrent(layout.minimumKey), true);
+            panel.minimumKey = layout.minimumKey;
+            panel.minimumReady = current.controlMinimumReady;
+            panel.layout = layout;
+            assert.equal(panel.contentInputEnabled(), true, 'current content remains reachable through its viewport even when natural fit is false');
+            return layout;
+        };
+        let compositions = 0, oldPathRejected = false, oldRailRejected = false, fontReflowObserved = false, previousFontHeight;
+        for (const [width, height] of [[366, 844], [320, 640], [568, 320], [760, 960]]) {
+            previousFontHeight = undefined;
+            for (const factor of [1, 1.3, 1.6, 2]) {
+                scale = factor;
+                metrics = { ...createDefaultReaderWindowMetrics(), revision: metrics.revision + 1,
+                    systemFontScale: factor, windowRect: { left: 0, top: 0, width, height } };
+                Object.assign(current, { width, height, expandedLayout: width >= 600, controlLayoutCache: undefined });
+                const home = visit('home');
+                if (previousFontHeight !== undefined && home.quickPanelHeight !== previousFontHeight) fontReflowObserved = true;
+                previousFontHeight = home.quickPanelHeight;
+                for (const [module, tab] of [['directory', 'directory'], ['directory', 'bookmarks'], ['tts'], ['appearance'],
+                    ['settings'], ['search'], ['replace'], ['autoPage'], ['home']]) {
+                    const layout = visit(module, tab);
+                    assert.deepEqual(outer(layout), outer(home), `${width}x${height}@${factor} ${module}/${tab} retains shared W/Q/F/anchors`);
+                    const selected = current.controlMinimumCandidates.find(candidate => candidate.key === layout.minimumKey);
+                    assert.equal(selected.minimum.module, module);
+                    assert.equal(layout.contentBudget.navigationHeightVp, selected.chrome.navigationHeightVp);
+                    for (const progress of [0, .37, 1]) {
+                        const sample = value => motion.sampleReaderControlMotionComposition({ visibilityProgress: 1, expansionProgress: progress },
+                            motion.readerControlMotionBounds(value.fullPanelWidth, value.fullPanelHeight, value.dockBottomGap,
+                                value.quickPanelHeight, value.contentBudget));
+                        assert.deepEqual(sample(layout).shell, sample(home).shell, 'module selection does not modify the finger progress or shared shell sample');
+                        assert.deepEqual(sample(layout).brightness, sample(home).brightness, 'the shared rail keeps its measured height and motion across module content budgets');
+                        if (module === 'directory' && selected.chrome.navigationHeightVp === 0 && progress === 0) {
+                            const oldBudget = { ...layout.contentBudget };
+                            delete oldBudget.brightnessContentHeightVp;
+                            assert.notEqual(sample({ ...layout, contentBudget: oldBudget }).brightness.height,
+                                sample(home).brightness.height, 'old shared rail borrowed the enlarged secondary content viewport');
+                            oldRailRejected = true;
+                        }
+                    }
+                    if (module === 'directory' && tab === 'directory' && factor === 1 && width === 366) {
+                        const legacy = geo.resolveReaderControlLayout(width, height, false, metrics, 0,
+                            current.controlMinimumCandidates.map(({ sharedShell, ...candidate }) => candidate));
+                        assert.notDeepEqual(outer(legacy), outer(home), 'old per-module chooser reproduces the settled Directory shell change');
+                        oldPathRejected = true;
+                    }
+                    compositions++;
+                }
+                const unfit = visit('directory', 'directory', () => ({ module: 'directory',
+                    quick: { heightVp: 5000, minWidthVp: 5000, fits: false },
+                    full: { heightVp: 5000, minWidthVp: 5000, fits: false } }));
+                assert.deepEqual(outer(unfit), outer(home), 'natural content overflow does not resize the common shell');
+                assert.equal(unfit.quickMinimumFits, false);
+                assert.equal(unfit.fullMinimumFits, false);
+                assert.ok(unfit.contentBudget.quickContentHeightVp >= 44);
+                const malformed = current.controlMinimumCandidates.map(candidate => ({ ...candidate,
+                    sharedShell: { ...candidate.sharedShell, chrome: { ...candidate.sharedShell.chrome, quickReserveVp: NaN } } }));
+                const refused = geo.resolveReaderControlLayout(width, height, width >= 600, metrics, 0, malformed);
+                assert.equal(refused.minimumStatus, 'legacy', 'malformed shared basis never falls back to active-module sizing');
+                assert.equal(current.controlMinimumReceiptCurrent(refused.minimumKey), false);
+            }
+        }
+        const sharedHeaderLabels = [];
+        const headerContext = { ...context, getMeasureUtils: () => ({ ...context.getMeasureUtils(),
+            measureTextSize(options) {
+                sharedHeaderLabels.push(options.textContent);
+                return context.getMeasureUtils().measureTextSize(options);
+            },
+        }) };
+        minimum.measureReaderControlMinimum({ context: headerContext, headerInter: false, title: '目录',
+            identity: 'header-vocabulary', metricsRevision: metrics.revision, topBarHeightVp: 54,
+            measureHomeForm: width => panel.measureHomeForm(width) }, 'home',
+            geo.readerControlCandidateWidths(366, 844, false, metrics)[0], 'header-vocabulary|1');
+        for (const label of ['目录', '书签', '界面', '朗读', '设置', '替换规则', '内容搜索', '自动翻页', '替换规则管理', '完成'])
+            assert.ok(sharedHeaderLabels.includes(label), `shared shell measures actual header vocabulary ${label}`);
+        assert.equal(oldPathRejected, true);
+        assert.equal(oldRailRejected, true);
+        assert.equal(fontReflowObserved, true, 'real font/window metrics may reflow the common shell');
+        const old = current.controlMinimumProvider;
+        current.bindControlMinimum(current.controlMinimumIdentity(), undefined);
+        const retiredClear = frames.shift();
+        current.bindControlMinimum(current.controlMinimumIdentity(), old);
+        const revision = current.controlMinimumRevision;
+        retiredClear.onFrame(0);
+        assert.equal(current.controlMinimumRevision, revision);
+        frames.shift().onFrame(0);
+        assert.equal(current.controlMinimumReady, true);
+        console.log(JSON.stringify({ kind: 'reader-common-module-shell', compositions, modules: 8,
+            directoryTabs: 2, fontScales: [1, 1.3, 1.6, 2], viewports: [[366, 844], [320, 640], [568, 320], [760, 960]],
+            pendingAndStaleReceipt: 'PASS', naturalContentOverflow: 'RETAINED_FALSE_FITS', nativeRaster: 'NOT_RUN' }));
+        return;
+    }
     if (id === 'admission-sdk') {
         let metrics = createDefaultReaderWindowMetrics();
         const frames = [];
@@ -438,8 +778,8 @@ async function run(id) {
             const ttsProfile = tt.measureReaderTtsMinimum(context, w, ttsFacts);
             const accessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
             const presetModifier = selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), ['ReaderTtsPresetModifier'], { ...accessibility, readerAppColor, Color: { Transparent: 'transparent' } });
-            const presets = native('ReaderControlTtsContent.ets', ['timer', 'timerPreset', 'timerStepper', 'timerStepButton', 'ratePreset', 'ratePresetWidth'], {
-                ...presetModifier, readerTtsPresetLabelColor: () => '#222', ...await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts'),
+            const presets = native('ReaderControlTtsContent.ets', ['timer', 'timerCardLayout', 'timerPreset', 'timerStepper', 'timerStepButton', 'ratePreset', 'ratePresetWidth'], {
+                ...accessibility, ...presetModifier, ...tt, readerTtsPresetLabelColor: () => '#222', ...await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts'),
             });
             Object.assign(presets, { appScheme: 'day', frame: () => ttsProfile.full, textMinimum: () => ttsProfile.fullText, sectionSurface: () => { }, moduleHeader: () => { }, quickLabel: () => { },
                 timerCaption: () => '不开启', p:()=>1, sharedInput: () => true, presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), fullInput: () => true, configField: '',
@@ -644,7 +984,7 @@ async function run(id) {
         assert.equal(nodes(chapter, 'Scroll')[0].height, '100%');
         for (const button of nodes(chapter, 'Button')) { assert.equal(button.constraintSize.minHeight, 44); assert.equal(button.height, undefined); }
         assert.ok(7 * 13 * 2 > 102 && 2 * 13 * 2 * 1.5 + 16 > 44, 'old fixed44 next action loses wide CJK wrapped label');
-        const o = native('ReaderTtsConfigOverlay.ets', ['headerAreaChangeHandler', 'headerLayoutKey', 'headerHeight', 'formatChoice', 'formatActionHeight', 'previewActionHeight', 'choiceHeight', 'panelWidth', 'managerSurfaceSpec', 'compactManager', 'footerHeight', 'managerOuterPadding', 'panelHeight', 'choiceRow', 'close', 'onIdentityChanged', 'stopPreview', 'preview'], {
+        const o = native('ReaderTtsConfigOverlay.ets', ['headerAreaChangeHandler', 'headerLayoutKey', 'headerHeight', 'formatChoice', 'formatActionHeight', 'previewActionWidth', 'previewPaintHeight', 'previewActionHeight', 'choiceHeight', 'panelWidth', 'managerSurfaceSpec', 'compactManager', 'footerHeight', 'managerOuterPadding', 'panelHeight', 'choiceRow', 'close', 'onIdentityChanged', 'stopPreview', 'preview'], {
             uiContext: context, resolvePopupSpec: surfaces.resolvePopupSpec, ReaderWindowCoordinator: { metrics: () => metrics },
         });
         Object.assign(o, { modalUsableWidth: 0, measuredHeaderHeight: 0, measuredHeaderKey: '', manager: false, voicePicker: true, availableWidth: 320, availableHeight: 180, appThemeScheme: 'day', choices: [], selectedId: 'v1', draftFormat: 'mp3', busy: false,

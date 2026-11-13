@@ -98,7 +98,7 @@ const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderT
 const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
 const accessibility=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',import.meta.url),'utf8'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['ReaderActionAccessibility']);
 const presetActors=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderTtsPresetActors.ets',{...accessibility,readerAppColor,FrameCallback:class{},Color:{Transparent:'transparent'}},['ReaderTtsPresetModifier','readerTtsPresetLabelColor']);
-const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts, ...readerTypographyRoles,readerAppColor,...presetActors });
+const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts, ...readerTypographyRoles,readerAppColor,...accessibility,...presetActors });
 Object.assign(owner, { motionProgress: 1, interactionEnabled: true, state: { rate: 1 }, ratePreview: -1,
   timerMode: 'duration', timerMinutes: 25, timerSeconds: 0,
   appScheme: 'day', configField: '', textMinimum: () => undefined,

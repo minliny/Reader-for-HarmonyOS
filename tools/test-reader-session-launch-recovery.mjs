@@ -183,7 +183,7 @@ const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,imp
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 for(const [name,builder] of [['ReaderControlAutoPageContent.ets','runningButton'],['ReaderControlTtsContent.ets','roundControl']]){
  const source=readFileSync(file(name),'utf8');
- const {owner}=createReaderBuilderProbe(source,[builder],{readerTtsPlayGradientStart:()=> '#123456',FlexAlign:{Center:'center'}});
+ const {owner}=createReaderBuilderProbe(source,builder==='roundControl'?[builder,'transportPaint','transportGlyphSize']:[builder],{readerTtsPlayGradientStart:()=> '#123456',FlexAlign:{Center:'center'}});
  Object.assign(owner,{p:()=>0,sourceOnly:'none',appScheme:'day',status:'running',state:{status:'playing'},serviceBusy:false,
  frame:()=>({playIcon:{x:0,y:0,width:32,height:32},toggle:{x:0,y:0,width:80,height:50}}),
  transport:()=>({x:0,y:0,width:40,height:40}),sharedInput:()=>true,onlineServicePage:()=>false,

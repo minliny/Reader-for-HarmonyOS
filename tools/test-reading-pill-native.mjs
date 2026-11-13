@@ -109,7 +109,7 @@ for (const id of selectContractCases(cases)) {
       geometry: { speedTrack: { width: 242, height: 4, x: 16 }, speedThumb: { x: 16 + 242 * progress } },
       activeTabLineWidth() { return this.line; }, brightnessContentHeight() { return this.railHeight; },
       textMinimum() { return this.minimum; }, headerActor() { return { width: this.headerWidth }; },
-      transport() { return this.transportRect; }, frame() { return this.geometry; },
+      transport() { return this.transportRect; }, transportPaint() { return this.transportRect; }, frame() { return this.geometry; },
     };
     for (const [file, method, width, height, dimensions] of targets) {
       const matches = parsed.get(file).sites.filter(site => site.method === method && site.width === width && site.height === height);
@@ -134,7 +134,7 @@ for (const id of selectContractCases(cases)) {
     { WordBreak: { BREAK_WORD: 'break' } }, ['measureReaderControlText']);
   const minimum = pureModuleProbe(source('ReaderControlTtsMinimum.ets'), 'ReaderControlTtsMinimum.ets', {
     ...readerTypographyRoles, ...readerMessageStyles, ...typography, ...textMeasurement, ...playbackGeometry, readerControlLerp,
-  }, ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum']);
+  }, ['measureReaderTtsMinimum', 'sampleReaderTtsTextMinimum', 'readerTtsTimerCardLayout']);
   let headerSamples = 0;
   for (const scale of [1, 2]) for (const status of ['未开始', '正在检查朗读可用性']) for (const maxCap of [14, 128]) {
     const calls = [];
@@ -207,8 +207,8 @@ for (const id of selectContractCases(cases)) {
   const callbacks = [];
   const { readerTtsPlayGradientStart } = pureModuleProbe(source('ReaderControlTtsStyle.ts'),
     'ReaderControlTtsStyle.ts', { readerAppColor }, ['readerTtsPlayGradientStart']);
-  const { owner } = createReaderBuilderProbe(tts, methods, {
-    ...readerTypographyRoles, ...ttsState, readerAppColor, readerTtsPlayGradientStart, ScrollDirection: { Horizontal: 'horizontal' },
+  const { owner } = createReaderBuilderProbe(tts, methods.concat(['transportPaint', 'transportGlyphSize', 'timerCardLayout']), {
+    ...minimum, ...readerTypographyRoles, ...ttsState, readerAppColor, readerTtsPlayGradientStart, ScrollDirection: { Horizontal: 'horizontal' },
   });
   const rect = { width: 130, height: 44, x: 0, y: 0, opacity: 1 };
   let nativeMinimum;

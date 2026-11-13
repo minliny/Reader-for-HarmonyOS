@@ -162,14 +162,22 @@ export struct ReaderTtsConfigOverlay {
       Math.max(1, (this.panelWidth() - 52) / 3));
     return Math.max(44, (measured?.heightVp ?? 18) + 16);
   }
-  private previewActionHeight(): number {
+  private previewActionWidth(choiceId?: string): number {
     this.metricsRevision;
-    const measured = measureReaderControlText(this.getUIContext(), '试听', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, 44);
-    return Math.max(44, (measured?.heightVp ?? 18) + 8);
+    const label = measureReaderControlText(this.getUIContext(), this.previewId === choiceId ? '试听中' : '试听', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY,
+      Math.max(1, this.panelWidth()));
+    return Math.max(44, (label?.singleLineWidthVp ?? 30) + 31);
   }
+  private previewPaintHeight(): number {
+    this.metricsRevision;
+    const measured = measureReaderControlText(this.getUIContext(), '试听', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY,
+      Math.max(1, this.previewActionWidth() - 31));
+    return Math.max(26, (measured?.heightVp ?? 10) + 16);
+  }
+  private previewActionHeight(): number { return Math.max(44, this.previewPaintHeight()); }
   private choiceHeight(choice: ReaderTtsConfigChoice): number {
     this.metricsRevision;
-    const width = Math.max(1, this.panelWidth() - 24 - 11 - 10 - (this.voicePicker ? 34 + 44 + 20 : 0));
+    const width = Math.max(1, this.panelWidth() - 24 - (this.voicePicker ? 16 : 11) - 10 - (this.voicePicker ? 34 + this.previewActionWidth(choice.id) + 20 : 0));
     const style = this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED : TYPE_READER_TTS_VOICE_REGULAR) :
       (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED : TYPE_READER_TTS_CHOICE_REGULAR);
     const label = this.voicePicker ? choice.label.split(' · ')[0] : choice.label;
@@ -331,10 +339,12 @@ export struct ReaderTtsConfigOverlay {
   @Builder
   private choiceRow(choice: ReaderTtsConfigChoice) {
     Row({ space: 10 }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 10 }) {
       if (this.voicePicker) {
         Text(choice.label.includes('女') ? '女' : choice.label.includes('男') ? '男' : '声')
           .width(34).height(34).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
-          .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp)
+          .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.control.paint.212F6373', this.appThemeScheme)).borderRadius(17);
       }
       Column({ space: 0 }) {
@@ -349,23 +359,39 @@ export struct ReaderTtsConfigOverlay {
             .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontWeight)
             .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).maxLines(1);
         }
-      }.layoutWeight(1).constraintSize({ minHeight: 44 }).alignItems(HorizontalAlign.Start)
+      }.layoutWeight(1).constraintSize({ minHeight: 44 }).alignItems(HorizontalAlign.Start);
+      }.width('100%').height('100%').alignItems(VerticalAlign.Center)
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+      }.layoutWeight(1).height(this.choiceHeight(choice)).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+        .enabled(!this.busy).accessibilityText(choice.label).accessibilitySelected(choice.id === this.selectedId)
         .onClick((): void => this.choose(choice.id));
       if (this.voicePicker) {
-        Button(this.previewId === choice.id ? '停止' : '试听')
-          .width(44).height(this.previewActionHeight()).padding(0).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp).borderRadius(18)
-          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
-          .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appThemeScheme))
-          .accessibilityText(`${choice.label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
+        Button({ type: ButtonType.Capsule, stateEffect: false }) {
+          Row({ space: 5 }) {
+            Image($r(this.previewId === choice.id ?
+              (this.appThemeScheme === 'night' ? 'app.media.reader_tts_make_stop_theme_night' : 'app.media.reader_tts_make_stop') :
+              (this.appThemeScheme === 'night' ? 'app.media.reader_tts_make_play_theme_night' : 'app.media.reader_tts_make_play'))).width(9).height(9);
+            Text(this.previewId === choice.id ? '试听中' : '试听')
+              .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontFamily)
+              .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontWeight)
+              .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp)
+              .lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme));
+          }.width('100%').height(this.previewPaintHeight()).padding({ left: 8, right: 9 })
+            .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appThemeScheme))
+            .borderRadius(Math.min(this.previewActionWidth(choice.id), this.previewPaintHeight()) / 2)
+            .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+        }.width(this.previewActionWidth(choice.id)).height(this.previewActionHeight()).padding(0).backgroundColor(Color.Transparent)
+          .enabled(!this.busy).accessibilityText(`${choice.label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
           .onClick((): void => this.preview(choice.id));
       }
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check'))).width(11).height(9)
-        .opacity(choice.id === this.selectedId ? 1 : 0);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check')))
+        .width(this.voicePicker ? 16 : 11).height(this.voicePicker ? 16 : 9)
+        .opacity(choice.id === this.selectedId ? 1 : 0).accessibilityLevel('no');
     }.width('100%').height(this.choiceHeight(choice)).padding({ left: 12, right: 12 })
       .border({ width: { bottom: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) })
       .backgroundColor(choice.id === this.selectedId ? readerAppColor('app.reader.choiceHover', this.appThemeScheme) : Color.Transparent)
-      .enabled(!this.busy).accessibilityText(`${choice.label}${choice.id === this.selectedId ? '，已选择' : ''}`)
-      ;
+      .enabled(!this.busy);
   }
 
   private stopPreview(): void {
@@ -376,7 +402,7 @@ export struct ReaderTtsConfigOverlay {
     if (identity !== undefined) this.onPreviewStop(identity);
   }
   private preview(id: string): void {
-    if (!this.mounted || this.busy) return;
+    if (!this.mounted || this.busy || !this.choices.some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;
     if (this.previewId === id) { this.stopPreview(); return; }
     this.stopPreview();
     const generation = ++this.previewGeneration;
@@ -395,8 +421,8 @@ export struct ReaderTtsConfigOverlay {
   }
 
   private choose(id: string): void {
-    this.stopPreview();
     if (!this.mounted || this.busy || !this.choices.some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;
+    this.stopPreview();
     const identity = this.selectionId;
     const generation = ++this.generation;
     this.busy = true;

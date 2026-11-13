@@ -56,6 +56,8 @@ export interface ReaderTtsTextMinimum {
   stopLabel: number;
   stopLabelWidth: number;
   timerPreset: number;
+  timerPresetPaint: number;
+  quickTimerPaintHeight: number;
   timerPresetsWidth: number;
   timerCustom: number;
   timerCustomWidth: number;
@@ -64,6 +66,7 @@ export interface ReaderTtsTextMinimum {
   timerStepper: number;
   timerStepButton: number;
   ratePreset: number;
+  ratePresetPaint: number;
   speedRange: number;
   speedRangeWidth: number;
   speedRangeY: number;
@@ -93,6 +96,25 @@ export interface ReaderTtsMinimumProfile extends ReaderControlTtsNaturalProfile 
   quickText: ReaderTtsTextMinimum;
   fullText: ReaderTtsTextMinimum;
   minimum: ReaderControlModuleMinimum;
+}
+
+export interface ReaderTtsTimerCardLayout {
+  topPadding: number;
+  rowGap: number;
+  sectionGap: number;
+  height: number;
+}
+
+/** Adjacent44vp targets use the original8vp painted-row gap and surrounding
+ * blank space. Default36vp paint therefore keeps the approved168vp card. */
+export function readerTtsTimerCardLayout(targetHeight: number, paintHeight: number,
+  customHeight: number): ReaderTtsTimerCardLayout {
+  const extra = Math.max(0, targetHeight - paintHeight);
+  const topPadding = Math.max(0, 14 - extra / 2);
+  const rowGap = Math.max(0, 8 - extra);
+  const sectionGap = Math.max(0, 12 - extra / 2);
+  return { topPadding: topPadding, rowGap: rowGap, sectionGap: sectionGap,
+    height: topPadding + 14 + targetHeight * 2 + rowGap + sectionGap + customHeight };
 }
 
 // These leaves do not call Text.lineHeight. Speed values additionally retain
@@ -128,25 +150,25 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const frame = sampleReaderControlTts(full ? 1 : 0, width, 1 / 3, 0, facts.online);
   const inner = frame.playback.width;
   if (inner <= 100) return undefined;
-  const qPlayback = largest(context, ['播放'], actual(TYPE_READER_TTS_QUICK_PLAYBACK_LABEL), inner);
-  const qStatus = largest(context, [facts.playbackLabel], actual(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE), inner);
+  const qPlayback = largest(context, ['播放'], TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, inner);
+  const qStatus = largest(context, [facts.playbackLabel], TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE, inner);
   const qSetting = largest(context, ['定时', '语速'], actual(TYPE_READER_TTS_QUICK_SETTING_LABEL), inner);
   const header = largest(context, ['朗读控制', '定时停止', '语速'], actual(TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE), inner);
   const playbackMeta = largest(context, [facts.status], TYPE_READER_TTS_SECTION_META, inner);
   const timerMeta = largest(context, [facts.timerSummary], TYPE_READER_TTS_SECTION_META, inner);
   const speedMeta = largest(context, [facts.rate], TYPE_READER_TTS_SECTION_SPEED_META, inner);
   const voice = largest(context, ['当前音色 · ' + facts.voice], actual(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL), Math.max(1, frame.voice.width - 22));
-  const stop = largest(context, ['停止'], actual(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL), inner);
-  const caption = largest(context, [facts.timerCaption], actual(TYPE_READER_TTS_RETAINED_TIMER_META), inner);
+  const stop = largest(context, ['停止'], TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL, inner);
+  const caption = largest(context, [facts.timerCaption], TYPE_READER_TTS_RETAINED_TIMER_META, inner);
   const timerPreset = largest(context, ['不开启', '15 分钟', '30 分钟', '45 分钟', '60 分钟', '本章结束'],
-    actual(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE), Math.max(1, (inner - 44) / 3));
+    TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, Math.max(1, (inner - 44) / 3));
   const custom = largest(context, ['自定义时长'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL), inner);
   const customMeta = largest(context, ['分 · 秒'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY), inner);
   const digit = largest(context, [facts.minutes, facts.seconds], actual(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE), inner);
   const rate = largest(context, [facts.rate], actual(TYPE_READER_TTS_RETAINED_SPEED_VALUE, false), inner);
   const range = largest(context, ['0.50x', '2.00x'], actual(TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, false), inner);
   const ratePreset = largest(context, ['0.50x', '0.75x', '1.00x', '1.25x', '1.50x'],
-    actual(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE), Math.max(1, (inner - 64) / 5));
+    TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, Math.max(1, (inner - 64) / 5));
   const section = largest(context, ['播放配置', '朗读引擎'], actual(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL), inner);
   const sectionMeta = largest(context, ['即时生效'], actual(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META), inner);
   const tabTitle = largest(context, ['系统 TTS', '在线 TTS'], actual(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE),
@@ -192,13 +214,14 @@ function measureForm(context: UIContext, width: number, full: boolean,
     playbackMetaWidth: playbackMeta.singleLineWidthVp,
     sectionHeader: Math.max(18, section.heightVp, sectionMeta.heightVp), stopLabel: Math.max(14, stop.heightVp),
     stopLabelWidth: Math.max(24, stop.singleLineWidthVp), timerPreset: Math.max(44, timerPreset.heightVp + 8),
+    timerPresetPaint: Math.max(36, timerPreset.heightVp + 8), quickTimerPaintHeight: Math.max(30, caption.heightVp + 12),
     timerPresetsWidth: Math.max(inner - 28, 3 * Math.max(44, Math.ceil(timerPreset.singleLineWidthVp) + 12) + 16),
     timerCustomWidth: Math.max(inner - 28, custom.singleLineWidthVp + 4 +
       2 * (44 * 2 + Math.max(23, digit.singleLineWidthVp) + 2) + 4 + 16),
     timerCustom: Math.max(48, custom.heightVp + 2 + customMeta.heightVp + 8, digit.heightVp + 16),
     timerDigit: Math.max(24, digit.heightVp), timerDigitWidth: Math.max(23, digit.singleLineWidthVp),
     timerStepper: Math.max(44, digit.heightVp + 8), timerStepButton: Math.max(44, digit.heightVp + 6),
-    ratePreset: Math.max(44, ratePreset.heightVp + 8), speedRange: Math.max(14, range.heightVp),
+    ratePreset: Math.max(44, ratePreset.heightVp + 8), ratePresetPaint: Math.max(32, ratePreset.heightVp + 8), speedRange: Math.max(14, range.heightVp),
     speedRangeWidth: Math.max(21, range.singleLineWidthVp), speedRangeY: 75,
     serviceTab: Math.max(87, 27 + 20 + 7 + Math.max(17, tabTitle.heightVp) + 3 + Math.max(14, tabSubtitle.heightVp)),
     serviceTabTitle: Math.max(17, tabTitle.heightVp), serviceTabSubtitle: Math.max(14, tabSubtitle.heightVp),
@@ -232,7 +255,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
   text.configRow = Math.max(text.configRow, text.configField);
   text.voiceRow = Math.max(text.voiceRow, text.voiceField + 12);
   text.timerStepper = Math.max(text.timerStepper, text.timerStepButton, text.timerDigit);
-  text.timerCustom = Math.max(text.timerCustom, text.timerStepper + 16);
+  text.timerCustom = Math.max(text.timerCustom, text.timerStepper + 4);
   text.detailCard = text.voiceRow + text.toggleRow * 5 + text.configRow;
   text.systemCard = 14 + text.serviceTab + 15 + text.configRow * (facts.online ? 1 : 2);
 
@@ -260,7 +283,8 @@ function measureForm(context: UIContext, width: number, full: boolean,
       target.y = controlsTop + Math.floor(index / columns) * 52;
       target.width = 44; target.height = 44;
     }
-    frame.playback.height = controlsTop + Math.ceil(4 / columns) * 52 + 4;
+    const controlRows = Math.ceil(4 / columns);
+    frame.playback.height = controlsTop + controlRows * 44 + (controlRows - 1) * 8 + 4;
     frame.playbackCard.height = frame.playback.height;
     frame.quickTimerLabel.height = Math.max(26, text.quickSettingTitle);
     frame.quickTimerLabel.width = Math.max(72, 34 + qSetting.singleLineWidthVp);
@@ -268,7 +292,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.quickTimerSelect.width = Math.max(78, caption.singleLineWidthVp + 32);
     frame.quickTimerSelect.x = inner - frame.quickTimerSelect.width - 11;
     frame.timer.y = frame.playback.y + frame.playback.height + 8;
-    frame.timer.height = Math.max(42, frame.quickTimerLabel.height + 16, frame.quickTimerSelect.height + 12);
+    frame.timer.height = Math.max(42, frame.quickTimerLabel.height + 16, frame.quickTimerSelect.height);
     frame.quickTimerSelect.y = (frame.timer.height - frame.quickTimerSelect.height) / 2;
     if (frame.quickTimerLabel.width + frame.quickTimerSelect.width + 34 > inner) {
       frame.quickTimerSelect.x = 11;
@@ -305,17 +329,23 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.timerHeader.height = text.header; frame.speedHeader.height = text.header;
     frame.playbackCard.y += headerGrowth;
     frame.waveform.y += headerGrowth;
+    frame.previous.x -= Math.max(0, 44 - frame.previous.width) / 2;
+    frame.previous.y -= Math.max(0, 44 - frame.previous.height) / 2;
+    frame.next.x -= Math.max(0, 44 - frame.next.width) / 2;
+    frame.next.y -= Math.max(0, 44 - frame.next.height) / 2;
     frame.previous.width = Math.max(44, frame.previous.width); frame.previous.height = Math.max(44, frame.previous.height);
     frame.next.width = Math.max(44, frame.next.width); frame.next.height = Math.max(44, frame.next.height);
     frame.previous.y += headerGrowth; frame.toggle.y += headerGrowth;
     frame.stop.y += headerGrowth; frame.next.y += headerGrowth;
     frame.voice.y += headerGrowth; frame.voice.height = Math.max(frame.voice.height, voice.heightVp, 16);
+    const stopPaintHeight = frame.stop.height;
     frame.stop.height = Math.max(44, frame.stop.height, text.stopLabel + 12);
+    frame.stop.y -= (frame.stop.height - stopPaintHeight) / 2;
     frame.stop.width = Math.max(frame.stop.width, 10 + 4 + text.stopLabelWidth + 14);
     frame.stop.x = inner - frame.stop.width - 16;
     frame.voice.width = Math.max(0, frame.stop.x - 8 - frame.voice.x);
-    frame.voice.y += Math.max(0, (frame.stop.height - frame.voice.height) / 2);
-    text.seekY = Math.max(198 + headerGrowth + Math.max(0, frame.voice.height - 21), frame.stop.y + frame.stop.height + 16);
+    frame.voice.y -= Math.max(0, (frame.voice.height - 21) / 2);
+    text.seekY = Math.max(198 + headerGrowth + Math.max(0, frame.voice.height - 21), frame.stop.y + frame.stop.height + 4.5);
     text.errorY = text.seekY + (facts.seek ? 52 : 0);
     frame.playback.height = text.seekY + (facts.seek ? 52 : 0) + (facts.error.length > 0 ? error.heightVp + 12 : 0);
     frame.playbackCard.height = frame.playback.height - frame.playbackCard.y;
@@ -324,15 +354,17 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.speedTrack.y += headerGrowth;
     frame.speedThumb.y += headerGrowth;
     text.speedRangeY = 75 + headerGrowth;
-    frame.speedPresets.y = text.speedRangeY + text.speedRange + 10.5;
+    const speedPresetPaintY = text.speedRangeY + text.speedRange + 10.5;
+    frame.speedPresets.y = speedPresetPaintY - (text.ratePreset - text.ratePresetPaint) / 2;
     frame.speedPresets.height = text.ratePreset;
     frame.speedPresets.width = Math.max(frame.speedPresets.width,
       Math.max(44, Math.ceil(ratePreset.singleLineWidthVp) + 12) * 5 + 32);
-    frame.speed.height = frame.speedPresets.y + text.ratePreset + 16;
+    frame.speed.height = Math.max(speedPresetPaintY + text.ratePresetPaint + 16,
+      frame.speedPresets.y + text.ratePreset + 4);
     frame.speedCard.height = frame.speed.height - frame.speedCard.y;
     frame.timer.y = frame.speed.y + frame.speed.height + 20;
     frame.timerCard.y = 26 + headerGrowth;
-    frame.timerCard.height = 28 + text.timerPreset * 2 + 8 + 12 + text.timerCustom;
+    frame.timerCard.height = readerTtsTimerCardLayout(text.timerPreset, text.timerPresetPaint, text.timerCustom).height;
     frame.timer.height = frame.timerCard.y + frame.timerCard.height;
     frame.config.y = frame.timer.y + frame.timer.height + 20;
     frame.config.height = text.sectionHeader + 8 + text.systemCard;
@@ -375,9 +407,12 @@ export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
     stopLabel: readerControlLerp(q.stopLabel, f.stopLabel, progress), stopLabelWidth: readerControlLerp(q.stopLabelWidth, f.stopLabelWidth, progress),
     timerPresetsWidth: readerControlLerp(q.timerPresetsWidth, f.timerPresetsWidth, progress),
     timerCustomWidth: readerControlLerp(q.timerCustomWidth, f.timerCustomWidth, progress),
+    timerPresetPaint: readerControlLerp(q.timerPresetPaint ?? 36, f.timerPresetPaint ?? 36, progress),
+    quickTimerPaintHeight: readerControlLerp(q.quickTimerPaintHeight ?? 30, f.quickTimerPaintHeight ?? 30, progress),
     timerPreset: readerControlLerp(q.timerPreset, f.timerPreset, progress), timerCustom: readerControlLerp(q.timerCustom, f.timerCustom, progress),
     timerDigit: readerControlLerp(q.timerDigit, f.timerDigit, progress), timerDigitWidth: readerControlLerp(q.timerDigitWidth, f.timerDigitWidth, progress),
     timerStepper: readerControlLerp(q.timerStepper, f.timerStepper, progress), timerStepButton: readerControlLerp(q.timerStepButton, f.timerStepButton, progress),
+    ratePresetPaint: readerControlLerp(q.ratePresetPaint ?? 32, f.ratePresetPaint ?? 32, progress),
     ratePreset: readerControlLerp(q.ratePreset, f.ratePreset, progress), speedRange: readerControlLerp(q.speedRange, f.speedRange, progress),
     speedRangeWidth: readerControlLerp(q.speedRangeWidth, f.speedRangeWidth, progress),
     speedRangeY: readerControlLerp(q.speedRangeY, f.speedRangeY, progress), serviceTab: readerControlLerp(q.serviceTab, f.serviceTab, progress),

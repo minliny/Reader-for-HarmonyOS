@@ -923,6 +923,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private commitTimerStep(minutes: boolean, delta: number): void {
+    if (!this.fullInput() || !this.hasAdjacentTimerValue(minutes, delta)) return;
     if (minutes) {
       this.onTimerChange(this.adjacentTimerValue(true, delta), this.currentTimerValue(false));
     } else {

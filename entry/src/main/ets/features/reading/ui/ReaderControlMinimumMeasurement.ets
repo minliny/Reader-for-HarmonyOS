@@ -2,6 +2,7 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI,
   TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI,
+  TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY,
   TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL,
   TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL } from '../../../ui/foundation/ReaderTypography';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
@@ -64,7 +65,7 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
   profileReader?: ReaderControlPlaybackProfileReader): ReaderControlMinimumMeasurement | undefined {
     const context = input.context;
     const navigationCellWidth = Math.max(1, (widths.panelWidthVp - 24 - 9 - TOK_BORDER_W * 2 - 12) / 4);
-    let navigationLabelHeight = 15;
+    let navigationLabelHeight = 13.889;
     for (const label of ['目录', '朗读', '界面', '设置']) {
       const extent = measureReaderControlText(context, label,
         TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, navigationCellWidth, 'wrap');
@@ -83,7 +84,7 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     const collapseHeight = Math.max(input.headerInter ? 12 : 14, collapse.heightVp);
     const headerHeight = Math.max(44, titleHeight + (input.headerInter ? 13 : 10),
       collapseHeight + (input.headerInter ? 14 : 12));
-    const normalNavigationHeight = 80 + navigationLabelHeight - 15;
+    const normalNavigationHeight = 80 + navigationLabelHeight - 13.889;
     const topBarVisible = input.availableWithTopBarHeightVp === undefined ||
       input.availableWithTopBarHeightVp >= 29 + 18 + normalNavigationHeight + 13 + 44;
     // Secondary modules already return to Home through their registered Back
@@ -96,11 +97,11 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     const automaticSize = Math.max(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
       automatic.heightVp + TOK_BORDER_W * 2, automatic.singleLineWidthVp + TOK_BORDER_W * 2);
     const automaticHitHeight = Math.max(44, automaticSize);
-    const quick = module === 'home' ? input.measureHomeForm(widths.quickContentWidthVp) : undefined;
-    const full = module === 'home' ? input.measureHomeForm(widths.fullContentWidthVp) : undefined;
+    const quick = input.measureHomeForm(widths.quickContentWidthVp);
+    const full = input.measureHomeForm(widths.fullContentWidthVp);
+    if (quick === undefined || full === undefined) return undefined;
     let minimum: ReaderControlModuleMinimum | undefined;
     if (module === 'home') {
-      if (quick === undefined || full === undefined) return undefined;
       minimum = { module: 'home', quick: { heightVp: quick.minimumHeight + (topBarVisible ? 0 : 52), minWidthVp: quick.minWidth, fits: quick.fits },
         full: { heightVp: full.minimumHeight + (topBarVisible ? 0 : 52), minWidthVp: full.minWidth, fits: full.fits } };
     } else {
@@ -116,6 +117,33 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
       quick: { heightVp: Math.max(minimum.quick.heightVp, brightnessMinimum),
         minWidthVp: minimum.quick.minWidthVp, fits: minimum.quick.fits && automaticSize <= READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2 },
       full: minimum.full };
+    // The same authored shell hosts every module. Its measured Home form and
+    // fixed header vocabulary cannot change when the active module changes.
+    let sharedHeaderHeight = 44;
+    for (const inter of [false, true]) {
+      const sharedCollapse = measureReaderControlText(context, '收起',
+        inter ? TYPE_READER_CONTROL_COLLAPSE_INTER : TYPE_READER_CONTROL_COLLAPSE_UI, widths.fullContentWidthVp);
+      if (sharedCollapse === undefined) return undefined;
+      const sharedCollapseWidth = Math.max(44, sharedCollapse.singleLineWidthVp + 20);
+      for (const sharedLabel of inter ? ['内容搜索', '自动翻页'] : ['目录', '书签', '界面', '朗读', '设置', '替换规则']) {
+        const sharedTitle = measureReaderControlText(context, sharedLabel,
+          inter ? TYPE_READER_CONTROL_HEADER_INTER : TYPE_READER_CONTROL_HEADER_UI,
+          Math.max(1, widths.fullContentWidthVp - sharedCollapseWidth - 34));
+        if (sharedTitle === undefined) return undefined;
+        sharedHeaderHeight = Math.max(sharedHeaderHeight,
+          Math.max(inter ? 17 : 20, sharedTitle.heightVp) + (inter ? 13 : 10),
+          Math.max(inter ? 12 : 14, sharedCollapse.heightVp) + (inter ? 14 : 12));
+      }
+    }
+    const sharedReplaceAction = measureReaderControlText(context, '完成',
+      TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY, widths.fullContentWidthVp);
+    if (sharedReplaceAction === undefined) return undefined;
+    const sharedReplaceTitle = measureReaderControlText(context, '替换规则管理',
+      TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL,
+      Math.max(1, widths.fullContentWidthVp - Math.max(44, sharedReplaceAction.singleLineWidthVp + 20) - 34));
+    if (sharedReplaceTitle === undefined) return undefined;
+    sharedHeaderHeight = Math.max(sharedHeaderHeight, sharedReplaceTitle.heightVp + 10,
+      sharedReplaceAction.heightVp + 12);
     const profile: ReaderControlMeasuredProfile = { module: module, identity: input.identity,
       metricsRevision: input.metricsRevision, widths: widths,
       playbackData: module === 'tts' || module === 'autoPage' ? profileReader?.(key) : undefined,
@@ -127,6 +155,16 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
       chrome: { topBarVisible: topBarVisible, topBarHeightVp: input.topBarHeightVp, quickReserveVp: 29 + quickGap + navigationHeight + 13,
         fullReserveVp: 19 + headerHeight + 8 + 13, navigationHeightVp: navigationHeight,
         headerHeightVp: headerHeight, brightnessAutoHeightVp: automaticSize,
-        brightnessAutoWidthVp: automaticSize } };
+        brightnessAutoWidthVp: automaticSize },
+      sharedShell: {
+        minimum: { module: 'home',
+          quick: { heightVp: Math.max(quick.minimumHeight + (topBarVisible ? 0 : 52), brightnessMinimum),
+            minWidthVp: quick.minWidth, fits: quick.fits && automaticSize <= READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2 },
+          full: { heightVp: full.minimumHeight + (topBarVisible ? 0 : 52), minWidthVp: full.minWidth, fits: full.fits } },
+        chrome: { topBarVisible: topBarVisible, topBarHeightVp: input.topBarHeightVp,
+          quickReserveVp: 29 + quickGap + normalNavigationHeight + 13,
+          fullReserveVp: 19 + sharedHeaderHeight + 8 + 13, navigationHeightVp: normalNavigationHeight,
+          headerHeightVp: sharedHeaderHeight, brightnessAutoHeightVp: automaticSize,
+          brightnessAutoWidthVp: automaticSize } } };
     return { candidate: result, profile: profile };
 }

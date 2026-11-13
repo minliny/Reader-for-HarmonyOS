@@ -29,7 +29,7 @@ import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum, ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
-import { measureReaderTtsMinimum, sampleReaderTtsTextMinimum, type ReaderTtsMinimumFacts,
+import { measureReaderTtsMinimum, sampleReaderTtsTextMinimum, readerTtsTimerCardLayout, type ReaderTtsTimerCardLayout, type ReaderTtsMinimumFacts,
   type ReaderTtsMinimumProfile, type ReaderTtsTextMinimum } from './ReaderControlTtsMinimum';
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileData,
   type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
@@ -69,12 +69,10 @@ function readerTtsPresetLabelColor(selected: boolean, scheme: string): ResourceC
 
 /** The native preset frame and its decorative label keep separate recipes. */
 class ReaderTtsPresetModifier implements AttributeModifier<CommonAttribute> {
-  private readonly semantics: ReaderActionAccessibility;
   private readonly selected: boolean;
   private readonly scheme: string;
 
-  constructor(label: string, enabled: boolean, selected: boolean, scheme: string) {
-    this.semantics = new ReaderActionAccessibility(label, enabled, selected, true, undefined, 'nativeButton');
+  constructor(selected: boolean, scheme: string) {
     this.selected = selected;
     this.scheme = scheme;
   }
@@ -85,7 +83,6 @@ class ReaderTtsPresetModifier implements AttributeModifier<CommonAttribute> {
       .borderRadius(10)
       .shadow({ radius: 7, color: this.selected ? readerAppColor('app.control.paint.472F6373', this.scheme) : Color.Transparent,
         offsetY: 2 });
-    this.semantics.applyNormalAttribute(instance);
   }
 }
 
@@ -624,6 +621,27 @@ export struct ReaderControlTtsContent {
     return this.frame().next;
   }
 
+  private transportPaint(kind: ReaderControlTransportKind): ReaderControlActorFrame {
+    const p = this.p();
+    const target = this.transport(kind);
+    const width = Math.min(target.width, kind === 'toggle' ? 36 + 22 * p : kind === 'stop' ?
+      Math.max(28 + 29 * p, 10 + (18 + (this.textMinimum()?.stopLabelWidth ?? 24)) * p) : 28 + 14 * p);
+    const height = Math.min(target.height, kind === 'toggle' ? 36 + 22 * p : kind === 'stop' ?
+      Math.max(28 - 7 * p, ((this.textMinimum()?.stopLabel ?? 14) + 7) * p) : 28 + 14 * p);
+    return { x: (target.width - width) / 2, y: (target.height - height) / 2,
+      width: width, height: height, opacity: 1 };
+  }
+
+  private transportGlyphSize(kind: ReaderControlTransportKind): number {
+    if (kind === 'toggle') return this.isActivelySpeaking() ? 13 + 7 * this.p() : 14 + 8 * this.p();
+    return kind === 'stop' ? 10 : 17 + 9 * this.p();
+  }
+
+  private timerCardLayout(): ReaderTtsTimerCardLayout {
+    return readerTtsTimerCardLayout(this.textMinimum()?.timerPreset ?? 44,
+      this.textMinimum()?.timerPresetPaint ?? 36, this.textMinimum()?.timerCustom ?? 48);
+  }
+
   build() {
     if (this.sourceOnly !== 'none') {
       this.launchSourceContent();
@@ -871,7 +889,7 @@ export struct ReaderControlTtsContent {
       Stack({ alignContent: Alignment.Center }) {
         Image($r(kind === 'playback' ? (this.appScheme === 'night' ? 'app.media.reader_tts_headphones_theme_night' : 'app.media.reader_tts_headphones') :
           (kind === 'timer' ? (this.appScheme === 'night' ? 'app.media.reader_tts_clock_theme_night' : 'app.media.reader_tts_clock') : (this.appScheme === 'night' ? 'app.media.reader_tts_rate_theme_night' : 'app.media.reader_tts_rate'))))
-          .width(kind === 'playback' ? 18 : 16).height(kind === 'playback' ? 18 : 16);
+          .width(kind === 'playback' ? 16 : 15).height(kind === 'playback' ? 16 : 15);
       }.width(kind === 'playback' ? 34 : 26).height(kind === 'playback' ? 34 : 26)
         .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).borderRadius(kind === 'playback' ? 10 : 8)
         .border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) });
@@ -879,12 +897,13 @@ export struct ReaderControlTtsContent {
         Text(kind === 'playback' ? '播放' : (kind === 'timer' ? '定时' : '语速'))
           .fontFamily(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontFamily : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontFamily).fontWeight(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontWeight : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontWeight).fontSize(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontSizeFp : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
+          .lineHeight(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.lineHeightFp as number : 18)
           .height(kind === 'playback' ? this.textMinimum()?.quickPlaybackTitle ?? 16 : this.textMinimum()?.quickSettingTitle ?? 18).maxLines(1);
         if (kind === 'playback') {
           Row({ space: 4 }) {
             Row().width(5).height(5).borderRadius(3)
               .backgroundColor(this.isActivelySpeaking() ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.B4A697', this.appScheme));
-            Text(this.playbackLabel()).fontFamily(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.fontSizeFp)
+            Text(this.playbackLabel()).fontFamily(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.fontSizeFp).lineHeight(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE.lineHeightFp as number)
               .fontColor(this.isActivelySpeaking() ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('TOK_TTS_MUTED', this.appScheme))
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
           }.height(this.textMinimum()?.quickPlaybackStatus ?? 13).width('100%').alignItems(VerticalAlign.Center);
@@ -993,7 +1012,7 @@ export struct ReaderControlTtsContent {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Stack({ alignContent: Alignment.Center }) {
       if (kind === 'toggle') {
-        Row().width('100%').height('100%').borderRadius(Math.min(this.transport(kind).width, this.transport(kind).height) / 2)
+        Row().width('100%').height('100%').borderRadius(Math.min(this.transportPaint(kind).width, this.transportPaint(kind).height) / 2)
           .linearGradient({ angle: 155, colors: [[readerTtsPlayGradientStart(this.p(), this.appScheme), 0], [readerAppColor('TOK_TTS_PLAY_END', this.appScheme), 1]] })
           .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.33FFFFFF', this.appScheme) })
           .shadow({ radius: 6 + 2 * this.p(), color: readerAppColor('app.control.paint.5C2F6373', this.appScheme), offsetY: 4 });
@@ -1002,19 +1021,22 @@ export struct ReaderControlTtsContent {
         Image($r(kind === 'toggle' ? (this.isActivelySpeaking() ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_pause_theme_night' : 'app.media.reader_tts_make_pause') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_play_theme_night' : 'app.media.reader_tts_make_play')) :
           (kind === 'stop' ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_stop_theme_night' : 'app.media.reader_tts_make_stop') :
           (kind === 'previous' ? (this.p() === 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_previous_quick_theme_night' : 'app.media.reader_tts_make_previous_quick') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_previous_theme_night' : 'app.media.reader_tts_make_previous')) : (this.p() === 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_next_quick_theme_night' : 'app.media.reader_tts_make_next_quick') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_next_theme_night' : 'app.media.reader_tts_make_next'))))))
-          .width(kind === 'toggle' ? 13 + 7 * this.p() : kind === 'stop' ? 10 : 14 + 12 * this.p())
-          .height(kind === 'toggle' ? 13 + 7 * this.p() : kind === 'stop' ? 10 : 14 + 12 * this.p());
+          .width(this.transportGlyphSize(kind)).height(this.transportGlyphSize(kind));
         if (kind === 'stop') {
-          Text('停止').fontFamily(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_CLAY', this.appScheme))
+          Text('停止').fontFamily(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.fontSizeFp).lineHeight(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_CLAY', this.appScheme))
             .width((this.textMinimum()?.stopLabelWidth ?? 24) * this.p())
             .height(this.textMinimum()?.stopLabel ?? 14).opacity(this.p()).maxLines(1);
         }
       }.justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center);
-      }.width('100%').height('100%').accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+      }.width(this.transportPaint(kind).width).height(this.transportPaint(kind).height)
+        .position({ x: this.transportPaint(kind).x, y: this.transportPaint(kind).y })
+        .backgroundColor(kind === 'stop' ? readerAppColor('TOK_TTS_CLAY_SOFT', this.appScheme) : Color.Transparent)
+        .border({ width: kind === 'stop' ? 0.5 : 0, color: readerAppColor('TOK_TTS_CLAY_LINE', this.appScheme) })
+        .borderRadius(Math.min(this.transportPaint(kind).width, this.transportPaint(kind).height) / 2)
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(this.transport(kind).width).height(this.transport(kind).height).padding(0).clip(false)
       .position({ x: this.transport(kind).x, y: this.transport(kind).y })
-      .backgroundColor(kind === 'stop' ? readerAppColor('TOK_TTS_CLAY_SOFT', this.appScheme) : Color.Transparent)
-      .border({ width: kind === 'stop' ? 0.5 : 0, color: readerAppColor('TOK_TTS_CLAY_LINE', this.appScheme) })
+      .backgroundColor(Color.Transparent)
       .enabled(this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?
         this.state.status !== 'stopping' : this.hasActiveQueue()))
       .opacity((kind === 'toggle' || this.hasActiveQueue()) ? 1 : 0.42)
@@ -1060,31 +1082,38 @@ export struct ReaderControlTtsContent {
       Stack({ alignContent: Alignment.TopStart }) {
         this.moduleHeader('timer'); this.quickLabel('timer');
         Button({ type: ButtonType.Capsule, stateEffect: false }) {
+          Stack({ alignContent: Alignment.Center }) {
           Row({ space: 4 }) {
-          Text(this.timerCaption()).fontFamily(TYPE_READER_TTS_RETAINED_TIMER_META.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_META.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TIMER_META.fontSizeFp).fontColor(readerAppColor('TOK_TTS_TEAL', this.appScheme))
+          Text(this.timerCaption()).fontFamily(TYPE_READER_TTS_RETAINED_TIMER_META.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_META.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TIMER_META.fontSizeFp).lineHeight(TYPE_READER_TTS_RETAINED_TIMER_META.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_TEAL', this.appScheme))
             .layoutWeight(1).maxLines(1).textAlign(TextAlign.Center);
           Image(this.appScheme === 'night' ? $r('app.media.reader_tts_timer_cycle_theme_night') :
             $r('app.media.reader_tts_timer_cycle')).width(12).height(12).accessibilityLevel('no');
           }.width('100%').alignItems(VerticalAlign.Center)
             .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+          }.width('100%').height(this.textMinimum()?.quickTimerPaintHeight ?? 30)
+            .padding({ left: 8, right: 8 })
+            .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme))
+            .border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) })
+            .borderRadius(Math.min(this.frame().quickTimerSelect.width, this.textMinimum()?.quickTimerPaintHeight ?? 30) / 2)
+            .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
         }.width(this.frame().quickTimerSelect.width).height(this.frame().quickTimerSelect.height)
-          .padding({ left: 8, right: 8, top: 0, bottom: 0 })
+          .padding(0)
           .position({ x: this.frame().quickTimerSelect.x, y: this.frame().quickTimerSelect.y })
-          .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) })
+          .backgroundColor(Color.Transparent)
           .opacity(this.frame().quickTimerSelect.opacity).enabled(this.sharedInput() && this.p() === 0)
           .accessibilityLevel(this.sharedInput() && this.p() === 0 ? 'auto' : 'no-hide-descendants')
           .accessibilityText(`定时${this.timerCaption()}，循环切换定时预设`)
           .accessibilityRole(AccessibilityRoleType.BUTTON)
           .onClick((): void => this.cycleQuickTimer());
-        Column({ space: 12 }) {
+        Column({ space: this.timerCardLayout().sectionGap }) {
           Scroll() {
-          Column({ space: 8 }) {
+          Column({ space: this.timerCardLayout().rowGap }) {
             Row({ space: 8 }) { this.timerPreset(0); this.timerPreset(15); this.timerPreset(30); }
               .width('100%');
             Row({ space: 8 }) { this.timerPreset(45); this.timerPreset(60); this.timerPreset('chapterEnd'); }
               .width('100%');
           }.width(this.textMinimum()?.timerPresetsWidth ?? '100%');
-          }.width('100%').height((this.textMinimum()?.timerPreset ?? 44) * 2 + 8)
+          }.width('100%').height((this.textMinimum()?.timerPreset ?? 44) * 2 + this.timerCardLayout().rowGap)
             .scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
           Scroll() {
           Row({ space: 4 }) {
@@ -1098,7 +1127,8 @@ export struct ReaderControlTtsContent {
           }.width('100%').height(this.textMinimum()?.timerCustom ?? 48).scrollable(ScrollDirection.Horizontal)
             .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
             .border({ width: 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10);
-        }.width(this.frame().timer.width).height(this.frame().timerCard.height).padding(14)
+        }.width(this.frame().timer.width).height(this.frame().timerCard.height)
+          .padding({ left: 14, right: 14, top: this.timerCardLayout().topPadding, bottom: 14 })
           .position({ x: this.frame().timerCard.x, y: this.frame().timerCard.y })
           .opacity(this.frame().timerCard.opacity).enabled(this.fullInput())
           .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
@@ -1112,13 +1142,18 @@ export struct ReaderControlTtsContent {
   @Builder
   private timerPreset(minutes: number | 'chapterEnd') {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(this.timerPresetLabel(minutes)).fontFamily(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontWeight)
+      Stack({ alignContent: Alignment.Center }) {
+      Text(this.timerPresetLabel(minutes)).fontFamily(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontSizeFp).lineHeight(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.lineHeightFp as number).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE.fontWeight)
         .textAlign(TextAlign.Center).fontColor(readerTtsPresetLabelColor(this.timerPresetIsSelected(minutes), this.appScheme))
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.layoutWeight(1).height(this.textMinimum()?.timerPreset ?? 36).padding(0).opacity(1)
-      .attributeModifier(new ReaderTtsPresetModifier(minutes === 'chapterEnd' ? '朗读到本章结束停止' :
+      }.width('100%').height(this.textMinimum()?.timerPresetPaint ?? 36)
+        .attributeModifier(new ReaderTtsPresetModifier(this.timerPresetIsSelected(minutes), this.appScheme))
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.layoutWeight(1).height(this.textMinimum()?.timerPreset ?? 44).padding(0).opacity(1)
+      .backgroundColor(Color.Transparent).borderRadius(0)
+      .attributeModifier(new ReaderActionAccessibility(minutes === 'chapterEnd' ? '朗读到本章结束停止' :
         (minutes === 0 ? '关闭定时停止' : `定时${minutes}分钟`), this.fullInput() && this.configField === '',
-        this.timerPresetIsSelected(minutes), this.appScheme))
+        this.timerPresetIsSelected(minutes), true, undefined, 'nativeButton'))
       .onClick((): void => this.chooseTimerPreset(minutes));
   }
 
@@ -1144,10 +1179,14 @@ export struct ReaderControlTtsContent {
   @Builder
   private timerStepButton(minutes: boolean, delta: number) {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
-      Image($r(delta < 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_minus_theme_night' : 'app.media.reader_tts_make_minus') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_plus_theme_night' : 'app.media.reader_tts_make_plus'))).width(12).height(12)
+      Stack({ alignContent: Alignment.Center }) {
+      Image($r(delta < 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_minus_theme_night' : 'app.media.reader_tts_make_minus') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_plus_theme_night' : 'app.media.reader_tts_make_plus'))).width(14).height(14)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(44).height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme))
-      .enabled(this.fullInput() && (delta > 0 ?
+      }.width(30).height(30).borderRadius(15).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme))
+        .border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) })
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.width(44).height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1).backgroundColor(Color.Transparent)
+      .enabled(this.fullInput() && this.configField === '' && (delta > 0 ?
         (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
         (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)))
       .accessibilityText(`${delta > 0 ? '增加' : '减少'}${minutes ? '五分钟' : '五秒'}`)
@@ -1219,12 +1258,17 @@ export struct ReaderControlTtsContent {
   @Builder
   private ratePreset(rate: number) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(rate.toFixed(2) + 'x').fontFamily(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontSizeFp)
+      Stack({ alignContent: Alignment.Center }) {
+      Text(rate.toFixed(2) + 'x').fontFamily(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.fontSizeFp).lineHeight(TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE.lineHeightFp as number)
         .textAlign(TextAlign.Center).fontColor(readerTtsPresetLabelColor(this.effectiveRate() === rate, this.appScheme))
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(this.ratePresetWidth()).height(this.textMinimum()?.ratePreset ?? 32).padding(0).opacity(1)
-      .attributeModifier(new ReaderTtsPresetModifier(`语速${rate.toFixed(2)}倍`, this.fullInput() && this.configField === '',
-        this.effectiveRate() === rate, this.appScheme))
+      }.width('100%').height(this.textMinimum()?.ratePresetPaint ?? 32)
+        .attributeModifier(new ReaderTtsPresetModifier(this.effectiveRate() === rate, this.appScheme))
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.width(this.ratePresetWidth()).height(this.textMinimum()?.ratePreset ?? 44).padding(0).opacity(1)
+      .backgroundColor(Color.Transparent).borderRadius(0)
+      .attributeModifier(new ReaderActionAccessibility(`语速${rate.toFixed(2)}倍`, this.fullInput() && this.configField === '',
+        this.effectiveRate() === rate, true, undefined, 'nativeButton'))
       .onClick((): void => this.chooseRatePreset(rate));
   }
 
@@ -1443,6 +1487,7 @@ export struct ReaderControlTtsContent {
   }
 
   private stepTimer(minutes: boolean, delta: number): void {
+    if (!this.fullInput() || this.configField !== '') return;
     if (minutes) {
       // A one-shot chapter target has no numeric value. The first explicit
       // minute adjustment converts it to a normal duration instead of

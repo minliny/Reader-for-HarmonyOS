@@ -575,7 +575,9 @@ export struct ReaderControlSearchContent {
     ReaderControlQuickBack({ variant: 'search', scheme: this.appThemeScheme,
       actionWidth: this.frame().back.width, actionHeight: this.frame().back.height,
       actionVisible: this.frame().back.opacity > 0, actionEnabled: this.currentInputEnabled(),
-      onAction: (): void => this.onBack(),
+      onAction: (): void => {
+        if (this.queryInputMounted && this.currentInputEnabled() && this.motionProgress === 0) this.onBack();
+      },
     }).position({ x: this.frame().back.x, y: this.frame().back.y })
       .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur);
   }

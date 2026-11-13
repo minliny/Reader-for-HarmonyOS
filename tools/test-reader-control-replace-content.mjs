@@ -29,18 +29,21 @@ const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderC
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets', import.meta.url), 'utf8');
 // Execute the actual ordinary production methods. Only ArkUI rendering and
 // lifecycle services are omitted; async callbacks stay explicitly controllable.
-const methods = source.slice(source.indexOf('  private onSourceChanged()'), source.indexOf('  build()'));
+const methods = source.slice(source.indexOf('  private currentInputEnabled()'), source.indexOf('  private statusText()')) +
+  source.slice(source.indexOf('  private onMinimumContentChanged()'), source.indexOf('  aboutToAppear()')) +
+  source.slice(source.indexOf('  private onSourceChanged()'), source.indexOf('  build()'));
 assert.ok(methods.includes('private async perform('));
-const Probe = new Function(...Object.keys(morphScroll), 'sampleReaderControlReplace', 'readerControlReplaceEndpoint',
+const Probe = new Function('readerControlUnit', ...Object.keys(morphScroll), 'sampleReaderControlReplace', 'readerControlReplaceEndpoint',
   'createReaderControlReplaceDraft', 'errorMessageOf',
   `${stripTypeScriptTypes(`class Probe { ${methods} }`)}\nreturn Probe;`)(
-    ...Object.values(morphScroll), geometry.sampleReaderControlReplace, geometry.readerControlReplaceEndpoint,
+    value => Math.max(0, Math.min(1, value)), ...Object.values(morphScroll), geometry.sampleReaderControlReplace, geometry.readerControlReplaceEndpoint,
     stateModule.createReaderControlReplaceDraft, error => error.message);
 const owner = new Probe();
 const events = [];
 Object.assign(owner, { state: { ...stateModule.createReaderControlReplaceState('A:open1'), status: 'ready' },
   motionProgress: 1, interactionEnabled: true, availableWidth: 338, availableHeight: 666,
   layer: '', localError: '', localPending: false, presentationRevision: 0, lastSessionKey: 'A:open1',
+  quickScrollMotion: morphScroll.createReaderControlMorphScroll(), quickScroller: { scrollTo() {}, currentOffset: () => ({ yOffset: 0 }) },
   scrollMotion: morphScroll.createReaderControlMorphScroll(), scroller: { scrollTo() {}, currentOffset: () => ({ yOffset: 0 }) }, onTemporaryLayerChange: active => events.push(active),
 });
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -106,6 +109,8 @@ assert.equal(owner.readyInput(), false, 'a completed query callback alone cannot
 assert.equal(reloadedId, 'original-rule-operation');
 assert.equal(reloads, 1);
 owner.state.writeUncertain = false;
+owner.cancelTemporaryLayer();
+assert.equal(owner.layer, '', 'leave the retained editor explicitly before opening the independent import confirmation');
 owner.openImport();
 assert.equal(owner.layer, 'import-confirm');
 let imports = 0;
@@ -312,7 +317,7 @@ if(selectedCase==='sdk-rule-geometry'){
 // string. User M-02 overrides the recovered text scale, not row geometry.
 function checkMountedRuleTypography(componentSource = source) {
   const { owner: rowOwner } = createReaderBuilderProbe(componentSource,
-    ['ruleRow', 'ruleIcon', 'scopeSummary', 'frame', 'fullInput', 'quickInput', 'readyInput', 'presentation', 'rowClip'],
+    ['ruleRow', 'ruleIcon', 'scopeSummary', 'quickFlowExtra', 'quickFlowContentHeight', 'frame', 'fullInput', 'quickInput', 'readyInput', 'presentation', 'rowClip'],
     { ...geometry, ...morphScroll, ...motionDeps, FlexAlign: { Center: 'FlexAlign.Center' } });
   let rule = { id: 12, name: '规则名称', pattern: '原文', replacement: '替换', scope: '本书',
     scopeTitle: true, scopeContent: true, scopeSource: false, isRegex: false, isEnabled: true };
@@ -369,7 +374,7 @@ function checkMountedRuleListClip(componentSource = source) {
   const { owner: listOwner } = createReaderBuilderProbe(probeSource,
     ['ruleListClipProbe', 'ruleRow', 'ruleIcon', 'scopeSummary', 'frame', 'fullInput', 'quickInput', 'readyInput',
       'textAction', 'statusContent', 'originalRecoveryAction', 'emptyStateMessage', 'listContentMinHeight', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'fullOnlyScrollTranslation',
-      'currentRule', 'currentRuleIndex', 'refreshRuleLookup', 'presentation', 'rowClip'],
+      'currentRule', 'currentRuleIndex', 'refreshRuleLookup', 'quickFlowExtra', 'quickFlowContentHeight', 'presentation', 'rowClip'],
     { ...geometry, ...morphScroll, ...motionDeps, FlexAlign: { Center: 'FlexAlign.Center' } });
   const rule = { id: 12, name: '规则名称', pattern: '原文', replacement: '替换', scope: '本书',
     scopeTitle: true, scopeContent: true, scopeSource: false, isRegex: false, isEnabled: true };
