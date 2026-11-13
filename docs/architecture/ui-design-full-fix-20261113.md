@@ -4,7 +4,7 @@
 
 ## 目标与执行边界
 
-本轮目标覆盖15个当前整改条目、1个保留代码条目，以及可在代码侧补齐的来源登记、局部宿主检查和跨书恢复引导。goal 已设为 active。15个当前整改项与1个保留项的代码开发、独立审修及选中定向回归已完成，goal继续跟踪最后候选编译与交付评估。
+本轮目标覆盖15个当前整改条目、1个保留代码条目，以及可在代码侧补齐的来源登记、局部宿主检查和跨书恢复引导。goal 已设为 active。15个当前整改项与1个保留项的代码开发、独立审修及选中定向回归已完成，最后候选的实际ArkTS编译、打包和指定身份签名已通过，goal继续跟踪保数据交付与原生证据评估。
 
 三个独立 agent 分别实施阅读、主流程、二级域，再交换阅读与主流程、二级与共享范围审修。Root 负责共享呈现、依据绑定、消息与控件登记和最终差异核对。全部代码开发及独立审修完成后再评估原生取证。
 
@@ -78,3 +78,11 @@ TTS compact状态的恢复滚动位于面板左侧，右侧保留原关闭目标
 首次输入预检因漏传既有CARGO_TARGET_DIR而停止，未编译Core或Host。后续明确绑定本机既有 /Users/minliny/Documents/Reader/Reader-Core/target，Native/Core配套预检通过并进入实际ArkTS编译。该编译发现4处本批新增ClickEvent.stopPropagation调用不受当前SDK支持，四处非法调用已移除，标题为普通Flex/Text，唯一书籍Row持原焦点ID，More/状态/Checkbox沿默认子优先Tap手势，44横槽和111密度保留。6组合动作/API与24密度准确回归已通过并完成再次独立审修，进入修正后编译。
 
 官方onClick是隐式单击TapGesture，默认同类手势按子优先竞争。TouchEvent.stopPropagation只终止基础事件冒泡，不能用来证明父手势被取消。修正采用真实受支持的点击结构，保留List拖动，撤回有限probe中手造stopPropagation标志所声称的证明。[OpenHarmony单一手势说明](https://github.com/openharmony/docs/blob/master/zh-cn/application-dev/ui/arkts-gesture-events-single-gesture.md)、[华为事件交互原理](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/arkts-interaction-basic-principles/)
+
+## 固定候选
+
+HarmonyOS提交 `ed8d693798d5c3112e938e7a7dd45fda28c17df7`，Reader-UI提交 `f206f0d`，Core沿 `c078126376294faa3a611690fbe48e79f0f86cc4`。候选run为 `20261113T125933Z-ed8d6937-54bfeed6`，App身份为 `0.2.0.DEV.ac7d00ae82ab`，产品版本继续 `0.2.0`，安装计数器继续 `1000000`。
+
+实际编译从 `2026-11-13T12:59:06.286Z` 至 `12:59:32.525Z`。签名HAP为226233325字节，SHA-256为 `f893c0fb9032c831bf1e60a4efae79e58a156def9807be0f38d0608889fd3c05`。唯一证书身份核验通过。当前Core/Native输入与已有缓存一致，Native未重复编译。所有未选业务门禁保留NOT_RUN。
+
+manifest位于 `.reader-artifacts/hap/20261113T125933Z-ed8d6937-54bfeed6/manifest.json`，日志位于 `.reader-artifacts/ui-full-fix-20261113/hap-build-final.log`。本候选编译及签名通过，全页视觉、原生命中、焦点、系统字号和用户验收各保留原状态。

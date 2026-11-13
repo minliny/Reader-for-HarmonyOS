@@ -99,8 +99,10 @@ function vmBootSample(query, now, monotonicNow) {
   });
   const guestEnd = epoch(rows.at(-1));
   if (monotonicEnd < monotonicStart || monotonicEnd - monotonicStart > 10_000) throw new Error('VM boot sampling observation budget is invalid');
-  if (guestEnd < guestStart ||
-    guestStart < hostStart - 1000 || guestStart > hostEnd + 1000 || guestEnd < hostStart - 1000 || guestEnd > hostEnd + 1000 ||
+  // Guest and host wall clocks may have a fixed offset. Check elapsed time
+  // within each clock domain; the two samples below still reject guest jumps,
+  // frozen time, changed boot/milestones and SceneBoard replacement.
+  if (guestEnd < guestStart || guestEnd - guestStart > monotonicEnd - monotonicStart + 1000 ||
     Math.abs((hostEnd - hostStart) - (monotonicEnd - monotonicStart)) > 1000) throw new Error('VM guest/host clock or observation is inconsistent');
   if (bootStart > guestStart + 1000 || milestones.some(value => value > milestones.at(-1)) ||
     milestones.at(-1) / 1000 > guestEnd - bootStart + 1000) throw new Error('VM boot milestone timing is inconsistent');
@@ -253,6 +255,7 @@ export function targetReadiness({ targetKind, query, vmLog, targetEndpoint, now 
       if (stat.dev !== firstStat.dev || stat.ino !== firstStat.ino || stat.size !== observedBytes.length || observedBytes.length < firstBytes.length || !observedBytes.subarray(0, firstBytes.length).equals(firstBytes) ||
         latest.identity !== instance.identity || JSON.stringify(second.milestones) !== JSON.stringify(firstSample.milestones) ||
         Math.abs(second.bootStart - firstSample.bootStart) > 1000 ||
+        second.guestStart <= firstSample.guestEnd ||
         second.guestStart - firstSample.guestEnd < observationMs - 2000 ||
         second.guestEnd - firstSample.guestStart > second.monotonicEnd - firstSample.monotonicStart + 2000) throw new Error('VM boot instance, milestones or uptime changed during readiness observation');
       if (instance.snapshotLog) {

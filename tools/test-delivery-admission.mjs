@@ -18,6 +18,7 @@ import { CORE_GATE_STAGES } from '../../Reader-Core/scripts/lib/core-gate-stages
 import { verifyBuildLease } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 
 const selected = selectContractCases({
+  'vm-clock': 'Actual VM targetReadiness fixed-offset/quantization and single-query/cross-sample clock rejection, preserving boot/milestone/PID/log guards through finite read-only ports.',
   readiness: 'Actual targetReadiness with guest-only, logged VM/snapshot and physical read-only fixture ports. Boot/PID/clock identities, malformed evidence and changed instances reject without device calls.',
   'delivery-admission': 'Existing Native-cache, IDE lease, resource/gate-receipt, loader and failure-log fixtures. Readiness is separately selected.',
 });
@@ -432,6 +433,7 @@ try {
   console.log('Delivery admission fixtures PASS: generated Native copy recovery/receipts/idempotence and unsafe inventory rejection, real Native/SDK file types before missing classification, bounded Native repair callbacks, GUI environment, nested IDE lease ownership/rejection/cleanup, resources, complete receipt, readiness, loader inputs and failure logs; no device/build run.');
     recordContractCasePass('delivery-admission');
   }
+  if (selected.includes('vm-clock')) { vmClockFixtures(); recordContractCasePass('vm-clock'); }
   if (selected.includes('readiness')) { readinessFixtures(); recordContractCasePass('readiness'); }
 } finally { if (root !== undefined) rmSync(root, { recursive: true, force: true }); }
 
@@ -625,7 +627,7 @@ function readinessFixtures() {
     ['completion marker exceeds existing milestone delay bound', { log: instanceLog.replace(markerLine, markerLine.replace(localStamp(bootEpoch + 19036), localStamp(bootEpoch + 25036))) }, /does not match/],
     ['milestone replacement', { secondMilestones: { kernel: 881434 } }, /changed during readiness/],
     ['boot time replacement', { secondBootOffset: 120_000 }, /does not match/],
-    ['guest clock jump', { secondClockOffset: 5000 }, /clock or observation is inconsistent/],
+    ['guest clock jump', { secondClockOffset: 5000 }, /changed during readiness|clock or observation is inconsistent/],
     ['no observation', { waitMs: 0 }, /observation interval/],
     ['unbounded observation', { waitMs: 11_000 }, /observation interval/],
     ['SceneBoard replacement', { finalPid: '1644' }, /boot\/SceneBoard changed/],
@@ -756,7 +758,7 @@ function readinessFixtures() {
     ['future milestone', { milestones: { kernel: 99_000_000 } }, /milestone timing is inconsistent/],
     ['malformed boot timestamp', { bootTimestamp: '2026-02-30 10:29:23' }, /timestamp is invalid/],
     ['frozen guest clock', { guestDate: String(checkEpoch / 1000) }, /changed during readiness|clock or observation is inconsistent/],
-    ['guest clock jump', { secondClockOffset: 5000 }, /clock or observation is inconsistent/],
+    ['guest clock jump', { secondClockOffset: 5000 }, /changed during readiness|clock or observation is inconsistent/],
     ['host clock jump', { hostWaitOffset: 5000 }, /observation interval or clock/],
     ['short observation', { waitMs: 1000 }, /observation interval/],
     ['unbounded observation', { waitMs: 11000 }, /observation interval/],
@@ -766,4 +768,81 @@ function readinessFixtures() {
   assert.equal(guestDenied.commands.some(command => /\bbm\b|\baa\b|install|\bsu\b|chmod|param set/.test(command)), false,
     'guest-only readiness uses the existing read-only system probes');
 
+}
+
+
+function vmClockFixtures() {
+  const bootEpoch = Date.UTC(2026, 10, 13, 1, 35, 59);
+  const hostEpoch = bootEpoch + 45_000;
+  const milestones = [10590803, 15696209, 15751693, 20028261, 24893221, 39033599];
+  const milestoneNames = ['kernel', 'init', 'samgr.ready', 'appspawn.started', 'wms.ready', 'boot.completed'];
+  const batch = ['set -e', 'date -u +%s', 'TZ=UTC uptime -s',
+    ...milestoneNames.map(name => `param get ohos.boot.time.${name}`), 'date -u +%s'].join('\n');
+  const utcStamp = value => new Date(value).toISOString().slice(0, 19).replace('T', ' ');
+  const localStamp = value => {
+    const date = new Date(value), pad = (number, width = 2) => String(number).padStart(width, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+      `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
+  };
+  let fixtureNumber = 0;
+  function fixture(options = {}) {
+    const commands = [];
+    let elapsed = 0, wallOffset = 0, second = false;
+    const query = command => {
+      commands.push(command);
+      if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : 'true';
+      if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1370' : '1370';
+      if (command === 'cat /proc/sys/kernel/random/boot_id') return '/bin/sh: cat: /proc/sys/kernel/random/boot_id: Permission denied';
+      if (command === 'cat /proc/uptime') return '/bin/sh: cat: /proc/uptime: Permission denied';
+      assert.equal(command, batch, 'VM sample stays a single readonly shell');
+      const offset = (options.guestOffsetMs ?? 0) + (second ? options.secondOffsetMs ?? 0 : 0);
+      const start = Math.floor((hostEpoch + elapsed + offset) / 1000);
+      elapsed += options.queryCostMs ?? 162;
+      wallOffset += options.queryHostJumpMs ?? 0;
+      const end = Math.floor((hostEpoch + elapsed + offset + (options.queryGuestJumpMs ?? 0)) / 1000);
+      return [options.frozenDate ?? start, utcStamp(bootEpoch + (options.guestOffsetMs ?? 0) +
+        (second ? options.secondBootOffsetMs ?? 0 : 0)),
+        ...(second ? options.secondMilestones ?? milestones : milestones), options.frozenDate ?? end].join('\n');
+    };
+    let vmLog;
+    if (options.withLog) {
+      vmLog = put(join(root, `clock-${++fixtureNumber}`, 'emulator.log'),
+        `${localStamp(bootEpoch + 491)} 1 [Info] [TraceTool.cpp(InitPipe:27)][TraceTool] trace pipe name is: "clock-fixture"\n` +
+        `${localStamp(bootEpoch + 40036)} 1 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!\n`);
+    }
+    return { commands, run: () => targetReadiness({ targetKind: 'vm', query, vmLog,
+      now: () => hostEpoch + elapsed + wallOffset, monotonicNow: () => elapsed,
+      wait() { elapsed += options.waitMs ?? 2000; wallOffset += options.waitHostJumpMs ?? 0; second = true; },
+    }) };
+  }
+  for (const offset of [-86_400_000, -1600, 0, 900, 1600, 86_400_000]) {
+    const current = fixture({ guestOffsetMs: offset });
+    const ready = current.run();
+    assert.equal(ready.status, 'PASS');
+    assert.equal(ready.evidenceScope, 'guest-only');
+    assert.equal(ready.bootIdentitySource, 'vm-guest-boot-milestones-v1');
+    assert.equal(current.commands.filter(command => command === batch).length, 2);
+    assert.deepEqual(ready.emulatorLog, { status: 'NOT_PROVIDED' });
+    assert.equal(current.commands.some(command => /\bbm\b|\baa\b|install|param set|chmod|\bsu\b/.test(command)), false);
+  }
+  assert.equal(fixture({ withLog: true }).run().status, 'PASS', 'explicit host log still uses its original instance association');
+  for (const [label, options, expected] of [
+    ['forward jump within query', { queryGuestJumpMs: 5000 }, /guest\/host clock or observation is inconsistent/],
+    ['backward jump within query', { queryGuestJumpMs: -2000 }, /guest\/host clock or observation is inconsistent/],
+    ['forward jump between samples', { secondOffsetMs: 5000 }, /changed during readiness/],
+    ['backward jump between samples', { secondOffsetMs: -5000 }, /changed during readiness/],
+    ['frozen guest clock', { frozenDate: hostEpoch / 1000 }, /changed during readiness/],
+    ['frozen guest clock with explicit log', { withLog: true, frozenDate: hostEpoch / 1000 }, /changed during readiness/],
+    ['host jump within query', { queryHostJumpMs: 5000 }, /clock or observation is inconsistent/],
+    ['host jump during wait', { waitHostJumpMs: 5000 }, /observation interval or clock/],
+    ['sample exceeds budget', { queryCostMs: 10001 }, /sampling observation budget/],
+    ['short observation', { waitMs: 1000 }, /observation interval/],
+    ['changed guest boot', { secondBootOffsetMs: 5000 }, /milestone timing|changed during readiness/],
+    ['changed milestone', { secondMilestones: [10590804, ...milestones.slice(1)] }, /changed during readiness/],
+    ['changed SceneBoard', { finalPid: '1371' }, /boot\/SceneBoard changed/],
+    ['boot becomes incomplete', { finalComplete: 'false' }, /boot\/SceneBoard changed/],
+    ['explicit log cannot match another wall-clock instance', { withLog: true, guestOffsetMs: 86_400_000 }, /startup\/boot marker does not match/],
+  ]) assert.throws(() => fixture(options).run(), expected, label);
+  console.log(JSON.stringify({ kind: 'vm-clock-readiness', fixedOffsets: 6, rejectionScenarios: 15,
+    boundary: 'Actual VM admission with finite readonly clock/query ports. No HDC, device, App or system clock action.' }));
 }
