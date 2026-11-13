@@ -557,8 +557,8 @@ export struct ReaderFullDirectory {
       .alignSelf(ItemAlign.Center)
       .margin({ top: 1.25 });
     Text('换源')
-      .width(24)
-      .height(15)
+      .constraintSize({ minWidth: 24, minHeight: 15 * this.fontScale() })
+      .maxLines(1)
       .fontFamily(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontFamily)
       .fontWeight(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontWeight)
       .fontSize(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontSizeFp)
@@ -574,7 +574,10 @@ export struct ReaderFullDirectory {
       .accessibilityLevel(this.usesExpandedLayout() ? 'auto' : 'no');
   }
 
-  private fontScale(): number { return readerReadableFontScale(readerWindowMetrics().systemFontScale); }
+  private fontScale(): number {
+    this.readerWindowMetricsRevision;
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
+  }
   private headerBarHeight(): number {
     return Math.max(this.headerSpec.barHeight, this.headerControlHeight(), Math.ceil(22 * this.fontScale()) + Math.ceil(17 * this.fontScale()) + 6);
   }

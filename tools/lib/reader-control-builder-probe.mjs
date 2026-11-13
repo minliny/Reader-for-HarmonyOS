@@ -131,6 +131,11 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     .some(decorator => decorator.getText(original) === '@Builder'))
     require(`${sdkRoot}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(member.name.getText(original));
   names = [...names];
+  if (struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('panelHeader')) {
+    for (const name of ['collapsePaint', 'collapseLabel', 'fontScale']) {
+      if (!names.includes(name) && struct.members.some(member => member.name?.getText(original) === name)) names.push(name);
+    }
+  }
   // Main-tab migration adds real optional slots with production defaults.
   // Preserve those declarations/initializer Builders in old partial-method
   // probes rather than filling a fake empty callback in every consumer test.
@@ -651,6 +656,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
   globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
     () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
+  if (struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('panelHeader')) {
+    const resolvers = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'),
+      'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']);
+    globals.readerReadableFontScale ??= resolvers.readerReadableFontScale;
+    globals.readerScaledControlHeight ??= resolvers.readerScaledControlHeight;
+  }
   if (/\breaderReadingTopBar(?:Height|FontsReady)\b/.test(members.join('\n'))) {
     const header = readFileSync(new URL('../../entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets', import.meta.url), 'utf8');
     const resolvers = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'),

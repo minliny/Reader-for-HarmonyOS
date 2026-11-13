@@ -11360,13 +11360,25 @@
       }
     },
     "test-reader-directory-chrome-spacing.mjs": {
-      "sourceSha256": "47c7c52029c6b43976dd1a4ad36ab16ee9f3fb21e12510b068d380dbe5f65e53",
+      "sourceSha256": "190b8fbc69d0f1f45c32b867d702207667c82e7d659474b5af2f18bf006e0a9b",
       "cases": {
         "header-spacing": {
           "resources": [],
           "qualification": "QUALIFIED"
         },
         "icon-roles": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "standalone-collapse": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "full-directory-font-revision": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "full-directory-source-caption": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

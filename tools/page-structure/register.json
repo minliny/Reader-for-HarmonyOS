@@ -1123,7 +1123,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -1503,7 +1503,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-        "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a"
+        "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd"
       },
       "layers": {
         "route": {
@@ -2493,12 +2493,12 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-          "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+          "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
           "symbol": "build"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-          "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+          "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
           "symbol": "directoryBody"
         },
         {
@@ -2837,7 +2837,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -3817,12 +3817,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -4161,7 +4161,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -4317,7 +4317,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-              "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a"
+              "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd"
             },
             "layers": {
               "route": {
@@ -5259,12 +5259,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -5603,7 +5603,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -6660,12 +6660,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -7004,7 +7004,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -8046,12 +8046,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -8390,7 +8390,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -9337,12 +9337,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -9681,7 +9681,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -10555,12 +10555,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -10899,7 +10899,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -11948,12 +11948,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -12292,7 +12292,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -13253,12 +13253,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -13597,7 +13597,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -14556,12 +14556,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -14900,7 +14900,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -15774,12 +15774,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -16118,7 +16118,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -17184,12 +17184,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -17528,7 +17528,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -18577,12 +18577,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "55ca28a9f50b65aecdca1c96ea1749d0d3b740cbd80d5acde1e2b34629b2018a",
+                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "57c08e432848ffbd58bcbf5408df3c882492600263b0908d5ce803cc3154eb1d",
+                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
                 "symbol": "directoryBody"
               },
               {
@@ -18921,7 +18921,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -19422,7 +19422,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -20792,7 +20792,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -22169,7 +22169,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -23546,7 +23546,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -24876,7 +24876,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -26206,7 +26206,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -28554,7 +28554,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "c3cfbe4894f95da8aeccab7a38b71aab23d6f76a27ab637dfb4d0db981182203"
+          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",

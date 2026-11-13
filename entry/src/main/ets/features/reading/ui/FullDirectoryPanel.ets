@@ -474,18 +474,18 @@ export struct FullDirectoryPanel {
 
       if (this.expandedLayout) {
         Stack({ alignContent: Alignment.Center }) {
-          this.collapseLabel();
+          this.collapsePaint();
         }
-        .width(44).height(this.panelHeaderHeight())
-        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+        .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).flexShrink(0)
+        .backgroundColor(Color.Transparent).borderRadius(8)
         .attributeModifier(new ReaderActionAccessibility('收起目录'))
         .onClick((): void => this.onExit());
       } else {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          this.collapseLabel();
+          this.collapsePaint();
         }
-        .width(44).height(this.panelHeaderHeight()).padding(0)
-        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+        .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).padding(0).flexShrink(0)
+        .backgroundColor(Color.Transparent).borderRadius(8)
         .attributeModifier(new ReaderActionAccessibility('收起目录', true, false, true, undefined, 'nativeButton'))
         .onClick((): void => this.onExit());
       }
@@ -496,9 +496,20 @@ export struct FullDirectoryPanel {
   }
 
   @Builder
+  private collapsePaint() {
+    Stack({ alignContent: Alignment.Center }) {
+      this.collapseLabel();
+    }.constraintSize({ minWidth: 40,
+      minHeight: readerScaledControlHeight(26, TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number, this.fontScale()) })
+      .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+      .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+  }
+
+  @Builder
   private collapseLabel() {
     Text('收起')
-      .width('100%')
+      .maxLines(1)
       .fontFamily(TYPE_READER_DIRECTORY_COLLAPSE.fontFamily)
       .fontWeight(TYPE_READER_DIRECTORY_COLLAPSE.fontWeight)
       .fontSize(TYPE_READER_DIRECTORY_COLLAPSE.fontSizeFp)
@@ -1435,7 +1446,10 @@ export struct FullDirectoryPanel {
     return this.embeddedInControl ? this.controlValue(190, 666) : (this.expandedLayout ? 852 : 736);
   }
 
-  private fontScale(): number { return readerReadableFontScale(readerWindowMetrics().systemFontScale); }
+  private fontScale(): number {
+    this.readerWindowMetricsRevision;
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
+  }
   private panelHeaderHeight(): number { return readerScaledControlHeight(44, 20, this.fontScale()); }
   private queryHeight(): number { return readerScaledControlHeight(44, 24, this.fontScale()); }
   private tabStripHeight(): number { return this.tabHeight() + 6; }
