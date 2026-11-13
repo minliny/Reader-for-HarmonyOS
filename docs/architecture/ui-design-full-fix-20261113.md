@@ -20,7 +20,7 @@
 | RD-05 | 阅读恢复采用显式请求展示，既有更多菜单提供待处理事项，Back/正文/开控制收起当前投影 | ui-recovery-composition、secondary-recovery-assembly |
 | RD-07 | 书签空/失败复用readingBookmark配方，16/9/23间距、92最小动作宽、10×17内距 | reader-bookmark-state-recipe |
 | RD-08 | 保留既有五秒步长，读屏名称与实际增减一致 | reader-control-tts-make preset-controls |
-| P-01 | 默认24/18/28/80组合与约111行高，纯信息不各占44，状态28绘制/44响应，行与子动作各自准入 | shared-download-visual-contract |
+| P-01 | 默认24/18/28/80组合与约111行高，纯信息不各占44，状态28绘制/44响应，单一书籍行入口与状态/More/选择动作各自准入 | shared-download-visual-contract |
 | P-02 | 更新徽标明确封面内最大宽，单行省略，卡片读屏保留完整计数 | bookshelf-update-badge-budget |
 | P-03 | 导入进行态自然文档测量、有界Scroll与原代次围栏，前后台变化可重绑测量 | bounded-local-import-composition |
 | S-02 | App主题按实际行宽与字体预算选择横排/上下排，原168分段控件使用唯一宽度事实源 | secondary-design-budget、switch-enum-shared-contract |
@@ -51,7 +51,7 @@ TTS compact状态的恢复滚动位于面板左侧，右侧保留原关闭目标
 
 - Root抽取根恢复Builder时引入语法损坏，独立审修完整重组并补真实根构造回归。
 - TTS短窗仍扣已进入Scroll的header/footer，独立审修修正恢复高度与关闭列避让。
-- 下载新行入口与子按钮有冒泡重复动作，More和标题命中区也可能交叠，独立审修分别修复目标归属及阻冒泡。
+- More和标题命中区存在可复算的2vp交叠，已为独立控件支付44横槽。此前把onClick当作可手动阻断的基础冒泡并使用ClickEvent.stopPropagation的判断与实现有误，旧“阻冒泡PASS”撤回。当前按官方隐式Tap手势的默认子优先规则修正，List滚动沿原手势链。
 - 导入前后台只增加private代次可能留下全部失效测量闭包，改为可观察代次并补旧/新回执回归。
 - 多事项组曾把已确认结果也画成未决表面，独立审修恢复原分类。
 - 主题行的旧Area回调可能跨分支、字号、窗口或重新展示回写，独立审修补真实重测、属性重绑和appearance身份。
@@ -65,10 +65,16 @@ TTS compact状态的恢复滚动位于面板左侧，右侧保留原关闭目标
 
 ## 代码侧最终核对
 
-全部3个agent已完成开发与独立审修并停止生产写入。Root终核下载/导入的新点击和测量修正、主题行appearance回调、RSS/Sync同代busy和当前canRetry、普通阅读恢复原owner围栏，以及旧记录显式回执分类。
+全部3个agent已完成开发与独立审修并停止生产写入。Root终核下载单Row入口/原生子Tap与导入测量修正、主题行appearance回调、RSS/Sync同代busy和当前canRetry、普通阅读恢复原owner围栏，以及旧记录显式回执分类。
 
 修改范围40个ETS/TS生产输入经实际SDK AST解析，0语法诊断。选定修改文件的消息登记79/79组通过，register Schema单项通过，git diff --check通过。选择集包括普通、保留和共享消费者，声明范围保留各自处置。全树产品门禁本轮未选。
 
 4族21个正式登记的设计引用已解析，visual继续NOT_RUN，3组整页批准来源继续OPEN_APPROVAL，GAP-04为CODE_VERIFIED_NATIVE_OPEN。登记主源和受影响依赖的SHA按已审事实更新，历史SDK/布局/Native产物保持其原输入与结果。Source E2/E3与其他原生缺口继续开放。
 
 候选编译采用唯一hap-pipeline，iteration、x86_64、local signing、contracts none。直接保护真实ArkTS类型/普通入口/打包与指定签名身份，不触发Core/Host全量业务检查。Core源码与Native配套沿本轮当前c0781263输入核验。签名配置和口令材料只在私有路径。
+
+## 编译阶段发现与修正
+
+首次输入预检因漏传既有CARGO_TARGET_DIR而停止，未编译Core或Host。后续明确绑定本机既有 /Users/minliny/Documents/Reader/Reader-Core/target，Native/Core配套预检通过并进入实际ArkTS编译。该编译发现4处本批新增ClickEvent.stopPropagation调用不受当前SDK支持，四处非法调用已移除，标题为普通Flex/Text，唯一书籍Row持原焦点ID，More/状态/Checkbox沿默认子优先Tap手势，44横槽和111密度保留。6组合动作/API与24密度准确回归已通过并完成再次独立审修，进入修正后编译。
+
+官方onClick是隐式单击TapGesture，默认同类手势按子优先竞争。TouchEvent.stopPropagation只终止基础事件冒泡，不能用来证明父手势被取消。修正采用真实受支持的点击结构，保留List拖动，撤回有限probe中手造stopPropagation标志所声称的证明。[OpenHarmony单一手势说明](https://github.com/openharmony/docs/blob/master/zh-cn/application-dev/ui/arkts-gesture-events-single-gesture.md)、[华为事件交互原理](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/arkts-interaction-basic-principles/)

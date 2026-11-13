@@ -642,26 +642,15 @@ export struct SharedDownloadPage {
       Column({ space: 0 }) {
         Column({ space: 0 }) {
         Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
-          Button({ type: ButtonType.Normal }) {
-            Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start, alignItems: ItemAlign.Center }) {
-              Text(book().title).fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
-                .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
-                .fontColor(downloadVisualColor('ink', this.appThemeScheme)).flexShrink(1).textAlign(TextAlign.Start).wordBreak(WordBreak.BREAK_WORD);
-              if (!secondary) {
-                Image(this.visualIcon('chevron')).width(DOWNLOAD_VISUAL.titleChevronSize).height(DOWNLOAD_VISUAL.titleChevronSize)
-                  .flexShrink(0).margin({ left: DOWNLOAD_VISUAL.statusGap });
-              }
-            }.width('100%');
-          }.id(secondary ? '' : this.focusKey('book-title:' + book().key))
-            .accessibilityLevel(secondary ? 'no' : 'auto')
-            .padding(0).borderRadius(0).backgroundColor(Color.Transparent).layoutWeight(1)
-            .constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight })
-            .responseRegion([{ x: 0, y: 0, width: '100%', height: '100%' },
-              readerActionTouchRegion('100%', DOWNLOAD_VISUAL.bookTopHeight)])
-            .onClick((event: ClickEvent): void => {
-              event?.stopPropagation();
-              if (!secondary) this.openBook(book(), ownerGeneration);
-            });
+          Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start, alignItems: ItemAlign.Center }) {
+            Text(book().title).fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
+              .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
+              .fontColor(downloadVisualColor('ink', this.appThemeScheme)).flexShrink(1).textAlign(TextAlign.Start).wordBreak(WordBreak.BREAK_WORD);
+            if (!secondary) {
+              Image(this.visualIcon('chevron')).width(DOWNLOAD_VISUAL.titleChevronSize).height(DOWNLOAD_VISUAL.titleChevronSize)
+                .flexShrink(0).margin({ left: DOWNLOAD_VISUAL.statusGap });
+            }
+          }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight });
           if (book().contentKind !== undefined) {
             Text(book().contentKind === 'manga' ? '漫画' : '小说')
               .fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -677,7 +666,6 @@ export struct SharedDownloadPage {
                 .selectedColor(downloadVisualColor('green', this.appThemeScheme))
                 .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
                 .mark({ strokeColor: downloadVisualColor('greenInk', this.appThemeScheme) })
-                .onClick((event: ClickEvent): void => event?.stopPropagation())
                 .onChange((selected: boolean): void => {
                   const current = this.eventBook(book, ownerGeneration);
                   if (current !== undefined) this.toggleBook(current.key, selected);
@@ -738,6 +726,7 @@ export struct SharedDownloadPage {
           if (current !== undefined) this.recordBookHeight(current.key, readerPageAreaLength(area.height));
         });
     }.width('100%').alignItems(VerticalAlign.Top).padding({ top: DOWNLOAD_VISUAL.bookPaddingY, bottom: DOWNLOAD_VISUAL.bookPaddingY })
+      .id(secondary ? '' : this.focusKey('book-title:' + book().key))
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .accessibilityText(secondary ? '' : `${book().title}，${this.authorSource(book())}，${this.downloadCount(book(), false)}` +
         (this.managing ? `，${this.selectedBookKeys.includes(book().key) ? '取消选择' : '选择'}` : '，打开书籍'))
@@ -775,8 +764,7 @@ export struct SharedDownloadPage {
       .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
       .enabled(!this.managing).opacity(this.managing ? DOWNLOAD_VISUAL.disabledOpacity : 1)
       .accessibilityText(`${book().title}，${book().stateLabel}${this.bookIsRunning(book()) ? '，暂停' : book().stateLabel === '下载失败' ? '，重试' : ''}`)
-      .onClick((event: ClickEvent): void => {
-        event?.stopPropagation();
+      .onClick((): void => {
         const current = this.eventBook(book, ownerGeneration);
         if (this.managing || current === undefined) return;
         this.actionBookKeys = [current.key]; this.actionChapters = [];
@@ -959,7 +947,7 @@ export struct SharedDownloadPage {
       .responseRegion(readerActionTouchRegion(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreWidth,
         chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreHeight))
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .accessibilityText(label()).onClick((event: ClickEvent): void => { event?.stopPropagation(); action(); });
+      .accessibilityText(label()).onClick((): void => action());
   }
 
   @Builder

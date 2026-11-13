@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 18,
+  "revision": 19,
   "controls": [
     {
       "controlId": "page-back",
@@ -1671,30 +1671,6 @@
       "knownGap": "Actual44 direction carrier contains approved24 paint; parent budgets direction+3gap+sort field independently from filter/count, switching inline/wrapped at actual width/scale. SDK15 combinations reject former7vp overlap. Native hit/clipping/focus/system-font acceptance remains NOT_RUN."
     },
     {
-      "controlId": "download-book-title-open",
-      "owner": "SharedDownloadPage",
-      "sources": [
-        {
-          "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "symbol": "bookRow"
-        }
-      ],
-      "states": [
-        "default",
-        "pressed",
-        "selection-mode"
-      ],
-      "hitTarget": {
-        "width": 44,
-        "height": 44,
-        "unit": "vp",
-        "status": "spec"
-      },
-      "accessibleNameSource": "Visible book title",
-      "status": "partial",
-      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
-    },
-    {
       "controlId": "download-book-selection",
       "owner": "SharedDownloadPage",
       "sources": [
@@ -3112,9 +3088,9 @@
         "unit": "vp",
         "status": "unverified"
       },
-      "accessibleNameSource": "Current book-row button label; title has its existing child action, metadata and cover share the row intent",
+      "accessibleNameSource": "One book Row with the existing book-title focus ID, full title/author/source/count and selection intent",
       "status": "partial",
-      "knownGap": "Whole row owns ordinary open/management selection. Informational author/count no separate44carrier. Child title/status/more stop propagation to keep one intent. Default density and declaration tested; Native arbitration/focus/reader acceptance open."
+      "knownGap": "Whole row owns ordinary open/management selection. Title/cover/metadata are information under this one intent. Native status/More/checkbox use default child-priority Tap recognition, with independent44 horizontal lanes. Exact SDK API/callback and24 density samples pass; Native arbitration, List Pan, focus and reader acceptance remain open."
     }
   ]
 }

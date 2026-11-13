@@ -19215,12 +19215,12 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-        "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+        "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
       },
       "sourceInputs": [
         {
           "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+          "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -19674,7 +19674,6 @@
             "budgetDeclared": true,
             "controlRefs": [
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more"
@@ -19886,7 +19885,6 @@
               "download-sort-direction",
               "download-sort-open",
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more",
@@ -19928,7 +19926,6 @@
                 "download-sort-direction",
                 "download-sort-open",
                 "download-book-row-open",
-                "download-book-title-open",
                 "download-book-selection",
                 "download-book-primary-action",
                 "download-book-more",
@@ -20172,7 +20169,6 @@
         "download-sort-direction",
         "download-sort-open",
         "download-book-row-open",
-        "download-book-title-open",
         "download-book-selection",
         "download-book-primary-action",
         "download-book-more",
@@ -20578,12 +20574,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+              "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+                "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -21029,7 +21025,6 @@
                   "budgetDeclared": true,
                   "controlRefs": [
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more"
@@ -21255,7 +21250,6 @@
                     "download-sort-direction",
                     "download-sort-open",
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more",
@@ -21297,7 +21291,6 @@
                       "download-sort-direction",
                       "download-sort-open",
                       "download-book-row-open",
-                      "download-book-title-open",
                       "download-book-selection",
                       "download-book-primary-action",
                       "download-book-more",
@@ -21541,7 +21534,6 @@
               "download-sort-direction",
               "download-sort-open",
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more",
@@ -21948,12 +21940,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+              "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+                "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -22399,7 +22391,6 @@
                   "budgetDeclared": true,
                   "controlRefs": [
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more"
@@ -22625,7 +22616,6 @@
                     "download-sort-direction",
                     "download-sort-open",
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more",
@@ -22667,7 +22657,6 @@
                       "download-sort-direction",
                       "download-sort-open",
                       "download-book-row-open",
-                      "download-book-title-open",
                       "download-book-selection",
                       "download-book-primary-action",
                       "download-book-more",
@@ -22911,7 +22900,6 @@
               "download-sort-direction",
               "download-sort-open",
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more",
@@ -23318,12 +23306,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+              "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+                "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -23960,7 +23948,6 @@
                     "download-sort-direction",
                     "download-sort-open",
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more",
@@ -24001,7 +23988,6 @@
                       "download-sort-direction",
                       "download-sort-open",
                       "download-book-row-open",
-                      "download-book-title-open",
                       "download-book-selection",
                       "download-book-primary-action",
                       "download-book-more",
@@ -24244,7 +24230,6 @@
               "download-sort-direction",
               "download-sort-open",
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more",
@@ -24643,12 +24628,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+              "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+                "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -25285,7 +25270,6 @@
                     "download-sort-direction",
                     "download-sort-open",
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more",
@@ -25326,7 +25310,6 @@
                       "download-sort-direction",
                       "download-sort-open",
                       "download-book-row-open",
-                      "download-book-title-open",
                       "download-book-selection",
                       "download-book-primary-action",
                       "download-book-more",
@@ -25569,7 +25552,6 @@
               "download-sort-direction",
               "download-sort-open",
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more",
@@ -25968,12 +25950,12 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-              "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+              "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
             },
             "sourceInputs": [
               {
                 "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-                "sha256": "65663cf3facc54e2512f0443d769398661f495dec20abd9d9156222e10abfe29"
+                "sha256": "05aee0985f71f3b8841113b335211341252fffd3619e90d19f5c6679849d39a5"
               },
               {
                 "path": "entry/src/main/ets/features/downloads/application/SharedDownloadHost.ts",
@@ -26610,7 +26592,6 @@
                     "download-sort-direction",
                     "download-sort-open",
                     "download-book-row-open",
-                    "download-book-title-open",
                     "download-book-selection",
                     "download-book-primary-action",
                     "download-book-more",
@@ -26651,7 +26632,6 @@
                       "download-sort-direction",
                       "download-sort-open",
                       "download-book-row-open",
-                      "download-book-title-open",
                       "download-book-selection",
                       "download-book-primary-action",
                       "download-book-more",
@@ -26894,7 +26874,6 @@
               "download-sort-direction",
               "download-sort-open",
               "download-book-row-open",
-              "download-book-title-open",
               "download-book-selection",
               "download-book-primary-action",
               "download-book-more",

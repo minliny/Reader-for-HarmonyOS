@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"book-row-input-owners":{"description":"Actual download row/title/status/more intent boundaries and44vp horizontal lanes including old kind-less data","resources":[]},"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
+const definitions={"book-row-input-owners":{"description":"Installed SDK click API and default child-first assembly, scoped intent callbacks and44vp lanes including old kind-less data","resources":[]},"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
 const confluenceCases = new Set(['book-row-input-owners','list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset','book-row-density']);
 Object.assign(definitions, {
   'book-row-density': { description: '批准demo常态24/18/28/80与实际SDK行/More/状态绘制响应、状态/管理/摘要、自然增长和当前行入口', resources: [] },
@@ -582,6 +582,60 @@ if (selectedCase === 'filter-reset') {
 }
 
 if (selectedCase === 'book-row-input-owners') {
+  const { resolve } = await import('node:path');
+  const declarationPath = resolve(sdk, '../../component/common.d.ts');
+  const declarations = readFileSync(declarationPath, 'utf8');
+  const declarationTree = ts.createSourceFile(declarationPath, declarations, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const interfaces = new Map(declarationTree.statements.filter(ts.isInterfaceDeclaration).map(node => [node.name.text, node]));
+  const apiNames = name => {
+    const declaration = interfaces.get(name);
+    assert.ok(declaration, 'the installed SDK declares ' + name);
+    const own = declaration.members.filter(node => node.name).map(node => node.name.getText(declarationTree));
+    const inherited = (declaration.heritageClauses ?? []).flatMap(clause => clause.types.flatMap(type => apiNames(type.expression.getText(declarationTree))));
+    return [...new Set([...own, ...inherited])];
+  };
+  const clickApi = new Set(apiNames('ClickEvent'));
+  assert.equal(clickApi.has('stopPropagation'), false);
+  assert.ok(apiNames('TouchEvent').includes('stopPropagation'));
+  const unsupportedClickMembers = definition => {
+    const file = ts.createSourceFile('DownloadClickApi.ets', definition, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(sdk + '/lib/ets_checker.js').compilerOptions);
+    const failures = [];
+    const visit = node => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'onClick') {
+        const callback = node.arguments[0];
+        if (callback && ts.isArrowFunction(callback)) for (const parameter of callback.parameters) {
+          if (parameter.type?.getText(file) !== 'ClickEvent') continue;
+          const name = parameter.name.getText(file);
+          const check = child => {
+            if (ts.isPropertyAccessExpression(child) && ts.isIdentifier(child.expression) && child.expression.text === name && !clickApi.has(child.name.text)) failures.push(child.name.text);
+            ts.forEachChild(child, check);
+          };
+          check(callback.body);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    return failures;
+  };
+  assert.deepEqual(unsupportedClickMembers(source), []);
+  const unsupported = source.replace('.onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); })',
+    '.onClick((event: ClickEvent): void => { event.stopPropagation(); if (!secondary) this.openBook(book(), ownerGeneration); })');
+  assert.notEqual(unsupported, source);
+  assert.deepEqual(unsupportedClickMembers(unsupported), ['stopPropagation'], 'the former implementation is rejected against the installed SDK API surface');
+  const customClickArbitration = [];
+  for (const name of ['bookRow', 'statusButton', 'moreButton']) {
+    const method = page.members.find(node => node.name?.getText(tree) === name);
+    const visit = node => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+        ['gesture', 'parallelGesture', 'priorityGesture'].includes(node.expression.name.text)) customClickArbitration.push(node.expression.name.text);
+      ts.forEachChild(node, visit);
+    };
+    visit(method);
+  }
+  assert.deepEqual(customClickArbitration, [], 'the row and its child controls retain default child-first implicit Tap competition');
+  const click = Object.freeze({ x: 12, y: 12, windowX: 12, windowY: 12, timestamp: 1 });
+  assert.ok(Object.keys(click).every(name => clickApi.has(name)));
   for (const contentKind of [undefined, 'text', 'manga']) for (const managing of [false, true]) {
     const dto = { ...book, contentKind, stateLabel: '下载中' };
     const row = owner('day', { books: [dto], managing });
@@ -595,20 +649,22 @@ if (selectedCase === 'book-row-input-owners') {
     const all = records(row);
     const carrier = all.find(n => n.type === 'Stack' && n.width === 44 && n.height === 24);
     assert.ok(carrier, 'more/checkbox owns an explicit44vp horizontal lane even without a type tag');
-    const title = all.find(n => n.id === row.focusKey('book-title:' + dto.key));
-    const parent = all.find(n => n.type === 'Row' && n.padding?.top === 15 && n.onClick);
-    let stopped = 0;
-    const click = { stopPropagation: () => stopped++ };
-    title.onClick(click); assert.equal(stopped, 1);
+    const parent = all.find(n => n.id === row.focusKey('book-title:' + dto.key));
+    assert.equal(parent.type, 'Row', 'the restored book-title focus ID belongs to the single actual row entry');
+    const title = all.find(n => n.type === 'Flex' && n.layoutWeight === 1 && n.constraintSize?.minHeight === 24);
+    assert.ok(title); assert.equal(title.onClick, undefined); assert.equal(title.responseRegion, undefined);
+    // These are separate callback invocations. Native recognition of the
+    // child-first implicit Tap is an official platform rule, not simulated here.
+    parent.onClick(click);
     assert.deepEqual(intent, managing ? [['select', dto.key, true]] : ['open']);
     intent.length = 0;
     const status = all.find(n => n.id === row.focusKey('book-status:' + dto.key));
-    status.onClick(click); assert.equal(stopped, 2);
+    status.onClick(click);
     assert.deepEqual(intent, managing ? [] : ['pause']);
     intent.length = 0;
     if (!managing) {
       const more = all.find(n => n.id === row.focusKey('book-menu:' + dto.key));
-      more.onClick(click); assert.equal(stopped, 3); assert.deepEqual(intent, ['book-actions']);
+      more.onClick(click); assert.deepEqual(intent, ['book-actions']);
       assert.deepEqual([more.width, more.responseRegion.x, more.responseRegion.width], [28, -8, 44]);
       const paintOffset = (carrier.width - more.width) / 2;
       assert.equal(paintOffset + more.responseRegion.x, 0);
@@ -621,19 +677,22 @@ if (selectedCase === 'book-row-input-owners') {
     assert.equal(parent.enabled, true); assert.equal(parent.focusable, true);
     if (managing) {
       const checkbox = all.find(n => n.type === 'Checkbox');
-      assert.ok(checkbox && checkbox.onClick);
-      const before = stopped; checkbox.onClick(click); assert.equal(stopped, before + 1);
+      assert.ok(checkbox); assert.equal(checkbox.onClick, undefined, 'the native checkbox retains its own click recognizer');
       intent.length = 0; checkbox.onChange(true); assert.deepEqual(intent, [['select', dto.key, true]]);
     }
-    intent.length = 0; parent.onClick(); assert.deepEqual(intent, managing ? [['select', dto.key, true]] : ['open']);
-    intent.length = 0; row.presentationGeneration++; parent.onClick(); assert.deepEqual(intent, [], 'retired row cannot dispatch to successor');
+    intent.length = 0; parent.onClick(click); assert.deepEqual(intent, managing ? [['select', dto.key, true]] : ['open']);
+    intent.length = 0; row.presentationGeneration++; parent.onClick(click);
+    for (const button of all.filter(n => n.type === 'Button' && n.onClick)) button.onClick(click);
+    assert.deepEqual(intent, [], 'retired row and child callbacks cannot dispatch to a successor');
   }
   const secondary = owner('day', { books: [book] });
   secondary.bookRow(() => book, true);
   const readonlyRow = records(secondary).find(n => n.type === 'Row' && n.padding?.top === 15 && n.onClick);
   assert.equal(readonlyRow.accessibilityLevel, 'no'); assert.equal(readonlyRow.focusable, false);
-  assert.equal(records(secondary).find(n => n.type === 'Button').accessibilityLevel, 'no');
-  console.log('PASS download input owners6 combinations, explicit44 lane and child propagation barriers');
+  assert.equal(records(secondary).filter(n => n.type === 'Button').length, 0, 'readonly summary has no inert title button');
+  console.log(JSON.stringify({ kind: 'download-click-owner-api', result: 'PASS', combinations: 6,
+    sdkDeclaration: declarationPath, sdkSha256: createHash('sha256').update(declarations).digest('hex'),
+    evidence: 'Installed SDK declaration, default-arbitration source assembly and separately invoked owner callbacks. Native gesture arbitration OPEN.' }));
   return;
 }
 
@@ -657,12 +716,12 @@ if (selectedCase === 'book-row-density') {
         assert.equal(sourceText.constraintSize.minHeight, 18 * scale);
         assert.equal(sourceText.onClick, undefined, 'source is information within the enclosing book target');
         if (!secondary) {
-          const title = find(row, node => node.id === row.focusKey('book-title:' + dto.key), 'title target');
+          const title = find(row, node => node.type === 'Flex' && node.layoutWeight === 1 && node.constraintSize?.minHeight === 24, 'natural title paint');
           assert.equal(title.constraintSize.minHeight, 24);
-          assert.deepEqual(title.responseRegion, [
-            { x: 0, y: 0, width: '100%', height: '100%' },
-            { x: 0, y: -10, width: '100%', height: 44 },
-          ], 'natural multiline button and its minimum 44 target both remain responsive');
+          assert.equal(title.onClick, undefined);
+          const entry = find(row, node => node.id === row.focusKey('book-title:' + dto.key), 'whole-book entry');
+          assert.equal(entry.type, 'Row'); assert.equal(typeof entry.onClick, 'function');
+          assert.equal(entry.responseRegion, undefined, 'the full growing row owns its native clickable area');
         }
         const progressRow = find(row, node => node.type === 'Row' && node.margin?.top === 2, 'progress row');
         assert.equal(progressRow.constraintSize.minHeight, 28);
