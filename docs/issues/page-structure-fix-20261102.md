@@ -2488,3 +2488,6 @@ Current-session original system font has been restored: actual Settings sliders2
 
 
 2026-11-14 当前候选为源码4ca0d6af / App16f2c3829b3b，signed HAP46889b6e07e8039706c74bed3b58b1801d9ee51ae8719e7ffb7605a1030e4a20。所有开发及独立代码审修完成后，实际ArkTS编译、指定证书签名、现有远程x86_64 VM保数据更新和启动通过。选定AutoPage Quick/Full、Replace Quick/Full、Search Quick及返回Home已完成原PNG与树核对，Replace当前真实空集合读取完成，ready Tab正常。原首装动画保持原判定，历史Tab扇形物理因果继续OPEN。完整记录见[体系修复当前交付](../architecture/ui-design-full-fix-20261113.md)。正式登记da88a15f/control21、原39诊断、Source E2/E3和21visual NOT_RUN均保持，当前全动作连续闪烁、大字号/窄宽原生、全目标命中和整页接受继续开放。原书签未决核对及继续本批为0。
+
+
+2026-11-14 当前formal共壳组合补充。既有module-shell-sdk已接当前真实producer和Host提交链，第05次180提交/540轨迹/51自然高度/20metadata/20环境/20实际Back通过并获独审。生产只补LocalReadingExperience失活intent清理与Back消费语义，inactive-back-cleanup03含真实hide/open后的首次Back终点。Auto未挂载QuickBack误判、临时源与新增仅dead测试已撤回并保历史，真实build可达性继续逐项核对。支持范围正式3f5c4b9b/control21，13own递增、283unique/2470pins，refs02PASS0/register原39对象保持。App16f为本次取消补修前的已安装候选。准确边界及历史Tab图像拟合见[体系修复记录](../architecture/ui-design-full-fix-20261113.md)。

@@ -9375,10 +9375,11 @@ export struct ReadingExperience {
 
   private cancelControlNavigationIntent(): boolean {
     if (this.controlNavigationIntent === undefined) return false;
+    const consumed = this.activeControlNavigationIntent() !== undefined;
     this.controlNavigationGeneration += 1;
     this.controlMinimumGeneration += 1;
     this.controlNavigationIntent = undefined;
-    return true;
+    return consumed;
   }
 
   private onControlInputActivity(): void {

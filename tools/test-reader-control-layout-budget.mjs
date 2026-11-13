@@ -1085,177 +1085,288 @@ async function run(id) {
         return;
     }
     if (id === 'module-shell-sdk') {
+        const hostSession = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
         const directoryBudget = await import('../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts');
-        const directory = pureModuleProbe(ui('ReaderControlDirectoryMinimum.ets'), 'ReaderControlDirectoryMinimum.ets',
-            { ...deps, ...directoryBudget, readerWindowMetrics: () => metrics }, ['measureReaderDirectoryMinimum']);
         let metrics = createDefaultReaderWindowMetrics();
+        Object.assign(deps, directoryBudget, ap, st, se, rp, tt, au, {
+            readerWindowMetrics: () => metrics,
+        });
+        Object.assign(deps, pure('ReaderControlDirectoryMinimum.ets', ['measureReaderDirectoryMinimum']));
+        const composedMinimum = pure('ReaderControlMinimumMeasurement.ets', [
+            'measureReaderControlMinimum', 'measureReaderControlModuleMinimum',
+            'readerControlModuleFactsGeometryKey', 'readerControlModuleFactsDisplayEqual',
+            'readerControlModuleFactsMatch', 'readerControlModuleProfileMatches',
+            'readerControlMeasuredProfileGeometryKey',
+        ]);
+        // Use the current window facts in the original top-bar producer too.
+        const topBarProducer = pureModuleProbe(headerMeasure.getText(headerTree), 'ReadingHeaderMeasure.ets', {
+            ...deps, readerWindowMetrics: () => metrics,
+        }, ['readerReadingTopBarHeight']);
+        const directorySnapshot = { rows: [{ key: 'chapter:0' }], catalogState: 'ready', loading: false,
+            targetRow: 0, currentTitle: 'Chapter One', currentPosition: '1 / 1' };
+        const directoryFacts = { title: 'Chapter One', excerpt: '', hasRows: true, loading: false,
+            currentTitle: 'Chapter One', currentPosition: '1 / 1', bookmarkError: false,
+            message: '', action: '', catalogStatus: '', catalogAction: '',
+            readViewSnapshot: () => directorySnapshot };
+        const appearanceSnapshot = { fontOrder: ['system', 'serif'] };
+        const searchState = { kind: 'results', results: [{ key: 'result:0' }] };
+        const ttsState = { status: 'idle', totalSlices: 0, errorMessage: '' };
+        const replaceState = { rules: [{ name: '规则一' }, { name: '规则二' }, { name: '规则三' }] };
+        const settingsFacts = pure('ReaderControlSettingsMinimum.ets',
+            ['readerControlSettingsMinimumFacts']).readerControlSettingsMinimumFacts();
+        const moduleFacts = new Map([
+            ['home', { module: 'home', home: { chapterTitle: 'Chapter One', totalChapters: 1 } }],
+            ['directory', { module: 'directory', directory: { ...directoryFacts, tab: 'directory' } }],
+            ['bookmarks', { module: 'directory', directory: { ...directoryFacts, tab: 'bookmarks' } }],
+            ['appearance', { module: 'appearance', appearance: { ...appInput,
+                readViewSnapshot: () => appearanceSnapshot,
+                readViewFontOrder: () => appearanceSnapshot.fontOrder } }],
+            ['settings', { module: 'settings', settings: settingsFacts }],
+            ['search', { module: 'search', search: { ...searchFacts,
+                readViewState: () => searchState } }],
+            ['tts', { module: 'tts', tts: { ...ttsFacts, readViewState: () => ttsState } }],
+            ['autoPage', { module: 'autoPage', autoPage: { status: '未开始', timerSummary: '15:00' } }],
+            ['replace', { module: 'replace', replace: { statusText: '', recoveryLabel: '', name: '规则',
+                pattern: 'a → b', meta: '正文', temporaryTitle: '', editorOpen: false, layerOpen: false,
+                ruleCount: replaceState.rules.length, statusVisible: false, readViewState: () => replaceState } }],
+        ]);
         const frames = [];
-        const panel = native('ReaderControlPanel.ets', ['measureHomeForm', 'measureControlMinimum', 'minimumModule',
-            'publishMinimumMeasurer', 'bindModuleMinimum', 'headerInter', 'contentTitle', 'minimumInputReady', 'contentInputEnabled'], { ...geo, ...minimum, DEBUG: false });
-        const current = native('LocalReadingExperience.ets', ['controlMinimumIdentity', 'controlMinimumCurrent',
-            'controlMinimumReceiptCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
-            ...geo, ...receipt, ...session, ReaderWindowCoordinator: { metrics: () => metrics },
+        const current = native('LocalReadingExperience.ets', [
+            'setControlPage', 'requestExit', 'requestControlSession', 'cancelControlNavigationIntent',
+            'onControlInputActivity', 'controlMinimumIdentity', 'controlMinimumCurrent',
+            'controlMinimumReceiptCurrent', 'bindControlMinimum', 'scheduleControlMinimum',
+            'admitControlMinimum', 'adoptControlDisplayFacts', 'controlLayoutGeometryKey', 'controlLayout',
+        ], { ...geo, ...receipt, ...session, ...hostSession, ...composedMinimum,
+            ReaderWindowCoordinator: { metrics: () => metrics },
             ReaderUIFrameCallback: class { constructor(fn) { this.onFrame = fn; } },
         });
+        const panel = native('ReaderControlPanel.ets', [
+            'measureHomeForm', 'measureControlMinimum', 'minimumModule', 'publishMinimumMeasurer',
+            'minimumProfileReader', 'minimumInputReady', 'contentInputEnabled',
+        ], { ...geo, ...composedMinimum, ...topBarProducer, DEBUG: false });
+        const timing = { showDurationMs: 320, dismissDurationMs: 200,
+            morphDurationMs: 260, navigateDurationMs: 0 };
         Object.assign(current, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
             appForeground: true, windowChromeActive: true, windowChromeOverlayActive: false,
             interactionBlocked: false, controlObscured: false, controlOpenRevision: 1,
-            controlModuleVisitRevision: 0, controlMinimumRevision: 0, controlMinimumGeneration: 0,
-            controlMinimumCandidates: [], controlMinimumReady: false,
-            controlSession: { location: { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' } },
-            isSessionActive: token => token === 1,
-            effectiveViewportWidth() { return this.width; }, effectiveViewportHeight() { return this.height; },
-            pageTurnInputPhase: () => 'idle', invalidateControlBackdrop() {},
-            getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
+            isSessionActive: token => token === 1, isControlInputEnabled: () => true,
+            controlTiming: () => timing, pageTurnInputPhase: () => 'idle',
+            invalidateControlBackdrop() {}, prepareControlPage() {},
+            controlPage: () => hostSession.readerControlHostPage(current.controlSession),
+            readerRecoveryRequestCurrent: () => false, controlVisible: () => true,
+            effectiveViewportWidth() { return this.width; },
+            effectiveViewportHeight() { return this.height; },
+            getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }),
         });
-        Object.assign(panel, { runtimeMounted: true, minimumFontsReady: true, minimumProfiles: new Map(),
-            minimumProfileTicket: '', minimumIdentity: '', minimumKey: '', minimumMetricsRevision: 0,
-            chapterTitle: 'Chapter One', totalChapters: 1, minimumReady: false, contentMotionProgress: 0,
-            inputEnabled: true, controlObscured: false, visualVisibilityProgress: 1, visualTransitionKind: '',
-            visualHeldPointerId: -1, hasCurrentTemporaryInput: () => false,
+        Object.assign(panel, { runtimeMounted: true, minimumFontsReady: true,
+            preparedMinimumRequired: true, chapterTitle: 'Chapter One', totalChapters: 1,
+            inputEnabled: true, controlObscured: false, visualVisibilityProgress: 1,
+            visualTransitionKind: '', visualHeldPointerId: -1, temporaryLayerActive: false,
+            hasCurrentTemporaryInput: () => false, contentMotionProgress: 0,
+            getUIContext: () => context,
+            contentLocation: () => panel.presentationReceipt?.location ?? session.readerControlContentLocation(current.controlSession),
             minimumReceiptCurrent: key => current.controlMinimumReceiptCurrent(key),
-            getUIContext: () => context, contentLocation: () => session.readerControlContentLocation(current.controlSession),
-            onMinimumMeasurerReady: (identity, provider) => current.bindControlMinimum(identity, provider),
+            defaultMinimumFacts: () => {
+                const location = current.controlMinimumRequestLocation();
+                const module = location.level === 'secondary' ? location.module : 'home';
+                return moduleFacts.get(module === 'directory' ? location.directoryTab : module);
+            },
+            onMinimumMeasurerReady: (identity, provider, reader, facts, signature) =>
+                current.bindControlMinimum(identity, provider, reader, facts, signature),
         });
-        const directoryFacts = { tab: 'directory', title: 'Chapter One', excerpt: '', currentTitle: 'Chapter One',
-            currentPosition: '1 / 1', hasRows: true, loading: false, message: '', action: '', bookmarkError: false,
-            catalogStatus: '', catalogAction: '' };
-        const settingsOwner = native('ReaderControlSettingsContent.ets', ['measureMinimum', 'groupLabel', 'groupOptions', 'optionLabel'],
-            { ...st, ...selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url),
-                ['SETTINGS_DIRECTION_OPTIONS', 'SETTINGS_PAGE_OPTIONS', 'SETTINGS_TIMEOUT_OPTIONS'], deps) });
-        Object.assign(settingsOwner, { getUIContext: () => context, minimumProfiles: new Map(), minimumKey: '', minimumCacheTicket: '' });
-        const replaceOwner = native('ReaderControlReplaceContent.ets', ['measureMinimum'], { ...rp });
-        Object.assign(replaceOwner, { getUIContext: () => context, minimumProfiles: new Map(), minimumKey: '', minimumCacheTicket: '',
-            state: { rules: [{ name: '替换', pattern: '原文', replacement: '替换' }], recoveryLabel: '', errorMessage: '' },
-            statusText: () => '', scopeSummary: () => '正文', temporaryTitle: () => '替换规则', layer: '', localError: '', fullContentHeight: 666 });
-        const delegateFor = (module, tab) => (w, key) => {
-            if (module === 'directory') {
-                const profile = directory.measureReaderDirectoryMinimum(context, w, { ...directoryFacts, tab });
-                return { module, quick: profile.quick.minimum, full: profile.full.minimum };
+        const deliverHostProps = () => Object.assign(panel, {
+            controlSession: current.controlSession,
+            minimumIdentity: current.controlMinimumIdentity(),
+            minimumCommittedIdentity: current.controlMinimumCommittedIdentity(),
+            minimumOwnerKey: current.controlMinimumOwnerKey(),
+            minimumEnvironmentKey: current.controlMinimumEnvironmentKey(),
+            minimumRequestLocation: current.controlMinimumRequestLocation(),
+            minimumMetricsRevision: metrics.revision,
+            presentationReceipt: current.controlPresentationReceipt,
+            minimumReady: current.controlMinimumReady,
+            layout: current.controlLayout(metrics.revision),
+        });
+        const flush = () => {
+            let count = 0;
+            while (frames.length) {
+                assert.ok(++count < 20, 'bounded current production frame queue');
+                frames.shift().onFrame(0);
             }
-            if (module === 'appearance') return ap.measureReaderControlAppearanceMinimum(context, w, appInput).minimum;
-            if (module === 'tts') return tt.measureReaderTtsMinimum(context, w, ttsFacts).minimum;
-            if (module === 'autoPage') return au.measureReaderControlAutoPageMinimum(context, w, '未开始', '未设置').minimum;
-            if (module === 'search') {
-                const profile = se.measureReaderSearchMinimum(context, w, searchFacts);
-                return { module, quick: profile.quick.minimum, full: profile.full.minimum };
-            }
-            if (module === 'settings') return settingsOwner.measureMinimum(w, key);
-            return replaceOwner.measureMinimum(w, key);
+            current.latestControlVisualSession = session.copyReaderControlSessionState(current.controlSession);
+            deliverHostProps();
         };
         const outer = layout => [layout.fullPanelWidth, layout.quickPanelHeight, layout.fullPanelHeight,
             layout.fullPanelTop, layout.dockBottomGap, layout.topBarTop, layout.topBarHeight];
-        const visit = (module, tab = 'directory', override) => {
-            const before = current.controlLayout(metrics.revision);
+        const pages = { directory: 'moduleDirectory', tts: 'moduleTts', appearance: 'moduleAppearance',
+            settings: 'moduleSettings', search: 'quickSearch', replace: 'quickReplace',
+            autoPage: 'quickAutoPage', home: 'home' };
+        const visit = (module, tab = 'directory') => {
+            const previous = current.controlPresentationReceipt;
+            const previousSession = session.copyReaderControlSessionState(current.controlSession);
             const previousProvider = current.controlMinimumProvider;
-            current.controlModuleVisitRevision++;
-            current.controlSession.location = { level: module === 'home' ? 'home' : 'secondary',
-                module: module === 'home' ? 'directory' : module, directoryTab: tab, form: 'quick' };
-            current.controlLayoutCache = undefined;
-            const pending = current.controlLayout(metrics.revision);
-            if (before.minimumStatus !== 'legacy') assert.deepEqual(outer(pending), outer(before), 'pending successor preserves the already measured shell');
-            panel.layout = pending;
-            panel.minimumIdentity = current.controlMinimumIdentity();
-            panel.minimumMetricsRevision = metrics.revision;
-            if (module === 'home') panel.publishMinimumMeasurer();
-            else panel.bindModuleMinimum(module, panel.minimumIdentity, override ?? delegateFor(module, tab));
-            if (previousProvider) assert.equal(previousProvider(geo.readerControlCandidateWidths(current.width, current.height,
-                current.expandedLayout, metrics)[0], 'retired|1'), undefined, 'old module provider cannot measure the successor');
-            assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), false, 'new visit fences the old key synchronously');
-            while (frames.length) frames.shift().onFrame(0);
-            const layout = current.controlLayout(metrics.revision);
-            assert.notEqual(layout.minimumStatus, 'legacy', JSON.stringify({ module, tab, candidates: current.controlMinimumCandidates, identity: panel.minimumIdentity, measuredHome: panel.measureHomeForm(263) }));
-            assert.ok(current.controlMinimumCandidates.every(candidate => candidate.sharedShell?.minimum.module === 'home'));
-            assert.ok(layout.minimumKey.startsWith(panel.minimumIdentity + '|'));
-            assert.equal(current.controlMinimumReceiptCurrent(layout.minimumKey), true);
-            panel.minimumKey = layout.minimumKey;
-            panel.minimumReady = current.controlMinimumReady;
-            panel.layout = layout;
-            assert.equal(panel.contentInputEnabled(), true, 'current content remains reachable through its viewport even when natural fit is false');
-            return layout;
+            if (module === 'directory' && tab === 'bookmarks') {
+                current.requestControlSession(session.setReaderControlDirectoryTab(current.controlSession, tab));
+            } else current.setControlPage(pages[module]);
+            assert.deepEqual(current.controlSession, previousSession, 'pending semantic owner stays committed');
+            assert.equal(current.controlPresentationReceipt, previous, 'pending paint/profile pair stays committed');
+            deliverHostProps();
+            panel.publishMinimumMeasurer();
+            if (previousProvider !== undefined && previous !== undefined &&
+                current.controlMinimumIdentity() !== previous.identity) {
+                const candidateWidth = geo.readerControlCandidateWidths(current.width, current.height,
+                    current.expandedLayout, metrics)[0];
+                assert.equal(previousProvider(candidateWidth, 'retired|1'), undefined,
+                    'old actual Panel provider cannot measure the requested successor');
+                assert.equal(current.controlMinimumReceiptCurrent(previous.key), true,
+                    'pending target retains the committed input receipt');
+            }
+            assert.equal(current.controlPresentationReceipt, previous, 'real provider publication does not commit inline');
+            flush();
+            const next = current.controlPresentationReceipt;
+            assert.ok(next, module + ' has a complete real measured receipt');
+            assert.equal(next.profile.module, module);
+            assert.equal(next.identity, current.controlMinimumCommittedIdentity());
+            assert.equal(next.key, next.layout.minimumKey);
+            assert.equal(next.profile.identity, next.identity);
+            if (module !== 'home') {
+                assert.equal(next.prepared.key, next.key);
+                assert.equal(next.prepared.moduleData, next.profile.moduleData);
+                assert.equal(composedMinimum.readerControlModuleProfileMatches(next.prepared.moduleData, module), true);
+            }
+            assert.equal(current.controlMinimumReceiptCurrent(next.key), true);
+            return next.layout;
         };
-        let compositions = 0, oldPathRejected = false, oldRailRejected = false, fontReflowObserved = false, previousFontHeight;
-        for (const [width, height] of [[366, 844], [320, 640], [568, 320], [760, 960]]) {
-            previousFontHeight = undefined;
+        let compositions = 0, samples = 0, oldChooserRejected = false, immediateCommitRejected = false;
+        let metadataUpdates = 0, environmentUpdates = 0, backCancellations = 0, environmentReflows = 0;
+        const naturalQuickHeights = new Set();
+        const viewports = [[366, 844, 1], [320, 640, 1], [568, 320, 1], [760, 960, 1],
+            [1280 / 3.5, 2832 / 3.5, 3.5]];
+        for (const [width, height, density] of viewports) {
             for (const factor of [1, 1.3, 1.6, 2]) {
                 scale = factor;
                 metrics = { ...createDefaultReaderWindowMetrics(), revision: metrics.revision + 1,
-                    systemFontScale: factor, windowRect: { left: 0, top: 0, width, height } };
-                Object.assign(current, { width, height, expandedLayout: width >= 600, controlLayoutCache: undefined });
+                    densityPixels: density, systemFontScale: factor,
+                    windowRect: { left: 0, top: 0, width, height } };
+                frames.length = 0;
+                Object.assign(current, { width, height, expandedLayout: width >= 600,
+                    controlModuleVisitRevision: 1, controlMinimumRevision: 0, controlMinimumGeneration: 0,
+                    controlNavigationGeneration: 0, observedControlModule: 'home',
+                    controlMinimumCandidates: [], controlMinimumReady: false, controlPresentationReceipt: undefined,
+                    controlNavigationIntent: undefined, controlLayoutCache: undefined,
+                    controlSession: session.openReaderControlSession(session.createReaderControlSessionState(), 0),
+                });
+                current.latestControlVisualSession = session.copyReaderControlSessionState(current.controlSession);
+                Object.assign(panel, { minimumProfiles: new Map(), minimumProfileTicket: '',
+                    minimumFactsSignature: '', minimumOwnerFactsSignature: '', minimumOwnerFacts: undefined,
+                    localMinimumFacts: undefined, publishedMinimumFacts: undefined });
                 const home = visit('home');
-                if (previousFontHeight !== undefined && home.quickPanelHeight !== previousFontHeight) fontReflowObserved = true;
-                previousFontHeight = home.quickPanelHeight;
-                for (const [module, tab] of [['directory', 'directory'], ['directory', 'bookmarks'], ['tts'], ['appearance'],
-                    ['settings'], ['search'], ['replace'], ['autoPage'], ['home']]) {
+                for (const [module, tab] of [['directory', 'directory'], ['directory', 'bookmarks'], ['tts'],
+                    ['appearance'], ['settings'], ['search'], ['replace'], ['autoPage'], ['home']]) {
                     const layout = visit(module, tab);
                     assert.deepEqual(outer(layout), outer(home), `${width}x${height}@${factor} ${module}/${tab} retains shared W/Q/F/anchors`);
                     const selected = current.controlMinimumCandidates.find(candidate => candidate.key === layout.minimumKey);
-                    assert.equal(selected.minimum.module, module);
-                    assert.equal(layout.contentBudget.navigationHeightVp, selected.chrome.navigationHeightVp);
+                    assert.ok(selected.sharedShell);
+                    naturalQuickHeights.add(selected.minimum.quick.heightVp);
                     for (const progress of [0, .37, 1]) {
                         const sample = value => motion.sampleReaderControlMotionComposition({ visibilityProgress: 1, expansionProgress: progress },
-                            motion.readerControlMotionBounds(value.fullPanelWidth, value.fullPanelHeight, value.dockBottomGap,
-                                value.quickPanelHeight, value.contentBudget));
-                        assert.deepEqual(sample(layout).shell, sample(home).shell, 'module selection does not modify the finger progress or shared shell sample');
-                        assert.deepEqual(sample(layout).brightness, sample(home).brightness, 'the shared rail keeps its measured height and motion across module content budgets');
-                        if (module === 'directory' && selected.chrome.navigationHeightVp === 0 && progress === 0) {
-                            const oldBudget = { ...layout.contentBudget };
-                            delete oldBudget.brightnessContentHeightVp;
-                            assert.notEqual(sample({ ...layout, contentBudget: oldBudget }).brightness.height,
-                                sample(home).brightness.height, 'old shared rail borrowed the enlarged secondary content viewport');
-                            oldRailRejected = true;
-                        }
+                            motion.readerControlMotionBounds(value.fullPanelWidth, value.fullPanelHeight,
+                                value.dockBottomGap, value.quickPanelHeight, value.contentBudget));
+                        assert.deepEqual(sample(layout).shell, sample(home).shell, 'actual measured module commit retains common shell trajectory');
+                        assert.deepEqual(sample(layout).brightness, sample(home).brightness, 'actual module chrome cannot resize the shared brightness rail');
+                        samples++;
                     }
-                    if (module === 'directory' && tab === 'directory' && factor === 1 && width === 366) {
+                    if (!oldChooserRejected && module === 'directory' && width === 366 && factor === 1) {
                         const legacy = geo.resolveReaderControlLayout(width, height, false, metrics, 0,
                             current.controlMinimumCandidates.map(({ sharedShell, ...candidate }) => candidate));
-                        assert.notDeepEqual(outer(legacy), outer(home), 'old per-module chooser reproduces the settled Directory shell change');
-                        oldPathRejected = true;
+                        assert.notDeepEqual(outer(legacy), outer(home), 'old active-module chooser reproduces shell movement with actual current producer');
+                        oldChooserRejected = true;
                     }
                     compositions++;
                 }
-                const unfit = visit('directory', 'directory', () => ({ module: 'directory',
-                    quick: { heightVp: 5000, minWidthVp: 5000, fits: false },
-                    full: { heightVp: 5000, minWidthVp: 5000, fits: false } }));
-                assert.deepEqual(outer(unfit), outer(home), 'natural content overflow does not resize the common shell');
-                assert.equal(unfit.quickMinimumFits, false);
-                assert.equal(unfit.fullMinimumFits, false);
-                assert.ok(unfit.contentBudget.quickContentHeightVp >= 44);
-                const malformed = current.controlMinimumCandidates.map(candidate => ({ ...candidate,
-                    sharedShell: { ...candidate.sharedShell, chrome: { ...candidate.sharedShell.chrome, quickReserveVp: NaN } } }));
-                const refused = geo.resolveReaderControlLayout(width, height, width >= 600, metrics, 0, malformed);
-                assert.equal(refused.minimumStatus, 'legacy', 'malformed shared basis never falls back to active-module sizing');
-                assert.equal(current.controlMinimumReceiptCurrent(refused.minimumKey), false);
+                // Same geometry, new business snapshot follows the actual metadata fast path.
+                visit('directory');
+                const before = current.controlPresentationReceipt;
+                const facts = moduleFacts.get('directory');
+                const snapshot = facts.directory.readViewSnapshot();
+                const nextSnapshot = { ...snapshot, rows: snapshot.rows.slice() };
+                moduleFacts.set('directory', { ...facts, directory: { ...facts.directory,
+                    readViewSnapshot: () => nextSnapshot } });
+                const measuredBefore = measurementCalls;
+                deliverHostProps(); panel.publishMinimumMeasurer(); flush();
+                assert.equal(current.controlPresentationReceipt.key, before.key);
+                assert.equal(current.controlPresentationReceipt.profile, before.profile);
+                assert.equal(current.controlPresentationReceipt.layout, before.layout);
+                assert.equal(measurementCalls, measuredBefore, 'same geometry metadata does not invoke real text producers again');
+                metadataUpdates++;
+                // The real Back entry cancels a queued target before its frame can commit.
+                current.setControlPage('moduleTts'); deliverHostProps(); panel.publishMinimumMeasurer();
+                assert.ok(current.controlNavigationIntent);
+                const cancelled = current.controlPresentationReceipt;
+                current.requestExit(); flush();
+                assert.equal(current.controlPresentationReceipt, cancelled);
+                assert.equal(current.controlNavigationIntent, undefined);
+                backCancellations++;
+                // Real environment changes may reflow while semantic ownership stays current.
+                metrics = { ...metrics, revision: metrics.revision + 1, systemFontScale: factor === 2 ? 1 : 2 };
+                scale = metrics.systemFontScale;
+                deliverHostProps(); panel.publishMinimumMeasurer(); flush();
+                assert.equal(current.controlPresentationReceipt.environmentKey, current.controlMinimumEnvironmentKey());
+                assert.equal(current.controlPresentationReceipt.location.module, 'directory');
+                assert.notEqual(current.controlPresentationReceipt.key, cancelled.key);
+                if (JSON.stringify(outer(current.controlPresentationReceipt.layout)) !== JSON.stringify(outer(cancelled.layout)))
+                    environmentReflows++;
+                environmentUpdates++;
+                const admitted = current.controlPresentationReceipt.layout;
+                const candidates = current.controlMinimumCandidates;
+                const overflow = geo.resolveReaderControlLayout(width, height, current.expandedLayout, metrics, 0,
+                    candidates.map(candidate => ({ ...candidate, minimum: { module: candidate.minimum.module,
+                        quick: { heightVp: 5000, minWidthVp: 5000, fits: false },
+                        full: { heightVp: 5000, minWidthVp: 5000, fits: false } } })));
+                assert.deepEqual(outer(overflow), outer(admitted), 'unfit content stays inside the same paid shell');
+                assert.equal(overflow.quickMinimumFits, false);
+                assert.equal(overflow.fullMinimumFits, false);
+                const malformed = geo.resolveReaderControlLayout(width, height, current.expandedLayout, metrics, 0,
+                    candidates.map(candidate => ({ ...candidate, sharedShell: { ...candidate.sharedShell,
+                        chrome: { ...candidate.sharedShell.chrome, quickReserveVp: NaN } } })));
+                assert.equal(malformed.minimumStatus, 'legacy', 'malformed shared basis is rejected');
+                assert.equal(current.controlMinimumReceiptCurrent(malformed.minimumKey), false);
+                if (!immediateCommitRejected) {
+                    const request = current.requestControlSession;
+                    const committedSession = current.controlSession;
+                    current.requestControlSession = next => { current.controlSession = next; };
+                    assert.throws(() => visit('tts'), /pending semantic owner stays committed/,
+                        'former semantic-first navigation fails the composed pending assertion');
+                    current.requestControlSession = request;
+                    current.controlSession = committedSession;
+                    current.latestControlVisualSession = session.copyReaderControlSessionState(committedSession);
+                    immediateCommitRejected = true;
+                }
             }
         }
-        const sharedHeaderLabels = [];
-        const headerContext = { ...context, getMeasureUtils: () => ({ ...context.getMeasureUtils(),
-            measureTextSize(options) {
-                sharedHeaderLabels.push(options.textContent);
-                return context.getMeasureUtils().measureTextSize(options);
-            },
-        }) };
-        minimum.measureReaderControlMinimum({ context: headerContext, headerInter: false, title: '目录',
-            identity: 'header-vocabulary', metricsRevision: metrics.revision, topBarHeightVp: 54,
-            measureHomeForm: width => panel.measureHomeForm(width) }, 'home',
-            geo.readerControlCandidateWidths(366, 844, false, metrics)[0], 'header-vocabulary|1');
-        for (const label of ['目录', '界面', '朗读', '设置', '内容搜索', '自动翻页', '替换规则管理', '完成'])
-            assert.ok(sharedHeaderLabels.includes(label), `shared shell measures actual header vocabulary ${label}`);
-        assert.equal(oldPathRejected, true);
-        assert.equal(oldRailRejected, true);
-        assert.equal(fontReflowObserved, true, 'real font/window metrics may reflow the common shell');
-        const old = current.controlMinimumProvider;
-        current.bindControlMinimum(current.controlMinimumIdentity(), undefined);
+        const provider = current.controlMinimumProvider;
+        const profileReader = current.controlMinimumProfileReader;
+        const facts = current.controlMinimumProviderFacts;
+        const factsKey = current.controlMinimumProviderFactsKey;
+        const identity = current.controlMinimumIdentity();
+        current.bindControlMinimum(identity, undefined);
         const retiredClear = frames.shift();
-        current.bindControlMinimum(current.controlMinimumIdentity(), old);
+        current.bindControlMinimum(identity, provider, profileReader, facts, factsKey);
         const revision = current.controlMinimumRevision;
         retiredClear.onFrame(0);
-        assert.equal(current.controlMinimumRevision, revision);
-        frames.shift().onFrame(0);
+        assert.equal(current.controlMinimumRevision, revision, 'retired provider clear cannot invalidate the new binding');
+        flush();
         assert.equal(current.controlMinimumReady, true);
-        console.log(JSON.stringify({ kind: 'reader-common-module-shell', compositions, modules: 8,
-            directoryTabs: 2, fontScales: [1, 1.3, 1.6, 2], viewports: [[366, 844], [320, 640], [568, 320], [760, 960]],
-            pendingAndStaleReceipt: 'PASS', naturalContentOverflow: 'RETAINED_FALSE_FITS', nativeRaster: 'NOT_RUN' }));
+        assert.ok(environmentReflows > 0, 'real environment changes can reflow the common shell');
+        assert.ok(naturalQuickHeights.size > 7, 'real module measurers replace the uniform190 lifecycle fixture');
+        assert.equal(oldChooserRejected, true);
+        assert.equal(immediateCommitRejected, true);
+        console.log(JSON.stringify({ kind: 'reader-current-atomic-module-shell', compositions, samples,
+            modules: 8, directoryTabs: 2, viewports, fontScales: [1, 1.3, 1.6, 2],
+            metadataUpdates, environmentUpdates, environmentReflows, backCancellations,
+            distinctNaturalQuickHeights: naturalQuickHeights.size,
+            pendingOwnerAndProfile: 'PAIRED_UNTIL_FRAME_COMMIT',
+            oldActiveModuleChooser: 'REJECTED', oldSemanticFirstNavigation: 'REJECTED',
+            boundary: 'Actual current Host/Panel producer and commit methods with pure production module measurements. Readonly business facts and text metrics are finite ports. Prop scheduler, native raster, glyphs and continuous device frames are outside this case.' }));
         return;
     }
     if (id === 'admission-sdk') {

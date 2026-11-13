@@ -211,7 +211,7 @@ producer和profile显式区分可见paint、内容slot、文字测量、原生re
 
 Full外壳恢复原736优选值，由实际安全区和视口截限。844高、39状态栏、28手势区得到705上限。原先额外的80%/87%硬比例及模块最小预算对整壳的干预已移除。各模块的内容高度仍由自身事实和自然流决定。
 
-准确入口 `authored-allocation-sdk` 最终22记录通过。原稿端点实际读取冻结fixture，覆盖七模块默认宏观几何、84个producer profile、实际目录NavigationList各lane及锚点、共享消费者和131个受影响Builder与10个root build的SDK前端编译。测量采用有限明确端口，实际系统字号、字形和像素另行验收。冻结原稿未改写。
+准确入口 `authored-allocation-sdk` 最终22记录通过。原稿端点实际读取冻结fixture，覆盖七模块默认宏观几何、84个producer profile、实际目录NavigationList各lane及锚点、共享消费者和131个受影响Builder与10个root build的SDK前端编译。该编译枚举包含保留的私有Builder，实际build可达性沿后继AST审计登记。测量采用有限明确端口，实际系统字号、字形和像素另行验收。冻结原稿未改写。
 
 ### 单次呈现交付与保留实例
 
@@ -417,3 +417,21 @@ AutoPage Quick图出现两条近重合轮廓。真实历史1234772ae在2026-09-1
 
 
 当前六个表面端点已获Secondary独审9cfc96ca接受。18份原始layout/PNG/JPEG与结果哈希一致，八份相关生产源与候选snapshot一致。五个私有端点的四公共paint actor均为opacity0，Appearance Full的fill与上层stroke均为opacity1且同矩形，真实层次保持fill→content→stroke。46个采到的可见Button、Slider及TextInput的可见bounds均位于内容host内，Scroll裁切后的bounds与原始extent分别保存。两个主题Text在259×98px父Button内完整包含，当前原PNG圆角与文字正常。该六端点结论保留稳定帧范围，所有原生中间态及完整交互继续开放。三名独审均已停止写入，设备会话释放。之后仅提交文档记录，生产包字节沿当前16f复用。
+
+
+## 当前formal共壳组合与失活导航取消补修
+
+2026-11-14，完成审计确认旧module-shell-sdk仍走直接session赋值及legacy minimum delegate，新生命周期十一叶使用有限190高度，真实七模块producer则由另一个准确叶覆盖。三者各自的历史结果保留，旧证明组合宣称撤回。当前同一module-shell-sdk叶已串起真实Panel.publishMinimumMeasurer、Home与七个纯模块测量、Host.setControlPage/request/bind/frame/admit、正式profileReader/facts及完整receipt。
+
+第05次准确运行通过180次主序列提交、540个共壳和亮度轨迹样本、51种真实自然高度、20次同几何metadata零重测、20次真实环境重排与20次requestExit取消。五个窗口组合含当前365.714×809.143vp、density3.5，四字号为1/1.3/1.6/2。旧active-module chooser和semantic-first导航负例均被拒，失效provider、非法shared basis与真实内容不适配保持准确处置。readonly业务事实、文字metrics和frame队列为显式有限端口，原生字形及连续帧另有自己的证据。Primary db14fcbc独审接受。本轮01的session引用相同过约束已纠正为语义副本，首次失败原记录保留。
+
+实际共享调用链另发现失活intent仍因对象存在而消费Back。pending经外侧或程序关闭后，旧对象可在新opening失活，requestExit清理时原先提前返回。当前cancelControlNavigationIntent仍退休旧generation，仅在activeControlNavigationIntent有效时返回已消费。准确inactive-back-cleanup03走真实hide、advance、open、requestExit，首Back目标为hidden且exitCalls为0，涵盖七类owner失配、九个旧frame、无对象及旧无条件true负例。该生产差异仅LocalReadingExperience取消语义三行。
+
+导航审计最初还把AutoPage.quickBack列为当前旧回调缺陷。Root追build→normalContent/launchSourceContent确认该私有Builder未挂载，新增SDK叶直接调用了生产UI不可达方法。该live入口结论及对应独审范围已明确撤回。临时Auto guard/helper按before字节精确恢复，仅为该误判新增的测试归档为不可执行历史源，既有测试保留。原4ae报告、13c独审、第一次正式a7绑定及全部PASS日志各自冻结，未通过添加UI入口改变事实。后继依据从真实build接线重新审查。
+
+最终支持范围正式register为3f5c4b9b，control21原字节保持。13项own revision各增长一次，刷新22个既有pin，新增17槽，包括13个cancel准确测试绑定与四个current-shell既有测试的遗漏绑定。283唯一输入、2470pin。refs02通过且零诊断，register02保留原39项完整对象，全部typed facts、knownGap、层、不变量及21visual结果保持。第一次preview手数Auto9与实际8的错误及首次正式支持链撤回均保留。当前App16f早于这一个取消语义补修，后继产物和原生各自登记。
+
+Tab历史材料离线审计已检查四证据根1083份文本记录的十个旧PID/App命中。window79-inspector实为目录态，旧1498字节hilog属于运行约1198秒后回架，完整RS均属正常态。异常四角像素可拟合约203.391px圆弧，最大径向残差约0.874px，该值仅为图像拟合。196×116/118vp的反事实输入可以产生58/59vp radius，历史没有这些Area/字号回执。SDK Area为vp，当前半径链未发现重复density转换或Row属性逆序。普通单层ambient shadow与异常精确描边色不符，坏态实际半径/inner path/draw分支仍缺失。未据图像拟合修改生产半径。完整结果为tab-render-root-cause-20261113/history-evidence-audit-20261114/results.json。
+
+
+真实build可达性审计已封存并停止写入。所选10组件144个Builder中，142个有build静态装配链，一个为BuilderParam默认，Auto.quickBack为唯一无生产引用方法。另核四个实际宿主、四个Directory Surface构造点、两个TTS配置构造点及必要插槽桥，12组当前回归逐项映射，没有发现第二个同类live入口误判。SourceOnly只读分支、ForEach条件、popup/content-cover、虚拟无障碍函数值和BuilderParam动态限制分别保存，静态装配链不等同于当前每一条件分支实际显示。结果9196a839见builder-reachability-audit-20261114/results.json。支持范围formal02终核9f78a7cd已接受3f5c4b9b及当前三输入，所有开发、正式绑定及独立审修现已冻结。
