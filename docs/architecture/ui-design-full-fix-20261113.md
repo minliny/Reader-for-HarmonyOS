@@ -170,3 +170,8 @@ opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416`
 本次remote Figma MCP读取原节点返回403 Token expired，local MCP端点可用但资源读取被拒。实际桌面page07同节点显示当前App7fc3af9a衍生内容且处于离线重连，保留实施参照。设计核对使用冻结原始MakeV17、2026-09-05/06原稿夹具及用户确认执行文档的后继修订，未声称新取得在线独立原稿。
 
 逐元素清单、初次失败、最终准确日志与独审位于 `.reader-artifacts/ui-full-fix-20261113/`。本问题入口、旧帧对比、Root复核和原生最小计划位于 `.reader-artifacts/control-module-height-20261113/`。亮度辅助动作的1×1虚拟节点只提供语义投影，物理目标仍沿既有44轨道，读屏与实际焦点继续开放。旧书签原记录本轮核对与继续次数为0。
+
+
+### 控制栏候选首次编译的导入缺口
+
+冻结提交0b2de1c5的首次实际ArkTS编译失败，替换规则Quick自然流两处readerControlUnit缺少真实import。定向SDK probe注入geometry namespace，未检查这个生产导入缺口。失败发生在包发布前，Appf7c57fa0d30a没有成为安装候选，VM仍为旧App18805b。本轮保留失败日志并补实际导入与源码引用核对，原方法级准确回归继续按未变方法复用。新候选实际编译及原生结果另行追加。

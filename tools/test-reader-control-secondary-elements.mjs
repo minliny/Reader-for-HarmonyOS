@@ -11,6 +11,7 @@ import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 const definitions = {
+  'production-imports': { description: 'Actual new secondary UI external identifiers have explicit production imports and resolvable exports, without injected probe namespaces.', resources: [] },
   'search-back-admission': { description: 'Actual retained Search QuickBack Button rejects pre-flush retired input, Full and unmounted callbacks.', resources: [] },
   'font-cell-semantics': { description: 'Actual retained Appearance font-cell Stack exposes custom button role, selected state and current focusability without replacing drag/click ownership.', resources: [] },
   'auto-timer-admission': { description: 'Actual retained timer-wheel native Button rechecks the current AutoPage Full owner and current timer bounds before dispatch.', resources: [] },
@@ -33,6 +34,37 @@ if (selected.length) {
   const deps = { ScrollSource: { SCROLLER: 'scroller' }, ...readerTypographyRoles, ...readerFoundationTokens, ...actor, ...geometry, ...morph, ...searchGeometry, readerAppColor };
   const nodes = (owner, type) => [...owner.nodes.values()].filter(node => node.type === type);
   for (const id of selected) {
+    if (id === 'production-imports') {
+      const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+      const { resolve, dirname } = await import('node:path');
+      const { fileURLToPath } = await import('node:url');
+      const compiler = installedEtsCompiler(), { ts, options } = compiler;
+      const imports = [
+        ['ReaderControlReplaceContent.ets', 'readerControlUnit', './ReaderControlActorGeometry', 'ts'],
+        ['ReaderControlAppearanceContent.ets', 'ReaderActionAccessibility', '../../../ui/controls/ReaderActionAccessibility', 'ets'],
+      ];
+      const verify = (name, symbol, expectedSpecifier, extension, sourceOverride) => {
+        const file = new URL('../entry/src/main/ets/features/reading/ui/' + name, import.meta.url);
+        const tree = ts.createSourceFile(fileURLToPath(file), sourceOverride ?? read(name), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+        assert.equal(tree.parseDiagnostics.length, 0);
+        const matches = tree.statements.filter(ts.isImportDeclaration).filter(node => node.moduleSpecifier.text === expectedSpecifier)
+          .flatMap(node => node.importClause?.namedBindings?.elements ?? []).filter(binding => binding.name.text === symbol);
+        assert.equal(matches.length, 1, name + ' explicitly imports ' + symbol + ' from its actual module');
+        const exportedName = matches[0].propertyName?.text ?? symbol;
+        const target = resolve(dirname(fileURLToPath(file)), expectedSpecifier + '.' + extension);
+        const exported = ts.createSourceFile(target, readFileSync(target, 'utf8'), ts.ScriptTarget.Latest, true,
+          extension === 'ets' ? ts.ScriptKind.ETS : ts.ScriptKind.TS, options);
+        assert.equal(exported.parseDiagnostics.length, 0);
+        assert.ok(exported.statements.some(node => node.name?.text === exportedName && node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword)),
+          'the production import resolves to actual exported ' + exportedName);
+      };
+      for (const entry of imports) verify(...entry);
+      const missing = read('ReaderControlReplaceContent.ets').replace("import { readerControlUnit } from './ReaderControlActorGeometry';\n", '');
+      assert.notEqual(missing, read('ReaderControlReplaceContent.ets'));
+      assert.throws(() => verify(...imports[0], missing), /explicitly imports readerControlUnit/,
+        'the exact production missing-import failure is rejected without a probe-injected actor namespace');
+      console.log(JSON.stringify({ kind: 'secondary-production-import-admission', importedSymbols: imports.length, explicitExportResolution: 'PASS', arktsBuild: 'NOT_RUN' }));
+    }
     if (id === 'search-back-admission') {
       const properties = createArkUIPropertyRuntimeProbe();
       const source = read('ReaderControlQuickBack.ets');
