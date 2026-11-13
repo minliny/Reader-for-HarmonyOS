@@ -14,7 +14,7 @@ registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
 } } });
 const [{ ReaderNavigation }, { ReaderEntryStartupTrace }, { SearchViewState }, { SearchPublication },
   { resolveBookshelfBook }, { searchCandidateRank }, { readerSourceCategoryIsText }, { diagnosticCodeOf },
-  { errorMessageOf }, { readingFailureHint }, { readerSurfaceRectValid }, headerMetrics, { readingEntryInputForSearchContext }] = await Promise.all([
+  { errorMessageOf }, { readingFailureHint }, { readerSurfaceRectValid }, headerMetrics, { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot }] = await Promise.all([
   import('../../entry/src/main/ets/app/navigation/ReaderNavigation.ts'),
   import('../../entry/src/main/ets/app/ReaderStartupTrace.ts'),
   import('../../entry/src/main/ets/features/search/presentation/SearchViewState.ts'),
@@ -46,7 +46,7 @@ const { LibrarySearchPresentation } = emit('features/search/presentation/Library
 });
 const { ReaderLibraryJourney } = emit('app/composition/ReaderLibraryJourney.ets', ['ReaderLibraryJourney']);
 const { ReaderReadingEntryActions } = emit('app/composition/ReaderReadingEntryActions.ets', ['ReaderReadingEntryActions'],
-  { readingEntryInputForSearchContext, ReaderCoreGateway, Observed: value => value });
+  { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot, ReaderCoreGateway, Observed: value => value });
 const { ReaderSourceSwitchJourney } = emit('app/composition/ReaderSourceSwitchJourney.ets', ['ReaderSourceSwitchJourney']);
 const { ReaderExitActions } = emit('app/composition/ReaderExitActions.ets', ['ReaderExitActions']);
 

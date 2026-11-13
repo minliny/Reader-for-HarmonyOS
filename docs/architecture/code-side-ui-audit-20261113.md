@@ -216,3 +216,9 @@ Root独立执行阅读9项同进程精确场景、主流程6项、后续canonica
 当前代码的真实字形、像素、原生命中、平台返回、焦点与用户验收保持各自证据边界。候选构建与VM复验在所有作者和独立审查完成之后进行。书签核对只处理已授权的同一条原记录，合格回执才结算，未知结果继续保留原intent。
 
 最终静态核对的 `validate-model` 通过，消息全树165/165通过。首次引用核对发现下载六个变体仍指向旧range recovery入口，已逐项改为现用PageState入口，原六项FAIL留档，单独复验 `check-contract-refs` 通过。`check-register` 继续保留39项原诊断，分别为E2 FAIL21、E3 FAIL5、G-03 NOT_RUN8、SCOPE NOT_RUN3、B1 NOT_RUN2。层与不变量的原判定保留。
+
+### 首次完整编译的补遗
+
+`a2eafa15` 的完整候选构建在CompileArkTS失败，签名和安装尚未执行。具体诊断为两份ETS中三处本轮新增对象展开，以及LRE两处已删除 `scheduleReaderRecoveryMeasurement` 的遗留调用。此前有限方法lowering漏掉了这两类问题，原始失败保留在工具输出和私有 `build-attempt-01.json`。
+
+对象转换移入已有 `ReadingEntryDto.ts` 薄工厂，两份ETS转交调用。当前实际SDK AST确认旧三处SpreadAssignment降为0，14个请求字段、13个seed字段的值、引用和缺省语义有准确断言。Root独立kind/dto/prepared三case通过，203个实际输入稳定。两处失效测量调用已清除，恢复表面继续直接消费当前viewport/control几何，准确 `recovery-floating` 通过，非作者只读复核完成。上述五处属于本轮修复遗漏，单列于修复补遗，原有100处定位口径保留。

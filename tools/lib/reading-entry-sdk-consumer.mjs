@@ -12,7 +12,7 @@ import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/Reader
 import { ReaderEntryStartupTrace } from '../../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { ReaderCoreRequestError } from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import { readingEntryInputForSearchContext } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
+import { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import * as headerMetrics from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import * as geometry from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
@@ -59,7 +59,7 @@ export function makeIndex(f, { route = 'search', mount = 1, indexSource = read('
     for (const name of ['installSession', 'publish']) Entry.prototype[name] = changed.prototype[name];
   }
   const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions', {
-    Observed: value => value, readingEntryInputForSearchContext, ReaderCoreGateway,
+    Observed: value => value, readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot, ReaderCoreGateway,
   });
   const Detail = bookshelfOperationClass('features/bookshelf/presentation/BookshelfDetailPresentation.ets', 'BookshelfDetailPresentation', {
     Observed: value => value, EMPTY_READABLE_ADMISSION: types.EMPTY_READABLE_ADMISSION,

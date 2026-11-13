@@ -6,17 +6,17 @@ import { readingFailureHint } from '../../entry/src/main/ets/features/reading/pr
 import { ReaderBookmarkAnchorRequest } from '../../entry/src/main/ets/features/reading/presentation/ReaderBookmarkAnchorRequest.ts';
 import { ReaderDirectoryBackfill } from '../../entry/src/main/ets/features/reading/application/ReaderDirectoryBackfill.ts';
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
-import { readingSessionForCommittedSource } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
+import { readingEntrySeedForContentKind, readingSessionForCommittedSource } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import { remoteReadingEntryKind, remoteShelfDetailInput } from '../../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts';
 
 const source = readFileSync(new URL('../../entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets', import.meta.url), 'utf8');
-const build = new Function('hilog', 'LOCAL_SOURCE_ID', 'ReadingEntryHost', 'errorMessageOf', 'diagnosticCodeOf', 'readingFailureHint', 'MangaBookPresentation', 'ReaderBookmarkAnchorRequest', 'ReaderDirectoryBackfill', 'remoteReadingEntryKind', 'remoteShelfDetailInput', 'readingSessionForCommittedSource',
+const build = new Function('hilog', 'LOCAL_SOURCE_ID', 'ReadingEntryHost', 'errorMessageOf', 'diagnosticCodeOf', 'readingFailureHint', 'MangaBookPresentation', 'ReaderBookmarkAnchorRequest', 'ReaderDirectoryBackfill', 'remoteReadingEntryKind', 'remoteShelfDetailInput', 'readingSessionForCommittedSource', 'readingEntrySeedForContentKind',
   `${stripTypeScriptTypes(source.replace(/^import[^;]+;\s*/gm, '').replace(/^@Observed\n/gm, '').replace(/^export /gm, ''))}; return ReadingEntryPresentation;`);
 
 export function actualReadingEntryPresentation(dependencies = {}) {
   return build(dependencies.hilog ?? { warn() {} }, dependencies.LOCAL_SOURCE_ID ?? 'local', dependencies.ReadingEntryHost,
     errorMessageOf, diagnosticCodeOf, readingFailureHint, dependencies.MangaBookPresentation ?? MangaBookPresentation,
-    ReaderBookmarkAnchorRequest, ReaderDirectoryBackfill, remoteReadingEntryKind, remoteShelfDetailInput, readingSessionForCommittedSource);
+    ReaderBookmarkAnchorRequest, ReaderDirectoryBackfill, remoteReadingEntryKind, remoteShelfDetailInput, readingSessionForCommittedSource, readingEntrySeedForContentKind);
 }
 
 const legacy = {

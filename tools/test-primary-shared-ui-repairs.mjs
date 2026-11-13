@@ -23,6 +23,7 @@ import { currentLibraryShelfChrome } from './lib/bookshelf-current-projection-pr
 import { ProductionHost, compileHost, BookAcquisitionCoordinator, ReaderCoreGateway } from './lib/reading-entry-owner-probe.mjs';
 import { readingEntryActionFixture } from './lib/reading-entry-action-fixture.mjs';
 import { remoteReadingEntryKind } from '../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts';
+import { readingEntryInputForShelfSnapshot, readingEntrySeedForContentKind } from '../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import { sourceSwitchTriggerFocusId } from '../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
@@ -269,6 +270,49 @@ for (const id of selectContractCases(definitions)) {
     assert.equal(calls.length, count, 'retired search cannot navigate or update its successor coverage');
   }
   if (id === 'detail-entry-dto-geometry') {
+    const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+    const { ts, options } = installedEtsCompiler();
+    const parse = (path, kind) => ts.createSourceFile(path, read(path), ts.ScriptTarget.Latest, true, kind, options);
+    for (const path of ['app/composition/ReaderReadingEntryActions.ets', 'features/reading/presentation/ReadingEntryPresentation.ets']) {
+      const tree = parse(path, ts.ScriptKind.ETS), spreads = [];
+      assert.deepEqual(tree.parseDiagnostics, []);
+      const visit = node => { if (ts.isSpreadAssignment(node)) spreads.push(node.getText(tree)); ts.forEachChild(node, visit); };
+      visit(tree);
+      assert.deepEqual(spreads, [], path + ' obeys the ArkTS ETS object-spread restriction');
+    }
+    const authorIdentity = Object.freeze({ schemaVersion: 1, sourceVersion: 'source-v1', field: 'author', raw: '作者', label: '作者', rule: 'author-rule' });
+    const completeSeed = Object.freeze({ sourceId: 'source', bookId: 'book', detailUrl: '/book', title: '书籍', author: '作者',
+      contentKind: 'manga', sourceVersion: 'source-v1', authorIdentity, coverUrl: 'https://example/cover.jpg', intro: '简介',
+      kind: 'image', lastChapter: '最新章节', searchVariables: Object.freeze([{ name: 'book', value: 'value' }]) });
+    const oldShelf = Object.freeze({ sourceId: 'source', bookId: 'book', title: '书籍', author: '作者', addedAt: 1, sortIndex: 0 });
+    const session = Object.freeze({ identity: { sourceId: 'source', bookId: 'book' }, contentKind: 'manga', acquisitionMode: 'online',
+      detailUrl: '/book', tocUrl: '/toc', book: { title: '书籍', author: '作者' }, continuationVariables: [], entries: [], hostRequirements: [] });
+    const completeInput = Object.freeze({ seed: completeSeed, sourceName: '原书源名', displayCoverUrl: 'https://example/display.jpg',
+      shelfSnapshot: oldShelf, shelfBooks: Object.freeze([oldShelf]), fromSearch: false, sourceSwitchPending: true,
+      resumeImmediately: false, fallbackSeeds: Object.freeze([completeSeed]), fallbackSourceNames: Object.freeze(['备用书源']),
+      candidates: Object.freeze([{ seed: completeSeed, catalogReady: true, failed: false }]),
+      validatedSession: session, retainedSession: session, retainAdmissionThroughProbe: true });
+    const inputTree = parse('features/reading/application/ReadingEntryHost.ts', ts.ScriptKind.TS);
+    const inputFields = inputTree.statements.find(node => node.name?.text === 'RemoteReadingEntryInput').members.map(member => member.name.getText(inputTree));
+    const seedTree = parse('features/reading/application/RemoteReadingFlowGateway.ts', ts.ScriptKind.TS);
+    const seedFields = seedTree.statements.find(node => node.name?.text === 'RemoteReadingBookSeed').type.members.map(member => member.name.getText(seedTree));
+    assert.deepEqual(Object.keys(completeInput).sort(), inputFields.sort(), 'the fixture covers every supported input field');
+    assert.deepEqual(Object.keys(completeSeed).sort(), seedFields.sort(), 'the fixture covers every supported seed field');
+    const canonical = Object.freeze({ ...oldShelf, contentKind: 'text', kind: 'TXT' });
+    const projectedInput = readingEntryInputForShelfSnapshot(completeInput, canonical);
+    assert.notEqual(projectedInput, completeInput); assert.notEqual(projectedInput.seed, completeSeed);
+    assert.equal(projectedInput.shelfSnapshot, canonical);
+    for (const key of inputFields.filter(key => key !== 'seed' && key !== 'shelfSnapshot')) assert.equal(projectedInput[key], completeInput[key]);
+    assert.equal(projectedInput.seed.kind, 'TXT'); assert.equal(projectedInput.seed.contentKind, 'text');
+    for (const key of seedFields.filter(key => key !== 'kind' && key !== 'contentKind')) assert.equal(projectedInput.seed[key], completeSeed[key]);
+    const typedSeed = readingEntrySeedForContentKind(completeSeed, 'text');
+    for (const key of seedFields.filter(key => key !== 'contentKind')) assert.equal(typedSeed[key], completeSeed[key]);
+    assert.equal(typedSeed.contentKind, 'text');
+    const sparseInput = { seed: completeSeed, sourceName: '旧输入' };
+    const sparseProjection = readingEntryInputForShelfSnapshot(sparseInput, oldShelf);
+    assert.deepEqual(Object.keys(sparseProjection).sort(), ['seed', 'shelfSnapshot', 'sourceName']);
+    assert.equal(sparseProjection.seed.kind, completeSeed.kind); assert.equal(sparseProjection.seed.contentKind, undefined);
+    assert.equal(readingEntrySeedForContentKind(completeSeed, undefined).contentKind, undefined);
     const Entry = actualReadingEntryPresentation();
     for (const contentKind of [undefined, 'text', 'manga']) for (const canonicalType of contentKind === undefined ? ['text', 'manga'] : [contentKind]) for (const category of ['novel', 'comic'])
       for (const warm of [false, true]) for (const preferred of [undefined, 'https://search.example/merged.jpg']) {

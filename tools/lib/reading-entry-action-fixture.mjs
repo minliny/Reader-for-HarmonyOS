@@ -4,7 +4,7 @@ import { actualReadingEntryPresentation } from './reading-entry-presentation-pro
 import { actualBookshelfOperationTypes, bookshelfOperationClass } from './bookshelf-operation-owner-probe.mjs';
 import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { ReaderEntryStartupTrace } from '../../entry/src/main/ets/app/ReaderStartupTrace.ts';
-import { readingEntryInputForSearchContext } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
+import { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import { ReaderCoreRequestError } from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 
@@ -16,7 +16,7 @@ export function readingEntryActionFixture({ runtime, Host = ProductionHost, rout
   setRuntime(runtime);
   const Entry = actualReadingEntryPresentation({ ReadingEntryHost: Host });
   const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions',
-    { Observed: value => value, readingEntryInputForSearchContext, ReaderCoreGateway });
+    { Observed: value => value, readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot, ReaderCoreGateway });
   const entry = new Entry();
   const navigation = new ReaderNavigation();
   navigation.show(route);

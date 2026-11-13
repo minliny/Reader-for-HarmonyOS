@@ -6,7 +6,7 @@ import { ProductionHost, setRuntime, BookAcquisitionCoordinator, ReaderCoreGatew
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
 import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { ReaderEntryStartupTrace } from '../../entry/src/main/ets/app/ReaderStartupTrace.ts';
-import { readingEntryInputForSearchContext } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
+import { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot } from '../../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
 import { readFileSync } from 'node:fs';
@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 const file = path => new URL('../../entry/src/main/ets/' + path, import.meta.url);
 const Entry = actualReadingEntryPresentation({ ReadingEntryHost: ProductionHost });
 const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions', {
-  Observed: value => value, readingEntryInputForSearchContext, ReaderCoreGateway,
+  Observed: value => value, readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot, ReaderCoreGateway,
 });
 const Exit = bookshelfOperationClass('app/composition/ReaderExitActions.ets', 'ReaderExitActions');
 const Directory = selectedProductionMethods(file('app/composition/ReaderDirectoryJourney.ets'), 'ReaderDirectoryJourney', ['navigationPorts']);

@@ -10,7 +10,7 @@ import type { SourceSwitchPresentation } from '../../features/source/presentatio
 import type { ReaderDirectoryTargetProof } from '../../features/reading/application/ReaderDirectoryTargetProof';
 import type { RemoteReadingEntryInput } from '../../features/reading/application/ReadingEntryHost';
 import type { RemoteReadingBookSeed, RemoteReadingSession } from '../../features/reading/application/RemoteReadingFlowGateway';
-import { readingEntryInputForSearchContext } from '../../features/reading/presentation/ReadingEntryDto';
+import { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot } from '../../features/reading/presentation/ReadingEntryDto';
 import type { PreparedReaderOpening, ReadingEntryPorts, ReadingEntryPresentation, ReadingShelfEntryIntent,
   RemoteDetailOpening } from '../../features/reading/presentation/ReadingEntryPresentation';
 
@@ -159,8 +159,7 @@ export class ReaderReadingEntryActions {
           this.ports.failure('书籍类型尚未确认', '请重试读取书架信息。');
           return;
         }
-        this.openRemoteDetail({ ...input, shelfSnapshot: book,
-          seed: { ...input.seed, kind: book.kind ?? input.seed.kind, contentKind: book.contentKind } }, parent, download);
+        this.openRemoteDetail(readingEntryInputForShelfSnapshot(input, book), parent, download);
       }).catch((_error: Error): void => {
         if (current() && this.ports.detailReadAllowed?.() !== false) this.ports.failure('读取书架信息失败', '请重试读取书架信息。');
       });

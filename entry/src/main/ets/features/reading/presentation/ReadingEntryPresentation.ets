@@ -11,7 +11,7 @@ import { diagnosticCodeOf } from '../../../app/LogPrivacy';
 import { LOCAL_SOURCE_ID, type LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import type { RemoteContentVerdict, RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
 import type { RemoteReadingBookSeed, RemoteReadingSession, RemoteChapterCacheRefreshError } from '../application/RemoteReadingFlowGateway';
-import { readingSessionForCommittedSource } from './ReadingEntryDto';
+import { readingEntrySeedForContentKind, readingSessionForCommittedSource } from './ReadingEntryDto';
 import { remoteReadingEntryKind, remoteShelfDetailInput, type ReadingBookDetail } from './ReadingBookDetail';
 import type { ReaderDirectoryOperation } from '../application/ReaderDirectoryHost';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
@@ -579,7 +579,7 @@ export class ReadingEntryPresentation {
     const opening = open((): void => { this.contentKind = kind === 'manga' ? 'manga' : 'text'; }, fallbackSeeds);
     const host = this.currentHost(owner);
     void host.openRemote({
-      seed: { ...request.seed, contentKind: kind }, sourceName: request.sourceName, shelfSnapshot: request.shelfSnapshot,
+      seed: readingEntrySeedForContentKind(request.seed, kind), sourceName: request.sourceName, shelfSnapshot: request.shelfSnapshot,
       shelfBooks: opening.shelfBooks, fromSearch: request.fromSearch, sourceSwitchPending: opening.sourceSwitchPending,
       resumeImmediately: request.resumeImmediately === true, fallbackSeeds,
       fallbackSourceNames: request.fallbackSourceNames ?? [], candidates: opening.candidates,

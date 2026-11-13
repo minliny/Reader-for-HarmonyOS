@@ -2691,9 +2691,6 @@ export struct ReadingExperience {
     }
     if (Math.abs(width - this.viewportWidth) < 0.01 &&
       Math.abs(height - this.viewportHeight) < 0.01) {
-      // The initial window snapshot may already have these dimensions. The
-      // real Native viewport receipt still rearms a notice mounted afterward.
-      if (this.isSessionActive(lifecycleToken) && this.hasReaderRecoveryContent()) this.scheduleReaderRecoveryMeasurement();
       return;
     }
     this.invalidatePageTurnRuntime(true);
@@ -10772,11 +10769,10 @@ export struct ReadingExperience {
     if (module !== this.observedControlModule) {
       this.controlModuleVisitRevision += 1;
       this.observedControlModule = module;
-        this.prepareControlPage(page);
+      this.prepareControlPage(page);
     }
     // The module/opening identity changes only at semantic edges, never p.
     this.controlLayoutCache = undefined;
-    this.scheduleReaderRecoveryMeasurement();
     if (!readerControlHostCloseCommitted(this.controlSession, this.observedControlCloseRevision)) return;
     this.observedControlCloseRevision = this.controlSession.closeRevision;
     this.invalidateControlBackdrop();

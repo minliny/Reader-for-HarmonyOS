@@ -2507,7 +2507,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+          "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
           "symbol": "requestCatalogForTurn"
         },
         {
@@ -2748,7 +2748,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+          "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -2941,6 +2941,10 @@
         {
           "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
           "sha256": "17826818e67e87070f5a88838a36a5c2f9296324b9a848fa4c4f377b3c3cc855"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+          "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
         }
       ],
       "variants": [
@@ -3819,7 +3823,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -4060,7 +4064,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -4233,6 +4237,10 @@
               {
                 "path": "tools/test-book-directory-page.mjs",
                 "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -5244,7 +5252,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -5485,7 +5493,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -5754,6 +5762,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -6633,7 +6645,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -6874,7 +6886,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -7135,6 +7147,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -8002,7 +8018,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -8243,7 +8259,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -8492,6 +8508,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -9281,7 +9301,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -9522,7 +9542,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -9695,6 +9715,10 @@
               {
                 "path": "tools/test-book-directory-page.mjs",
                 "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -10487,7 +10511,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -10728,7 +10752,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -10989,6 +11013,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -11868,7 +11896,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -12109,7 +12137,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -12282,6 +12310,10 @@
               {
                 "path": "tools/test-book-directory-page.mjs",
                 "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -13161,7 +13193,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -13402,7 +13434,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -13663,6 +13695,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -14452,7 +14488,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -14693,7 +14729,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -14866,6 +14902,10 @@
               {
                 "path": "tools/test-book-directory-page.mjs",
                 "sha256": "44a2536f7c35a580d282457ff2c42390704d29019ce7da8aa98289066eaba17d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -15658,7 +15698,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -15899,7 +15939,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -16160,6 +16200,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -17051,7 +17095,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -17292,7 +17336,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -17541,6 +17585,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
@@ -18427,7 +18475,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-                "sha256": "d11047f248cf7e94ac66753ee6f2e37fa61d2d0cec13b12d2d6cbe5133b62b56",
+                "sha256": "582d7c8802030faaf99ddf7f0f5d2a3c0ba2e6bfcbdb1fa2eff7d57bafd4edec",
                 "symbol": "requestCatalogForTurn"
               },
               {
@@ -18668,7 +18716,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "bbaf06db231217c990fecfc683614690d61f473c42b48dff51dcab9a0a8e9a09"
+                "sha256": "fce39ca7c820d3a175d52fd3610108d28b0ab8bedb59d917f84682d19b9a6649"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -18917,6 +18965,10 @@
               {
                 "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
                 "sha256": "9a1116688c1a6d0561559a49d33aa9356dc905cc7bad45f85ef0b75ccab1da5d"
+              },
+              {
+                "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
+                "sha256": "f4e29c23839839d13d26e0521277584b441367ff274215a89dc8f731e4464455"
               }
             ]
           }
