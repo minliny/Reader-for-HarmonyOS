@@ -78,11 +78,7 @@ export struct ReaderSelect {
   build() {
     // 收起/展开态同构；面板由宿主 overlay 覆盖，不参与字段行的测量。
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.variant === 'settingsTablet') {
-        this.settingsTrigger();
-      } else {
-        this.phoneTrigger();
-      }
+      this.phoneTrigger();
     }
     .width(this.resolvedWidth())
     .height(this.triggerHeight());
@@ -118,6 +114,8 @@ export struct ReaderSelect {
       this.appearanceLibraryTrigger();
     } else if (this.variant === 'settingsPhone') {
       this.settingsPhoneTrigger();
+    } else if (this.variant === 'settingsTablet') {
+      this.settingsTrigger();
     } else if (this.variant === 'sourceGroup') {
       this.sourceGroupTrigger();
     } else {
@@ -189,8 +187,7 @@ export struct ReaderSelect {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('app.selection.subtle', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
-    .borderRadius(7)
-    .onClick((): void => this.onToggle());
+    .borderRadius(7);
   }
 
   @Builder

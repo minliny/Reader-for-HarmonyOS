@@ -488,14 +488,14 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.rangeSheet::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.rangeSheet::shared.page-state",
       "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
       "owner": "SharedDownloadPage",
       "member": "rangeSheet",
-      "family": "shared.recovery-notice",
-      "category": "原操作未决、读回失败或清理待完成",
-      "effectiveHost": "SharedDownloadPage.rangeSheet 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
-      "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
+      "family": "shared.page-state",
+      "category": "当前下载范围草稿的目录版本失效",
+      "effectiveHost": "当前range sheet/opening、rangeBookKey、rangeDraftRevision和rangeCatalogChanged，展示本地字段/目录校验事实，复用PageState局部反馈。",
+      "retireRule": "被动失效保留rangeStart/rangeEnd/rangeChoice。仅当前sheet opening与原draft revision且当前目录ready才允许用户明确重新填写，旧actor不得重置后继草稿。",
       "status": "registered-source-entry"
     },
     {
@@ -587,14 +587,36 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets#FullDirectoryPanel.bookmarkBody::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
+      "owner": "FullDirectoryPanel",
+      "member": "bookmarkBody",
+      "family": "shared.page-state",
+      "category": "Current local loading, empty or unavailable-content facts",
+      "effectiveHost": "The current full-directory short-window bookmark List state item projects original bookmark loading, empty and failed-read facts. The same List keeps its chrome prefix reachable.",
+      "retireRule": "Current chapterActionsEnabled and bookmark loading/failure facts admit retry or local return-to-directory. Parent presentation and original callback identity own retirement. A read retry cannot continue an unknown original write.",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets#FullDirectoryPanel.directoryBody::shared.page-state",
       "file": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
       "owner": "FullDirectoryPanel",
       "member": "directoryBody",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 reader 控制栏目录页的 entries、busy/empty 与原 reader session/呈现身份。",
-      "retireRule": "控制栏临时目录页退场或 reader/session/目录投影变化后更新/卸载，原动作保持当前身份准入。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "The current detail full-directory or reader directory host uses its entries, busy/empty facts, source/book and directory opening identity. Default empty wording consumes allowUnanchoredBrowse for detail and reading origins. Specific catalogMessage and nonempty filter-empty facts retain priority.",
+      "retireRule": "Directory teardown, replaced opening, source/book or parent presentation retires the old host and retry actions. Parent current chapter-action admission owns retry and navigation. A display message cannot continue or confirm an original operation.",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets#FullDirectoryPanel.standaloneCatalogState::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
+      "owner": "FullDirectoryPanel",
+      "member": "standaloneCatalogState",
+      "family": "shared.page-state",
+      "category": "Current local loading, empty or unavailable-content facts",
+      "effectiveHost": "The current detail or reading full-directory short-window List state item uses the original catalog loading/empty/failure facts and existing retry owner. Default empty wording follows allowUnanchoredBrowse while specific catalogMessage and filter-empty facts retain priority.",
+      "retireRule": "Current chapterActionsEnabled and catalogRetryVisible admission controls retry. Directory teardown or a replaced opening, source/book or parent presentation retires old callbacks. No original write or route state is owned here.",
       "status": "registered-source-entry"
     },
     {
@@ -628,6 +650,17 @@
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "当前已挂载且 detailBookAvailable 的书籍详情，沿用 sourceId/bookId、目录投影与字体准备代次。",
       "retireRule": "详情身份/目录投影变化或退场拒绝旧回调；书架短反馈按原 shelfMessage 事实更新，不更改书籍数据。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets#LocalBookDetail.kindPreparationContent::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+      "owner": "LocalBookDetail",
+      "member": "kindPreparationContent",
+      "family": "shared.page-state",
+      "category": "Current local loading, empty or unavailable-content facts",
+      "effectiveHost": "The current detail book whose canonical content kind is still unknown, failed confirmation, or unsupported audio. Existing catalog/read owner supplies the actual facts, and Back remains available.",
+      "retireRule": "Retry requires current detail input, still-unknown kind and idle catalog. Retired Entry/Host generation cannot publish to a successor detail. Confirmed text/manga types leave this state through the existing owner projection.",
       "status": "registered-source-entry"
     },
     {
@@ -736,8 +769,8 @@
       "member": "readerRecoveryContent",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
-      "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate to the existing ReaderDirectoryRecoverySurface, preserving pending/result/readback classification. Floating feedback draws, receives input and exposes accessibility only while its current reader input lease holds and controls are hidden. The directory List prefix retains current-book original facts while controls display.",
+      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent.",
       "status": "registered-source-entry"
     },
     {
@@ -884,6 +917,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets#ReaderControlDirectoryContent.directoryPrefix::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+      "owner": "ReaderControlDirectoryContent",
+      "member": "directoryPrefix",
+      "family": "shared.recovery-notice",
+      "category": "当前书原书签写入未决的目录内核对",
+      "effectiveHost": "当前book匹配的ReadingDirectoryRecovery.bookmarks pending，消费原DirectoryHost事实，复用既有单List自然高度prefix。控制栏可见时全局浮层退出，由此保留解释与恢复动作。",
+      "retireRule": "prefixIdentity含session/tab/layoutPresentation/bookmarkRecoveryIdentity；核currentContent、父live input lease、原generation、busy及canRetry/canContinue，再由LRE核lifecycle/presentation/current input。不改变正文分页或控制壳预算，关闭提示不取消原intent。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets#ReaderControlDirectoryContent.flatCatalog::shared.page-state",
       "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
       "owner": "ReaderControlDirectoryContent",
@@ -989,8 +1033,8 @@
       "member": "build",
       "family": "shared.recovery-action",
       "category": "书签终态确认隐藏及已确认写入后的只读刷新",
-      "effectiveHost": "当前directoryRecovery.presentationId及各领域identity/generation；知道了只隐藏书签结果；readbackFailed且canRetry才重新读取，原bookmarks/offline owner持有事实。",
-      "retireRule": "reconcile复核isCurrent(identity)、!busy与原canRetry；分别转交captured generation/presentation，读取不继续已确认写入。dismiss仅影响本地显示，不能ACK业务。",
+      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading.",
+      "retireRule": "Mounted teardown, inactive presentationActive or an expired immediate caller lease rejects retained retry, continue and local result-dismiss actors. A newly active Prop retries only undelivered current readback feedback, and an already delivered original identity remains deduplicated. Replaced original identity retires its actors. Original intent, receipt and data remain with their business owner. Dismiss is local presentation only and cannot ACK a write.",
       "status": "registered-source-entry"
     },
     {
@@ -1000,8 +1044,8 @@
       "member": "build",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前 feedbackMounted 的 reader 目录恢复面；presentationId + bookmark/offline generation 与 isCurrent(identity) 决定准入。",
-      "retireRule": "退场清空短反馈去重；presentationId/原操作 generation 变化使旧动作失效，原书签/缓存未决事项分别保留。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading.",
+      "retireRule": "Mounted teardown, inactive presentationActive or an expired immediate caller lease rejects retained retry, continue and local result-dismiss actors. A newly active Prop retries only undelivered current readback feedback, and an already delivered original identity remains deduplicated. Replaced original identity retires its actors. Original intent, receipt and data remain with their business owner. Dismiss is local presentation only and cannot ACK a write.",
       "status": "registered-source-entry"
     },
     {
@@ -1011,8 +1055,8 @@
       "member": "notifyReadbackFailures",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前 feedbackMounted 的 reader 目录恢复面；presentationId + bookmark/offline generation 与 isCurrent(identity) 决定准入。",
-      "retireRule": "退场清空短反馈去重；presentationId/原操作 generation 变化使旧动作失效，原书签/缓存未决事项分别保留。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading.",
+      "retireRule": "Mounted teardown, inactive presentationActive or an expired immediate caller lease rejects retained retry, continue and local result-dismiss actors. A newly active Prop retries only undelivered current readback feedback, and an already delivered original identity remains deduplicated. Replaced original identity retires its actors. Original intent, receipt and data remain with their business owner. Dismiss is local presentation only and cannot ACK a write.",
       "status": "registered-source-entry"
     },
     {
@@ -1082,14 +1126,25 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets#RssEntryDetailPage.operationFeedback::shared.page-state",
+      "file": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets",
+      "owner": "RssEntryDetailPage",
+      "member": "operationFeedback",
+      "family": "shared.page-state",
+      "category": "RSS当前实体读取或已确认写回后的读回状态",
+      "effectiveHost": "L0 RSS保持关闭。当前保留宿主的readFacts与generation来自原RSS读取owner，纯读取的loading/failed/refreshFailed使用内容状态，不推定原写入回执。",
+      "retireRule": "重试捕获读取/operation facts generation，退代后拒绝旧物理回调；宿主presentation/实体失效仍由Journey owner拒绝，读取成功不确认任何独立原写入。登记不代表Native或开放验收。",
+      "status": "retained-disabled"
+    },
+    {
       "id": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets#RssEntryDetailPage.operationFeedback::shared.recovery-notice",
       "file": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets",
       "owner": "RssEntryDetailPage",
       "member": "operationFeedback",
       "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "L0 下 rss 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。",
-      "retireRule": "当前入口不可达，不能计为已开放可见场景；恢复前重新检查原操作身份/原按钮/退场失效规则。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "category": "当前实体原写回执unknown的核对",
+      "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。",
+      "retireRule": "动作携带该projection generation并由retryFeedback核当前facts.canRetry；当前实体/呈现/原回执退休后拒绝，pure read或confirmed readback改由独立PageState显示。",
       "status": "retained-disabled"
     },
     {
@@ -1098,9 +1153,9 @@
       "owner": "RssOriginalRecoverySurface",
       "member": "build",
       "family": "shared.recovery-action",
-      "category": "保留RSS原operation的回执核对及合格原操作继续",
-      "effectiveHost": "L0 RSS关闭；mounted且完整JSON identity包括presentation/scope/original operation/subscriptionId/guid；feed不许continue，operationId非空且canRetryOriginal才合格。",
-      "retireRule": "current核identity仍在且!busy；continue另核qualified，传完整原identity，不把unknown重新当新写入；退场mounted=false。开放前补运行证据。",
+      "category": "当前RSS原操作的回执核对及合格继续",
+      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。feed与foreign域不挂原写提示，原intent与全域写准入保留。",
+      "retireRule": "current核mounted、完整JSON presentation/scope/original/subscriptionId/guid及!busy；continue再核qualified+operationId+canRetryOriginal。跨实体或退场拒绝旧物理动作，绝不拿当前列表代替原ACK。",
       "status": "retained-before-open"
     },
     {
@@ -1109,20 +1164,42 @@
       "owner": "RssOriginalRecoverySurface",
       "member": "build",
       "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "L0 下 rss 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。",
-      "retireRule": "当前入口不可达，不能计为已开放可见场景；恢复前重新检查原操作身份/原按钮/退场失效规则。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "category": "当前RSS宿主同实体原写未决事实",
+      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。feed与foreign域不挂原写提示，原intent与全域写准入保留。",
+      "retireRule": "current核mounted、完整JSON presentation/scope/original/subscriptionId/guid及!busy；continue再核qualified+operationId+canRetryOriginal。跨实体或退场拒绝旧物理动作，绝不拿当前列表代替原ACK。",
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/features/rss/ui/RssPage.ets#RssPage.readFeedback::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/rss/ui/RssPage.ets#RssPage.readFeedback::shared.page-state",
       "file": "entry/src/main/ets/features/rss/ui/RssPage.ets",
       "owner": "RssPage",
       "member": "readFeedback",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "L0 下 rss 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。",
-      "retireRule": "当前入口不可达，不能计为已开放可见场景；恢复前重新检查原操作身份/原按钮/退场失效规则。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "family": "shared.page-state",
+      "category": "RSS列表纯读取的加载或失败",
+      "effectiveHost": "L0 RSS保持关闭。当前保留宿主的readFacts与generation来自原RSS读取owner，纯读取的loading/failed/refreshFailed使用内容状态，不推定原写入回执。",
+      "retireRule": "重试捕获读取/operation facts generation，退代后拒绝旧物理回调；宿主presentation/实体失效仍由Journey owner拒绝，读取成功不确认任何独立原写入。登记不代表Native或开放验收。",
+      "status": "retained-disabled"
+    },
+    {
+      "id": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets#RssSourceFeedPage.entryList::shared.page-state",
+      "file": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets",
+      "owner": "RssSourceFeedPage",
+      "member": "entryList",
+      "family": "shared.page-state",
+      "category": "RSS原生虚拟列表的当前空态",
+      "effectiveHost": "L0 RSS保持关闭。当前保留宿主的readFacts与generation来自原RSS读取owner，纯读取的loading/failed/refreshFailed使用内容状态，不推定原写入回执。",
+      "retireRule": "仅items为空且readFacts=current/empty才显示空态，读取失败保持独立状态，不因暂存空数组生成成功空态。",
+      "status": "retained-disabled"
+    },
+    {
+      "id": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets#RssSourceFeedPage.operationFeedback::shared.page-state",
+      "file": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets",
+      "owner": "RssSourceFeedPage",
+      "member": "operationFeedback",
+      "family": "shared.page-state",
+      "category": "RSS当前实体读取或已确认写回后的读回状态",
+      "effectiveHost": "L0 RSS保持关闭。当前保留宿主的readFacts与generation来自原RSS读取owner，纯读取的loading/failed/refreshFailed使用内容状态，不推定原写入回执。",
+      "retireRule": "重试捕获读取/operation facts generation，退代后拒绝旧物理回调；宿主presentation/实体失效仍由Journey owner拒绝，读取成功不确认任何独立原写入。登记不代表Native或开放验收。",
       "status": "retained-disabled"
     },
     {
@@ -1131,9 +1208,9 @@
       "owner": "RssSourceFeedPage",
       "member": "operationFeedback",
       "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "L0 下 rss 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。",
-      "retireRule": "当前入口不可达，不能计为已开放可见场景；恢复前重新检查原操作身份/原按钮/退场失效规则。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "category": "当前实体原写回执unknown的核对",
+      "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。",
+      "retireRule": "动作携带该projection generation并由retryFeedback核当前facts.canRetry；当前实体/呈现/原回执退休后拒绝，pure read或confirmed readback改由独立PageState显示。",
       "status": "retained-disabled"
     },
     {
@@ -1143,9 +1220,20 @@
       "member": "operationRecovery",
       "family": "shared.recovery-action",
       "category": "保留RSS编辑器的原失败读回动作",
-      "effectiveHost": "L0 RSS关闭；original.blocked时只挂原RssOriginalRecoverySurface；否则按write/read前缀及facts generation生成捕获identity。",
+      "effectiveHost": "L0 RSS关闭。仅匹配editor/subscriptionId的original.blocked挂原恢复表面；foreign pending不隐藏当前readback动作，原write/read identity前缀与generation分别捕获。",
       "retireRule": "dispatchRecovery核identity仍在再分别onReconcile或onRetryRead，保持原事实归属，不让读成功确认未知写入；开放前复核presentation/实体准入。",
       "status": "retained-before-open"
+    },
+    {
+      "id": "entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage.notifyResult::shared.transient",
+      "file": "entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets",
+      "owner": "RssSubscriptionManagementPage",
+      "member": "notifyResult",
+      "family": "shared.transient",
+      "category": "RSS管理已知完成结果",
+      "effectiveHost": "L0 RSS关闭。已知resultMessage消费既有ReaderTransientFeedback，key绑定presentationIdentity+message，原mutation owner拥有结果。",
+      "retireRule": "仅mounted且当前presentation/message仍相同才投递；退场reset通知，提示消失不确认或取消业务。",
+      "status": "retained-disabled"
     },
     {
       "id": "entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage.operationFeedback::shared.recovery-action",
@@ -1154,19 +1242,19 @@
       "member": "operationFeedback",
       "family": "shared.recovery-action",
       "category": "保留RSS管理已有内容时读取/原操作核对动作",
-      "effectiveHost": "L0 RSS关闭；original未blocked，依据operation.projection或readFacts给出真实message/canRetry/generation。",
-      "retireRule": "retryFeedback重新核当前operation/readFacts.canRetry后转交完整原事实；当前callback读取live事实而非完整captured identity，开放前须复核旧物理回调不得借新事实，登记不宣称已验收。",
+      "effectiveHost": "L0 RSS关闭；仅当前management original匹配时由原恢复表面展示。其余当前operation.projection或readFacts给出真实message/canRetry/generation，保留现有局部readback行。",
+      "retireRule": "retryFeedback接收实际Action捕获generation，先与当前operation或readFacts generation和canRetry匹配再转交原owner。新facts/新entity/退场拒绝旧动作，读成功不确认独立原写。",
       "status": "retained-before-open"
     },
     {
-      "id": "entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage.pageContent::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage.subscriptionList::shared.page-state",
       "file": "entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets",
       "owner": "RssSubscriptionManagementPage",
-      "member": "pageContent",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "L0 下 rss 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。",
-      "retireRule": "当前入口不可达，不能计为已开放可见场景；恢复前重新检查原操作身份/原按钮/退场失效规则。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "member": "subscriptionList",
+      "family": "shared.page-state",
+      "category": "RSS原生虚拟列表的当前空态",
+      "effectiveHost": "L0 RSS保持关闭。当前保留宿主的readFacts与generation来自原RSS读取owner，纯读取的loading/failed/refreshFailed使用内容状态，不推定原写入回执。",
+      "retireRule": "仅items为空且readFacts=current/empty才显示空态，读取失败保持独立状态，不因暂存空数组生成成功空态。",
       "status": "retained-disabled"
     },
     {
@@ -1464,8 +1552,8 @@
       "member": "notifyOrdinaryFailure",
       "family": "shared.transient",
       "category": "仍保留候选的普通查源或换源失败",
-      "effectiveHost": "当前前景换源窗口仍有已展示候选且没有未决恢复。按当前源、状态和消息去重。",
-      "retireRule": "窗口状态、身份或消息代次变化时退役。待核对或待撤销走持续提示，候选耗尽走局部页态。",
+      "effectiveHost": "The current mounted source-picker presentation and source scope display an ordinary known failure when no original pending transaction/reconcile fact exists. This includes the current candidate acquisition failure projected by SourceSwitchHost.showAcquisitionFailure, retaining its original failedCandidate and picker host.",
+      "retireRule": "Replaced scope, attachment, picker exit or a changed failure retires old feedback and retry actors. Explicit retry stays with the same failed candidate and current Host lease. Closing a known picker failure does not dispatch reading, continue an unresolved write or infer a receipt.",
       "status": "registered-source-entry"
     },
     {
@@ -1719,8 +1807,8 @@
       "member": "showReadingFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "Index 当前 mountedRuntimeOwner、shelfReceiptRetired、route/navigationGeneration 与原操作 current；入口共享活动路由及受 L0 禁用的保留路由。",
-      "retireRule": "Index 退场、runtime 退役、导航/实体/原操作代次变化即拒绝旧回调；共享 owner 的 UI 结束不确认任何业务写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "effectiveHost": "Current reading-entry and bookshelf action owner forwards ordinary failure facts to this existing transient adapter, including legacy shelf type still unknown or exact shelf information read failure. ReaderReadingEntryActions checks its captured shelf/navigation lease before delivery.",
+      "retireRule": "The adapter retains its current Index feedback identity and transient retirement. Old shelf preparation, replaced entity, route or Entry lease cannot publish new feedback. This adapter owns no reading transition, retry, original write or confirmation.",
       "status": "registered-source-entry"
     },
     {
@@ -1779,10 +1867,10 @@
       "status": "registered-adapter-boundary"
     },
     {
-      "id": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets#ReaderRecoveryNotice.build::shared.recovery-action",
+      "id": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets#ReaderRecoveryNotice.noticeBody::shared.recovery-action",
       "file": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
       "owner": "ReaderRecoveryNotice",
-      "member": "build",
+      "member": "noticeBody",
       "family": "shared.recovery-action",
       "category": "公共原操作通知的主/次动作及本地展开适配边界",
       "effectiveHost": "当前已登记RecoveryNotice的view.generation、view.canRetry/busy/secondaryBusy；原operation事实仍归调用者。第三个Action仅切expanded，不执行原操作。",

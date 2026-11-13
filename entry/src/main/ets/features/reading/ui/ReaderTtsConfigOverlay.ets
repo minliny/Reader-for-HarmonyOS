@@ -97,7 +97,11 @@ export struct ReaderTtsConfigOverlay {
     // A replaced selection invalidates the previous async operation. Release
     // the parent content-cover gate as well, otherwise its dismiss callback
     // can remain blocked forever after the stale operation is discarded.
-    this.onBusyChange(false);
+    const generation = this.generation, selection = this.selectionId;
+    void Promise.resolve().then((): void => {
+      if (this.mounted && generation === this.generation && selection === this.selectionId && !this.busy)
+        this.onBusyChange(false);
+    });
     this.errorText = '';
   }
   private close(): void { this.stopPreview(); if (!this.busy) this.onClose(this.selectionId); }

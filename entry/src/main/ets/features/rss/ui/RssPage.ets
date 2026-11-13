@@ -4,7 +4,7 @@ import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from 
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import type { RssFailedSource, RssMode, RssPresentation } from '../presentation/RssPresentationContract';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
-import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderOperationFacts';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_ERROR_REASON, TYPE_RSS_HOME_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_REFRESH_STATUS, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE, TYPE_RSS_STATE_ACTION, TYPE_RSS_STATE_BODY, TYPE_RSS_STATE_TITLE, TYPE_RSS_UNREAD_COUNT } from '../../../ui/foundation/ReaderTypography';
@@ -272,11 +272,15 @@ export struct RssPage {
   private readFeedback() {
     RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
       onReconcileOriginal: this.onReconcileOriginal });
-    if (this.original?.blocked !== true) {
-      ReaderRecoveryNotice({ view: readerRecoveryView(undefined, this.readFacts), actionLabel: '重新读取',
-        onReconcile: (generation: number): void => {
+    if (readerRecoveryView(undefined, this.readFacts).visible) {
+      ForEach([this.readFacts.generation], (generation: number): void => {
+      ReaderPageState({ message: readerRecoveryView(undefined, this.readFacts).message,
+        loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing', padded: false,
+        actionLabel: this.readFacts.canRetry ? '重新读取' : '',
+        onAction: (): void => {
           if (this.readFacts.generation === generation && this.readFacts.canRetry) this.onRetryRead(this.readFacts);
         } });
+      }, (generation: number): string => `rss-read:${generation}`);
     }
   }
 

@@ -53,7 +53,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 function create(remote = false) {
   const toc = deferred(), catalog = deferred(), body = deferred();
   const book = {
-    sourceId: remote ? 'source' : 'local', bookId: 'book', title: 'Test book', author: 'Author',
+    sourceId: remote ? 'source' : 'local', bookId: 'book', title: 'Test book', author: 'Author', contentKind: 'text',
     currentChapterIndex: 7, coverUrl: 'cover',
   };
   const entries = [...(remote ? [{ index: 5, title: '卷一', url: '' }] : []), { index: 7, title: 'Chapter seven', url: 'chapter-7' }];

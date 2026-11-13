@@ -1662,23 +1662,23 @@
       }
     },
     "test-reader-capsule-page-turn.mjs": {
-      "sourceSha256": "fa5e1a4e077d90e2728bbea2e864e108b85cc7aea4c05b7fa99d9d5f32e1ee61",
+      "sourceSha256": "27f5a61f400f2f446b0a84d6923e3554d7c5e6975f9055a4e6d6a2e0dbdbd09b",
       "cases": {
         "visibility": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "freeze": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "pointer-routing": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1886,15 +1886,19 @@
       }
     },
     "test-reader-control-bookmark-mutation-recovery.mjs": {
-      "sourceSha256": "0b6ccbbdfe2c9c034f543acbd986c7f4063f4d1051e975072912cbd4e63586d1",
+      "sourceSha256": "a2fa15c6f9448e07fca8ca732c0bc6ba97916c2b65c8e7be3e154afac399b1eb",
       "cases": {
         "durable-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
+        },
+        "recovery-surface-sdk": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2425,7 +2429,7 @@
       }
     },
     "test-reader-directory-host.mjs": {
-      "sourceSha256": "158084efae1c7609d9e67c9c2faefe167371cd38589f623781c8ac9d1f2d358a",
+      "sourceSha256": "5a67aa6ba97997cc5f2b8646935c10d1973f58bf3b5913ca078d0ddfd607fed9",
       "cases": {
         "node-protocol": {
           "resources": [],
@@ -2433,7 +2437,7 @@
         },
         "sdk-protocol": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2949,7 +2953,7 @@
       }
     },
     "test-reader-page-header-contract.mjs": {
-      "sourceSha256": "f52180f0d2d9f230093a269a98458ab47c075fdcd4d382097014b7ade8b29bd6",
+      "sourceSha256": "b8c5c8ebfca5e05014ee0b6a175cb6e83e65bfe535c56505ff22649db29a7561",
       "cases": {
         "sdk-public-slots": {
           "resources": [],
@@ -2957,31 +2961,31 @@
         },
         "header-paint-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "scaffold-slots": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "footer-safe-lane": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "standard-page-layout": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "framework-route-coverage": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-layout-succession": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sync-cold-layout": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11250,31 +11254,31 @@
       }
     },
     "test-reader-control-layout-budget.mjs": {
-      "sourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
+      "sourceSha256": "57784c5233f0467a4a94929cfa73172803ef58b5b102475a8c1b7f5320ae7993",
       "cases": {
         "admission-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "module-minimum-budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-targets-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-tts-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "header-home-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "brightness-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11342,6 +11346,259 @@
       "sourceSha256": "8435534006dc8b418694eaecd2aa1ce1f780beabadecf5cf830a72bdec7a2503",
       "cases": {
         "matrix": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-directory-chrome-spacing.mjs": {
+      "sourceSha256": "47c7c52029c6b43976dd1a4ad36ab16ee9f3fb21e12510b068d380dbe5f65e53",
+      "cases": {
+        "header-spacing": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "icon-roles": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-download-surface-measurement-identity.mjs": {
+      "sourceSha256": "b4b49e0a1d821cd8f06d65f6a85096dd041f6eb8f1f8e9d1a7a57b107e66981e",
+      "cases": {
+        "surface-measurements": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-feedback-state-mark-budget.mjs": {
+      "sourceSha256": "305c8ce5f7857d11d72cf2c5507bd0c9428607731b7a6577fcae6039937af803",
+      "cases": {
+        "mark-role": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-primary-shared-ui-repairs.mjs": {
+      "sourceSha256": "622898e62171c8b0fa067198da1f28de51689760f80a0b1d031821742938bb89",
+      "cases": {
+        "detail-kind-confirmation": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-type-state": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "library-watch-parent-delivery": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-entry-dto-geometry": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-directory-action": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "bookshelf-action-lanes": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "labeled-action-paint": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "select-watch-parent-delivery": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "directory-watch-parent-delivery": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "dialog-action-budget": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "menu-divider-current": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "main-rail-current": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "no-cover-graphic": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "compact-source-paint": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "tablet-select-admission": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "dialog-current-actions": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-hero-source": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "prepared-media-qualification": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-bookmark-message-kinds.mjs": {
+      "sourceSha256": "9dbeeeb204a537b040287a36ab98d78691a561821180ccbfd8b1e73292acc331",
+      "cases": {
+        "bookmark-facts": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "directory-consumers": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-capsule-measurement-identity.mjs": {
+      "sourceSha256": "3acbce537c2447c53ab091ffebea25c0de40a167b6d127fc16fec5ed03d72116",
+      "cases": {
+        "measurement-owner": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-directory-pending-prefix.mjs": {
+      "sourceSha256": "9a8c1ce3a81ae0b0001b5c41ed68f4c86559f37e7258d6bf864e9174330ce9c4",
+      "cases": {
+        "pending-prefix": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-global-host-contracts.mjs": {
+      "sourceSha256": "6773d181543004013655bb1e1777eec0fa014b1f5bdf2fabe31e4b0646d766b8",
+      "cases": {
+        "recovery-floating": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "module-live-input": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "watch-parent-notifications": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "capsule-budget": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "standalone-prefix-sdk": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "standalone-short": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "standalone-bookmark": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "compact-roles": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "render-followups": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-retry": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-rss-native-list-page.mjs": {
+      "sourceSha256": "1c775d0f44bba403aa6c62a59c2da637057ccdd870cd82afc5e07721bb1f1f85",
+      "cases": {
+        "scroll-owner": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "default-scroll": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-secondary-message-facts.mjs": {
+      "sourceSha256": "7a475d8dd96d70ce53b6bb9e97db9b0568ff7f3faf4d3bc59a916c469ec57e2c",
+      "cases": {
+        "rss-facts": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "range-draft": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        }
+      }
+    },
+    "test-source-picker-overlay-opening.mjs": {
+      "sourceSha256": "0d87af0975f419e2b28021d0015cf672f356b770e57213eca73cc6257936bb04",
+      "cases": {
+        "opening-retention": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "target-handoff": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "failure-retention": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "restoration-retention": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-source-picker-surface-notifications.mjs": {
+      "sourceSha256": "0bc9efa574217b4f3885cd55a3b45d191478b2023d11085fb282c94a8fb2b234",
+      "cases": {
+        "surface-notifications": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "cover-receipt": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-sync-history-affordance.mjs": {
+      "sourceSha256": "fabeb2ced5fcccb011c8baa2b4349d712018b4dfca7fd7b4360ad46a224415cf",
+      "cases": {
+        "history-integrity": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

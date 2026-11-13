@@ -217,6 +217,7 @@ export struct SourceSwitchWindow {
   @State private selectedKey: string = '';
   @State private selectionPending: boolean = false;
   @State private coverFailed: boolean = false;
+  private coverGeneration: number = 0;
   @State private containerHeight: number = 0;
   @State private containerWidth: number = 0;
   @State private novelFontsReady: boolean = sourceSwitchNovelFontsReady();
@@ -254,7 +255,15 @@ export struct SourceSwitchWindow {
     }
   }
   aboutToDisappear(): void { this.mounted = false; this.retireMessages(); this.cancelPresentation(); }
-  private coverChanged(): void { this.coverFailed = false; }
+  private coverChanged(): void { this.coverGeneration += 1; this.coverFailed = false; }
+  private coverFailureHandler(): () => void {
+    const generation = this.coverGeneration, url = this.coverUrl;
+    const attachment = this.surfaceAttachment, scope = this.surfaceScope;
+    return (): void => {
+      if (this.mounted && generation === this.coverGeneration && url === this.coverUrl &&
+        attachment === this.surfaceAttachment && scope === this.surfaceScope) this.coverFailed = true;
+    };
+  }
   private foregroundChanged(): void {
     if (!this.foreground) { this.retireMessages(); this.cancelPresentation(); }
     else if (this.mounted) this.acceptState();
@@ -711,7 +720,7 @@ export struct SourceSwitchWindow {
       if (this.coverUrl.trim().length > 0 && !this.coverFailed) {
         Image(this.coverUrl).width(this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverWidth : SOURCE_SWITCH_VISUAL.coverWidth)
           .height(this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverHeight : SOURCE_SWITCH_VISUAL.coverHeight)
-          .objectFit(ImageFit.Cover).borderRadius(SOURCE_SWITCH_VISUAL.coverRadius).onError((): void => { this.coverFailed = true; });
+          .objectFit(ImageFit.Cover).borderRadius(SOURCE_SWITCH_VISUAL.coverRadius).onError(this.coverFailureHandler());
       } else {
         NoCoverCover({ coverWidth: this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverWidth : SOURCE_SWITCH_VISUAL.coverWidth,
           coverHeight: this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverHeight : SOURCE_SWITCH_VISUAL.coverHeight });

@@ -1,11 +1,11 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 const definitions = {
-    'admission-sdk': { description: 'Current experience scheduling to measured Panel admission across orientations and wide windows, stale frame negatives', resources: [] },
+    'admission-sdk': { description: 'Current experience scheduling to measured Panel admission across orientations and wide windows, render-safe readiness and stale frame negatives', resources: [] },
     'module-minimum-budget': { description: 'Shipping measured appearance/settings/search/replace/autopage budgets at four scales and exact narrow/wide widths', resources: [] },
     'native-targets-sdk': { description: 'Actual SDK control target attributes and paid parent geometry for reading modules', resources: [] },
     'manga-tts-sdk': { description: 'Manga dock/preferences and TTS configuration actual SDK targets, scale and busy identity', resources: [] },
     'header-home-sdk': { description: 'Actual reading topbar and home native frames, scalable title/action/slider parents with old fixed-height negatives', resources: [] },
-    'brightness-sdk': { description: 'Constrained brightness rail Scroll, actual production Pan/Tap declarations and same-owner resize', resources: [] },
+    'brightness-sdk': { description: 'Constrained brightness rail Scroll, circular measured paint inside paid targets, cap centres, actual Pan/Tap declarations and same-owner resize', resources: [] },
 };
 for (const id of selectContractCases(definitions)) {
     await run(id);
@@ -49,7 +49,7 @@ async function run(id) {
     const ui = file => read('entry/src/main/ets/features/reading/ui/' + file);
     const classes = selectedProductionClasses(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), ['ReaderTextStyle', 'ReaderInheritedTextStyle']);
     const measure = pureModuleProbe(ui('ReaderControlTextMeasurement.ets'), 'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'break' } }, ['measureReaderControlText']);
-    const deps = { ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...replace, ...playback, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
+    const deps = { ScrollDirection: { Horizontal: 'horizontal', Vertical: 'vertical' }, ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...replace, ...playback, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
     const pure = (file, names, source = ui(file)) => pureModuleProbe(source, file, deps, names);
     const headerSource = read('entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets');
     const compiler = installedEtsCompiler();
@@ -121,7 +121,7 @@ async function run(id) {
             isExpanded: () => current.expandedLayout, getUIContext: () => context,
             measureHomeForm: w => ({ minimumHeight: 170 * scale, minWidth: 130, fits: w >= 130 }),
         });
-        const { owner: current } = createReaderBuilderProbe(ui('LocalReadingExperience.ets'), ['controlMinimumIdentity', 'controlMinimumCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
+        const { owner: current } = createReaderBuilderProbe(ui('LocalReadingExperience.ets'), ['controlMinimumIdentity', 'controlMinimumCurrent', 'controlMinimumReceiptCurrent', 'bindControlMinimum', 'scheduleControlMinimum', 'admitControlMinimum', 'controlLayout'], {
             ...geo, ...receipt, ...session, ReaderWindowCoordinator: { metrics: () => metrics },
             ReaderUIFrameCallback: class {
                 constructor(fn) { this.onFrame = fn; }
@@ -129,10 +129,19 @@ async function run(id) {
         });
         Object.assign(current, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true, appForeground: true,
             windowChromeActive: true, windowChromeOverlayActive: false, interactionBlocked: false, controlObscured: false,
-            controlOpenRevision: 1, controlModuleVisitRevision: 1, readerRecoveryBottom: 0, controlMinimumRevision: 0, controlMinimumGeneration: 0,
+            controlOpenRevision: 1, controlModuleVisitRevision: 1, readerRecoveryBottom: 0, controlMinimumRevision: 0, controlMinimumGeneration: 0, controlMinimumCandidates: [],
             controlSession: { location: { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' } },
             isSessionActive: token => token === 1, effectiveViewportWidth() { return this.width; }, effectiveViewportHeight() { return this.height; },
             pageTurnInputPhase: () => 'idle', invalidateControlBackdrop() { }, getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
+        });
+        panel.minimumReceiptCurrent = key => current.controlMinimumReceiptCurrent(key);
+        let rendering = false, ready = false;
+        Object.defineProperty(current, 'controlMinimumReady', {
+            get: () => ready,
+            set(value) {
+                assert.equal(rendering, false, 'child publication must not mutate parent @State during render');
+                ready = value;
+            },
         });
         panel.onMinimumMeasurerReady = (identity, provider) => current.bindControlMinimum(identity, provider);
         let prepareModule;
@@ -146,11 +155,16 @@ async function run(id) {
             panel.layout = cold;
             panel.minimumIdentity = current.controlMinimumIdentity();
             panel.minimumMetricsRevision = metrics.revision;
+            const beforePublication = current.controlMinimumReady;
+            rendering = true;
             if (prepareModule)
                 prepareModule(panel.minimumIdentity);
             else
                 panel.publishMinimumMeasurer();
-            assert.equal(current.controlMinimumReady, false);
+            rendering = false;
+            assert.equal(current.controlMinimumReady, beforePublication, 'readiness changes only in the scheduled frame');
+            assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), false, 'provider replacement synchronously fences the old measured generation');
+            assert.equal(panel.minimumInputReady(), false, 'old reactive ready value cannot admit the new generation');
             assert.ok(frames.length > 0, 'supported viewport scheduled measurement');
             frames.shift().onFrame(0);
             assert.equal(current.controlMinimumReady, true);
@@ -215,10 +229,23 @@ async function run(id) {
         assert.equal(current.controlMinimumRevision, revision);
         assert.equal(current.controlMinimumCurrent(old), false);
         const previous = current.controlMinimumProvider;
+        rendering = true;
         current.bindControlMinimum(current.controlMinimumIdentity(), undefined);
+        rendering = false;
+        assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), false, 'same-identity undefined provider is fenced before its frame');
+        assert.equal(panel.contentInputEnabled(), false);
+        frames.shift().onFrame(0);
         assert.equal(current.controlMinimumReady, false);
+        current.bindControlMinimum(current.controlMinimumIdentity(), undefined);
         current.bindControlMinimum(current.controlMinimumIdentity(), previous);
         frames.shift().onFrame(0);
+        assert.equal(current.controlMinimumReady, false, 'superseded undefined provider cannot commit readiness');
+        assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), false, 'stale clear frame cannot admit the replacement');
+        frames.shift().onFrame(0);
+        assert.equal(current.controlMinimumReady, true);
+        assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), false, 'new receipt cannot re-enable old Panel props');
+        panel.minimumKey = current.controlLayout(metrics.revision).minimumKey;
+        assert.equal(current.controlMinimumReceiptCurrent(panel.minimumKey), true);
         const portraitOnly = ui('LocalReadingExperience.ets').replace('this.effectiveViewportWidth() > 0 && this.effectiveViewportHeight() > 0 &&', '!this.expandedLayout && this.effectiveViewportWidth() < this.effectiveViewportHeight() &&');
         const mutant = createReaderBuilderProbe(portraitOnly, ['controlMinimumCurrent'], {}).owner;
         Object.assign(mutant, current, { width: 568, height: 320, expandedLayout: false });
@@ -873,14 +900,15 @@ async function run(id) {
         assert.equal(retiredNav.enabled, false); assert.equal(retiredNav.hitTestBehavior, 'HitTestMode.None'); assert.equal(retiredNav.accessibilityLevel, 'no-hide-descendants');
         const gestures = [];
         const gesture = new Proxy({}, { get: (_, name) => (...args) => { gestures.push({ name, args }); return gesture; } });
-        const b = native('ReaderControlPanel.ets', ['brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
+        const b = native('ReaderControlPanel.ets', ['minimumInputReady', 'brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
             PanGesture: gesture, TapGesture: gesture, GestureGroup: gesture, PanDirection: { Vertical: 'vertical' }, GestureMode: { Exclusive: 'exclusive' },
             GesturePriority: { Low: 'low' }, globalThis: { Gesture: gesture, GestureGroup: gesture, PanGesture: gesture, TapGesture: gesture },
         });
-        let auto = 0;
+        let auto = 0, cancelled = 0, receiptCurrent = true;
         const changed = [];
         Object.assign(b, { layout, frame: () => frame, appScheme: 'day', brightnessPercent: 50, brightnessPreviewPercent: -1, brightnessAutomatic: false,
-            temporaryLayerActive: false, brightnessDragging: false, emitBrightness: () => { }, onBrightnessChange: v => changed.push(v), onBrightnessAuto: () => auto++, onBrightnessCancel: () => { }, });
+            minimumIdentity: 'current', minimumKey: 'current|1', minimumReady: true, minimumReceiptCurrent: () => receiptCurrent,
+            temporaryLayerActive: false, brightnessDragging: false, emitBrightness: () => { }, onBrightnessChange: v => changed.push(v), onBrightnessAuto: () => auto++, onBrightnessCancel: () => cancelled++, });
         b.brightnessRail();
         const scroll = nodes(b, 'Scroll')[0], column = nodes(b, 'Column')[0];
         assert.equal(scroll.height, frame.brightness.height);
@@ -891,6 +919,36 @@ async function run(id) {
         const automatic = nodes(b, 'Button')[0];
         target(automatic, 'brightness automatic');
         assert.ok(column.width >= automatic.width + 1);
+        const marker = nodes(b, 'Stack').find(node => node.borderRadius === 999 && node.border?.width === deps.TOK_BORDER_W);
+        const markerId = marker.id;
+        for (const fontScale of [1, 1.3, 1.6, 2]) {
+            scale = fontScale;
+            const sample = minimum.measureReaderControlMinimum({ context, headerInter: false, title: '阅读控制', identity: 'current', metricsRevision: 1,
+                topBarHeightVp: nativeBar, measureHomeForm: () => ({ minimumHeight: 170, minWidth: 100, fits: true }) }, 'home', width, 'current|1');
+            const expectedSize = Math.max(20, 13 * fontScale + deps.TOK_BORDER_W * 2);
+            assert.equal(sample.candidate.chrome.brightnessAutoWidthVp, expectedSize, 'paint follows its glyph and border, independent of the44 target');
+            assert.equal(sample.candidate.chrome.brightnessAutoHeightVp, expectedSize);
+            b.layout = { ...layout, contentBudget: { ...layout.contentBudget, ...sample.candidate.chrome } };
+            for (const scheme of ['day', 'night']) {
+                b.appScheme = scheme;
+                b.replay();
+                assert.equal(marker.width, expectedSize);
+                assert.equal(marker.height, expectedSize, 'automatic marker stays circular');
+                assert.ok(marker.width < automatic.width);
+                target(automatic, 'brightness automatic at' + fontScale);
+                const sun = nodes(b, 'Image')[0];
+                const track = nodes(b, 'Stack').find(node => node.hitTestBehavior === 'HitTestMode.Block');
+                const centre = deps.TOK_BORDER_W + sun.margin.top + sun.height + track.margin.top + track.height + automatic.margin.top + automatic.height / 2;
+                assert.equal(centre, column.height - column.width / 2, 'automatic marker shares the rail cap centre');
+                const oldTrackHeight = Math.max(0, controls.READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT -
+                    (controls.READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT - column.height) - (automatic.height - 20));
+                assert.notEqual(track.height, oldTrackHeight, 'full deduction of target growth would move the bottom marker inward');
+            }
+        }
+        scale = 2;
+        b.layout = layout;
+        b.replay();
+        assert.equal(marker.id, markerId, 'same marker survives scale and scheme updates');
         automatic.onClick();
         assert.equal(auto, 1);
         assert.ok(gestures.some(g => g.name === 'onActionStart') && gestures.some(g => g.name === 'onActionUpdate') && gestures.some(g => g.name === 'onActionEnd') && gestures.some(g => g.name === 'onAction'));
@@ -903,6 +961,16 @@ async function run(id) {
         assert.ok(changed.length >= 1);
         gestures.find(g => g.name === 'onAction').args[0]({ fingerList: [{ localY: 0 }] });
         assert.equal(changed.at(-1), 100);
+        const emissions = changed.length;
+        receiptCurrent = false;
+        automatic.onClick(); start(); move({ offsetY: -10 }); end({ offsetY: -10 });
+        gestures.find(g => g.name === 'onAction').args[0]({ fingerList: [{ localY: 0 }] });
+        assert.equal(auto, 1, 'retained automatic callback rejects a superseded provider before the next frame');
+        assert.equal(changed.length, emissions, 'retained Pan/Tap callbacks reject the old ready value');
+        receiptCurrent = true; start(); receiptCurrent = false; end({ offsetY: -10 });
+        assert.equal(cancelled, 1, 'in-flight drag settles through its original cancel owner when admission changes');
+        assert.equal(changed.length, emissions);
+        receiptCurrent = true;
         const ids = [...b.nodes.keys()];
         frame.brightness.height = 190;
         b.replay();

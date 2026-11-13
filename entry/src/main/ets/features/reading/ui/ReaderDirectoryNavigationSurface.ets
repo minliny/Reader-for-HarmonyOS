@@ -176,7 +176,6 @@ export struct ReaderDirectoryNavigationSurface {
     this.loadPending = false;
     this.loadFailed = false;
     this.awaitingRulesRefresh = false;
-    this.onTreeStateChange(false);
     this.settledFlat = false;
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
@@ -187,6 +186,11 @@ export struct ReaderDirectoryNavigationSurface {
     this.lastAscending = this.ascending;
     this.lastChapterIndex = this.currentChapterIndex;
     this.openTree(true);
+    const generation = this.generation, sourceId = this.sourceId, bookId = this.bookId;
+    this.getUIContext().postFrameCallback(new ReaderDirectoryTraceFrame((): void => {
+      if (this.mounted && generation === this.generation && sourceId === this.sourceId && bookId === this.bookId &&
+        this.view === undefined) this.onTreeStateChange(false);
+    }));
   }
 
   private onRefreshRevisionChanged(): void {

@@ -414,7 +414,6 @@ export struct SyncPage {
           ForEach(this.snapshot.history, (entry: SyncHistoryEntry) => {
             this.historyRow(entry);
           }, (entry: SyncHistoryEntry): string => `sync-history-${entry.timestamp}`);
-          this.expandRow();
         }
         .width('100%');
       }
@@ -504,26 +503,6 @@ export struct SyncPage {
       .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
       .alignItems(HorizontalAlign.Start);
     }
-  }
-
-  @Builder
-  private expandRow() {
-    Row() {
-      Stack({ alignContent: Alignment.Center }) {
-        Text('展开')
-          .fontFamily(TYPE_APP_COMPACT_BADGE.fontFamily)
-          .fontWeight(TYPE_APP_COMPACT_BADGE.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_BADGE.fontSizeFp)
-          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
-      }
-      .constraintSize({ minHeight: 26 })
-      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .borderRadius(8);
-    }
-    .width('100%')
-    .constraintSize({ minHeight: 32 })
-    .justifyContent(FlexAlign.End);
   }
 
   private scopeSummary(): string {

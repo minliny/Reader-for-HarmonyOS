@@ -181,7 +181,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     'catalogHeaderHeight','catalogHeaderTop',
     'searchFontScale','searchFilterHeight','searchFilterLabelWidth','searchBarHeight','bookFontScale',
     'resultTagWidth','resultTagHeight','resultViewportId',
-    'inputAllowed','readingContentIsForeground','acceptsTextInput',
+    'inputAllowed','readingContentIsForeground','acceptsTextInput','currentInputEnabled','deferPointerWatch','hasFollowingAction',
     'isMangaSurfaceCurrent','acceptsMangaInput','requestedMangaOfflineChapterId',
     // Nonmodal feedback is a finite visual/admission seam. Keep the actual
     // production defaults and helpers in focused pre-migration consumers.
@@ -189,7 +189,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     'indexRecoveryRevision','remoteCacheRefreshConsent','indexRecoveryNoticeContent','showIndexRecoveryNotice','runIndexRecoveryAction','jsonImportPresentation','isCurrentJsonImportContext','executeJsonImport','dismissJsonImport',
     'sourceImportSearchActionLabel','sourceImportSearchActionRevision','sourceImportSearchAction','runSourceImportSearchAction',
     'statusActionLabel','statusActionGeneration','onStatusAction','rssOperationResultMessage','resultMessage',
-    'readerRecoveryView','readerRecoveryActionLabel','readerRecoveryAction','showReaderRecovery','reconcileReaderRecovery',
+    'readerRecoveryView','readerRecoveryInputCurrent','readerRecoveryActionLabel','readerRecoveryAction','showReaderRecovery','reconcileReaderRecovery',
     'detailPendingNoticeVisible','detailContentIsForeground','isDirectoryOpeningCurrent','handleDetailBack','prepareDetailRoute','directoryNavigationPorts','openDirectory','isDetailDirectoryRoute','currentReadingRuntime','detailReadableAdmission','readableAdmissions','detailBookKey','hasUnknownShelfWrite','isCurrentRuntime',
     'dispatchBackDestination','requestReadingExit','cancelShelfReadingPreparation','bookshelfModalVisible','bookshelfContentAcceptsInput','openShelfEntry',
     'pendingFeedback','hasPendingSettings','hasPendingCleanup','recovery',

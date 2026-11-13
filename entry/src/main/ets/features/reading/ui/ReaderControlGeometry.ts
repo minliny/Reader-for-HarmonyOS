@@ -33,7 +33,7 @@ export const READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT = READER_CONTROL_BRIGHTNESS_
 export function readerControlBrightnessTrackHeight(railHeight: number,
   automaticHeight: number = READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE): number {
   return Math.max(0, READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT - (READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT - railHeight) -
-    Math.max(0, automaticHeight - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE));
+    Math.max(0, automaticHeight - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2);
 }
 export const READER_CONTROL_AUTO_PAGE_BRIGHTNESS_X = 312.44;
 export const READER_CONTROL_AUTO_PAGE_BRIGHTNESS_Y = 28;

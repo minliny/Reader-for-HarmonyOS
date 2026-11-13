@@ -1,8 +1,10 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderOperationFacts';
 import type { RssSourceSnapshot } from '../presentation/RssPresentationContract';
@@ -60,8 +62,9 @@ export struct RssSourceFeedPage {
   build() {
     ReaderStandardPage({
       variant: 'rssFeed',
+      scrollOwner: 'native-list',
       header: (): void => { this.pageHeader(); },
-      content: (): void => { this.pageContent(); },
+      nativeListItems: (): void => { this.entryList(); },
     });
   }
 
@@ -76,9 +79,6 @@ export struct RssSourceFeedPage {
     this.sourceCard();
     this.sourceActions();
     this.entrySectionHeader();
-    if (this.items.length > 0) {
-      this.entryList();
-    }
   }
 
 
@@ -87,11 +87,21 @@ export struct RssSourceFeedPage {
     RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
       onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
-    if (this.original?.blocked !== true) {
-    ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
-      actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+    if (this.feedbackView().visible) {
+      if (this.operation?.projection.receipt.confirmation === 'unknown') {
+        ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: '重新读取',
+          onReconcile: (generation: number): void => this.retryFeedback(generation) });
+      } else {
+        ForEach([this.feedbackView().generation], (generation: number): void => {
+          ReaderPageState({ message: this.feedbackView().message, padded: false,
+            loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing',
+            actionLabel: this.feedbackView().canRetry ? '重新读取' : '', onAction: (): void => this.retryFeedback(generation) });
+        }, (generation: number): string => `rss-feed-read:${generation}`);
+      }
     }
   }
+
+  private feedbackView(): ReaderRecoveryView { return readerRecoveryView(this.operation?.projection, this.readFacts); }
 
   private retryFeedback(generation: number): void {
     const operation = this.operation;
@@ -194,23 +204,23 @@ export struct RssSourceFeedPage {
 
   @Builder
   private entryList() {
-    List() {
-      Repeat(this.items)
-        .each((repeatItem: RepeatItem<RssItem>) => {
-        ListItem() {
-          this.entryRow(repeatItem.item, repeatItem.index);
-        }
-      })
-      .key((item: RssItem): string =>
-        `rss-source-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`)
-      .virtualScroll({ reusable: true });
+    ListItem() { Column() { this.pageContent(); }.width('100%'); }
+    if (this.items.length === 0 && (this.readFacts.fact === 'current' || this.readFacts.fact === 'empty')) {
+      ListItem() { ReaderPageState({ title: '暂无条目', message: '刷新订阅源后可在这里查看条目。' }); }
     }
-    .width('100%')
-    .height(Math.min(480, this.items.length * 72))
-    .scrollBar(BarState.Off)
-    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    Repeat(this.items)
+      .each((repeatItem: RepeatItem<RssItem>) => {
+      ListItem() {
+        this.entryRow(repeatItem.item, repeatItem.index);
+      }.backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+        .border({ width: { left: TOK_BORDER_W, right: TOK_BORDER_W, top: repeatItem.index === 0 ? TOK_BORDER_W : 0,
+          bottom: repeatItem.index === this.items.length - 1 ? TOK_BORDER_W : 0 }, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
+        .borderRadius({ topLeft: repeatItem.index === 0 ? 8 : 0, topRight: repeatItem.index === 0 ? 8 : 0,
+          bottomLeft: repeatItem.index === this.items.length - 1 ? 8 : 0, bottomRight: repeatItem.index === this.items.length - 1 ? 8 : 0 });
+    })
+    .key((item: RssItem): string =>
+      `rss-source-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`)
+    .virtualScroll({ reusable: true });
   }
 
   @Builder

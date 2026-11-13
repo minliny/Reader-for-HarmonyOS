@@ -16,7 +16,7 @@ export function remoteReadingEntryKind(seed: RemoteReadingBookSeed, shelf?: Shel
 export function remoteReadingSeedForShelf(book: ShelfBook): RemoteReadingBookSeed {
   return {
     contentKind: book.contentKind, sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
-    title: book.title, author: book.author, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
+    title: book.title, author: book.author, kind: book.kind, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
   };
 }
 

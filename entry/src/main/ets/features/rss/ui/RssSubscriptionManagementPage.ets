@@ -1,11 +1,13 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import type { RssSubscriptionManagementItem } from '../presentation/RssPresentationContract';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
-import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
+import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
@@ -42,7 +44,7 @@ export struct RssSubscriptionManagementPage {
   @Prop expandedLayout: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
   @Prop focusedSubscriptionId: string = '';
-  @Prop resultMessage: string = '';
+  @Prop @Watch('notifyResult') resultMessage: string = '';
   @Prop operation: RssManagementOperationProjection | undefined = undefined;
   @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   @Prop presentationIdentity: string = '';
@@ -66,20 +68,33 @@ export struct RssSubscriptionManagementPage {
     (_subscriptionId: string, _expanded: boolean): void => {};
   @State private expandedSubscriptionId: string = '';
   private readonly pageScroller: Scroller = new Scroller();
+  private readonly resultFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  private mounted: boolean = false;
 
   aboutToAppear(): void {
+    this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     if (this.items.some((item: RssSubscriptionManagementItem): boolean =>
       item.subscriptionId === this.focusedSubscriptionId)) {
       this.expandedSubscriptionId = this.focusedSubscriptionId;
     }
+    this.notifyResult();
+  }
+  aboutToDisappear(): void { this.mounted = false; this.resultFeedback.reset(); }
+
+  private notifyResult(): void {
+    if (!this.mounted || this.resultMessage.length === 0) return;
+    const message = this.resultMessage, presentation = this.presentationIdentity;
+    this.resultFeedback.show(() => this.getUIContext(), { message, key: `${presentation}:${message}` },
+      (): boolean => this.mounted && presentation === this.presentationIdentity && message === this.resultMessage);
   }
 
   build() {
     ReaderStandardPage({
       variant: 'rssManagement',
+      scrollOwner: 'native-list',
       header: (): void => { this.backBar(); },
-      content: (): void => { this.pageContent(); },
+      nativeListItems: (): void => { this.subscriptionList(); },
       scroller: this.pageScroller,
     });
   }
@@ -87,10 +102,7 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private pageContent() {
     this.stats();
-    ReaderRecoveryNotice({ view: { message: this.resultMessage, visible: this.resultMessage.length > 0,
-      canRetry: false, generation: 0 } });
     this.operationFeedback();
-    this.subscriptionList();
   }
 
 
@@ -134,7 +146,7 @@ export struct RssSubscriptionManagementPage {
     RssOriginalRecoverySurface({ original: this.operation?.original, presentationIdentity: this.presentationIdentity, scope: 'management',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
       onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
-    if (this.operation?.original?.blocked !== true && this.feedbackMessage().length > 0) {
+    if (!rssOriginalMatchesScope(this.operation?.original, 'management') && this.feedbackMessage().length > 0) {
       Row({ space: TOK_SPACE_XS }) {
         Text(this.feedbackMessage())
           .layoutWeight(1)
@@ -149,7 +161,7 @@ export struct RssSubscriptionManagementPage {
             label: this.hasOperationFeedback() ? '刷新列表' : '重试',
             generation: this.hasOperationFeedback() && this.operation !== undefined ?
               this.operation.projection.facts.generation : this.readFacts.generation,
-            onReconcile: (_generation: number): void => this.retryFeedback(),
+            onReconcile: (generation: number): void => this.retryFeedback(generation),
           });
         }
       }
@@ -179,10 +191,10 @@ export struct RssSubscriptionManagementPage {
       this.operation.projection.facts.canRetry : this.readFacts.canRetry;
   }
 
-  private retryFeedback(): void {
+  private retryFeedback(generation: number): void {
     if (this.hasOperationFeedback() && this.operation !== undefined) {
-      if (this.operation.projection.facts.canRetry) this.onReconcile(this.operation);
-    } else if (this.readFacts.canRetry) {
+      if (generation === this.operation.projection.facts.generation && this.operation.projection.facts.canRetry) this.onReconcile(this.operation);
+    } else if (generation === this.readFacts.generation && this.readFacts.canRetry) {
       this.onRetryRead(this.readFacts);
     }
   }
@@ -216,24 +228,22 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private subscriptionList() {
-    List() {
-      Repeat(this.items)
-        .each((repeatItem: RepeatItem<RssSubscriptionManagementItem>) => {
-        ListItem() {
-          this.subscriptionItem(repeatItem.item, repeatItem.index);
-        }
-      })
-      .key((item: RssSubscriptionManagementItem): string => `rss-management-${item.subscriptionId}`)
-      .virtualScroll({ reusable: true });
+    ListItem() { Column() { this.pageContent(); }.width('100%'); }
+    if (this.items.length === 0 && (this.readFacts.fact === 'current' || this.readFacts.fact === 'empty')) {
+      ListItem() { ReaderPageState({ title: '暂无订阅源', message: '添加订阅源后可在这里管理。' }); }
     }
-    .width('100%')
-    .height(Math.min(520, Math.max(72, this.items.length * 92)))
-    .scrollBar(BarState.Off)
-    .margin({ top: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .borderRadius(8)
-    .clip(true);
+    Repeat(this.items)
+      .each((repeatItem: RepeatItem<RssSubscriptionManagementItem>) => {
+      ListItem() {
+        this.subscriptionItem(repeatItem.item, repeatItem.index);
+      }.backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+        .border({ width: { left: TOK_BORDER_W, right: TOK_BORDER_W, top: repeatItem.index === 0 ? TOK_BORDER_W : 0,
+          bottom: repeatItem.index === this.items.length - 1 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
+        .borderRadius({ topLeft: repeatItem.index === 0 ? 8 : 0, topRight: repeatItem.index === 0 ? 8 : 0,
+          bottomLeft: repeatItem.index === this.items.length - 1 ? 8 : 0, bottomRight: repeatItem.index === this.items.length - 1 ? 8 : 0 });
+    })
+    .key((item: RssSubscriptionManagementItem): string => `rss-management-${item.subscriptionId}`)
+    .virtualScroll({ reusable: true });
   }
 
   @Builder

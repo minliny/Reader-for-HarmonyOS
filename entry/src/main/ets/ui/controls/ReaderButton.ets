@@ -176,7 +176,8 @@ export struct ReaderButton {
   @Builder
   private emptyLeading() {}
   build() {
-    if (this.specId === 'search-filter-option') {
+    if (this.specId === 'search-filter-option' || this.specId === 'source-management-category' ||
+      this.specId === 'source-management-detect' || this.specId === 'source-management-login') {
       // The capsule keeps its compact visual size inside a separate native
       // target. Its 44vp slot belongs to layout instead of an outer response
       // region, so adjacent filter targets never overlap.

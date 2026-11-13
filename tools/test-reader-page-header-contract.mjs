@@ -52,7 +52,7 @@ const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/man
 const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 for (const [name, file, slots] of [
   ['ReaderPageScaffold', 'ui/layout/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
-  ['ReaderStandardPage', 'ui/layout/ReaderStandardPage.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['ReaderStandardPage', 'ui/layout/ReaderStandardPage.ets', ['content', 'nativeListItems', 'header', 'footer', 'overlayContent']],
   ['MainTabShell', 'features/shell/MainTabShell.ets', ['content', 'header', 'overlayContent', 'scrollOverlayContent']],
 ]) {
   const source = readFileSync(`entry/src/main/ets/${file}`, 'utf8');

@@ -316,6 +316,7 @@ export function resolveReaderReadingLayout(
   insetProfile?: ReaderContentInsetProfile,
   measuredTopInfoHeightVp: number = 0,
   measuredPersistentBottomVp: number = 0,
+  measuredSessionTargetHeightVp: number = 0,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -382,13 +383,16 @@ export function resolveReaderReadingLayout(
     metrics.navigationInsets.bottom,
   );
   const systemFontScale = metrics.systemFontScale > 0 ? metrics.systemFontScale : 1;
+  const sessionTargetHeight = Number.isFinite(measuredSessionTargetHeightVp) ? Math.max(0, measuredSessionTargetHeightVp) : 0;
+  const sessionBottomBudget = sessionTargetHeight > 0 ?
+    Math.max(23, readerInteractiveSafeBottom(metrics, false)) + sessionTargetHeight : 0;
   return new ReaderReadingLayoutSnapshot(
     widthClass,
     width,
     height,
     Math.max(resolvedContentTop, persistentBottom > 0 ? persistentBottom + 8 : 0),
     contentHorizontal,
-    Math.max(profile.contentBottom, contentBottom),
+    Math.max(profile.contentBottom, contentBottom, sessionBottomBudget),
     contentHorizontal,
     systemFontScale,
     informationTop,

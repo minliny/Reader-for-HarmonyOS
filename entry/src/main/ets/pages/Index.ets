@@ -268,6 +268,7 @@ struct Index {
       restoreReaderReturn: (context: ReaderReturnContext | undefined): boolean => this.downloadNavigation.restoreReaderReturn(context),
       entryPorts: (owner: ReaderRuntimeOwner): ReadingEntryPorts => this.readingEntryPorts(owner),
       sourceName: (sourceId: string, name?: string): string => this.sourceDisplayName(sourceId, name),
+      detailReadAllowed: (): boolean => this.journeyRecoveryInputAllowed(),
       failure: (title: string, message: string): void => this.showReadingFailure(title, message),
       afterOpening: (project: () => void): void => this.shelfMotion.projectAfterOpening(project),
       postFrame: (action: () => void): void => this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame(action)),
@@ -1059,6 +1060,10 @@ struct Index {
       },
       openReading: (chapterIndex?: number): void => this.openReading(chapterIndex),
       openDirectory: (): void => this.openFullDirectory(),
+      retryCatalog: (): void => {
+        const owner = this.currentReadingRuntime();
+        if (owner !== undefined) this.readingEntry.retryDirectoryCatalog(owner);
+      },
       openSourceSwitch: (focusId?: string): void => this.openDetailSourceSwitch(focusId),
       back: (): void => { this.onBackPress(); },
     };

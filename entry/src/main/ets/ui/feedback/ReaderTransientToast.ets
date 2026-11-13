@@ -71,7 +71,9 @@ export struct ReaderTransientToast {
             Text(this.toast.tone === 'success' ? '✓' : this.toast.tone === 'error' ? '!' : 'i')
               .fontFamily(MESSAGE_TITLE.fontFamily)
               .fontWeight(MESSAGE_TITLE.fontWeight)
-              .fontSize(14)
+              // This status mark is the glyph inside a fixed22vp icon.
+              // Message title/body below retain system-scaled text units.
+              .fontSize('14vp')
               .fontColor(readerAppColor('TOK_MESSAGE_FEEDBACK_MARK_INK', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .width(22)

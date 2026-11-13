@@ -167,7 +167,14 @@ export struct ReaderSearchField {
     if (this.directoryLayoutId !== this.directoryFocusId) this.directoryNativeFocused = false;
     if (this.mounted && this.variant === 'readerDirectory' && !this.directoryFocusAllowed &&
       this.directoryFocusId.length > 0 && this.directoryLayoutId === this.directoryFocusId) {
-      this.onDirectoryFocusChanged(this.directoryFocusId, false);
+      this.directoryNativeFocused = false;
+      const id = this.directoryFocusId;
+      const ticket = this.directoryFocusTicket;
+      const notify = this.onDirectoryFocusChanged;
+      this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+        if (this.mounted && ticket === this.directoryFocusTicket && id === this.directoryFocusId &&
+          !this.directoryFocusAllowed && this.directoryLayoutId === id) notify(id, false);
+      }));
     }
     this.queueDirectoryFocus();
   }

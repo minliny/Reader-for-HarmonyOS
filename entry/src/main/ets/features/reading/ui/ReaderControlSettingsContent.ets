@@ -45,6 +45,7 @@ export struct ReaderControlSettingsContent {
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
+  inputCurrent?: () => boolean;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @Prop pageTurnSimulationAvailable: boolean = true;
   @Prop justifyText: boolean = true;
@@ -84,6 +85,10 @@ export struct ReaderControlSettingsContent {
   private clipMinimumKey: string = '';
   private readonly minimumMeasurer: ReaderControlModuleMeasurer =
     (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => this.measureMinimum(widths, key);
+  private currentInputEnabled(): boolean {
+    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+
   private measureMinimum(widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined {
     const groups: ReaderControlSettingsGroup[] = ['direction', 'pageTurn', 'timeout'];
     const groupLabels: string[] = []; const options: string[][] = [];
@@ -131,7 +136,7 @@ export struct ReaderControlSettingsContent {
   }
 
   private p(): number { return readerControlUnit(this.motionProgress); }
-  private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
+  private fullInput(): boolean { return this.currentInputEnabled() && this.p() === 1; }
   private scrollContentHeight(): number {
     return Math.max(this.geometry().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
   }
@@ -150,7 +155,7 @@ export struct ReaderControlSettingsContent {
       const target = sampleReaderControlMorphScrollPath(path, this.p());
       this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
       if (Math.abs(offset - target) > .1) this.scroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
-      if (this.interactionEnabled && (this.p() === 0 || this.p() === 1)) {
+      if (this.currentInputEnabled() && (this.p() === 0 || this.p() === 1)) {
         this.minimumQuickScrollOffset = this.p() === 0 ? path.quickOffset : 0;
         this.minimumScrollPath = undefined;
       }
@@ -162,7 +167,7 @@ export struct ReaderControlSettingsContent {
       return;
     }
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, offset);
+      this.currentInputEnabled(), offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -189,7 +194,7 @@ export struct ReaderControlSettingsContent {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress);
   }
   private quickMinimumScrollInput(): boolean {
-    return this.interactionEnabled && this.quickMinimumScrollPresentation();
+    return this.currentInputEnabled() && this.quickMinimumScrollPresentation();
   }
 
   private quickMinimumScrollPresentation(): boolean {
@@ -260,7 +265,7 @@ export struct ReaderControlSettingsContent {
         (): void => this.handleSegment(group, option));
     }
     return this.optionModifiers[slot].update(this.choice(group, row, index), this.presentation(),
-      this.isSegmentActive(group, option), this.interactionEnabled && this.isSegmentAvailable(group, option),
+      this.isSegmentActive(group, option), this.currentInputEnabled() && this.isSegmentAvailable(group, option),
       this.segmentAccessibilityText(group, option), this.appThemeScheme);
   }
   private group(group: ReaderControlSettingsAddedGroup): ReaderControlActorFrame {
@@ -288,7 +293,7 @@ export struct ReaderControlSettingsContent {
     .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
       this.nativeScrollDelta(y, source))
     .onDidScroll((): void => this.onFullDidScroll())
-    .enabled(this.interactionEnabled)
+    .enabled(this.currentInputEnabled())
     .clip(true);
   }
 
@@ -376,7 +381,7 @@ export struct ReaderControlSettingsContent {
     // visibility mount/unmount at p=0; both can expose a black intermediate
     // frame on device while the parent dock is resizing.
     .opacity(this.group(group).opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-    .enabled(this.interactionEnabled && this.p() > 0)
+    .enabled(this.currentInputEnabled() && this.p() > 0)
     .hitTestBehavior(this.p() > 0 ? HitTestMode.Default : HitTestMode.None);
   }
 
@@ -394,7 +399,7 @@ export struct ReaderControlSettingsContent {
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .position({ x: this.child('row', index).x, y: this.child('row', index).y })
     .opacity(this.child('row', index).opacity * (isReaderSettingsToggleAvailable(key) ? 1 : .55))
-    .enabled(this.interactionEnabled && this.p() > 0 && isReaderSettingsToggleAvailable(key))
+    .enabled(this.currentInputEnabled() && this.p() > 0 && isReaderSettingsToggleAvailable(key))
     .accessibilityText(this.toggleAccessibilityText(label, key))
     .onClick((): void => this.handleToggle(key));
   }
@@ -418,13 +423,13 @@ export struct ReaderControlSettingsContent {
   }
 
   private handleToggle(key: ReaderSettingsToggleKey): void {
-    if (this.interactionEnabled && this.p() > 0 && isReaderSettingsToggleAvailable(key)) {
+    if (this.currentInputEnabled() && this.p() > 0 && isReaderSettingsToggleAvailable(key)) {
       this.onToggleChange(key, !this.toggleValue(key));
     }
   }
 
   private handleJustify(): void {
-    if (this.interactionEnabled && this.p() > 0) this.onJustifyTextChange(!this.justifyText);
+    if (this.currentInputEnabled() && this.p() > 0) this.onJustifyTextChange(!this.justifyText);
   }
 
   private groupOptions(group: ReaderControlSettingsGroup): string[] {
@@ -516,7 +521,7 @@ export struct ReaderControlSettingsContent {
   }
 
   private handleSegment(group: ReaderControlSettingsGroup, option: string): void {
-    if (!this.interactionEnabled || !this.isSegmentAvailable(group, option)) {
+    if (!this.currentInputEnabled() || !this.isSegmentAvailable(group, option)) {
       return;
     }
     if (group === 'direction') {

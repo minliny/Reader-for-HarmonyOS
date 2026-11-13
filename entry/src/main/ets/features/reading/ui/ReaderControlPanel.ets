@@ -62,6 +62,7 @@ import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
 import { ReaderControlTtsContent } from './ReaderControlTtsContent';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
 import {
   ReaderSessionMorphSourceMeasurement,
@@ -164,6 +165,7 @@ class ReaderControlFrameCallback extends FrameCallback {
 
 @Component
 export struct ReaderControlPanel {
+  @Prop sessionFontScale: number = 1;
   @StorageLink('readerAppScheme') private appScheme: string = 'day';
   @Prop @Watch('onLaunchSampleChanged') launchSample: ReaderSessionLaunchSample | undefined = undefined;
   @Prop @Watch('onLaunchSampleChanged') launchGeneration: number = 0;
@@ -286,6 +288,7 @@ export struct ReaderControlPanel {
   @Prop @Watch('publishSelectedPlaybackProfile') minimumKey: string = '';
   @Prop @Watch('onMinimumMetricsChanged') minimumMetricsRevision: number = -1;
   @Prop @Watch('onMinimumAvailabilityChanged') minimumReady: boolean = true;
+  minimumReceiptCurrent?: (key: string) => boolean;
   onMinimumMeasurerReady: (identity: string, measurer: ReaderControlContentMeasurer | undefined) => void =
     (_identity: string, _measurer: ReaderControlContentMeasurer | undefined): void => {};
   private moduleMinimumMeasurer: ReaderControlModuleMeasurer | undefined = undefined;
@@ -329,6 +332,9 @@ export struct ReaderControlPanel {
   @Prop mangaSearch: boolean = false;
   @Prop bookmarkLoadFailed: boolean = false;
   @Prop bookmarkLoadMessage: string = '';
+  @Prop bookmarkRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  @Prop bookmarkRecoveryIdentity: string = '';
+  onBookmarkRecovery: (identity: string, continuing: boolean) => void = (): void => {};
   onRetryBookmarkLoad: () => void = (): void => {};
   @Prop searchQuery: string = '';
   searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
@@ -541,7 +547,7 @@ export struct ReaderControlPanel {
   @State private progressInputRevision: number = 0;
   private progressInputScope: string = '';
   @State private brightnessPreviewPercent: number = -1;
-  @State private appearanceFontReorderActive: boolean = false;
+  private appearanceFontReorderActive: boolean = false;
   private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
   private brightnessDragging: boolean = false;
   private brightnessLastEmittedPercent: number = -1;
@@ -693,7 +699,8 @@ export struct ReaderControlPanel {
 
   private minimumInputReady(): boolean {
     const ready = this.minimumIdentity.length === 0 ||
-      (this.minimumReady && this.minimumKey.startsWith(`${this.minimumIdentity}|`));
+      (this.minimumReady && this.minimumKey.startsWith(`${this.minimumIdentity}|`) &&
+        (this.minimumReceiptCurrent?.(this.minimumKey) ?? true));
     const budget = this.layout.contentBudget;
     const viewport = this.contentMotionProgress === 1 ? budget?.fullContentHeightVp : budget?.quickContentHeightVp;
     return ready && (viewport === undefined || viewport >= 44);
@@ -1330,6 +1337,7 @@ export struct ReaderControlPanel {
           HitTestMode.Transparent : HitTestMode.None);
       if (this.launchSample !== undefined) {
         ReaderSessionLaunchStage({
+          fontScale: this.sessionFontScale,
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
           desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
           interactionEnabled: this.launchInteractionEnabled,
@@ -1557,26 +1565,29 @@ export struct ReaderControlPanel {
       this.replaceHeader();
     } else {
     Stack({ alignContent: Alignment.TopStart }) {
-      Image(this.headerIcon()).width(16).height(16).position({ x: 0, y: 7 })
+      Image(this.headerIcon()).width(16).height(16).position({ x: 0, y: Math.max(0, (this.headerFrame().height - 16) / 2) })
         .hitTestBehavior(HitTestMode.None);
       Text(this.contentTitle()).fontFamily(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontFamily : TYPE_READER_CONTROL_HEADER_UI.fontFamily)
         .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontWeight : TYPE_READER_CONTROL_HEADER_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontSizeFp : TYPE_READER_CONTROL_HEADER_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.lineHeightFp : TYPE_READER_CONTROL_HEADER_UI.lineHeightFp) as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width(Math.max(0, this.headerFrame().width - (this.selectedMinimumProfile()?.collapseWidth ?? 40) - 34))
+        .width(Math.max(0, this.headerFrame().width - (this.selectedMinimumProfile()?.collapseWidth ?? 44) - 34))
         .height(this.selectedMinimumProfile()?.titleHeight ?? (this.headerInter() ? 17 : 20))
-        .position({ x: 24, y: this.headerInter() ? 6.5 : 5 });
+        .position({ x: 24, y: Math.max(0, (this.headerFrame().height -
+          (this.selectedMinimumProfile()?.titleHeight ?? (this.headerInter() ? 17 : 20))) / 2) });
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        Text('收起').width((this.selectedMinimumProfile()?.collapseWidth ?? 40) - 20)
+      Stack({ alignContent: Alignment.Center }) {
+        Text('收起').width((this.selectedMinimumProfile()?.collapseWidth ?? 44) - 20)
           .height(this.selectedMinimumProfile()?.collapseLabelHeight ?? (this.headerInter() ? 12 : 14))
           .fontFamily(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontFamily : TYPE_READER_CONTROL_COLLAPSE_UI.fontFamily)
           .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontWeight : TYPE_READER_CONTROL_COLLAPSE_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontSizeFp : TYPE_READER_CONTROL_COLLAPSE_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.lineHeightFp : TYPE_READER_CONTROL_COLLAPSE_UI.lineHeightFp) as number)
-          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
-          .position({ x: 10, y: this.headerInter() ? 7 : 6 });
-      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 40).height(this.headerFrame().height - 4);
-      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 40).height(this.headerFrame().height - 4).padding(0)
-        .position({ x: Math.max(0, this.headerFrame().width - (this.selectedMinimumProfile()?.collapseWidth ?? 40)), y: 2 })
+          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center);
+      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44)
+        .height(Math.max(26, (this.selectedMinimumProfile()?.collapseLabelHeight ?? (this.headerInter() ? 12 : 14)) + 12))
         .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
+        .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44).height(this.headerFrame().height - 4).padding(0)
+        .position({ x: Math.max(0, this.headerFrame().width - (this.selectedMinimumProfile()?.collapseWidth ?? 44)), y: 2 })
+        .backgroundColor(Color.Transparent).borderRadius(8)
         .id('reader-control-collapse')
         .hitTestBehavior(HitTestMode.Block)
         .accessibilityText(`收起${this.contentTitle()}`)
@@ -1612,12 +1623,17 @@ export struct ReaderControlPanel {
         .position({ x: this.replaceHeaderFrame().icon.x, y: this.replaceHeaderFrame().icon.y })
         .opacity(this.replaceHeaderFrame().icon.opacity).hitTestBehavior(HitTestMode.None);
       Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Stack({ alignContent: Alignment.Center }) {
       Text('完成').fontFamily(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontWeight)
         .fontSize(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
-        .width(this.replaceHeaderFrame().action.width).height(this.replaceHeaderFrame().action.height);
+        .width(this.replaceHeaderFrame().action.width).height(this.selectedMinimumProfile()?.collapseLabelHeight ?? 14);
+      }.width(this.replaceHeaderFrame().action.width)
+        .height(Math.max(26, (this.selectedMinimumProfile()?.collapseLabelHeight ?? 14) + 12))
+        .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
+        .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
       }.width(this.replaceHeaderFrame().action.width).height(this.replaceHeaderFrame().action.height).padding(0)
         .position({ x: this.replaceHeaderFrame().action.x, y: this.replaceHeaderFrame().action.y })
-        .opacity(this.replaceHeaderFrame().action.opacity).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
+        .opacity(this.replaceHeaderFrame().action.opacity).backgroundColor(Color.Transparent).borderRadius(8)
         .enabled(this.frame().progress === 1).accessibilityText('完成替换规则管理，收起到快捷态')
         .accessibilityLevel(this.frame().progress === 1 ? 'auto' : 'no-hide-descendants')
         .onClick((): void => this.collapseControl());
@@ -1648,12 +1664,15 @@ export struct ReaderControlPanel {
           onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),
           bookmarkLoadFailed: this.bookmarkLoadFailed,
           bookmarkLoadMessage: this.bookmarkLoadMessage,
+          bookmarkRecovery: this.bookmarkRecovery, bookmarkRecoveryIdentity: this.bookmarkRecoveryIdentity,
+          onBookmarkRecovery: (identity: string, continuing: boolean): void => this.onBookmarkRecovery(identity, continuing),
           onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),
           chapterDownloadEnabled: this.chapterDownloadEnabled,
           mangaSearch: this.mangaSearch,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           progress: this.contentMotionProgress,
           interactionEnabled: this.secondaryModuleInputEnabled('directory'),
+          inputCurrent: (): boolean => this.secondaryModuleInputEnabled('directory'),
           availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
           tab: this.contentLocation().directoryTab,
           sessionKey: this.listSessionKey(), bookmarkIdentity: this.bookmarkIdentity,
@@ -1703,6 +1722,7 @@ export struct ReaderControlPanel {
       availableHeight: this.contentMotionHeight,
       fullContentHeight: this.contentEndpointHeight(true),
       interactionEnabled: this.contentInputEnabled(),
+      inputCurrent: (): boolean => this.secondaryModuleInputEnabled('appearance'),
       dismissTemporaryRevision: this.dismissTemporaryRevision,
       onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
       reduceMotion: this.reduceMotion,
@@ -1749,6 +1769,7 @@ export struct ReaderControlPanel {
       availableWidth: this.contentMotionWidth,
       availableHeight: this.contentMotionHeight,
       interactionEnabled: this.secondaryModuleInputEnabled('search'),
+      inputCurrent: (): boolean => this.secondaryModuleInputEnabled('search'),
       dismissTemporaryRevision: this.dismissTemporaryRevision,
       onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
       query: this.searchQuery,
@@ -1773,6 +1794,7 @@ export struct ReaderControlPanel {
       availableWidth: this.contentMotionWidth,
       availableHeight: this.contentMotionHeight,
       interactionEnabled: this.secondaryModuleInputEnabled('settings'),
+      inputCurrent: (): boolean => this.secondaryModuleInputEnabled('settings'),
       snapshot: this.settingsSnapshot,
       pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
       justifyText: this.appearanceSnapshot.alignment === 'justify',
@@ -1811,6 +1833,7 @@ export struct ReaderControlPanel {
       availableWidth: this.contentMotionWidth,
       availableHeight: this.contentMotionHeight,
       interactionEnabled: this.secondaryModuleInputEnabled('tts'),
+      inputCurrent: (): boolean => this.secondaryModuleInputEnabled('tts'),
       state: this.ttsState,
       timerMode: this.ttsTimerMode,
       timerMinutes: this.ttsTimerMinutes,
@@ -1869,6 +1892,7 @@ export struct ReaderControlPanel {
           availableWidth: this.contentMotionWidth,
           availableHeight: this.contentMotionHeight,
           interactionEnabled: this.secondaryModuleInputEnabled('autoPage'),
+          inputCurrent: (): boolean => this.secondaryModuleInputEnabled('autoPage'),
           canPreviousChapter: this.canStepChapter(-1),
           canNextChapter: this.canStepChapter(1),
           status: this.autoPageStatus, speedSeconds: this.autoPageSpeedSeconds,
@@ -1898,6 +1922,7 @@ export struct ReaderControlPanel {
           state: this.controlReplaceState, motionProgress: this.contentMotionProgress,
           availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
           interactionEnabled: this.secondaryModuleInputEnabled('replace'),
+          inputCurrent: (): boolean => this.secondaryModuleInputEnabled('replace'),
           dismissTemporaryRevision: this.dismissTemporaryRevision, retireTemporaryRevision: this.retireTemporaryRevision,
           onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
           onBack: (): void => this.requestPage('home'),
@@ -2091,7 +2116,7 @@ export struct ReaderControlPanel {
     .enabled(this.inputEnabled && !this.controlObscured)
     .accessibilityText(label)
     .onClick((): void => {
-      if (!this.runtimeMounted || !this.inputEnabled || this.controlObscured) return;
+      if (!this.runtimeMounted || !this.contentInputEnabled()) return;
       if (action === 'search') {
         this.promoteSearch();
       } else if (action === 'autoPage') {
@@ -2149,7 +2174,7 @@ export struct ReaderControlPanel {
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_left_theme_night' : 'app.media.rc_chevron_left'),
         accessibilityLabel: '上一章', actionEnabled: this.canStepChapter(-1),
-        onTap: (): void => { if (this.canStepChapter(-1)) this.onPreviousChapter(); },
+        onTap: (): void => { if (this.contentInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
       });
 
       // ChapterTitle Inter Bold 13 居中 (layoutWeight 吃剩余宽)。
@@ -2169,7 +2194,7 @@ export struct ReaderControlPanel {
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_right_theme_night' : 'app.media.rc_chevron_right'),
         accessibilityLabel: '下一章', actionEnabled: this.canStepChapter(1),
-        onTap: (): void => { if (this.canStepChapter(1)) this.onNextChapter(); },
+        onTap: (): void => { if (this.contentInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
       });
     }
     .width('100%')
@@ -2286,7 +2311,8 @@ export struct ReaderControlPanel {
   private brightnessContentHeight(): number {
     const automatic = Math.max(44, this.layout.contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE);
     const minimum = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH + READER_CONTROL_BRIGHTNESS_ICON_SIZE / 2 +
-      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE / 2 + 2 * READER_CONTROL_BRIGHTNESS_CONTROL_GAP + automatic + 24;
+      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE / 2 + 2 * READER_CONTROL_BRIGHTNESS_CONTROL_GAP + 44 +
+      (automatic - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2;
     return Math.max(this.frame().brightness.height, minimum);
   }
 
@@ -2302,7 +2328,7 @@ export struct ReaderControlPanel {
         .margin({ top: READER_CONTROL_BRIGHTNESS_ICON_TOP - TOK_BORDER_W });
 
       // The 8vp track fills the gap between the cap-centred endpoint icons;
-      // its 24vp pointer target uses that same height. Gesture coordinates
+      // its 44vp pointer target uses that same height. Gesture coordinates
       // are mapped to the whole authored track; an invisible OutSet slider
       // would retain an implicit thumb inset and shorten the usable range.
       Stack({ alignContent: Alignment.Center }) {
@@ -2336,12 +2362,10 @@ export struct ReaderControlPanel {
         ),
       );
 
-      // AutoBrightnessHitArea 24×20: pill 20×20 居中 + A Inter Medium 13。
+      // Keep the measured circular A marker centred in its paid 44vp carrier.
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Stack({ alignContent: Alignment.Center }) {
           Text('A')
-            .width(this.layout.contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-            .height(this.layout.contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
             .fontFamily(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontFamily)
             .fontWeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontWeight)
             .fontSize(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontSizeFp)
@@ -2366,7 +2390,7 @@ export struct ReaderControlPanel {
       .opacity(this.brightnessAutomatic ? 1 : 0.72)
       .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启，点击改为手动' : '手动亮度，点击跟随系统')
       .onClick((): void => {
-        if (this.temporaryLayerActive) return;
+        if (this.temporaryLayerActive || !this.minimumInputReady()) return;
         this.brightnessDragging = false;
         this.brightnessPreviewPercent = -1;
         this.onBrightnessAuto();
@@ -2395,7 +2419,7 @@ export struct ReaderControlPanel {
   }
 
   private beginBrightnessDrag(): void {
-    if (this.temporaryLayerActive) return;
+    if (this.temporaryLayerActive || !this.minimumInputReady()) return;
     this.brightnessDragStartPercent = this.effectiveBrightnessPercent();
     this.brightnessPreviewPercent = this.brightnessDragStartPercent;
     this.brightnessDragging = true;
@@ -2403,7 +2427,10 @@ export struct ReaderControlPanel {
   }
 
   private updateBrightnessDrag(offsetY: number): void {
-    if (this.temporaryLayerActive) return;
+    if (this.temporaryLayerActive || !this.minimumInputReady()) {
+      this.cancelBrightnessDrag();
+      return;
+    }
     const trackHeight = this.brightnessTrackHeight();
     if (!Number.isFinite(offsetY) || trackHeight <= 0) {
       return;
@@ -2421,7 +2448,11 @@ export struct ReaderControlPanel {
   }
 
   private finishBrightnessDrag(offsetY: number): void {
-    if (!this.brightnessDragging || this.temporaryLayerActive) return;
+    if (!this.brightnessDragging) return;
+    if (this.temporaryLayerActive || !this.minimumInputReady()) {
+      this.cancelBrightnessDrag();
+      return;
+    }
     this.updateBrightnessDrag(offsetY);
     this.brightnessDragging = false;
     // Keep the optimistic rail until the latest native write is acknowledged.
@@ -2443,7 +2474,7 @@ export struct ReaderControlPanel {
   }
 
   private commitBrightnessTap(event: GestureEvent): void {
-    if (this.temporaryLayerActive || event.fingerList.length === 0) {
+    if (this.temporaryLayerActive || !this.minimumInputReady() || event.fingerList.length === 0) {
       return;
     }
     const localY = event.fingerList[0].localY;

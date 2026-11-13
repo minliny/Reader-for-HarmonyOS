@@ -164,23 +164,28 @@ export class ReadingEntryHost {
       fallbackSourceNames: input.fallbackSourceNames?.slice(),
       candidates: input.candidates?.map((candidate): BookAcquisitionCandidate => ({ ...candidate, seed: { ...candidate.seed } })) };
     this.lastLocalSelection = undefined;
-    const seed: RemoteReadingBookSeed = { ...input.seed,
-      contentKind: remoteReadingEntryKind(input.seed, input.shelfSnapshot, input.validatedSession) };
+    const untypedShelf = input.shelfSnapshot !== undefined && input.shelfSnapshot.contentKind === undefined;
+    const declared: RemoteReadingBookSeed = { ...input.seed,
+      contentKind: untypedShelf ? undefined : remoteReadingEntryKind(input.seed, input.shelfSnapshot, input.validatedSession) };
+    let seed: RemoteReadingBookSeed = { ...declared,
+      contentKind: untypedShelf ? undefined : this.runtime.bookAcquisitions().presentationContentKind?.(declared) ?? declared.contentKind };
     if (seed.contentKind === 'audio') {
       if (this.runtimeCurrent() && lease.isCurrent()) lease.notice('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
       return;
     }
-    const retained = input.shelfSnapshot !== undefined && this.sameBook(input.retainedSession, seed) ? input.retainedSession : undefined;
+    const retained = !untypedShelf && input.shelfSnapshot !== undefined && this.sameBook(input.retainedSession, seed) &&
+      (input.retainedSession?.contentKind ?? 'text') === (seed.contentKind ?? 'text') ? input.retainedSession : undefined;
     const scope = this.begin(lease, this.detail(seed, input.sourceName), input.shelfSnapshot !== undefined,
       input.shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…', seed, retained, [], input.displayCoverUrl);
     const current = this.current(scope, lease);
-    if (input.resumeImmediately) {
+    if (input.resumeImmediately && !untypedShelf) {
       // The Host owns the intent for every resume entry, including committed
       // source and download paths. An offline probe must never authorize work.
       if (input.shelfSnapshot !== undefined && this.runtime.mangaOfflineProbeFor?.(seed.sourceId, seed.bookId) !== true) {
         this.runtime.noteReadingPreparationIntent(seed.sourceId, seed.bookId);
       }
       if (this.sameBook(input.validatedSession, seed) &&
+        (input.validatedSession?.contentKind ?? 'text') === (seed.contentKind ?? 'text') &&
         this.runtime.bookAcquisitions().hasCurrentCatalogProjection(input.validatedSession!)) {
         this.install(input.validatedSession); this.state = { ...this.state, toc: this.catalog(input.validatedSession!), catalogLoading: false };
         this.publish(scope, lease);
@@ -198,13 +203,21 @@ export class ReadingEntryHost {
     let shelf = input.shelfSnapshot, group = false;
     const coordinator = this.runtime.bookAcquisitions();
     try {
-      // A filtered shelf cannot prove absence. This actual exact read precedes
-      // candidate fallback; it never gates publication of the selected DTO.
-      if (input.fromSearch && shelf === undefined) {
+      if (untypedShelf || (input.fromSearch && shelf === undefined)) {
         const membership = lease.membership();
-        shelf = await new ReaderCoreGateway(this.runtime).loadShelfBook(seed.sourceId, seed.bookId);
+        shelf = await new ReaderCoreGateway(this.runtime).loadShelfBook(seed.sourceId, seed.bookId, current);
         if (!current()) return;
-        this.reconcileMembership(shelf !== undefined, membership, scope, lease);
+        if (!untypedShelf) this.reconcileMembership(shelf !== undefined, membership, scope, lease);
+        if ((untypedShelf || shelf !== undefined) && shelf?.contentKind === undefined)
+          throw new Error('书籍类型尚未确认，请重试读取书架信息。');
+        if (shelf !== undefined) {
+          seed = { ...seed, contentKind: shelf.contentKind, kind: shelf.kind ?? seed.kind };
+          seeds[0] = seed;
+          this.lastRemoteInput = { ...this.lastRemoteInput!, seed, shelfSnapshot: shelf };
+          this.state = { ...this.state, seed, book: this.displayDetail(this.detail(seed, input.sourceName), true) };
+          this.publish(scope, lease);
+          if (seed.contentKind === 'audio') throw new Error('暂不支持此类阅读');
+        }
       }
       if (!current()) return;
       const membership = lease.membership();
@@ -215,6 +228,7 @@ export class ReadingEntryHost {
       const choiceGeneration = lease.membership().generation;
       const admissionCurrent = (): boolean => current() && (!group || choiceGeneration === lease.membership().generation);
       const supplied = input.validatedSession?.contentKind !== 'manga' && this.sameBook(input.validatedSession, seed) &&
+        (input.validatedSession?.contentKind ?? 'text') === (seed.contentKind ?? 'text') &&
         coordinator.hasCurrentCatalogProjection(input.validatedSession!) && preparedRemoteChapterMatches(
         input.validatedSession?.preparedChapter, input.validatedSession!, undefined, coordinator.readingProjectionRevision());
       const admission = supplied ? { session: input.validatedSession!, backgroundRefresh: undefined } : group ?
@@ -230,6 +244,8 @@ export class ReadingEntryHost {
       const sourceName = names[index]?.trim() || session.identity.sourceId;
       const suppliedShelf = shelf?.sourceId === session.identity.sourceId && shelf.bookId === session.identity.bookId ? shelf :
         input.shelfBooks?.find(book => book.sourceId === session.identity.sourceId && book.bookId === session.identity.bookId);
+      if (suppliedShelf?.contentKind !== undefined && suppliedShelf.contentKind !== (session.contentKind ?? 'text'))
+        throw new Error('书籍类型与书架记录不一致，请重新打开书籍。');
       this.install(session);
       this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, sourceName, group),
         toc: this.catalog(session), inBookshelf: suppliedShelf !== undefined, loadingMessage: '', catalogLoading: false };
@@ -761,7 +777,7 @@ export class ReadingEntryHost {
     const retain = previous !== undefined && (previous.contentKind ?? 'text') === (session.contentKind ?? 'text') &&
       (this.sameBook(session, previous) || confirmedCandidate);
     return this.displayDetail({ sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId,
-      ...this.remoteDetail(session.book), contentKind: session.contentKind,
+      ...this.remoteDetail(session.book), contentKind: session.contentKind ?? 'text',
       authorIdentity: session.book.authorIdentity, sourceVersion: session.sourceVersion,
       mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined }, retain);
   }

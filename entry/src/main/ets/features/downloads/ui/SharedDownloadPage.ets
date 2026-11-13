@@ -1203,11 +1203,7 @@ export struct SharedDownloadPage {
         surfaceWidth: this.operationsSurfaceWidth(), scheme: this.appThemeScheme === 'night' ? 'night' : 'day',
         closeFocusId: this.focusKey('sheet'),
         onClose: (): void => { if (this.sheetOpeningIsCurrent(opening)) this.sheet = ''; } });
-    }.width('100%').onAreaChange((_old: Area, area: Area): void => {
-      const height = readerPageAreaLength(area.height);
-      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.operationsHeaderMeasuredHeight) > .5)
-        this.operationsHeaderMeasuredHeight = height;
-    });
+    }.width('100%').onAreaChange(this.sheetAreaHandler('operations-header', opening));
   }
 
   @Builder
@@ -1217,12 +1213,7 @@ export struct SharedDownloadPage {
         .padding({ left: resolveDrawerSpec('reader-action-sheet').contentInset,
           right: resolveDrawerSpec('reader-action-sheet').contentInset,
           bottom: this.sheet === 'book-actions' ? 0 : resolveDrawerSpec('reader-action-sheet').contentInset })
-        .onAreaChange((_old: Area, area: Area): void => {
-          if (this.sheet !== 'book-actions') return;
-          const height = readerPageAreaLength(area.height);
-          if (Number.isFinite(height) && height > 0 && Math.abs(height - this.bookOperationsBodyMeasuredHeight) > .5)
-            this.bookOperationsBodyMeasuredHeight = height;
-        });
+        .onAreaChange(this.sheetAreaHandler('operations-body', opening));
     }.width('100%').height(this.sheet === 'book-actions' ? this.bookOperationsBodyHeight() : undefined)
       .constraintSize({ maxHeight: Math.max(1,
         this.sheetMaxHeight() - this.operationsHeaderMeasuredHeight - this.operationsBottomInset()) }).scrollBar(BarState.Auto);
@@ -1256,7 +1247,7 @@ export struct SharedDownloadPage {
         .onClick((): void => { if (this.sheetOpeningIsCurrent(opening)) this.sheet = ''; });
     }.constraintSize({ minHeight: DOWNLOAD_VISUAL.sheetTitleHeight }).width('100%')
       .padding({ left: DOWNLOAD_VISUAL.sheetTitleLeft, right: DOWNLOAD_VISUAL.sheetTitleRight })
-      .onAreaChange((_old: Area, area: Area): void => this.recordSheetTitleHeight(readerPageAreaLength(area.height)));
+      .onAreaChange(this.sheetAreaHandler('title', opening));
     if (wholeDocument) {
       this.sheetBody(opening);
     } else {
@@ -1267,7 +1258,7 @@ export struct SharedDownloadPage {
         Row() { this.clearStorageButton(); }
           .width('100%').padding({ left: DOWNLOAD_VISUAL.storageFooterSide, right: DOWNLOAD_VISUAL.storageFooterSide,
             top: DOWNLOAD_VISUAL.storageFooterTop, bottom: this.sheetFooterBottomInset() })
-          .onAreaChange((_old: Area, area: Area): void => this.recordSheetFooterHeight(readerPageAreaLength(area.height)));
+          .onAreaChange(this.sheetAreaHandler('footer', opening));
       } else {
         Row() {
         this.actionButton((): string => this.sheet === 'range' ? '开始下载' : '完成', true,
@@ -1278,7 +1269,7 @@ export struct SharedDownloadPage {
       }.width('100%').padding({ left: DOWNLOAD_VISUAL.sheetFooterSide, right: DOWNLOAD_VISUAL.sheetFooterSide,
         top: DOWNLOAD_VISUAL.sheetFooterTop, bottom: this.sheetFooterBottomInset() })
         .border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) })
-        .onAreaChange((_old: Area, area: Area): void => this.recordSheetFooterHeight(readerPageAreaLength(area.height)));
+        .onAreaChange(this.sheetAreaHandler('footer', opening));
       }
     }
   }
@@ -1549,14 +1540,15 @@ export struct SharedDownloadPage {
       ForEach([this.rangeDraftRevision], (revision: number): void => { this.rangeInputs(opening, revision); },
         (revision: number): string => revision.toString());
       if (this.rangeCatalogChanged) {
-        ReaderRecoveryNotice({ tag: '目录更新', actionLabel: '重新填写',
-          view: { message: '目录已变化，请按当前目录重新填写下载范围。', visible: true,
-            canRetry: this.rangeBook()?.projectionStatus === 'ready', generation: this.rangeDraftRevision },
-          onReconcile: (revision: number): void => {
+        ForEach([this.rangeDraftRevision], (revision: number): void => {
+        ReaderPageState({ title: '目录已更新', message: '目录已变化，请按当前目录重新填写下载范围。',
+          padded: false, actionLabel: '重新填写', actionEnabled: this.rangeBook()?.projectionStatus === 'ready',
+          onAction: (): void => {
             if (this.sheetOpeningIsCurrent(opening) && this.sheet === 'range' && this.rangeChoice === 'custom' &&
               revision === this.rangeDraftRevision && this.rangeCatalogChanged &&
               this.rangeBook()?.projectionStatus === 'ready') this.resetRangeDraft(this.rangeBookKey);
           } }).margin({ top: DOWNLOAD_VISUAL.rangeSelectionTop });
+        }, (revision: number): string => `download-range-invalid:${revision}`);
       }
     }
   }
@@ -1627,11 +1619,7 @@ export struct SharedDownloadPage {
           const action = this.confirmation === 'cancel' ? 'cancel' : 'deleteLocal';
           this.confirmation = ''; this.sendAction(action);
         }, (): boolean => this.confirmationActionAvailable());
-      }.width('100%').onAreaChange((_old: Area, area: Area): void => {
-        const height = readerPageAreaLength(area.height);
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dialogActionsMeasuredHeight) > 0.5)
-          this.dialogActionsMeasuredHeight = height;
-      });
+      }.width('100%').onAreaChange(this.confirmationAreaHandler(opening, ownerGeneration));
     }.width('100%');
   }
 
@@ -2913,6 +2901,32 @@ export struct SharedDownloadPage {
   }
   private recordSheetTitleHeight(height: number): void {
     if (Number.isFinite(height) && height > 0 && Math.abs(height - this.sheetTitleMeasuredHeight) > 0.5) this.sheetTitleMeasuredHeight = height;
+  }
+  private sheetAreaHandler(slot: 'title' | 'footer' | 'operations-header' | 'operations-body', opening: number): (_old: Area, area: Area) => void {
+    const presentation = this.presentationGeneration, layout = this.measurementGeneration(), sheet = this.sheet;
+    return (_old: Area, area: Area): void => {
+      if (!this.presentationIsCurrent(presentation) || opening !== this.sheetOpeningGeneration ||
+        layout !== this.measurementGeneration() || sheet.length === 0 || sheet !== this.sheet) return;
+      const height = readerPageAreaLength(area.height);
+      if (slot === 'title') this.recordSheetTitleHeight(height);
+      else if (slot === 'footer') this.recordSheetFooterHeight(height);
+      else if (Number.isFinite(height) && height > 0) {
+        if (slot === 'operations-header' && Math.abs(height - this.operationsHeaderMeasuredHeight) > .5)
+          this.operationsHeaderMeasuredHeight = height;
+        if (slot === 'operations-body' && sheet === 'book-actions' && Math.abs(height - this.bookOperationsBodyMeasuredHeight) > .5)
+          this.bookOperationsBodyMeasuredHeight = height;
+      }
+    };
+  }
+  private confirmationAreaHandler(opening: number, presentation: number): (_old: Area, area: Area) => void {
+    const layout = this.measurementGeneration(), confirmation = this.confirmation;
+    return (_old: Area, area: Area): void => {
+      if (!this.presentationIsCurrent(presentation) || opening !== this.confirmationGeneration ||
+        layout !== this.measurementGeneration() || confirmation.length === 0 || confirmation !== this.confirmation) return;
+      const height = readerPageAreaLength(area.height);
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dialogActionsMeasuredHeight) > 0.5)
+        this.dialogActionsMeasuredHeight = height;
+    };
   }
   private recordSheetFooterHeight(height: number): void {
     if (Number.isFinite(height) && height > 0 && Math.abs(height - this.sheetFooterMeasuredHeight) > 0.5) this.sheetFooterMeasuredHeight = height;

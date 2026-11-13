@@ -1,7 +1,7 @@
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { TOK_SPACE_CONTROL_INLINE } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
-import { BOOKMARK_ROW_HEIGHT, ReaderBookmarkRow } from './ReaderBookmarkRow';
+import { BOOKMARK_ROW_HEIGHT, ReaderBookmarkRow, type ReaderStandaloneBookmarkSize } from './ReaderBookmarkRow';
 import { sampleReaderControlBookmark } from './ReaderControlBookmarkGeometry';
 
 /**
@@ -17,6 +17,9 @@ export struct ReaderBookmarkList {
   @Prop @Watch('onRowGeometryChanged') motionProgress: number = 1;
   @Prop @Watch('onRowGeometryChanged') embeddedInControl: boolean = false;
   @Prop rowWidth: number = 316;
+  @Prop @Watch('onRowGeometryChanged') standaloneSize: ReaderStandaloneBookmarkSize | undefined = undefined;
+  @Prop prefixHeight: number = 0;
+  @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
   // Embedded control-bar transitions keep the native List geometry stable
   // while ReaderBookmarkRow continues to consume the live visual progress.
   // Zero keeps the standalone/legacy contract (the materialized row is also
@@ -36,6 +39,8 @@ export struct ReaderBookmarkList {
     (_bookmarkId: string, _chapterIndex: number, _chapterOffset: number): void => {};
 
   private measuredWidth: number = -1;
+  @Builder
+  private emptyPrefix() {}
   private measuredHeight: number = -1;
   // ChildrenMainSize is owned by the native virtual List. Defer updates that
   // arrive from motion/geometry @Watch callbacks so AceList never rebuilds its
@@ -74,7 +79,8 @@ export struct ReaderBookmarkList {
   }
 
   private rowHeight(): number {
-    return this.embeddedInControl ? sampleReaderControlBookmark(this.motionProgress, this.rowWidth).card.height : BOOKMARK_ROW_HEIGHT;
+    return this.embeddedInControl ? sampleReaderControlBookmark(this.motionProgress, this.rowWidth).card.height :
+      this.standaloneSize?.rowHeight ?? BOOKMARK_ROW_HEIGHT;
   }
 
   private stableLayoutEnabled(): boolean {
@@ -127,6 +133,9 @@ export struct ReaderBookmarkList {
 
   build() {
     List({ space: 0, scroller: this.scroller }) {
+      if (this.prefixHeight > 0) {
+        ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: this.prefixHeight });
+      }
       Repeat(this.rows)
         .each((repeatItem: RepeatItem<ReaderBookmarkRowModel>) => {
           ListItem() {
@@ -136,6 +145,7 @@ export struct ReaderBookmarkList {
               embeddedInControl: this.embeddedInControl,
               motionProgress: this.motionProgress,
               availableWidth: this.rowWidth,
+              standaloneSize: this.standaloneSize,
             });
           }
           .width('100%')
@@ -150,7 +160,7 @@ export struct ReaderBookmarkList {
     }
     .width(this.layoutViewportWidth > 0 ? this.layoutViewportWidth : '100%')
     .height(this.layoutViewportHeight > 0 ? this.layoutViewportHeight : '100%')
-    .childrenMainSize(this.itemSizes)
+    .childrenMainSize(this.prefixHeight > 0 ? undefined : this.itemSizes)
     .padding({
       left: this.layoutPaddingXValue(),
       right: this.layoutPaddingXValue(),

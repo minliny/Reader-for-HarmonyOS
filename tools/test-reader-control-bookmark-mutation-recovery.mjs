@@ -1,7 +1,8 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
  'durable-recovery':{description:'Actual bookmark Index/DirectoryHost exact receipt and committed-write reload recovery via existing Core CLI',resources:[]},
- 'host-retry':{description:'Actual bookmark Host/Gateway/Operations and reader list versus unknown-write recovery, input identity and retry without Native',resources:[]}
+ 'host-retry':{description:'Actual bookmark Host/Gateway/Operations and reader list versus unknown-write recovery, input identity and retry without Native',resources:[]},
+ 'recovery-surface-sdk':{description:'SDK-emitted reading recovery Scroll touch boundary and actual retry actors with current, busy and successor identities',resources:[]}
 };
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
@@ -9,7 +10,81 @@ const {default:assert}=await import('node:assert/strict');
 const book={sourceId:'local',bookId:'book',title:'Book',author:'Author'};
 const row=(bookmarks=[],title='Chapter',downloadState='completed')=>({index:0,title,downloadState,bookmarks});
 const mark=time=>({time,chapterIndex:0,chapterOffset:12,chapterTitle:'Chapter',content:'saved'});
-if(selectedCase==='durable-recovery'){
+if(selectedCase==='recovery-surface-sdk'){
+ const {registerHooks}=await import('node:module');
+ registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+  if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);
+  throw error;
+ }}});
+ const {readFileSync}=await import('node:fs');
+ const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
+ const backdrop=await import('../entry/src/main/ets/features/reading/ui/ReaderControlBackdropTouch.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8');
+ const sdk=boundedSurfaceSdk(),calls=[],TouchType={Down:0,Up:1,Move:2,Cancel:3};
+ const recoverySource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets',import.meta.url),'utf8');
+ sdk.hooks.childSources.ReaderDirectoryRecoverySurface=recoverySource;
+ sdk.deps.ReaderDirectoryRecoverySurface=createReaderBuilderProbe(recoverySource,boundedMembers(recoverySource),
+  {...sdk.deps,EMPTY_READING_DIRECTORY_RECOVERY},sdk.hooks).Component;
+ let timeMs=1000,outsideDismissals=0;
+ const owner=sdk.consumer(source,['readerRecoveryContent','readerRecoveryInputCurrent','hasReaderRecoveryContent','bookmarkRecoveryIdentity','reconcileBookmarkRecovery','onControlBackdropTouch'],
+  {...backdrop,TouchType,EMPTY_READING_DIRECTORY_RECOVERY,readerMotionNowMs:()=>timeMs});
+ const empty={visible:false,canRetry:false,generation:0,message:''};
+ Object.assign(owner,{mounted:false,lifecycleToken:1,sourceId:book.sourceId,bookId:book.bookId,
+  sourceSwitchPresentationVisible:false,readerRecoveryView:empty,readerSettingsRecovery:empty,
+  ttsPreferencesRecovery:empty,ttsConfigurationRecovery:empty,replaceRecovery:empty,
+  bookmarkRecovery:{presentationId:'opening-1',bookmarks:{visible:true,canRetry:true,generation:8,
+   message:'原操作结果尚未确认，可核对同一原操作'},bookmarksBusy:false,canContinueBookmarks:true},
+  viewportWidth:366,readerWindowMetricsRevision:0,controlLayout:()=>({topBarWidth:334}),
+  readerRecoveryViewportHeight:()=>180,readerRecoveryTop:()=>100,
+  readerRecoveryOverlayId:()=> 'recovery-test',
+  isSessionActive:()=>true,isControlInputEnabled:()=>true,
+  controlBackdropState:backdrop.createReaderControlBackdropTouchState(),controlBackdropGeometryReady:true,
+  controlInputRevision:0,controlMotionVisible:()=>true,
+  controlMotionSession:()=>({heldPointerId:-1,closeRevision:0}),
+  controlBackdropRegions:[{x:16,y:40,width:334,height:54},{x:16,y:400,width:334,height:300}],
+  hideControl:()=>outsideDismissals++,
+  onReconcileBookmarks:(generation,presentation)=>calls.push(['query',generation,presentation]),
+  onContinueBookmarks:(generation,presentation)=>calls.push(['continue',generation,presentation])});
+ owner.mounted=true;
+ owner.readerRecoveryContent();sdk.properties.flush();
+ const scroll=[...owner.nodes.values()].find(node=>node.type==='Scroll');
+ assert.ok(scroll.onTouch,'the actual recovery viewport owns its touch propagation');
+ const touch=type=>{let stopped=false;const point={id:1,windowX:200,windowY:130};return {
+  type,touches:[point],changedTouches:[point],stopPropagation(){stopped=true;},isStopped:()=>stopped};};
+ // The old boundary lets these same native-shaped samples reach the actual
+ // parent handler and its production outside-control policy.
+ owner.onControlBackdropTouch(touch(TouchType.Down));timeMs+=40;
+ owner.onControlBackdropTouch(touch(TouchType.Up));
+ assert.equal(outsideDismissals,1,'uncaptured notice touch reaches the real parent dismissal request');
+ outsideDismissals=0;owner.controlBackdropState=backdrop.createReaderControlBackdropTouchState();
+ for(const type of [TouchType.Down,TouchType.Up]){
+  timeMs+=40;const event=touch(type);scroll.onTouch(event);
+  if(!event.isStopped())owner.onControlBackdropTouch(event);
+  assert.equal(event.isStopped(),true);
+ }
+ assert.equal(outsideDismissals,0,'the recovery boundary prevents the actual parent dismissal request');
+ assert.equal(owner.controlBackdropState.pointerId,-1,'the parent cannot acquire a notice pointer');
+ const action=sdk.walk(owner).find(child=>child instanceof sdk.deps.ReaderRecoveryAction&&child.label==='重新载入核对书签');
+ assert.ok(action);const physical=[...action.nodes.values()].find(node=>node.type==='Button'&&node.onClick);
+ assert.equal(physical.enabled,true);assert.equal(physical.constraintSize.minHeight,44);
+ assert.equal(scroll.opacity,0);assert.equal(scroll.enabled,false);
+ assert.equal(scroll.accessibilityLevel,'no-hide-descendants');assert.equal(scroll.hitTestBehavior,'HitTestMode.None');
+ physical.onClick();assert.deepEqual(calls,[],'hidden floating notice retained callback cannot dispatch under controls');
+ owner.controlMotionVisible=()=>false;owner.replay();sdk.properties.flush();
+ assert.equal(scroll.opacity,1);assert.equal(scroll.enabled,true);assert.equal(scroll.accessibilityLevel,'auto');
+ assert.equal(scroll.onAreaChange,undefined,'floating notice does not feed a page geometry owner');
+ assert.equal(scroll.onAppear,undefined);
+ physical.onClick();assert.deepEqual(calls,[['query',8,'opening-1']],'touch boundary preserves the real retry callback');
+ owner.bookmarkRecovery={...owner.bookmarkRecovery,bookmarksBusy:true};physical.onClick();
+ assert.equal(calls.length,1,'a retained pre-busy actor cannot dispatch duplicate recovery');
+ owner.bookmarkRecovery={...owner.bookmarkRecovery,bookmarksBusy:false,presentationId:'opening-2'};physical.onClick();
+ assert.equal(calls.length,1,'a previous presentation cannot invoke a successor recovery');
+ owner.bookmarkRecovery={...owner.bookmarkRecovery,presentationId:'opening-1',bookmarks:{...owner.bookmarkRecovery.bookmarks,generation:9}};physical.onClick();
+ assert.equal(calls.length,1,'an old physical generation cannot invoke a successor operation');
+ console.log('PASS actual SDK reading recovery touch boundary, retry actor, busy and successor guards');
+}else if(selectedCase==='durable-recovery'){
 const {bookmarkFixture:fixture,deferred,until,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/reading-operation-durable-probe.mjs');
 const {makeIndex,settledBookmarks:settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
 console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
@@ -217,7 +292,7 @@ for(const outcome of ['empty','rows','rpc-failed','malformed']){
  }
 }
 const source=readFileSync(hostUrl,'utf8'),shell=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url),'utf8');
-assert.match(source,/ReaderRecoveryNotice\(\{ view: this\.bookmarkRecovery\.bookmarks/);
+assert.match(source,/ReaderRecoveryNotice\(\{[^\n]*view: this\.bookmarkRecovery\.bookmarks/);
 assert.match(source,/onReconcile:.*reconcileBookmarkRecovery\(identity, false\)/);
 assert.match(source,/onSecondaryAction:.*reconcileBookmarkRecovery\(identity, true\)/);
 assert.match(shell,/bookmarkRecovery: this\.directoryRecovery/);

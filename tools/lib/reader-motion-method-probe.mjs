@@ -3,6 +3,7 @@ import { JsonImportPresentation, bindJsonImportFixtureFields } from './json-impo
 import { BookRemovalDialogPresentation } from '../../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts';
 import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { ReaderEntryStartupTrace } from '../../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import { ReaderCoreGateway } from './reading-entry-owner-probe.mjs';
 import { actualReadingEntryPresentation, legacyReadingEntryIndexFields, bindReadingEntryFixtureFields } from './reading-entry-presentation-probe.mjs';
 import { actualSourceSwitchPresentation, sourceSwitchProbeQuery, legacySourceSwitchIndexFields, bindSourceSwitchFixtureFields } from './source-switch-presentation-probe.mjs';
 import { actualReaderDirectoryJourney, directoryOperationIndexMembers } from './reader-directory-operations-probe.mjs';
@@ -277,7 +278,7 @@ if (names.includes('traceBoundary')) capturedOwnerFields += '\n' + ordinaryField
     }
     if (needsReadingEntryActions && !names.includes('readingEntryActions')) {
       dependencies.ReaderReadingEntryActions ??= bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
-        'ReaderReadingEntryActions', { Observed: value => value });
+        'ReaderReadingEntryActions', { Observed: value => value, ReaderCoreGateway });
       capturedOwnerFields += '\nget readingEntryActions() { return this.entryActionsFixture ??= new ReaderReadingEntryActions(this.navigationOwner, this.entryStartupTrace, this.readingEntryActionPorts()); }';
     }
     if (needsSourceSwitchJourney && !names.includes('sourceSwitchJourney')) {

@@ -24,12 +24,13 @@ export struct BookshelfGroupSelector {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text('默认').fontFamily(TYPE_APP_FILTER_OPTION.fontFamily).fontWeight(TYPE_APP_FILTER_OPTION.fontWeight)
           .fontSize(TYPE_APP_FILTER_OPTION.fontSizeFp).lineHeight(TYPE_APP_FILTER_OPTION.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).accessibilityLevel('no');
+          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).accessibilityLevel('no')
+          .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+          .backgroundColor(this.selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+          .border({ width: 1, color: this.selected ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(999);
       }
-        .constraintSize({ minWidth: 0, minHeight: 0 })
-        .padding({ left: 12, right: 12, top: 5, bottom: 5 })
-        .backgroundColor(this.selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .border({ width: 1, color: this.selected ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(999)
+        .constraintSize({ minWidth: 44, minHeight: 44 })
+        .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
         .id(this.focusId)
         .attributeModifier(new ReaderActionAccessibility('默认分组', !this.busy, this.selected, true, undefined, 'nativeButton'))
         .onClick((): void => { if (!this.busy) this.onSelect(); });

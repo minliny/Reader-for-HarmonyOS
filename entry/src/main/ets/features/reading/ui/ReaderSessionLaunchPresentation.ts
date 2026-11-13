@@ -90,6 +90,7 @@ export interface ReaderSessionLaunchGeometryInput {
   readonly targetTop: number;
   /** Measured localized width; never smaller than the authored 96/94. */
   readonly capsuleWidth?: number;
+  readonly capsuleHeight?: number;
   /** Positive distances based on current top bar / dock geometry, not screen type. */
   readonly topBarExitDistance: number;
   readonly dockExitDistance: number;
@@ -111,6 +112,7 @@ export interface ReaderSessionLaunchGeometry {
   readonly targetLeft: number;
   readonly targetTop: number;
   readonly capsuleWidth: number;
+  readonly capsuleHeight: number;
   readonly dotLeft: number;
   readonly topBarExitDistance: number;
   readonly dockExitDistance: number;
@@ -131,11 +133,13 @@ export function buildReaderSessionLaunchGeometry(
   const source = input.source;
   const design = readerSessionLaunchDesign(source.kind);
   const width = input.capsuleWidth === undefined ? design.capsuleWidth : input.capsuleWidth;
+  const height = input.capsuleHeight ?? READER_SESSION_LAUNCH_DOT_SIZE_VP;
   if (!Number.isFinite(source.left) || !Number.isFinite(source.top) ||
     !Number.isFinite(source.width) || !Number.isFinite(source.height) ||
     source.width <= 0 || source.height <= 0 || !Number.isFinite(source.revision) ||
     !Number.isFinite(input.targetLeft) || !Number.isFinite(input.targetTop) ||
     !Number.isFinite(width) || width < design.capsuleWidth ||
+    !Number.isFinite(height) || height < READER_SESSION_LAUNCH_DOT_SIZE_VP ||
     !Number.isFinite(input.topBarExitDistance) || input.topBarExitDistance < 0 ||
     !Number.isFinite(input.dockExitDistance) || input.dockExitDistance < 0) return undefined;
   const clipLeft = source.visibleLeft ?? 0, clipTop = source.visibleTop ?? 0;
@@ -151,7 +155,7 @@ export function buildReaderSessionLaunchGeometry(
     sourceClipTop: Math.max(0, source.visibleTop ?? 0),
     sourceClipRightInset: Math.max(0, source.width - (source.visibleRight ?? source.width)),
     sourceClipBottomInset: Math.max(0, source.height - (source.visibleBottom ?? source.height)),
-    targetLeft: input.targetLeft, targetTop: input.targetTop, capsuleWidth: width,
+    targetLeft: input.targetLeft, targetTop: input.targetTop, capsuleWidth: width, capsuleHeight: height,
     dotLeft: input.targetLeft + width - READER_SESSION_LAUNCH_DOT_SIZE_VP,
     topBarExitDistance: input.topBarExitDistance, dockExitDistance: input.dockExitDistance,
     // Retain the original quantized Figma scale at its authored size. For a
@@ -205,6 +209,7 @@ export interface ReaderSessionLaunchSample {
   readonly pauseX: number;
   readonly pauseOpacity: number;
   readonly capsuleWidth: number;
+  readonly capsuleHeight: number;
   readonly footerTranslateX: number;
   readonly footerOpacity: number;
   readonly immersiveOpacity: number;
@@ -229,6 +234,7 @@ export function sampleReaderSessionLaunch(
   const info = motionSegment(time, READER_SESSION_LAUNCH_INFO_START_MS, READER_SESSION_LAUNCH_INFO_MS, curves.easeOut);
   const outgoing = motionSegment(time, READER_SESSION_LAUNCH_OUTGOING_START_MS, READER_SESSION_LAUNCH_OUTGOING_MS, curves.easeIn);
   const expandedWidth = geometry.capsuleWidth - READER_SESSION_LAUNCH_DOT_SIZE_VP;
+  const expandedHeight = geometry.capsuleHeight - READER_SESSION_LAUNCH_DOT_SIZE_VP;
   const footerDot = geometry.footerDot;
   const footerFirst = motionSegment(time, READER_SESSION_LAUNCH_FOOTER_FIRST_START_MS, READER_SESSION_LAUNCH_FOOTER_FIRST_MS, curves.easeInOut);
   const footerSecond = motionSegment(time, READER_SESSION_LAUNCH_FOOTER_SECOND_START_MS, READER_SESSION_LAUNCH_FOOTER_SECOND_MS, curves.easeInOut);
@@ -252,10 +258,11 @@ export function sampleReaderSessionLaunch(
     controlsPresented: time < READER_SESSION_LAUNCH_CONTROL_RELEASE_MS,
     flight, expansion,
     proxyLeft,
-    proxyTop: geometry.sourceTop + (geometry.targetTop - geometry.sourceTop) * flight,
+    proxyTop: geometry.sourceTop + (geometry.targetTop + expandedHeight / 2 - geometry.sourceTop) * flight -
+      expandedHeight / 2 * expansion,
     proxyWidth: geometry.sourceWidth +
       (READER_SESSION_LAUNCH_DOT_SIZE_VP - geometry.sourceWidth) * flight + expandedWidth * expansion,
-    proxyHeight: geometry.sourceHeight + (24 - geometry.sourceHeight) * flight,
+    proxyHeight: geometry.sourceHeight + (READER_SESSION_LAUNCH_DOT_SIZE_VP - geometry.sourceHeight) * flight + expandedHeight * expansion,
     sourceWidth: geometry.sourceWidth, sourceHeight: geometry.sourceHeight, sourceRadius: geometry.sourceRadius,
     // Actual Scroll viewport clipping is retained on the first frame and
     // releases continuously as the existing flight leaves the source region.
@@ -273,7 +280,7 @@ export function sampleReaderSessionLaunch(
     // Figma HOLD/step-end: visible on the boundary, not after a later fade.
     leadingOpacity: time >= READER_SESSION_LAUNCH_EXPAND_START_MS ? 1 : 0,
     pauseX: READER_SESSION_LAUNCH_PAUSE_GAP_VP + expandedWidth * expansion, pauseOpacity: handoff,
-    capsuleWidth: geometry.capsuleWidth,
+    capsuleWidth: geometry.capsuleWidth, capsuleHeight: geometry.capsuleHeight,
     footerTranslateX: footerOffset,
     footerOpacity: info, immersiveOpacity: info,
     topBarOffsetY: -geometry.topBarExitDistance * outgoing,

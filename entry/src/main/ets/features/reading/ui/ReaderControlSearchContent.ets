@@ -63,6 +63,7 @@ export struct ReaderControlSearchContent {
   @Prop fullContentHeight: number = 666;
   @Prop quickContentHeight: number = 190;
   @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;
+  inputCurrent?: () => boolean;
   @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;
   @Prop @Watch('publishMinimumMeasurer') query: string = '';
   searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
@@ -132,6 +133,10 @@ export struct ReaderControlSearchContent {
     this.onResultScrollDisappear();
   }
 
+  private currentInputEnabled(): boolean {
+    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+
   private acceptSearchPublication(): void {
     const next = this.searchPublication.stateAt(this.searchRevision);
     // Compare the raw owner snapshot, not ArkUI's top-level @State proxy.
@@ -164,10 +169,10 @@ export struct ReaderControlSearchContent {
       this.diagnosticEditingEvents += 1;
       hilog.info(0xD004, 'ReaderControlDiagnostic',
         'stage=search-edit editing=%{public}s stored=%{public}s mounted=%{public}s input=%{public}s',
-        String(editing), String(this.queryEditing), String(this.queryInputMounted), String(this.interactionEnabled));
+        String(editing), String(this.queryEditing), String(this.queryInputMounted), String(this.currentInputEnabled()));
     }
     if (!this.queryInputMounted) return;
-    if (editing && !this.interactionEnabled) {
+    if (editing && !this.currentInputEnabled()) {
       this.stopQueryEditing();
       return;
     }
@@ -177,7 +182,7 @@ export struct ReaderControlSearchContent {
   }
 
   private focusQueryField(): void {
-    if (!this.queryInputMounted || !this.interactionEnabled) return;
+    if (!this.queryInputMounted || !this.currentInputEnabled()) return;
     try {
       this.getUIContext().getFocusController().requestFocus(this.queryInputId);
     } catch (_) {
@@ -186,7 +191,7 @@ export struct ReaderControlSearchContent {
   }
 
   private onInputChanged(): void {
-    if (!this.interactionEnabled) this.dismissTemporaryLayer();
+    if (!this.currentInputEnabled()) this.dismissTemporaryLayer();
     this.onResultLayoutChanged();
   }
 
@@ -334,7 +339,7 @@ export struct ReaderControlSearchContent {
   }
 
   private onResultLayoutChanged(): void {
-    const settled = this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1);
+    const settled = this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1);
     if (this.resultMotionPath === undefined &&
       (!settled || this.motionProgress !== this.resultRestingProgress)) {
       if (this.resultScrollMounted && this.resultRestingLayout !== undefined) {
@@ -360,7 +365,7 @@ export struct ReaderControlSearchContent {
       this.resultRestingLayout = this.resultLayout();
     }
     this.resultScrollPosition = cancelReaderControlSearchScrollRebase(this.resultScrollPosition);
-    if (!this.interactionEnabled || (this.motionProgress !== 0 && this.motionProgress !== 1)) {
+    if (!this.currentInputEnabled() || (this.motionProgress !== 0 && this.motionProgress !== 1)) {
       this.resultUserScrolling = false;
     }
     if (!this.resultScrollMounted) return;
@@ -372,7 +377,7 @@ export struct ReaderControlSearchContent {
     const previous = this.resultScrollPosition;
     const position = observeReaderControlSearchScroll(previous, this.resultLayout(), {
       nativeOffsetVp: this.resultNativeOffset(), source: source,
-      progress: this.motionProgress, inputEnabled: this.interactionEnabled,
+      progress: this.motionProgress, inputEnabled: this.currentInputEnabled(),
     });
     this.resultScrollPosition = position;
     if (position.anchorRows !== previous.anchorRows) this.rememberResultScroll(position.anchorRows);
@@ -409,7 +414,7 @@ export struct ReaderControlSearchContent {
 
   private onResultWillScroll(y: number, source: ScrollSource): OffsetResult {
     const accepted = this.resultScrollMounted && (source === ScrollSource.SCROLLER ||
-      (this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1)));
+      (this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1)));
     if (!accepted) { this.resultScrollSource = 'unknown'; return { xOffset: 0, yOffset: 0 }; }
     if (source === ScrollSource.DRAG) this.resultScrollSource = 'drag';
     else if (source === ScrollSource.FLING) this.resultScrollSource = 'fling';
@@ -471,7 +476,7 @@ export struct ReaderControlSearchContent {
     if (!this.resultScrollMounted || this.state.kind !== 'results' ||
       Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
     const next = prepareReaderControlSearchScrollRebase(this.resultScrollPosition, this.resultLayout(), {
-      progress: this.motionProgress, inputEnabled: this.interactionEnabled,
+      progress: this.motionProgress, inputEnabled: this.currentInputEnabled(),
       userScrolling: this.resultUserScrolling || this.resultPointers.length > 0,
     });
     this.resultScrollPosition = next.state;
@@ -500,7 +505,7 @@ export struct ReaderControlSearchContent {
       this.resultNativeFollowTimer = -1;
       if (this.state.kind !== 'results' || this.resultPointers.length > 0 || this.resultUserScrolling ||
         this.resultListFrame().viewportHeightVp <= 0 || Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
-      const endpoint = this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1);
+      const endpoint = this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1);
       if (endpoint) { this.tryResultScrollRebase(); return; }
       const target = this.resultListFrame().targetOffsetVp;
       if (Math.abs(this.resultNativeRawOffset() - target) <= 0.5) return;
@@ -525,7 +530,7 @@ export struct ReaderControlSearchContent {
     }
     .width(this.availableWidth).height(this.availableHeight)
     .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme))
-    .clip(true).enabled(this.interactionEnabled);
+    .clip(true).enabled(this.currentInputEnabled());
   }
 
   @Builder
@@ -535,7 +540,7 @@ export struct ReaderControlSearchContent {
         naturalInputHeightVp: this.frame().inputHeightVp,
         text: this.query, placeholder: '搜索正文内容', inputController: this.inputController, inputIdentity: this.queryInputId,
         fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => {
-          if (this.queryInputMounted && this.interactionEnabled) this.onQueryChange(value);
+          if (this.queryInputMounted && this.currentInputEnabled()) this.onQueryChange(value);
         },
         onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() });
     }
@@ -569,7 +574,7 @@ export struct ReaderControlSearchContent {
     // a transient black frame.
     ReaderControlQuickBack({ variant: 'search', scheme: this.appThemeScheme,
       actionWidth: this.frame().back.width, actionHeight: this.frame().back.height,
-      actionVisible: this.frame().back.opacity > 0, actionEnabled: this.interactionEnabled,
+      actionVisible: this.frame().back.opacity > 0, actionEnabled: this.currentInputEnabled(),
       onAction: (): void => this.onBack(),
     }).position({ x: this.frame().back.x, y: this.frame().back.y })
       .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -599,7 +604,7 @@ export struct ReaderControlSearchContent {
         // Rows retain authored geometry outside their normalized native item.
         // The parent Results viewport owns the only visual/input clipping box.
         .clip(false).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
-        .enableScrollInteraction(this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1))
+        .enableScrollInteraction(this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1))
         .onAppear((): void => this.onResultScrollAppear())
         .onDisAppear((): void => this.onResultScrollDisappear())
         .onAreaChange((_old: Area, area: Area): void => this.onResultScrollArea(area))
@@ -637,9 +642,9 @@ export struct ReaderControlSearchContent {
             .lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
           ReaderRecoveryAction({ label: this.state.hasMore === true ? '重试' : '重新搜索', variant: 'text', isBusy: this.state.loadingMore === true,
-            actionEnabled: this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1),
+            actionEnabled: this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1),
             onReconcile: (): void => {
-              if (this.state.kind !== 'results' || !this.interactionEnabled ||
+              if (this.state.kind !== 'results' || !this.currentInputEnabled() ||
                 (this.motionProgress !== 0 && this.motionProgress !== 1) || this.state.loadingMore === true ||
                 (this.state.loadMoreError === undefined && this.state.paginationRetired !== true)) return;
               if (this.state.hasMore === true) this.onLoadMore(); else this.submit();
@@ -661,12 +666,12 @@ export struct ReaderControlSearchContent {
         y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp) - 4) })
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-      .enabled(this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&
+      .enabled(this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1) &&
         this.state.loadingMore !== true)
       .accessibilityText(this.state.loadingMore === true ? '正在加载更多搜索结果' :
         (this.state.loadMoreError === undefined ? '加载更多搜索结果' : '重试加载更多搜索结果'))
       .onClick((): void => {
-        if (this.state.kind === 'results' && this.state.hasMore === true && this.state.loadingMore !== true && this.interactionEnabled &&
+        if (this.state.kind === 'results' && this.state.hasMore === true && this.state.loadingMore !== true && this.currentInputEnabled() &&
           (this.motionProgress === 0 || this.motionProgress === 1)) this.onLoadMore();
       });
       }
@@ -713,7 +718,7 @@ export struct ReaderControlSearchContent {
   }
 
   private canSearch(): boolean {
-    return this.queryInputMounted && this.interactionEnabled && this.query.trim().length > 0 && this.state.kind !== 'loading';
+    return this.queryInputMounted && this.currentInputEnabled() && this.query.trim().length > 0 && this.state.kind !== 'loading';
   }
 
   private submit(): void {
@@ -757,7 +762,7 @@ export struct ReaderControlSearchContent {
 
   private selectCurrentResult(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = ''): void {
     const result = this.currentResult(chapterIndex, chapterOffset);
-    if (this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&
+    if (this.currentInputEnabled() && (this.motionProgress === 0 || this.motionProgress === 1) &&
       result !== undefined && (sourceId.length === 0 || result.sourceId === sourceId) &&
       (bookId.length === 0 || result.bookId === bookId)) this.onSelectResult(result);
   }

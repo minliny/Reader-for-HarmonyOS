@@ -61,6 +61,10 @@ export struct ReaderDialogSurface {
   @BuilderParam body: () => void = this.defaultBody;
   onAction: (id: string) => void = (): void => {};
   onClose: () => void = (): void => {};
+  private mounted: boolean = false;
+
+  aboutToAppear(): void { this.mounted = true; }
+  aboutToDisappear(): void { this.mounted = false; }
 
   @Builder
   private defaultBody() {
@@ -126,7 +130,7 @@ export struct ReaderDialogSurface {
         }.constraintSize({ minWidth: 52 }).height(readerScaledControlHeight(44, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale()))
           .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .accessibilityText('关闭')
-          .onClick((): void => this.onClose());
+          .onClick((): void => { if (this.mounted) this.onClose(); });
       }
       .width('100%')
       .alignItems(VerticalAlign.Center);
@@ -145,14 +149,14 @@ export struct ReaderDialogSurface {
     if (this.spec().actionsLayout === 'stack') {
       Column({ space: 16 }) {
         ForEach(this.actions, (action: DialogActionView): void => {
-          this.actionCell(action);
+          this.actionCell(action.id);
         }, (action: DialogActionView): string => action.id);
       }
       .width('100%');
     } else {
       Row({ space: 10 }) {
         ForEach(this.actions, (action: DialogActionView): void => {
-          this.actionCell(action);
+          this.actionCell(action.id);
         }, (action: DialogActionView): string => action.id);
       }
       .width('100%');
@@ -160,25 +164,30 @@ export struct ReaderDialogSurface {
   }
 
   @Builder
-  private actionCell(action: DialogActionView) {
+  private actionCell(id: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(action.label)
+      Text(this.action(id).label)
         .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight).fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
-        .fontColor(this.actionLabelColor(action));
+        .fontColor(this.actionLabelColor(this.action(id)));
     }
     .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)
     .layoutWeight(this.spec().actionsLayout === 'stack' ? undefined : 1)
-    .height(this.actionHeight()).padding(0)
-    .opacity(action.enabled ? 1 : 0.62)
-    .enabled(action.enabled)
-    .attributeModifier(this.actionModifier(action))
-    .defaultFocus(action.defaultFocus)
+    .constraintSize({ minHeight: this.actionHeight() }).padding({ top: 6, bottom: 6 })
+    .opacity(this.action(id).enabled ? 1 : 0.62)
+    .enabled(this.action(id).enabled)
+    .attributeModifier(this.actionModifier(this.action(id)))
+    .defaultFocus(this.action(id).defaultFocus)
     .responseRegion(this.actionTouchRegion())
     .onClick((): void => {
-      if (action.enabled) {
-        this.onAction(action.id);
+      if (this.mounted && this.action(id).enabled) {
+        this.onAction(id);
       }
     });
+  }
+
+  private action(id: string): DialogActionView {
+    return this.actions.find((action: DialogActionView): boolean => action.id === id) ??
+      new DialogActionView(id, '', 'default', false);
   }
 
   // Specs that preserve the legacy extended touch contract return an expanded
@@ -189,7 +198,7 @@ export struct ReaderDialogSurface {
     if (spec.actionExtendsTouchRegion) {
       return { x: 0, y: -3, width: '100%', height: height + 6 };
     }
-    return { x: 0, y: 0, width: '100%', height };
+    return { x: 0, y: 0, width: '100%', height: '100%' };
   }
 
   // A spec may keep its body→actions spacing on the body content itself

@@ -56,7 +56,7 @@ function form(context: UIContext, width: number, full: boolean,
   if (field === undefined || title === undefined || snippet === undefined || match === undefined ||
     loadAction === undefined || loadMessage === undefined || status === undefined || back === undefined || glyph === undefined) return undefined;
   const inputHeight = Math.max(14, field.heightVp);
-  const backHeight = Math.max(44, back.heightVp);
+  const backHeight = Math.max(44, back.heightVp + 8);
   const fieldHeight = Math.max(44, inputHeight + 10, full ? 0 : backHeight);
   const titleHeight = Math.max(13, title.heightVp);
   // The actual Text keeps maxLines(2); both real Span weights share this

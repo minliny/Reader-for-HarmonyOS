@@ -93,8 +93,9 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     const automatic = measureReaderControlText(context, 'A', TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL,
       READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2);
     if (automatic === undefined) return undefined;
-    const automaticHeight = Math.max(44, automatic.heightVp);
-    const automaticWidth = Math.max(44, automatic.singleLineWidthVp);
+    const automaticSize = Math.max(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
+      automatic.heightVp + TOK_BORDER_W * 2, automatic.singleLineWidthVp + TOK_BORDER_W * 2);
+    const automaticHitHeight = Math.max(44, automaticSize);
     const quick = module === 'home' ? input.measureHomeForm(widths.quickContentWidthVp) : undefined;
     const full = module === 'home' ? input.measureHomeForm(widths.fullContentWidthVp) : undefined;
     let minimum: ReaderControlModuleMinimum | undefined;
@@ -109,10 +110,11 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     // The brightness rail shares the same Quick vertical budget. Its real
     // cap label must fit without shortening the original actionable track.
     const brightnessMinimum = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH + READER_CONTROL_BRIGHTNESS_ICON_SIZE / 2 +
-      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE / 2 + 2 * READER_CONTROL_BRIGHTNESS_CONTROL_GAP + 44 + automaticHeight - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE;
+      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE / 2 + 2 * READER_CONTROL_BRIGHTNESS_CONTROL_GAP + 44 +
+      (automaticHitHeight - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2;
     minimum = { module: minimum.module,
       quick: { heightVp: Math.max(minimum.quick.heightVp, brightnessMinimum),
-        minWidthVp: minimum.quick.minWidthVp, fits: minimum.quick.fits && automaticWidth <= READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - 2 },
+        minWidthVp: minimum.quick.minWidthVp, fits: minimum.quick.fits && automaticSize <= READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2 },
       full: minimum.full };
     const profile: ReaderControlMeasuredProfile = { module: module, identity: input.identity,
       metricsRevision: input.metricsRevision, widths: widths,
@@ -124,7 +126,7 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     const result: ReaderControlCandidateMinimum = { key: key, widths: widths, minimum: minimum,
       chrome: { topBarVisible: topBarVisible, topBarHeightVp: input.topBarHeightVp, quickReserveVp: 29 + quickGap + navigationHeight + 13,
         fullReserveVp: 19 + headerHeight + 8 + 13, navigationHeightVp: navigationHeight,
-        headerHeightVp: headerHeight, brightnessAutoHeightVp: automaticHeight,
-        brightnessAutoWidthVp: automaticWidth } };
+        headerHeightVp: headerHeight, brightnessAutoHeightVp: automaticSize,
+        brightnessAutoWidthVp: automaticSize } };
     return { candidate: result, profile: profile };
 }

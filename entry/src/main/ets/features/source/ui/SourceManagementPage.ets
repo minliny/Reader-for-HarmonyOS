@@ -1339,8 +1339,8 @@ export struct SourceManagementPage {
   private layoutBudget(source?: BookSource): SourceManagementLayout {
     const scale = this.fontScale();
     const action = resolveReaderButtonSpec('source-management-detect');
-    const actionHeight = readerScaledControlHeight(action.height ?? 44,
-      action.text.lineHeightFp ?? action.text.fontSizeFp * 1.5, scale);
+    const actionHeight = Math.max(44, readerScaledControlHeight(action.height ?? 44,
+      action.text.lineHeightFp ?? action.text.fontSizeFp * 1.5, scale));
     return resolveSourceManagementLayout({ availableWidth: this.contentFrame().width, fontScale: scale,
       hasLogin: source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
       hasSummary: source?.checkMessage !== undefined && source.checkMessage.trim().length > 0 && source.checkState !== 'unchecked',

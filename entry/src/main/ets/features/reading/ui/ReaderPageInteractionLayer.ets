@@ -34,20 +34,20 @@ export const READER_PAGE_POINTER_STALL_TIMEOUT_MS = 15000;
  */
 @Component
 export struct ReaderPageInteractionLayer {
-  @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
+  @Prop @Watch('onInteractionEnabledInputsChanged') interactionEnabled: boolean = true;
   /** While a commit/preparation is non-interruptible, retain only short taps as queued intent. */
-  @Prop @Watch('onInteractionModeChanged') tapOnly: boolean = false;
+  @Prop @Watch('onInteractionModeInputsChanged') tapOnly: boolean = false;
   /** Prop delivery can lag a new DOWN; the owner supplies its live transaction gate. */
   currentTapOnly: (() => boolean) | undefined = undefined;
-  @Prop @Watch('onReadinessChanged') readinessRevision: number = 0;
-  @Prop @Watch('onInputRevisionChanged') inputRevision: number = 0;
-  @Prop @Watch('onPointerGeometryChanged') viewportWidth: number = 0;
-  @Prop @Watch('onPointerGeometryChanged') viewportHeight: number = 0;
+  @Prop @Watch('onReadinessInputsChanged') readinessRevision: number = 0;
+  @Prop @Watch('onInputRevisionInputsChanged') inputRevision: number = 0;
+  @Prop @Watch('onPointerGeometryInputsChanged') viewportWidth: number = 0;
+  @Prop @Watch('onPointerGeometryInputsChanged') viewportHeight: number = 0;
   @Prop allowTextSelection: boolean = false;
   /** Pointer streams beginning in system-owned edge bands never enter the reader arena. */
-  @Prop @Watch('onPointerGeometryChanged') systemGestureLeftInset: number = 16;
-  @Prop @Watch('onPointerGeometryChanged') systemGestureRightInset: number = 16;
-  @Prop @Watch('onPointerGeometryChanged') systemGestureBottomInset: number = 24;
+  @Prop @Watch('onPointerGeometryInputsChanged') systemGestureLeftInset: number = 16;
+  @Prop @Watch('onPointerGeometryInputsChanged') systemGestureRightInset: number = 16;
+  @Prop @Watch('onPointerGeometryInputsChanged') systemGestureBottomInset: number = 24;
 
   onTurn: (direction: ReaderPageTurnDirection) => ReaderPageTurnOutcome =
     (_direction: ReaderPageTurnDirection): ReaderPageTurnOutcome => ({ kind: 'busy' });
@@ -625,6 +625,29 @@ export struct ReaderPageInteractionLayer {
       this.pointerLeftInset === this.finiteInset(this.systemGestureLeftInset) &&
       this.pointerRightInset === this.finiteInset(this.systemGestureRightInset) &&
       this.pointerBottomInset === this.finiteInset(this.systemGestureBottomInset);
+  }
+
+  private deferPointerWatch(reconcile: () => void): void {
+    const clock = this.inputClock, pointer = this.activePointerId, revision = this.inputRevision;
+    void Promise.resolve().then((): void => {
+      if (clock === this.inputClock && pointer === this.activePointerId && revision === this.inputRevision) reconcile();
+    });
+  }
+
+  private onInteractionEnabledInputsChanged(): void {
+    this.deferPointerWatch((): void => this.onInteractionEnabledChanged());
+  }
+  private onInteractionModeInputsChanged(): void {
+    this.deferPointerWatch((): void => this.onInteractionModeChanged());
+  }
+  private onReadinessInputsChanged(): void {
+    this.deferPointerWatch((): void => this.onReadinessChanged());
+  }
+  private onInputRevisionInputsChanged(): void {
+    this.deferPointerWatch((): void => this.onInputRevisionChanged());
+  }
+  private onPointerGeometryInputsChanged(): void {
+    this.deferPointerWatch((): void => this.onPointerGeometryChanged());
   }
 
   private onPointerGeometryChanged(): void {

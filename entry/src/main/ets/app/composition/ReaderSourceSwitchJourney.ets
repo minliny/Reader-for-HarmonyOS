@@ -85,6 +85,7 @@ export class ReaderSourceSwitchJourney {
         this.ports.sourceName(book.sourceId, book.sourceName)),
       clearSession: (): void => this.ports.entry().installSession(this.ports.runtime(), undefined, this.ports.bindReader),
       restored: (identitiesChanged: boolean): void => {
+        if (!this.ports.entry().sessionActive) return;
         this.ports.entry().resumeRestoredSource(this.ports.runtime(), identitiesChanged);
         this.presentReader();
       },
@@ -98,16 +99,12 @@ export class ReaderSourceSwitchJourney {
     const entry = this.ports.entry();
     const source = this.ports.source();
     if (!entry.sessionActive) {
-      if (!source.canOpenEntry(entry.book)) return;
-      this.ports.leaveReader();
       this.openDetail();
       return;
     }
-    source.openForEntry(this.workflow(), (): void => {
-      this.ports.advance();
-      this.presentReader();
-      this.ports.bindReader();
-    });
+    // The picker owns a temporary surface lease over this retained host.
+    // A selected target performs its own explicit entry/navigation handoff.
+    source.openForEntry(this.workflow(), (): void => {});
   }
 
   openDetail(): void {
@@ -116,13 +113,7 @@ export class ReaderSourceSwitchJourney {
       !this.ports.entry().sessionActive;
     if ((!fromDirectory && route.route !== this.navigation.returns.snapshot().readingOrigin) ||
       this.ports.manga().selectionVisible || this.ports.removalPending()) return;
-    this.ports.source().openForEntry(this.workflow(), (): void => {
-      // Keep the directory mount and its temporary Back registration under the picker.
-      if (!fromDirectory) {
-        this.ports.advance();
-        this.ports.bindReader();
-      }
-    });
+    this.ports.source().openForEntry(this.workflow(), (): void => {});
   }
 
   preview(seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession): void {
@@ -159,7 +150,10 @@ export class ReaderSourceSwitchJourney {
   }
 
   presentReaderFailure(): void {
-    if (!this.ports.entry().sessionActive) this.ports.entryActions().openReading(undefined);
+    if (!this.ports.entry().sessionActive) {
+      this.ports.source().showEntryAcquisitionFailure();
+      return;
+    }
     this.ports.showReading();
   }
 

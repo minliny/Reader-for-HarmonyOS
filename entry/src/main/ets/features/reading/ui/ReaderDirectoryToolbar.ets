@@ -56,7 +56,7 @@ export struct ReaderDirectoryToolbar {
       Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
   }
   private controlToolbarHeight(): number {
-    return this.variant === 'standard' && Number.isFinite(this.naturalToolbarHeightVp) ?
+    return this.variant !== 'manga-catalog' && Number.isFinite(this.naturalToolbarHeightVp) ?
       Math.max(this.controlFieldHeight() + 6, this.naturalToolbarHeightVp) :
       this.variant === 'manga-catalog' ? 44 : Math.max(READER_DIRECTORY_TOOLBAR_HEIGHT, this.controlFieldHeight() + 6);
   }
@@ -143,8 +143,8 @@ export struct ReaderDirectoryToolbar {
   private queryField(inputFocusId: string) {
       Row() {
         ReaderSearchField({ variant: 'readerDirectory', mode: this.variant === 'manga-catalog' ? 'live' : 'submit', text: this.text,
-          naturalFieldHeightVp: this.variant === 'standard' ? this.naturalFieldHeightVp : 0,
-          naturalInputHeightVp: this.variant === 'standard' ? this.naturalInputHeightVp : 0,
+          naturalFieldHeightVp: this.variant !== 'manga-catalog' ? this.naturalFieldHeightVp : 0,
+          naturalInputHeightVp: this.variant !== 'manga-catalog' ? this.naturalInputHeightVp : 0,
           placeholder: this.placeholder, accessibilityLabel: this.placeholder,
           clearable: this.variant === 'manga-catalog',
           directoryFocusId: inputFocusId, directoryFocusAllowed: this.directoryFocusAllowed,

@@ -108,6 +108,7 @@ export struct LocalBookDetail {
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
+  onRetryCatalog: () => void = (): void => {};
   onSwitchSource: (focusId?: string) => void = (): void => {};
   onRemove: (identity?: string) => void = (_identity?: string): void => {};
   onCancelAdd: (identity?: string) => void = (_identity?: string): void => {};
@@ -177,7 +178,9 @@ export struct LocalBookDetail {
 
   @Builder
   private detailContent() {
-    if (this.book.contentKind !== 'manga' || this.mangaFontsReady) {
+    if (!this.detailKindConfirmed()) {
+      this.kindPreparationContent();
+    } else if (this.book.contentKind !== 'manga' || this.mangaFontsReady) {
       this.detailScroll();
     } else {
       this.fontPreparationContent();
@@ -186,9 +189,26 @@ export struct LocalBookDetail {
 
   @Builder
   private detailFooter() {
-    if (this.book.contentKind !== 'manga' || this.mangaFontsReady) {
+    if (this.detailKindConfirmed() && (this.book.contentKind !== 'manga' || this.mangaFontsReady)) {
       this.actionArea();
     }
+  }
+
+  private detailKindConfirmed(): boolean {
+    return this.book.contentKind === 'text' || this.book.contentKind === 'manga' ||
+      (this.book.sourceId === 'local' && this.book.contentKind === undefined);
+  }
+
+  @Builder
+  private kindPreparationContent() {
+    ReaderPageState({ title: this.book.contentKind === 'audio' ? '暂不支持此类阅读' :
+      this.catalogBusy ? '正在确认书籍类型…' : '书籍类型尚未确认',
+      message: this.catalogBusy ? '' : this.loadingMessage || this.readingBlockedReason,
+      loading: this.book.contentKind !== 'audio' && this.catalogBusy,
+      actionLabel: this.book.contentKind === undefined && !this.catalogBusy ? '重试' : '',
+      onAction: (): void => {
+        if (this.acceptsDetailInput() && this.book.contentKind === undefined && !this.catalogBusy) this.onRetryCatalog();
+      } }).width('100%').padding({ left: 18, right: 18, top: this.geometry.content.startInset });
   }
 
   build() {
@@ -329,7 +349,7 @@ export struct LocalBookDetail {
   @Builder
   private hero() {
     if (this.book.contentKind === 'manga') this.mangaHero();
-    else this.standardHero();
+    else if (this.detailKindConfirmed()) this.standardHero();
   }
 
   @Builder
@@ -447,9 +467,8 @@ export struct LocalBookDetail {
           this.metadataTag(this.book.contentKind === 'audio' ? '有声' : '小说');
           this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
         }.width('100%');
-      }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start)
-        .padding({ top: this.headerSpec.contentGap + this.headerSpec.contentUnderlap });
-    }.width('100%').constraintSize({ minHeight: 122 + this.headerSpec.contentGap + this.headerSpec.contentUnderlap })
+      }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
+    }.width('100%').constraintSize({ minHeight: 122 })
       .alignItems(VerticalAlign.Top);
   }
 
@@ -495,7 +514,7 @@ export struct LocalBookDetail {
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.book.sourceId !== 'local') {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
-              Text('换源').constraintSize({ minHeight: READER_ACTION_MIN_TARGET }).padding({ left: 12, right: 12 }).fontSize(12)
+              Text('换源').padding({ left: 12, right: 12, top: 5, bottom: 5 }).fontSize(12).lineHeight(18)
                 .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
                 .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)
                 .textAlign(TextAlign.Center);
@@ -880,7 +899,7 @@ export struct LocalBookDetail {
     input.footerBottom = readerInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);
     input.footerHeight = Math.max(minimumDockHeight, this.measurements.readForGeneration('detail:dock', this.measurementKey, minimumDockHeight));
     input.contentGap = manga ? visual.contentTop - visual.headerHeight - this.headerSpec.topGap : this.headerSpec.contentGap;
-    input.contentUnderlap = manga ? 0 : this.headerSpec.contentUnderlap;
+    input.contentUnderlap = 0;
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;
     input.contentHorizontalPadding = manga ? 20 : 18;
     input.contentEndInset = input.footerBottom + input.footerHeight + (manga ? visual.detailDockClearance : DETAIL_DOCK_CONTENT_GAP);

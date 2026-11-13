@@ -60,7 +60,7 @@ export struct MainTabBar {
         cornerRadius: TOK_RADIUS_PILL, scheme: this.appThemeScheme });
     Column({ space: MAIN_TAB_RAIL_ITEM_GAP }) {
       ForEach(MAIN_TABS, (tab: MainTabDef): void => {
-        this.tabItem(tab, this.current === tab.key, true);
+        this.tabItem(tab, true);
       }, (tab: MainTabDef): string => `main-rail-tab-${tab.key}`);
     }
     .width(MAIN_TAB_RAIL_WIDTH)
@@ -89,10 +89,10 @@ export struct MainTabBar {
   }
 
   @Builder
-  private tabItem(tab: MainTabDef, active: boolean, vertical: boolean) {
+  private tabItem(tab: MainTabDef, vertical: boolean) {
     Column({ space: 2 }) {
       Stack({ alignContent: Alignment.Center }) {
-        this.tabIcon(tab.key, active);
+        this.tabIcon(tab.key);
       }
       .width(30)
       .height(30);
@@ -106,21 +106,21 @@ export struct MainTabBar {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center)
-        .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .fontColor(this.current === tab.key ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width(vertical ? 66 : undefined)
     .layoutWeight(vertical ? 0 : 1)
     .constraintSize({ minHeight: readerMainTabItemHeight(this.navigationFontScale(), vertical) })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(active ? TOK_RADIUS_PILL : 0)
-    .accessibilityText(`${tab.label}${active ? '，已选中' : ''}`)
+    .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
+    .borderRadius(this.current === tab.key ? TOK_RADIUS_PILL : 0)
+    .accessibilityText(`${tab.label}${this.current === tab.key ? '，已选中' : ''}`)
     .accessibilityRole(AccessibilityRoleType.BUTTON)
-    .accessibilitySelected(active)
+    .accessibilitySelected(this.current === tab.key)
     .focusable(true)
     .onClick((): void => {
-      if (!active) {
+      if (this.current !== tab.key) {
         this.onSelect(tab.key);
       } else {
         this.onCurrentTap(tab.key);
@@ -133,7 +133,7 @@ export struct MainTabBar {
   }
 
   @Builder
-  private tabIcon(key: string, active: boolean) {
-    Image($r(`app.media.${readerMainTabIconResource(key, active, this.appThemeScheme)}`)).width(24).height(24);
+  private tabIcon(key: string) {
+    Image($r(`app.media.${readerMainTabIconResource(key, this.current === key, this.appThemeScheme)}`)).width(24).height(24);
   }
 }

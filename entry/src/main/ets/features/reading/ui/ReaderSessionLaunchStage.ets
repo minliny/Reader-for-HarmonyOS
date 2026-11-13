@@ -2,7 +2,7 @@ import { PathShape } from '@ohos.arkui.shape';
 import { ReaderControlMotionPathCache, readerControlMotionClipPath } from './ReaderControlMotionPresentation';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSessionCapsuleLeading, ReaderSessionCapsulePause,
-  readerSessionCapsuleAccessibility } from './ReaderSessionCapsule';
+  readerSessionCapsuleAccessibility, measureReaderSessionCapsule, type ReaderSessionCapsuleMetrics } from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 
@@ -20,6 +20,7 @@ export struct ReaderSessionLaunchStage {
   @Prop desiredPlaying: boolean = true;
   @Prop countdown: number = 8;
   @Prop interactionEnabled: boolean = true;
+  @Prop fontScale: number = 1;
   @Prop surfaceColor: string = '';
   @Prop surfaceBorderColor: string = '';
   @Prop sourceSurfaceColor: string = '';
@@ -95,22 +96,24 @@ export struct ReaderSessionLaunchStage {
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderSessionCapsuleLeading({ type: this.sample.type, countdown: this.countdown,
           textColor: this.effectiveTextColor(), primaryColor: this.effectivePrimaryColor(),
-          onPrimaryColor: this.effectiveOnPrimaryColor(), themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth })
+          onPrimaryColor: this.effectiveOnPrimaryColor(), themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth,
+          capsuleHeight: this.sample.capsuleHeight, labelWidth: this.metrics().labelWidth,
+          labelHeight: this.metrics().labelHeight, countdownSize: this.metrics().countdownSize })
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
       }.width('100%').height('100%').borderRadius(READER_SESSION_CAPSULE_RADIUS).clip(true).hitTestBehavior(HitTestMode.None);
 
       // CircleState is NOT a descendant of the reveal row: already visible at dot.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
         primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
-        .position({ x: this.sample.pauseX, y: 4 }).opacity(this.sample.pauseOpacity);
+        .position({ x: this.sample.pauseX, y: (this.sample.proxyHeight - 16) / 2 }).opacity(this.sample.pauseOpacity);
     }
     .width(this.sample.proxyWidth).height(this.sample.proxyHeight)
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
     .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-    .width(this.sample.proxyWidth).height(this.sample.proxyHeight)
-    .position({ x: this.sample.proxyLeft, y: this.sample.proxyTop })
-    .responseRegion({ x: 0, y: -10, width: '100%', height: this.sample.proxyHeight + 20 })
+    .width(Math.max(44, this.sample.proxyWidth)).height(Math.max(44, this.sample.proxyHeight))
+    .position({ x: this.sample.proxyLeft - Math.max(0, 44 - this.sample.proxyWidth) / 2,
+      y: this.sample.proxyTop - Math.max(0, 44 - this.sample.proxyHeight) / 2 })
     .hitTestBehavior(this.interactionEnabled && this.sample.pauseOpacity > 0 ? HitTestMode.Block : HitTestMode.None)
     .enabled(this.interactionEnabled && this.sample.pauseOpacity > 0)
     .accessibilityText(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying))
@@ -120,6 +123,10 @@ export struct ReaderSessionLaunchStage {
     .onClick((): void => {
       if (this.interactionEnabled && this.sample.pauseOpacity > 0) this.onToggle();
     });
+  }
+
+  private metrics(): ReaderSessionCapsuleMetrics {
+    return measureReaderSessionCapsule(this.getUIContext(), this.sample.type, this.fontScale);
   }
 
   private effectiveSourceSurfaceColor(): string {

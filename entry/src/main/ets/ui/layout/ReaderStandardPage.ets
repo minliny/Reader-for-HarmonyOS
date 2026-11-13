@@ -20,6 +20,7 @@ export struct ReaderStandardPage {
   @Prop @Watch('onLayoutInputsChanged') variant: ReaderStandardPageVariant = 'management';
   @Prop @Watch('onLayoutInputsChanged') contentLeadingRail: number = 0;
   @Prop @Watch('onLayoutInputsChanged') contentEndInset: number = -1;
+  @Prop scrollOwner: 'page' | 'native-list' = 'page';
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
   private geometryRevision: number = 0;
@@ -29,6 +30,7 @@ export struct ReaderStandardPage {
   onViewportChange: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   scroller: Scroller = new Scroller();
   @BuilderParam content: () => void = this.emptySlot;
+  @BuilderParam nativeListItems: () => void = this.emptySlot;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam footer: () => void = this.emptySlot;
   @BuilderParam overlayContent: (contentStartInset: number) => void = this.emptyOverlaySlot;
@@ -98,7 +100,7 @@ export struct ReaderStandardPage {
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
       footerMeasurementKey: this.measurementKey,
-      content: (): void => { this.scrollContent(); },
+      content: (): void => { this.pageBody(); },
       header: (): void => { this.header(); }, footer: (): void => { this.footer(); },
       overlayContent: (): void => { this.overlayContent(this.geometry.content.startInset); },
       onHeaderHeightChange: (height: number, key: number): void => this.recordMeasurement('standard:header', height, key),
@@ -118,6 +120,19 @@ export struct ReaderStandardPage {
 
   private scrollLayout(): ReaderScrollLayout {
     return readerScrollLayout(this.geometry);
+  }
+
+  @Builder private pageBody() {
+    if (this.scrollOwner === 'native-list') {
+      List({ scroller: this.scroller }) { this.nativeListItems(); }
+        .width('100%').height('100%')
+        .contentStartOffset(this.geometry.content.startInset)
+        .contentEndOffset(this.geometry.content.endInset)
+        .padding({ left: this.geometry.content.frame.left, right: this.geometry.content.frame.right })
+        .scrollBar(BarState.Off).clip(true);
+    } else {
+      this.scrollContent();
+    }
   }
 
   @Builder private scrollContent() {

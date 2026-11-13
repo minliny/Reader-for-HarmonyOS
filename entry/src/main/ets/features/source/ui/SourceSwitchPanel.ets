@@ -5,6 +5,14 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
 import { SourceSwitchWindow } from './SourceSwitchWindow';
+import { FrameCallback } from '@kit.ArkUI';
+
+class SourceSwitchSurfaceFrame extends FrameCallback {
+  private readonly action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
 
 /** Shared modal carrier for the detail and retained reader source picker. */
 @Component
@@ -16,6 +24,8 @@ export struct SourceSwitchPanel {
   surface: SourceSwitchPresentation | undefined = undefined;
   @State private attachment: number = 0;
   private attachedScope: number = -1;
+  private attachedSurface: SourceSwitchPresentation | undefined = undefined;
+  private surfaceRevision: number = 0;
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
   @Prop bookTitle: string = '';
@@ -41,27 +51,50 @@ export struct SourceSwitchPanel {
   aboutToAppear(): void { this.mounted = true; this.surfaceChanged(); }
   aboutToDisappear(): void {
     this.mounted = false;
-    this.surface?.detachSurface(this.attachment, this.attachedScope);
+    this.surfaceRevision += 1;
+    const surface = this.attachedSurface, attachment = this.attachment, scope = this.attachedScope;
+    this.postSurfaceAction((): void => surface?.detachSurface(attachment, scope));
   }
   private surfaceChanged(): void {
     if (!this.mounted || this.surface === undefined) return;
+    const revision = ++this.surfaceRevision, surface = this.surface;
+    const scope = this.scopeId, showing = this.showing;
+    // This child can receive Props while its ObjectLink parent renders. The
+    // Presentation publishes surface receipts observed by that parent.
+    this.postSurfaceAction((): void => {
+      if (!this.mounted || revision !== this.surfaceRevision || surface !== this.surface ||
+        scope !== this.scopeId || showing !== this.showing) return;
+      this.applySurfaceChanged();
+    });
+  }
+  private postSurfaceAction(action: () => void): void {
+    try { this.getUIContext().postFrameCallback(new SourceSwitchSurfaceFrame(action)); }
+    catch (_) { setTimeout(action, 0); }
+  }
+  private applySurfaceChanged(): void {
+    const surface = this.surface;
+    if (surface === undefined) return;
     if (this.showing) {
-      if (this.surface.surfaceClosing || !this.surface.surfaceIsCurrent(this.attachment, this.scopeId)) {
-        this.surface.detachSurface(this.attachment, this.attachedScope);
+      if (surface !== this.attachedSurface || surface.surfaceClosing || !surface.surfaceIsCurrent(this.attachment, this.scopeId)) {
+        this.attachedSurface?.detachSurface(this.attachment, this.attachedScope);
         this.attachedScope = this.scopeId;
-        this.attachment = this.surface.attachSurface(this.scopeId);
+        this.attachedSurface = surface;
+        this.attachment = surface.attachSurface(this.scopeId);
       }
-    } else this.surface.hideSurface(this.attachment, this.attachedScope, this.reduceMotion);
+    } else this.attachedSurface?.hideSurface(this.attachment, this.attachedScope, this.reduceMotion);
   }
 
-  private acceptsInput(): boolean { return this.showing && this.interactive && this.appForeground; }
+  private acceptsInput(): boolean {
+    return this.showing && this.interactive && this.appForeground && (this.surface === undefined ||
+      this.surface === this.attachedSurface && this.surface.surfaceIsCurrent(this.attachment, this.scopeId));
+  }
 
   private isCurrent(scopeId: number): boolean {
     return this.mounted && this.acceptsInput() && scopeId === this.scopeId;
   }
 
   build() {
-    ForEach([this.attachment], (attachment: number): void => {
+    ForEach(this.attachment > 0 ? [this.attachment] : [], (attachment: number): void => {
       this.panel(this.scopeId, attachment);
     }, (attachment: number): string => attachment.toString());
   }

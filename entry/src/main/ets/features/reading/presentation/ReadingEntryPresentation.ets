@@ -565,7 +565,9 @@ export class ReadingEntryPresentation {
   enterRemoteDetail(owner: ReaderRuntimeOwner, request: RemoteReadingEntryInput,
     open: (projectKind: () => void, fallbackSeeds: RemoteReadingBookSeed[]) => RemoteDetailOpening,
     notice: (title: string, message: string) => void): boolean {
-    const kind = remoteReadingEntryKind(request.seed, request.shelfSnapshot, request.validatedSession);
+    const untypedShelf = request.shelfSnapshot !== undefined && request.shelfSnapshot.contentKind === undefined;
+    const declared = untypedShelf ? undefined : remoteReadingEntryKind(request.seed, request.shelfSnapshot, request.validatedSession);
+    const kind = declared ?? (untypedShelf ? undefined : owner.bookAcquisitions().presentationContentKind?.(request.seed));
     if (kind === 'audio') {
       notice('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
       return false;
@@ -577,7 +579,7 @@ export class ReadingEntryPresentation {
     const opening = open((): void => { this.contentKind = kind === 'manga' ? 'manga' : 'text'; }, fallbackSeeds);
     const host = this.currentHost(owner);
     void host.openRemote({
-      seed: request.seed, sourceName: request.sourceName, shelfSnapshot: request.shelfSnapshot,
+      seed: { ...request.seed, contentKind: kind }, sourceName: request.sourceName, shelfSnapshot: request.shelfSnapshot,
       shelfBooks: opening.shelfBooks, fromSearch: request.fromSearch, sourceSwitchPending: opening.sourceSwitchPending,
       resumeImmediately: request.resumeImmediately === true, fallbackSeeds,
       fallbackSourceNames: request.fallbackSourceNames ?? [], candidates: opening.candidates,

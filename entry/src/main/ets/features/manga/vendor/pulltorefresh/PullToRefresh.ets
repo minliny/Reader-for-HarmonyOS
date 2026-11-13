@@ -71,19 +71,19 @@ export struct PullToRefresh {
     this.requestGeneration++;
     this.requestPending = false;
     this.gestureCancelled = true;
-    this.resetPull(false);
+    this.resetPull(false, true);
   }
 
   private handleEnabledChange(): void {
-    if (!this.pullEnabled) this.cancelPull();
+    if (!this.pullEnabled) this.cancelPull(true);
   }
 
   private handleAdmissionChange(): void {
     if ((this.pullDirection() === 'previous' && !this.hasPrevious) ||
-      (this.pullDirection() === 'next' && !this.hasNext)) this.cancelPull();
+      (this.pullDirection() === 'next' && !this.hasNext)) this.cancelPull(true);
   }
 
-  private handleResetToken(): void { this.cancelPull(); }
+  private handleResetToken(): void { this.cancelPull(true); }
 
   private triggerDistance(): number {
     return Math.max(120, Math.min(180, this.mHeightNumber * 0.2));
@@ -200,21 +200,32 @@ export struct PullToRefresh {
     }
   }
 
-  private cancelPull(): void {
+  private cancelPull(deferParent: boolean = false): void {
     this.gestureCancelled = true;
     this.requestGeneration++;
     this.requestPending = false;
-    this.resetPull(this.alive);
+    this.resetPull(this.alive, deferParent);
   }
 
-  private resetPull(animated: boolean): void {
+  private resetPull(animated: boolean, deferParent: boolean = false): void {
     const reset = (): void => { this.trYTop = 0; this.trYBottom = 0; };
     if (animated) this.getUIContext().animateTo({ duration: Math.max(0, this.animationDuration) }, reset);
     else reset();
     this.state = IS_FREE;
     this.rawDistance = 0;
-    this.onPull('', 0, false);
-    this.setActive(false);
+    if (deferParent) {
+      const generation = this.requestGeneration;
+      const wasActive = this.active;
+      this.active = false;
+      void Promise.resolve().then((): void => {
+        if (!this.alive || generation !== this.requestGeneration || this.active || this.rawDistance !== 0) return;
+        this.onPull('', 0, false);
+        if (wasActive) this.onActivity(false);
+      });
+    } else {
+      this.onPull('', 0, false);
+      this.setActive(false);
+    }
   }
 
   build() {

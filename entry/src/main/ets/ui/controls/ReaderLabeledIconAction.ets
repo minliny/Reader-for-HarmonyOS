@@ -48,17 +48,16 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
     if (spec.naturalHeight) {
-      instance.constraintSize({ minHeight: 44 });
+      instance.constraintSize({ minHeight: spec.rowHeight ?? 44 });
     } else if (this.id === 'source-management-add') {
       instance.height(readerScaledControlHeight(spec.rowHeight ?? 44, spec.text.lineHeightFp ?? 20, this.scale));
     } else if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
     instance.alignItems(VerticalAlign.Center);
     if (spec.rowWidth !== undefined) instance.width(spec.naturalHeight && typeof spec.rowWidth === 'number' ? spec.rowWidth * this.scale : spec.rowWidth);
     if (spec.horizontalPadding !== undefined) {
-      if (spec.naturalHeight) instance.padding({ left: spec.horizontalPadding, right: spec.leftPaddingOnly ? 0 : spec.horizontalPadding, top: 8, bottom: 8 });
-      else if (spec.leftPaddingOnly) instance.padding({ left: spec.horizontalPadding });
+      if (spec.leftPaddingOnly) instance.padding({ left: spec.horizontalPadding });
       else instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
-    } else if (spec.naturalHeight) instance.padding({ top: 8, bottom: 8 });
+    }
     if (spec.centerRow) instance.justifyContent(FlexAlign.Center);
     if (spec.borderRole !== undefined) {
       if (spec.divided) instance.border({ width: { left: this.divider ? TOK_BORDER_W : 0 }, color: readerAppColor(spec.borderRole, this.scheme) });
@@ -144,7 +143,9 @@ export struct ReaderLabeledIconAction {
     Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme, this.fontScale()));
   }
   build() {
-    if (resolveReaderLabeledIconActionSpec(this.specId).outerHit) {
+    if (resolveReaderLabeledIconActionSpec(this.specId).outerHit ||
+      (resolveReaderLabeledIconActionSpec(this.specId).naturalHeight &&
+        (resolveReaderLabeledIconActionSpec(this.specId).rowHeight ?? 44) < 44)) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
           .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()));

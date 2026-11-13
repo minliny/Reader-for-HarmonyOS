@@ -155,7 +155,7 @@ export class ReaderDirectoryHost {
   }
 
   async reconcile(generation: number, binding: ReaderDirectoryBinding): Promise<void> {
-    if (this.operation?.generation !== generation || !this.sameBook(this.operation.book, binding.book) ||
+    if (this.active || this.operation?.generation !== generation || !this.sameBook(this.operation.book, binding.book) ||
       !this.operation.projection.facts.canRetry) return;
     await this.load(binding);
   }
@@ -173,12 +173,15 @@ export class ReaderDirectoryHost {
     if (this.active || !this.admitted(binding)) return;
     this.active = true; const previous = this.operation !== undefined && this.sameBook(this.operation.book, binding.book) ? this.operation : undefined;
     const current = (): boolean => this.admitted(binding);
+    if (previous !== undefined) this.updateReadback(binding, 'reading');
     try {
       const pending = await this.dependencies.gateway.pendingBookmarkOperation();
       if (pending === undefined) return;
       if (pending.context.sourceId !== binding.book.sourceId || pending.context.bookId !== binding.book.bookId ||
         pending.context.title !== binding.book.title || pending.context.author !== binding.book.author) {
-        this.deliver(binding, (): void => binding.failed?.(new Error('另一书籍的原书签操作仍需核对，请返回原书籍'))); return;
+        // That original write retains its own owner. It cannot turn this
+        // book's independent canonical list read into a loading failure.
+        return;
       }
       const evidence = new ReaderWriteEvidence();
       try {
@@ -209,11 +212,18 @@ export class ReaderDirectoryHost {
       }
     } catch (error) {
       this.bookmarkProjectionStale = true; const issue = error as ReadingOperationPendingError;
-      const generation = previous?.generation ?? ++this.generation;
-      this.operation = { action: previous?.action ?? 'createPosition', book: { ...binding.book }, generation,
-        requestedCount: previous?.requestedCount ?? 1, confirmedCount: previous?.confirmedCount ?? 0,
-        completion: previous?.completion ?? 'unknown', canContinueOriginal: false,
-        projection: projectPersistedReceipt({ confirmation: previous?.projection.receipt.confirmation ?? 'unknown',
+      // A failed intent-file read supplies no transaction identity. Keep it a
+      // retryable loading failure instead of inventing an unknown create for
+      // this book. A previously accepted operation keeps its exact receipt.
+      if (previous === undefined) {
+        this.deliver(binding, (): void => binding.failed?.(error as Error));
+        throw error;
+      }
+      const generation = previous.generation;
+      this.operation = { action: previous.action, book: { ...binding.book }, generation,
+        requestedCount: previous.requestedCount, confirmedCount: previous.confirmedCount,
+        completion: previous.completion, canContinueOriginal: false,
+        projection: projectPersistedReceipt({ confirmation: previous.projection.receipt.confirmation,
           readback: 'failed', generation, canRetry: true, value: binding.currentEntries(), stale: true,
           blockedReason: issue.message, message: issue.message, refreshError: issue.message }) };
       this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
@@ -231,7 +241,9 @@ export class ReaderDirectoryHost {
       this.settled(binding, false); return;
     }
     if (this.operation?.projection.receipt.confirmation === 'unknown') {
-      this.deliver(binding, (): void => binding.failed?.(new Error('书签操作结果未确认，请重新载入核对，不要重复操作')));
+      const message = this.sameBook(this.operation.book, binding.book) ? '书签操作结果未确认，请重新载入核对，不要重复操作' :
+        `《${this.operation.book.title}》的原书签操作尚未确认，请返回原书籍核对`;
+      this.deliver(binding, (): void => binding.failed?.(new Error(message)));
       this.settled(binding, false); return;
     }
     const generation = ++this.generation;

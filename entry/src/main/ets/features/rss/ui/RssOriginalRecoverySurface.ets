@@ -2,6 +2,7 @@ import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice'
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
+import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
 
 interface RssRecoveryActionIdentity {
   presentationIdentity: string;
@@ -27,11 +28,12 @@ export struct RssOriginalRecoverySurface {
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; }
   private view(): ReaderRecoveryView {
-    return { visible: this.original?.blocked === true, message: this.original?.message ?? '',
+    return { visible: this.matchesScope(), message: this.original?.message ?? '',
       canRetry: false, generation: this.original?.generation ?? 0 };
   }
+  private matchesScope(): boolean { return rssOriginalMatchesScope(this.original, this.scope, this.subscriptionId, this.guid); }
   private identities(): string[] {
-    if (this.original?.blocked !== true) return [];
+    if (!this.matchesScope() || this.original === undefined) return [];
     const identity: RssRecoveryActionIdentity = { presentationIdentity: this.presentationIdentity, scope: this.scope, original: this.original,
       subscriptionId: this.subscriptionId, guid: this.guid };
     return [JSON.stringify(identity)];
@@ -60,7 +62,7 @@ export struct RssOriginalRecoverySurface {
     return this.current(identity) && this.qualified(identity) && this.original?.canRetryOriginal === true;
   }
   build() {
-    if (this.original?.blocked === true) {
+    if (this.matchesScope()) {
       ReaderRecoveryNotice({ view: this.view() });
       ForEach(this.identities(), (identity: string) => {
         ReaderRecoveryAction({ label: '核对原操作回执', generation: this.expected(identity).generation,

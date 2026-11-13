@@ -331,7 +331,9 @@ export class LibrarySearchPresentation {
     // The search badge describes a saved work, not just this source URL. Keep
     // its exact durable identity so changing source owns the existing row.
     const shelfMatch = resolveBookshelfBook(book.sourceId, book.bookId, book.title, book.author,
-      membership.filter((saved: ShelfBook): boolean => (saved.contentKind === 'manga') === (book.category === 'comic')),
+      membership.filter((saved: ShelfBook): boolean =>
+        (saved.sourceId === book.sourceId && saved.bookId === book.bookId) ||
+        saved.contentKind === (book.category === 'comic' ? 'manga' : 'text')),
       book.authorIdentity, book.sourceRuleVersion);
     if (shelfMatch.kind === 'ambiguous') {
       ports.failure('书架中有多个版本', '请从书架选择要阅读或换源的版本，已有书籍不会自动合并。');

@@ -209,6 +209,9 @@ export class SourceSwitchHost {
 
   retry(scopeId: number): void {
     if (!this.currentScope(scopeId) || !this.snapshot.visible) return;
+    if (this.snapshot.state.kind === 'failure' && this.failedCandidate !== undefined) {
+      this.retryFailed(scopeId); return;
+    }
     if (this.snapshot.write?.action === 'rollback' && this.snapshot.write.confirmation === 'unknown') {
       void this.reconcileRollback(true); return;
     }
@@ -253,8 +256,11 @@ export class SourceSwitchHost {
     this.generation += 1;
     this.pickQualification = undefined;
     this.previewPreparation = undefined;
+    const acquisitionFailure = this.snapshot.state.kind === 'failure' && this.failedCandidate !== undefined;
+    if (acquisitionFailure) { this.failedCandidate = undefined; this.failedIdentity = undefined; }
     this.stopDiscovery();
-    this.snapshot = { ...this.snapshot, visible: false, state: { kind: 'discovering' } };
+    this.snapshot = { ...this.snapshot, visible: false, state: { kind: 'discovering' },
+      failureMessage: acquisitionFailure ? '' : this.snapshot.failureMessage };
     this.publish();
     this.deliver({ kind: 'closed' });
     return true;
@@ -292,9 +298,19 @@ export class SourceSwitchHost {
     this.snapshot = { ...this.snapshot, failureMessage: '' }; this.publish();
   }
 
+  showAcquisitionFailure(scopeId: number): void {
+    if (!this.currentScope(scopeId) || this.snapshot.visible || this.failedCandidate === undefined ||
+      this.failedIdentity === undefined || !this.sameIdentity(this.failedIdentity, this.identity()) ||
+      this.snapshot.failureMessage.length === 0 || this.busyOrUnknown()) return;
+    this.snapshot = { ...this.snapshot, visible: true,
+      state: { kind: 'failure', message: this.snapshot.failureMessage } };
+    this.publish();
+  }
+
   retryFailed(scopeId: number): void {
     const candidate = this.failedCandidate, identity = this.failedIdentity;
-    if (!this.currentScope(scopeId) || this.snapshot.visible || candidate === undefined || identity === undefined ||
+    if (!this.currentScope(scopeId) || (this.snapshot.visible && this.snapshot.state.kind !== 'failure') ||
+      candidate === undefined || identity === undefined ||
       !this.sameIdentity(identity, this.identity()) || this.busyOrUnknown()) return;
     this.snapshot = { ...this.snapshot, visible: true, state: { kind: 'candidates', candidates: [candidate] } };
     this.publish(); void this.pick(candidate, scopeId);

@@ -47,8 +47,8 @@ export struct BookshelfSectionHeader {
       }
     }
     .width(this.contentWidth)
-    .constraintSize({ minHeight: readerScaledControlHeight(38, TYPE_APP_SECTION_LABEL.lineHeightFp as number,
-      this.windowRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale) })
+    .constraintSize({ minHeight: Math.max(this.actionsEnabled ? 44 : 0, readerScaledControlHeight(38, TYPE_APP_SECTION_LABEL.lineHeightFp as number,
+      this.windowRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale)) })
     .alignItems(VerticalAlign.Center);
   }
 

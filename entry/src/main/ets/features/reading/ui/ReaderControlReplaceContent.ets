@@ -61,6 +61,7 @@ export struct ReaderControlReplaceContent {
   @Prop fullContentHeight: number = 666;
   @Prop quickContentHeight: number = 190;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
+  inputCurrent?: () => boolean;
   @Prop @Watch('cancelTemporaryLayer') dismissTemporaryRevision: number = 0;
   @Prop @Watch('retireTemporaryLayer') retireTemporaryRevision: number = 0;
   onBack: () => void = (): void => {};
@@ -106,6 +107,10 @@ export struct ReaderControlReplaceContent {
   private cachedQuickContentHeight: number = -1;
   private readonly minimumMeasurer: ReaderControlModuleMeasurer =
     (widths: ReaderControlCandidateWidths, key: string): ReaderControlModuleMinimum | undefined => this.measureMinimum(widths, key);
+  private currentInputEnabled(): boolean {
+    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+
   private statusText(): string {
     return this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?
       '规则载入中…' : this.emptyStateMessage());
@@ -224,7 +229,7 @@ export struct ReaderControlReplaceContent {
     const offset = this.scroller.currentOffset()?.yOffset;
     if (offset === undefined || !Number.isFinite(offset)) return;
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, offset);
+      this.currentInputEnabled(), offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -248,10 +253,10 @@ export struct ReaderControlReplaceContent {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
   }
   private fullInput(): boolean {
-    return readerControlReplaceEndpoint(this.motionProgress, this.interactionEnabled) === 'full';
+    return readerControlReplaceEndpoint(this.motionProgress, this.currentInputEnabled()) === 'full';
   }
   private quickInput(): boolean {
-    return readerControlReplaceEndpoint(this.motionProgress, this.interactionEnabled) === 'quick';
+    return readerControlReplaceEndpoint(this.motionProgress, this.currentInputEnabled()) === 'quick';
   }
   private readyInput(): boolean {
     return (this.fullInput() || this.quickInput()) && this.state.status === 'ready' &&
@@ -326,7 +331,7 @@ export struct ReaderControlReplaceContent {
     await this.perform(this.onImport, true);
   }
   private async perform(action: () => Promise<void>, closeAfter: boolean = false): Promise<void> {
-    if (this.localPending || this.state.mutationPending || !this.interactionEnabled) return;
+    if (this.localPending || this.state.mutationPending || !this.currentInputEnabled()) return;
     const revision = this.presentationRevision;
     const key = this.state.sessionKey;
     this.localPending = true;

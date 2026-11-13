@@ -153,6 +153,15 @@ export class BookAcquisitionCoordinator {
   /** Changes on both sides of a source mutation, including uncertain restore failures. */
   sourceRegistryRevision(): number { return this.registryRevision; }
 
+  presentationContentKind(seed: RemoteReadingBookSeed): 'text' | 'manga' | 'audio' | undefined {
+    if (seed.contentKind !== undefined) return seed.contentKind;
+    const category = this.sourceCategories.get(seed.sourceId);
+    if (category === 'comic') return 'manga';
+    if (category === 'novel') return 'text';
+    if (category === 'music') return 'audio';
+    return undefined;
+  }
+
   readingProjectionRevision(): number { return this.projectionRevision; }
 
   /** Download facts have their own clock: filling a cache must not retire an
@@ -174,6 +183,7 @@ export class BookAcquisitionCoordinator {
     const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion]);
     const ready = this.prepared.get(key);
     return ready !== undefined && ready.projectionRevision === this.projectionRevision &&
+      (ready.session.contentKind ?? 'text') === (session.contentKind ?? 'text') &&
       ready.session.entries === session.entries && ready.session.catalogVersion === session.catalogVersion &&
       ready.session.contextVersion === session.contextVersion &&
       !this.jobs.has(key) && !this.refreshes.has(key);
@@ -634,6 +644,7 @@ export class BookAcquisitionCoordinator {
         const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion]);
         const ready = this.prepared.get(key);
         if (ready !== undefined && ready.projectionRevision === revision &&
+          (ready.session.contentKind ?? 'text') === (session.contentKind ?? 'text') &&
           ready.session.entries === session.entries && ready.session.catalogVersion === session.catalogVersion &&
           ready.session.contextVersion === session.contextVersion &&
           this.versions.get(session.identity.sourceId) === session.sourceVersion && this.canRetainPreparedBody(key, chapter)) {
@@ -690,16 +701,19 @@ export class BookAcquisitionCoordinator {
     // Apply the same category boundary before prepared or on-disk cache reuse.
     // A type-0 review directory is not a novel even when its old body is cached.
     this.assertReadableSource(seed.sourceId);
-    // Durable add metadata uses the existing Core shelf schema, which has no
-    // media hint. Recover an omitted hint from the current source registry so
-    // a cold manga add can use the same first-image admission as a warm one.
-    if (seed.contentKind === undefined && this.sourceCategories.get(seed.sourceId) === 'comic') {
-      seed = { ...seed, contentKind: 'manga' };
-    }
+    const declaredContentKind = seed.contentKind;
+    // New candidates may borrow a current source hint. Shelf owners first
+    // supply the exact durable type through their existing Core read.
+    const contentKind = this.presentationContentKind(seed);
+    if (contentKind !== seed.contentKind) seed = { ...seed, contentKind };
     const version = this.versions.get(seed.sourceId);
     const cacheKey = JSON.stringify([seed.sourceId, seed.bookId, version]);
     const key = options.preparationRevision === undefined ? cacheKey : JSON.stringify([seed.sourceId, seed.bookId, version, options.preparationRevision]);
-    const ready = this.prepared.get(cacheKey);
+    let ready = this.prepared.get(cacheKey);
+    if (ready !== undefined && (ready.session.contentKind ?? 'text') !== (seed.contentKind ?? 'text')) {
+      this.prepared.delete(cacheKey);
+      ready = undefined;
+    }
     if (!options.forceRefresh && ready !== undefined && Date.now() - ready.at < CACHE_FRESH_MS) {
       const session = this.withCatalogFreshness(ready.session);
       this.prepared.delete(cacheKey);
@@ -727,7 +741,9 @@ export class BookAcquisitionCoordinator {
       job.consumers.push(consumer);
       if (priority === 'foreground') this.scheduler.promote(seed.sourceId, seed.bookId);
       this.scheduler.visibilityChanged();
-      return this.consumeJob(job, consumer);
+      const session = await this.consumeJob(job, consumer);
+      if ((session.contentKind ?? 'text') !== (seed.contentKind ?? 'text')) return this.acquireBook(seed, options, priority);
+      return session;
     }
     const next: BookJob = { priority, forceRefresh: options.forceRefresh === true,
       started: false, consumers: [consumer], sourceId: seed.sourceId, bookId: seed.bookId, preempted: false, cancelled: false,
@@ -738,6 +754,8 @@ export class BookAcquisitionCoordinator {
     const projectionAtStart = this.projectionRevision;
     next.promise = this.openBook(seed, version, next, options.forceRefresh === true)
       .then((session: RemoteReadingSession): RemoteReadingSession => {
+        if (declaredContentKind !== undefined && (session.contentKind ?? 'text') !== declaredContentKind)
+          throw new RemoteReadingGatewayError('invalidInput', '书籍类型与当前请求不一致，请重新打开书籍。');
         if (this.versions.get(seed.sourceId) === version && !this.bookJobCancelled(next)) {
           this.prepared.set(cacheKey, { session, at: Date.now(), projectionRevision: projectionAtStart });
           while (this.prepared.size > PREPARED_SESSION_LIMIT) {

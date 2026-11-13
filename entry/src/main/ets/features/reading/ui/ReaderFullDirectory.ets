@@ -223,10 +223,23 @@ export struct ReaderFullDirectory {
   @Builder
   private recoveryContent() {
     if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
-      ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
-        onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
-        onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+      ForEach([this.recoveryPresentationIdentity()], (identity: string): void => {
+        ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
+          presentationActive: this.recoveryPresentationCurrent(identity),
+          isPresentationCurrent: (): boolean => this.recoveryPresentationCurrent(identity),
+          onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+          onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+      }, (identity: string): string => identity);
     }
+  }
+
+  private recoveryPresentationIdentity(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.directoryRecovery.presentationId, this.temporaryBackIdentity]);
+  }
+
+  private recoveryPresentationCurrent(identity: string): boolean {
+    return this.mounted && this.interactive && !this.exitRequested && !this.directoryRulesVisible &&
+      identity === this.recoveryPresentationIdentity() && this.isOpeningCurrent();
   }
 
   private headerRecoveryVisible(): boolean {
@@ -390,11 +403,16 @@ export struct ReaderFullDirectory {
     }));
   }
 
+  private directoryRulesRecoveryPublication: number = 0;
   private admitDirectoryRulesRecovery(identity: string, bookId: string,
     recovery: ReaderDirectoryRulesRecoveryProjection | undefined): void {
     if (!this.directoryRulesCurrent(identity, bookId) || (recovery !== undefined && recovery.bookId !== bookId)) return;
-    this.directoryRulesRecovery = recovery;
-    this.onHeaderRecoveryChanged();
+    const publication = ++this.directoryRulesRecoveryPublication;
+    void Promise.resolve().then((): void => {
+      if (publication !== this.directoryRulesRecoveryPublication || !this.directoryRulesCurrent(identity, bookId)) return;
+      this.directoryRulesRecovery = recovery;
+      this.onHeaderRecoveryChanged();
+    });
   }
 
   @Builder

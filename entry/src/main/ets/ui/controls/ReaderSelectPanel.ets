@@ -1,3 +1,4 @@
+import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
@@ -39,6 +40,12 @@ const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
 const CHEVRON_H = 8;
 const SELECT_CHROME = SELECT_PAD * 2 + CHEVRON_GAP + CHEVRON_W; // 40
+
+class ReaderSelectParentFrame extends FrameCallback {
+  private readonly callback: () => void;
+  constructor(callback: () => void) { super(); this.callback = callback; }
+  onFrame(): void { this.callback(); }
+}
 
 @Component
 export struct ReaderSelectPanel {
@@ -111,11 +118,15 @@ export struct ReaderSelectPanel {
       this.expandedHeight = this.closeInFlight ? OPTION_H : this.fullPanelHeight();
       this.chevronAngle = this.closeInFlight ? 0 : -180;
     });
-    if (this.closeInFlight) this.finishCollapse(generation);
+    if (this.closeInFlight) this.finishCollapse(generation, true);
   }
 
-  private finishCollapse(generation: number): void {
+  private finishCollapse(generation: number, deferParent: boolean = false): void {
     if (!this.mounted || generation !== this.generation || !this.closeInFlight) return;
+    if (deferParent) {
+      this.getUIContext().postFrameCallback(new ReaderSelectParentFrame((): void => this.finishCollapse(generation)));
+      return;
+    }
     const finish = this.closeFinish;
     this.closeFinish = undefined;
     finish?.();
@@ -363,7 +374,7 @@ export struct ReaderSelectPanel {
     }
     const identity = this.selectionId;
     const dismiss = this.onDismiss;
-    this.collapsePanel((): void => dismiss(identity));
+    this.collapsePanel((): void => dismiss(identity), undefined, true);
   }
 
   private selectAndCollapse(option: string): void {
@@ -375,7 +386,7 @@ export struct ReaderSelectPanel {
     this.collapsePanel((): void => dismiss(identity), (): void => commit(option, identity));
   }
 
-  private collapsePanel(onFinish: () => void, onCommit?: () => void): void {
+  private collapsePanel(onFinish: () => void, onCommit?: () => void, deferParent: boolean = false): void {
     if (!this.mounted || this.closeInFlight) {
       return;
     }
@@ -389,7 +400,7 @@ export struct ReaderSelectPanel {
     if (this.reduceMotion) {
       this.expandedHeight = OPTION_H;
       this.chevronAngle = 0;
-      this.finishCollapse(generation);
+      this.finishCollapse(generation, deferParent);
       return;
     }
     this.getUIContext().animateTo(

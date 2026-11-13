@@ -15,6 +15,7 @@ import { readingFailureHint } from '../presentation/ReadingFailurePresentation';
 import { ReaderReadingRecordHost } from '../application/ReaderReadingRecordHost';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
+import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_META, MESSAGE_GESTURE_ICON } from '../../../ui/foundation/ReaderMessageStyle';
@@ -205,7 +206,8 @@ import {
 import {
   READER_SESSION_CAPSULE_HEIGHT,
   ReaderSessionCapsule,
-  readerSessionCapsuleMinimumWidth,
+  measureReaderSessionCapsule,
+  type ReaderSessionCapsuleMetrics,
 } from './ReaderSessionCapsule';
 import {
   deriveReaderSessionCapsule,
@@ -560,7 +562,7 @@ export struct ReadingExperience {
   @Prop @Watch('sourceSwitchCompletionChanged') sourceSwitchCompletion: SourceSwitchCompletionPresentation | undefined = undefined;
   @Prop @Watch('sourceSwitchCompletionChanged') readingReadyGeneration: number = 0;
   @Prop @Watch('sourceSwitchCompletionVisibleChanged') sourceSwitchCompletionVisible: boolean = false;
-  @Prop @Watch('onReaderRecoverySetChanged') sourceSwitchPresentationVisible: boolean = false;
+  @Prop sourceSwitchPresentationVisible: boolean = false;
   @Prop @Watch('onRequestedChapterChanged') requestedChapterIndex: number | undefined = undefined;
   // Full Directory bookmark row: host-originated precise (chapter, offset)
   // anchor; mirrors the selectSearchResult exact-scalar jump. The requestId
@@ -747,7 +749,7 @@ export struct ReadingExperience {
   @Prop totalChapters: number = 0;
   @Prop @Watch('onControlDirectoryDataChanged') directoryEntries: LocalReadingTocEntry[] = [];
   @Prop @Watch('onControlBookmarkFailureChanged') bookmarkLoadMessage: string = '';
-  @Prop @Watch('onReaderRecoverySetChanged') bookmarkRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  @Prop bookmarkRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, presentationId: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, presentationId: string) => void = (): void => {};
   @State private controlBookmarkLoadFailed: boolean = false;
@@ -769,7 +771,8 @@ export struct ReadingExperience {
    */
   private latestControlVisualSession: ReaderControlSessionState = createReaderControlSessionState();
   @State private controlOpenRevision: number = 0;
-  @State private controlTemporaryLayer: boolean = false;
+  private controlTemporaryLayer: boolean = false;
+  @State private controlTemporaryLayerPresented: boolean = false;
   @State private dismissControlTemporaryRevision: number = 0;
   @State private retireControlTemporaryRevision: number = 0;
   @State private quickSearchQuery: string = '';
@@ -806,27 +809,22 @@ export struct ReadingExperience {
   private chineseConversionActorKey: string = '';
   private chineseConversionActor: ((mode: ReaderChineseConversionMode) => void) | undefined;
   @State private readerSettingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
-  @State @Watch('onReaderRecoverySetChanged') private readerRecoveryView: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
-  @State @Watch('onReaderRecoverySetChanged') private readerRecoveryActionLabel: string = '重试';
+  @State private readerRecoveryView: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private readerRecoveryActionLabel: string = '重试';
   private readerRecoveryAction: (() => void) | undefined = undefined;
   private readerRecoveryKind: 'general' | 'progress' | 'presentation' = 'general';
   private readerRecoveryIdentity: string = '';
   private readerRecoveryProgressRevision: string | undefined = undefined;
-  @State @Watch('onReaderRecoverySetChanged') private readerSettingsRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
-  @State @Watch('onReaderRecoverySetChanged') private ttsPreferencesRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private readerSettingsRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private ttsPreferencesRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private readerSettingsRecoveryBusy: boolean = false;
   @State private ttsPreferencesRecoveryBusy: boolean = false;
   @State private ttsConfigurationLoading: boolean = false;
   @State private ttsConfigurationLoadFailed: boolean = false;
   private ttsConfigurationMetadataFailed: boolean = false;
-  @State @Watch('onReaderRecoverySetChanged') private ttsConfigurationRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
-  @State @Watch('onReaderRecoverySetChanged') private replaceRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private ttsConfigurationRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private replaceRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   private replaceRecoveryOperationId: string | undefined = undefined;
-  /** One measured obstruction shared by body pagination and control placement. */
-  @State private readerRecoveryBottom: number = 0;
-  @State private readerRecoveryMeasurementRevision: number = 0;
-  private readerRecoveryMeasurementScheduledFor: string = '';
-  private readerRecoveryMeasurementScheduleToken: number = 0;
 
   @State private ttsState: ReaderTtsState = createReaderTtsState(false);
   // TTS progress callbacks can arrive out of order around an utterance
@@ -1032,8 +1030,6 @@ export struct ReadingExperience {
   private pageTurnPendingViewportWidth: number = 0;
   private pageTurnPendingViewportHeight: number = 0;
   private pageTurnPendingWindowReflow: boolean = false;
-  private pageTurnPendingRecoveryBottom: number | undefined = undefined;
-  private pageTurnPendingRecoveryIdentity: string = '';
   private pageTurnPendingWindowSettings: ReaderSettingsSnapshot | undefined = undefined;
   @State private readerWindowPolicyPending: boolean = false;
   private readerWindowPolicyGeneration: number = 0;
@@ -1051,7 +1047,9 @@ export struct ReadingExperience {
   private pageChromeStatusTimer: number = -1;
   private pendingPageChromeClockText: string | undefined = undefined;
   private measuredSessionCapsuleType: ReaderSessionCapsuleType | undefined = undefined;
+  private sessionCapsuleMeasuredIdentity: string = '';
   private pendingSessionCapsuleType: ReaderSessionCapsuleType | undefined = undefined;
+  private pendingSessionCapsuleIdentity: string = '';
   private pendingSessionCapsuleWidth: number = 0;
   private pendingSessionCapsuleHeight: number = 0;
   // Frozen readers no longer observe live session state; release must itself
@@ -1218,8 +1216,6 @@ export struct ReadingExperience {
       this.isReaderIdentityCurrent?.() !== false && this.windowChromeActive && this.appForeground);
     this.restoreEntryPresentation();
     this.admitInitialWindowGeometry();
-    this.readerRecoveryBottom = 0;
-    this.readerRecoveryMeasurementScheduledFor = '';
     this.controlSession = createReaderControlSessionState();
     this.controlDirectoryDataRetained = false;
     this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
@@ -1684,6 +1680,7 @@ export struct ReadingExperience {
     this.clearPageChromeStatusTimer();
     this.pendingPageChromeClockText = undefined;
     this.pendingSessionCapsuleType = undefined;
+    this.pendingSessionCapsuleIdentity = '';
     this.readingRecordHost.retire();
     const ttsCoordinator = this.ttsCoordinator;
     this.ttsConfigurationHost?.retire();
@@ -1873,6 +1870,7 @@ export struct ReadingExperience {
       // The Panel stays mounted, but only this Host's linked session owns
       // routes, held input, the transition and committed close revision.
       ReaderControlPanel({
+        sessionFontScale: this.readingLayout().systemFontScale,
         controlThemeStyle: readerControlThemeStyle(this.readerAppScheme),
         launchSample: this.sessionLaunch?.sample,
         launchGeneration: this.sessionLaunch?.generation ?? 0,
@@ -1903,6 +1901,7 @@ export struct ReadingExperience {
         minimumIdentity: this.controlMinimumIdentity(),
         minimumKey: this.controlLayout(this.readerWindowMetricsRevision).minimumKey,
         minimumReady: this.controlMinimumReady,
+        minimumReceiptCurrent: (key: string): boolean => this.controlMinimumReceiptCurrent(key),
         minimumMetricsRevision: ReaderWindowCoordinator.metrics().revision,
         onPlaybackProfileSelected: (receipt: ReaderControlPlaybackProfileReceipt): void =>
           this.acceptControlPlaybackProfile(receipt),
@@ -1914,7 +1913,7 @@ export struct ReadingExperience {
         controlOpenRevision: this.controlOpenRevision,
         dismissTemporaryRevision: this.dismissControlTemporaryRevision,
         retireTemporaryRevision: this.retireControlTemporaryRevision,
-        temporaryLayerActive: this.controlTemporaryLayer,
+        temporaryLayerActive: this.controlTemporaryLayerPresented,
         onVisualSessionChange: (state: ReaderControlSessionState): void => {
           // This assignment is deliberately non-reactive.  It is a decision
           // snapshot for Back/close only; the Panel owns the visual @State.
@@ -1925,7 +1924,7 @@ export struct ReadingExperience {
             chromeOwnerChanged: (): void => this.applyWindowPolicyForChromeOwner(),
           });
         },
-        onTemporaryLayerChange: (active: boolean): void => { this.controlTemporaryLayer = active; },
+        onTemporaryLayerChange: (active: boolean): void => this.onControlTemporaryLayerChanged(active),
         onTtsConfigurationOpen: (): void => this.retryTtsConfigurationMetadataOnOpen(),
         onInputActivity: (): void => this.invalidateControlBackdrop(),
         onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean): void => {
@@ -1950,6 +1949,9 @@ export struct ReadingExperience {
         chapterDownloadEnabled: this.sourceId !== LOCAL_READING_SOURCE_ID,
         bookmarkLoadFailed: this.controlBookmarkLoadFailed,
         bookmarkLoadMessage: this.bookmarkLoadMessage,
+        bookmarkRecovery: this.bookmarkRecovery,
+        bookmarkRecoveryIdentity: this.bookmarkRecoveryIdentity(),
+        onBookmarkRecovery: (identity: string, continuing: boolean): void => this.reconcileBookmarkRecovery(identity, continuing),
         onRetryBookmarkLoad: (): void => this.loadControlBookmarks(),
         searchQuery: this.quickSearchQuery,
         searchPublication: this.quickSearchPublication,
@@ -2167,9 +2169,12 @@ export struct ReadingExperience {
           primaryColor: readerAppColor('TOK_READ_PRIMARY', this.readerAppScheme),
           onPrimaryColor: readerAppColor('app.control.onPrimary', this.readerAppScheme),
           themeScheme: this.readerAppScheme,
+          fontScale: this.readingLayout().systemFontScale,
+          measurementIdentity: this.sessionCapsuleMeasurementIdentity(this.sessionCapsuleType()),
           interactionEnabled: !this.pageTurnInputOwned,
           onToggle: (): void => this.toggleSessionCapsule(),
-          onMeasured: (width: number, height: number): void => this.onSessionCapsuleMeasured(this.sessionCapsuleType(), width, height),
+          onMeasured: (width: number, height: number, identity: string, type: ReaderSessionCapsuleType): void =>
+            this.onSessionCapsuleMeasured(identity, type, width, height),
         }).position({ x: this.sessionCapsuleLayout().sessionX, y: this.sessionCapsuleLayout().sessionY }).zIndex(8);
       }
       if (this.sessionLaunch !== undefined) {
@@ -2177,7 +2182,7 @@ export struct ReadingExperience {
           isSessionOverlay: true, topStartText: this.sessionChromeForPresentation().topStartText,
           topEndText: this.sessionChromeForPresentation().topEndText, bottomStartText: this.sessionChromeForPresentation().bottomStartText,
           bottomEndText: this.sessionChromeForPresentation().bottomEndText, sessionVisible: true,
-          sessionWidth: this.sessionLaunch.geometry.capsuleWidth, sessionHeight: 24,
+          sessionWidth: this.sessionLaunch.geometry.capsuleWidth, sessionHeight: this.sessionCapsuleMetrics().targetHeight,
           layout: this.readingLayout(), appearance: this.appearanceSnapshot,
           incomingOpacity: this.sessionLaunch.sample.immersiveOpacity,
           footerOpacity: this.sessionLaunchFooterExiting ? this.sessionLaunchFooterOpacity : this.sessionLaunch.sample.footerOpacity,
@@ -2291,19 +2296,15 @@ export struct ReadingExperience {
 
   private hasReaderRecoveryContent(): boolean {
     return this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible ||
-      this.ttsConfigurationRecovery.visible || this.replaceRecovery.visible || this.bookmarkRecovery.bookmarks.visible;
+      this.ttsConfigurationRecovery.visible || (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') ||
+      this.bookmarkRecovery.bookmarks.visible;
   }
 
   private readerRecoveryBaseLayout(): ReaderControlLayoutSnapshot {
-    // The notice must never position itself from a layout that already pays
-    // its own obstruction. This is the original, unmodified top-bar anchor.
+    // The floating notice uses the ordinary top-bar anchor independently of
+    // the body and control layouts underneath it.
     return resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
       this.expandedLayout, ReaderWindowCoordinator.metrics());
-  }
-
-  private usesReaderRecoveryBudget(): boolean {
-    return this.controlVisible() || (this.readerRecoveryBaseLayout().widthClass === 'compact' &&
-      this.effectiveViewportWidth() < this.effectiveViewportHeight());
   }
 
   private recoveryTopBarRevision: number = -1;
@@ -2322,194 +2323,71 @@ export struct ReadingExperience {
     const base = this.readerRecoveryBaseLayout();
     const layout = this.controlLayout(this.readerWindowMetricsRevision);
     const headerHeight = layout.topBarVisible ? Math.max(this.readerRecoveryTopBarHeight(), layout.topBarHeight) : 0;
-    return this.usesReaderRecoveryBudget() ?
-      base.topBarTop + headerHeight + READER_CONTROL_SAFE_TOP_GAP :
-      base.topBarTop + (this.controlVisible() ? headerHeight : 10);
+    return base.topBarTop + (this.controlVisible() ? headerHeight + READER_CONTROL_SAFE_TOP_GAP : 10);
   }
 
   private readerRecoveryViewportHeight(): number {
-    const layout = this.controlLayout(this.readerWindowMetricsRevision);
     const remaining = this.effectiveViewportHeight() - this.readerRecoveryTop() -
       readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics(), false);
-    const cap = this.controlVisible() && !layout.topBarVisible ? 44 : this.viewportHeight / 3;
+    const cap = this.effectiveViewportHeight() / 3;
     return Math.max(0, Math.min(cap, remaining));
   }
 
-  private readerRecoveryMeasurementId(): string {
-    // Geometry belongs to this mounted book, not to one chapter transaction.
-    // Action callbacks retain their original, stricter operation identities.
-    return `reader-recovery-viewport:${JSON.stringify([this.sourceId, this.bookId,
-      this.lifecycleToken, this.readerRecoveryMeasurementRevision])}`;
+  private readerRecoveryOverlayId(): string {
+    return `reader-recovery-overlay:${JSON.stringify([this.sourceId, this.bookId, this.lifecycleToken])}`;
   }
 
-  private readerRecoveryMeasurementIdentity(): string {
-    const base = this.readerRecoveryBaseLayout();
-    return [this.readerRecoveryMeasurementId(), this.viewportWidth, this.viewportHeight,
-      ReaderWindowCoordinator.metrics().revision, base.topBarTop, base.topBarWidth, this.controlVisible(),
-      this.controlLayout(this.readerWindowMetricsRevision).topBarVisible].join('|');
-  }
-
-  private readerRecoveryMeasurementCurrent(identity: string): boolean {
-    return this.isSessionActive(this.lifecycleToken) && this.hasMeasuredViewport() && this.usesReaderRecoveryBudget() &&
-      identity === this.readerRecoveryMeasurementIdentity() && this.isControlInputEnabled() && this.windowChromeActive &&
-      !this.windowChromeOverlayActive && !this.sourceSwitchPresentationVisible &&
-      (!this.replaceRecovery.visible || this.readerPreferenceModule() !== 'replace' ||
-        this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible ||
-        this.ttsConfigurationRecovery.visible || this.bookmarkRecovery.bookmarks.visible);
-  }
-
-  private onReaderRecoverySetChanged(): void {
-    if (!this.mounted || !this.usesReaderRecoveryBudget()) return;
-    // Change only the measurement id. Keep the Scroll, card expansion state,
-    // and native focus mounted even when a successor has the same height.
-    this.readerRecoveryMeasurementRevision += 1;
-    if (!this.hasReaderRecoveryContent()) {
-      this.admitReaderRecoveryBottom(0, this.readerRecoveryMeasurementIdentity());
-      return;
-    }
-    this.scheduleReaderRecoveryMeasurement();
-  }
-
-  private scheduleReaderRecoveryMeasurement(attempt: number = 0): void {
-    const identity = this.readerRecoveryMeasurementIdentity();
-    if (!this.readerRecoveryMeasurementCurrent(identity) || !this.hasReaderRecoveryContent() ||
-      identity === this.readerRecoveryMeasurementScheduledFor) return;
-    this.readerRecoveryMeasurementScheduledFor = identity;
-    const token = ++this.readerRecoveryMeasurementScheduleToken;
-    const id = this.readerRecoveryMeasurementId();
-    const finish = (accepted: boolean): void => {
-      // This is an in-flight slot, not a permanent receipt. A predecessor
-      // cannot release a newer slot, even when it has the same semantic id.
-      if (this.readerRecoveryMeasurementScheduledFor !== identity ||
-        this.readerRecoveryMeasurementScheduleToken !== token) return;
-      this.readerRecoveryMeasurementScheduledFor = '';
-      if (!accepted && attempt === 0 && this.readerRecoveryMeasurementCurrent(identity) &&
-        this.hasReaderRecoveryContent()) this.scheduleReaderRecoveryMeasurement(1);
-    };
-    try {
-      this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-        if (!this.readerRecoveryMeasurementCurrent(identity) || !this.hasReaderRecoveryContent()) {
-          finish(false);
-          return;
-        }
-        let accepted = false;
-        try {
-          const context = this.getUIContext();
-          const viewport = context.getComponentUtils().getRectangleById(id);
-          accepted = this.acceptReaderRecoveryViewport(context.px2vp(viewport.localOffset.y),
-            context.px2vp(viewport.size.width), context.px2vp(viewport.size.height), identity);
-        } catch (_) { /* A removed native node cannot authorize another opening. */ }
-        finish(accepted);
-      }));
-    } catch (_) {
-      // Keep the normal Area receipt usable after a retiring frame context.
-      finish(false);
-    }
-  }
-
-  private readerRecoveryAreaChangeHandler(identity: string): (_old: Area, current: Area) => void {
-    return (_old: Area, current: Area): void => {
-      this.acceptReaderRecoveryViewport(current.position.y === undefined ? Number.NaN : this.numericAreaLength(current.position.y),
-        this.numericAreaLength(current.width), this.numericAreaLength(current.height), identity);
-    };
-  }
-
-  private acceptReaderRecoveryViewport(top: number, width: number, height: number, identity: string): boolean {
-    if (!this.readerRecoveryMeasurementCurrent(identity) || !this.hasReaderRecoveryContent() ||
-      !Number.isFinite(top) || !Number.isFinite(width) || !Number.isFinite(height) || height <= 0 ||
-      Math.abs(top - this.readerRecoveryTop()) > 1 ||
-      Math.abs(width - this.readerRecoveryBaseLayout().topBarWidth) > 1) return false;
-    // Scroll's viewport, rather than its potentially very long inner Column,
-    // owns the obstruction. The original one-third cap remains unchanged.
-    this.admitReaderRecoveryBottom(top + Math.min(height, this.readerRecoveryViewportHeight()), identity);
-    return true;
-  }
-
-  private admitReaderRecoveryBottom(bottom: number, identity: string): void {
-    if (!this.readerRecoveryMeasurementCurrent(identity) || !Number.isFinite(bottom) || bottom < 0 ||
-      (bottom > 0 && !this.hasReaderRecoveryContent())) return;
-    if (Math.abs(bottom - this.readerRecoveryBottom) < .1) {
-      this.pageTurnPendingRecoveryBottom = undefined;
-      this.pageTurnPendingRecoveryIdentity = '';
-      return;
-    }
-    if (this.pageTurnInputPhase() !== 'idle') {
-      // Keep the active body/control budget frozen. Only the latest receipt
-      // survives; its final visible anchor is sampled after the existing join.
-      this.pageTurnPendingRecoveryBottom = bottom;
-      this.pageTurnPendingRecoveryIdentity = identity;
-      this.rollbackPageTurnForDeferredMutation();
-      return;
-    }
-    this.invalidatePageTurnRuntime(true);
-    if (this.readerSettingsSnapshot.navigationMode === 'continuous') this.continuousAnchorSampler?.();
-    const visibleAnchor = this.readerSettingsSnapshot.navigationMode === 'continuous' ? this.continuousVisibleScalar :
-      this.visiblePage !== undefined && this.visiblePageSelectionToken === this.materializedChapterSelectionToken ?
-        this.visiblePage.startScalar : this.desiredChapterOffset;
-    const previousSignature = this.hasMeasuredViewport() ? this.paginationLayoutSignature() : undefined;
-    this.readerRecoveryBottom = bottom;
-    this.lastWindowMetricsLayoutKey = this.windowMetricsLayoutKey();
-    if (previousSignature !== undefined && previousSignature !== this.paginationLayoutSignature()) {
-      this.physicalPagination.index.invalidateLayout(this.sourceId, this.bookId, previousSignature);
-      this.resetPaginationDraft();
-    }
-    if (!this.hasCurrentMaterializedChapter() || this.phase === 'failed') return;
-    const scalarCount = this.requireChapterLayoutMap().scalarCount();
-    this.desiredChapterOffset = Math.max(0, Math.min(scalarCount, visibleAnchor));
-    this.desiredChapterProgress = scalarCount === 0 ? 0 : this.desiredChapterOffset / scalarCount;
-    if (this.measurementCompleting) {
-      this.remeasurePending = true;
-      this.appearanceReflowInvalidateCurrentLayout = true;
-      return;
-    }
-    this.beginMeasurement(this.lifecycleToken);
+  private readerRecoveryInputCurrent(): boolean {
+    return !this.controlMotionVisible() && this.isControlInputEnabled() && !this.sourceSwitchPresentationVisible;
   }
 
   @Builder
   private readerRecoveryContent() {
-    // Original operations survive closing tools. On phones the measured
-    // viewport pays one shared body/control budget at a stable top-bar anchor.
-    if (!this.sourceSwitchPresentationVisible &&
-      (this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible ||
-        this.ttsConfigurationRecovery.visible || this.replaceRecovery.visible || this.bookmarkRecovery.bookmarks.visible)) {
+    // This floating surface displays the original operation without changing
+    // body pagination, page-turn ownership or the control expansion budget.
+    if (!this.sourceSwitchPresentationVisible && this.hasReaderRecoveryContent()) {
       Scroll() {
         Column({ space: 8 }) {
           if (this.bookmarkRecovery.bookmarks.visible) {
             ForEach([this.bookmarkRecoveryIdentity()], (identity: string): void => {
-              ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.bookmarkRecovery.bookmarks, tag: '书签',
-                busy: this.bookmarkRecovery.bookmarksBusy === true, actionLabel: '重新载入核对书签',
-                onReconcile: (): void => this.reconcileBookmarkRecovery(identity, false),
-                secondaryActionLabel: this.bookmarkRecovery.canContinueBookmarks ? '继续原操作' : '',
-                onSecondaryAction: (): void => this.reconcileBookmarkRecovery(identity, true) });
+              ReaderDirectoryRecoverySurface({ recovery: {
+                presentationId: this.bookmarkRecovery.presentationId, bookmarks: this.bookmarkRecovery.bookmarks,
+                bookmarksKind: this.bookmarkRecovery.bookmarksKind, bookmarksReadbackFailed: this.bookmarkRecovery.bookmarksReadbackFailed,
+                bookmarksBusy: this.bookmarkRecovery.bookmarksBusy, canContinueBookmarks: this.bookmarkRecovery.canContinueBookmarks,
+                offline: EMPTY_READING_DIRECTORY_RECOVERY.offline, canContinueOffline: false,
+              }, presentationActive: this.readerRecoveryInputCurrent(),
+                isPresentationCurrent: (): boolean => this.readerRecoveryInputCurrent() && identity === this.bookmarkRecoveryIdentity(),
+                onReconcileBookmarks: (): void => this.reconcileBookmarkRecovery(identity, false),
+                onContinueBookmarks: (): void => this.reconcileBookmarkRecovery(identity, true) });
             }, (identity: string): string => `bookmark:${identity}`);
           }
           if (this.readerRecoveryView.visible) {
             ForEach([this.readerRecoveryView.generation], (generation: number): void => {
               ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
-                onReconcile: (): void => this.reconcileReaderRecovery(generation) });
+                onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.reconcileReaderRecovery(generation); } });
             }, (generation: number): string => `recovery:${generation}`);
           }
           if (this.readerSettingsRecovery.visible) {
             ForEach([this.readerSettingsRecovery.generation], (generation: number): void => {
               ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.readerSettingsRecovery, tag: '阅读设置',
                 busy: this.readerSettingsRecoveryBusy, actionLabel: '重试保存',
-                onReconcile: (): void => this.retryReaderPreferenceNotice('settings', generation) });
+                onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.retryReaderPreferenceNotice('settings', generation); } });
             }, (generation: number): string => `settings:${generation}`);
           }
           if (this.ttsPreferencesRecovery.visible) {
             ForEach([this.ttsPreferencesRecovery.generation], (generation: number): void => {
               ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.ttsPreferencesRecovery, tag: '朗读设置',
                 busy: this.ttsPreferencesRecoveryBusy, actionLabel: '重试保存',
-                onReconcile: (): void => this.retryReaderPreferenceNotice('tts', generation) });
+                onReconcile: (): void => { if (this.readerRecoveryInputCurrent()) this.retryReaderPreferenceNotice('tts', generation); } });
             }, (generation: number): string => `tts:${generation}`);
           }
           if (this.ttsConfigurationRecovery.visible) {
             ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.ttsConfigurationRecovery, tag: '朗读配置', actionLabel: '查看设置',
-              onReconcile: (generation: number): void => this.openTtsConfigurationRecovery(generation) });
+              onReconcile: (generation: number): void => { if (this.readerRecoveryInputCurrent()) this.openTtsConfigurationRecovery(generation); } });
           }
           if (this.replaceRecovery.visible && this.readerPreferenceModule() !== 'replace') {
             ReaderRecoveryNotice({ layoutWidthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth, view: this.replaceRecovery, tag: '替换规则', actionLabel: '查看规则',
-              onReconcile: (generation: number): void => this.openReplaceRecovery(generation) });
+              onReconcile: (generation: number): void => { if (this.readerRecoveryInputCurrent()) this.openReplaceRecovery(generation); } });
           }
         }.width('100%').hitTestBehavior(HitTestMode.Transparent);
       }
@@ -2517,10 +2395,14 @@ export struct ReadingExperience {
       .constraintSize({ maxHeight: this.readerRecoveryViewportHeight() })
       .position({ x: (this.viewportWidth - this.controlLayout(this.readerWindowMetricsRevision).topBarWidth) / 2,
         y: this.readerRecoveryTop() })
-      .id(this.readerRecoveryMeasurementId())
-      .onAreaChange(this.readerRecoveryAreaChangeHandler(this.readerRecoveryMeasurementIdentity()))
-      .onAppear((): void => this.scheduleReaderRecoveryMeasurement())
-      .zIndex(8).hitTestBehavior(HitTestMode.Transparent);
+      .id(this.readerRecoveryOverlayId())
+      // This surface owns its actions and scrolling. Its touches must not
+      // reach the reading host's outside-control dismissal recognizer.
+      .onTouch((event: TouchEvent): void => event.stopPropagation())
+      .opacity(this.readerRecoveryInputCurrent() ? 1 : 0)
+      .enabled(this.readerRecoveryInputCurrent())
+      .accessibilityLevel(this.readerRecoveryInputCurrent() ? 'auto' : 'no-hide-descendants')
+      .zIndex(8).hitTestBehavior(this.readerRecoveryInputCurrent() ? HitTestMode.Transparent : HitTestMode.None);
     }
   }
 
@@ -2818,7 +2700,6 @@ export struct ReadingExperience {
     const previousLayoutSignature = this.hasMeasuredViewport() ? this.paginationLayoutSignature() : undefined;
     this.viewportWidth = width;
     this.viewportHeight = height;
-    if (this.hasReaderRecoveryContent()) this.onReaderRecoverySetChanged();
     if (this.usesBookTurnSimulation()) {
       this.bookTurnSession.configure(width, height);
     }
@@ -4416,7 +4297,6 @@ export struct ReadingExperience {
     if (!this.mounted) {
       return;
     }
-    if (this.hasReaderRecoveryContent()) this.onReaderRecoverySetChanged();
     this.reflowAfterWindowGeometryChange();
     this.applyWindowPolicyForChromeOwner();
   }
@@ -4425,7 +4305,6 @@ export struct ReadingExperience {
     if (!this.mounted) {
       return;
     }
-    if (this.hasReaderRecoveryContent()) this.onReaderRecoverySetChanged();
     this.controlMinimumGeneration += 1;
     this.scheduleControlMinimum();
     this.reflowAfterWindowGeometryChange();
@@ -7629,7 +7508,6 @@ export struct ReadingExperience {
   private readingLayoutCacheCutout: boolean = false;
   private readingLayoutCacheHideStatusBar: boolean = false;
   private readingLayoutCachePaged: boolean = false;
-  private readingLayoutCacheRecoveryBottom: number = -1;
 
   private readingLayout(): ReaderReadingLayoutSnapshot {
     if (this.pageTurnSettlementLayout !== undefined) {
@@ -7644,16 +7522,14 @@ export struct ReadingExperience {
     const cutout = this.readerSettingsSnapshot.extendIntoCutout;
     const hideStatusBar = this.readerSettingsSnapshot.hideStatusBar === true;
     const paged = this.readerSettingsSnapshot.navigationMode === 'paged';
-    const recoveryBottom = !this.expandedLayout && width < height ? (this.readerRecoveryBottom ?? 0) : 0;
     if (this.readingLayoutCache !== undefined && this.readingLayoutCacheWidth === width &&
       this.readingLayoutCacheHeight === height && this.readingLayoutCacheRevision === metrics.revision &&
       this.readingLayoutCacheTablet === this.expandedLayout && this.readingLayoutCacheCutout === cutout &&
-      this.readingLayoutCacheHideStatusBar === hideStatusBar && this.readingLayoutCachePaged === paged &&
-      this.readingLayoutCacheRecoveryBottom === recoveryBottom) {
+      this.readingLayoutCacheHideStatusBar === hideStatusBar && this.readingLayoutCachePaged === paged) {
       return this.readingLayoutCache;
     }
     let layout = resolveReaderReadingLayout(width, height, this.expandedLayout, metrics, cutout,
-      undefined, 0, recoveryBottom);
+      undefined, 0, 0, this.sessionCapsuleMetrics().targetHeight);
     if (metrics.ready && layout.pageChromeTopRegionHeight > 0) {
       const context = this.getUIContext();
       const topStyle = readerPageChromeTopTextStyle(layout, context);
@@ -7663,7 +7539,7 @@ export struct ReadingExperience {
       const measuredInformationLane = informationHeight + READER_PAGE_CHROME_TOP_ROW_PADDING_VP * 2;
       if (measuredInformationLane > layout.pageChromeTopRegionHeight) {
         layout = resolveReaderReadingLayout(width, height, this.expandedLayout, metrics, cutout,
-          undefined, informationHeight, recoveryBottom);
+          undefined, informationHeight, 0, this.sessionCapsuleMetrics().targetHeight);
       }
     }
     this.readingLayoutCache = layout;
@@ -7672,7 +7548,6 @@ export struct ReadingExperience {
     this.readingLayoutCacheCutout = cutout;
     this.readingLayoutCacheHideStatusBar = hideStatusBar;
     this.readingLayoutCachePaged = paged;
-    this.readingLayoutCacheRecoveryBottom = recoveryBottom;
     return layout;
   }
 
@@ -7681,7 +7556,6 @@ export struct ReadingExperience {
   private controlLayoutCacheHeight: number = -1;
   private controlLayoutCacheRevision: number = -1;
   private controlLayoutCacheTablet: boolean = false;
-  private controlLayoutCacheRecoveryBottom: number = -1;
   private controlLayoutCacheMinimumRevision: number = -1;
 
   private controlLayout(_windowMetricsRevision: number): ReaderControlLayoutSnapshot {
@@ -7693,11 +7567,9 @@ export struct ReadingExperience {
       return held.receipt.layout;
     const width = this.effectiveViewportWidth();
     const height = this.effectiveViewportHeight();
-    const recoveryBottom = this.readerRecoveryBottom ?? 0;
     if (this.controlLayoutCache !== undefined && this.controlLayoutCacheWidth === width &&
       this.controlLayoutCacheHeight === height && this.controlLayoutCacheRevision === metrics.revision &&
       this.controlLayoutCacheTablet === this.expandedLayout &&
-      this.controlLayoutCacheRecoveryBottom === recoveryBottom &&
       this.controlLayoutCacheMinimumRevision === this.controlMinimumRevision) return this.controlLayoutCache;
     const measured = this.controlMinimumCandidateSource === this.sourceId && this.controlMinimumCandidateBook === this.bookId &&
       this.controlMinimumCandidateLifecycle === this.lifecycleToken && this.controlMinimumCandidateOpen === this.controlOpenRevision &&
@@ -7708,15 +7580,13 @@ export struct ReadingExperience {
     const retaining = measured === undefined && retained !== undefined &&
       this.controlMinimumCandidateSource === this.sourceId && this.controlMinimumCandidateBook === this.bookId &&
       this.controlMinimumCandidateLifecycle === this.lifecycleToken && this.controlMinimumCandidateWidth === width &&
-      this.controlMinimumCandidateHeight === height && this.controlMinimumCandidateMetrics === metrics.revision &&
-      this.controlLayoutCacheRecoveryBottom === recoveryBottom;
+      this.controlMinimumCandidateHeight === height && this.controlMinimumCandidateMetrics === metrics.revision;
     const layout = retaining && retained !== undefined ? retained :
-      resolveReaderControlLayout(width, height, this.expandedLayout, metrics, recoveryBottom, measured);
+      resolveReaderControlLayout(width, height, this.expandedLayout, metrics, 0, measured);
     if (layout.minimumStatus !== 'legacy') this.controlMinimumRetainedLayout = layout;
     this.controlLayoutCache = layout;
     this.controlLayoutCacheWidth = width; this.controlLayoutCacheHeight = height;
     this.controlLayoutCacheRevision = metrics.revision; this.controlLayoutCacheTablet = this.expandedLayout;
-    this.controlLayoutCacheRecoveryBottom = recoveryBottom;
     this.controlLayoutCacheMinimumRevision = this.controlMinimumRevision;
     return layout;
   }
@@ -7761,33 +7631,38 @@ export struct ReadingExperience {
   private bindControlMinimum(identity: string, measurer: ReaderControlContentMeasurer | undefined): void {
     if (identity !== this.controlMinimumIdentity() || !this.mounted) return;
     this.controlMinimumGeneration += 1;
-    this.controlMinimumReady = false;
     this.controlMinimumProvider = measurer;
     this.controlMinimumProviderIdentity = identity;
     this.pendingControlMinimum = undefined;
     this.pendingControlMinimumIdentity = '';
-    if (measurer === undefined) {
-      // A successor's first Native receipt is pending, not evidence that the
-      // authored fallback fits. Keep the last valid shell but fence input.
-      return;
-    }
     this.scheduleControlMinimum();
+  }
+
+  private controlMinimumReceiptCurrent(key: string): boolean {
+    const identity = this.controlMinimumProviderIdentity;
+    const prefix = `${identity}|${this.controlMinimumGeneration}|`;
+    return this.controlMinimumProvider !== undefined && identity === this.controlMinimumIdentity() && key.startsWith(prefix) &&
+      this.controlMinimumCandidates.some((candidate: ReaderControlCandidateMinimum): boolean => candidate.key === key);
   }
 
   private scheduleControlMinimum(): void {
     const identity = this.controlMinimumProviderIdentity;
     const measure = this.controlMinimumProvider;
-    if (measure === undefined || !this.controlMinimumCurrent(identity)) return;
+    if (!this.controlMinimumCurrent(identity)) return;
     const generation = this.controlMinimumGeneration;
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
       if (generation !== this.controlMinimumGeneration || measure !== this.controlMinimumProvider ||
         !this.controlMinimumCurrent(identity)) return;
+      // Child Prop watchers publish during the parent's render. Apply its
+      // reactive readiness change with the current frame's measured receipt.
+      this.controlMinimumReady = false;
+      if (measure === undefined) return;
       const widths = readerControlCandidateWidths(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
         this.expandedLayout, ReaderWindowCoordinator.metrics());
       const measured = measureReaderControlMinimumCandidates(widths, identity, generation, measure,
         (candidate: ReaderControlCandidateMinimum): boolean =>
           resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-            this.expandedLayout, ReaderWindowCoordinator.metrics(), this.readerRecoveryBottom, [candidate]).minimumStatus === 'preferred');
+            this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, [candidate]).minimumStatus === 'preferred');
       if (generation !== this.controlMinimumGeneration || measure !== this.controlMinimumProvider ||
         !this.controlMinimumCurrent(identity)) return;
       this.admitControlMinimum(measured, identity);
@@ -10178,13 +10053,19 @@ export struct ReadingExperience {
 
   private activeSessionCapsuleWidth(): number {
     const type = this.sessionCapsuleType();
-    return this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredWidth > 0 ?
-      this.sessionCapsuleMeasuredWidth : readerSessionCapsuleMinimumWidth(type);
+    return this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredIdentity === this.sessionCapsuleMeasurementIdentity(type) &&
+      this.sessionCapsuleMeasuredWidth > 0 ?
+      Math.max(this.sessionCapsuleMeasuredWidth, this.sessionCapsuleMetrics(type).width) : this.sessionCapsuleMetrics(type).width;
   }
 
   private activeSessionCapsuleHeight(): number {
-    return this.sessionCapsuleMeasuredHeight > 0 ?
-      this.sessionCapsuleMeasuredHeight : READER_SESSION_CAPSULE_HEIGHT;
+    const type = this.sessionCapsuleType(), minimum = this.sessionCapsuleMetrics(type).targetHeight;
+    return this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredIdentity === this.sessionCapsuleMeasurementIdentity(type) ?
+      Math.max(this.sessionCapsuleMeasuredHeight, minimum) : minimum;
+  }
+
+  private sessionCapsuleMetrics(type: ReaderSessionCapsuleType = 'autoPage'): ReaderSessionCapsuleMetrics {
+    return measureReaderSessionCapsule(this.getUIContext(), type, ReaderWindowCoordinator.metrics().systemFontScale);
   }
 
   private sessionCapsuleLayout(): ReaderPageChromeLayoutSnapshot {
@@ -10203,41 +10084,54 @@ export struct ReadingExperience {
     ));
   }
 
+  private sessionCapsuleMeasurementIdentity(type: ReaderSessionCapsuleType): string {
+    const generation = type === 'tts' ? this.ttsState.sessionGeneration : this.automaticReadingState().generation;
+    return JSON.stringify([type, generation, this.sessionLaunchLayoutKey(), this.appearanceMutationGeneration]);
+  }
+
+  private sessionCapsuleMeasurementCurrent(identity: string, type: ReaderSessionCapsuleType): boolean {
+    return this.isSessionActive(this.lifecycleToken) && this.sessionLaunch === undefined &&
+      this.sessionCapsuleSnapshot()?.type === type && identity === this.sessionCapsuleMeasurementIdentity(type);
+  }
+
   private onSessionCapsuleMeasured(
+    identity: string,
     type: ReaderSessionCapsuleType,
     width: number,
     height: number,
   ): void {
-    const snapshot = this.sessionCapsuleSnapshot();
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 ||
-      snapshot === undefined || type !== snapshot.type) {
+      !this.sessionCapsuleMeasurementCurrent(identity, type)) {
       return;
     }
     if (this.pageChromeStateFrozen()) {
       this.pendingSessionCapsuleType = type;
+      this.pendingSessionCapsuleIdentity = identity;
       this.pendingSessionCapsuleWidth = width;
       this.pendingSessionCapsuleHeight = height;
       return;
     }
-    this.admitSessionCapsuleMeasurement(type, width, height);
+    this.admitSessionCapsuleMeasurement(identity, type, width, height);
   }
 
   private admitSessionCapsuleMeasurement(
+    identity: string,
     type: ReaderSessionCapsuleType,
     width: number,
     height: number,
   ): void {
     // Morph frames report transient shell widths; they must not overwrite
     // the settled measurement that anchors the capsule layout.
-    if (this.sessionLaunch !== undefined) {
+    if (!this.sessionCapsuleMeasurementCurrent(identity, type)) {
       return;
     }
-    if (this.measuredSessionCapsuleType === type &&
+    if (this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredIdentity === identity &&
       Math.abs(this.sessionCapsuleMeasuredWidth - width) < 0.01 &&
       Math.abs(this.sessionCapsuleMeasuredHeight - height) < 0.01) {
       return;
     }
     this.measuredSessionCapsuleType = type;
+    this.sessionCapsuleMeasuredIdentity = identity;
     this.sessionCapsuleMeasuredWidth = width;
     this.sessionCapsuleMeasuredHeight = height;
     this.pageTurnRenderRevision += 1;
@@ -10297,12 +10191,16 @@ export struct ReadingExperience {
       hilog.warn(0x0000, 'ReaderSessionLaunch', 'session launch retained source: measurement not current');
       return false;
     }
-    const width = this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredWidth > 0 ?
-      this.sessionCapsuleMeasuredWidth : readerSessionCapsuleMinimumWidth(type);
+    const capsule = this.sessionCapsuleMetrics(type);
+    const width = this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredIdentity === this.sessionCapsuleMeasurementIdentity(type) &&
+      this.sessionCapsuleMeasuredWidth > 0 ?
+      Math.max(this.sessionCapsuleMeasuredWidth, capsule.width) : capsule.width;
     const target = resolveReaderPageChromeLayout(this.readingLayout(), new ReaderPageChromeMeasurements(
-      0, 0, 0, 0, 0, 0, 0, 0, true, width, 24));
-    const geometry = buildReaderSessionLaunchGeometry({ source, targetLeft: target.sessionX, targetTop: target.sessionY,
-      capsuleWidth: width, topBarExitDistance: this.sessionLaunchTopExit, dockExitDistance: this.sessionLaunchDockExit });
+      0, 0, 0, 0, 0, 0, 0, 0, true, width, capsule.targetHeight));
+    const geometry = buildReaderSessionLaunchGeometry({ source, targetLeft: target.sessionX,
+      targetTop: target.sessionY + (capsule.targetHeight - capsule.paintHeight) / 2,
+      capsuleWidth: width, capsuleHeight: capsule.paintHeight,
+      topBarExitDistance: this.sessionLaunchTopExit, dockExitDistance: this.sessionLaunchDockExit });
     if (geometry === undefined || this.sessionLaunchTopExit <= 0 || this.sessionLaunchDockExit <= 0) return false;
     const identity: ReaderSessionLaunchIdentity = {
       lifecycle: this.lifecycleToken, bookIdentity: `${this.sourceId}:${this.bookId}`,
@@ -10313,7 +10211,7 @@ export struct ReadingExperience {
     };
     const page = this.currentPageTurnRenderPage();
     this.sessionLaunchChrome = new ReaderPageChromeSnapshot(page.chromeTopStartText, page.chromeTopEndText,
-      page.chromeBottomStartText, page.chromeBottomEndText, true, width, 24);
+      page.chromeBottomStartText, page.chromeBottomEndText, true, width, capsule.targetHeight);
     this.sessionLaunchSourceTtsState = this.ttsState;
     this.sessionLaunchSourceAutoStatus = this.automaticReadingState().status;
     this.sessionLaunchSourceControl = copyReaderControlSessionState(this.latestControlVisualSession);
@@ -10618,14 +10516,15 @@ export struct ReadingExperience {
       this.admitPageChromeClock(clockText);
     }
     const type = this.pendingSessionCapsuleType;
+    const identity = this.pendingSessionCapsuleIdentity;
     const width = this.pendingSessionCapsuleWidth;
     const height = this.pendingSessionCapsuleHeight;
     this.pendingSessionCapsuleType = undefined;
+    this.pendingSessionCapsuleIdentity = '';
     this.pendingSessionCapsuleWidth = 0;
     this.pendingSessionCapsuleHeight = 0;
-    const snapshot = this.sessionCapsuleSnapshot();
-    if (type !== undefined && snapshot !== undefined && type === snapshot.type && width > 0 && height > 0) {
-      this.admitSessionCapsuleMeasurement(type, width, height);
+    if (type !== undefined && width > 0 && height > 0) {
+      this.admitSessionCapsuleMeasurement(identity, type, width, height);
     }
   }
 
@@ -10818,7 +10717,6 @@ export struct ReadingExperience {
   private onControlInputBoundaryChanged(): void {
     this.controlMinimumGeneration += 1;
     this.scheduleControlMinimum();
-    this.onReaderRecoverySetChanged();
     if (!this.appForeground || this.interactionBlocked || this.controlObscured) this.cancelAutomaticPageStart?.();
     if (this.mounted && this.appForeground && this.ttsCoordinator !== undefined &&
       this.isReaderIdentityCurrent?.() !== false && (!this.isControlInputEnabled() || this.windowChromeOverlayActive)) {
@@ -10834,6 +10732,18 @@ export struct ReadingExperience {
     this.retireControlTemporaryRevision += 1;
     this.dismissControlTemporaryRevision += 1;
     this.controlTemporaryLayer = false;
+    this.controlTemporaryLayerPresented = false;
+  }
+
+  private onControlTemporaryLayerChanged(active: boolean): void {
+    if (this.controlTemporaryLayer === active) return;
+    this.controlTemporaryLayer = active;
+    const lifecycle = this.lifecycleToken;
+    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+      if (!this.isSessionActive(lifecycle)) return;
+      this.controlTemporaryLayerPresented = this.controlTemporaryLayer;
+      this.invalidateControlBackdrop();
+    }));
   }
 
   private onControlSessionChanged(): void {
@@ -10862,8 +10772,7 @@ export struct ReadingExperience {
     if (module !== this.observedControlModule) {
       this.controlModuleVisitRevision += 1;
       this.observedControlModule = module;
-      this.onReaderRecoverySetChanged();
-      this.prepareControlPage(page);
+        this.prepareControlPage(page);
     }
     // The module/opening identity changes only at semantic edges, never p.
     this.controlLayoutCache = undefined;
@@ -13809,8 +13718,12 @@ export struct ReadingExperience {
   private onBookTurnArkUIContentReady(revision: number): void {
     if (!this.mounted || this.exitRequested || revision !== this.pageTurnRenderRevision) return;
     this.bookTurnArkUIReadyRevision = revision;
-    this.settleReaderRecovery('presentation');
-    if (this.bookTurn2DFallbackPending) this.completeBookTurn2DFallback(this.pageTurnSettlementGeneration);
+    const lifecycle = this.lifecycleToken;
+    void Promise.resolve().then((): void => {
+      if (!this.mounted || this.exitRequested || lifecycle !== this.lifecycleToken || revision !== this.pageTurnRenderRevision) return;
+      this.settleReaderRecovery('presentation');
+      if (this.bookTurn2DFallbackPending) this.completeBookTurn2DFallback(this.pageTurnSettlementGeneration);
+    });
   }
 
   private requestBookTurn2DFallback(generation: number): void {
@@ -13899,8 +13812,6 @@ export struct ReadingExperience {
     const pendingViewportWidth = this.pageTurnPendingViewportWidth;
     const pendingViewportHeight = this.pageTurnPendingViewportHeight;
     const pendingWindowReflow = this.pageTurnPendingWindowReflow;
-    const pendingRecoveryBottom = this.pageTurnPendingRecoveryBottom;
-    const pendingRecoveryIdentity = this.pageTurnPendingRecoveryIdentity;
     const pendingWindowSettings = this.pageTurnPendingWindowSettings;
     const pendingControlMinimum = this.pendingControlMinimum;
     const pendingControlMinimumIdentity = this.pendingControlMinimumIdentity;
@@ -13935,9 +13846,6 @@ export struct ReadingExperience {
     if (pendingViewportWidth > 0 && pendingViewportHeight > 0) {
       this.admitReaderViewportSize(pendingViewportWidth, pendingViewportHeight, lifecycleToken);
     }
-    if (pendingRecoveryBottom !== undefined) {
-      this.admitReaderRecoveryBottom(pendingRecoveryBottom, pendingRecoveryIdentity);
-    }
     if (pendingWindowReflow) {
       this.reflowAfterWindowGeometryChange();
     }
@@ -13959,8 +13867,6 @@ export struct ReadingExperience {
     this.pageTurnPendingViewportWidth = 0;
     this.pageTurnPendingViewportHeight = 0;
     this.pageTurnPendingWindowReflow = false;
-    this.pageTurnPendingRecoveryBottom = undefined;
-    this.pageTurnPendingRecoveryIdentity = '';
     this.pageTurnPendingWindowSettings = undefined;
     this.pendingControlMinimum = undefined;
     this.pendingControlMinimumIdentity = '';

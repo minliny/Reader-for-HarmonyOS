@@ -70,7 +70,7 @@ export struct ReaderActionMenuSurface {
     Scroll() {
       Column() {
         ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
-          this.actionRow(action.id, index < this.actions.length - 1);
+          this.actionRow(action.id);
         }, (action: ReaderMenuActionView): string => action.id);
       }.width('100%').height(this.menuActionHeight() * this.actions.length);
     }.width(this.availableWidth)
@@ -79,7 +79,7 @@ export struct ReaderActionMenuSurface {
   }
 
   @Builder
-  private actionRow(id: string, showDivider: boolean) {
+  private actionRow(id: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: this.spec().actionIconSize > 0 ? 16 : 0 }) {
@@ -102,7 +102,7 @@ export struct ReaderActionMenuSurface {
           .layoutWeight(this.spec().actionIconSize > 0 ? 1 : undefined);
       }.width('100%').height(this.menuActionHeight())
         .padding({ left: this.spec().actionPaddingLeft, right: this.spec().actionPaddingRight });
-      if (showDivider) {
+      if (this.hasFollowingAction(id)) {
         Row().width(this.dividerWidth()).height(this.spec().dividerHeight)
           .backgroundColor(readerAppColor(this.spec().dividerRole, this.effectiveScheme()))
           .position({ x: this.spec().dividerInset, y: this.menuActionHeight() - this.spec().dividerHeight });
@@ -120,13 +120,13 @@ export struct ReaderActionMenuSurface {
   private actionRows() {
     Column({ space: 0 }) {
       ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
-        this.row(action.id, index);
+        this.row(action.id);
       }, (action: ReaderMenuActionView): string => action.id);
     }.width('100%');
   }
 
   @Builder
-  private row(id: string, index: number) {
+  private row(id: string) {
     Column({ space: 0 }) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: this.actionSheetSpec().rowGap }) {
@@ -169,12 +169,17 @@ export struct ReaderActionMenuSurface {
       }.width('100%').padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
         .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
-      if (index < this.actions.length - 1) {
+      if (this.hasFollowingAction(id)) {
         Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight)
           .backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.effectiveScheme()))
           .margin({ left: this.actionSheetSpec().dividerInset });
       }
     }.width('100%');
+  }
+
+  private hasFollowingAction(id: string): boolean {
+    const index = this.actions.findIndex((action: ReaderMenuActionView): boolean => action.id === id);
+    return index >= 0 && index < this.actions.length - 1;
   }
 
   private actionSheetSpec(): ActionSheetSurfaceSpec {

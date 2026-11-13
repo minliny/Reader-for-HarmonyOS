@@ -32,7 +32,9 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
   const source=read(name);hooks.childSources[name]=source;
   const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];
   const values=moduleNames.length?selectedProductionValues(file(name),moduleNames,deps):{};
-  deps[name]=createReaderBuilderProbe(source,boundedMembers(source),{...deps,...values},hooks).Component;
+  const localClasses=name==='ReaderSelectPanel'?pureModuleProbe(source.slice(0,source.indexOf('@Component')),
+    'ReaderSelectPanelFrames.ets',{...deps,FrameCallback:class{}},['ReaderSelectParentFrame']):{};
+  deps[name]=createReaderBuilderProbe(source,boundedMembers(source),{...deps,...values,...localClasses},hooks).Component;
  }
  const walk=owner=>[owner,...[...(owner.children?.values()??[])].flatMap(walk)],nodes=owner=>walk(owner).flatMap(actor=>[...(actor.nodes?.values()??[])]);
  return{dependencies:deps,hooks,properties,walk,nodes,

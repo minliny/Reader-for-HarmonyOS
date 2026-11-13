@@ -33,8 +33,14 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
     directory.book.title === book.title && directory.book.author === book.author ? directory : undefined;
   const cached = offline !== undefined && offline.sourceId === book.sourceId && offline.bookId === book.bookId ? offline : undefined;
   let bookmarks = readerRecoveryView(dir?.projection, undefined, dir?.confirmedCount ?? 0);
-  if (dir === undefined && directory?.projection.receipt.confirmation === 'unknown') bookmarks = {
-    message: `《${directory.book.title}》的原书签操作尚未确认，请返回原书籍核对`, visible: true, canRetry: false, generation: directory.generation };
+  if (dir?.projection.receipt.confirmation === 'unknown') {
+    // A successful list read cannot qualify the original write. Retain the
+    // owner's exact recovery explanation after that independent read succeeds.
+    const reason = dir.projection.facts.message;
+    if (reason !== undefined && reason.trim().length > 0 && !bookmarks.message.includes(reason)) {
+      bookmarks = { ...bookmarks, message: `${bookmarks.message}。${reason}` };
+    }
+  }
   if (dir?.completion === 'partial') bookmarks = { ...bookmarks, visible: true, generation: dir.generation,
     message: `部分书签已更新（已确认 ${dir.confirmedCount}/${dir.requestedCount} 项），后续操作未派发`,
     canRetry: dir.projection.facts.canRetry };

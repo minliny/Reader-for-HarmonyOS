@@ -79,7 +79,7 @@ const Model = productionMotionMethods(file, [...projectionNames, 'beginMeasureme
 const checks = [];
 function check(name, fn) {
   try { fn(); checks.push({ name, status: 'PASS' }); }
-  catch (error) { checks.push({ name, status: 'FAIL', error: error.message }); }
+  catch (error) { checks.push({ name, status: 'FAIL', error: error.stack }); }
 }
 function fixture(type, status) {
   const chapter = { sourceId: 'local', bookId: 'capsule', content: 'body text', chapterIndex: 1, images: [] };
@@ -125,6 +125,7 @@ function nativeProjection(p) {
     },
   });
   owner.sessionCapsuleLayout = () => ({ sessionX: 269, sessionY: 797 });
+  owner.readingLayout = () => ({ systemFontScale: 1 });
   const decisions = [];
   const update = owner.ifElseBranchUpdateFunction;
   owner.ifElseBranchUpdateFunction = function(id, generator) {
@@ -253,14 +254,16 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     { ReaderControlPanel: CapsuleChild }, { childSources: { ReaderControlPanel: panelText } }).Component;
   const Raw = createReaderBuilderProbe(rawText, ['build']).Component;
   const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent', 'sourceBlurContent',
-    'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], {
-    ...capsuleFrame,
+    'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'metrics'], {
+    ...capsuleFrame, measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
+      paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
   const Static = createReaderBuilderProbe(capsuleText, ['build', 'finalWidth',
-    'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength'], {
-    ...capsuleFrame,
+    'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength', 'metrics', 'measurementHandler'], {
+    ...capsuleFrame, measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
+      paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     READER_SESSION_CAPSULE_HEIGHT: 24, readerSessionCapsuleMinimumWidth: type => type === 'tts' ? 94 : 96,
     readerSessionCapsuleAccessibility: () => 'capsule',
@@ -355,8 +358,10 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       stage.initialRender();
       const actor = [...stage.nodes.values()].find(node => node.onClick);
       assert.equal(actor.type, 'Button', 'the launch proxy has one native action actor');
-      assert.equal(actor.hitTestBehavior, 'HitTestMode.Block'); assert.equal(actor.responseRegion.height, launch.sample.proxyHeight + 20);
-      assert.equal(actor.position.x, launch.sample.proxyLeft); assert.equal(actor.position.y, launch.sample.proxyTop);
+      assert.equal(actor.hitTestBehavior, 'HitTestMode.Block'); assert.equal(actor.responseRegion, undefined);
+      assert.equal(actor.height, Math.max(44, launch.sample.proxyHeight));
+      assert.equal(actor.position.x, launch.sample.proxyLeft - Math.max(0, 44 - launch.sample.proxyWidth) / 2);
+      assert.equal(actor.position.y, launch.sample.proxyTop - Math.max(0, 44 - launch.sample.proxyHeight) / 2);
       // One admitted pointer at this actual actor dispatches its actual click.
       exclusiveTap(actor, 'launch Stage');
       assert.equal(launch.desiredPlaying, status === 'paused', 'one actual click records the new desired state, including auto preparing');

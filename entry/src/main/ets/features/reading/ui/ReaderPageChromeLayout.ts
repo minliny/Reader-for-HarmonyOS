@@ -246,8 +246,9 @@ export function resolveReaderPageChromeLayout(
   const resolvedBottomEndWidth = Math.min(measurements.bottomEndWidth, result.bottomEndMaxWidth);
   result.sessionX = measurements.sessionVisible ?
     Math.max(visualLeft, result.footerRight - measurements.sessionWidth) : result.footerRight;
-  result.sessionY = footerTop + Math.max(0,
-    (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.sessionHeight) / 2);
+  result.sessionY = Math.max(0, Math.min(footerTop +
+    (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.sessionHeight) / 2,
+    layout.viewportHeight - bottomInset - measurements.sessionHeight));
   const bottomEndRight = measurements.sessionVisible ?
     result.sessionX - READER_PAGE_CHROME_FOOTER_GAP : result.footerRight;
   result.bottomEndX = Math.max(visualLeft, bottomEndRight - resolvedBottomEndWidth);

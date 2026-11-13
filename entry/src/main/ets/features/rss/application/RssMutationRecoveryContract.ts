@@ -30,3 +30,10 @@ export interface RssOriginalMutationRecovery {
   original?: RssOriginalMutationProjection;
   outcome?: RssOriginalMutationOutcome;
 }
+
+export function rssOriginalMatchesScope(original: RssOriginalMutationProjection | undefined,
+  scope: 'management' | 'editor' | 'entry' | 'feed', subscriptionId: string = '', guid: string = ''): boolean {
+  return original?.blocked === true && original.scope === scope &&
+    (scope === 'management' || original.subscriptionId === subscriptionId &&
+      (scope !== 'entry' || original.guid === guid));
+}

@@ -145,10 +145,23 @@ export struct BookDirectoryPage {
   @Builder
   private recoveryContent() {
     if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
-      ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
-        onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
-        onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+      ForEach([this.recoveryPresentationIdentity()], (identity: string): void => {
+        ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
+          presentationActive: this.recoveryPresentationCurrent(identity),
+          isPresentationCurrent: (): boolean => this.recoveryPresentationCurrent(identity),
+          onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+          onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+      }, (identity: string): string => identity);
     }
+  }
+
+  private recoveryPresentationIdentity(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.directoryRecovery.presentationId, this.temporaryBackIdentity]);
+  }
+
+  private recoveryPresentationCurrent(identity: string): boolean {
+    return this.directoryInputIsCurrent() && this.mangaFontsReady && !this.downloadMenuVisible &&
+      identity === this.recoveryPresentationIdentity();
   }
 
   @Builder

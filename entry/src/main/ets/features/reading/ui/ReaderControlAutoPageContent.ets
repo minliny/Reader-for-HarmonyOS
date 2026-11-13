@@ -77,6 +77,10 @@ export struct ReaderControlAutoPageContent {
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
+  private currentInputEnabled(): boolean {
+    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+
   private onSourceDetachedChanged(): void {
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const measured = this.form === 'full' ? this.fullMeasurement : this.quickMeasurement;
@@ -96,6 +100,7 @@ export struct ReaderControlAutoPageContent {
   @Prop availableHeight: number = 190;
   @Prop expandedLayout: boolean = false;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
+  inputCurrent?: () => boolean;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
   @Prop @Watch('publishMinimumMeasurer') status: ReaderAutoPageStatus = 'stopped';
   @Prop @Watch('publishMinimumMeasurer') timerSummaryText: string = '15:00';
@@ -294,7 +299,7 @@ export struct ReaderControlAutoPageContent {
       const target = sampleReaderControlMorphScrollPath(path, this.p());
       this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
       if (Math.abs(offset - target) > .1) this.scroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
-      if (this.interactionEnabled && (this.p() === 0 || this.p() === 1)) {
+      if (this.currentInputEnabled() && (this.p() === 0 || this.p() === 1)) {
         this.minimumQuickScrollOffset = this.p() === 0 ? path.quickOffset : 0;
         this.minimumScrollPath = undefined;
       }
@@ -306,7 +311,7 @@ export struct ReaderControlAutoPageContent {
       return;
     }
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, offset);
+      this.currentInputEnabled(), offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -336,7 +341,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private quickMinimumScrollInput(): boolean {
-    return this.interactionEnabled && this.quickMinimumScrollPresentation();
+    return this.currentInputEnabled() && this.quickMinimumScrollPresentation();
   }
 
   private quickMinimumScrollPresentation(): boolean {
@@ -348,7 +353,7 @@ export struct ReaderControlAutoPageContent {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
   }
 
-  private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
+  private fullInput(): boolean { return this.currentInputEnabled() && this.p() === 1; }
   private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
   private paintProgress: number = -1;
   private presentation(): ReaderControlMotionPresentation {
@@ -386,7 +391,7 @@ export struct ReaderControlAutoPageContent {
       return readerControlMotionClipPath(rects, density);
     });
   }
-  private sharedInput(): boolean { return this.interactionEnabled && (this.p() === 0 || this.p() === 1); }
+  private sharedInput(): boolean { return this.currentInputEnabled() && (this.p() === 0 || this.p() === 1); }
   private contentWidth(): number { return this.frame().content.width; }
   private sectionInnerWidth(): number { return Math.max(0, this.frame().content.width - 8); }
   private actorId(full: boolean): string {
@@ -512,7 +517,7 @@ export struct ReaderControlAutoPageContent {
   private quickBack() {
     ReaderControlQuickBack({ variant: 'auto-page', scheme: this.appScheme,
       actionWidth: this.frame().back.width, actionHeight: this.frame().back.height,
-      actionVisible: this.p() === 0, actionEnabled: this.interactionEnabled,
+      actionVisible: this.p() === 0, actionEnabled: this.currentInputEnabled(),
       onAction: (): void => this.onBack(),
     }).position({ x: this.frame().back.x, y: this.frame().back.y })
       .translate({ y: readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'quickOnly') })

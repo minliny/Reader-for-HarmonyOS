@@ -9,6 +9,7 @@ export interface BookshelfDetailScenePorts {
   captureAction: (identity: string) => (() => boolean);
   openReading: (chapterIndex?: number) => void;
   openDirectory: () => void;
+  retryCatalog: () => void;
   openSourceSwitch: (focusId?: string) => void;
   back: () => void;
 }
@@ -80,6 +81,7 @@ export struct BookshelfDetailScene {
           if (current?.() === true) this.ports?.openReading(chapterIndex);
         },
         onOpenDirectory: (): void => { if (current?.() === true) this.ports?.openDirectory(); },
+        onRetryCatalog: (): void => { if (current?.() === true) this.ports?.retryCatalog(); },
         onSwitchSource: (focusId?: string): void => { if (current?.() === true) this.ports?.openSourceSwitch(focusId); },
         admissionIdentity: identity,
         onRemove: (requestedIdentity?: string): void => {

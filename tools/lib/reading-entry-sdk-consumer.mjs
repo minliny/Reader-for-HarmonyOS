@@ -4,7 +4,7 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import { bookshelfOperationClass, actualBookshelfOperationTypes, actualBookshelfHostField } from './bookshelf-operation-owner-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './bounded-surface-sdk-probe.mjs';
-import { ProductionHost, read } from './reading-entry-owner-probe.mjs';
+import { ProductionHost, read, ReaderCoreGateway } from './reading-entry-owner-probe.mjs';
 import { localBookDetailSdk } from './local-book-detail-sdk-probe.mjs';
 import { actualReaderPageLayout } from './reader-page-shell-runtime-probe.mjs';
 import { actualReadingEntryPresentation } from './reading-entry-presentation-probe.mjs';
@@ -59,7 +59,7 @@ export function makeIndex(f, { route = 'search', mount = 1, indexSource = read('
     for (const name of ['installSession', 'publish']) Entry.prototype[name] = changed.prototype[name];
   }
   const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions', {
-    Observed: value => value, readingEntryInputForSearchContext,
+    Observed: value => value, readingEntryInputForSearchContext, ReaderCoreGateway,
   });
   const Detail = bookshelfOperationClass('features/bookshelf/presentation/BookshelfDetailPresentation.ets', 'BookshelfDetailPresentation', {
     Observed: value => value, EMPTY_READABLE_ADMISSION: types.EMPTY_READABLE_ADMISSION,

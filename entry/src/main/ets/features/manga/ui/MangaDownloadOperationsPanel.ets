@@ -28,9 +28,9 @@ export struct MangaDownloadOperationsPanel {
         Text(this.failureMessage).fontSize(13).lineHeight(20).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
           .fontColor(this.ink()).width('100%');
         Row() {
-          Button('重试').height(32).padding({ left: 12, right: 12 }).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+          Button('重试').constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 12, right: 12 }).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
             .fontColor(readerAppColor('TOK_GREEN', this.effectiveScheme())).backgroundColor(Color.Transparent).borderRadius(8)
-            .onClick((): void => this.onRetry());
+            .onClick((): void => { if (!this.loading && this.failureMessage.length > 0) this.onRetry(); });
         }.width('100%').justifyContent(FlexAlign.End);
       } else {
         ReaderActionMenuSurface({ variant: 'grouped', actions: this.sheetActions(), scheme: this.panelScheme,

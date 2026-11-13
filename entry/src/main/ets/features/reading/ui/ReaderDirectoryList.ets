@@ -55,6 +55,8 @@ export struct ReaderDirectoryList {
   onGeometryProbe: (event: string) => void = (_event: string): void => {};
   @BuilderParam rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => void;
   @BuilderParam emptyBuilder: () => void = this.emptyContent;
+  @Prop prefixHeight: number = 0;
+  @BuilderParam prefixBuilder: () => void = this.emptyContent;
 
   @Builder
   private emptyContent() {}
@@ -154,7 +156,10 @@ export struct ReaderDirectoryList {
 
   build() {
     List({ space: 0, scroller: this.scroller }) {
-      if (this.naturalRowHeight && this.entries.length === 0) {
+      if (this.prefixHeight > 0) {
+        ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: this.prefixHeight });
+      }
+      if ((this.naturalRowHeight || this.prefixHeight > 0) && this.entries.length === 0) {
         ListItem() { this.emptyBuilder(); }.width('100%');
       }
       // Repeat.virtualScroll retained an empty native range when the control
@@ -170,7 +175,7 @@ export struct ReaderDirectoryList {
     }
     .width('100%')
     .height('100%')
-    .childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)
+    .childrenMainSize(this.naturalRowHeight || this.prefixHeight > 0 ? undefined : this.itemSizes)
     .padding({
       left: this.listPaddingX,
       right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,

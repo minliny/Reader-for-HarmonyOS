@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ProductionHost, setRuntime } from './reading-entry-owner-probe.mjs';
+import { ProductionHost, setRuntime, ReaderCoreGateway } from './reading-entry-owner-probe.mjs';
 import { actualReadingEntryPresentation } from './reading-entry-presentation-probe.mjs';
 import { actualBookshelfOperationTypes, bookshelfOperationClass } from './bookshelf-operation-owner-probe.mjs';
 import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
@@ -16,7 +16,7 @@ export function readingEntryActionFixture({ runtime, Host = ProductionHost, rout
   setRuntime(runtime);
   const Entry = actualReadingEntryPresentation({ ReadingEntryHost: Host });
   const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions',
-    { Observed: value => value, readingEntryInputForSearchContext });
+    { Observed: value => value, readingEntryInputForSearchContext, ReaderCoreGateway });
   const entry = new Entry();
   const navigation = new ReaderNavigation();
   navigation.show(route);

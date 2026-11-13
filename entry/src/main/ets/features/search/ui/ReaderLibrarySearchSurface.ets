@@ -229,7 +229,7 @@ export struct ReaderLibrarySearchSurface {
       this.activeMounting = this.mounting;
       this.activeIdentity = this.identity;
       this.publishContinueCardCoverage(next === 'input' && this.resolvedHistoryViewport().suppressContinueCard);
-      if (this.reduceMotion && this.transitionKind !== 'none') this.completeTransition();
+      if (this.reduceMotion && this.transitionKind !== 'none') this.completeTransition(true);
       return;
     }
     const previous = this.currentMode;
@@ -254,7 +254,7 @@ export struct ReaderLibrarySearchSurface {
     if (next === 'results' || next === 'idle') this.getUIContext().getFocusController().clearFocus();
     if (next !== 'idle') this.searchMounted = true;
     if (this.reduceMotion || this.transitionKind === 'none' || this.transitionDurationMs <= 0) {
-      this.completeTransition();
+      this.completeTransition(true);
       return;
     }
     this.schedule(token);
@@ -295,7 +295,14 @@ export struct ReaderLibrarySearchSurface {
     const publish = suppressed !== this.lastCardSuppressed || (suppressed && scope !== this.lastCardCoverageScope);
     this.lastCardCoverageScope = scope;
     this.lastCardSuppressed = suppressed;
-    if (publish) this.onHistoryCoverageChanged(suppressed, this.identity, this.navigationGeneration, this.mounting);
+    if (publish) {
+      const token = this.generation, identity = this.identity, navigation = this.navigationGeneration, mounting = this.mounting;
+      this.getUIContext().postFrameCallback(new LibrarySearchFrame((): void => {
+        if (this.mounted && token === this.generation && identity === this.identity && navigation === this.navigationGeneration &&
+          mounting === this.mounting && scope === this.lastCardCoverageScope && suppressed === this.lastCardSuppressed)
+          this.onHistoryCoverageChanged(suppressed, identity, navigation, mounting);
+      }));
+    }
   }
   private schedule(token: number): void {
     if (!this.mounted || this.scheduledToken === token) return;
@@ -320,7 +327,7 @@ export struct ReaderLibrarySearchSurface {
       if (running) this.schedule(token);
     }));
   }
-  private completeTransition(): void {
+  private completeTransition(deferParent: boolean = false): void {
     const token = this.generation;
     const wasOpen = this.transitionKind === 'open';
     this.transitionKind = 'none';
@@ -332,7 +339,14 @@ export struct ReaderLibrarySearchSurface {
     if (this.mode === 'input' && wasOpen) this.scheduleInputFocus(token, 0);
     if (this.activeIdentity === this.identity && this.activeNavigation === this.navigationGeneration &&
       this.activeMounting === this.mounting) {
-      this.onSettled(this.mode, this.activeIdentity, this.activeNavigation, this.activeMounting);
+      const mode = this.mode, identity = this.activeIdentity, navigation = this.activeNavigation, mounting = this.activeMounting;
+      const notify = (): void => {
+        if (this.mounted && token === this.generation && mode === this.mode && identity === this.identity &&
+          navigation === this.navigationGeneration && mounting === this.mounting)
+          this.onSettled(mode, identity, navigation, mounting);
+      };
+      if (deferParent) this.getUIContext().postFrameCallback(new LibrarySearchFrame(notify));
+      else notify();
     }
   }
   private scheduleInputFocus(token: number, attempt: number): void {

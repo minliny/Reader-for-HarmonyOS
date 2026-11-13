@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { selectedProductionClasses, selectedProductionMethods } from './selected-production-methods.mjs';
 import { bookshelfOperationClass } from './bookshelf-operation-owner-probe.mjs';
 import { actualReadingEntryPresentation } from './reading-entry-presentation-probe.mjs';
-import { ProductionHost, setRuntime, BookAcquisitionCoordinator } from './reading-entry-owner-probe.mjs';
+import { ProductionHost, setRuntime, BookAcquisitionCoordinator, ReaderCoreGateway } from './reading-entry-owner-probe.mjs';
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
 import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { ReaderEntryStartupTrace } from '../../entry/src/main/ets/app/ReaderStartupTrace.ts';
@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 const file = path => new URL('../../entry/src/main/ets/' + path, import.meta.url);
 const Entry = actualReadingEntryPresentation({ ReadingEntryHost: ProductionHost });
 const Actions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets', 'ReaderReadingEntryActions', {
-  Observed: value => value, readingEntryInputForSearchContext,
+  Observed: value => value, readingEntryInputForSearchContext, ReaderCoreGateway,
 });
 const Exit = bookshelfOperationClass('app/composition/ReaderExitActions.ets', 'ReaderExitActions');
 const Directory = selectedProductionMethods(file('app/composition/ReaderDirectoryJourney.ets'), 'ReaderDirectoryJourney', ['navigationPorts']);

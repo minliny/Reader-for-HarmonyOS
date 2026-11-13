@@ -21,12 +21,16 @@ export struct ReaderControlQuickBack {
         Text('返回').fontFamily(this.labelStyle().fontFamily).fontWeight(this.labelStyle().fontWeight)
           .fontSize(this.labelStyle().fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.scheme))
           .accessibilityLevel('no');
-      }.width('100%').justifyContent(this.variant === 'replace' ? FlexAlign.Center : FlexAlign.Start)
-        .alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+      }.width('100%').constraintSize({ minHeight: 24 })
+        .padding({ left: this.variant === 'search' ? 8 : this.variant === 'auto-page' ? 9 : 0,
+          right: this.variant === 'auto-page' ? 9 : 0, top: 4, bottom: 4 })
+        .justifyContent(this.variant === 'replace' ? FlexAlign.Center : FlexAlign.Start)
+        .alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None)
+        .backgroundColor(readerAppColor(this.variant === 'auto-page' ? 'TOK_SURFACE_PANEL' : 'TOK_SURFACE_PANEL_SOFT', this.scheme))
+        .borderRadius(8);
     }.width(this.actionWidth).height(this.actionHeight)
-      .padding({ left: this.variant === 'search' ? 8 : this.variant === 'auto-page' ? 9 : 0,
-        right: this.variant === 'auto-page' ? 9 : 0, top: 0, bottom: 0 })
-      .backgroundColor(readerAppColor(this.variant === 'auto-page' ? 'TOK_SURFACE_PANEL' : 'TOK_SURFACE_PANEL_SOFT', this.scheme))
+      .padding(0)
+      .backgroundColor(Color.Transparent)
       .borderRadius(8).opacity(1)
       .hitTestBehavior(this.actionVisible ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.actionVisible ? 'auto' : 'no-hide-descendants')

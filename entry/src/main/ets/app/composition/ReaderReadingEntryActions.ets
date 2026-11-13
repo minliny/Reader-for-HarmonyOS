@@ -1,4 +1,5 @@
 import type { ShelfBook } from '../ReaderCoreGateway';
+import { ReaderCoreGateway } from '../ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import type { ReaderEntryStartupTrace } from '../ReaderStartupTrace';
 import type { DetailReturnRoute, ReaderNavigation, ReaderReturnContext, ReaderRoute } from '../navigation/ReaderNavigation';
@@ -28,6 +29,7 @@ export interface ReaderReadingEntryActionPorts {
   restoreReaderReturn: (context: ReaderReturnContext | undefined) => boolean;
   entryPorts: (owner: ReaderRuntimeOwner) => ReadingEntryPorts;
   sourceName: (sourceId: string, persistedName?: string) => string;
+  detailReadAllowed?: () => boolean;
   failure: (title: string, message: string) => void;
   afterOpening: (project: () => void) => void;
   postFrame: (action: () => void) => void;
@@ -39,6 +41,7 @@ export interface ReaderReadingEntryActionPorts {
 export class ReaderReadingEntryActions {
   shelfPreparing: boolean = false;
   private shelfEntryNavigation: number = -1;
+  private detailReadGeneration: number = 0;
   private readonly navigation: ReaderNavigation;
   private readonly startup: ReaderEntryStartupTrace;
   private readonly ports: ReaderReadingEntryActionPorts;
@@ -49,7 +52,7 @@ export class ReaderReadingEntryActions {
     this.ports = ports;
   }
 
-  retirePreparation(): void { this.shelfPreparing = false; }
+  retirePreparation(): void { this.shelfPreparing = false; this.detailReadGeneration += 1; }
 
   async refreshDetailAcquisition(): Promise<void> {
     const owner = this.ports.runtime();
@@ -145,6 +148,24 @@ export class ReaderReadingEntryActions {
   openRemoteDetail(input: RemoteReadingEntryInput, parent?: DetailReturnRoute, download?: DownloadReadingEntry): void {
     const owner = this.ports.runtime();
     if (owner === undefined) return;
+    const readGeneration = ++this.detailReadGeneration;
+    if (input.shelfSnapshot !== undefined && input.shelfSnapshot.contentKind === undefined) {
+      const route = this.navigation.snapshot(), mounting = this.ports.mounting();
+      const current = (): boolean => this.ports.runtime() === owner && this.navigation.snapshot() === route &&
+        this.ports.mounting() === mounting && readGeneration === this.detailReadGeneration;
+      void new ReaderCoreGateway(owner).loadShelfBook(input.seed.sourceId, input.seed.bookId, current).then((book): void => {
+        if (!current() || this.ports.detailReadAllowed?.() === false) return;
+        if (book?.contentKind === undefined) {
+          this.ports.failure('书籍类型尚未确认', '请重试读取书架信息。');
+          return;
+        }
+        this.openRemoteDetail({ ...input, shelfSnapshot: book,
+          seed: { ...input.seed, kind: book.kind ?? input.seed.kind, contentKind: book.contentKind } }, parent, download);
+      }).catch((_error: Error): void => {
+        if (current() && this.ports.detailReadAllowed?.() !== false) this.ports.failure('读取书架信息失败', '请重试读取书架信息。');
+      });
+      return;
+    }
     const resume = input.resumeImmediately === true;
     const request = readingEntryInputForSearchContext(input, this.navigation.snapshot().route === 'search');
     const admitted = this.ports.entry().enterRemoteDetail(owner,

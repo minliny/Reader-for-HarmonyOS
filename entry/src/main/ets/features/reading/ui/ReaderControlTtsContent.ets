@@ -123,6 +123,10 @@ export struct ReaderControlTtsContent {
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
+  private currentInputEnabled(): boolean {
+    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
+  }
+
   private onSourceDetachedChanged(): void {
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const measured = this.form === 'full' ? this.fullMeasurement : this.quickMeasurement;
@@ -142,6 +146,7 @@ export struct ReaderControlTtsContent {
   @Prop availableHeight: number = 190;
   @Prop expandedLayout: boolean = false;
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
+  inputCurrent?: () => boolean;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
   @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
   @Prop @Watch('onMinimumKeyChanged') minimumKey: string = '';
@@ -448,7 +453,7 @@ export struct ReaderControlTtsContent {
       const target = sampleReaderControlMorphScrollPath(path, this.p());
       this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion, offset, false);
       if (Math.abs(offset - target) > .1) this.scroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
-      if (this.interactionEnabled && (this.p() === 0 || this.p() === 1)) {
+      if (this.currentInputEnabled() && (this.p() === 0 || this.p() === 1)) {
         this.minimumQuickScrollOffset = this.p() === 0 ? path.quickOffset : 0;
         this.minimumScrollPath = undefined;
       }
@@ -460,7 +465,7 @@ export struct ReaderControlTtsContent {
       return;
     }
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, offset);
+      this.currentInputEnabled(), offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -489,7 +494,7 @@ export struct ReaderControlTtsContent {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress);
   }
   private quickMinimumScrollInput(): boolean {
-    return this.interactionEnabled && this.quickMinimumScrollPresentation();
+    return this.currentInputEnabled() && this.quickMinimumScrollPresentation();
   }
 
   private quickMinimumScrollPresentation(): boolean {
@@ -517,7 +522,7 @@ export struct ReaderControlTtsContent {
     return readerControlMotionOutlineOpacity(this.motionProgress, actor.y, actor.height,
       this.fullViewportHeight, this.scrollMotion.fullScrollOffset);
   }
-  private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
+  private fullInput(): boolean { return this.currentInputEnabled() && this.p() === 1; }
   private pathCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
     (path: string): PathShape => new PathShape().commands(path));
   private clipMinimumKey: string = '';
@@ -544,7 +549,7 @@ export struct ReaderControlTtsContent {
             this.fullViewportHeight, this.scrollMotion.fullScrollOffset)) : clips, density);
     });
   }
-  private sharedInput(): boolean { return this.interactionEnabled && (this.p() === 0 || this.p() === 1); }
+  private sharedInput(): boolean { return this.currentInputEnabled() && (this.p() === 0 || this.p() === 1); }
   private playbackLabel(): string {
     if (this.state.status === 'playing') return '朗读中';
     if (this.state.status === 'preparing' || this.state.status === 'resuming') return '准备中';

@@ -485,6 +485,10 @@ export class SourceSwitchPresentation {
     if (scopeId !== undefined && this.matchesScope(scopeId)) this.activeHost?.retryFailed(scopeId);
   }
 
+  showEntryAcquisitionFailure(): void {
+    this.activeHost?.showAcquisitionFailure(this.scopeId);
+  }
+
   dismissTextFailure(scopeId?: number): void {
     if (scopeId !== undefined && this.matchesScope(scopeId)) this.activeHost?.dismissFailure(scopeId);
   }

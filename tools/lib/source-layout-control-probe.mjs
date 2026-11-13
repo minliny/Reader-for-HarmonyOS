@@ -10,11 +10,13 @@ export function runSourceLayoutControlProbe(width, scale) {
   const metrics = () => ({ systemFontScale: scale, windowRect: { width, height: 844 } });
   const foundation = foundationControls({ windowMetrics: metrics });
   const labeled = labeledIconControls({ foundation });
+  const minimumDimension = (value, minimum) => typeof value === 'number' ? Math.max(value, minimum ?? 0) : value ?? minimum ?? null;
   const scalarFrame = (nodes, label) => {
     const frame = nodes.find(node => typeof node.onClick === 'function');
     const text = nodes.find(node => node.type === 'Text' && node.create === label);
     assert.ok(frame && text, `actual hit and text carrier for ${label}`);
-    return { width: frame.width ?? null, height: frame.height ?? null,
+    return { width: minimumDimension(frame.width, frame.constraintSize?.minWidth),
+      height: minimumDimension(frame.height, frame.constraintSize?.minHeight),
       minHeight: frame.constraintSize?.minHeight ?? null,
       fontSize: text.fontSize, minFontScale: text.minFontScale ?? null,
       maxFontScale: text.maxFontScale ?? null, maxLines: text.maxLines ?? null,

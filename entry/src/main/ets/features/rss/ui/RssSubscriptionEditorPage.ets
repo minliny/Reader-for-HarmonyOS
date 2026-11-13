@@ -1,6 +1,7 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity } from '../application/RssMutationRecoveryContract';
+import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
@@ -189,7 +190,7 @@ export struct RssSubscriptionEditorPage {
       subscriptionId: this.snapshot.subscriptionId ?? '',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
       onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
-    ForEach(this.snapshot.original?.blocked === true ? [] : this.recoveryActionIdentities(), (identity: string): void => {
+    ForEach(rssOriginalMatchesScope(this.snapshot.original, 'editor', this.snapshot.subscriptionId ?? '') ? [] : this.recoveryActionIdentities(), (identity: string): void => {
       ReaderRecoveryAction({ label: '重新读取', generation: this.recoveryGeneration(identity),
         onReconcile: (): void => this.dispatchRecovery(identity) });
     }, (identity: string): string => identity);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 14,
+  "revision": 16,
   "controls": [
     {
       "controlId": "page-back",
@@ -235,7 +235,7 @@
       },
       "accessibleNameSource": "ReaderButton label='登录'",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "The actual shared ReaderButton producer retains authored28vp compact paint at normal scale with centered text and natural font growth inside a minimum44vp native carrier. SourceManagement parent budget pays max44/scaledPaint. Selected SDK and matrix evidence is local. Native glyphs, clipping, pointer delivery, focus, screen reader and E2/E3 acceptance remain OPEN/FAIL."
     },
     {
       "controlId": "source-detect",
@@ -267,7 +267,7 @@
       },
       "accessibleNameSource": "ReaderButton label=检测/检测中",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "The actual shared ReaderButton producer retains authored28vp compact paint at normal scale with centered text and natural font growth inside a minimum44vp native carrier. SourceManagement parent budget pays max44/scaledPaint. Selected SDK and matrix evidence is local. Native glyphs, clipping, pointer delivery, focus, screen reader and E2/E3 acceptance remain OPEN/FAIL."
     },
     {
       "controlId": "source-status",
@@ -414,7 +414,7 @@
       },
       "accessibleNameSource": "ReaderButton category label (seven values; custom disabled)",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "The actual shared ReaderButton producer retains authored32vp compact paint at normal scale with centered text and natural font growth inside a minimum44vp native carrier. SourceManagement parent budget pays max44/scaledPaint. Selected SDK and matrix evidence is local. Native glyphs, clipping, pointer delivery, focus, screen reader and E2/E3 acceptance remain OPEN/FAIL."
     },
     {
       "controlId": "source-group-option",
@@ -993,7 +993,7 @@
     },
     {
       "controlId": "directory-tools-control",
-      "owner": "ReaderControlDirectoryContent",
+      "owner": "ReaderDirectoryToolbar",
       "sources": [
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
@@ -1019,7 +1019,7 @@
       },
       "accessibleNameSource": "ReaderDirectoryToolbar.tool(title)",
       "status": "partial",
-      "knownGap": "Authored budget remains unchanged where it fits. Short full endpoints put existing tabs/query/tools/load on the same native List prefix with actual44 carriers. Tree ranks/proofs remain canonical; local focus uses opt-in current-owner predicate and semantic id. SDK proof is partial; native glyph/hit/IME/focus/readout remains OPEN."
+      "knownGap": "ReaderDirectoryToolbar.tool uses the full-directory role with16vp glyph,32vp paint and44vp native target. ReaderControlDirectoryContent owns deferred catalog action admission. Short clear keeps its14vp glyph. Selected SDK role/parent checks passed; native glyph, hit, IME, focus and readout remain OPEN."
     },
     {
       "controlId": "directory-control-collapse",
@@ -1040,9 +1040,9 @@
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderPanelCollapseButton accessibilityLabel=收起目录/收起书签",
+      "accessibleNameSource": "ReaderControlPanel.controlHeader accessibilityText=收起${contentTitle()}，目录为收起目录，书签为收起书签",
       "status": "partial",
-      "knownGap": "Actual directory parent passes minimumTarget44 and directoryHeaderScale to the existing collapse component. This is the directory branch only; native hit/focus remain OPEN."
+      "knownGap": "The real owner is ReaderControlPanel.controlHeader. Its native target is at least44vp. The transparent carrier contains compact paint height=max(26,collapseLabelHeight+12),26vp at normal scale and40vp at2x. Title and16vp header glyph center in the measured header. Selected SDK parent/paint/label checks passed; native hit, focus and visual acceptance remain OPEN."
     },
     {
       "controlId": "directory-back-manga",
@@ -1194,7 +1194,7 @@
       },
       "accessibleNameSource": "打开书签：chapterTitle positionLabel timeLabel，待确认",
       "status": "partial",
-      "knownGap": "Current chapter/ListItem minimum44 and scaled bookmark motion/legacy extents share production font budgets; current Tree renderer retains entity/proof guards. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified."
+      "knownGap": "Motion and standalone bookmark variants retain distinct budgets. Standalone natural title/excerpt measurements are shared by the actual row, virtual List extent and positioning; short-window prefix transfer preserves a fractional anchor. Precise local SDK/method evidence exists. Native glyphs, clipping, focus and whole-target touch acceptance remain unverified."
     },
     {
       "controlId": "directory-bookmark-marker",
@@ -1387,7 +1387,7 @@
       },
       "accessibleNameSource": "原书签/离线事项：核对/继续原操作/只读重读",
       "status": "partial",
-      "knownGap": "仅源码声明；本轮没有原生命中、焦点、字号及全部状态验证。"
+      "knownGap": "The existing surface distinguishes original pending, known result and confirmed readback failure. Mounted, presentationActive, immediate caller lease and original presentation/generation qualify retained retry, continue and local-dismiss actions. Reactivation presents an undelivered current readback fact once. Precise method/SDK evidence is local. Native touch delivery, focus, system font and full-state acceptance remain unverified."
     },
     {
       "controlId": "directory-catalog-retry",

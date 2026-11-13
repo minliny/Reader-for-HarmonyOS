@@ -47,7 +47,7 @@ function emit(path,name,deps,source=read(path)){
 }
 const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...coverDisplay,...local,...remote,
  ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,MangaAdmissionGateway,MangaBookPresentation,hilog:{warn(){},error(){},info(){}}};
-const ReaderCoreGateway=emit('app/ReaderCoreGateway.ts','ReaderCoreGateway',common);
+export const ReaderCoreGateway=emit('app/ReaderCoreGateway.ts','ReaderCoreGateway',common);
 const LocalBookImportGateway=emit('features/bookshelf/application/LocalBookImportGateway.ts','LocalBookImportGateway',{...common,ReaderCoreGateway});
 const BookshelfFlowGateway=emit('features/bookshelf/application/BookshelfFlowGateway.ts','BookshelfFlowGateway',{...common,ReaderCoreGateway,LocalBookImportGateway});
 const SourceGateway=emit('features/source/application/SourceGateway.ts','SourceGateway',common);

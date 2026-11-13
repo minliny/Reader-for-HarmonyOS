@@ -6,6 +6,7 @@ import { selectedProductionMethods } from './selected-production-methods.mjs';
 import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { bookshelfOperationClass } from './bookshelf-operation-owner-probe.mjs';
 import { actualReadingEntryPresentation } from './reading-entry-presentation-probe.mjs';
+import { ReaderCoreGateway } from './reading-entry-owner-probe.mjs';
 import { actualSourceSwitchPresentation } from './source-switch-presentation-probe.mjs';
 import { readerFoundationTokens } from './reader-tokens-probe.mjs';
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
@@ -45,7 +46,7 @@ const { LibrarySearchPresentation } = emit('features/search/presentation/Library
 });
 const { ReaderLibraryJourney } = emit('app/composition/ReaderLibraryJourney.ets', ['ReaderLibraryJourney']);
 const { ReaderReadingEntryActions } = emit('app/composition/ReaderReadingEntryActions.ets', ['ReaderReadingEntryActions'],
-  { readingEntryInputForSearchContext, Observed: value => value });
+  { readingEntryInputForSearchContext, ReaderCoreGateway, Observed: value => value });
 const { ReaderSourceSwitchJourney } = emit('app/composition/ReaderSourceSwitchJourney.ets', ['ReaderSourceSwitchJourney']);
 const { ReaderExitActions } = emit('app/composition/ReaderExitActions.ets', ['ReaderExitActions']);
 
@@ -85,7 +86,7 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
   const Entry = actualReadingEntryPresentation({ ReadingEntryHost: ReadingHost }), entry = new Entry();
   const authority = { current: currentRuntime, isCurrent: owner => owner === currentRuntime() };
   const source = SourceHost ? new (actualSourceSwitchPresentation({ ReaderRuntimeOwner: authority, SourceSwitchHost: SourceHost }))() :
-    { visible: false, pending: undefined, failureMessage: '' };
+    { visible: false, pending: undefined, failureMessage: '', isSurfacePresented() { return this.visible; } };
   const entryPorts = owner => {
     const generation = navigation.snapshot().generation;
     return { current: () => owner === currentRuntime() && generation === navigation.snapshot().generation,

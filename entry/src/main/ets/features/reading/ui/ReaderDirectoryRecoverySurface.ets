@@ -14,6 +14,8 @@ export struct ReaderDirectoryRecoverySurface {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('notifyReadbackFailures') recovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  @Prop @Watch('notifyReadbackFailures') presentationActive: boolean = true;
+  isPresentationCurrent?: () => boolean;
   @State private dismissedResults: string[] = [];
   private notifiedReadbacks: Set<string> = new Set<string>();
   onReconcileBookmarks: (generation: number, presentationId: string) => void = (): void => {};
@@ -51,7 +53,7 @@ export struct ReaderDirectoryRecoverySurface {
     return (this.isBookmarks(identity) ? this.recovery.bookmarksBusy : this.recovery.offlineBusy) === true;
   }
   private notifyReadbackFailures(): void {
-    if (!this.feedbackMounted) return;
+    if (!this.feedbackMounted || !this.presentationActive) return;
     const active = this.identities().filter((identity: string): boolean => this.readbackFailed(identity));
     for (const identity of this.notifiedReadbacks) if (!active.includes(identity)) this.notifiedReadbacks.delete(identity);
     for (const identity of active) {
@@ -62,7 +64,7 @@ export struct ReaderDirectoryRecoverySurface {
     }
   }
   private isCurrent(identity: string): boolean {
-    return this.capturedPresentation(identity) === this.recovery.presentationId && this.view(identity).visible &&
+    return this.feedbackMounted && this.presentationActive && (this.isPresentationCurrent?.() ?? true) && this.capturedPresentation(identity) === this.recovery.presentationId && this.view(identity).visible &&
       this.capturedGeneration(identity) === this.view(identity).generation;
   }
   private canContinue(identity: string): boolean {
@@ -96,7 +98,7 @@ export struct ReaderDirectoryRecoverySurface {
                 .fontWeight(MESSAGE_BODY.fontWeight).lineHeight(MESSAGE_BODY.lineHeightFp as number)
                 .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
               ReaderRecoveryAction({ variant: 'text', label: '知道了', onReconcile: (): void => {
-                this.dismissedResults = this.dismissedResults.concat([identity]);
+                if (this.isCurrent(identity)) this.dismissedResults = this.dismissedResults.concat([identity]);
               } });
             }.width('100%');
           }

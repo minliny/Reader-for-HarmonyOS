@@ -98,6 +98,7 @@ export struct ReaderControlAppearanceContent {
   @Prop expandedLayout: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;
+  inputCurrent?: () => boolean;
   @Prop importLayout: ReaderControlAppearanceImportLayout = 'ordered-slot-approved';
   @Prop @Watch('requestSelectClose') dismissTemporaryRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
@@ -205,6 +206,10 @@ export struct ReaderControlAppearanceContent {
     this.requestedPreviewFamilies.clear();
     this.dismissTemporaryLayer();
     this.cancelFontDrag();
+  }
+
+  private currentInputEnabled(): boolean {
+    return this.interactionEnabled && (this.inputCurrent?.() ?? true);
   }
 
   private minimumInput(): ReaderControlAppearanceMinimumInput {
@@ -388,10 +393,10 @@ export struct ReaderControlAppearanceContent {
     return full ? this.fullEndpoint! : this.quickEndpoint!;
   }
   private fullInput(): boolean {
-    return readerControlAppearanceEndpoint(this.motionProgress, this.interactionEnabled) === 'full';
+    return readerControlAppearanceEndpoint(this.motionProgress, this.currentInputEnabled()) === 'full';
   }
   private sharedInput(): boolean {
-    return readerControlAppearanceEndpoint(this.motionProgress, this.interactionEnabled) !== 'none';
+    return readerControlAppearanceEndpoint(this.motionProgress, this.currentInputEnabled()) !== 'none';
   }
   private extendedThemes(): boolean {
     const minimum = this.minimumProfile();
@@ -457,7 +462,7 @@ export struct ReaderControlAppearanceContent {
     // Unknown is not zero: retain the existing scroll state until attachment.
     if (offset === undefined || !Number.isFinite(offset)) return;
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, offset);
+      this.currentInputEnabled(), offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -524,7 +529,7 @@ export struct ReaderControlAppearanceContent {
   }
   private onInputChanged(): void {
     this.syncMorphScroll();
-    if (!this.interactionEnabled) {
+    if (!this.currentInputEnabled()) {
       this.selectInputRevision += 1;
       if (this.openSelect !== '') this.dismissTemporaryLayer();
       if (this.draggedFontId !== '' || this.fontPointerId >= 0 || this.fontTracks.size > 0 ||
@@ -791,7 +796,7 @@ export struct ReaderControlAppearanceContent {
       font === 'import', this.importLayout);
   }
   private fontInput(font: ReaderAppearanceFontSlot): boolean {
-    return !this.openSelect && readerControlAppearanceFontInput(this.motionProgress, this.interactionEnabled,
+    return !this.openSelect && readerControlAppearanceFontInput(this.motionProgress, this.currentInputEnabled(),
       font === 'import', this.importLayout);
   }
   private activeFont(font: ReaderAppearanceFontSlot): boolean {

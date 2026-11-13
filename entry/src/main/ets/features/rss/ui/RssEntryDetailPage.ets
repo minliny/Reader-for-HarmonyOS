@@ -6,6 +6,9 @@ import type { RssFavoritePresentation, RssEntrySnapshot } from '../presentation/
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
+import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderOperationFacts';
 import type { RssRouteOperationProjection } from '../application/RssRouteOperationHost';
@@ -102,11 +105,21 @@ export struct RssEntryDetailPage {
       subscriptionId: this.item?.subscriptionId ?? '', guid: this.item?.guid ?? '',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
       onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
-    if (this.original?.blocked !== true) {
-    ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
-      actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+    if (!rssOriginalMatchesScope(this.original, 'entry', this.item?.subscriptionId ?? '', this.item?.guid ?? '') && this.feedbackView().visible) {
+      if (this.operation?.projection.receipt.confirmation === 'unknown') {
+        ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: '重新读取',
+          onReconcile: (generation: number): void => this.retryFeedback(generation) });
+      } else {
+        ForEach([this.feedbackView().generation], (generation: number): void => {
+          ReaderPageState({ message: this.feedbackView().message, padded: false,
+            loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing',
+            actionLabel: this.feedbackView().canRetry ? '重新读取' : '', onAction: (): void => this.retryFeedback(generation) });
+        }, (generation: number): string => `rss-entry-read:${generation}`);
+      }
     }
   }
+
+  private feedbackView(): ReaderRecoveryView { return readerRecoveryView(this.operation?.projection, this.readFacts); }
 
   private retryFeedback(generation: number): void {
     const operation = this.operation;
