@@ -2485,3 +2485,6 @@ Current-session original system font has been restored: actual Settings sliders2
 全应用原生Button顺序后继批已完成代码与独立审修。当前SDK要求显式borderRadius位于border之后，268ETS/207构造及66modifier闭包内九坏序模板已按原值调整，八生产文件保持其他几何和业务。373TS无对应构造或modifier声明，207构造的内容盒同型账本没有额外精确outer重复。正式72fee70d/control21为当前冻结，16受影响own登记各递增一次，277唯一输入、2388pin，refsPASS0/register原39项保持，Primary终核9bc073c4接受。Appb5e6的两个主题Text已实际完整包含并获独审，圆角材质与尚未采样的AutoPage/Replace端点由后继候选单列核对。[完整修复与历史归因记录](../architecture/ui-design-full-fix-20261113.md)
 
 共同绘制owner及导航提交副作用后继批已完成独立审修。公共Quick框仅Dir/Appearance/Settings，Search/Auto/Replace保原child单框；独立上层Full描边严格使用FullSurface原矩形与透明度，41Panel与41参考Stage合法样本、五负例通过。Replace读取接到完整receipt/ready后，真实入口及busy解除、metadata/环境快径、Recovery、旧请求和去重经准确叶05与独审接受。当前正式da88a15f/control21为冻结结果，13own递增、282唯一输入、2453pin，refsPASS0/register原39项保持，Primary终核4498870c接受。App6e已证明主题圆角与内容盒、设置端点，旧Quick双框与Replace idle帧保留，当前新字节Native单独核对。
+
+
+2026-11-14 当前候选为源码4ca0d6af / App16f2c3829b3b，signed HAP46889b6e07e8039706c74bed3b58b1801d9ee51ae8719e7ffb7605a1030e4a20。所有开发及独立代码审修完成后，实际ArkTS编译、指定证书签名、现有远程x86_64 VM保数据更新和启动通过。选定AutoPage Quick/Full、Replace Quick/Full、Search Quick及返回Home已完成原PNG与树核对，Replace当前真实空集合读取完成，ready Tab正常。原首装动画保持原判定，历史Tab扇形物理因果继续OPEN。完整记录见[体系修复当前交付](../architecture/ui-design-full-fix-20261113.md)。正式登记da88a15f/control21、原39诊断、Source E2/E3和21visual NOT_RUN均保持，当前全动作连续闪烁、大字号/窄宽原生、全目标命中和整页接受继续开放。原书签未决核对及继续本批为0。

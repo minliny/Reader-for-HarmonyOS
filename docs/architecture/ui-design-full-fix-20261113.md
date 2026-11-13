@@ -8,7 +8,9 @@
 
 三个独立 agent 分别实施阅读、主流程、二级域，再交换阅读与主流程、二级与共享范围审修。Root 负责共享呈现、依据绑定、消息与控件登记和最终差异核对。全部代码开发及独立审修完成后再评估原生取证。
 
-## 逐项实施
+## 首次批次实施与历史证据
+
+下表保留首次批次的实现和准确证据。RD-01、RD-02中的44横槽及共用Header装配已由后文体系性修复按原角色、实际slot和付款范围替代，当前实现与判定沿后继逐批记录读取。
 
 | 审计项 | 实施内容 | 定向证据 |
 | --- | --- | --- |
@@ -63,7 +65,7 @@ TTS compact状态的恢复滚动位于面板左侧，右侧保留原关闭目标
 
 当前全页原生尺寸、字形、触摸、焦点、系统Back及用户接受继续开放。局部代码/SDK通过与整页visual结果分别记录。
 
-## 代码侧最终核对
+## 首次批次的代码侧核对
 
 全部3个agent已完成开发与独立审修并停止生产写入。Root终核下载单Row入口/原生子Tap与导入测量修正、主题行appearance回调、RSS/Sync同代busy和当前canRetry、普通阅读恢复原owner围栏，以及旧记录显式回执分类。
 
@@ -132,7 +134,7 @@ opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416`
 
 精确 `rounded-parent-sdk` 第04日志通过100个受控边界样本、40个实际layout/motion样本、四个实际Props和State更新及四个负控。独立审修从生产测量、layout resolver到SDK Builder复核。测量API采用显式受控seam，字形与新原生帧尚待最终候选核对。未重复运行既有范围外用例。
 
-## 最终交付与最小原生核对
+## App188的交付与最小原生核对
 
 冻结生产提交 `973ec49a` 的最终run为 `20261113T144057Z-973ec49a-2396219a`，App为 `0.2.0.DEV.18805b72930f`，产品版本0.2.0，安装计数器1000000。签名HAP为226273959字节，SHA-256为 `4d3fc8c03a7a465b727e2c73b87429cb34343e06dae499660731e1e8f27995eb`，指定证书身份通过。Core c078与Native配对沿既有已验证缓存。未选业务门禁保持NOT_RUN。
 
@@ -199,7 +201,7 @@ RenderService RSTree已读回正常返回及普通冷启节点，二者均为686
 
 ## 体系性修复与代码侧独立验收（2026-11-14）
 
-本批覆盖Home及目录、朗读、外观、设置、搜索、自动翻页、替换规则七个模块，连同独立完整目录、共享Header、IconButton、SearchField、Select、PageState和书架Tab的实际消费者。前述204项登记继续作为源库存，体系性完成结论以本节的准确范围重新建立。
+本批覆盖Home及目录、朗读、外观、设置、搜索、自动翻页、替换规则七个模块，连同独立完整目录、共享Header、IconButton、SearchField、Select、PageState和书架Tab的实际消费者。前述204项登记继续作为源库存，本节记录当批已选代码路径和有限SDK证据。后继实际父子组合、原生绘制与Replace入口副作用的新增问题、修复和未决范围继续按后文逐批记录保留。
 
 ### 几何职责与原稿比例
 
@@ -395,3 +397,23 @@ AutoPage Quick图出现两条近重合轮廓。真实历史1234772ae在2026-09-1
 读取初始化准确叶05及Primary独审2efe39cd已接受。实际SDK State/Watch、bind与frame链证明busy解除后启动一次，metadata、2×与320宽重采纳保持一次；原import先发canonical read也计入当前入口。读取启动标识在原reload通过实体和operation守卫后承诺，原写owner、clock及持久化协议保持。新字节真实规则读取与绘制像素由后继候选分别核对，旧700ms idle帧保留原判定。
 
 两域统一正式register为da88a15f，13个own登记各递增一次、八项保持，三生产源刷新39旧pin，两新准确测试绑定26槽、三维护端口绑定39槽。282个唯一输入、2453处pin成立，control21及所有语义判定保持。refs01为PASS0，register01为FAIL且原39项完整数组全等。Primary终核4498870c接受，全部owner开发、准确测试与独立审修已结束，后继只构建一个必要候选。
+
+
+## App16f 的当前交付与选定原生后证
+
+2026-11-14。生产提交4ca0d6afe1f69cf0b3e693668f188a9c71287de6在所有开发和独立代码审修冻结后完成实际ArkTS工程编译及指定证书签名。run为20261113T212843Z-4ca0d6af-3f093c13，App为0.2.0.DEV.16f2c3829b3b，signed HAP为46889b6e07e8039706c74bed3b58b1801d9ee51ae8719e7ffb7605a1030e4a20，manifest为f3bd934b1f0149dc9ef2c8985d7715524ac5377a9fb3c9beb7a62ee544be92be。Core沿c0781263与原x86_64 Native缓存复用，Reader-UI沿f206f0db。构建类别iteration，acceptanceEligible为false，未选业务门禁按原范围保留。
+
+该候选已在现有远程x86_64 VM保数据更新和启动，实际部署回执为该run的deploy-vm-6460677a198b-20261113T213014Z.json。停态原库/WAL备份保留，当前副本正式FFI新执行一次，两项同源合成证据复用。当前server为192.168.1.10:8710，target为该server持有的127.0.0.1:5555，所有设备命令沿同一租约入口直连。原书签未决记录核对及继续动作本批均为0。
+
+安装会话的两个初始PNG仍处于系统启动动画，shelfTabLabelsPresent为false，该组保持启动观察。后继closure-ready实际进入书架。Root及独立agent均已打开ready原PNG，胶囊轮廓完整，64837个既有quiet-mask像素全为正常底色，异常精确边框色为0。当前树中的材料Row与外Stack均为[297,2496][983,2734]、clip=false，选中Button为[328,2528][626,2703]。独审130619cc接受这一个ready观察。该ready组没有同期RS及startup trace，历史523首次扇形的物理因果继续OPEN。
+
+当前同一候选完成Home→AutoPage Quick→Full→Home→Replace Quick→Full→Home→Search Quick→Home的选定链。随后仅补Appearance Full一帧，核对真实启用shared FullSurface的描边端点，采样后收起并Back回Home。Root逐张打开原PNG并核对树。AutoPage和Search的Quick只保留自己的单一外框。AutoPage和Replace的Full由各自内容组件保留单一外框。共享FullSurface的独立绘制轨迹按准确SDK多进度点另行证明。当前Appearance Full的capture2中，shared fill与outline均为opacity1，边界同为[89,588][1193,2689]，Quick两层均为opacity0。Root及Primary实际读图确认共享Full框完整可见。Replace Quick已显示“暂无替换规则，可展开后新增”，Full已显示“暂无替换规则，点击上方新增规则”，原idle loading在这次实际空集合分支消失。Replace这两帧的实际空态、六个可见ready门控操作及父子包含已获独审aa1621af接受。Ready-empty由匹配源码分支与原生呈现共同推论，dump未直接提供raw State或数据库行。该观察只覆盖当前空集合，已存在规则、读取失败及业务写入仍按准确方法回归和原生记录各自保留。
+
+返回Home的真实Scroll为false，内容视口为[89,1689][1011,2346]，Quick共同外壳保持[43,1587][1238,2734]。实际灰色滚动条未显示。AutoPage Quick当前内容可以滚动，其自然内容超过Quick视口时沿原滚动资格处置。Full隐去的亮度actor仍可保留在语义树中，其绘制与准入沿原Motion事实核对。
+
+本批记录、每个准确capture及独审引用汇总于 `.reader-artifacts/control-module-height-20261113/systemic-closure-16f.json`。历史native-systemic-findings原文件先按原字节冻结，再更新为当前候选索引，原34ea失败、449推论撤回、081主题越界、6e双框与Replace载入帧均保留。默认settled截图、有限SDK回调及已采目录过渡帧分别记账。所有点击的连续闪烁、当前窄宽及2×原生矩阵、完整触摸目标、读屏、焦点和整页用户接受继续开放。正式register da88a15f与control21保持，39项既有诊断及21项visual NOT_RUN保持，Source E2/E3继续FAIL。
+
+本轮实现沿冻结原稿恢复默认视觉密度。目录及TTS部分紧凑横向响应仍小于44，真实冲突保留在E2，后续设计裁决仍需独立处理。Full736作为原稿优选值，实际端点由安全区与窗口约束。当前Figma独立原稿访问存在权限缺口，比较依据为已冻结独立导出和批准范围。源码衍生画板继续登记来源。上述实施决定、当前原生点及未决来源共同保留。
+
+
+当前六个表面端点已获Secondary独审9cfc96ca接受。18份原始layout/PNG/JPEG与结果哈希一致，八份相关生产源与候选snapshot一致。五个私有端点的四公共paint actor均为opacity0，Appearance Full的fill与上层stroke均为opacity1且同矩形，真实层次保持fill→content→stroke。46个采到的可见Button、Slider及TextInput的可见bounds均位于内容host内，Scroll裁切后的bounds与原始extent分别保存。两个主题Text在259×98px父Button内完整包含，当前原PNG圆角与文字正常。该六端点结论保留稳定帧范围，所有原生中间态及完整交互继续开放。三名独审均已停止写入，设备会话释放。之后仅提交文档记录，生产包字节沿当前16f复用。
