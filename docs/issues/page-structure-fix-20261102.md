@@ -2465,3 +2465,8 @@ Current-session original system font has been restored: actual Settings sliders2
 用户在App18805b指出Home进入目录时外壳变化，并扩大要求到控制栏全部元素。本批继承全量UI修复，重新登记共享51项、目录/书签/TTS105项和其余模块48项。共壳、独立paint/target、旧回调准入、短窗自然流、备用预算与字体真实覆盖的代码原因及逐域修复见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)。三域开发后交叉独审，全部冻结后才进入新候选实际编译、保数据更新与原生画面核对。
 
 当前登记source/sourceInputs按最终字节刷新，历史证据各守原输入。Source E2/E3、全页visual、整页来源批准与未执行原生维度维持原判定。具体候选和原生执行追加于同一修复记录。原书签未决记录本批未核对、未继续，所有业务数据沿原owner保留。
+
+
+## 体系性重审状态（2026-11-14）
+
+控制栏全量完成结论重新开放。当前明确两组框架问题，包括模块/profile两阶段交付及测量代际耦合，以及31536cfb将44响应预算映射进默认paint/slot。此前目录调整随全部模块共同重审，代码原因、七域量化、历史合流契约与同包Tab原生边界见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)最新补充。204项清单和既有局部SDK只在原准确范围内保留。后续先完成统一语义及生命周期修复、默认macro与中间帧代码验收和独立审修，再绑定一个实际源码候选。当前原生Tab根因仍OPEN，当前候选全页visual与Source E2/E3维持原判定。

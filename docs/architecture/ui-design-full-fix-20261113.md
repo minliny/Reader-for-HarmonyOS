@@ -175,3 +175,24 @@ opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416`
 ### 控制栏候选首次编译的导入缺口
 
 冻结提交0b2de1c5的首次实际ArkTS编译失败，替换规则Quick自然流两处readerControlUnit缺少真实import。定向SDK probe注入geometry namespace，未检查这个生产导入缺口。失败发生在包发布前，Appf7c57fa0d30a没有成为安装候选，VM仍为旧App18805b。本轮保留失败日志并补实际导入与源码引用核对，原方法级准确回归继续按未变方法复用。新候选实际编译及原生结果另行追加。
+
+
+## 控制栏体系审计重开（2026-11-14）
+
+用户指出控制栏切页闪烁、全部模块比例异常，并要求联系合流重构重新审查目录。前述204项登记、局部SDK与独立审读的“全量完成”结论撤回。对应准确日志继续证明其有限属性、回调和最终回执，默认整组比例、中间装配帧及体系正确性重新开放。
+
+根因分为两个独立实现层。测量/呈现链在新业务模块挂载时保留上一模块layout/key，新子组件私有profile尚为空，先具备authored fallback的绘制资格，下一帧登记测量后再采用新profile。普通同模块事实变更又可能替换provider，由Host generation使旧receipt立即失效。正常模块未使用minimumKey重建整棵ForEach；Home的Scroll/direct条件分支确有两棵子树。已投影的搜索临时编辑scope能保住输入，不能把每次query变化一概写成关闭键盘。原生是否合并某些中间更新保留未证。
+
+比例问题集中在Harmony合流落地提交31536cfb。该提交将44响应下限写入多个同时承担paint、slot和下游坐标的natural字段。参考默认1×时，TTS Quick播放卡66→108、内容190→236；Settings Quick选择条30→50、内容190→238；Appearance主题步距28→48并推移字体区域；Directory原输入168×32经44工具槽分配压到132×44，chapter高亮行亦32/40→44。Search、AutoPage与Replace存在同类传递。实际523 TTS帧playback108vp和只余4.57vp可见的语速尾部与源码对应。
+
+历史边界已核。d8ad88ef checkpoint已含测量/保留机制；5b6edd87抽取纯helper保留机制；31536cfb扩大测量覆盖并改变默认参数；6e3e4827加强代际receipt与延迟投影；0b2de1c5稳定共享shell，未原子交付模块内容。Reader-UI合流基线与当前canonical没有规定文字控制栏统一44绘制，当时书面契约已允许小paint居中44carrier。缺口同时存在于Harmony参数映射、类型语义及验收oracle。历史164输入没有原控制设计fixture，部分测试直接断言这些paint/slot字段>=44，因而未检验默认原稿比例。
+
+705在39vp状态栏、28vp手势区的844vp窗口中可由真实约束得到；它被固化为全部环境优选比例的来源继续审查，不能把这一值直接认作当前523 Full已错。当前问题也未发现通用fp/vp二次缩放来源。
+
+正式逐域producer→profile→paint/slot/response矩阵位于 `.reader-artifacts/ui-full-fix-20261113/control-framework-geometry-root-cause.json`，历史与字段映射分别位于 `architecture-history/control-architecture-history-independent.json` 和 `confluence-contract-mapping.json`。框架修复需先拆分这些几何职责，并使实体准入、测量请求和已提交呈现各有明确身份。新模块及其profile需共同交付，默认参考、真实字号增长、空间不足变体和callback生命周期分别验收。原稿无法同时容纳现有44槽时应显式处理冲突，继续压缩输入或扩大paint不能作为默认收口。
+
+### 同包Tab异常的进一步定位
+
+App52353cad4ec0的安装后首帧仍有Tab边框色扇形。其PhoneTab相关16个输入与前次188同字节，实际父盒686×238px、Row/Stack clip=false。按同64837个父材料内部样本，初始坏帧有5463点为精确边框色D0C5B4。正常进入阅读后返回书架，无源码/安装改变，后继Row的该计数为0；同包一次普通冷启动仍为0。首次私有诊断入口在任何stop前因读取appVersion嵌套字段错误而中止，已保留失败；纠正后只执行一次实际冷启动。
+
+RenderService RSTree已读回正常返回及普通冷启节点，二者均为686×238px、四角119px、四边3px、SOLID/D0C5B4，clipBounds/Frame=false，shadowY42、native sigma57.1、fill=false。普通冷启Row编号58与首次坏帧相同，但进程不同；返回Row编号4214，属于后继挂载。当前缺少首次坏态同期RS属性与录制drawing命令，不能宣称引擎bug或仅由clip开关解释。后续必要源码候选安装时应在首次启动立即读取同态帧和RS，复用实际交付机会。本阶段已停止控制栏后续VM导航、未改生产代码，也未因这些审计再构建或重装。
