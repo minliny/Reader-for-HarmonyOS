@@ -22,7 +22,7 @@ import { createDefaultReaderSettingsSnapshot, isReaderPageTurnStyleAvailable,
 
 import { readerControlSettingsLabel, readerControlSettingsBar, readerControlSettingsChoice, readerControlSettingsScreenTitle, readerControlSettingsAddedGroup, readerControlSettingsAddedChild, sampleReaderControlSettings, type ReaderControlSettingsFrame, type ReaderControlSettingsGroup, type ReaderControlSettingsAddedGroup, type ReaderControlSettingsMinimumProfile } from './ReaderControlSettingsGeometry';
 
-import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum, ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
+import { readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
 
 const SETTINGS_DIRECTION_OPTIONS: string[] = ['system', 'portrait', 'landscape'];
 const SETTINGS_PAGE_OPTIONS: string[] = ['cover', 'slide', 'simulation', 'scroll', 'none'];
@@ -237,7 +237,7 @@ export struct ReaderControlSettingsContent {
   }
 
   private quickMinimumScrollPresentation(): boolean {
-    return this.p() === 0 && this.geometry().contentHeight > this.availableHeight + .1;
+    return this.p() === 0 && !readerControlExtentFits(this.geometry().contentHeight, this.availableHeight);
   }
 
   private fullOnlyScrollTranslation(): number {

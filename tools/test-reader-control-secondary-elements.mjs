@@ -28,6 +28,7 @@ if (selected.length) {
   } });
   const actor = await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
   const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+  const layoutGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
   const searchGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
   const morph = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
   const read = name => readFileSync(new URL('../entry/src/main/ets/features/reading/ui/' + name, import.meta.url), 'utf8');
@@ -203,7 +204,8 @@ if (selected.length) {
       for (scale of [1, 1.3, 1.6, 2]) for (const width of [220, 262, 286]) for (const height of [100, 190, 240]) {
         const widths = { panelWidthVp: width + 78, quickContentWidthVp: width, fullContentWidthVp: width + 52 };
         const profile = minimum.measureReaderControlReplaceMinimum(context, widths, '', '核对原规则操作', '规则名称', '匹配 → 替换', '正文', '编辑替换规则', false);
-        const owner = createReaderBuilderProbe(source, methods, deps).owner;
+        const owner = createReaderBuilderProbe(source, methods,
+          { ...deps, readerControlExtentFits: layoutGeometry.readerControlExtentFits }).owner;
         let offset = 0, input = true;
         Object.assign(owner, { minimumKey: 'current|1', minimumProfiles: new Map([['current|1', profile]]), state: { rules: Array.from({ length: 7 }, (_, id) => ({ id })), errorMessage: '' },
           localError: '', layer: '', motionProgress: 0, availableWidth: width, availableHeight: height, quickContentHeight: height,
@@ -230,8 +232,10 @@ if (selected.length) {
         if (former.list.height + .1 < profile.quick.rowHeight * 3) oldClippedSamples++;
         assert.ok(quick.list.height + .1 >= profile.quick.rowHeight * 3, 'the natural Quick list pays exactly the original first-three-row projection');
         assert.ok(quick.quickFooter.y + quick.quickFooter.height <= owner.quickFlowContentHeight() + .1);
-        assert.equal(owner.quickFlowInput(), owner.quickFlowExtra() > .1);
-        assert.equal(owner.quickScrollDelta(20, 'drag').yOffset, owner.quickFlowExtra() > .1 ? 20 : 0);
+        const quickOverflow = !layoutGeometry.readerControlExtentFits(
+          owner.quickContentHeight + owner.quickFlowExtra(), owner.quickContentHeight);
+        assert.equal(owner.quickFlowInput(), quickOverflow);
+        assert.equal(owner.quickScrollDelta(20, 'drag').yOffset, quickOverflow ? 20 : 0);
         input = false; assert.equal(owner.quickScrollDelta(20, 'drag').yOffset, 0, 'current input retirement closes Quick scroll immediately'); input = true;
         offset = owner.quickFlowExtra(); owner.syncQuickScroll(); owner.onQuickDidScroll();
         const anchor = offset;

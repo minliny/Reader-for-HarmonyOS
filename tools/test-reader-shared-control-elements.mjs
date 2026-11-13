@@ -51,6 +51,7 @@ const gestures = { PanGesture: gesture, TapGesture: gesture, GestureGroup: gestu
 function fixture(text = source) {
   const events = [];
   if (!compiled.has(text)) compiled.set(text, createReaderBuilderProbe(text, names, { ...geometry, ...session, ...headerGeometry, ...headerTextModifier, ...gestures, readerControlMotionMs,
+    TOK_BORDER_W: readerFoundationTokens.TOK_BORDER_W,
     sourceSwitchTriggerFocusId, ScrollDirection: { Horizontal: 'horizontal' }, READER_CONTROL_EXPAND_MS: 320 }).Component);
   const Component = compiled.get(text);
   const owner = new Component(undefined, {});
@@ -68,7 +69,7 @@ function fixture(text = source) {
     geo: { moduleNavH: 80, moduleNavRadiusTop: 14 },
     ttsState: { status: 'unavailable' }, selectedMinimumProfile: () => undefined,
     minimumInputReady: () => true, hasCurrentTemporaryInput: function() { return this.temporaryLayerActive; },
-    frame: () => ({ visibility: 1, progress: 0, content: { x: 13, y: 57, width: 264 }, header: { x: 13, y: 19, width: 338, height: 30, opacity: 1 }, shell: { x: 0, y: 0, width: 364, height: 736 }, topBar: { opacity: 1 },
+    frame: () => ({ visibility: 1, progress: 0, content: { x: 13, y: 57, width: 264, height: 190 }, header: { x: 13, y: 19, width: 338, height: 30, opacity: 1 }, shell: { x: 0, y: 0, width: 364, height: 736 }, topBar: { opacity: 1 },
       brightness: { width: 46, height: 190, opacity: 1 }, navigation: { opacity: 1, height: 80 } }),
     contentTitle: () => '目录',
     readerMorePopupOptions: () => ({}), isLocalBook: () => false, setMoreMenuVisible: value => events.push(['more', value]),
@@ -642,11 +643,11 @@ for (const id of selectContractCases(cases)) {
     }
     assert.equal(chapter.nodes().find(node => node.type === 'Row').height, 54);
     assert.ok(chapter.nodes().filter(node => node.type === 'Image').every(node => node.width === 20 && node.height === 20));
-    assert.ok(chapter.owner.homeChapterCardHeight() >= 104, 'fallback card pays54 chapter and50 progress rows');
+    assert.ok(chapter.owner.homeChapterCardHeight() >= 106, 'fallback card pays54 chapter and50 progress rows plus its two native borders');
     const progress = fixture(); progress.owner.progressRow();
     assert.equal(progress.nodes().find(node => node.type === 'Row').height, 50);
     assert.equal(progress.nodes().find(node => node.type === 'Slider').height, 44);
-    assert.equal(progress.owner.homeContentMinimumHeight(), 185.438, 'same fallback minimum pays both rows, the original quick-action lane and its6gap');
+    assert.equal(progress.owner.homeContentMinimumHeight(), 187.438, 'same fallback minimum pays both rows, native card border2, quick-action lane and gap6');
     const oldFallback = source.replaceAll("this.homeMetric('chapterRowHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT))", "this.homeMetric('chapterRowHeight', READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT)");
     assert.notEqual(oldFallback, source); const unpaid = fixture(oldFallback); unpaid.owner.chapterRow();
     assert.ok(unpaid.nodes().find(node => node.type === 'Row').height - 10 < 44, 'former missing-profile chapter fallback is an actual unpaid SDK negative');

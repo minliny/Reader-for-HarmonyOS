@@ -1667,7 +1667,8 @@ async function run(id) {
         const morph = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
         for (const file of ['ReaderControlSettingsContent.ets', 'ReaderControlTtsContent.ets', 'ReaderControlAutoPageContent.ets']) {
             let offset = 60;
-            const scrolled = native(file, ['p', 'fullInput', 'syncMorphScroll', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'quickMinimumScrollInput', 'quickMinimumScrollPresentation'], morph);
+            const scrolled = native(file, ['p', 'fullInput', 'syncMorphScroll', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'quickMinimumScrollInput', 'quickMinimumScrollPresentation'],
+                { ...morph, readerControlExtentFits: geo.readerControlExtentFits });
             Object.assign(scrolled, { sourceOnly: 'none', motionProgress: 0, interactionEnabled: true, availableHeight: 80,
                 scrollMotion: morph.createReaderControlMorphScroll(), minimumQuickScrollOffset: 0, minimumScrollPath: undefined,
                 scroller: { currentOffset: () => ({ yOffset: offset }), scrollTo: request => { offset = request.yOffset; } },

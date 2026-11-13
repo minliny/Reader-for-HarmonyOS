@@ -4,7 +4,7 @@
 
 ## 目标与执行边界
 
-本轮目标覆盖15个当前整改条目、1个保留代码条目，以及可在代码侧补齐的来源登记、局部宿主检查和跨书恢复引导。15个当前整改项与1个保留项的代码开发、独立审修及选中定向回归已完成。最终候选的实际ArkTS编译、打包、指定身份签名、保数据安装和最小原生证据评估已完成，goal按该范围收口。完整页批准及全页原生验收继续开放。
+最初目标覆盖15个当前整改条目、1个保留代码条目，以及来源登记、局部宿主检查和跨书恢复引导，该批曾按其有限范围完成交付。2026-11-14用户进一步指出控制栏体系性问题，当前目标已扩大到Home及七个模块的生命周期、默认比例、真实父子组合和书架Tab根因。此前整体完成结论已撤回，当前进度和后继失败以本文末尾逐批追加的实际记录为准。当前goal继续active，完整页批准及全页原生验收继续开放。
 
 三个独立 agent 分别实施阅读、主流程、二级域，再交换阅读与主流程、二级与共享范围审修。Root 负责共享呈现、依据绑定、消息与控件登记和最终差异核对。全部代码开发及独立审修完成后再评估原生取证。
 
@@ -300,3 +300,26 @@ density3.5的原反例中，Home需求185.438不变，内容实际容量从185.4
 准确pixel-height-payment第03记录通过20组阈值样本及70组共享布局，包含七模块、五种窗口、两组内容高度、Full736与原Motion端点。既有home-single-owner只补真实生产helper端口并选跑一叶通过，其余方法域复用。reading已独立接受两源、两个测试及原反例，回执位于 `control-module-height-20261113/pixel-height-payment-results.json` 和 `reading-crossreview-pixel-height-payment.json`。后继只补实际变动Quick和未执行端点，111ab已证TTS自定义与嵌套目录行为按未变方法范围复用。
 
 高度小批正式登记已独审接受。13项目录登记各20→21，刷新两源26处pin并新增13个准确pixel test输入，270唯一输入与2324处pin成立。control21、全部typed facts、层/不变量/visual结果及另八项登记结构保持。refs本批一次PASS0，register本批一次保持39项开放诊断。当前register191970bb93aa，control仍38daef5dcf30，生产、测试与正式登记再次冻结后再产生必要后继候选。
+## Home真实组合对像素支付证明的补充纠正
+
+App449235758304的当前Home采样已实际读图。共享Quick高度由1139px增至1140px，外壳为[43,1594][1238,2734]，内容视口为[89,1696][1011,2346]。灰色滚动条仍显示，原生Scroll继续scrollable=true。像素向外取整已兑现，但此前pixel-height-payment方法探针将homeContent留空，只证明Scroll声明与producer算术，不能证明真实内容无溢出。其原局部结果保留，原生无溢出的推论撤回。后续Native立即暂停。
+
+当前真实消费链另有两处源码原因。homeChapterCardHeight的拉伸分支再次加入原导出0.001vp补偿量，得到实际Column总高viewport+0.001。chapterProgress使用reader-card上下各1vp边框，producer与Card最小高度遗漏2vp，当前进度行越过卡片下边界。短窗第三子项实际是44vp动作区与6vp新增间距，旧minimum额外52vp在总量上偶然补偿另一层遗漏，同时Card拉伸未扣第三子项，仍可能产生重复占位。
+
+修复范围限定于Home实际producer和consumer统一计算Card外盒、内部行、两个间距与短窗动作区。完整SDK组合需装配homeContent、chapterProgress、两行、Slider、quickActionPanel及实际ReaderPanelFrame边框，分别拒绝旧0.001拉伸与漏边框负例。共享Geometry物理像素修复及其阈值证据按原范围复用，其他七模块由独立审修继续核对组合责任。原书签未决记录核对与继续仍为0。
+
+### 真实Home组合与模块滚动资格补修
+
+Home producer目前单独支付章节卡上下2vp边框，默认最小内容为187.438vp。卡片先支付真实两行和边框，再在原108.563vp优选值内消费视口剩余空间。短窗动作区44vp及新增6vp间距共50vp，由同一常量沿共享测量和实际Builder支付。准确home-composition覆盖四字号、两种顶部条件和五个视口的40组真实SDK子树声明，包含实际PanelFrame与Slider，旧0.001伸展、漏边框和原Card越界三条负控均被拒。当前pixel-height-payment叶同步从新producer得到327.438vp总需求，density3.5时支付327.714286vp，20阈值和70个共享布局按当前输入通过。原approved-elements仅选该case维护真实border和frame端口后通过。
+
+逐模块组合审读又追出Settings、TTS、AutoPage和Replace仍以0.1vp判断Quick滚动，而共享layout fit已采用物理像素支付和机器精度边界。四处实际消费者统一调用readerControlExtentFits，各自保留原输入、layer和Motion端点条件。文字宽度、Area去重及滚动位置去重保留原适用语义。独立新叶装配这四条实际Scroll声明与生产方法，120组合及四个旧阈值负控通过。完整Home真实原生布局和这四处Native行为仍待本批代码独审冻结后的准确候选，先前空子树结果继续只证明资格声明。
+
+### Tab首Area顺序的独立代码缺口
+
+最新449候选的ready Tab正常，历史523首装扇形因果仍OPEN。同actor离线SDK追出另一条可重现链。materialRadius使用采纳的实际Area，requiresChildClip原先与68vp预算盒严格比较，首Area微高于68即转clip=true；后继精确68又会被0.1vp几何去重忽略，使相同最终尺寸按首次回执顺序保留不同clip。实际两胶囊曲线在这些微高父盒内完整包含，微量增高导致的clip变化缺少几何依据。
+
+当前修复让同identity的radius与包含判定使用同一份实际Area盒，真实父预算包含itemHeight、上下8vp padding和1vp border。旧identity继续按当前Prop预算保守裁定。原0.1vp State去重保留，只在真实付款或包含分类跨界时采纳回执。新area-adoption-order准确叶覆盖同actor零宽到有效材料、微量Area顺序、真实边界双向跨越、旧字体shape、两或三tabs和5760个实际子曲线样本，含五个源负控。此结果证明当前参数与采纳缺口，历史fan仍需坏态同期RS及drawing证据。
+
+Home、四Quick比较及Tab三个域已完成交叉独审，全部生产和测试冻结。正式register为a891ffcf，13目录族各revision21→22，刷新84个既有pin并增加8个准确Quick测试绑定，271个唯一输入及2332处pin。control21保持38daef5d原字节。全部21项layer、typed facts、knownGap、evidence、results及invariants保持，另外8个登记完整保持。refs01为PASS且零诊断，register01为FAIL且与原39项完整诊断数组相等。Tab按真实根标签caller归入独立输入清单，当前21项正式页面登记的消费关系保持原范围。
+
+独审记录分别为home-composition的41f606fc、Quick的c216e741、Tab的d8219ef4及正式绑定的a5ac0e96。Float32离线审读存在VP累计微量超差模型，物理像素累计模型则恰好支付；当前本地证据未确定原生实际累计路径，该模型保留为准确原生Home点的待答项。后继只制作一份必要候选，沿已有保数据路径安装，并核对真实Home及其余五模块端点。原目录四帧稳定与Full TTS四按钮完整显示在原准确源码范围内复用，变更后的共享Quick盒单独核对。

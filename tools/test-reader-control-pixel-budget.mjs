@@ -9,11 +9,121 @@ import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const definitions = {
+  'home-composition': {
+    description: 'Actual complete SDK Home Column/card/rows/action/short-lane declarations independently pay borders and cannot fill past the Scroll viewport',
+    resources: [],
+  },
   'pixel-height-payment': {
     description: 'Shared Quick/Full height pays outward requirements within inward physical capacity, with actual Home Scroll overflow declaration',
     resources: [],
   },
 };
+
+function homeComposition(source, geometry, control) {
+  const start = source.indexOf('        Scroll() { this.homeContent(); }', source.indexOf('private controlContent()'));
+  const finish = source.indexOf(';', source.indexOf('.enableScrollInteraction', start)) + 1;
+  const statement = source.slice(start, finish);
+  const names = ['regressionHome', 'measureHomeForm', 'homeContent', 'chapterProgress', 'chapterRow', 'progressRow',
+    'quickActionPanel', 'quickAction', 'shortWindowActions', 'homeChapterCardHeight', 'homeContentMinimumHeight',
+    'homeMetric', 'homeProfileMetric', 'presentedHomeChapterTitle', 'presentedHomeTotalChapters'];
+  function render(text, scale, viewport, topBarVisible) {
+    const candidate = text.replace('  @Builder\n  private controlContent() {',
+      `  @Builder\n  private regressionHome() { ${statement} }\n  @Builder\n  private controlContent() {`);
+    const owner = createReaderBuilderProbe(candidate, names, {
+      ...control, ...readerFoundationTokens, ...readerTypographyRoles,
+      readerControlExtentFits: geometry.readerControlExtentFits,
+      ScrollDirection: { Horizontal: 'horizontal' }, sourceSwitchTriggerFocusId: () => 'source-trigger',
+      measureReaderControlText(_context, value, style) {
+        return { heightVp: (style === readerTypographyRoles.TYPE_READER_CONTROL_CHAPTER_TITLE ? 34 :
+          style === readerTypographyRoles.TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL ? 12.5 : 13) * scale,
+        singleLineWidthVp: Math.min(80, Math.max(1, [...value].length * 6 * scale)), fitsWidth: true };
+      },
+    }).owner;
+    Object.assign(owner, { chapterTitle: 'Chapter One', totalChapters: 1, minimumIdentity: '', appScheme: 'day',
+      currentLayout: () => ({ topBarVisible, quickPanelHeight: viewport + 140 }),
+      frame: () => ({ progress: 0, content: { width: 264, height: viewport } }),
+      selectedMinimumProfile: () => undefined, progressInputEnabled: () => true, canStepChapter: () => true,
+      controlActionScope: () => 'current', controlActionHandler: callback => callback,
+      progressChangeHandler: () => () => {}, effectiveProgressPercent: () => 0, quickActionIcon: icon => icon,
+      shortWindowActionInput: () => true, isLocalBook: () => true, readerMorePopupOptions: () => ({}),
+      onPreviousChapter() {}, onNextChapter() {}, onExitReading() {}, onSourceSwitch() {}, setMoreMenuVisible() {},
+      promoteSearch() {}, promoteAutoPage() {}, onOpenReplace() {},
+    });
+    const profile = owner.measureHomeForm(264);
+    owner.selectedMinimumProfile = () => ({ quick: profile, full: profile });
+    owner.regressionHome();
+    const nodes = [...owner.nodes.values()];
+    const scroll = nodes.find(node => node.type === 'Scroll');
+    const column = nodes.find(node => node.type === 'Column' && node.create?.space === 6);
+    const card = nodes.find(node => node.type === 'Column' && node.border?.width === 1);
+    const chapter = nodes.find(node => node.type === 'Row' && node.padding?.top === 10);
+    const progress = nodes.find(node => node.type === 'Row' && node.padding?.top === 6);
+    const actions = nodes.find(node => node.type === 'Row' && node.border?.width === 1);
+    const slider = nodes.find(node => node.type === 'Slider');
+    const short = nodes.filter(node => node.type === 'Scroll').at(1);
+    assert.ok(scroll && column && card && chapter && progress && actions && slider,
+      'actual Scroll→Home Column→framed Card/real Rows/Slider and framed quick actions all emit');
+    const border = card.border.width * 2;
+    const shortHeight = topBarVisible ? 0 : short.height;
+    const gapCount = topBarVisible ? 1 : 2;
+    const natural = card.height + actions.height + column.create.space * gapCount + shortHeight;
+    const required = chapter.height + progress.height + border + actions.height + column.create.space * gapCount + shortHeight;
+    assert.ok(card.height + 1e-10 >= chapter.height + progress.height + border,
+      'real card content pays child rows plus both native border sides');
+    assert.ok(chapter.height - chapter.padding.top >= profile.chapterTitleHeight,
+      'chapter row pays its actual top padding and declared title height');
+    assert.ok(progress.height - progress.padding.top >= slider.height,
+      'progress row pays its actual top padding and44 slider height');
+    assert.ok(Math.abs(owner.homeContentMinimumHeight() - required) < 1e-9,
+      'producer/fallback minimum agrees with independently summed emitted children, borders and Column spacing');
+    assert.equal(geometry.readerControlExtentFits(natural, viewport), geometry.readerControlExtentFits(required, viewport),
+      'real Home native declaration sum cannot exceed a viewport that pays its natural minimum');
+    assert.equal(scroll.enableScrollInteraction, !geometry.readerControlExtentFits(natural, viewport),
+      'actual Scroll predicate agrees with actual emitted parent-child composition');
+    assert.equal(scroll.scrollBar, undefined, 'outer Scroll keeps its original default scrollbar');
+    assert.ok(actions.height - actions.border.width * 2 >= 55.438 + profile.actionLabelHeight - 13,
+      'quick action frame pays its real button height inside native borders');
+    if (!topBarVisible) {
+      assert.equal(shortHeight, 44); assert.equal(short.scrollBar, 'BarState.Off');
+      assert.equal(required - profile.minimumHeight, 50, 'third child44 and second Column gap6 pay exactly50');
+    }
+    return { owner, profile, viewport, natural, required, cardHeight: card.height, cardBorder: border,
+      chapterHeight: chapter.height, progressHeight: progress.height, actionHeight: actions.height, gapCount,
+      shortHeight, scrollEnabled: scroll.enableScrollInteraction };
+  }
+  const samples = [];
+  for (const scale of [1, 1.3, 1.6, 2]) for (const topBar of [true, false]) {
+    for (const viewport of [120, 657 / 3.5, 190, 270, 666]) samples.push(render(source, scale, viewport, topBar));
+  }
+  const normal = render(source, 1, 190, true);
+  assert.equal(normal.natural, 190, 'default190 viewport preserves its complete authored arrangement without extra.001');
+  const current = render(source, 1, 657 / 3.5, true);
+  assert.equal(current.scrollEnabled, false);
+  const begin = source.indexOf('  private homeChapterCardHeight(): number {');
+  const end = source.indexOf('\n  @Builder\n  private chapterProgress()', begin);
+  const oldCard = `  private homeChapterCardHeight(): number {
+    return Math.max(this.homeMetric('chapterRowHeight', 54) + this.homeMetric('progressHeight', 50),
+      Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT, this.frame().content.height) +
+      (READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT + READER_CONTROL_HOME_QUICK_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP - READER_CONTROL_HOME_TOP_ROW_HEIGHT) -
+      this.homeMetric('actionHeight', READER_CONTROL_HOME_QUICK_ACTION_HEIGHT) - READER_CONTROL_HOME_SECTION_GAP);
+  }
+`;
+  const oldConsumer = source.slice(0, begin) + oldCard + source.slice(end);
+  assert.throws(() => render(oldConsumer, 1, 190, true), /native declaration sum cannot exceed/,
+    'old viewport+.001 consumer fails the independently emitted native child sum');
+  assert.throws(() => render(oldConsumer, 1, 650 / 3.5, true), /real card content pays/,
+    'old card child overflow matches the installed449 native counterexample');
+  const missingBorder = source.replace('minimumHeight: chapterHeight + progressHeight + TOK_BORDER_W * 2 + actionHeight',
+    'minimumHeight: chapterHeight + progressHeight + actionHeight');
+  assert.notEqual(missingBorder, source);
+  assert.throws(() => render(missingBorder, 1, 657 / 3.5, true), /independently summed emitted children/,
+    'omitting parent border from the producer is rejected by actual child declarations');
+  console.log(JSON.stringify({ kind: 'home-composition', samples: samples.length, defaultViewport190: normal.natural,
+    currentMinimum: current.required, currentCardHeight: current.cardHeight, currentPaidContent: current.viewport,
+    cardBorder: current.cardBorder, shortLane: 50, oldViewportPlusPoint001Rejected: true, oldUnpaidBorderRejected: true,
+    nativeLayoutAndRaster: 'NOT_RUN' }));
+}
+
 for (const id of selectContractCases(definitions)) {
   registerHooks({ resolve(specifier, context, next) {
     try { return next(specifier, context); }
@@ -31,6 +141,11 @@ for (const id of selectContractCases(definitions)) {
   const geometrySource = read('ReaderLayoutGeometry.ts');
   const panelSource = read('ReaderControlPanel.ets');
   const deps = { ...metricsApi, ...control, ...motion };
+  if (id === 'home-composition') {
+    homeComposition(panelSource, geometry, control);
+    recordContractCasePass(id);
+    continue;
+  }
   const height = pureModuleProbe(geometrySource, 'ReaderLayoutGeometry.ts', deps,
     ['controlHeightWithin', 'pixelWithin']);
   const near = (actual, expected, text) => assert.ok(Math.abs(actual - expected) < 1e-9, `${text}: ${actual}/${expected}`);
@@ -46,7 +161,7 @@ for (const id of selectContractCases(definitions)) {
   }).owner;
   Object.assign(home, { chapterTitle: 'Chapter One', totalChapters: 1 });
   const homeProfile = home.measureHomeForm(264);
-  near(homeProfile.minimumHeight, 185.438, 'actual Home producer minimum floor');
+  near(homeProfile.minimumHeight, 187.438, 'actual Home producer minimum includes the card native borders');
 
   // Keep the exact shipping Scroll statement. The fixture supplies only its
   // business content slot and already-committed frame/profile metric ports.
@@ -77,10 +192,10 @@ for (const id of selectContractCases(definitions)) {
 
   const quickRequired = homeProfile.minimumHeight + 140;
   const paidQuick = height.controlHeightWithin(quickRequired, quickRequired, 700, density);
-  near(paidQuick, 1140 / density, 'physical height rounds measured requirement outward');
+  near(paidQuick, 1147 / density, 'physical height rounds measured requirement outward');
   assert.equal(nativeScroll(paidQuick - 140, homeProfile.minimumHeight).enableScrollInteraction, false);
   const oldQuick = height.pixelWithin(quickRequired, 0, 700, density);
-  near(oldQuick, 1139 / density, 'old nearest-height counterexample');
+  near(oldQuick, 1146 / density, 'old nearest-height counterexample');
   const oldStatement = scrollStatement.replace('!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height)',
     'this.frame().content.height < this.homeContentMinimumHeight()');
   assert.equal(nativeScroll(oldQuick - 140, homeProfile.minimumHeight, oldStatement).enableScrollInteraction, true,

@@ -114,15 +114,26 @@ export struct ReaderBottomTabBar {
   }
 
   private requiresChildClip(): boolean {
+    const adopted = this.currentRaisedShape();
+    const current = adopted?.identity === this.raisedShapeIdentity() ? adopted : undefined;
+    const width = current?.width ?? this.surfaceWidth;
+    const height = current?.height ?? readerFloatingTabBarHeight(this.fontScale);
+    // Current Area paint and containment share one border-box. Retained
+    // geometry from a previous input still uses the new conservative budget.
+    return this.childGeometryNeedsClip(width, height, this.materialRadius());
+  }
+
+  private childGeometryNeedsClip(width: number, height: number, radius: number): boolean {
     const count = this.items.length;
     const itemHeight = readerMainTabItemHeight(this.fontScale, false);
+    const inset = TOK_SPACE_XS + TOK_BORDER_W;
     const minimumWidth = count * Math.max(44, itemHeight) + Math.max(0, count - 1) * TOK_SPACE_XS +
-      2 * (TOK_SPACE_XS + TOK_BORDER_W);
-    const maximumRadius = Math.min(this.surfaceWidth, readerFloatingTabBarHeight(this.fontScale)) / 2;
-    // Within this paid box the child capsule caps share the parent's centers.
-    // Keep clipping until both the live width and adopted radius fit that box.
-    return count === 0 || !Number.isFinite(this.surfaceWidth) || this.surfaceWidth < minimumWidth ||
-      this.materialRadius() > maximumRadius;
+      2 * inset;
+    const minimumHeight = itemHeight + 2 * inset;
+    const precision = Number.EPSILON * Math.max(1, width, height, minimumWidth, minimumHeight) * 4;
+    return count === 0 || !Number.isFinite(width) || !Number.isFinite(height) ||
+      minimumWidth - width > precision || minimumHeight - height > precision ||
+      radius - Math.min(width, height) / 2 > precision;
   }
 
   private measurementHandler(width: number, fontScale: number): (_old: Area, area: Area) => void {
@@ -155,7 +166,9 @@ export struct ReaderBottomTabBar {
     const shape = resolveReaderRaisedShape(identity, width, height, TOK_RADIUS_PILL);
     if (shape === undefined) return;
     const previous = this.raisedShape;
-    if (previous?.identity === identity && Math.abs(previous.width - width) <= .1 && Math.abs(previous.height - height) <= .1) return;
+    if (previous?.identity === identity && Math.abs(previous.width - width) <= .1 && Math.abs(previous.height - height) <= .1 &&
+      this.childGeometryNeedsClip(previous.width, previous.height, previous.radius) ===
+        this.childGeometryNeedsClip(shape.width, shape.height, shape.radius)) return;
     this.raisedShape = shape;
   }
 }

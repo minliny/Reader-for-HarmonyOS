@@ -21,7 +21,8 @@ import { TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TY
   TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL } from '../../../ui/foundation/ReaderTypography';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
-  READER_CONTROL_BRIGHTNESS_ICON_SIZE, READER_CONTROL_BRIGHTNESS_CONTROL_GAP } from './ReaderControlGeometry';
+  READER_CONTROL_BRIGHTNESS_ICON_SIZE, READER_CONTROL_BRIGHTNESS_CONTROL_GAP,
+  READER_CONTROL_HOME_SHORT_ACTION_HEIGHT, READER_CONTROL_HOME_SECTION_GAP } from './ReaderControlGeometry';
 
 import type { ReaderControlPlaybackProfileData, ReaderControlPlaybackProfileReader } from './ReaderControlPlaybackProfile';
 
@@ -290,11 +291,12 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     const quick = input.measureHomeForm(widths.quickContentWidthVp);
     const full = input.measureHomeForm(widths.fullContentWidthVp);
     if (quick === undefined || full === undefined) return undefined;
+    const homeShortReserve = topBarVisible ? 0 : READER_CONTROL_HOME_SHORT_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP;
     let minimum: ReaderControlModuleMinimum | undefined;
     let prepared: ReaderControlPreparedModuleMinimum | undefined;
     if (module === 'home') {
-      minimum = { module: 'home', quick: { heightVp: quick.minimumHeight + (topBarVisible ? 0 : 52), minWidthVp: quick.minWidth, fits: quick.fits },
-        full: { heightVp: full.minimumHeight + (topBarVisible ? 0 : 52), minWidthVp: full.minWidth, fits: full.fits } };
+      minimum = { module: 'home', quick: { heightVp: quick.minimumHeight + homeShortReserve, minWidthVp: quick.minWidth, fits: quick.fits },
+        full: { heightVp: full.minimumHeight + homeShortReserve, minWidthVp: full.minWidth, fits: full.fits } };
     } else {
       if (input.moduleFacts !== undefined) {
         prepared = measureReaderControlModuleMinimum(context, widths, module, input.moduleFacts);
@@ -340,9 +342,9 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
         brightnessAutoWidthVp: automaticSize },
       sharedShell: {
         minimum: { module: 'home',
-          quick: { heightVp: Math.max(quick.minimumHeight + (topBarVisible ? 0 : 52), brightnessMinimum),
+          quick: { heightVp: Math.max(quick.minimumHeight + homeShortReserve, brightnessMinimum),
             minWidthVp: quick.minWidth, fits: quick.fits && automaticSize <= READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2 },
-          full: { heightVp: full.minimumHeight + (topBarVisible ? 0 : 52), minWidthVp: full.minWidth, fits: full.fits } },
+          full: { heightVp: full.minimumHeight + homeShortReserve, minWidthVp: full.minWidth, fits: full.fits } },
         chrome: { topBarVisible: topBarVisible, topBarHeightVp: input.topBarHeightVp,
           quickReserveVp: 29 + quickGap + normalNavigationHeight + 13,
           fullReserveVp: 19 + sharedHeaderHeight + 8 + 13, navigationHeightVp: normalNavigationHeight,

@@ -31,7 +31,7 @@ import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
 import type { ReaderControlForm } from './ReaderControlSessionState';
-import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum, ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
+import { readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
 
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileData,
   type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
@@ -554,7 +554,7 @@ export struct ReaderControlTtsContent {
   private quickMinimumScrollPresentation(): boolean {
     const profile = this.selectedMinimum();
     return this.p() === 0 && profile !== undefined &&
-      profile.minimum.quick.heightVp > this.availableHeight + .1;
+      !readerControlExtentFits(profile.minimum.quick.heightVp, this.availableHeight);
   }
 
   private fullOnlyScrollTranslation(): number {

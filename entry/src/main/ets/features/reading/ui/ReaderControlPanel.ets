@@ -129,6 +129,7 @@ import {
   READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT,
   READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,
   READER_CONTROL_HOME_SECTION_GAP,
+  READER_CONTROL_HOME_SHORT_ACTION_HEIGHT,
   READER_CONTROL_HOME_TOP_ROW_HEIGHT,
   READER_CONTROL_TOP_BAR_HEIGHT,
   READER_CONTROL_PROGRESS_MAX,
@@ -1019,7 +1020,7 @@ export struct ReaderControlPanel {
     const profile: ReaderControlHomeFormProfile = { chapterTitleHeight: titleHeight,
       chapterRowHeight: chapterHeight, progressHeight: progressHeight, percentWidth: percentWidth,
       countWidth: countWidth, actionLabelHeight: actionLabelHeight, actionHeight: actionHeight,
-      minimumHeight: chapterHeight + progressHeight + actionHeight + READER_CONTROL_HOME_SECTION_GAP,
+      minimumHeight: chapterHeight + progressHeight + TOK_BORDER_W * 2 + actionHeight + READER_CONTROL_HOME_SECTION_GAP,
       minWidth: minWidth, fits: width >= minWidth };
     return profile;
   }
@@ -2458,7 +2459,7 @@ export struct ReaderControlPanel {
     Row({ space: 8 }) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back')).width(24).height(24);
-      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+      }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
         .enabled(this.shortWindowActionInput() && !this.temporaryLayerActive && !this.moreMenuVisible)
         .accessibilityText('退出阅读，返回上一页')
         .onClick(this.controlActionHandler((): void => {
@@ -2472,7 +2473,7 @@ export struct ReaderControlPanel {
             .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp).lineHeight(TYPE_READER_CONTROL_SOURCE_ACTION.lineHeightFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
         }.justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
-      }.width(76).height(44).padding(0).backgroundColor(Color.Transparent)
+      }.width(76).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control-short'))
         .enabled(this.shortWindowActionInput() && !this.temporaryLayerActive && !this.moreMenuVisible && !this.isLocalBook())
         .accessibilityText('换源')
@@ -2482,15 +2483,15 @@ export struct ReaderControlPanel {
         }));
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots')).width(20).height(20);
-      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+      }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0).backgroundColor(Color.Transparent)
         .enabled(this.shortWindowActionInput() && (!this.temporaryLayerActive || this.moreMenuVisible))
         .accessibilityText('更多')
         .onClick(this.controlActionHandler((): void => {
           if (this.shortWindowActionInput() && (!this.temporaryLayerActive || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
         }))
         .bindPopup(this.moreMenuVisible && !this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
-    }.width(Math.max(180, this.frame().content.width)).height(44).justifyContent(FlexAlign.End);
-    }.width(this.frame().content.width).height(44).scrollable(ScrollDirection.Horizontal)
+    }.width(Math.max(180, this.frame().content.width)).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).justifyContent(FlexAlign.End);
+    }.width(this.frame().content.width).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None).enableScrollInteraction(this.frame().content.width < 180).clip(true);
   }
 
@@ -2559,21 +2560,16 @@ export struct ReaderControlPanel {
 
   private homeContentMinimumHeight(): number {
     return this.homeMetric('minimumHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT) + Math.max(50, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT) +
-      READER_CONTROL_HOME_QUICK_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP) + (this.currentLayout().topBarVisible ? 0 : 52);
+      TOK_BORDER_W * 2 + READER_CONTROL_HOME_QUICK_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP) +
+      (this.currentLayout().topBarVisible ? 0 : READER_CONTROL_HOME_SHORT_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP);
   }
 
   private homeChapterCardHeight(): number {
-    const viewportHeight = this.frame().content.height;
-    if (this.selectedMinimumProfile() === undefined &&
-      (this.currentLayout().quickPanelHeight === undefined || viewportHeight >= READER_CONTROL_HOME_TOP_ROW_HEIGHT)) {
-      return READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT;
-    }
-    return Math.max(this.homeMetric('chapterRowHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT)) +
-      this.homeMetric('progressHeight', Math.max(50, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT)),
-      Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT, viewportHeight) +
-        (READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT + READER_CONTROL_HOME_QUICK_ACTION_HEIGHT +
-          READER_CONTROL_HOME_SECTION_GAP - READER_CONTROL_HOME_TOP_ROW_HEIGHT) -
-        this.homeMetric('actionHeight', READER_CONTROL_HOME_QUICK_ACTION_HEIGHT) - READER_CONTROL_HOME_SECTION_GAP);
+    const minimum = this.homeMetric('chapterRowHeight', Math.max(54, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT)) +
+      this.homeMetric('progressHeight', Math.max(50, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT)) + TOK_BORDER_W * 2;
+    const trailing = this.homeMetric('actionHeight', READER_CONTROL_HOME_QUICK_ACTION_HEIGHT) + READER_CONTROL_HOME_SECTION_GAP +
+      (this.currentLayout().topBarVisible ? 0 : READER_CONTROL_HOME_SHORT_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP);
+    return Math.max(minimum, Math.min(READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT, this.frame().content.height - trailing));
   }
 
   @Builder

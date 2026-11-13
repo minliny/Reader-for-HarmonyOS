@@ -32,7 +32,7 @@ import { readerControlUnit } from './ReaderControlActorGeometry';
 import { sampleReaderControlReplace, readerControlReplaceEndpoint, type ReaderControlReplaceFrame, type ReaderControlReplaceMinimumProfile } from './ReaderControlReplaceGeometry';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 
-import type { ReaderControlCandidateWidths, ReaderControlModuleMeasurer, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
+import { readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlModuleMeasurer, type ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
 
 class ReaderReplaceEditorFocusFrame extends FrameCallback {
   private readonly applyFocus: () => void;
@@ -279,7 +279,8 @@ export struct ReaderControlReplaceContent {
     return this.availableHeight + this.quickFlowExtra() * (1 - readerControlUnit(this.motionProgress));
   }
   private quickFlowInput(): boolean {
-    return this.quickInput() && this.layer === '' && this.quickFlowExtra() > .1;
+    return this.quickInput() && this.layer === '' &&
+      !readerControlExtentFits(this.quickContentHeight + this.quickFlowExtra(), this.quickContentHeight);
   }
   private syncQuickScroll(): void {
     const offset = this.quickScroller.currentOffset()?.yOffset;

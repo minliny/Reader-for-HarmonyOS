@@ -34,7 +34,7 @@ import { ReaderControlTimerWheel } from './ReaderControlTimerWheel';
 import { FrameCallback } from '@kit.ArkUI';
 import { prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
 
-import type { ReaderControlCandidateWidths, ReaderControlModuleMeasurer, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
+import { readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlModuleMeasurer, type ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileReceipt,
   type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileData } from './ReaderControlPlaybackProfile';
 
@@ -392,7 +392,7 @@ export struct ReaderControlAutoPageContent {
   private quickMinimumScrollPresentation(): boolean {
     const profile = this.minimumProfile();
     return this.p() === 0 && profile !== undefined &&
-      profile.minimum.quick.heightVp > this.availableHeight + .1;
+      !readerControlExtentFits(profile.minimum.quick.heightVp, this.availableHeight);
   }
   private fullOnlyScrollTranslation(): number {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
