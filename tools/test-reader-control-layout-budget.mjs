@@ -6,6 +6,7 @@ const definitions = {
     'manga-tts-sdk': { description: 'Manga dock/preferences and TTS configuration actual SDK targets, scale and busy identity', resources: [] },
     'header-home-sdk': { description: 'Actual reading topbar and home native frames, scalable title/action/slider parents with old fixed-height negatives', resources: [] },
     'brightness-sdk': { description: 'Constrained brightness rail Scroll, circular measured paint inside paid targets, cap centres, actual Pan/Tap declarations and same-owner resize', resources: [] },
+    'rounded-parent-sdk': { description: 'Measured brightness child containment keeps unpaid crops and removes only a redundant outer mask; empty font paint keeps its separate motion mask.', resources: [] },
 };
 for (const id of selectContractCases(definitions)) {
     await run(id);
@@ -829,6 +830,215 @@ async function run(id) {
         assert.ok(52.563 - 10 < 44 && 30 - 6 < 44, 'old home rows cannot pay44');
         return;
     }
+    if (id === 'rounded-parent-sdk') {
+        const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+        const properties = createArkUIPropertyRuntimeProbe();
+        const gesture = new Proxy({}, { get: () => () => gesture });
+        const gestureBindings = { PanGesture: gesture, TapGesture: gesture, GestureGroup: gesture, LongPressGesture: gesture,
+            PanDirection: { Vertical: 'vertical' }, GestureMode: { Exclusive: 'exclusive' }, GesturePriority: { Low: 'low' },
+            globalThis: { Gesture: gesture, GestureGroup: gesture, PanGesture: gesture, TapGesture: gesture, LongPressGesture: gesture } };
+        const methods = ['layout', 'minimumReady', 'minimumIdentity', 'minimumKey', 'contentMotionProgress',
+            'onLayoutChanged', 'onMinimumIdentityChanged', 'onMinimumAvailabilityChanged', 'publishSelectedPlaybackProfile',
+            'minimumInputReady', 'brightnessRequiresChildClip', 'brightnessRail', 'brightnessRailContent',
+            'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness'];
+        let receiptCurrent = true, automaticActions = 0;
+        const frame = { brightness: { width: 46, height: 190, opacity: 1 } };
+        const probe = createReaderBuilderProbe(ui('ReaderControlPanel.ets'), methods, {
+            ...deps, ...geo, ...properties.sdk, ...gestureBindings, DEBUG: false,
+        }, properties.hooks);
+        const owner = probe.owner;
+        Object.assign(owner, {
+            isExpanded: () => false, moreMenuVisible: false, runtime: undefined,
+            syncProgressInput() {}, cancelBrightnessDrag() {}, publishMinimumMeasurer() {},
+            minimumModule: () => 'home', selectedMinimumProfile: () => undefined, runtimeMounted: false,
+        });
+        Object.assign(owner, {
+            appScheme: 'day', minimumIdentity: 'current', minimumKey: 'current|1', minimumReady: true,
+            minimumReceiptCurrent: () => receiptCurrent, frame: () => frame,
+            brightnessPercent: 50, brightnessPreviewPercent: -1, brightnessAutomatic: false,
+            temporaryLayerActive: false, brightnessDragging: false, runtime: undefined,
+            onBrightnessAuto: () => automaticActions++,
+        });
+        function measuredLayout(fontScale, viewportWidth = 366, viewportHeight = 844) {
+            scale = fontScale;
+            const metrics = createDefaultReaderWindowMetrics();
+            metrics.windowRect.width = viewportWidth; metrics.windowRect.height = viewportHeight;
+            metrics.systemFontScale = fontScale;
+            const initial = geo.resolveReaderControlLayout(viewportWidth, viewportHeight, false, metrics);
+            const candidateWidths = geo.readerControlCandidateWidths(viewportWidth, viewportHeight, false, metrics)[0];
+            const nativeBar = deps.readerReadingTopBarHeight(context, 'reading', 54);
+            const measured = minimum.measureReaderControlMinimum({ context, headerInter: false, title: '阅读控制',
+                identity: 'current', metricsRevision: 1, topBarHeightVp: nativeBar,
+                availableWithTopBarHeightVp: initial.fullPanelHeight + initial.fullPanelTop -
+                    Math.max(88, initial.topBarTop + nativeBar + 8),
+                measureHomeForm: () => ({ minimumHeight: 170, minWidth: 100, fits: true }) },
+                'home', candidateWidths, 'current|1');
+            assert.ok(measured);
+            return geo.resolveReaderControlLayout(viewportWidth, viewportHeight, false, metrics, 0, [measured.candidate]);
+        }
+        function deliver(patch) {
+            owner.updateStateVars({ layout: owner.layout, minimumReady: owner.minimumReady,
+                minimumIdentity: owner.minimumIdentity, minimumKey: owner.minimumKey, ...patch });
+            properties.flush();
+        }
+        owner.layout = measuredLayout(1);
+        properties.flush();
+        owner.brightnessRail();
+        const scroll = nodes(owner, 'Scroll')[0];
+        const column = nodes(owner, 'Column')[0];
+        const marker = nodes(owner, 'Stack').find(node => node.border?.width === 1);
+        const track = nodes(owner, 'Stack').find(node => node.borderRadius === 4);
+        const automatic = nodes(owner, 'Button')[0];
+        const recordedIds = [...owner.nodes.keys()];
+        let samples = 0, motionSamples = 0;
+        for (const fontScale of [1, 1.3, 1.6, 2]) {
+            const layout = measuredLayout(fontScale);
+            const expectedSize = Math.max(20, 13 * fontScale + 2);
+            assert.equal(layout.contentBudget.brightnessAutoWidthVp, expectedSize);
+            assert.equal(layout.contentBudget.brightnessAutoHeightVp, expectedSize);
+            deliver({ layout, minimumReady: true });
+            for (const viewport of [[366, 844], [568, 320]]) {
+                const actualLayout = measuredLayout(fontScale, ...viewport);
+                deliver({ layout: actualLayout });
+                const bounds = motion.readerControlMotionBounds(actualLayout.fullPanelWidth, actualLayout.fullPanelHeight,
+                    actualLayout.dockBottomGap, actualLayout.quickPanelHeight, actualLayout.contentBudget);
+                for (const progress of [0, .25, .5, .75, 1]) {
+                    frame.brightness = motion.sampleReaderControlMotionComposition({ visibilityProgress: 1, expansionProgress: progress }, bounds).brightness;
+                    owner.contentMotionProgress = progress; properties.flush(); owner.replay();
+                    assert.equal(column.clip, false, 'actual admitted normal/short motion geometry pays the same contained Column');
+                    motionSamples++;
+                }
+            }
+            deliver({ layout });
+            for (const height of [0, 20, 44, 80, 190]) for (const progress of [0, .25, .5, .75, 1]) {
+                frame.brightness = { width: 46, height, opacity: 1 - progress };
+                owner.contentMotionProgress = progress;
+                properties.flush();
+                owner.replay();
+                assert.equal(column.clip, height < 44, 'only paid current frames omit the decorative outer crop');
+                assert.equal(scroll.clip, true, 'the short-window Scroll remains the live viewport crop');
+                assert.equal(track.clip, true, 'the percentage fill keeps its rounded8vp crop');
+                assert.equal(track.width, 8);
+                assert.equal(marker.width, expectedSize); assert.equal(marker.height, expectedSize);
+                assert.ok(automatic.width >= 44 && automatic.height >= 44);
+                assert.deepEqual([...owner.nodes.keys()], recordedIds, 'the same native actors survive font/short/morph samples');
+                if (height >= 44) {
+                    const sun = nodes(owner, 'Image')[0];
+                    const hit = nodes(owner, 'Stack').find(node => node.hitTestBehavior === 'HitTestMode.Block');
+                    const radius = column.width / 2;
+                    const sunCenter = 1 + sun.margin.top + sun.height / 2;
+                    const markerCenter = 1 + sun.margin.top + sun.height + hit.margin.top + hit.height +
+                        automatic.margin.top + automatic.height / 2;
+                    assert.equal(sunCenter, radius);
+                    assert.equal(markerCenter, column.height - radius);
+                    assert.ok(2 * (sun.width / 2) ** 2 <= radius ** 2, 'the fixed sun rectangle lies in the top circular cap');
+                    assert.ok((marker.width / 2) ** 2 + (marker.height / 2) ** 2 <= radius ** 2,
+                        'the full measured A rectangle, including its glyph, lies in the bottom cap');
+                    assert.ok(1 + sun.margin.top + sun.height + hit.margin.top >= radius);
+                    assert.ok(1 + sun.margin.top + sun.height + hit.margin.top + hit.height <= column.height - radius,
+                        'the track lies entirely in the straight span');
+                }
+                samples++;
+            }
+        }
+        frame.brightness = { width: 46, height: 190, opacity: 1 };
+        deliver({ layout: measuredLayout(2), minimumReady: false });
+        assert.equal(column.clip, true, 'actual minimumReady Prop retirement restores the original crop');
+        deliver({ minimumReady: true });
+        assert.equal(column.clip, false, 'the same Row observes the current minimum Prop');
+        automatic.onClick(); assert.equal(automaticActions, 1);
+        receiptCurrent = false; owner.replay();
+        assert.equal(column.clip, true); automatic.onClick(); assert.equal(automaticActions, 1);
+        receiptCurrent = true;
+        const valid = measuredLayout(1);
+        for (const [width, height] of [[undefined, 20], [20, undefined], [0, 20], [45, 20], [33, 33], [NaN, 20]]) {
+            deliver({ layout: { ...valid, contentBudget: { ...valid.contentBudget,
+                brightnessAutoWidthVp: width, brightnessAutoHeightVp: height } } });
+            assert.equal(column.clip, true, 'missing, invalid or uncontained measured boxes keep clipping');
+        }
+        deliver({ layout: valid });
+        frame.brightness.width = 0; owner.replay(); assert.equal(column.clip, true, 'an unpaid morph width keeps clipping');
+        frame.brightness.width = 46;
+        const contentHeight = owner.brightnessContentHeight;
+        owner.brightnessContentHeight = () => 100; owner.replay(); assert.equal(column.clip, true, 'insufficient content height keeps clipping');
+        owner.brightnessContentHeight = contentHeight;
+        deliver({ minimumIdentity: '' });
+        assert.equal(column.clip, true, 'legacy or missing minimum identity keeps clipping');
+        deliver({ minimumIdentity: 'current' }); assert.equal(column.clip, false);
+
+        const appearanceState = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+        const renderStyle = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+        const outerClip = { identity: 'unchanged-font-motion-mask' };
+        const appearanceOwner = native('ReaderControlAppearanceContent.ets', ['fontCell'], {
+            ...appearanceState, ...renderStyle, ...gestureBindings,
+        });
+        let chosen = '';
+        Object.assign(appearanceOwner, {
+            snapshot: appearanceState.createDefaultReaderAppearanceSnapshot(), appThemeScheme: 'day',
+            fontActor: () => ({ width: 72, height: 44, opacity: 1 }), activeFont: () => true,
+            visiblePreviewFamily: () => 'ReaderNotoSansSCUIBold', presentation: () => ({ contentOpacity: 1, contentBlur: 0 }),
+            fontPreviewReady: () => true, sharedClip: () => outerClip, fontCellPosition: () => ({ x: 0, y: 0 }),
+            draggedFontId: '', suppressFontClick: false, fontInput: () => true,
+            onFontChange: font => { chosen = font; },
+        });
+        appearanceOwner.fontCell('sans');
+        const paint = nodes(appearanceOwner, 'Row')[0], outer = nodes(appearanceOwner, 'Stack')[0];
+        assert.equal(paint.clip, false); assert.equal(paint.borderRadius, 12);
+        assert.equal(paint.width, 72); assert.equal(paint.height, 44);
+        assert.equal(paint.hitTestBehavior, 'HitTestMode.None');
+        assert.equal(outer.clipShape, outerClip, 'the unpainted motion viewport keeps its original path');
+        outer.onClick(); assert.equal(chosen, 'sans');
+        const source = ui('ReaderControlAppearanceContent.ets');
+        const tree = compiler.ts.createSourceFile('Appearance.ets', source, compiler.ts.ScriptTarget.Latest, true,
+            compiler.ts.ScriptKind.ETS, compiler.options);
+        const component = tree.statements.find(node => node.members?.some(member => member.name?.getText(tree) === 'fontCell'));
+        const cell = component.members.find(member => member.name?.getText(tree) === 'fontCell');
+        const rowBodies = [];
+        function visit(node) {
+            if (node.kind === compiler.ts.SyntaxKind.EtsComponentExpression && node.expression.getText(tree) === 'Row')
+                rowBodies.push(node.body?.statements?.length ?? 0);
+            compiler.ts.forEachChild(node, visit);
+        }
+        visit(cell); assert.deepEqual(rowBodies, [0], 'the only painted Row has no child content to crop');
+        assert.doesNotMatch(source.slice(cell.pos, cell.end), /\.borderRadius\(12\)\.clip\(true\)/,
+            'the redundant empty rounded-parent mask cannot return');
+        const panelSource = ui('ReaderControlPanel.ets');
+        function verifyPanelSource(sourceText, frameHeight = 190, boxSize = 20) {
+            const { owner: mutant } = createReaderBuilderProbe(sourceText, ['minimumInputReady',
+                'brightnessRailContent', 'brightnessRequiresChildClip', 'brightnessContentHeight',
+                'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness'], {
+                ...deps, ...gestureBindings,
+            });
+            Object.assign(mutant, {
+                layout: { contentBudget: { quickContentHeightVp: 190, fullContentHeightVp: 190,
+                    brightnessAutoWidthVp: boxSize, brightnessAutoHeightVp: boxSize } },
+                frame: () => ({ brightness: { width: 46, height: frameHeight } }), appScheme: 'day',
+                minimumIdentity: 'current', minimumKey: 'current|1', minimumReady: true,
+                minimumReceiptCurrent: () => true, contentMotionProgress: 0,
+                brightnessPercent: 50, brightnessPreviewPercent: -1,
+            });
+            mutant.brightnessRailContent();
+            assert.equal(nodes(mutant, 'Column')[0].clip, frameHeight < 44 || boxSize > 32,
+                'the exact native material respects the paid containment domain');
+            assert.equal(nodes(mutant, 'Stack').find(node => node.borderRadius === 4).clip, true,
+                'the percentage-fill crop remains enabled');
+        }
+        verifyPanelSource(panelSource);
+        for (const [name, before, after, height, size] of [
+            ['old-parent-mask', '.clip(this.brightnessRequiresChildClip())', '.clip(true)', 190, 20],
+            ['unpaid-parent-unclipped', '.clip(this.brightnessRequiresChildClip())', '.clip(false)', 0, 20],
+            ['A-box-diagonal-unpaid', 'width * width + height * height > READER_CONTROL_BRIGHTNESS_RAIL_WIDTH * READER_CONTROL_BRIGHTNESS_RAIL_WIDTH', 'false', 190, 33],
+            ['fill-track-crop-lost', '.borderRadius(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH / 2).clip(true)',
+                '.borderRadius(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH / 2).clip(false)', 190, 20],
+        ]) {
+            assert.equal(panelSource.split(before).length - 1, 1);
+            assert.throws(() => verifyPanelSource(panelSource.replace(before, after), height, size),
+                /paid containment domain|percentage-fill crop/, `${name} must fail the actual SDK attribute contract`);
+        }
+        console.log(JSON.stringify({ kind: 'reading-rounded-parent-inputs', samples, motionSamples, productionSites: 2,
+            scrollCrop: 'RETAINED', trackCrop: 'RETAINED', fontMotionMask: 'RETAINED', nativeRaster: 'NOT_RUN' }));
+        return;
+    }
     if (id === 'brightness-sdk') {
         const metrics = createDefaultReaderWindowMetrics();
         scale = 2; metrics.systemFontScale = 2;
@@ -901,7 +1111,7 @@ async function run(id) {
         assert.equal(retiredNav.enabled, false); assert.equal(retiredNav.hitTestBehavior, 'HitTestMode.None'); assert.equal(retiredNav.accessibilityLevel, 'no-hide-descendants');
         const gestures = [];
         const gesture = new Proxy({}, { get: (_, name) => (...args) => { gestures.push({ name, args }); return gesture; } });
-        const b = native('ReaderControlPanel.ets', ['minimumInputReady', 'brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
+        const b = native('ReaderControlPanel.ets', ['minimumInputReady', 'brightnessRequiresChildClip', 'brightnessRail', 'brightnessRailContent', 'brightnessContentHeight', 'brightnessTrackHeight', 'effectiveBrightnessPercent', 'clampBrightness', 'beginBrightnessDrag', 'updateBrightnessDrag', 'finishBrightnessDrag', 'cancelBrightnessDrag', 'roundBrightness', 'commitBrightnessTap'], {
             PanGesture: gesture, TapGesture: gesture, GestureGroup: gesture, PanDirection: { Vertical: 'vertical' }, GestureMode: { Exclusive: 'exclusive' },
             GesturePriority: { Low: 'low' }, globalThis: { Gesture: gesture, GestureGroup: gesture, PanGesture: gesture, TapGesture: gesture },
         });
@@ -920,7 +1130,7 @@ async function run(id) {
         const automatic = nodes(b, 'Button')[0];
         target(automatic, 'brightness automatic');
         assert.ok(column.width >= automatic.width + 1);
-        const marker = nodes(b, 'Stack').find(node => node.borderRadius === 999 && node.border?.width === deps.TOK_BORDER_W);
+        const marker = nodes(b, 'Stack').find(node => node.border?.width === deps.TOK_BORDER_W);
         const markerId = marker.id;
         for (const fontScale of [1, 1.3, 1.6, 2]) {
             scale = fontScale;

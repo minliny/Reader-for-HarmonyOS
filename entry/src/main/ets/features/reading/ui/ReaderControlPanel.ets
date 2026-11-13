@@ -2331,6 +2331,28 @@ export struct ReaderControlPanel {
     return Math.max(this.frame().brightness.height, minimum);
   }
 
+  private brightnessRequiresChildClip(): boolean {
+    const budget = this.layout.contentBudget;
+    if (this.minimumIdentity.length === 0 || !this.minimumInputReady() ||
+      budget?.brightnessAutoWidthVp === undefined || budget.brightnessAutoHeightVp === undefined) return true;
+    const width = budget.brightnessAutoWidthVp;
+    const height = budget.brightnessAutoHeightVp;
+    const frame = this.frame().brightness;
+    const contentHeight = this.brightnessContentHeight();
+    const trackHeight = this.brightnessTrackHeight();
+    const innerWidth = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2;
+    // The measured A box, including its glyph, fits the bottom cap. The sun
+    // shares the top cap center and the fill track stays in the straight span.
+    return !Number.isFinite(width) || !Number.isFinite(height) ||
+      width < READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE || height < READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE ||
+      width > innerWidth || height > innerWidth ||
+      width * width + height * height > READER_CONTROL_BRIGHTNESS_RAIL_WIDTH * READER_CONTROL_BRIGHTNESS_RAIL_WIDTH ||
+      !Number.isFinite(frame.width) || frame.width < READER_CONTROL_BRIGHTNESS_RAIL_WIDTH ||
+      !Number.isFinite(frame.height) || frame.height < 44 ||
+      !Number.isFinite(contentHeight) || contentHeight < READER_CONTROL_BRIGHTNESS_RAIL_WIDTH ||
+      !Number.isFinite(trackHeight) || trackHeight < 44;
+  }
+
   @Builder
   private brightnessRailContent() {
     Column() {
@@ -2418,7 +2440,8 @@ export struct ReaderControlPanel {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-    .borderRadius(Math.min(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, this.brightnessContentHeight()) / 2).clip(true);
+    .borderRadius(Math.min(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, this.brightnessContentHeight()) / 2)
+    .clip(this.brightnessRequiresChildClip());
   }
 
   private brightnessTrackHeight(): number {

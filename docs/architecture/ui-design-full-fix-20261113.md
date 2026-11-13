@@ -120,3 +120,14 @@ opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416`
 当前后继撤回opaqueMaterial选项及其临时接线，shadow helper恢复91218050同字节。只在PhoneTab已支付的包含域关闭冗余父clip。域下界按原item高度、44目标、8间距、8padding和1border推导，两项1到2倍字号需要126到162vp，当前196vp满足。0宽、窄宽、无项、非法宽和尚未满足当前预算的已采用半径保持原剪裁。源字体与实际标签墨迹另行核对，child Capsule和Glyph都包含于当前父材料。
 
 准确 `phone-child-containment` 第06记录通过，36个实际SDK组合、10560个数学边界点、四个负控拒绝。真实同Row的Prop与State回放覆盖2到1倍输入过渡，旧Area拒绝，当前68vp回执采用r34后取消clip。独立审修接受该代码边界。历史opaque代码、参数结果、签名包及失败帧继续保留，当前测试由后继包含条件回归承接。新候选仍须回答实际白楔是否消失，包含计算不作为原生PASS。
+
+
+## 同类剪裁库存与最终阅读补修
+
+候选 `20261113T141413Z-34cd3bbc-355a26ef`、App `0.2.0.DEV.66c1c747d5a9` 已保数据安装并启动。标准PNG显示底栏四处白楔和断弧消失。独立复核19,560个预期胶囊内部静区像素全部为绿色，旧帧3,147个白色内部像素全部转绿。原生树导出字段中仅父Row的clip从true变false，bounds、颜色和交互字段一致。此结论覆盖当前书架状态，实际系统字号倍率尚未独立读取。
+
+全树121处直接clip调用已登记用途，其中阅读域58处，其余63处位于31个文件。库存包含true和false。独立审查保留Scroll/List视口、封面裁切、展开揭示、动态内容与过渡遮罩。阅读域另核对三个跨域入口。逐站报告位于 `native/non-reading-clip-inventory.json`、`secondary-rounded-parent-clip-review.json` 与阅读域后继报告。
+
+阅读补修两处。亮度条外Column按当前minimum回执、46vp绘制宽、44vp视口与轨道，以及A完整测量矩形的包含条件控制子树裁剪。缺失、陈旧或超预算输入保留裁剪，内部Scroll及8vp百分比轨道继续裁剪。外观字体单元的空背景Row取消冗余裁剪，文字、边框、运动PathMask和原点击owner保留。
+
+精确 `rounded-parent-sdk` 第04日志通过100个受控边界样本、40个实际layout/motion样本、四个实际Props和State更新及四个负控。独立审修从生产测量、layout resolver到SDK Builder复核。测量API采用显式受控seam，字形与新原生帧尚待最终候选核对。未重复运行既有范围外用例。

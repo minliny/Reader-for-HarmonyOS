@@ -857,7 +857,7 @@ export struct ReaderControlAppearanceContent {
         .backgroundColor(this.activeFont(font) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
         .border({ width: this.activeFont(font) ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme),
           style: font === 'import' ? BorderStyle.Dashed : BorderStyle.Solid })
-        .borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
+        .borderRadius(12).clip(false).hitTestBehavior(HitTestMode.None);
       Text(readerAppearanceFontSlotLabel(this.snapshot, font))
         .width(this.fontActor(font).width).height(this.fontActor(font).height)
         .fontFamily(this.visiblePreviewFamily(font)).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontSizeFp)
