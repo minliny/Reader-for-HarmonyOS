@@ -11832,6 +11832,15 @@
           "qualification": "QUALIFIED"
         }
       }
+    },
+    "test-recovery-notice-flow.mjs": {
+      "sourceSha256": "75466950068805476ce689a5b51102753e7c2f3b84833304ef46e201fda2f12b",
+      "cases": {
+        "reservation-boundary": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
     }
   },
   "legacy": {

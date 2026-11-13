@@ -146,7 +146,7 @@ export struct ReaderRecoveryNotice {
         lineHeight: '22fp', constraintWidth: `${width}vp`, wordBreak: WordBreak.BREAK_WORD };
       // Include the action reservation when deciding whether three lines can
       // carry this item. Clipping must never remove that reserved final line.
-      const reservation = actions > 0 && space > 0 ? ' '.repeat(Math.floor(Math.min(width, actions) / space)) : '';
+      const reservation = actions > 0 && space > 0 ? ' ' + ' '.repeat(Math.floor(Math.min(width, actions) / space)) : '';
       options.textContent += reservation;
       const full = Number(utils.measureTextSize(options).height);
       options.maxLines = 3;
@@ -154,7 +154,7 @@ export struct ReaderRecoveryNotice {
       this.clipped = full > folded + .5;
       if (this.clipped) actions += labelWidth('展开');
       this.actionsWidth = Math.min(width, actions);
-      this.reservedSpace = actions > 0 && space > 0 ? ' '.repeat(Math.floor(this.actionsWidth / space)) : '';
+      this.reservedSpace = actions > 0 && space > 0 ? ' ' + ' '.repeat(Math.floor(this.actionsWidth / space)) : '';
       this.titleLineHeight = context.px2vp(Number(utils.measureTextSize({ textContent: '字', fontSize: '14fp',
         fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400, lineHeight: '22fp' }).height));
 

@@ -578,6 +578,7 @@
     "test-reading-rolling-prefetch.mjs",
     "test-reading-session-routing.mjs",
     "test-reading-whole-book-progress.mjs",
+    "test-recovery-notice-flow.mjs",
     "test-remote-position-reader.mjs",
     "test-remote-reading-evidence.mjs",
     "test-remote-reading-flow-runtime.mjs",
