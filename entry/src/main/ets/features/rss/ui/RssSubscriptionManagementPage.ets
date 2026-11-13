@@ -96,6 +96,8 @@ export struct RssSubscriptionManagementPage {
       header: (): void => { this.backBar(); },
       nativeListItems: (): void => { this.subscriptionList(); },
       scroller: this.pageScroller,
+      boundedOverlayVisible: rssOriginalMatchesScope(this.operation?.original, 'management'),
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     });
   }
 
@@ -142,10 +144,14 @@ export struct RssSubscriptionManagementPage {
   }
 
   @Builder
-  private operationFeedback() {
+  private pendingRecovery() {
     RssOriginalRecoverySurface({ original: this.operation?.original, presentationIdentity: this.presentationIdentity, scope: 'management',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
       onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+  }
+
+  @Builder
+  private operationFeedback() {
     if (!rssOriginalMatchesScope(this.operation?.original, 'management') && this.feedbackMessage().length > 0) {
       Row({ space: TOK_SPACE_XS }) {
         Text(this.feedbackMessage())

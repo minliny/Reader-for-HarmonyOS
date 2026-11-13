@@ -91,7 +91,7 @@ export struct BookshelfSettingsPage {
     return this.mounted && (this.isInputAllowed?.() ?? true);
   }
   @Builder
-  private pendingOverlay(contentStartInset: number) {
+  private pendingRecovery() {
     Column({ space: 8 }) {
       this.settingsRecovery();
       if (this.modePending()) {
@@ -99,8 +99,7 @@ export struct BookshelfSettingsPage {
           busy: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
           onReconcile: (generation: number): void => this.retryMode(generation) });
       }
-    }.width('100%').padding({ left: 17, right: 17, top: contentStartInset })
-      .hitTestBehavior(HitTestMode.Transparent);
+    }.width('100%');
   }
   @Builder
   private settingsRecovery() {
@@ -144,7 +143,8 @@ export struct BookshelfSettingsPage {
       variant: 'settings',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
-      overlayContent: (contentStartInset: number): void => { this.pendingOverlay(contentStartInset); },
+      boundedOverlayVisible: this.settingsPending() || this.modePending(),
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     });
   }
 

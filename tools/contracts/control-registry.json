@@ -908,7 +908,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-          "symbol": "queryStacked"
+          "symbol": "searchControlsHeight"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
@@ -930,9 +930,9 @@
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "controlButtonLabel(search/top/bottom/sort)",
+      "accessibleNameSource": "ReaderDirectoryToolbar.toolLabel(search/top/bottom/sort)",
       "status": "partial",
-      "knownGap": "Actual44x44 non-overflow action carriers contain original32 paint, with5vp spacing. Actual actor width selects an independent query row when its44 input plus tools cannot fit. SDK carrier/parent checks pass; native hit/focus remain OPEN."
+      "knownGap": "At least44vp native action targets contain the original32vp paint and16vp glyph for the full-directory role. Query and navigation groups use12vp separation and4vp navigation spacing. Actual editable width pays39vp inner field chrome plus the production-font text minimum. Shared row height, list budget and first-frame fallback grow together. Focused SDK checks pass; native hit/focus remain OPEN."
     },
     {
       "controlId": "directory-tabs-control",

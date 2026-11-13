@@ -180,13 +180,13 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfManagementPage.ets#BookshelfManagementPage.pendingOverlay::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfManagementPage.ets#BookshelfManagementPage.pendingRecovery::shared.recovery-notice",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfManagementPage.ets",
       "owner": "BookshelfManagementPage",
-      "member": "pendingOverlay",
+      "member": "pendingRecovery",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前 feedbackMounted 的书架管理页；snapshot 原 managementMutation/receipt/readFacts 决定消息和动作。",
+      "effectiveHost": "当前 feedbackMounted 的书架管理页；snapshot 原 managementMutation/receipt/readFacts 决定消息和动作。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "管理页退场拒绝新短反馈并清空局部去重；原分组/书籍操作变更后按原 snapshot 更新，通知消失不确认写入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
       "status": "registered-source-entry"
     },
@@ -279,13 +279,13 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets#BookshelfSettingsPage.pendingOverlay::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets#BookshelfSettingsPage.pendingRecovery::shared.recovery-notice",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets",
       "owner": "BookshelfSettingsPage",
-      "member": "pendingOverlay",
+      "member": "pendingRecovery",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前 mounted 的书架设置页；operation、viewModeSnapshot 与 revision/presentationRevision 决定原保存/核对准入。",
+      "effectiveHost": "当前 mounted 的书架设置页；operation、viewModeSnapshot 与 revision/presentationRevision 决定原保存/核对准入。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "退场递增 revision/presentationRevision 并清除局部反馈去重；未决写入仍由原设置/模式 owner 核对。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
       "status": "registered-source-entry"
     },
@@ -543,14 +543,14 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.topControls::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.recoveryOverlay::shared.recovery-notice",
       "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
       "owner": "MangaReadingSurface",
-      "member": "topControls",
+      "member": "recoveryOverlay",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
+      "effectiveHost": "当前漫画 reader 的 sourceId/bookId/presentationGeneration；独立 recoveryOverlay 使用实时 viewport/insets 的有界 Stack 层，controls、panel、章末或冷几何持有前景时关闭命中和读屏。",
+      "retireRule": "原展示身份或打开状态变化拒绝旧动作；仅 viewport 已交付且当前 reader 前景、无控制栏/面板/章末和忙态才允许核对。恢复消息与 busy 更新不替换原操作身份，原图像与章节 owner 保留取消、回退和资源释放。",
       "status": "registered-source-entry"
     },
     {
@@ -1126,13 +1126,13 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets#RssEntryDetailPage.operationFeedback::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets#RssEntryDetailPage.pendingRecovery::shared.recovery-notice",
       "file": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets",
       "owner": "RssEntryDetailPage",
-      "member": "operationFeedback",
+      "member": "pendingRecovery",
       "family": "shared.recovery-notice",
       "category": "当前实体原写回执unknown的核对",
-      "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。",
+      "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "动作携带该projection generation并由retryFeedback核当前facts.canRetry；当前实体/呈现/原回执退休后拒绝，pure read或confirmed readback改由独立PageState显示。",
       "status": "retained-disabled"
     },
@@ -1143,8 +1143,8 @@
       "member": "build",
       "family": "shared.recovery-action",
       "category": "当前RSS原操作的回执核对及合格继续",
-      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。feed与foreign域不挂原写提示，原intent与全域写准入保留。",
-      "retireRule": "current核mounted、完整JSON presentation/scope/original/subscriptionId/guid及!busy；continue再核qualified+operationId+canRetryOriginal。跨实体或退场拒绝旧物理动作，绝不拿当前列表代替原ACK。",
+      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。调用页以无参 boundedOverlayContent 提供自然内容，ReaderStandardPage 持有实时宿主几何；feed与foreign域不挂原写提示，原intent与全域写准入保留。",
+      "retireRule": "动作key只绑定 presentationIdentity/scope/subscriptionId/guid 与原generation/operationId/method/scope/subscriptionId/guid六字段身份，message/busy仅为当前投影。current同时核mounted、身份仍存在和!busy；continue再核qualified+operationId+canRetryOriginal。实体或退场拒绝旧动作，读取不确认原写。",
       "status": "retained-before-open"
     },
     {
@@ -1154,8 +1154,8 @@
       "member": "build",
       "family": "shared.recovery-notice",
       "category": "当前RSS宿主同实体原写未决事实",
-      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。feed与foreign域不挂原写提示，原intent与全域写准入保留。",
-      "retireRule": "current核mounted、完整JSON presentation/scope/original/subscriptionId/guid及!busy；continue再核qualified+operationId+canRetryOriginal。跨实体或退场拒绝旧物理动作，绝不拿当前列表代替原ACK。",
+      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。调用页以无参 boundedOverlayContent 提供自然内容，ReaderStandardPage 持有实时宿主几何；feed与foreign域不挂原写提示，原intent与全域写准入保留。",
+      "retireRule": "动作key只绑定 presentationIdentity/scope/subscriptionId/guid 与原generation/operationId/method/scope/subscriptionId/guid六字段身份，message/busy仅为当前投影。current同时核mounted、身份仍存在和!busy；continue再核qualified+operationId+canRetryOriginal。实体或退场拒绝旧动作，读取不确认原写。",
       "status": "retained-disabled"
     },
     {
@@ -1192,13 +1192,13 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets#RssSourceFeedPage.operationFeedback::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets#RssSourceFeedPage.pendingRecovery::shared.recovery-notice",
       "file": "entry/src/main/ets/features/rss/ui/RssSourceFeedPage.ets",
       "owner": "RssSourceFeedPage",
-      "member": "operationFeedback",
+      "member": "pendingRecovery",
       "family": "shared.recovery-notice",
       "category": "当前实体原写回执unknown的核对",
-      "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。",
+      "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "动作携带该projection generation并由retryFeedback核当前facts.canRetry；当前实体/呈现/原回执退休后拒绝，pure read或confirmed readback改由独立PageState显示。",
       "status": "retained-disabled"
     },
@@ -1209,7 +1209,7 @@
       "member": "operationRecovery",
       "family": "shared.recovery-action",
       "category": "保留RSS编辑器的原失败读回动作",
-      "effectiveHost": "L0 RSS关闭。仅匹配editor/subscriptionId的original.blocked挂原恢复表面；foreign pending不隐藏当前readback动作，原write/read identity前缀与generation分别捕获。",
+      "effectiveHost": "L0 RSS关闭。匹配editor/subscriptionId的原写恢复由 pendingRecovery 交给 ReaderStandardPage 无参有界覆盖层；operationRecovery 只保留普通当前读取/回读动作。foreign pending不隐藏当前readback动作，原write/read identity与generation分别捕获。",
       "retireRule": "dispatchRecovery核identity仍在再分别onReconcile或onRetryRead，保持原事实归属，不让读成功确认未知写入；开放前复核presentation/实体准入。",
       "status": "retained-before-open"
     },
@@ -1231,7 +1231,7 @@
       "member": "operationFeedback",
       "family": "shared.recovery-action",
       "category": "保留RSS管理已有内容时读取/原操作核对动作",
-      "effectiveHost": "L0 RSS关闭；仅当前management original匹配时由原恢复表面展示。其余当前operation.projection或readFacts给出真实message/canRetry/generation，保留现有局部readback行。",
+      "effectiveHost": "L0 RSS关闭。当前management原写恢复由 pendingRecovery 交给 ReaderStandardPage 无参有界覆盖层；operationFeedback 仅在原scope不匹配且当前反馈非空时保留原局部readback行，动作使用当前operation或readFacts generation。",
       "retireRule": "retryFeedback接收实际Action捕获generation，先与当前operation或readFacts generation和canRetry匹配再转交原owner。新facts/新entity/退场拒绝旧动作，读成功不确认独立原写。",
       "status": "retained-before-open"
     },
@@ -1335,13 +1335,13 @@
       "status": "diagnostic-only"
     },
     {
-      "id": "entry/src/main/ets/features/settings/ui/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage.previewOverlay::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/settings/ui/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage.noticePreview::shared.recovery-notice",
       "file": "entry/src/main/ets/features/settings/ui/ReaderMessagePreviewPage.ets",
       "owner": "ReaderMessagePreviewPage",
-      "member": "previewOverlay",
+      "member": "noticePreview",
       "family": "shared.recovery-notice",
       "category": "开发者诊断的未决、长文和核对忙态样本",
-      "effectiveHost": "设置中的开发者模式与消息预览打开身份。持续提示使用当前本地预览代次。",
+      "effectiveHost": "设置中的开发者模式与消息预览打开身份。noticePreview 只提供自然内容，由 ReaderStandardPage 的无参 boundedOverlayContent 消费实测宿主几何；模态预览仍由独立 previewOverlay 层承载。",
       "retireRule": "切换样本、失去前景或退场时清理原定时器；核对只改变预览投影。",
       "status": "diagnostic-only"
     },
@@ -1385,7 +1385,7 @@
       "member": "pendingFeedback",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
+      "effectiveHost": "当前已挂载且允许输入、无 reset/select 前景的设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。pendingFeedback 只提供自然内容，由 SettingsShell 转交 ReaderStandardPage 无参 boundedOverlayContent 消费实测几何。",
       "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
       "status": "registered-source-entry"
     },
@@ -1597,7 +1597,7 @@
       "member": "originalRecoveryActions",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。",
+      "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。 pendingRecovery 通过 ReaderStandardPage 无参 boundedOverlayContent 挂载原提示，宿主实测几何不由标量闭包捕获。",
       "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
       "status": "registered-source-entry"
     },
@@ -1608,7 +1608,7 @@
       "member": "recoveryAction",
       "family": "shared.recovery-action",
       "category": "书源工具无未决原操作时的只读刷新",
-      "effectiveHost": "当前SourceTools snapshot；original.blocked和unknown receipt使用原RecoveryNotice，此Action仅recovery.canRetry时带generation转交onReconcile。",
+      "effectiveHost": "当前SourceTools snapshot；original.blocked和unknown receipt使用原RecoveryNotice，此Action仅recovery.canRetry时带generation转交onReconcile。 pendingRecovery 通过 ReaderStandardPage 无参 boundedOverlayContent 挂载原提示，宿主实测几何不由标量闭包捕获。",
       "retireRule": "当前工具/Runtime/原generation由父SourceTools owner准入；关闭工具退休展示，不完成批量任务，不重派已确认/未知写入。",
       "status": "registered-source-entry"
     },
@@ -1619,7 +1619,7 @@
       "member": "recoveryAction",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。",
+      "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。 pendingRecovery 通过 ReaderStandardPage 无参 boundedOverlayContent 挂载原提示，宿主实测几何不由标量闭包捕获。",
       "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
       "status": "registered-source-entry"
     },
@@ -1646,24 +1646,35 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.manualActionsSection::shared.recovery-action",
+      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.manualActionsSection::shared.page-state",
       "file": "entry/src/main/ets/features/sync/ui/SyncPage.ets",
       "owner": "SyncPage",
       "member": "manualActionsSection",
+      "family": "shared.page-state",
+      "category": "保留同步宿主的当前读取/回读状态",
+      "effectiveHost": "L0 sync关闭。仅无未完成原operation且feedbackView可见时在原手动备份卡片内展示，loading来自snapshot.facts.busy；原写未决由独立boundedOverlayContent承载。",
+      "retireRule": "ForEach捕获当前feedback generation；执行读取核对前再次确认无原操作且generation仍相等，再转交原onReconcile owner。新facts或原操作出现后拒绝旧动作，读取状态不确认原写。",
+      "status": "retained-disabled"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.originalRecovery::shared.recovery-action",
+      "file": "entry/src/main/ets/features/sync/ui/SyncPage.ets",
+      "owner": "SyncPage",
+      "member": "originalRecovery",
       "family": "shared.recovery-action",
       "category": "保留同步配置继续和备份保留清理的原操作动作",
-      "effectiveHost": "L0 sync关闭；configSaveContinuationIdentities与backupRetentionActionIdentities分别按确切原operation/receipt身份key挂载，busy来自snapshot.facts。",
+      "effectiveHost": "L0 sync关闭；configSaveContinuationIdentities与backupRetentionActionIdentities分别按确切原operation/receipt身份key挂载，busy来自snapshot.facts。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "generation携回onContinueConfigSave或onSkipBackupRetention，原Sync owner决定原操作继续/结束清理；关UI不取消写入或确认备份，开放前验证旧物理回调及Runtime准入。",
       "status": "retained-before-open"
     },
     {
-      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.manualActionsSection::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.originalRecovery::shared.recovery-notice",
       "file": "entry/src/main/ets/features/sync/ui/SyncPage.ets",
       "owner": "SyncPage",
-      "member": "manualActionsSection",
+      "member": "originalRecovery",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "L0 下 sync 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。",
+      "effectiveHost": "L0 下 sync 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "当前入口不可达，不能计为已开放可见场景；恢复前重新检查原操作身份/原按钮/退场失效规则。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
       "status": "retained-disabled"
     },

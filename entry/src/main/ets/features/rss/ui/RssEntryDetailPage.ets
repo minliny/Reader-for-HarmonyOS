@@ -76,6 +76,8 @@ export struct RssEntryDetailPage {
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
       footer: (): void => { this.bottomActions(); },
+      boundedOverlayVisible: this.hasPendingRecovery(),
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     })
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         const width = this.numericAreaLength(newValue.width);
@@ -101,6 +103,18 @@ export struct RssEntryDetailPage {
 
   @Builder
   private operationFeedback() {
+    if (!rssOriginalMatchesScope(this.original, 'entry', this.item?.subscriptionId ?? '', this.item?.guid ?? '') && this.feedbackView().visible &&
+      this.operation?.projection.receipt.confirmation !== 'unknown') {
+      ForEach([this.feedbackView().generation], (generation: number): void => {
+        ReaderPageState({ message: this.feedbackView().message, padded: false,
+          loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing',
+          actionLabel: this.feedbackView().canRetry ? '重新读取' : '', onAction: (): void => this.retryFeedback(generation) });
+      }, (generation: number): string => `rss-entry-read:${generation}`);
+    }
+  }
+
+  @Builder
+  private pendingRecovery() {
     RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'entry',
       subscriptionId: this.item?.subscriptionId ?? '', guid: this.item?.guid ?? '',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
@@ -109,14 +123,13 @@ export struct RssEntryDetailPage {
       if (this.operation?.projection.receipt.confirmation === 'unknown') {
         ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: '重新读取',
           onReconcile: (generation: number): void => this.retryFeedback(generation) });
-      } else {
-        ForEach([this.feedbackView().generation], (generation: number): void => {
-          ReaderPageState({ message: this.feedbackView().message, padded: false,
-            loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing',
-            actionLabel: this.feedbackView().canRetry ? '重新读取' : '', onAction: (): void => this.retryFeedback(generation) });
-        }, (generation: number): string => `rss-entry-read:${generation}`);
       }
     }
+  }
+
+  private hasPendingRecovery(): boolean {
+    return rssOriginalMatchesScope(this.original, 'entry', this.item?.subscriptionId ?? '', this.item?.guid ?? '') ||
+      this.operation?.projection.receipt.confirmation === 'unknown' && this.feedbackView().visible;
   }
 
   private feedbackView(): ReaderRecoveryView { return readerRecoveryView(this.operation?.projection, this.readFacts); }

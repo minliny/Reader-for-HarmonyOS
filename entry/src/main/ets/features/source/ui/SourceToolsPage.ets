@@ -1,4 +1,3 @@
-import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { LengthMetrics } from '@kit.ArkUI';
@@ -190,8 +189,6 @@ export struct SourceToolsPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private sourceListWidth: number = 0;
   @State private overlayHostWidth: number = 0;
-  @State private overlayHostHeight: number = 0;
-  @State private overlayHostY: number = 0;
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   isOpeningCurrent: (() => boolean) | undefined = undefined;
@@ -291,12 +288,11 @@ export struct SourceToolsPage {
       variant: 'tools',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
-      overlayContent: (contentStartInset: number): void => { this.pendingOverlay(contentStartInset); },
+      boundedOverlayVisible: this.snapshot.original?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown',
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     }).onAreaChange((_old: Area, next: Area): void => {
       if (!this.mounted) return;
       this.overlayHostWidth = readerPageAreaLength(next.width);
-      this.overlayHostHeight = readerPageAreaLength(next.height);
-      this.overlayHostY = readerPageAreaLength(next.globalPosition.y);
     });
   }
 
@@ -565,28 +561,13 @@ export struct SourceToolsPage {
     }
   }
   @Builder
-  private pendingOverlay(contentStartInset: number) {
-    Scroll() {
-      Column() {
-        if (this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown') {
-          this.recoveryAction();
-        }
-      }.width('100%');
+  private pendingRecovery() {
+    if (this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown') {
+      this.recoveryAction();
     }
-      .width('100%').constraintSize({ maxHeight: this.overlayAvailableHeight(contentStartInset) })
-      .scrollBar(BarState.Auto).clip(true)
-      .margin({ top: contentStartInset }).padding({ left: 20, right: 20 })
-      .hitTestBehavior(HitTestMode.Transparent);
   }
   private overlayWidth(): number {
     return Math.max(0, (this.overlayHostWidth > 0 ? this.overlayHostWidth : ReaderWindowCoordinator.metrics().windowRect.width) - 40);
-  }
-
-  private overlayAvailableHeight(top: number): number {
-    const metrics = ReaderWindowCoordinator.metrics();
-    const height = this.overlayHostHeight > 0 ? this.overlayHostHeight : metrics.windowRect.height;
-    return Math.max(0, Math.min(height, metrics.windowRect.height -
-      readerInteractiveSafeBottom(metrics, true) - this.overlayHostY) - top);
   }
 
   @Builder

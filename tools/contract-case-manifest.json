@@ -7,7 +7,7 @@
       "cases": {
         "action-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -63,7 +63,7 @@
       "cases": {
         "intro-measurement-receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -72,23 +72,23 @@
       "cases": {
         "projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-callbacks": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "measured-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-header": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rules-eligibility": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -97,15 +97,15 @@
       "cases": {
         "confirmation-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "dialog-message": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "removal-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -114,19 +114,19 @@
       "cases": {
         "decoder": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "report-wire": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-add": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-json-bytes": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -135,7 +135,7 @@
       "cases": {
         "retained-card-hydration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -144,11 +144,11 @@
       "cases": {
         "toolbar-retained": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-action-semantics": {
           "resources": [],
@@ -161,19 +161,19 @@
       "cases": {
         "header-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-preview": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-spec": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "font-receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -182,7 +182,7 @@
       "cases": {
         "control-role-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -191,7 +191,7 @@
       "cases": {
         "bounded-menu-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -209,15 +209,15 @@
       "cases": {
         "settings-render": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "read-state": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "mode-persistence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -226,7 +226,7 @@
       "cases": {
         "native-sheet-action-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -235,15 +235,15 @@
       "cases": {
         "index": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shell": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -252,7 +252,7 @@
       "cases": {
         "extended-nav-generation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -261,7 +261,7 @@
       "cases": {
         "author-metadata-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -270,15 +270,15 @@
       "cases": {
         "picker-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "result-receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "scroll-origin": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -287,11 +287,11 @@
       "cases": {
         "source-drawer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tts-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -300,7 +300,7 @@
       "cases": {
         "header-callback-intrinsic-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -348,7 +348,7 @@
       "cases": {
         "choice-live-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -375,7 +375,7 @@
       "cases": {
         "actual-role-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -463,31 +463,31 @@
       "cases": {
         "search": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "multi-select": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-insets": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-catalog": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "search-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -496,31 +496,31 @@
       "cases": {
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rules": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rss": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "json": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-modifier": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -529,11 +529,11 @@
       "cases": {
         "consumer-callbacks": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -542,7 +542,7 @@
       "cases": {
         "pill-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -551,19 +551,19 @@
       "cases": {
         "replace": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "search": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -572,15 +572,15 @@
       "cases": {
         "search": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "discover": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -589,11 +589,11 @@
       "cases": {
         "consumer-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "controlled-fields": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -632,7 +632,7 @@
       "cases": {
         "icon-current-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -658,7 +658,7 @@
       "cases": {
         "import-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -667,7 +667,7 @@
       "cases": {
         "json-url-form-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -715,7 +715,7 @@
         },
         "native-targets": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -768,7 +768,7 @@
       "cases": {
         "navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-list": {
           "resources": [],
@@ -784,7 +784,7 @@
         },
         "discover-header": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -842,15 +842,15 @@
       "cases": {
         "chrome-current": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "adaptive-footer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "vp-host": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -859,11 +859,11 @@
       "cases": {
         "boundary-caption": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-paint": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -872,7 +872,7 @@
       "cases": {
         "empty-list-clear-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -881,15 +881,15 @@
       "cases": {
         "paged-data": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-paint": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "current-grid-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -898,7 +898,7 @@
       "cases": {
         "directory-search-current-spec": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -907,15 +907,15 @@
       "cases": {
         "gateway-task": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "current-submit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "legacy-intent-drain": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -924,11 +924,11 @@
       "cases": {
         "exit-once": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "brief-current-error": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -937,11 +937,11 @@
       "cases": {
         "selective-locate": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "empty-surface": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -977,11 +977,11 @@
       "cases": {
         "chapter-start": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -990,31 +990,31 @@
       "cases": {
         "controller-cas-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "controller-refresh-preview": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "surface-cold-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "adjacent-preparation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-cache-renew": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-shell-catalog-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1023,7 +1023,7 @@
       "cases": {
         "manga-action-eligibility": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1032,27 +1032,27 @@
       "cases": {
         "lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "font-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-selection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "download-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preferences-reset": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "drag-reduced": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1061,15 +1061,15 @@
       "cases": {
         "direction": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "fit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1216,11 +1216,11 @@
       "cases": {
         "official-image-type": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "render-publication": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1229,35 +1229,35 @@
       "cases": {
         "tap-constructor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "safe-area": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "save-and-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "persistent-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "viewport-overlays": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sheet-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "action-safe-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stage-width": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1279,59 +1279,59 @@
       "cases": {
         "scaffold": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reader-shell": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "book-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-panel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-window": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "navigation-surface": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "navigation-list": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "flat-list": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "observed-metadata": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-controls": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1340,15 +1340,15 @@
       "cases": {
         "phone-nav": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "centered-header": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-nav": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1357,15 +1357,15 @@
       "cases": {
         "position-projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "metadata-concurrency": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-detail-directory-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1429,15 +1429,15 @@
       "cases": {
         "recovery-cta": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rules-input": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1455,15 +1455,15 @@
       "cases": {
         "current-phone-shape": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "measurement-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "footer-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1490,19 +1490,19 @@
       "cases": {
         "owner-interleavings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-sdk-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-manga-first-image": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-novel-preparation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1511,11 +1511,11 @@
       "cases": {
         "current-sdk-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "arkts-registry-compatibility": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1524,7 +1524,7 @@
       "cases": {
         "retained-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1542,15 +1542,15 @@
       "cases": {
         "state": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "render-style": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-content": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1568,15 +1568,15 @@
       "cases": {
         "configuration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "chapter-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-content": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1631,11 +1631,11 @@
       "cases": {
         "full-projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "row-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1644,15 +1644,15 @@
       "cases": {
         "geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "subscription": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "transaction": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1691,19 +1691,19 @@
       "cases": {
         "probe-caches": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "card-props": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "page-measurement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "action-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-migration": {
           "resources": [],
@@ -1737,11 +1737,11 @@
       "cases": {
         "library-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "durable-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1801,23 +1801,23 @@
       "cases": {
         "geometry-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "scroll-receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "data-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "row-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "input-variant": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1826,11 +1826,11 @@
       "cases": {
         "entry-zero-core": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "render-budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-benchmark": {
           "resources": [],
@@ -1877,15 +1877,15 @@
       "cases": {
         "list-extent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "row-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "row-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1910,7 +1910,7 @@
         },
         "recovery-hit-boundary": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1919,15 +1919,15 @@
       "cases": {
         "sampler": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stage-surface": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tts-backdrop": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -1953,7 +1953,7 @@
       "cases": {
         "current-toolbar": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "legacy-embedded": {
           "resources": [],
@@ -1979,19 +1979,19 @@
       "cases": {
         "actor-clips": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "appearance-paint": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "appearance-cache": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "visible-rect-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2000,15 +2000,15 @@
       "cases": {
         "grabber-ownership": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "progress-slider": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2140,27 +2140,27 @@
       "cases": {
         "auto-headers": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tts-fields": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tts-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "auto-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "timer-wheel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "media-inventory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-geometry": {
           "resources": [],
@@ -2186,15 +2186,15 @@
       "cases": {
         "adapter": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "live-closures": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-rule-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2203,19 +2203,19 @@
       "cases": {
         "crud": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "replace-bundle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preview-request": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2224,11 +2224,11 @@
       "cases": {
         "sampler": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "recovery-actor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-motion": {
           "resources": [],
@@ -2241,11 +2241,11 @@
       "cases": {
         "host-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2296,11 +2296,11 @@
       "cases": {
         "search-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-geometry": {
           "resources": [],
@@ -2347,11 +2347,11 @@
       "cases": {
         "clip-difference": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preset-controls": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "quick-vertical-budget": {
           "resources": [],
@@ -2381,23 +2381,23 @@
       "cases": {
         "status-band": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "theme-texture": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "launch-work": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "volume-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "font-import": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2406,11 +2406,11 @@
       "cases": {
         "entry-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-compensation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2419,11 +2419,11 @@
       "cases": {
         "lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-bindings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2432,11 +2432,11 @@
       "cases": {
         "model": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "chapter-row": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2458,19 +2458,19 @@
       "cases": {
         "actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "surface-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "query-disclosure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "target-download": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "diagnostic-cancellation": {
           "resources": [],
@@ -2483,15 +2483,15 @@
       "cases": {
         "preview": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "durable": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-actors": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "legacy-preview": {
           "resources": [],
@@ -2504,15 +2504,15 @@
       "cases": {
         "toolbar": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "row-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "control-forwarding": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2521,7 +2521,7 @@
       "cases": {
         "panel-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2543,11 +2543,11 @@
       "cases": {
         "failure-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "role-grammar": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2586,11 +2586,11 @@
       "cases": {
         "projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-image-width": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2599,15 +2599,15 @@
       "cases": {
         "search-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-clearance": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-status": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2625,7 +2625,7 @@
       }
     },
     "test-reader-font-demand.mjs": {
-      "sourceSha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7",
+      "sourceSha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014",
       "cases": {
         "load": {
           "resources": [],
@@ -2714,15 +2714,15 @@
       "cases": {
         "geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "owner-snapshot": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-forwarding": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2761,11 +2761,11 @@
       "cases": {
         "last-dispatch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "footer-chain": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2808,15 +2808,15 @@
       "cases": {
         "fonts-carriers": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-notice": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "group-receipt": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2838,15 +2838,15 @@
       "cases": {
         "spec-endpoints": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "panel-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "adaptive-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -2940,32 +2940,32 @@
       "cases": {
         "footer-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status-sdk-track": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "measurement-cache": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "clock-texture-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "layout-cache": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "mounted-slot-capture": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
     "test-reader-page-header-contract.mjs": {
-      "sourceSha256": "b8c5c8ebfca5e05014ee0b6a175cb6e83e65bfe535c56505ff22649db29a7561",
+      "sourceSha256": "6063fb83227ca8fb8ed6fde318092e054cb5e81e4f4be59eecd3c3b751741d2a",
       "cases": {
         "sdk-public-slots": {
           "resources": [],
@@ -3023,11 +3023,11 @@
       "cases": {
         "slot-placement-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-build-slot-binding": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3036,11 +3036,11 @@
       "cases": {
         "paper-status-composition": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "continuous-fixed-chrome": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3062,11 +3062,11 @@
       "cases": {
         "capsule-leading-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "search-field-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3075,23 +3075,23 @@
       "cases": {
         "launch-controller": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "panel-layer-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "hold-and-capsule": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookmark-original-text": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookmark-feedback-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3100,35 +3100,35 @@
       "cases": {
         "window-metric-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "measured-safe-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reading-budget-cache": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status-paper-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookmark-confirmed-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "force-refresh-menu": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "durable-bookmark-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "window-listener-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3163,11 +3163,11 @@
       "cases": {
         "quick-search": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "auto-page-header": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3176,19 +3176,19 @@
       "cases": {
         "cold-entry-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failure-actions-input": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shell-window-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "chapter-loading-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3235,27 +3235,27 @@
       "cases": {
         "input-sdk-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bounded-editor-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "draft-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "save-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-footer-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "standalone-add-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3264,19 +3264,19 @@
       "cases": {
         "recovery-handoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "more-menu": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-builder-isolation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "playback-theme-icons": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3285,19 +3285,19 @@
       "cases": {
         "state-migration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "window-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preferences-durability": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-sdk-row": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3378,19 +3378,19 @@
       "cases": {
         "stage-parameters": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "owner-dismissal": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "fragment-copy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3425,35 +3425,35 @@
       "cases": {
         "configuration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "fields": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sliders": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "service-tabs": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manager-drafts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "keyboard": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "overlay": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "audio-adapter": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3462,7 +3462,7 @@
       "cases": {
         "frame-mapping": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3795,167 +3795,167 @@
       "cases": {
         "manga-toggle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-forced-ui": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-auth-viewport": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-panel-props": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-mask-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-mask-resize": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-mask-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-viewport-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-area-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-metric-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-metric-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-inactive": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-old-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-late-native": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-theme": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-shell-props": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-manga": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "historical-shell": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-watch-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-bars-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-dispose-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-transparency": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-palettes": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-color-queue": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-reapply-color": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-visible-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-setting-cutout": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-status-controls": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-setting-status": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-setting-rollback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-cutout-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "novel-default-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-show-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-reader-reapply": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-app-reapply": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-reapply-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-owner-queue": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-rotation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-old-window-reject": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "coordinator-old-window-success": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -3964,15 +3964,15 @@
       "cases": {
         "root-palette": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "root-edges": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "paired-chrome": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -4078,7 +4078,7 @@
       }
     },
     "test-reading-directory-index-sdk.mjs": {
-      "sourceSha256": "0b71d9e18bcd5b1b61dcfbf993d212852729d977e5420e2b6316a28f751fbb32",
+      "sourceSha256": "1df3cbfac5719a32a2ffb819a45ad58bc8b8f85bfcf5ebd18d68bcea9fbafb08",
       "cases": {
         "bookmark-ack": {
           "resources": [],
@@ -4122,12 +4122,12 @@
         },
         "presentation-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
     "test-reading-directory-message-routing.mjs": {
-      "sourceSha256": "9d9d334845360020f508eb2deba5736adee571bed0226c91494cb5c9ea6d6f35",
+      "sourceSha256": "ba8fc578d2cebae11ea293b65e542a6570f7018ef4ce130bcf440b05176b41cc",
       "cases": {
         "readback": {
           "resources": [],
@@ -4399,67 +4399,67 @@
       "cases": {
         "validated-bookmarks": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-order": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-session": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "remote-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "local-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-reading-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-detail-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "remount-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-detail-guard": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cache-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "visible-preparation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "restored-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "body-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-add": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "atomic-bind": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -4650,47 +4650,47 @@
       "cases": {
         "bounded-completion": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "blank-base": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "body-invalidation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "missing-image": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "legacy-fence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "parallel-mutation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "body-fence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failure-counts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "resource-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index-progress": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5214,75 +5214,75 @@
       "cases": {
         "index-remount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-reader": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "window-counts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "content-revision": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "latest-window": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "network-backoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failed-status": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "materialized-window": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "explicit-range": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "independent-books": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "background-lane": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "response-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "body-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "terminal-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-metadata": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-invalidated": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5312,23 +5312,23 @@
       "cases": {
         "resume-local": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "resume-remote": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preview": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reopen-local": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reopen-remote": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5536,31 +5536,31 @@
       "cases": {
         "new-session": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "same-session": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "metadata-handoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-refresh": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "switch-catalog": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "prepared-handoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5639,47 +5639,47 @@
       "cases": {
         "management": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssEditor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rules": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tools": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settingsHome": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settingsGeneral": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssManagement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssFeed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssDetail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "empty-card": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5688,51 +5688,51 @@
       "cases": {
         "management": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "entry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "feed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "main": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "management-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "management-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editor-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editor-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "entry-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "entry-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "admission-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5778,23 +5778,23 @@
       "cases": {
         "discover-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rss-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssFeed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssDetail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssManagement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5803,55 +5803,55 @@
       "cases": {
         "main-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-first-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "entry-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "entry-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stale-callbacks": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editor-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editor-runtime": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "presentation-key": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-unset": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "binding-unset": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -5970,83 +5970,83 @@
       "cases": {
         "readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "first-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "import": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "picker-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "typed-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "picker-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "route-close": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stale-generation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "queued-reentry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "route-publication": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "accepted-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "queued-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-cache": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "throwing-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "throwing-diagnostics": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6055,7 +6055,7 @@
       "cases": {
         "feedback-stats": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6064,11 +6064,11 @@
       "cases": {
         "cold-integration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "surface-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6077,23 +6077,23 @@
       "cases": {
         "inflight-feed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "management": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "entry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sourceFeed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shipping-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6102,55 +6102,55 @@
       "cases": {
         "readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "membership-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "accepted-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "queued-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "typed-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "main-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "gateway-evidence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "snapshot-bound": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "route-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "delivery-exception": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6159,7 +6159,7 @@
       "cases": {
         "focus-scroll": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6290,35 +6290,35 @@
       "cases": {
         "physical-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "attachment": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "accepted-tail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "modal-generation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "modal-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "attach-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "presentation-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6327,7 +6327,7 @@
       "cases": {
         "role-carriers": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6445,47 +6445,47 @@
       "cases": {
         "page-guards": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-lock": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "accepted-lock": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bad-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "orchestrator-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "orchestrator-continuation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-lock-strip-diagnostic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "accepted-lock-strip-diagnostic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bad-ack-strip-diagnostic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "orchestrator-readback-strip-diagnostic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "orchestrator-continuation-strip-diagnostic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6790,31 +6790,31 @@
       "cases": {
         "top-scroll": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "all-history": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-history": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "focus-state": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "history-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-focus": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -6823,11 +6823,11 @@
       "cases": {
         "field-clip": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "web-focus": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7101,11 +7101,11 @@
       "cases": {
         "novel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "comic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7114,19 +7114,19 @@
       "cases": {
         "import-boundary": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "progress-publication": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-publication": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "query-remount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7135,19 +7135,19 @@
       "cases": {
         "field": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "header": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "card": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7156,51 +7156,51 @@
       "cases": {
         "late-candidates": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "route-guard": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "timing-version": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preview-return": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failed-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "repeat-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-success": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reader-rollback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-resume": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-info": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7209,71 +7209,71 @@
       "cases": {
         "rows": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stream-batch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "relevance": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "progressive-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "incremental-row": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bounded-normalization": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "locale-remount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "candidate-version": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "query-delta": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-batch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "broad-reorder": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "layout-restoration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "candidate-facts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "safe-failure-text": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "media-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "content-filter": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7282,35 +7282,35 @@
       "cases": {
         "bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rules": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssFeed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssManagement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssEditor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rssDetail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7319,15 +7319,15 @@
       "cases": {
         "safe-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "legacy-global": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7336,55 +7336,55 @@
       "cases": {
         "confirmation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "confirmed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "partial": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "typed-refusal": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "legacy-query": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "malformed-core": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-row": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reopened-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "pre-dispatch-retire": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "publication-reentry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "publisher-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7617,47 +7617,47 @@
       "cases": {
         "text-projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "storage-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-proof-batch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "page-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "storage-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "storage-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "live-theme": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-single-flight": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-index": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-intents": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sheet-choice": {
           "resources": [],
@@ -7674,63 +7674,63 @@
       "cases": {
         "definition": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-bindings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "inline-filter": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "inline-settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "inline-quick": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "inline-range": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "select-measurement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "area-receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "font-receipts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "short-layout": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reactive-metrics": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "storage-publication": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-dto": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "management-scroll": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "overlay-chrome": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7739,15 +7739,15 @@
       "cases": {
         "progress-boundaries": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "formatter-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-list": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7756,51 +7756,51 @@
       "cases": {
         "followup-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "streaming": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "mode-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stop": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index-selection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "scale-selection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "list-notifications": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "report-negotiation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "report-schema": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "v1-fields": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "report-history": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7809,59 +7809,59 @@
       "cases": {
         "original-beforeMethod": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "original-afterMethod": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-nav": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-mount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-runtime": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-unmount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "same-runtime-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "pending-ack-remount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cookie-cleanup": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "same-runtime-tools": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "foreign-receipt": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-attachment": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-confirmation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7870,15 +7870,15 @@
       "cases": {
         "action-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "responsive-chip": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "trailing-tools": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7962,7 +7962,7 @@
       "cases": {
         "metadata-carriers": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7971,11 +7971,11 @@
       "cases": {
         "export-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "compact-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -7997,63 +7997,63 @@
       "cases": {
         "source-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-load": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-reopen": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-late-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-load": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-reopen": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-late-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-typed-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-retired": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-retired": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-retry-before": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings-retry-after": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8087,27 +8087,27 @@
       "cases": {
         "historical-definition": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "ack-boundary": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "visual-clock": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "stage-order": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "canonical-stage": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "actor-clock-isolation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8233,199 +8233,199 @@
       "cases": {
         "registry-qualification": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "qualification-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "acquisition-lock": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preview-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "known-author-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "author-resolution": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "author-read-error": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "streaming-latency": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failure-rebind": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "commit-lineage": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-commit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "pre-dispatch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "partial-envelope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preview-no-write": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "old-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "book-before-dispatch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "dirty-related": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "observer-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "progress-lane": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "journal-before-send": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "local-sync-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "confirmed-read-error": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "advanced-head": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "warm-handoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-intent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cross-runtime-tail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "large-intent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "terminal-sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unreadable-intent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "wrong-exact-id": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rollback-lost-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-rollback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "next-choice": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "startup-rollback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "live-picker": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "recommendation-filter": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "polluted-alias": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "wrong-detail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "wrong-manga": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-retire-lock": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-qualification-finally": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-preview-finally": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "public-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-identity-rollback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "negative-old-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-cold-receipt": {
           "resources": [],
@@ -8446,107 +8446,107 @@
         },
         "manga-valid": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-stale-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-wrong-book": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-wrong-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-target-version": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-registry-during-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-wrong-target-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-registry-during-image": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-cancel-resolve": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-cancel-reject": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "preview-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "seed-author-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "qualification-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source-finalization": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "old-overlay": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failed-preview": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "remount": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-reader-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-cache-confirmed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-cache-platform-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-cache-Core-unknown": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reader-overlay": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reader-completion": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "metadata-hosts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8568,11 +8568,11 @@
       "cases": {
         "design-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "candidate-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8581,55 +8581,55 @@
       "cases": {
         "definition": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "layout-text": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "layout-manga": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rows-safe-area": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "row-action-interaction": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "adaptive-empty": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cancel-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "anchor-controller": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "native-spinner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "completion-surfaces": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "font-load": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "wiring-negatives": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "refresh-error": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8638,15 +8638,15 @@
       "cases": {
         "cold-before": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cold-after": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "page-eligibility": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8655,19 +8655,19 @@
       "cases": {
         "carrier-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "input-selection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "guard-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "raw-debug": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8676,23 +8676,23 @@
       "cases": {
         "smallButton": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "actionButton": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "fullWidthActionButton": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "debugCard": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editorCard": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -8701,35 +8701,35 @@
       "cases": {
         "mode-store": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "import-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "import-picker": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "import-reopen": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "import-runtime": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "projections": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "result-layout": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "spinner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10475,47 +10475,47 @@
       "cases": {
         "toggle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "segment": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "press": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "spec-propagation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rules": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rss-management": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rss-editor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "theme": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "lazy-theme": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10524,23 +10524,23 @@
       "cases": {
         "cold-receipt": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "origin": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "secure-envelope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "zero-dispatch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-absence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10549,31 +10549,31 @@
       "cases": {
         "consent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "lost-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "route-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "origin": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "page-consumer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-actor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10582,47 +10582,47 @@
       "cases": {
         "cold-original": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "exact-input": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "prepared-atomic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "head-cleanup-atomic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "same-file-queue": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "context-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-add": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "late-remove": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bad-payload": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "corrupt-head": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retained-actor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10631,31 +10631,31 @@
       "cases": {
         "committed-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown-barrier": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "query-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retired-delivery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "clear-evidence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "add-not-found": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "invalid-metadata": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10664,27 +10664,27 @@
       "cases": {
         "host-schema": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "journal": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "restore-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "scheme-order": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "migration-start": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "config-barrier": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10693,63 +10693,63 @@
       "cases": {
         "first-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown-save": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "save-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-drafts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "backup-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "callbacks": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "presentation-key": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "restore-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "save-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-getter": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "retention-consent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "config-continuation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "attachment": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "accepted-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "attach-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10758,31 +10758,31 @@
       "cases": {
         "read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "config": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "backup": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "restore": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-absence": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-drafts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10791,19 +10791,19 @@
       "cases": {
         "config-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "restore-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "unknown-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "runtime-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10829,39 +10829,39 @@
       "cases": {
         "queue": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "queue-dispose": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "queue-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "uri-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-reuse": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-retired": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "host-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "index-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manifest-utd": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10870,19 +10870,19 @@
       "cases": {
         "settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "priority": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10891,15 +10891,15 @@
       "cases": {
         "settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10925,23 +10925,23 @@
       "cases": {
         "reader-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "reader-quick": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "main-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "quick-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "full-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10950,39 +10950,39 @@
       "cases": {
         "role-registry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sync-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rss-feed": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "rss": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "discover": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "segment": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookmark-empty": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status-semantics": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -10991,75 +10991,75 @@
       "cases": {
         "detail": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "message-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "empty-shelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "buttons-settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "buttons-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "buttons-bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "direct-rss": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "direct-sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "direct-settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "direct-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "direct-bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "direct-common": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "status-bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-bookshelf": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-rss": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shared-sync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11093,11 +11093,11 @@
       "cases": {
         "settings-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-notice": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11123,7 +11123,7 @@
       "cases": {
         "cover-continuity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11195,11 +11195,11 @@
         },
         "prefix-anchors": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-focus": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "measured-profile": {
           "resources": [],
@@ -11207,15 +11207,15 @@
         },
         "keyboard-ack-delay": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "keyboard-transfer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "keyboard-observation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11224,11 +11224,11 @@
       "cases": {
         "parent-chain": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "trigger-parent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11237,36 +11237,36 @@
       "cases": {
         "shelf-selection-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-projection-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-action-target": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-notice-width": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "management-parent-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-list-residual-lane": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "shelf-filter-action-target": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
     "test-reader-control-layout-budget.mjs": {
-      "sourceSha256": "57784c5233f0467a4a94929cfa73172803ef58b5b102475a8c1b7f5320ae7993",
+      "sourceSha256": "348336d158ba488715f41ac4f4952cce2b428ded3e926ec9e0b39f4a19ac9a91",
       "cases": {
         "admission-sdk": {
           "resources": [],
@@ -11295,15 +11295,15 @@
       }
     },
     "test-secondary-layout-repairs.mjs": {
-      "sourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
+      "sourceSha256": "fb3ee10fdd770101cb66e29a308734e295a72bc51c68c45c47d52becb66fd1a4",
       "cases": {
         "select-host": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "actions-tools-rules": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "recovery-overlays": {
           "resources": [],
@@ -11311,11 +11311,11 @@
         },
         "retained-and-settings": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "download-chapter-width": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11324,7 +11324,7 @@
       "cases": {
         "directory-rules": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11333,7 +11333,7 @@
       "cases": {
         "safe-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11342,15 +11342,15 @@
       "cases": {
         "check-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tools-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "editor-conflict": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11359,7 +11359,7 @@
       "cases": {
         "matrix": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11368,23 +11368,23 @@
       "cases": {
         "header-spacing": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "icon-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "standalone-collapse": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "full-directory-font-revision": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "full-directory-source-caption": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11393,7 +11393,7 @@
       "cases": {
         "surface-measurements": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11402,7 +11402,7 @@
       "cases": {
         "mark-role": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11411,88 +11411,88 @@
       "cases": {
         "detail-kind-confirmation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-type-state": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "library-watch-parent-delivery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-entry-dto-geometry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-directory-action": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "bookshelf-action-lanes": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "labeled-action-paint": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "select-watch-parent-delivery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "directory-watch-parent-delivery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "dialog-action-budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "menu-divider-current": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "main-rail-current": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "no-cover-graphic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "compact-source-paint": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "tablet-select-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "dialog-current-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-hero-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "prepared-media-qualification": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "detail-scroll-origin": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "document-scroll-origin": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
     "test-reader-bookmark-message-kinds.mjs": {
-      "sourceSha256": "9dbeeeb204a537b040287a36ab98d78691a561821180ccbfd8b1e73292acc331",
+      "sourceSha256": "2e65c16dbc6ad7297f902753b16b8e8e80b970e6efd66108c209691e5d2c4078",
       "cases": {
         "bookmark-facts": {
           "resources": [],
@@ -11509,7 +11509,7 @@
       "cases": {
         "measurement-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11518,7 +11518,7 @@
       "cases": {
         "pending-prefix": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11527,43 +11527,43 @@
       "cases": {
         "recovery-floating": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "module-live-input": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "watch-parent-notifications": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "capsule-budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "standalone-prefix-sdk": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "standalone-short": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "standalone-bookmark": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "compact-roles": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "render-followups": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-retry": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11572,11 +11572,11 @@
       "cases": {
         "scroll-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "default-scroll": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11598,19 +11598,19 @@
       "cases": {
         "opening-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "target-handoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "failure-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "restoration-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11619,11 +11619,11 @@
       "cases": {
         "surface-notifications": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "cover-receipt": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11632,7 +11632,7 @@
       "cases": {
         "history-integrity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
@@ -11641,16 +11641,16 @@
       "cases": {
         "rules-preview": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "manga-action-body": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         }
       }
     },
     "test-reader-recovery-action-state.mjs": {
-      "sourceSha256": "ff252536562ee30bc827e081930b1bf7af33d4bd0d45910c9edbad38f24f4954",
+      "sourceSha256": "10787e6b9b06ede5fa8f25d6125e6df3031a01331eaeaadbb27d1875624bbe90",
       "cases": {
         "pending-busy-owner": {
           "resources": [],
@@ -11679,6 +11679,155 @@
           "qualification": "QUALIFIED"
         },
         "offline": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-retained-overlay-pages.mjs": {
+      "sourceSha256": "2aabb5000820d7c852f4c7ee1de643f6744cf36d8acb6aa6fbd0b1ecc968694c",
+      "cases": {
+        "standard-overlay-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "rss-recovery-slots": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "sync-recovery-slot": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "legacy-overlay-slots": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-independent-directory-foreground.mjs": {
+      "sourceSha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f",
+      "cases": {
+        "header-stability": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "foreground-succession": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-directory-toolbar-budget.mjs": {
+      "sourceSha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387",
+      "cases": {
+        "editable-budget": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "sdk-actions": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-app-overlay-pages.mjs": {
+      "sourceSha256": "c4c351e60fabd55f6c937a814275e046e8aee2f41f8e0e447a100d8565c7fb68",
+      "cases": {
+        "manga-recovery": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-recovery-cold": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-settings-overlay-assembly.mjs": {
+      "sourceSha256": "083940cf4acfe6947339bf171ea16f7b39ca2c752a37485b20cd95e3f2584f11",
+      "cases": {
+        "settings-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "settings-compatibility": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "settings-actions": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "preview-layers": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-directory-foreground-adapter.mjs": {
+      "sourceSha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff",
+      "cases": {
+        "callback-contract": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-rss-additional-overlay.mjs": {
+      "sourceSha256": "3a5b519616d34526d447e40aa5c50a95e41d40778f312c6ffc2ea0a51ea5c32e",
+      "cases": {
+        "home-scope": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "editor-overlay": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "stable-identity": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "management-overlay": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-directory-target-closure.mjs": {
+      "sourceSha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309",
+      "cases": {
+        "private-toolbar": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "topbar-variants": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "header-budgets": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "fallback-carriers": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        }
+      }
+    },
+    "test-overlay-assembly.mjs": {
+      "sourceSha256": "23166bfe5f155b62af0841935ce8352ce569e74f9500d6a0786e3147318f4daf",
+      "cases": {
+        "slot-tracing": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "native-detached": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "geometry-isolation": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

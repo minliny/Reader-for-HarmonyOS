@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const selected=selectContractCases({load:{description:'Actual checked font-load readiness, lazy faces and failed receipt retry',resources:[]},preview:{description:'Actual visible preview serialized loading and fallback admission',resources:[]},assets:{description:'Manifest hashes and actual upstream fontTools tables/cmap/static weights',resources:[]},'manga-progress':{description:'Actual manga font preparation DEBUG stages distinguish pending Serif/individual faces, current acceptance and retired completion; release remains silent',resources:[]},'manga-publication':{description:'Actual Page/Scaffold SDK slot conditionals subscribe to font readiness and update the retained catalog/footer/overlay/header-menu after initial preparation, with plain-arrow before-source negative',resources:[]}});
+const selected=selectContractCases({load:{description:'Actual checked font-load readiness, lazy faces and failed receipt retry',resources:[]},preview:{description:'Actual visible preview serialized loading and fallback admission',resources:[]},assets:{description:'Manifest hashes and actual upstream fontTools tables/cmap/static weights',resources:[]},'manga-progress':{description:'Actual manga font preparation DEBUG stages distinguish pending Serif/individual faces, current acceptance and retired completion; release remains silent',resources:[]},'manga-publication':{description:'Actual Page/Scaffold SDK slot conditionals subscribe to font readiness and update the retained catalog/footer/header-menu after initial preparation, with plain-arrow before-source negative',resources:[]}});
 async function run(id){
 const {default:assert}=await import('node:assert/strict');
 const {readFileSync}=await import('node:fs');
@@ -223,11 +223,11 @@ assert.deepEqual(old.calls,['preparation'],'exact before-source keeps initial lo
 assert.equal(old.owner.mangaFontsReady,true);
 const current=publication(source);
 assert.equal(current.calls[0],'preparation');
-assert.deepEqual(current.calls.slice(1).sort(),['catalog','footer','header-menu','overlay']);
+assert.deepEqual(current.calls.slice(1).sort(),['catalog','footer','header-menu']);
 assert.equal([...current.owner.children.values()].find(child=>child.params?.geometry),current.frame,'font admission retains the same actual Scaffold actor');
-assert.ok(current.dependencies?.size>=4,'four named Builder conditions register actual Page-owned state dependencies');
+assert.ok(current.dependencies?.size>=3,'three live named Builder conditions register actual Page-owned state dependencies');
 assert.match(current.output,/mangaContentSlot\(parent = null\)[\s\S]*?observeComponentCreation2[\s\S]*?If\.create\(\)/,'actual SDK emits a reactive If for the named content Builder');
-console.log(JSON.stringify({beforeAcceptedButUnpainted:true,reactiveSlots:4,scaffoldRetained:true,boundary:'Actual SDK/property subscription delivery with finite terminal content/header slot markers. Native repaint and Grid geometry remain separate.'}));
+console.log(JSON.stringify({beforeAcceptedButUnpainted:true,reactiveSlots:3,scaffoldRetained:true,boundary:'Actual SDK/property subscription delivery with finite terminal content/header slot markers. Native repaint and Grid geometry remain separate.'}));
 
 }else if(id==='preview'){
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');

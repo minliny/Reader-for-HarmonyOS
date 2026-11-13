@@ -119,7 +119,11 @@ if (selected.length > 0) {
           argumentsFound.push(node.arguments[0].properties.find(property => property.name?.getText(tree) === 'recovery').initializer.getText(tree));
         ts.forEachChild(node, visit);
       }
-      visit(tree); assert.equal(argumentsFound.length, 1, `${name} actual surface consumer`);
+      visit(tree);
+      const activeReadingHost = name === 'LocalReadingExperience';
+      assert.equal(argumentsFound.length, activeReadingHost ? 1 : 0,
+        `${name} follows the active-reading or foreground-directory presentation policy`);
+      if (!activeReadingHost) continue;
       const emitted = ts.transpileModule(`function currentRecovery() { return ${argumentsFound[0]}; }`, {
         compilerOptions: { target: ts.ScriptTarget.ES2022 },
       }).outputText;

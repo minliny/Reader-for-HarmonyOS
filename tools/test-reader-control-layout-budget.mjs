@@ -598,8 +598,9 @@ async function run(id) {
                 assert.ok(button.height + 1 <= dock.height);
             assert.ok(m.dockPageRowHeight() >= 44 + 3 + 15 * scale);
             assert.ok(m.bottomControlViewportHeight() + m.mangaTopBarHeight() + 10 <= m.viewportHeight - 48);
+            const ordinaryViewport = m.bottomControlViewportHeight();
             m.recovering = true;
-            assert.ok(m.bottomControlViewportHeight() + m.mangaTopBarHeight() + 10 + m.recoveryNoticeHeight() + 8 <= m.viewportHeight - 48);
+            assert.equal(m.bottomControlViewportHeight(), ordinaryViewport, 'the independent recovery overlay preserves the dock viewport');
             m.recovering = false;
         }
         const legacyManga = createReaderBuilderProbe(source.replace("Button('‹').height(44).width(44)", "Button('‹').height(28).width(28)").replace('.height(this.dockActionHeight() + 1).border', '.height(55).border'), base, { ...mangaSurfaceSdkDependencies, ...deps, uiContext: context, ReaderWindowCoordinator: { metrics: () => metrics } }).owner;

@@ -7,7 +7,7 @@ import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContr
 interface RssRecoveryActionIdentity {
   presentationIdentity: string;
   scope: 'management' | 'editor' | 'entry' | 'feed';
-  original: RssOriginalMutationProjection;
+  original: RssOriginalMutationIdentity;
   subscriptionId: string;
   guid: string;
 }
@@ -33,27 +33,31 @@ export struct RssOriginalRecoverySurface {
   }
   private matchesScope(): boolean { return rssOriginalMatchesScope(this.original, this.scope, this.subscriptionId, this.guid); }
   private identities(): string[] {
-    if (!this.matchesScope() || this.original === undefined) return [];
-    const identity: RssRecoveryActionIdentity = { presentationIdentity: this.presentationIdentity, scope: this.scope, original: this.original,
+    const original = this.original;
+    if (!this.matchesScope() || original === undefined) return [];
+    const identity: RssRecoveryActionIdentity = { presentationIdentity: this.presentationIdentity, scope: this.scope,
+      original: { generation: original.generation, operationId: original.operationId, method: original.method,
+        scope: original.scope, subscriptionId: original.subscriptionId, guid: original.guid },
       subscriptionId: this.subscriptionId, guid: this.guid };
     return [JSON.stringify(identity)];
   }
   private actionIdentity(identity: string): RssRecoveryActionIdentity {
     return JSON.parse(identity) as RssRecoveryActionIdentity;
   }
-  private expected(identity: string): RssOriginalMutationProjection {
+  private expected(identity: string): RssOriginalMutationIdentity {
     return this.actionIdentity(identity).original;
   }
   private qualified(identity: string): boolean {
     const captured = this.actionIdentity(identity);
+    const original = this.original;
     const entityMatches = captured.scope === 'management' || (captured.original.subscriptionId === captured.subscriptionId &&
       (captured.scope !== 'entry' || captured.original.guid === captured.guid));
-    return entityMatches && captured.scope !== 'feed' && captured.original.scope === captured.scope &&
-      captured.original.canRetryOriginal && captured.original.operationId.length > 0;
+    return this.identities().indexOf(identity) >= 0 && original !== undefined && entityMatches &&
+      captured.scope !== 'feed' && original.scope === captured.scope &&
+      original.canRetryOriginal && original.operationId.length > 0;
   }
-  private continuationLabel(identity: string): string {
-    const captured = this.expected(identity);
-    return captured.confirmation === 'confirmed' && captured.writeStage === 'cleanup' ? '继续原清理' : '继续原操作';
+  private continuationLabel(): string {
+    return this.original?.confirmation === 'confirmed' && this.original.writeStage === 'cleanup' ? '继续原清理' : '继续原操作';
   }
   private current(identity: string): boolean {
     return this.mounted && this.original?.busy !== true && this.identities().indexOf(identity) >= 0;
@@ -69,7 +73,7 @@ export struct RssOriginalRecoverySurface {
           actionEnabled: this.current(identity),
           onReconcile: (): void => { if (this.current(identity)) this.onReconcileOriginal(this.expected(identity)); } });
         if (this.qualified(identity)) {
-          ReaderRecoveryAction({ label: this.continuationLabel(identity),
+          ReaderRecoveryAction({ label: this.continuationLabel(),
             generation: this.expected(identity).generation, actionEnabled: this.current(identity),
             onReconcile: (): void => { if (this.canContinue(identity)) this.onContinueOriginal(this.expected(identity)); } });
         }

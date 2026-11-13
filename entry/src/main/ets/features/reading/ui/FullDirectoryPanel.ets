@@ -1,11 +1,11 @@
-import { readerFullDirectoryHeights, type ReaderFullDirectoryHeights } from '../presentation/ReaderFullDirectoryBudget';
+import { readerFullDirectoryHeights, readerDirectoryToolbarBudget, type ReaderFullDirectoryHeights } from '../presentation/ReaderFullDirectoryBudget';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { mangaDirectoryContextEntries } from '../../manga/ui/MangaDirectoryState';
 import { mangaDirectoryPresentation } from '../../manga/presentation/MangaDirectoryPresentation';
-import { TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_SEARCH_DIRECTORY_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -24,7 +24,8 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../../../ui/foundation/ReaderTokens';
 
-import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { registerReaderFonts, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
+import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
@@ -79,6 +80,8 @@ import {
 export struct FullDirectoryPanel {
   @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  private toolbarInputWidthKey: string = '';
+  private toolbarInputWidthCached: number = 0;
 
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
@@ -402,11 +405,11 @@ export struct FullDirectoryPanel {
           .width(Math.max(0, this.panelWidth() - 2))
           .height(1)
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
-          .position({ x: 0, y: this.controlValue(63, 51) })
+          .position({ x: 0, y: this.controlValue(63, this.searchControlsHeight() - 1) })
           .opacity(this.controlProgress());
       }
       .width(Math.max(0, this.panelWidth() - 2))
-      .height(52)
+      .height(Math.max(52, this.searchControlsHeight()))
       .position({ x: 1, y: this.controlValue(61, 43) })
       .opacity(this.controlProgress())
       .enabled(this.controlProgress() > 0)
@@ -418,7 +421,7 @@ export struct FullDirectoryPanel {
         }
         .width(Math.max(0, this.panelWidth() - 2))
         .height(this.bookmarkListHeight())
-        .position({ x: 1, y: this.controlValue(47, 99) });
+        .position({ x: 1, y: this.controlValue(47, 99) + this.embeddedToolbarGrowth() });
       } else {
         Stack() {
           // The directory rows are persistent Figma actors. Keep one native
@@ -430,7 +433,7 @@ export struct FullDirectoryPanel {
         }
         .width(Math.max(0, this.panelWidth() - 2))
         .height(this.chapterListHeight())
-        .position({ x: 1, y: this.controlValue(48, 99) });
+        .position({ x: 1, y: this.controlValue(48, 99) + this.embeddedToolbarGrowth() });
         Stack() {
           this.statusFooter();
         }
@@ -683,7 +686,8 @@ export struct FullDirectoryPanel {
     Column({ space: 0 }) {
       ReaderDirectoryToolbar({
         variant: 'full-directory', text: this.searchDraft, placeholder: this.searchPlaceholder(),
-        ascending: this.ascending, showChapterTools: this.activeTab === 'directory', availableWidthVp: this.innerWidth(),
+        ascending: this.ascending, showChapterTools: this.activeTab === 'directory',
+        availableWidthVp: this.innerWidth(), inputMinimumWidthVp: this.toolbarInputMinimumWidth(),
         naturalFieldHeightVp: this.queryHeight(), naturalToolbarHeightVp: this.searchControlsHeight() - (this.embeddedInControl ? 0 : 1),
         onTextChange: (value: string): void => { this.searchDraft = value; },
         onSearch: (): void => this.handleControl('search'),
@@ -1453,12 +1457,28 @@ export struct FullDirectoryPanel {
   private panelHeaderHeight(): number { return readerScaledControlHeight(44, 20, this.fontScale()); }
   private queryHeight(): number { return readerScaledControlHeight(44, 24, this.fontScale()); }
   private tabStripHeight(): number { return this.tabHeight() + 6; }
-  private queryStacked(): boolean {
-    const count = this.activeTab === 'directory' ? 4 : 1;
-    return this.innerWidth() - TOK_SPACE_CONTROL_INLINE * 2 - count * (44 + 5) < 44;
+  private toolbarInputMinimumWidth(): number {
+    const scale = this.fontScale();
+    const ready = readerFontFamilyReady(TYPE_SEARCH_DIRECTORY_INPUT.fontFamily);
+    const key = `${this.searchPlaceholder()}:${this.readerWindowMetricsRevision}:${ready}`;
+    if (key === this.toolbarInputWidthKey) return this.toolbarInputWidthCached;
+    const fallback = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 8 * scale);
+    if (!ready) return fallback;
+    const context = this.getUIContext();
+    const placeholder = measureReaderControlText(context, this.searchPlaceholder(), TYPE_SEARCH_DIRECTORY_INPUT, this.innerWidth());
+    const glyph = measureReaderControlText(context, '字', TYPE_SEARCH_DIRECTORY_INPUT, this.innerWidth());
+    if (placeholder === undefined || glyph === undefined) return fallback;
+    const width = Math.max(fallback, placeholder.singleLineWidthVp + glyph.singleLineWidthVp * 2);
+    this.toolbarInputWidthKey = key;
+    this.toolbarInputWidthCached = width;
+    return width;
   }
   private searchControlsHeight(): number {
-    return this.queryHeight() + 6 + (this.queryStacked() ? 50 : 0) + (this.embeddedInControl ? 0 : 1);
+    return readerDirectoryToolbarBudget(this.innerWidth(), this.activeTab === 'directory',
+      this.queryHeight(), this.toolbarInputMinimumWidth()).height + (this.embeddedInControl ? 0 : 1);
+  }
+  private embeddedToolbarGrowth(): number {
+    return Math.max(0, this.searchControlsHeight() - 52) * this.controlProgress();
   }
   private heights(): ReaderFullDirectoryHeights {
     const heights = readerFullDirectoryHeights(this.panelHeight());
@@ -1482,14 +1502,14 @@ export struct FullDirectoryPanel {
   private chapterListHeight(): number {
     if (this.standaloneShort()) return Math.max(0, this.panelHeight() - 24);
     if (this.embeddedInControl) {
-      return Math.max(0, this.panelHeight() - this.controlValue(48, 99) - 48 * this.controlProgress() - 1);
+      return Math.max(0, this.panelHeight() - this.controlValue(48, 99) - this.embeddedToolbarGrowth() - 48 * this.controlProgress() - 1);
     }
     return this.heights().chapterList;
   }
 
   private bookmarkListHeight(): number {
     if (this.standaloneShort()) return Math.max(0, this.panelHeight() - 24);
-    if (this.embeddedInControl) return Math.max(0, this.panelHeight() - this.controlValue(47, 99) - 1);
+    if (this.embeddedInControl) return Math.max(0, this.panelHeight() - this.controlValue(47, 99) - this.embeddedToolbarGrowth() - 1);
     return this.heights().bookmarkList;
   }
 
@@ -1497,7 +1517,7 @@ export struct FullDirectoryPanel {
     if (!this.embeddedInControl) return this.bookmarkListHeight();
     // Empty/loading/error states center inside their parent's height. Keep
     // that parent inside the visible Quick/Full clip, not the Full mount box.
-    return Math.max(0, this.bookmarkContentHeightAt(this.controlProgress()) - this.controlValue(47, 99) - 1);
+    return Math.max(0, this.bookmarkContentHeightAt(this.controlProgress()) - this.controlValue(47, 99) - this.embeddedToolbarGrowth() - 1);
   }
 
   private gripLeft(): number {

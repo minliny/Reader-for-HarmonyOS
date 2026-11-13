@@ -9,7 +9,6 @@ import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from 
 import { LengthMetrics } from '@kit.ArkUI';
 import { MangaDirectoryCurrentFooter } from '../../manga/ui/MangaDirectoryCurrentFooter';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterHeight, mangaDirectoryHeaderHeight, mangaDirectoryFullFlowFooter } from '../../manga/ui/MangaDirectoryVisual';
-import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
@@ -55,6 +54,8 @@ export struct BookDirectoryPage {
   @Prop catalogBusy: boolean = false;
   @Prop interactive: boolean = true;
   isOpeningCurrent: () => boolean = (): boolean => true;
+  // Keep the parent's original operation contract while the catalog owns
+  // the foreground. Recovery presentation resumes at its reading host.
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -142,44 +143,6 @@ export struct BookDirectoryPage {
     this.pendingMangaCurrentScroll = false;
   }
 
-  @Builder
-  private recoveryContent() {
-    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
-      ForEach([this.recoveryPresentationIdentity()], (identity: string): void => {
-        ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
-          presentationActive: this.recoveryPresentationCurrent(identity),
-          isPresentationCurrent: (): boolean => this.recoveryPresentationCurrent(identity),
-          onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
-          onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
-      }, (identity: string): string => identity);
-    }
-  }
-
-  private recoveryPresentationIdentity(): string {
-    return JSON.stringify([this.sourceId, this.bookId, this.directoryRecovery.presentationId, this.temporaryBackIdentity]);
-  }
-
-  private recoveryPresentationCurrent(identity: string): boolean {
-    return this.directoryInputIsCurrent() && this.mangaFontsReady && !this.downloadMenuVisible &&
-      identity === this.recoveryPresentationIdentity();
-  }
-
-  @Builder
-  private pageRecoveryOverlay() {
-    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
-      Scroll() {
-        Column({ space: 8 }) {
-          this.recoveryContent();
-        }.width('100%').hitTestBehavior(HitTestMode.Transparent);
-      }.width(this.geometry.content.frame.width)
-        .constraintSize({ maxHeight: Math.max(0, readerWindowMetrics().windowRect.height / 3) })
-        .margin({ left: this.geometry.content.frame.left, right: this.geometry.content.frame.right,
-          top: this.geometry.header.bottom })
-        .visibility(this.downloadMenuVisible ? Visibility.Hidden : Visibility.Visible)
-        .hitTestBehavior(HitTestMode.Transparent);
-    }
-  }
-
   build() {
     this.mangaPage();
   }
@@ -203,7 +166,6 @@ export struct BookDirectoryPage {
       content: (): void => { this.mangaContentSlot(); },
       header: (): void => { this.mangaHeader(); },
       footer: (): void => { this.mangaFooterSlot(); },
-      overlayContent: (): void => { this.mangaOverlaySlot(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
         this.recordHeaderHeight('bookDirectory:mangaHeader', height, presentedKey);
       },
@@ -222,11 +184,6 @@ export struct BookDirectoryPage {
   @Builder
   private mangaFooterSlot() {
     if (this.mangaFontsReady) { this.mangaFixedFooter(); }
-  }
-
-  @Builder
-  private mangaOverlaySlot() {
-    if (this.mangaFontsReady) { this.pageRecoveryOverlay(); }
   }
 
   @Builder

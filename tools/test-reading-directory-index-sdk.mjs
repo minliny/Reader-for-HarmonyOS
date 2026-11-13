@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
 const {directoryFixture:fixture,deferred,until,session}=await import("./lib/reading-operation-durable-probe.mjs");
-const {makeIndex,settled,pRecovery}=await import("./lib/reading-directory-sdk-consumer.mjs");
+const {makeIndex,settled}=await import("./lib/reading-directory-sdk-consumer.mjs");
 const checks=[];
 const tick=()=>new Promise(setImmediate);
 
@@ -25,9 +25,9 @@ if(key==='bookmark-readback'){
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.list';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
  assert.equal(x.idx.directoryOperation.projection.receipt.confirmation,'confirmed');assert.equal(x.idx.directoryOperation.projection.receipt.fact,'confirmedRefreshFailed');
- const leaf=x.render();assert.equal(x.idx.directoryRecovery().bookmarksKind,'readback');assert.ok(x.actions(leaf).some(a=>a.label==='重新读取书签'));
- const writes=f.writes().length;x.click(leaf,'重新读取书签');await until(()=>x.idx.detailToc[0].bookmarks?.length===1);
- assert.equal(f.writes().length,writes);assert.equal(x.idx.directoryOperation.projection.receipt.fact,'confirmedCurrent');checks.push('confirmed-write-refresh-failure-real-native-read-action-no-second-write');
+ const leaf=x.render();assert.equal(x.idx.directoryRecovery().bookmarksKind,'readback');assert.equal(x.actions(leaf).length,0,'catalog foreground defers recovery actors');
+ const writes=f.writes().length;x.originalIntent(leaf,'bookmarks')();await until(()=>x.idx.detailToc[0].bookmarks?.length===1);
+ assert.equal(f.writes().length,writes);assert.equal(x.idx.directoryOperation.projection.receipt.fact,'confirmedCurrent');checks.push('confirmed-write-refresh-failure-retained-callback-port-no-second-write');
 }
 }
 if(key==='bookmark-lost-ack'){
@@ -35,9 +35,9 @@ if(key==='bookmark-lost-ack'){
  const f=await fixture(true),x=makeIndex(f);f.options.afterMethod='bookmark.create';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
  assert.equal(x.idx.directoryOperation.projection.receipt.confirmation,'unknown');const original=JSON.parse(f.disk('bookmark'));
- const leaf=x.render('ReaderFullDirectory');x.click(leaf,'重新载入核对书签');await until(()=>x.idx.directoryOperation.projection.receipt.fact==='confirmedCurrent');
+ const leaf=x.render('ReaderFullDirectory');x.originalIntent(leaf,'bookmarks')();await until(()=>x.idx.directoryOperation.projection.receipt.fact==='confirmedCurrent');
  assert.equal(f.writes().length,1);assert.equal(x.idx.detailToc[0].bookmarks.length,1);assert.equal(original.params.sequence,1);
- checks.push('unknown-lost-ACK-exact-pure-query-real-FullDirectory-action');
+ checks.push('unknown-lost-ACK-exact-pure-query-retained-directory-callback-port');
 }
 }
 if(key==='bookmark-continuation'){
@@ -46,27 +46,26 @@ if(key==='bookmark-continuation'){
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
  const original=JSON.parse(f.disk('bookmark'));await x.idx.loadControlBookmarks('local','book',()=>true);
  assert.equal(x.idx.directoryRecovery().canContinueBookmarks,true);assert.equal(f.writes().length,1);
- const leaf=x.render(),actor=x.actions(leaf).find(a=>a.label==='继续原操作');assert.ok(actor);
- const native=[...actor.nodes.values()].find(n=>n.onClick).onClick;native();native();await until(()=>x.idx.directoryOperation.projection.receipt.fact==='confirmedCurrent');
+ const leaf=x.render(),submit=x.originalIntent(leaf,'bookmarks',true);assert.equal(x.actions(leaf).length,0);
+ submit();submit();await until(()=>x.idx.directoryOperation.projection.receipt.fact==='confirmedCurrent');
  assert.equal(f.writes().length,2);assert.deepEqual(f.writes()[1].params,original.params);assert.equal(x.idx.detailToc[0].bookmarks.length,1);
- checks.push('explicit-original-continuation-exact-ID-payload-double-native-tap-one-write');
+ checks.push('explicit-original-continuation-exact-ID-payload-double-business-intent-one-write');
 }
 }
 if(key==='retained-actor'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.create';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
- await x.idx.loadControlBookmarks('local','book',()=>true);const leaf=x.render(),actor=x.actions(leaf).find(a=>a.label==='继续原操作');
- const oldNative=[...actor.nodes.values()].find(n=>n.onClick).onClick;
- x.idx.route='reading';oldNative();assert.equal(f.writes().length,1,'closed directory rejects old continuation');
- x.idx.route='directory';x.idx.directoryPresentationGeneration++;oldNative();assert.equal(f.writes().length,1,'same-book reopen rejects the previous physical actor');
- // Actual V1 full Prop update and old observer replay must not upgrade the old
- // actor's generation/presentation. The new tiny key admits a new actor only.
- const recovery=pRecovery(x.p,leaf,x.Recovery);const key=recovery.identities()[0];const generation=recovery.capturedGeneration(key);
- recovery.updateStateVars({recovery:{...x.idx.directoryRecovery(),bookmarks:{...x.idx.directoryRecovery().bookmarks,generation:generation+1}}});
- recovery.replayOnly(recovery.observers.map((fn,i)=>String(fn).includes("new ReaderRecoveryAction")&&!String(fn).includes("If.create")?i:-1).filter(i=>i>=0));assert.equal(actor.generation,generation);oldNative();assert.equal(f.writes().length,1);
+ await x.idx.loadControlBookmarks('local','book',()=>true);const leaf=x.render(),oldIntent=x.originalIntent(leaf,'bookmarks',true);
+ x.idx.route='reading';oldIntent();assert.equal(f.writes().length,1,'closed directory rejects its retained original contract');
+ x.idx.route='directory';x.idx.directoryPresentationGeneration++;oldIntent();assert.equal(f.writes().length,1,'same-book reopen rejects the previous opening callback');
+ // A current DTO update cannot rewrite the captured original business intent.
+ // The catalog has no recovery button or native observer to replay.
+ const generation=leaf.directoryRecovery.bookmarks.generation;
+ leaf.updateStateVars({directoryRecovery:{...x.idx.directoryRecovery(),bookmarks:{...x.idx.directoryRecovery().bookmarks,generation:generation+1}}});
+ assert.equal(leaf.directoryRecovery.bookmarks.generation,generation+1);oldIntent();assert.equal(f.writes().length,1);
  f.unset();x.idx.reconcileDirectoryOperation(generation,x.idx.directoryOperations.presentationId(x.idx.directoryOperationScene()),true);assert.equal(f.writes().length,1);
- checks.push('closed-reopened-old-physical-V1-retained-observer-and-unset-Runtime-reject');
+ checks.push('closed-reopened-retained-original-DTO-callback-and-unset-Runtime-reject');
 }
 }
 if(key==='partial-delete'){
@@ -76,7 +75,7 @@ if(key==='partial-delete'){
  const cold=await fixture(true,f),x=makeIndex(cold);await x.idx.loadControlBookmarks('local','book',()=>true);
  const recovery=x.idx.directoryRecovery();assert.match(recovery.bookmarks.message,/已确认 1\/3/);assert.match(recovery.bookmarks.message,/后续操作未派发/);
  assert.equal(x.idx.detailToc[0].bookmarks.length,2);assert.equal(cold.writes().length,0);assert.equal(x.idx.controlBookmarkProjectionMessage(),'','canonical partial result is not a bookmark-load failure');
- const leaf=x.render();assert.ok(x.nodes(leaf).some(n=>String(n.create).includes('已确认 1/3')));checks.push('actual-cold-Core-partial-batch-never-all-success-no-replay');
+ const leaf=x.render();assert.match(leaf.directoryRecovery.bookmarks.message,/已确认 1\/3/);assert.equal(x.actions(leaf).length,0);checks.push('actual-cold-Core-partial-batch-never-all-success-no-replay');
 }
 }
 if(key==='offline-physical-failure'){
@@ -91,7 +90,7 @@ if(key==='offline-physical-failure'){
  const leaf=x.render('ReaderFullDirectory');assert.equal(x.idx.directoryRecovery().offlineKind,'result');assert.equal(x.actions(leaf).length,0,'known physical failure keeps the original task result, no persistent pending actor');
  x.idx.reconcileOfflineOperation(x.idx.offlineOperation.generation,x.idx.directoryOperations.presentationId(x.idx.directoryOperationScene()));await settled(f);
  assert.equal(f.writes().length,1);assert.equal(f.calls.filter(c=>c.platform).length,1);assert.equal(x.idx.detailToc[0].level,2);
- checks.push('cache-Core-ACK-platform-image-failure-independent-native-pure-reconcile');
+ checks.push('cache-Core-ACK-platform-image-failure-original-callback-pure-reconcile');
 }
 }
 if(key==='offline-continuation'){
@@ -99,7 +98,7 @@ if(key==='offline-continuation'){
  const f=await fixture(true),x=makeIndex(f,{remote:true});f.options.status=true;f.options.beforeMethod='cache.clear';
  x.idx.directoryOperations.clearOffline();await until(()=>f.writes().length===1);await settled(f);const original=JSON.parse(f.disk('cacheClear'));
  await f.offline.load(x.idx.directoryOperations.offlineBinding(f.runtime,session));assert.equal(x.idx.directoryRecovery().canContinueOffline,true);
- const leaf=x.render('ReaderFullDirectory');x.click(leaf,'继续原操作');await until(()=>x.idx.offlineOperation.projection.receipt.fact==='confirmedCurrent');
+ const leaf=x.render('ReaderFullDirectory');x.originalIntent(leaf,'offline',true)();await until(()=>x.idx.offlineOperation.projection.receipt.fact==='confirmedCurrent');
  assert.equal(f.writes().length,2);assert.deepEqual(f.writes()[1].params,original.params);checks.push('cache-original-continuation-uses-shared-domain-exact-head');
 }
 }
@@ -139,10 +138,10 @@ if(key==='presentation-negative'){
  const oldId=x.idx.directoryOperations.presentationId(x.idx.directoryOperationScene()),g=x.idx.directoryOperation.generation;const before=f.calls.length;
  x.idx.directoryPresentationGeneration++;x.idx.reconcileDirectoryOperation(g,oldId,true);assert.equal(f.calls.length,before);
  const { directoryOperationsSource } = await import('./lib/reader-directory-operations-probe.mjs');
- const permissive = directoryOperationsSource.replace('scene.directoryVisible && identity === this.presentationId(scene) &&', 'scene.directoryVisible &&');
+ const permissive = directoryOperationsSource.replace('identity !== this.presentationId(scene) ||', 'false ||');
  assert.notEqual(permissive, directoryOperationsSource);
  const mutant=makeIndex(f,{operationSource:permissive});mutant.idx.directoryPresentationGeneration++;mutant.idx.reconcileDirectoryOperation(g,oldId,true);
- await until(()=>f.writes().length===2);assert.equal(f.writes()[1].params.operationId,f.writes()[0].params.operationId,'negative control really consumes an obsolete physical intent');
+ await until(()=>f.writes().length===2);assert.equal(f.writes()[1].params.operationId,f.writes()[0].params.operationId,'negative control consumes an obsolete original business intent');
  await settled(f);
  checks.push('actual-presentation-guard-negative-control-observably-replays-old-intent');
 }

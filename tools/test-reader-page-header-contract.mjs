@@ -52,8 +52,8 @@ const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/man
 const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 for (const [name, file, slots] of [
   ['ReaderPageScaffold', 'ui/layout/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
-  ['ReaderStandardPage', 'ui/layout/ReaderStandardPage.ets', ['content', 'nativeListItems', 'header', 'footer', 'overlayContent']],
-  ['MainTabShell', 'features/shell/MainTabShell.ets', ['content', 'header', 'overlayContent', 'scrollOverlayContent']],
+  ['ReaderStandardPage', 'ui/layout/ReaderStandardPage.ets', ['content', 'nativeListItems', 'header', 'footer', 'overlayContent', 'boundedOverlayContent']],
+  ['MainTabShell', 'features/shell/MainTabShell.ets', ['content', 'header', 'overlayContent', 'boundedOverlayContent', 'scrollOverlayContent']],
 ]) {
   const source = readFileSync(`entry/src/main/ets/${file}`, 'utf8');
   assert.deepEqual([...readerPageBuilderSlots(source, name)], slots, `${name}: all original public slots retain their actual declarations`);

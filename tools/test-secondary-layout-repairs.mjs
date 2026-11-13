@@ -9,6 +9,7 @@ import { productionMangaDirectoryPressFeedback } from './lib/manga-directory-pre
 import { downloadChapterDetailLabel } from '../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
 import { resolveReaderRaisedShape } from '../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts';
 import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
+import { actualReaderPageLayout } from './lib/reader-page-shell-runtime-probe.mjs';
 import { boundedMembers, boundedSurfaceSdk, readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs';
 import { foundationControls, foundationSpecs, withReaderSectionHeading, readerFoundationTokens, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
 import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
@@ -344,13 +345,37 @@ function recoveryOverlays() {
   negative.initialRender(); assert.throws(() => assert.ok(sdk.nodes(negative).some(n => n.type === 'Scroll')), /AssertionError/);
   const c = context(value);
   const boundCases = [
-    ['features/source/ui/SourceToolsPage.ets', 'overlayAvailableHeight', { overlayHostHeight: 180, overlayHostY: 0 }, [70]],
-    ['features/settings/ui/SettingsPage.ets', 'overlayAvailableHeight', { overlayHostHeight: 180, overlayHostY: 0 }, [70]],
     ['app/composition/ReaderJourneyRecoveryNotices.ets', 'availableHeight', { hostHeight: 180, hostY: 0, topInset: 70 }, []],
   ];
   for (const [rel, method, fields, args] of boundCases) {
     const owner = c.actor(rel, [method], fields); assert.ok(owner[method](...args) <= 110);
   }
+  for (const [rel, builder] of [['features/source/ui/SourceToolsPage.ets', 'pendingRecovery'],
+    ['features/settings/ui/SettingsPage.ets', 'pendingFeedback']]) {
+    const source = read(rel), { ts, options } = installedEtsCompiler();
+    const tree = ts.createSourceFile(rel, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    assert.deepEqual(tree.parseDiagnostics, []);
+    const component = tree.statements.find(node => ts.isStructDeclaration(node));
+    const content = component.members.find(member => member.name?.getText(tree) === builder);
+    assert.equal(content.parameters.length, 0, `${rel} supplies no page-local scalar geometry`);
+    const slots = [];
+    const visit = node => {
+      if (ts.isPropertyAssignment(node) && node.name.getText(tree) === 'boundedOverlayContent') slots.push(node.initializer);
+      ts.forEachChild(node, visit);
+    };
+    visit(tree);
+    assert.ok(slots.length > 0, `${rel} uses the live StandardPage bounded host`);
+    for (const slot of slots) {
+      assert.equal(slot.parameters.length, 0);
+      assert.match(slot.body.getText(tree), new RegExp(`this\\.${builder}\\(\\)`));
+    }
+  }
+  const standard = standardRecoveryDocument(c, { width: 320, height: 180, header: 70, content() {} });
+  const frame = c.nodes(standard).find(node => node.type === 'Scroll');
+  assert.ok(frame && frame.constraintSize.maxHeight > 0 && frame.constraintSize.maxHeight <= 110);
+  assert.equal(frame.margin.top, standard.geometry.content.startInset);
+  assert.equal(frame.width, standard.geometry.content.frame.width);
+  assert.ok(frame.margin.top + frame.constraintSize.maxHeight <= standard.geometry.footer.top);
   for (const rel of ['features/source/ui/SourceManagementPage.ets', 'features/source/ui/SourceSwitchWindow.ets', 'features/downloads/ui/SharedDownloadPage.ets']) assert.match(read(rel), /maxHeightVp:/, `${rel} explicitly supplies its actual host remainder`);
   results.push({ case: 'recovery-overlays', fullMessageActions: 3, zeroBudget: 'bounded', staleGeneration: 'rejected', oldGenerationArea: 'rejected', sameGenerationOldLayoutArea: 'rejected', oldMetricsArea: 'rejected', retiredMountArea: 'rejected', oldInlineAreaMutation: 'reproduced-and-rejected', coldTextThenActions: 'PASS-one-delivery-each', coldActionsThenText: 'PASS-one-delivery-each', resultKeyedMutation: 'rejected-both-orders' });
 }
@@ -683,38 +708,55 @@ function supplementalInputTargets() {
   assert.throws(() => assert.ok(oldDefault.nodes(button).find(node => node.type === 'Button').height >= 44), /AssertionError/, 'old public default42 rejected');
   results.push({ case: 'actions-tools-rules', supplemental: '15 rule fields, default44 and unchanged named recipes, old three field recipes rejected' });
 }
+function standardRecoveryDocument(c, { width, height, header, content }, definition = read('ui/layout/ReaderStandardPage.ets')) {
+  const members = ['geometry', 'viewportWidth', 'viewportHeight', 'boundedOverlayVisible', 'boundedOverlayContent',
+    'overlayContent', 'emptySlot', 'emptyOverlaySlot', 'pageOverlay', 'overlayAvailableHeight', 'refreshGeometry'];
+  const owner = createReaderBuilderProbe(definition, members, { ...c.deps, ...actualReaderPageLayout() }, c.hooks).owner;
+  Object.assign(owner, { appThemeScheme: 'day', viewportWidth: width, viewportHeight: height, variant: 'settingsGeneral',
+    geometryRevision: 0, contentLeadingRail: 0, contentEndInset: -1, headerHeight: () => header, footerHeight: () => 0,
+    boundedOverlayVisible: true, boundedOverlayContent: content, overlayContent() {} });
+  owner.refreshGeometry(); owner.pageOverlay(); c.foundation.properties.flush();
+  return owner;
+}
 function supplementalPreviewDocument() {
   const value = metrics(366, 360, 2), c = context(value), rel = 'features/settings/ui/ReaderMessagePreviewPage.ets', source = read(rel);
-  const methods = ['previewOverlay', 'noticeActive', 'noticeView', 'noticeLeft', 'noticeWidth', 'noticeTop', 'noticeHeight', 'owns', 'admitted', 'end', 'clearPreview', 'handleBack'];
-  const fields = { scene: 'notice-long', generation: 7, previewEnabled: true, foreground: true, hostWidth: 320, hostHeight: 180,
-    hostX: 23, hostY: 24, timer: -1, feedback: { reset() {} }, reconcileNotice() {}, dialogActive: () => false, taskActive: () => false };
-  const owner = c.actor(rel, methods, fields); owner.previewOverlay(70);
-  const scroll = c.nodes(owner).find(node => node.type === 'Scroll');
-  assert.ok(scroll && scroll.constraintSize.maxHeight === 110 && scroll.position.y === 70);
-  assert.equal(scroll.width, 282); assert.equal(scroll.position.x, 19);
+  const methods = ['noticePreview', 'noticeActive', 'noticeView', 'owns', 'admitted', 'end', 'clearPreview', 'handleBack'];
+  const fields = { scene: 'notice-long', generation: 7, previewEnabled: true, foreground: true,
+    timer: -1, feedback: { reset() {} }, reconcileNotice() {} };
+  const owner = c.actor(rel, methods, fields);
+  const standard = standardRecoveryDocument(c, { width: 320, height: 180, header: 70,
+    content: (...args) => { assert.deepEqual(args, [], 'bounded content is delivered without an inset scalar'); owner.noticePreview(); } });
+  const scroll = c.nodes(standard).find(node => node.type === 'Scroll'), geometry = standard.geometry;
+  assert.ok(scroll && scroll.constraintSize.maxHeight > 0 && scroll.constraintSize.maxHeight <= 110);
+  assert.equal(scroll.margin.top, geometry.content.startInset);
+  assert.equal(scroll.width, geometry.content.frame.width);
+  assert.equal(scroll.margin.left, geometry.content.frame.left);
+  assert.ok(scroll.margin.top + scroll.constraintSize.maxHeight <= geometry.footer.top);
   const notice = [...owner.children.values()].find(child => child instanceof c.deps.ReaderRecoveryNotice);
-  assert.ok(notice); assert.equal(notice.maxHeightVp, -1, 'one whole document owns Scroll around Notice and end action');
-  assert.equal(notice.layoutWidthVp, 282);
+  assert.ok(notice); assert.equal(notice.maxHeightVp, -1, 'one StandardPage document owns Scroll around Notice and end action');
+  assert.equal(notice.layoutWidthVp, -1, 'business content leaves width allocation to its live bounded host');
   notice.expanded = true; notice.clipped = true; notice.replay(); c.foundation.properties.flush();
-  const nodes = c.nodes(owner);
+  const nodes = [...c.nodes(standard), ...c.nodes(owner)];
   assert.equal(nodes.filter(node => node.type === 'Scroll').length, 1, 'expanded Preview notice does not create nested Scroll');
   assert.ok(nodes.some(node => node.type === 'Text' && node.maxLines === 10000));
   const end = nodes.find(node => node.type === 'Button' && node.accessibilityText === '结束提醒预览');
   assertNaturalButton(end); assert.equal(end.width, '100%');
   owner.generation = 8; owner.scene = 'notice-busy'; end.onClick(); assert.equal(owner.scene, 'notice-busy', 'old preview end callback cannot end current generation');
   assert.equal(owner.handleBack(), true); assert.equal(owner.scene, 'none', 'current Back still retires the local preview');
-  const unbounded = source.replace('Scroll() {\n          Column({ space: 8 })', 'Column() {\n          Column({ space: 8 })');
-  assert.notEqual(unbounded, source);
-  const old = c.actor(rel, methods, fields, unbounded); old.previewOverlay(70);
-  assert.throws(() => assert.ok(c.nodes(old).some(node => node.type === 'Scroll')), /AssertionError/, 'old actual overlay document lacks overflow Scroll');
+  const standardSource = read('ui/layout/ReaderStandardPage.ets');
+  const unbounded = standardSource.replace('Scroll() { Column({ space: 8 })', 'Column() { Column({ space: 8 })');
+  assert.notEqual(unbounded, standardSource);
+  const old = standardRecoveryDocument(c, { width: 320, height: 180, header: 70, content() {} }, unbounded);
+  assert.throws(() => assert.ok(c.nodes(old).some(node => node.type === 'Scroll')), /AssertionError/, 'old actual document lacks its host overflow Scroll');
   const large = context(metrics(320, 360, 3));
   const sample = large.actor(rel, ['sampleButton'], { admitted: () => true });
   sample.sampleButton('长文本消息预览', () => {});
   const sampleButton = large.nodes(sample).find(node => node.type === 'Button'); assertNaturalButton(sampleButton);
   const sampleText = large.nodes(sample).find(node => node.type === 'Text' && node.create === '长文本消息预览');
   assert.ok(glyph(sampleText.create, sampleText.fontSize * 3, sampleText.fontWeight).width > 240, 'actual3x long sample needs its natural multi-line height');
-  results.push({ case: 'recovery-overlays', supplemental: 'normal MessagePreview long notice document110vp, width282, one Scroll and generation Back' });
+  results.push({ case: 'recovery-overlays', supplemental: 'normal MessagePreview notice uses actual StandardPage geometry, one Scroll, no-argument callback and generation Back' });
 }
+
 function supplementalRetainedTargets() {
   for (const scale of [1, 1.45, 2]) {
     const value = metrics(320, 360, scale), c = context(value);

@@ -65,6 +65,8 @@ export struct RssSourceFeedPage {
       scrollOwner: 'native-list',
       header: (): void => { this.pageHeader(); },
       nativeListItems: (): void => { this.entryList(); },
+      boundedOverlayVisible: this.hasPendingRecovery(),
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     });
   }
 
@@ -84,6 +86,17 @@ export struct RssSourceFeedPage {
 
   @Builder
   private operationFeedback() {
+    if (this.feedbackView().visible && this.operation?.projection.receipt.confirmation !== 'unknown') {
+      ForEach([this.feedbackView().generation], (generation: number): void => {
+        ReaderPageState({ message: this.feedbackView().message, padded: false,
+          loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing',
+          actionLabel: this.feedbackView().canRetry ? '重新读取' : '', onAction: (): void => this.retryFeedback(generation) });
+      }, (generation: number): string => `rss-feed-read:${generation}`);
+    }
+  }
+
+  @Builder
+  private pendingRecovery() {
     RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
       onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
@@ -91,14 +104,12 @@ export struct RssSourceFeedPage {
       if (this.operation?.projection.receipt.confirmation === 'unknown') {
         ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: '重新读取',
           onReconcile: (generation: number): void => this.retryFeedback(generation) });
-      } else {
-        ForEach([this.feedbackView().generation], (generation: number): void => {
-          ReaderPageState({ message: this.feedbackView().message, padded: false,
-            loading: this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing',
-            actionLabel: this.feedbackView().canRetry ? '重新读取' : '', onAction: (): void => this.retryFeedback(generation) });
-        }, (generation: number): string => `rss-feed-read:${generation}`);
       }
     }
+  }
+
+  private hasPendingRecovery(): boolean {
+    return this.operation?.projection.receipt.confirmation === 'unknown' && this.feedbackView().visible;
   }
 
   private feedbackView(): ReaderRecoveryView { return readerRecoveryView(this.operation?.projection, this.readFacts); }

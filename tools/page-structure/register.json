@@ -1123,7 +1123,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+          "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -1295,7 +1295,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-          "sha256": "833c05f09119defaec5efaa5f98e4c1c9c5f9fbbde4fab10e190a3458df32e0a"
+          "sha256": "a2bb01725a6260b57257dfa3999ca688cee563650fac77bd7fce4f78cae9f1fd"
         },
         {
           "path": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
@@ -1335,7 +1335,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/layout/ReaderStandardPage.ets",
-          "sha256": "01ddc8ff71874a56ce00e0c1221113fa95fadb1fe905fb3a932b0e74864df935"
+          "sha256": "07ddb4d8cf30236aaabd973435549de8948d73fb6e1cc9121170b64ccf38383d"
         },
         {
           "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
@@ -1503,7 +1503,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-        "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd"
+        "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533"
       },
       "layers": {
         "route": {
@@ -1756,14 +1756,13 @@
             ],
             "hosts": [
               "ReaderFullDirectory.directoryOverlay",
-              "ReaderDirectoryRecoverySurface",
               "ReaderFullDirectory.offlineBookMenu",
-              "ReaderFullDirectory.directoryRulesLayer"
+              "ReaderFullDirectory.directoryRulesLayer",
+              "ReaderFullDirectory.directoryRulesNotice (active directoryRulesLayer only)"
             ],
             "zOrder": [
               "directory-content",
               "page-header-footer",
-              "recovery-notice",
               "offline-menu",
               "conditional-local-txt-rules-editor"
             ],
@@ -1772,7 +1771,7 @@
           },
           "result": "NOT_RUN",
           "evidence": [],
-          "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open."
+          "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open. Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
         },
         "states": {
           "applicability": "applicable",
@@ -1849,7 +1848,6 @@
               "directory-tabs-full",
               "directory-query-full",
               "directory-tools-full",
-              "directory-recovery-actions",
               "directory-rules-pattern",
               "directory-rules-level",
               "directory-rules-boundary",
@@ -1878,8 +1876,7 @@
                 "directory-full-offline-actions",
                 "directory-tabs-full",
                 "directory-query-full",
-                "directory-tools-full",
-                "directory-recovery-actions"
+                "directory-tools-full"
               ]
             },
             "focusStatus": "unverified",
@@ -2078,7 +2075,6 @@
         "directory-tabs-full",
         "directory-query-full",
         "directory-tools-full",
-        "directory-recovery-actions",
         "directory-rules-pattern",
         "directory-rules-level",
         "directory-rules-boundary",
@@ -2259,22 +2255,7 @@
           "check": "source-entry reference only; native/lifecycle NOT_RUN"
         },
         {
-          "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
-          "layer": 9,
-          "check": "source-entry reference only; native/lifecycle NOT_RUN"
-        },
-        {
-          "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.notifyReadbackFailures::shared.transient",
-          "layer": 9,
-          "check": "source-entry reference only; native/lifecycle NOT_RUN"
-        },
-        {
           "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets#ReaderDirectoryNavigationSurface.build::shared.recovery-action",
-          "layer": 9,
-          "check": "source-entry reference only; native/lifecycle NOT_RUN"
-        },
-        {
-          "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
           "layer": 9,
           "check": "source-entry reference only; native/lifecycle NOT_RUN"
         },
@@ -2493,17 +2474,17 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-          "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+          "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
           "symbol": "build"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-          "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+          "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
           "symbol": "directoryBody"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-          "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+          "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
           "symbol": "mangaPage"
         },
         {
@@ -2518,7 +2499,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-          "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+          "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
           "symbol": "build"
         },
         {
@@ -2528,7 +2509,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-          "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+          "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
           "symbol": "build"
         },
         {
@@ -2680,12 +2661,12 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-          "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+          "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
           "symbol": "resolveReaderControlDirectoryGeometry"
         },
         {
           "path": "tools/test-directory-target-closure.mjs",
-          "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+          "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
         },
         {
           "path": "tools/generate-manga-directory-visual.mjs",
@@ -2769,7 +2750,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-          "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+          "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
         },
         {
           "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -2781,7 +2762,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-          "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+          "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -2837,7 +2818,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+          "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -2909,7 +2890,7 @@
         },
         {
           "path": "tools/test-reader-font-demand.mjs",
-          "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+          "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
         },
         {
           "path": "tools/test-book-directory-page.mjs",
@@ -2958,6 +2939,18 @@
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
           "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+        },
+        {
+          "path": "tools/test-independent-directory-foreground.mjs",
+          "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+        },
+        {
+          "path": "tools/test-directory-toolbar-budget.mjs",
+          "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+        },
+        {
+          "path": "tools/test-directory-foreground-adapter.mjs",
+          "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
         }
       ],
       "variants": [
@@ -3016,7 +3009,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -3243,18 +3236,15 @@
                 "owner": "BookDirectoryPage",
                 "facts": {
                   "types": [
-                    "recovery",
                     "transient",
                     "manga-download-popup"
                   ],
                   "hosts": [
-                    "BookDirectoryPage.pageRecoveryOverlay",
                     "ReaderMangaDownloadPopup"
                   ],
                   "zOrder": [
                     "directory-content",
                     "page-header-footer",
-                    "recovery-notice",
                     "download-popup"
                   ],
                   "backConsumption": "unknown",
@@ -3262,7 +3252,7 @@
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。"
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -3332,8 +3322,7 @@
                     "directory-locate-manga",
                     "directory-manga-entry",
                     "directory-manga-download",
-                    "directory-manga-download-menu",
-                    "directory-recovery-actions"
+                    "directory-manga-download-menu"
                   ],
                   "statusNonColor": true,
                   "targets": {
@@ -3349,8 +3338,7 @@
                       "directory-locate-manga",
                       "directory-manga-entry",
                       "directory-manga-download",
-                      "directory-manga-download-menu",
-                      "directory-recovery-actions"
+                      "directory-manga-download-menu"
                     ]
                   },
                   "focusStatus": "unverified",
@@ -3528,8 +3516,7 @@
               "directory-locate-manga",
               "directory-manga-entry",
               "directory-manga-download",
-              "directory-manga-download-menu",
-              "directory-recovery-actions"
+              "directory-manga-download-menu"
             ],
             "operationRefs": [
               {
@@ -3632,22 +3619,7 @@
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
               {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.notifyReadbackFailures::shared.transient",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
                 "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets#ReaderDirectoryNavigationSurface.build::shared.recovery-action",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
                 "layer": 9,
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
@@ -3821,17 +3793,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -3846,7 +3818,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -3856,7 +3828,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -4008,12 +3980,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -4097,7 +4069,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -4109,7 +4081,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -4165,7 +4137,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -4245,7 +4217,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -4266,6 +4238,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -4325,7 +4309,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-              "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd"
+              "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533"
             },
             "layers": {
               "route": {
@@ -4565,14 +4549,13 @@
                   ],
                   "hosts": [
                     "ReaderFullDirectory.directoryOverlay",
-                    "ReaderDirectoryRecoverySurface",
                     "ReaderFullDirectory.offlineBookMenu",
-                    "ReaderFullDirectory.directoryRulesLayer"
+                    "ReaderFullDirectory.directoryRulesLayer",
+                    "ReaderFullDirectory.directoryRulesNotice (active directoryRulesLayer only)"
                   ],
                   "zOrder": [
                     "directory-content",
                     "page-header-footer",
-                    "recovery-notice",
                     "offline-menu",
                     "conditional-local-txt-rules-editor"
                   ],
@@ -4581,7 +4564,7 @@
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open."
+                "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open. Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -4658,7 +4641,6 @@
                     "directory-tabs-full",
                     "directory-query-full",
                     "directory-tools-full",
-                    "directory-recovery-actions",
                     "directory-rules-pattern",
                     "directory-rules-level",
                     "directory-rules-boundary",
@@ -4687,8 +4669,7 @@
                       "directory-full-offline-actions",
                       "directory-tabs-full",
                       "directory-query-full",
-                      "directory-tools-full",
-                      "directory-recovery-actions"
+                      "directory-tools-full"
                     ]
                   },
                   "focusStatus": "unverified",
@@ -4887,7 +4868,6 @@
               "directory-tabs-full",
               "directory-query-full",
               "directory-tools-full",
-              "directory-recovery-actions",
               "directory-rules-pattern",
               "directory-rules-level",
               "directory-rules-boundary",
@@ -5068,22 +5048,7 @@
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
               {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.notifyReadbackFailures::shared.transient",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
                 "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets#ReaderDirectoryNavigationSurface.build::shared.recovery-action",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
                 "layer": 9,
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
@@ -5267,17 +5232,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -5292,7 +5257,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -5302,7 +5267,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -5454,12 +5419,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -5543,7 +5508,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -5555,7 +5520,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -5611,7 +5576,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -5707,7 +5672,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -5808,6 +5773,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -5867,7 +5844,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -6094,18 +6071,15 @@
                 "owner": "BookDirectoryPage",
                 "facts": {
                   "types": [
-                    "recovery",
                     "transient",
                     "manga-download-popup"
                   ],
                   "hosts": [
-                    "BookDirectoryPage.pageRecoveryOverlay",
                     "ReaderMangaDownloadPopup"
                   ],
                   "zOrder": [
                     "directory-content",
                     "page-header-footer",
-                    "recovery-notice",
                     "download-popup"
                   ],
                   "backConsumption": "unknown",
@@ -6113,7 +6087,7 @@
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。"
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -6183,8 +6157,7 @@
                     "directory-locate-manga",
                     "directory-manga-entry",
                     "directory-manga-download",
-                    "directory-manga-download-menu",
-                    "directory-recovery-actions"
+                    "directory-manga-download-menu"
                   ],
                   "statusNonColor": true,
                   "targets": {
@@ -6200,8 +6173,7 @@
                       "directory-locate-manga",
                       "directory-manga-entry",
                       "directory-manga-download",
-                      "directory-manga-download-menu",
-                      "directory-recovery-actions"
+                      "directory-manga-download-menu"
                     ]
                   },
                   "focusStatus": "unverified",
@@ -6379,8 +6351,7 @@
               "directory-locate-manga",
               "directory-manga-entry",
               "directory-manga-download",
-              "directory-manga-download-menu",
-              "directory-recovery-actions"
+              "directory-manga-download-menu"
             ],
             "operationRefs": [
               {
@@ -6483,22 +6454,7 @@
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
               {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.notifyReadbackFailures::shared.transient",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
                 "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets#ReaderDirectoryNavigationSurface.build::shared.recovery-action",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
                 "layer": 9,
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
@@ -6672,17 +6628,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -6697,7 +6653,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -6707,7 +6663,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -6859,12 +6815,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -6948,7 +6904,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -6960,7 +6916,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -7016,7 +6972,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -7096,7 +7052,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -7104,7 +7060,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -7205,6 +7161,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -7264,7 +7232,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f"
+              "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a"
             },
             "layers": {
               "route": {
@@ -8062,17 +8030,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -8087,7 +8055,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -8097,7 +8065,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -8249,12 +8217,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -8338,7 +8306,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -8350,7 +8318,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -8406,7 +8374,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -8482,7 +8450,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -8583,6 +8551,10 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
               }
             ]
           }
@@ -8639,7 +8611,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -8867,16 +8839,14 @@
                   ],
                   "zOrder": [
                     "directory-content",
-                    "page-header-footer",
-                    "recovery-notice",
-                    "download-popup"
+                    "page-header-footer"
                   ],
                   "backConsumption": "unknown",
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。"
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -9357,17 +9327,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -9382,7 +9352,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -9392,7 +9362,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -9544,12 +9514,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -9633,7 +9603,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -9645,7 +9615,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -9701,7 +9671,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -9781,7 +9751,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -9802,6 +9772,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -9858,7 +9840,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -10089,16 +10071,14 @@
                   ],
                   "zOrder": [
                     "directory-content",
-                    "page-header-footer",
-                    "recovery-notice",
-                    "download-popup"
+                    "page-header-footer"
                   ],
                   "backConsumption": "unknown",
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。"
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -10579,17 +10559,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -10604,7 +10584,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -10614,7 +10594,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -10766,12 +10746,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -10855,7 +10835,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -10867,7 +10847,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -10923,7 +10903,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -11003,7 +10983,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -11011,7 +10991,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -11112,6 +11092,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -11171,7 +11163,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -11398,18 +11390,15 @@
                 "owner": "BookDirectoryPage",
                 "facts": {
                   "types": [
-                    "recovery",
                     "transient",
                     "manga-download-popup"
                   ],
                   "hosts": [
-                    "BookDirectoryPage.pageRecoveryOverlay",
                     "ReaderMangaDownloadPopup"
                   ],
                   "zOrder": [
                     "directory-content",
                     "page-header-footer",
-                    "recovery-notice",
                     "download-popup"
                   ],
                   "backConsumption": "unknown",
@@ -11417,7 +11406,7 @@
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。"
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -11487,8 +11476,7 @@
                     "directory-locate-manga",
                     "directory-manga-entry",
                     "directory-manga-download",
-                    "directory-manga-download-menu",
-                    "directory-recovery-actions"
+                    "directory-manga-download-menu"
                   ],
                   "statusNonColor": true,
                   "targets": {
@@ -11504,8 +11492,7 @@
                       "directory-locate-manga",
                       "directory-manga-entry",
                       "directory-manga-download",
-                      "directory-manga-download-menu",
-                      "directory-recovery-actions"
+                      "directory-manga-download-menu"
                     ]
                   },
                   "focusStatus": "unverified",
@@ -11683,8 +11670,7 @@
               "directory-locate-manga",
               "directory-manga-entry",
               "directory-manga-download",
-              "directory-manga-download-menu",
-              "directory-recovery-actions"
+              "directory-manga-download-menu"
             ],
             "operationRefs": [
               {
@@ -11787,22 +11773,7 @@
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
               {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.notifyReadbackFailures::shared.transient",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
                 "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets#ReaderDirectoryNavigationSurface.build::shared.recovery-action",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
                 "layer": 9,
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
@@ -11976,17 +11947,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -12001,7 +11972,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -12011,7 +11982,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -12163,12 +12134,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -12252,7 +12223,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -12264,7 +12235,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -12320,7 +12291,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -12400,7 +12371,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -12421,6 +12392,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -12480,7 +12463,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -12707,18 +12690,15 @@
                 "owner": "BookDirectoryPage",
                 "facts": {
                   "types": [
-                    "recovery",
                     "transient",
                     "manga-download-popup"
                   ],
                   "hosts": [
-                    "BookDirectoryPage.pageRecoveryOverlay",
                     "ReaderMangaDownloadPopup"
                   ],
                   "zOrder": [
                     "directory-content",
                     "page-header-footer",
-                    "recovery-notice",
                     "download-popup"
                   ],
                   "backConsumption": "unknown",
@@ -12726,7 +12706,7 @@
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。"
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -12796,8 +12776,7 @@
                     "directory-locate-manga",
                     "directory-manga-entry",
                     "directory-manga-download",
-                    "directory-manga-download-menu",
-                    "directory-recovery-actions"
+                    "directory-manga-download-menu"
                   ],
                   "statusNonColor": true,
                   "targets": {
@@ -12813,8 +12792,7 @@
                       "directory-locate-manga",
                       "directory-manga-entry",
                       "directory-manga-download",
-                      "directory-manga-download-menu",
-                      "directory-recovery-actions"
+                      "directory-manga-download-menu"
                     ]
                   },
                   "focusStatus": "unverified",
@@ -12992,8 +12970,7 @@
               "directory-locate-manga",
               "directory-manga-entry",
               "directory-manga-download",
-              "directory-manga-download-menu",
-              "directory-recovery-actions"
+              "directory-manga-download-menu"
             ],
             "operationRefs": [
               {
@@ -13096,22 +13073,7 @@
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
               {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.notifyReadbackFailures::shared.transient",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
                 "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets#ReaderDirectoryNavigationSurface.build::shared.recovery-action",
-                "layer": 9,
-                "check": "source-entry reference only; native/lifecycle NOT_RUN"
-              },
-              {
-                "entryId": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
                 "layer": 9,
                 "check": "source-entry reference only; native/lifecycle NOT_RUN"
               },
@@ -13285,17 +13247,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -13310,7 +13272,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -13320,7 +13282,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -13472,12 +13434,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -13561,7 +13523,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -13573,7 +13535,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -13629,7 +13591,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -13709,7 +13671,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -13717,7 +13679,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -13818,6 +13780,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -13874,7 +13848,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -14102,16 +14076,14 @@
                   ],
                   "zOrder": [
                     "directory-content",
-                    "page-header-footer",
-                    "recovery-notice",
-                    "download-popup"
+                    "page-header-footer"
                   ],
                   "backConsumption": "unknown",
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。"
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -14592,17 +14564,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -14617,7 +14589,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -14627,7 +14599,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -14779,12 +14751,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -14868,7 +14840,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -14880,7 +14852,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -14936,7 +14908,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -15016,7 +14988,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -15037,6 +15009,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -15093,7 +15077,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-              "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d"
+              "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68"
             },
             "layers": {
               "route": {
@@ -15324,16 +15308,14 @@
                   ],
                   "zOrder": [
                     "directory-content",
-                    "page-header-footer",
-                    "recovery-notice",
-                    "download-popup"
+                    "page-header-footer"
                   ],
                   "backConsumption": "unknown",
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
                 "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。"
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
               },
               "states": {
                 "applicability": "applicable",
@@ -15814,17 +15796,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -15839,7 +15821,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -15849,7 +15831,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -16001,12 +15983,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -16090,7 +16072,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -16102,7 +16084,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -16158,7 +16140,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -16238,7 +16220,7 @@
               },
               {
                 "path": "tools/test-reader-font-demand.mjs",
-                "sha256": "bfccf1572230a6f21365ae356df11fd28291d9d4cf574fbd0cad1b9f068b05c7"
+                "sha256": "ff034c0175fb177959766e541781feb8a74abaaff02277743d25c94f1eb14014"
               },
               {
                 "path": "tools/test-book-directory-page.mjs",
@@ -16246,7 +16228,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -16347,6 +16329,18 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-independent-directory-foreground.mjs",
+                "sha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
+              },
+              {
+                "path": "tools/test-directory-foreground-adapter.mjs",
+                "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
               }
             ]
           }
@@ -16413,7 +16407,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f"
+              "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a"
             },
             "layers": {
               "route": {
@@ -17228,17 +17222,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -17253,7 +17247,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -17263,7 +17257,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -17415,12 +17409,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -17504,7 +17498,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -17516,7 +17510,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -17572,7 +17566,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -17648,7 +17642,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -17749,6 +17743,10 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
               }
             ]
           }
@@ -17815,7 +17813,7 @@
             },
             "source": {
               "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-              "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f"
+              "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a"
             },
             "layers": {
               "route": {
@@ -18625,17 +18623,17 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
-                "sha256": "d410d37a3a69be1bf8521914dae030eacdbce826b1d96a4bd0dcc313f0fccfdd",
+                "sha256": "17e0c0285dbab700d8823f93d00791c3ea652375964765f98bde6c309758c533",
                 "symbol": "build"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets",
-                "sha256": "05611fe045815f0ae0768c77ac7bef4adef741d2f445b09a754c0c797cef0da9",
+                "sha256": "820ac21d9c982ab99b4c28525069a5503539faa70c9106ba8853a54b0e8ab70a",
                 "symbol": "directoryBody"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets",
-                "sha256": "d7533eb7b592295564b631c64d3d0252b7f12345f3fe4e4c4596c3d3bb73116d",
+                "sha256": "0b44e54076d12108596e6c57b43f09aa465d37c6aab8ff39e69e5498c9e6bf68",
                 "symbol": "mangaPage"
               },
               {
@@ -18650,7 +18648,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-                "sha256": "63a90b329f1cddf71cd9087c5d8cc9c639493d7fdffb36386a3631d51db81b6f",
+                "sha256": "9b28da6d919adf9e5d74157daa32c8441e40812e0559116f046444a1f754338a",
                 "symbol": "build"
               },
               {
@@ -18660,7 +18658,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryToolbar.ets",
-                "sha256": "f8cd9ce8f8a3385997c472f23591c183abfff95657bad86df325f5a02f5a9f93",
+                "sha256": "c86da1d445cde263637a2f3e8a89e75297b38af4a9646dc944b7a2673ed075d3",
                 "symbol": "build"
               },
               {
@@ -18812,12 +18810,12 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryGeometry.ts",
-                "sha256": "892a54268ea8a8f5c4c28d57420e151e0e80db20cbbac7689ff0b82d4caefce6",
+                "sha256": "16581d23f1f6fcf20b802feddb31524c6b62efed3a2538fb2144a3e920a5595e",
                 "symbol": "resolveReaderControlDirectoryGeometry"
               },
               {
                 "path": "tools/test-directory-target-closure.mjs",
-                "sha256": "422f5d9fd6988aca1a3dcd2233813aa9c65630494942791ba566d27aaaddd52d"
+                "sha256": "76f2e132753e043d99071cc13a12da7008a30380650f1c23d1d078762cb6e309"
               },
               {
                 "path": "tools/generate-manga-directory-visual.mjs",
@@ -18901,7 +18899,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts",
-                "sha256": "d653452b4561592cf1a4f16e31d261938d6bdd79a2faf58764b260b44184b304"
+                "sha256": "4a84d1a7e9e93f6e08f4b61e514ee96267d96e4f584840f8b8aa8af1d1b84145"
               },
               {
                 "path": "entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ets",
@@ -18913,7 +18911,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryMinimum.ets",
-                "sha256": "92a64814f3e8862e8d9c08e65161ba5062221c69786b0587a29a017c38346935"
+                "sha256": "c8222cd56922096d79d1ae0b393c0be19dcb2e2701bedcbf4c997d651b20d525"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryList.ets",
@@ -18969,7 +18967,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/bounded-surface-sdk-probe.mjs",
@@ -19045,7 +19043,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-                "sha256": "9d69b4d7e67f5a05f8abb8c8a296a2f00e182260f497c349c212d53ba27564e9"
+                "sha256": "e8411a8c8310710c151f37c2a6193c7411c06bdfa8948048751839f05bdc2944"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets",
@@ -19146,6 +19144,10 @@
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingOperationIntents.ts",
                 "sha256": "16ae6c91cdbd9f374aa3bcbfded9bd2e0b9a5e4469f61d5307f0a053620fbbc1"
+              },
+              {
+                "path": "tools/test-directory-toolbar-budget.mjs",
+                "sha256": "0641a535bbf00bd264508d04a8a818debd27cba6fcf18f21cf95730892207387"
               }
             ]
           }
@@ -19320,7 +19322,7 @@
         },
         {
           "path": "tools/message-entrypoints.json",
-          "sha256": "246368843a13992d46e944ac8f76e4899e0d967ffd35159c5c4fa027a3f964ca"
+          "sha256": "a94e45032f261d0930642ab177cbd18dcb1ba111f48552e2419cc21c25f475a6"
         },
         {
           "path": "tools/test-shared-download-visual-contract.mjs",
@@ -19474,7 +19476,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+          "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -20690,7 +20692,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "246368843a13992d46e944ac8f76e4899e0d967ffd35159c5c4fa027a3f964ca"
+                "sha256": "a94e45032f261d0930642ab177cbd18dcb1ba111f48552e2419cc21c25f475a6"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -20844,7 +20846,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -22067,7 +22069,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "246368843a13992d46e944ac8f76e4899e0d967ffd35159c5c4fa027a3f964ca"
+                "sha256": "a94e45032f261d0930642ab177cbd18dcb1ba111f48552e2419cc21c25f475a6"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -22221,7 +22223,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -23444,7 +23446,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "246368843a13992d46e944ac8f76e4899e0d967ffd35159c5c4fa027a3f964ca"
+                "sha256": "a94e45032f261d0930642ab177cbd18dcb1ba111f48552e2419cc21c25f475a6"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -23598,7 +23600,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -24774,7 +24776,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "246368843a13992d46e944ac8f76e4899e0d967ffd35159c5c4fa027a3f964ca"
+                "sha256": "a94e45032f261d0930642ab177cbd18dcb1ba111f48552e2419cc21c25f475a6"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -24928,7 +24930,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -26104,7 +26106,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "246368843a13992d46e944ac8f76e4899e0d967ffd35159c5c4fa027a3f964ca"
+                "sha256": "a94e45032f261d0930642ab177cbd18dcb1ba111f48552e2419cc21c25f475a6"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -26258,7 +26260,7 @@
               },
               {
                 "path": "tools/lib/reader-control-builder-probe.mjs",
-                "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+                "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
               },
               {
                 "path": "tools/lib/arkui-property-runtime-probe.mjs",
@@ -27295,7 +27297,7 @@
       },
       "source": {
         "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
-        "sha256": "833c05f09119defaec5efaa5f98e4c1c9c5f9fbbde4fab10e190a3458df32e0a"
+        "sha256": "a2bb01725a6260b57257dfa3999ca688cee563650fac77bd7fce4f78cae9f1fd"
       },
       "layers": {
         "route": {
@@ -27522,7 +27524,7 @@
               "transient"
             ],
             "hosts": [
-              "ReaderStandardPage overlayContent",
+              "ReaderStandardPage boundedOverlayContent (SourceToolsPage.pendingRecovery)",
               "ReaderNativeAlertOwner:Page",
               "ReaderNativeAlertOwner:Index",
               "ReaderHostRegistry DocumentViewPicker"
@@ -27537,7 +27539,7 @@
           },
           "result": "NOT_RUN",
           "evidence": [],
-          "knownGap": "Source inventory only; no new tests/native/device/a11y/user acceptance."
+          "knownGap": "Source inventory only; no new tests/native/device/a11y/user acceptance. Pending recovery now uses the current StandardPage no-argument bounded slot. Parent frame geometry owns first measurement and resize. Native acceptance remains open."
         },
         "states": {
           "applicability": "applicable",
@@ -28308,7 +28310,7 @@
         {
           "path": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
           "symbol": "build",
-          "sha256": "833c05f09119defaec5efaa5f98e4c1c9c5f9fbbde4fab10e190a3458df32e0a"
+          "sha256": "a2bb01725a6260b57257dfa3999ca688cee563650fac77bd7fce4f78cae9f1fd"
         },
         {
           "path": "entry/src/main/ets/features/source/application/SourceToolsOrchestrator.ets",
@@ -28343,7 +28345,7 @@
         {
           "path": "entry/src/main/ets/ui/layout/ReaderStandardPage.ets",
           "symbol": "build",
-          "sha256": "01ddc8ff71874a56ce00e0c1221113fa95fadb1fe905fb3a932b0e74864df935"
+          "sha256": "07ddb4d8cf30236aaabd973435549de8948d73fb6e1cc9121170b64ccf38383d"
         },
         {
           "path": "entry/src/main/ets/ui/layout/ReaderPageScrollHost.ets",
@@ -28606,7 +28608,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "bb96a5123287f284033dfea82bfb3f6fa743e22b0ea29e818c42bb458ededd2a"
+          "sha256": "5b1363fd32fd89b262bc8ec87c33624201c6e11cd33d70f4a08ed049415b2156"
         },
         {
           "path": "tools/lib/selected-production-methods.mjs",
@@ -28707,6 +28709,10 @@
         {
           "path": "tools/fixtures/design/source-group-trigger-before/SourceManagementPage.ets",
           "sha256": "3b782bf2f37a471cfb367c97704936497ff63b65b21a2b722266b914edfea240"
+        },
+        {
+          "path": "tools/test-retained-overlay-pages.mjs",
+          "sha256": "2aabb5000820d7c852f4c7ee1de643f6744cf36d8acb6aa6fbd0b1ecc968694c"
         }
       ]
     }

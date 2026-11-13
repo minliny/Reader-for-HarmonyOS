@@ -5,6 +5,7 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
@@ -92,6 +93,8 @@ export struct SyncPage {
       variant: 'sync',
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
+      boundedOverlayVisible: this.hasOriginalRecovery() && this.snapshot.restoreConflict === undefined,
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     })
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         const width = this.numericAreaLength(newValue.width);
@@ -244,25 +247,15 @@ export struct SyncPage {
       ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
-          ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(),
-            onReconcile: (generation: number): void => this.onReconcile(generation) });
-          if (this.canContinueConfigSave()) {
-            ForEach(this.configSaveContinuationIdentities(), (identity: string): void => {
-              ReaderRecoveryAction({ label: '继续原操作', generation: this.configSaveGeneration(identity),
-                actionEnabled: this.snapshot.facts?.busy !== true,
-                onReconcile: (generation: number): void => this.onContinueConfigSave(generation,
-                  this.effectiveWebdavUrl(), this.effectiveWebdavUser(), this.webdavPass, this.backupPass, this.effectiveWebdavPath()) });
-            }, (identity: string): string => identity);
-          }
-          if (this.canSkipBackupRetention()) {
-            // This mutating consent actor belongs to one exact receipt identity.
-            // V1 callback fields are construction-only; rebuild only this action
-            // when its receipt changes so an old physical callback keeps old ID.
-            ForEach(this.backupRetentionActionIdentities(), (_identity: string): void => {
-              ReaderRecoveryAction({ label: '保留备份，结束清理', generation: this.backupGeneration(_identity),
-                actionEnabled: this.snapshot.facts?.busy !== true,
-                onReconcile: (generation: number): void => this.onSkipBackupRetention(generation) });
-            }, (identity: string): string => identity);
+          if (!this.hasOriginalRecovery() && this.feedbackView().visible) {
+            ForEach([this.feedbackView().generation], (generation: number): void => {
+              ReaderPageState({ message: this.feedbackView().message, padded: false,
+                loading: this.snapshot.facts?.busy === true,
+                actionLabel: this.feedbackView().canRetry ? this.recoveryLabel() : '',
+                onAction: (): void => {
+                  if (!this.hasOriginalRecovery() && generation === this.feedbackView().generation) this.onReconcile(generation);
+                } });
+            }, (generation: number): string => `sync-read:${generation}`);
           }
           if (this.snapshot.statusMessage.length > 0 && !this.feedbackView().visible) {
             Text(this.snapshot.statusMessage)
@@ -286,6 +279,54 @@ export struct SyncPage {
       }
     }
     .width('100%');
+  }
+
+  private hasOriginalRecovery(): boolean {
+    return this.snapshot.facts?.operation !== undefined && !this.snapshot.facts.operation.completed;
+  }
+
+  private recoveryIdentity(): string {
+    const operation = this.snapshot.facts?.operation;
+    return JSON.stringify([operation?.operationId ?? '', operation?.projection.facts.generation ?? 0]);
+  }
+
+  private recoveryCurrent(identity: string): boolean {
+    return this.hasOriginalRecovery() && this.snapshot.restoreConflict === undefined &&
+      identity === this.recoveryIdentity() && this.snapshot.facts?.busy !== true;
+  }
+
+  @Builder
+  private originalRecovery(identity: string) {
+    ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(), busy: this.snapshot.facts?.busy === true,
+      onReconcile: (generation: number): void => {
+        if (this.recoveryCurrent(identity)) this.onReconcile(generation);
+      } });
+    if (this.canContinueConfigSave()) {
+      ForEach(this.configSaveContinuationIdentities(), (continuationId: string): void => {
+        ReaderRecoveryAction({ label: '继续原操作', generation: this.configSaveGeneration(continuationId),
+          actionEnabled: this.snapshot.facts?.busy !== true,
+          onReconcile: (generation: number): void => {
+            if (this.recoveryCurrent(identity) && this.canContinueConfigSave()) this.onContinueConfigSave(generation,
+              this.effectiveWebdavUrl(), this.effectiveWebdavUser(), this.webdavPass, this.backupPass, this.effectiveWebdavPath());
+          } });
+      }, (continuationId: string): string => continuationId);
+    }
+    if (this.canSkipBackupRetention()) {
+      // Keep each consent action tied to the original receipt identity.
+      ForEach(this.backupRetentionActionIdentities(), (_identity: string): void => {
+        ReaderRecoveryAction({ label: '保留备份，结束清理', generation: this.backupGeneration(_identity),
+          actionEnabled: this.snapshot.facts?.busy !== true,
+          onReconcile: (generation: number): void => {
+            if (this.recoveryCurrent(identity) && this.canSkipBackupRetention()) this.onSkipBackupRetention(generation);
+          } });
+      }, (identity: string): string => identity);
+    }
+  }
+
+  @Builder
+  private pendingRecovery() {
+    ForEach([this.recoveryIdentity()], (identity: string): void => { this.originalRecovery(identity); },
+      (identity: string): string => identity);
   }
 
   @Builder

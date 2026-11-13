@@ -32,7 +32,8 @@ export interface ReaderControlDirectoryMeasuredGeometry {
 
 export function resolveReaderControlDirectoryGeometry(progress: number, tab: string,
   availableHeight: number, tabHeight: number, queryGrowth: number,
-  rowHeight: number, measured?: ReaderControlDirectoryMeasuredGeometry): ReaderControlDirectoryGeometry {
+  rowHeight: number, measured?: ReaderControlDirectoryMeasuredGeometry,
+  fallbackToolbarHeight?: number): ReaderControlDirectoryGeometry {
   const p = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
   const height = Number.isFinite(availableHeight) ? Math.max(0, availableHeight) : 0;
   const actualTabHeight = Number.isFinite(tabHeight) ? Math.max(44, tabHeight) : 44;
@@ -44,11 +45,12 @@ export function resolveReaderControlDirectoryGeometry(progress: number, tab: str
   const tabTop = tabQuickTop + (6 - tabQuickTop) * p;
   const tabBottom = tabTop + actualTabHeight;
   const toolbarTop = 61 - 18 * p + (measured === undefined ? 7 * p : 0) + tabGrowth;
-  const toolbarHeight = measured === undefined ? 52 + query : Math.max(44, measured.toolbarHeight);
+  const toolbarHeight = measured === undefined ? Math.max(52 + query,
+    Number.isFinite(fallbackToolbarHeight) ? fallbackToolbarHeight as number : 0) : Math.max(44, measured.toolbarHeight);
   const toolbarViewportHeight = Math.min(toolbarHeight * p, Math.max(0, height - toolbarTop));
   const quickListTop = bookmarks ? 47 : 48;
   const nominalListTop = measured === undefined ? quickListTop + (99 - quickListTop) * p + query * p +
-    14 - 7 * p + tabGrowth : Math.max(tabBottom, measured.listTop);
+    14 - 7 * p + tabGrowth + Math.max(0, toolbarHeight - 52 - query) * p : Math.max(tabBottom, measured.listTop);
   const listTop = Math.min(height, nominalListTop);
   // The current-chapter summary is informational. Give it only space left
   // after one whole row; shortage is explicit even when no summary remains.

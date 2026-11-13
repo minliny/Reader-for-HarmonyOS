@@ -37,6 +37,8 @@ export struct MainTabShell {
   @Prop headerTop: number = 0;
   @Prop headerMeasurementKey: number = 0;
   @Prop footerMeasurementKey: number = 0;
+  // Bounded recovery is hosted by the standardScroll page branch.
+  @Prop boundedOverlayVisible: boolean = false;
   @Prop headerInsetLeft: number = 0;
   @Prop headerInsetRight: number = 0;
   onHeaderHeightChange: (height: number, presentedKey?: number) => void = (_height: number, _presentedKey?: number): void => {};
@@ -44,6 +46,7 @@ export struct MainTabShell {
   @BuilderParam content: () => void;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam overlayContent: () => void = this.emptySlot;
+  @BuilderParam boundedOverlayContent: () => void = this.emptySlot;
   @BuilderParam scrollOverlayContent: (contentStartInset: number) => void = this.emptyScrollOverlay;
   @Builder private emptyScrollOverlay(_contentStartInset: number) {}
   @Builder private emptySlot() {}
@@ -101,6 +104,8 @@ export struct MainTabShell {
         header: (): void => { this.header(); },
         footer: (): void => { this.bottomNavigation(); },
         overlayContent: (startInset: number): void => { this.mainOverlays(startInset); },
+        boundedOverlayVisible: this.boundedOverlayVisible,
+        boundedOverlayContent: (): void => { this.boundedOverlayContent(); },
       });
     } else {
     ReaderPageScaffold({ frameStyle: this.frameStyle(), headerVisible: this.headerVisible,

@@ -34,6 +34,8 @@ export struct ReaderStandardPage {
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam footer: () => void = this.emptySlot;
   @BuilderParam overlayContent: (contentStartInset: number) => void = this.emptyOverlaySlot;
+  @Prop boundedOverlayVisible: boolean = false;
+  @BuilderParam boundedOverlayContent: () => void = this.emptySlot;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @Builder private emptySlot() {}
   @Builder private emptyOverlaySlot(_contentStartInset: number) {}
@@ -95,6 +97,25 @@ export struct ReaderStandardPage {
       footerBackground: pageBackground });
   }
 
+  private overlayAvailableHeight(): number {
+    const geometry = this.geometry;
+    if (this.viewportHeight <= 0) return 0;
+    const contentBottom = this.viewportHeight - Math.max(geometry.content.endInset, geometry.content.nativeEndInset);
+    return Math.max(0, Math.min(contentBottom, geometry.footer.top) - geometry.content.startInset);
+  }
+
+  @Builder
+  private pageOverlay() {
+    this.overlayContent(this.geometry.content.startInset);
+    if (this.boundedOverlayVisible && this.overlayAvailableHeight() > 0) {
+      Scroll() { Column({ space: 8 }) { this.boundedOverlayContent(); }.width('100%'); }
+        .width(this.geometry.content.frame.width).constraintSize({ maxHeight: this.overlayAvailableHeight() })
+        .margin({ left: this.geometry.content.frame.left, right: this.geometry.content.frame.right, top: this.geometry.content.startInset })
+        .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Default)
+        .onTouch((event: TouchEvent): void => event.stopPropagation());
+    }
+  }
+
   build() {
     ReaderPageScaffold({ frameStyle: this.frameStyle(),
       geometry: this.geometry,
@@ -102,7 +123,7 @@ export struct ReaderStandardPage {
       footerMeasurementKey: this.measurementKey,
       content: (): void => { this.pageBody(); },
       header: (): void => { this.header(); }, footer: (): void => { this.footer(); },
-      overlayContent: (): void => { this.overlayContent(this.geometry.content.startInset); },
+      overlayContent: (): void => { this.pageOverlay(); },
       onHeaderHeightChange: (height: number, key: number): void => this.recordMeasurement('standard:header', height, key),
       onFooterHeightChange: (height: number, key: number): void => this.recordMeasurement('standard:footer', height, key),
     }).onAreaChange((_old: Area, next: Area): void => {

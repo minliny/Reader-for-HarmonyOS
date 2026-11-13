@@ -1,5 +1,4 @@
 import { LengthMetrics } from '@kit.ArkUI';
-import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import type { RssFailedSource, RssMode, RssPresentation } from '../presentation/RssPresentationContract';
@@ -270,8 +269,6 @@ export struct RssPage {
 
   @Builder
   private readFeedback() {
-    RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
-      onReconcileOriginal: this.onReconcileOriginal });
     if (readerRecoveryView(undefined, this.readFacts).visible) {
       ForEach([this.readFacts.generation], (generation: number): void => {
       ReaderPageState({ message: readerRecoveryView(undefined, this.readFacts).message,

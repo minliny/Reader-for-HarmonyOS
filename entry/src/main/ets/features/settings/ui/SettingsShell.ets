@@ -18,6 +18,7 @@ export struct SettingsShell {
   @Prop navigationGeneration: number = 0;
   @Prop tapBottomScrollTop: boolean = true;
   @Prop showOverlay: boolean = false;
+  @Prop boundedOverlayVisible: boolean = false;
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
@@ -28,6 +29,8 @@ export struct SettingsShell {
   @BuilderParam homeContent: () => void;
   @BuilderParam generalContent: () => void;
   @BuilderParam overlayContent: (contentStartInset: number) => void;
+  @BuilderParam boundedOverlayContent: () => void = this.emptySlot;
+  @Builder private emptySlot() {}
   private readonly homeScroller: Scroller = new Scroller();
   private readonly generalScroller: Scroller = new Scroller();
 
@@ -40,7 +43,9 @@ export struct SettingsShell {
         onCurrentTabTap: (_key: string): void => this.scrollHomeToTop(),
         content: (): void => { this.homeContent(); },
         header: (): void => { this.homeTopBar(); },
-        scrollOverlayContent: (startInset: number): void => { this.pageOverlay(startInset); },
+        scrollOverlayContent: (contentStartInset: number): void => { this.pageOverlay(contentStartInset); },
+        boundedOverlayVisible: this.boundedOverlayVisible,
+        boundedOverlayContent: (): void => { this.boundedOverlayContent(); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     } else {
       ReaderStandardPage({
@@ -49,6 +54,8 @@ export struct SettingsShell {
         content: (): void => { this.generalContent(); },
         header: (): void => { this.generalTopBar(); },
         overlayContent: (contentStartInset: number): void => { this.pageOverlay(contentStartInset); },
+        boundedOverlayVisible: this.boundedOverlayVisible,
+        boundedOverlayContent: (): void => { this.boundedOverlayContent(); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     }
   }

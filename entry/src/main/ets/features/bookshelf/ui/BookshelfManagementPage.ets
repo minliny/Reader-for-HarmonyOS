@@ -77,7 +77,8 @@ export struct BookshelfManagementPage {
       variant: 'management',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
-      overlayContent: (contentStartInset: number): void => { this.pendingOverlay(contentStartInset); },
+      boundedOverlayVisible: this.originalPending(),
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     });
   }
 
@@ -116,15 +117,12 @@ export struct BookshelfManagementPage {
     return this.snapshot.managementMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown';
   }
   @Builder
-  private pendingOverlay(contentStartInset: number) {
+  private pendingRecovery() {
     if (this.originalPending()) {
-      Column() {
         ReaderRecoveryNotice({ view: this.recovery(), tag: '分组待处理', actionLabel: '核对操作结果', busy: this.snapshot.busy,
           onReconcile: this.onReconcile,
           secondaryActionLabel: this.snapshot.managementMutation?.canContinueOriginal === true ? '继续原分组操作' : '',
           onSecondaryAction: this.onContinueOriginal });
-      }.width('100%').padding({ left: 17, right: 17,
-        top: contentStartInset }).hitTestBehavior(HitTestMode.Transparent);
     }
   }
   private lastFeedback: string = '';

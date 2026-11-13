@@ -37,6 +37,7 @@ import type { ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGe
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../presentation/ReaderDirectoryViewport';
 import { TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
   TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT, TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
+import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
 
 class ControlDirectoryDataSource implements IDataSource {
   private rows: ReaderControlDirectoryRow[] = [];
@@ -257,7 +258,11 @@ export struct ReaderControlDirectoryContent {
       Math.max(44, this.value(profile.quick.tabHeightVp, profile.full.tabHeightVp));
   }
   private tabGrowth(): number { return this.tabHeight() - this.value(31, 36); }
-  private toolbarHeight(): number { return this.selectedMinimum()?.full.toolbarHeightVp ?? 52; }
+  private toolbarHeight(): number {
+    return this.selectedMinimum()?.full.toolbarHeightVp ??
+      readerDirectoryToolbarBudget(this.availableWidth - 2, this.tab === 'directory',
+        this.directoryQueryHeight(), 80 * this.fontScale()).height + 2;
+  }
   private footerHeight(): number { return this.selectedMinimum()?.full.footerHeightVp ?? 48; }
   private bookmarkNaturalSize(): ReaderControlBookmarkNaturalSize | undefined {
     const profile = this.selectedMinimum();
@@ -451,7 +456,7 @@ export struct ReaderControlDirectoryContent {
     return resolveReaderControlDirectoryGeometry(this.progress, this.tab, this.availableHeight,
       this.tabHeight(), this.queryGrowth(), this.rowHeight(), profile === undefined ? undefined : {
         listTop: this.value(profile.quick.listTopVp, profile.full.listTopVp),
-        toolbarHeight: this.toolbarHeight(), footerHeight: this.footerHeight() });
+        toolbarHeight: this.toolbarHeight(), footerHeight: this.footerHeight() }, this.toolbarHeight());
   }
   private toolbarInteractive(): boolean {
     return this.mounted && this.currentInputEnabled() && this.progress === 1 &&
@@ -668,6 +673,8 @@ export struct ReaderControlDirectoryContent {
         variant: 'full-directory',
         naturalFieldHeightVp: this.selectedMinimum()?.full.fieldHeightVp ?? 0,
         naturalInputHeightVp: this.selectedMinimum()?.full.inputHeightVp ?? 0,
+        inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp ?? 80 * this.fontScale(),
+        availableWidthVp: Math.max(0, this.availableWidth - 2),
         naturalToolbarHeightVp: this.selectedMinimum() === undefined ? 0 : this.toolbarHeight() - 2,
         text: this.draft, placeholder: this.placeholder(), ascending: this.ascending,
         showChapterTools: this.tab === 'directory',

@@ -102,31 +102,25 @@ if(id==='ordinary-state'){
 if(id==='core-busy'){
 const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/reading-operation-durable-probe.mjs');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));let passed=false;try{
 const {directoryFixture:fixture,deferred,until}=await import('./lib/reading-operation-durable-probe.mjs');
-const {makeIndex,settled,pRecovery}=await import('./lib/reading-directory-sdk-consumer.mjs');
+const {makeIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
 for(const family of ['bookmarks','offline']){
  const f=await fixture(true),x=makeIndex(f,{remote:family==='offline'});
  const writeMethod=family==='bookmarks'?'bookmark.create':'cache.clear',readMethod=family==='bookmarks'?'bookmark.list':'cache.book.status';
  f.options.status=true;f.options.beforeMethod=writeMethod;
  if(family==='bookmarks')x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else x.idx.directoryOperations.clearOffline();
  await until(()=>f.writes().length===1);await settled(f);
- const label=family==='bookmarks'?'重新载入核对书签':'核对离线结果',leaf=x.render('ReaderFullDirectory');
- const original=x.actions(leaf).find(action=>action.label===label);assert.ok(original);
- const native=[...original.nodes.values()].find(node=>node.onClick).onClick;
+ const leaf=x.render('ReaderFullDirectory');
+ assert.equal(x.actions(leaf).length,0,'catalog foreground defers recovery actors');
+ const submit=x.originalIntent(leaf,family);
  const gate=deferred(),readCount=f.calls.filter(call=>call.method===readMethod).length;
  f.options.pauseMethod=readMethod;f.options.gate=gate;
- native();await until(()=>f.calls.filter(call=>call.method===readMethod).length===readCount+1);
+ submit();await until(()=>f.calls.filter(call=>call.method===readMethod).length===readCount+1);
  const recovery=x.idx.directoryRecovery();assert.equal(recovery[family+'Busy'],true);
  const host=family==='bookmarks'?f.directory:f.offline;
  assert.equal(host.snapshot().projection.receipt.readback,'reading');
- const live=pRecovery(x.p,leaf,x.Recovery);live.updateStateVars({recovery});
- const dispatched=f.calls.length;native();native();assert.equal(f.calls.length,dispatched,'retained pre-busy native callback cannot dispatch a duplicate reconciliation');
- x.p.properties.flush();
- const action=x.actions(leaf).find(action=>action.label===label);assert.equal(action.isBusy,true);
- assert.equal([...action.nodes.values()].find(node=>node.onClick).enabled,false);
- assert.equal([...action.nodes.values()].find(node=>node.type==='Text').create,label,'busy retains the original label footprint');
- assert.ok([...action.nodes.values()].some(node=>node.type==='LoadingProgress'&&node.width===18&&node.height===18));
- const identity=live.identities().find(identity=>live.isBookmarks(identity)===(family==='bookmarks'));
- live.reconcile(identity,false);assert.equal(f.calls.length,dispatched,'surface busy guard also rejects direct stale action delivery');
+ leaf.updateStateVars({directoryRecovery:recovery});
+ const dispatched=f.calls.length;submit();submit();assert.equal(f.calls.length,dispatched,'the original owner rejects duplicate retained business intents while busy');
+ assert.equal(x.actions(leaf).length,0,'busy facts retain the catalog foreground without mounting recovery actors');
  assert.equal(f.writes().length,1,'checking never replays the original mutation');
  gate.resolve();await until(()=>host.snapshot().projection.receipt.readback==='succeeded');
  assert.equal(host.snapshot().projection.receipt.confirmation,'unknown','canonical read does not acknowledge the unresolved mutation');

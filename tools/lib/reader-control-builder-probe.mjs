@@ -203,6 +203,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     'notifyOpenedError','openedErrorNoticeKey','chapterLoadState','openFailureStage',
     'modeReconcileBusy','modeLoadBusy','recoveryBusy','catalogBusy','chromeScheme','directorySheet','directorySideHeader',
     'directoryBottomHeader','measureDirectorySheetHeader','offlineBookAction','offlineMenuGeneration']);
+  if (['FullDirectoryPanel', 'ReaderDirectoryToolbar', 'ReaderControlDirectoryContent'].includes(struct.name.getText(original))) {
+    for (const name of ['toolbarBudget', 'toolbarInputMinimumWidth', 'toolbarInputWidthKey', 'toolbarInputWidthCached',
+      'fontScale', 'queryHeight', 'searchPlaceholder', 'directoryQueryHeight', 'embeddedToolbarGrowth']) chromeMembers.add(name);
+  }
   let addedChrome;
   do {
     addedChrome = false;
@@ -656,11 +660,23 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
   globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
     () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
-  if (struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('panelHeader')) {
+  if ((struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('panelHeader')) ||
+    (['FullDirectoryPanel', 'ReaderDirectoryToolbar', 'ReaderControlDirectoryContent'].includes(struct.name.getText(original)) &&
+      /reader(?:ReadableFontScale|ScaledControlHeight)/.test(members.join('\n')))) {
     const resolvers = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'),
       'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']);
     globals.readerReadableFontScale ??= resolvers.readerReadableFontScale;
     globals.readerScaledControlHeight ??= resolvers.readerScaledControlHeight;
+  }
+  if (members.join('\n').includes('readerDirectoryToolbarBudget')) {
+    const budget = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts', import.meta.url), 'utf8'),
+      'ReaderFullDirectoryBudget.ts', {}, ['readerDirectoryToolbarBudget']);
+    globals.readerDirectoryToolbarBudget ??= budget.readerDirectoryToolbarBudget;
+  }
+  if (struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('toolbarInputMinimumWidth')) {
+    const measurement = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets', import.meta.url), 'utf8'),
+      'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' } }, ['measureReaderControlText']);
+    globals.measureReaderControlText ??= measurement.measureReaderControlText;
   }
   if (/\breaderReadingTopBar(?:Height|FontsReady)\b/.test(members.join('\n'))) {
     const header = readFileSync(new URL('../../entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets', import.meta.url), 'utf8');

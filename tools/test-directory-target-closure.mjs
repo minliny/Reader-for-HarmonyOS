@@ -26,7 +26,7 @@ if(selected.length){
    const metrics={systemFontScale:scale,windowRect:{width:1000,height:1000}};
    const toolbarValues=selectedProductionValues(file('reading/ui/ReaderDirectoryToolbar.ets'),['READER_DIRECTORY_TOOLBAR_HEIGHT']);
    const deps={...sdk.deps,...resolver,...access,...toolbarValues,readerWindowMetrics:()=>metrics};
-   const names=['searchControls','queryStacked','searchControlsHeight','queryHeight','fontScale','innerWidth','panelWidth','tabStripHeight','tabHeight'];
+   const names=['searchControls','toolbarInputMinimumWidth','searchControlsHeight','queryHeight','fontScale','innerWidth','panelWidth','tabStripHeight','tabHeight'];
    const {owner}=createReaderBuilderProbe(panelSource,names,{...deps,ReaderDirectoryToolbar:ToolbarSlot},
     {...sdk.hooks,childSources:{ReaderDirectoryToolbar:toolbarSource}});
    const actions=[];
@@ -42,12 +42,15 @@ if(selected.length){
    for(const hit of hits){assert.equal(hit.width,44);assert(hit.height>=44);assert.equal(hit.responseRegion.width,44);assert.equal(hit.responseRegion.x,0);hit.onClick();}
    assert.equal(actions.length,hits.length);
    assert(nodes.some(n=>n.type==='Stack'&&n.width===32&&n.height===32&&!n.onClick),'authored32 paint stays inside the native44 target');
-   const inner=width-26,count=hits.length,expectedStack=inner-20-count*49<44;
-   assert.equal(owner.queryStacked(),expectedStack,'actual actor width overrides global1000vp metrics');
-   assert.equal(toolbar.queryStacked(),expectedStack,'shared renderer pays the same narrow-width decision');
-   assert.equal(owner.searchControlsHeight(),owner.queryHeight()+7+(expectedStack?50:0));
-   if(!expectedStack)assert(inner-20-count*44-count*5>=44,'inline query owns44 without overlapping a target');
-   else assert(inner-20-(count-1)*5>=count*44,'the separate lane pays every tool');
+   const inner=width-26,actionsWidth=hits.length===4?196:44,editable=owner.toolbarInputMinimumWidth();
+   const expectedStack=inner-20-12-actionsWidth<39+editable;
+   assert.equal(toolbar.queryStacked(),expectedStack,'actual actor width and useful editable text determine the shared layout');
+   const row=owner.queryHeight()+6;
+   assert.equal(owner.searchControlsHeight(),(expectedStack?row*2+8:row)+1,
+    'both scaled rows and the parent separator receive their actual height');
+   const field=expectedStack?inner-20:inner-20-12-actionsWidth;
+   assert(field-39>=editable,'field icon/gap/insets leave the declared useful editable width');
+   assert(inner-20>=actionsWidth,'the grouped action lane pays every native target and fixed gap');
    assert.equal(owner.tabStripHeight(),owner.tabHeight()+6);
   }
  }

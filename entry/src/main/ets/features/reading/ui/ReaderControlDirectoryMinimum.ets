@@ -9,6 +9,7 @@ import { TOK_SPACE_CONTROL_INLINE, TOK_SPACE_SM } from '../../../ui/foundation/R
 import type { ReaderControlCandidateWidths, ReaderControlFormMinimum } from './ReaderLayoutGeometry';
 import type { ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
+import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
 
 export interface ReaderDirectoryMinimumFacts {
   tab: string;
@@ -32,6 +33,7 @@ export interface ReaderDirectoryFormProfile {
   footerHeightVp: number;
   fieldHeightVp: number;
   inputHeightVp: number;
+  inputMinimumWidthVp: number;
   toolbarHeightVp: number;
   statusHeightVp: number;
   bookmark: ReaderControlBookmarkNaturalSize;
@@ -78,7 +80,11 @@ function form(context: UIContext, width: number, full: boolean,
   const tabHeight = Math.max(readerScaledControlHeight(44, TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, scale), tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
   const inputHeight = Math.max(readerScaledControlHeight(42, 24, scale), field.heightVp);
   const fieldHeight = Math.max(readerScaledControlHeight(44, 24, scale), inputHeight + 2);
-  const toolbarHeight = Math.max(52, fieldHeight + 20);
+  const inputMinimumWidth = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 8 * scale,
+    field.singleLineWidthVp + fieldGlyph.singleLineWidthVp * 2);
+  const toolbarBudget = readerDirectoryToolbarBudget(width - 2, facts.tab === 'directory', fieldHeight,
+    inputMinimumWidth, Math.max(52, fieldHeight + 20) - 2);
+  const toolbarHeight = toolbarBudget.height + 2;
   const bookmark: ReaderControlBookmarkNaturalSize = {
     titleHeightVp: Math.max(14, bookmarkTitle.heightVp, meta.heightVp, pending.heightVp),
     excerptHeightVp: bookmarkLine.heightVp * 2,
@@ -116,11 +122,12 @@ function form(context: UIContext, width: number, full: boolean,
     viewport += statusHeight;
   }
   const minWidth = Math.max((Math.max(tab.singleLineWidthVp, bookmarkTab.singleLineWidthVp) + 20) * 2 + (full ? 18 : 32),
-    full ? TOK_SPACE_CONTROL_INLINE * 2 + (facts.tab === 'directory' ? 196 : 49) + 39 + fieldGlyph.singleLineWidthVp : 0,
+    full ? TOK_SPACE_CONTROL_INLINE * 2 + Math.max(toolbarBudget.fieldMinimumWidth, toolbarBudget.actionsWidth) : 0,
     full && facts.tab === 'directory' ? TOK_SPACE_SM * 2 + 20 + footerLabel.singleLineWidthVp + footerPosition.singleLineWidthVp + 16 : 0);
   return { minimum: { heightVp: listTop + viewport + 1 + (full ? footerHeight : 0), minWidthVp: minWidth,
     fits: width + .1 >= minWidth }, tabHeightVp: tabHeight, rowHeightVp: rowHeight, listTopVp: listTop,
     footerHeightVp: footerHeight, fieldHeightVp: fieldHeight, inputHeightVp: inputHeight,
+    inputMinimumWidthVp: inputMinimumWidth,
     toolbarHeightVp: toolbarHeight, statusHeightVp: statusHeight, bookmark };
 }
 

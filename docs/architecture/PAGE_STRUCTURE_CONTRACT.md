@@ -601,6 +601,36 @@ ScrollAway变体必须登记准确生效条件、测量/字号revision、唯一�
 - 消息跟随当前有效宿主，不设全局“永远最上层”的消息层；同一宿主去重和旧宿主退休按消息框架执行。
 - 浮层必须先消费返回，再允许路由退页。
 
+#### 6.4.1 全应用覆盖层装配
+
+覆盖层遵循同一份底页几何不变契约。相同viewport、系统字号和安全区下，打开、关闭、展开长文或更新busy，只更新覆盖表面及其输入资格。底页的页头实测、内容起点、可用高度、列表extent、滚动锚点、路由和控制栏展开预算保持。原业务动作产生的导航与数据更新继续由原owner发布。
+
+`ReaderPageScaffold` 已提供内容0、页头10、页脚20和覆盖30四个同作用域层。普通页面使用其 `overlayContent`，原生Dialog、bindSheet、bindPopup和bindContentCover使用各自已登记的分离宿主。页面登记分别说明实际phone、expanded及入口变体的挂载链。zIndex在当前窗口和父Stack作用域内解释，平台窗口层级由平台宿主负责。
+
+覆盖表面的测量用于自身限高、锚点和同层避让。页头与正文测量仅消费页面固定区域的事实。Recovery、Dialog和Sheet的内容、代次与busy字段保持在覆盖链内。书架两个浮层互相避让的测量属于覆盖层布局，须单独注明实际消费目标。
+
+标准页的有界覆盖表面使用 `ReaderStandardPage.boundedOverlayVisible` 和无参 `boundedOverlayContent`。StandardPage直接持有真实视口、当前页头与页脚几何、覆盖区宽度、位置、限高和输入边界。调用页仅发布当前可见资格与内容。SettingsShell和MainTabShell的standardScroll分支转交这两个字段。旧单参数overlayContent继续保留兼容转发，当前恢复表面的几何在实际持有者内读取。声明式Builder传递可变几何时须验证同一原生actor能随真实属性更新，首次参数值无法更新即为失败。
+
+#### 6.4.2 前景与输入归属
+
+用户主动打开的控制栏、选择面板、菜单、Sheet及平台前景拥有当前交互优先级。被动Recovery在这些前景占用期间暂退绘制、输入和无障碍遍历，原事项、回执和写准入仍归原业务owner。返回原可呈现宿主后按当前身份恢复。独立目录属于当前控制前景，详情来源的退出仍遵循原详情返回路径。
+
+Modal确认和Sheet独占其声明的输入范围，关闭后恢复原触发源焦点。非模态可交互表面在自身实际边界内独占同级命中，并按宿主要求处理祖先事件，区域外输入继续交原页面。Toast只呈现反馈。隐藏、暂退和已卸载的表面同步退出命中及无障碍遍历，已排队动作再次核对原宿主、实体和展示代次。
+
+布局验收同时核对控件与内容可达性。目录的拖拽柄、收起、查询、首章、末章、书签及页脚动作都有当前有效入口。窄窗与大字号下优先调整覆盖表面自身的有界滚动和前景协调。关闭提示只处理投影，原操作的核对、继续和取消资格继续沿原owner执行。
+
+#### 6.4.3 可执行边界与证据
+
+手动装配检查使用实际SDK AST追踪Scaffold、StandardPage和三个既有Shell的具名Builder槽，包括nativeListItems、Settings的homeContent/generalContent及boundedOverlayContent。通过本地与导入Builder、参数转交和集合Builder追踪到实际表面，原生分离宿主作为独立作用域。已知骨架中实际声明并提供的BuilderParam缺少装配角色时记录UNRESOLVED。正常PageState和覆盖表面内部测量保留原角色。
+
+受控清单为 `tools/page-structure/overlay-assembly-contracts.json`。已确认的几何消费链声明实际目标方法、覆盖事实和失效入口，检查按真实callee读链核对。动态目标解析失败、来源漂移或无法证明的装配保留对应诊断。该工具按任务手动选择，无参为NOT_RUN，默认关闭，未接入构建或CI。
+
+```sh
+node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-structure/overlay-assembly-contracts.json
+```
+
+当前快照的字节一致、构造数量与单独叶节点属性分别记录。覆盖行为验收连接实际外层Watch、HeaderHost、Scaffold几何和原生动作actor，比较关闭、显示、busy、长文、已退场与后继展示。额外保留正常viewport或字号变化会更新页面几何的正例。Native视觉、触摸、平台返回和读屏继续绑定实际候选与目标。
+
 ### 6.5 行形态
 
 ```text

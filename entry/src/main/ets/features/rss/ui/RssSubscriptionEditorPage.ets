@@ -55,6 +55,8 @@ export struct RssSubscriptionEditorPage {
       variant: 'rssEditor',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
+      boundedOverlayVisible: rssOriginalMatchesScope(this.snapshot.original, 'editor', this.snapshot.subscriptionId ?? ''),
+      boundedOverlayContent: (): void => { this.pendingRecovery(); },
     });
   }
 
@@ -186,14 +188,19 @@ export struct RssSubscriptionEditorPage {
   }
   @Builder
   private operationRecovery() {
-    RssOriginalRecoverySurface({ original: this.snapshot.original, presentationIdentity: this.presentationIdentity, scope: 'editor',
-      subscriptionId: this.snapshot.subscriptionId ?? '',
-      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
-      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
     ForEach(rssOriginalMatchesScope(this.snapshot.original, 'editor', this.snapshot.subscriptionId ?? '') ? [] : this.recoveryActionIdentities(), (identity: string): void => {
       ReaderRecoveryAction({ label: '重新读取', generation: this.recoveryGeneration(identity),
         onReconcile: (): void => this.dispatchRecovery(identity) });
     }, (identity: string): string => identity);
+  }
+
+  @Builder
+  private pendingRecovery() {
+    RssOriginalRecoverySurface({ original: this.snapshot.original,
+      presentationIdentity: this.presentationIdentity, scope: 'editor',
+      subscriptionId: this.snapshot.subscriptionId ?? '',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
   }
 
   @Builder

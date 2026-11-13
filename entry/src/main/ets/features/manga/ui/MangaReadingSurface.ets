@@ -1265,7 +1265,7 @@ export struct MangaReadingSurface {
   }
   private controlsPresentedForWindow(): boolean {
     return !this.chapterEnd && (this.controlsVisible || (!this.opened && this.error.length > 0) || this.openingRetry ||
-      this.recovering || this.loginRequiredForControls || this.panel.length > 0);
+      this.loginRequiredForControls || this.panel.length > 0);
   }
   private onErrorPresentationChanged(): void {
     this.onWindowChromeChanged();
@@ -2181,6 +2181,7 @@ export struct MangaReadingSurface {
               }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
                 .padding(this.interactiveInsets(this.windowMetricsRevision));
             }
+            this.recoveryOverlay();
           }.width('100%').height('100%')
             .enabled(this.phonePanelBackgroundEnabled())
             .accessibilityLevel(this.phonePanelBackgroundEnabled() ? 'auto' : 'no-hide-descendants');
@@ -2370,17 +2371,47 @@ export struct MangaReadingSurface {
         bookTitle: this.bookTitle || this.remoteSession?.book.title || this.remoteBookSeed?.title || '漫画阅读', subtitle: this.title,
         leading: (): void => { this.mangaTopBarBack(); }, trailing: (): void => { this.mangaTopBarActions(); },
       });
-      if (this.recovering) {
-        ReaderRecoveryNotice({ tag: '内容更新', layoutWidthVp: this.viewportWidth > 1 ? Math.max(0, this.viewportWidth - 16 -
-          this.interactiveInsets(this.windowMetricsRevision).left - this.interactiveInsets(this.windowMetricsRevision).right) : -1, maxHeightVp: this.recoveryNoticeHeight(),
-          view: { visible: true, generation: this.presentationGeneration, canRetry: true,
-            message: this.controller?.replacementRecoveryRequired === true ? '内容已更新，需从新版首图开始。' : '内容已更新，需确认阅读位置。' },
-          actionLabel: this.controller?.replacementRecoveryRequired === true ? '从首图开始' : '从当前页继续',
-          onReconcile: (): void => { void this.confirmRecovery(); } });
-      }
       if (this.loginRequiredForControls) { Button(this.loggingIn ? '登录处理中' : '登录书源后重试').height(44).enabled(!this.loggingIn).onClick((): void => { void this.loginAndRetry(); }); }
       if (this.offlineProbeStatus.length > 0) { Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status'); }
     }.width('100%').padding({ left: 8, right: 8, top: 10 });
+  }
+
+  private recoveryOverlayIdentity(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.presentationGeneration]);
+  }
+
+  private recoveryOverlayCurrent(identity: string): boolean {
+    return this.opened && this.recovering && this.viewportWidth > 1 && this.viewportHeight > 1 && this.recoveryNoticeHeight() > 0 &&
+      identity === this.recoveryOverlayIdentity() && this.readerPanelForeground() &&
+      !this.controlsVisible && this.panel.length === 0 && this.panelPhase === 'closed' && !this.chapterEnd &&
+      !this.openingRetry && !this.loginRequiredForControls && !this.boundaryBusy;
+  }
+
+  @Builder
+  private recoveryOverlay() {
+    if (this.recovering) {
+      ForEach([this.recoveryOverlayIdentity()], (identity: string): void => {
+        Column() {
+          ReaderRecoveryNotice({ tag: '内容更新', layoutWidthVp: Math.max(0, this.viewportWidth - 16 -
+            this.interactiveInsets(this.windowMetricsRevision).left - this.interactiveInsets(this.windowMetricsRevision).right),
+            maxHeightVp: this.recoveryNoticeHeight(),
+            view: { visible: true, generation: this.presentationGeneration, canRetry: true,
+              message: this.controller?.replacementRecoveryRequired === true ? '内容已更新，需从新版首图开始。' : '内容已更新，需确认阅读位置。' },
+            actionLabel: this.controller?.replacementRecoveryRequired === true ? '从首图开始' : '从当前页继续',
+            onReconcile: (): void => { if (this.recoveryOverlayCurrent(identity)) void this.confirmRecovery(); } });
+        }.width(Math.max(0, this.viewportWidth - 16 - this.interactiveInsets(this.windowMetricsRevision).left -
+          this.interactiveInsets(this.windowMetricsRevision).right))
+          .constraintSize({ maxHeight: this.recoveryNoticeHeight() })
+          .position({ x: 8 + this.interactiveInsets(this.windowMetricsRevision).left,
+            y: 10 + this.interactiveInsets(this.windowMetricsRevision).top })
+          .opacity(this.recoveryOverlayCurrent(identity) ? 1 : 0)
+          .enabled(this.recoveryOverlayCurrent(identity))
+          .accessibilityLevel(this.recoveryOverlayCurrent(identity) ? 'auto' : 'no-hide-descendants')
+          .hitTestBehavior(this.recoveryOverlayCurrent(identity) ? HitTestMode.Default : HitTestMode.None)
+          .onTouch((event: TouchEvent): void => event.stopPropagation())
+          .zIndex(8);
+      }, (identity: string): string => identity);
+    }
   }
   @Builder
   private mangaTopBarBack() {
@@ -2435,12 +2466,11 @@ export struct MangaReadingSurface {
   private recoveryNoticeHeight(): number {
     const insets = this.interactiveInsets(this.windowMetricsRevision);
     const available = this.viewportHeight - insets.top - insets.bottom;
-    return Math.max(1, Math.min(available / 3, available - this.mangaTopBarHeight() - 18 - 44 - 12 -
-      (this.loginRequiredForControls ? 52 : 0) - (this.offlineProbeStatus.length > 0 ? 60 * this.controlFontScale() + 8 : 0)));
+    return Math.max(0, Math.min(available / 3, available - 20));
   }
   private bottomControlViewportHeight(): number {
     const insets = this.interactiveInsets(this.windowMetricsRevision);
-    const top = this.mangaTopBarHeight() + 10 + (this.recovering ? this.recoveryNoticeHeight() + 8 : 0) +
+    const top = this.mangaTopBarHeight() + 10 +
       (this.loginRequiredForControls ? 52 : 0) + (this.offlineProbeStatus.length > 0 ? 60 * this.controlFontScale() + 8 : 0);
     return Math.max(0, Math.min(this.dockHeight() + 12, this.viewportHeight - insets.top - insets.bottom - top));
   }

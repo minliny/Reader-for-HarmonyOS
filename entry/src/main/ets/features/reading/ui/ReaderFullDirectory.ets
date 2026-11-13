@@ -4,17 +4,14 @@ import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { FrameCallback } from '@kit.ArkUI';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
-import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
 import { ReaderDirectoryRules, type ReaderDirectoryRulesRecoveryProjection } from './ReaderDirectoryRules';
-import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery,
-  type ReadingDirectoryMessageKind } from '../presentation/ReadingDirectoryRecovery';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { TYPE_READER_DIRECTORY_OFFLINE_ACTION, TYPE_READER_DIRECTORY_SOURCE_ACTION } from '../../../ui/foundation/ReaderTypography';
 import { ReaderReadingTopBar } from '../../../ui/chrome/ReaderReadingTopBar';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
-import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
@@ -52,36 +49,6 @@ interface FullDirectoryHeaderMetrics {
   readonly controlHeight: number;
   readonly menuGap: number;
   readonly menuRowHeight: number;
-}
-
-interface FullDirectoryRecoveryMessageSignature {
-  visible: boolean;
-  generation: number;
-  message: string;
-  retry: boolean;
-  continuing: boolean;
-  busy?: boolean;
-  kind?: ReadingDirectoryMessageKind;
-  readback?: boolean;
-}
-
-interface FullDirectoryRulesHeaderSignature {
-  identity: string;
-  view: ReaderRecoveryView;
-  action: string;
-  secondary: string;
-  busy: boolean;
-}
-
-interface FullDirectoryRecoveryHeaderSignature {
-  book: string;
-  source: string;
-  kind: string;
-  presentation: string;
-  rulesVisible: boolean;
-  bookmarks: FullDirectoryRecoveryMessageSignature;
-  offline: FullDirectoryRecoveryMessageSignature;
-  rules?: FullDirectoryRulesHeaderSignature;
 }
 
 class DirectoryRulesFocusFrame extends FrameCallback {
@@ -127,7 +94,9 @@ export struct ReaderFullDirectory {
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   onRetryCatalog: () => void = (): void => {};
-  @Prop @Watch('onHeaderRecoveryChanged') directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  // The original owner retains recovery facts while this foreground catalog
+  // owns the interaction surface. Its write admission remains authoritative.
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
   onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
@@ -186,7 +155,6 @@ export struct ReaderFullDirectory {
   @State private headerMeasuredKey: number = -1;
   private readonly headerMeasurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   private headerLayoutInputs: string = '';
-  private headerRecoverySignature: string = '';
   @State private offlineMenuVisible: boolean = false;
   @State private offlineMenuGeneration: number = 0;
   @State private directoryRulesOpened: boolean = false;
@@ -220,35 +188,8 @@ export struct ReaderFullDirectory {
     this.headerMeasurements.clear();
   }
 
-  @Builder
-  private recoveryContent() {
-    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
-      ForEach([this.recoveryPresentationIdentity()], (identity: string): void => {
-        ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
-          presentationActive: this.recoveryPresentationCurrent(identity),
-          isPresentationCurrent: (): boolean => this.recoveryPresentationCurrent(identity),
-          onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
-          onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
-      }, (identity: string): string => identity);
-    }
-  }
-
-  private recoveryPresentationIdentity(): string {
-    return JSON.stringify([this.sourceId, this.bookId, this.directoryRecovery.presentationId, this.temporaryBackIdentity]);
-  }
-
   private bookmarkWriteEnabled(): boolean {
     return this.directoryRecovery.bookmarkWriteEnabled === true;
-  }
-
-  private recoveryPresentationCurrent(identity: string): boolean {
-    return this.mounted && this.interactive && !this.exitRequested && !this.directoryRulesVisible &&
-      identity === this.recoveryPresentationIdentity() && this.isOpeningCurrent();
-  }
-
-  private headerRecoveryVisible(): boolean {
-    return !this.directoryRulesVisible && (this.directoryRecovery.bookmarks.visible ||
-      this.directoryRecovery.offline.visible || this.directoryRulesRecovery?.view.visible === true);
   }
 
   @Builder
@@ -260,13 +201,6 @@ export struct ReaderFullDirectory {
         Column() { this.topBar(this.temporaryBackIdentity, this.bookId); }
           .width('100%').id(`${this.temporaryBackIdentity}:topbar:${this.measurementKey}`)
           .onAreaChange(this.topBarAreaChangeHandler(this.measurementKey, this.temporaryBackIdentity));
-        if (this.headerRecoveryVisible()) {
-          Column({ space: 8 }) {
-            this.recoveryContent();
-            this.directoryRulesNotice(this.temporaryBackIdentity, this.directoryRulesRecovery);
-          }.width(this.panelWidth()).alignSelf(ItemAlign.Start)
-            .margin({ left: this.panelLeft() - this.topBarLeft(), top: this.headerSpec.panelGap });
-        }
       }.width('100%').alignItems(HorizontalAlign.Start)
         .id(`${this.temporaryBackIdentity}:header:${this.measurementKey}`);
     }
@@ -274,15 +208,6 @@ export struct ReaderFullDirectory {
 
   @Builder
   private directoryOverlay() {
-    if (this.usesExpandedLayout() && !this.directoryRulesVisible && (this.directoryRecovery.bookmarks.visible ||
-      this.directoryRecovery.offline.visible || this.directoryRulesRecovery?.view.visible === true)) {
-      Column({ space: 8 }) {
-        this.recoveryContent();
-        this.directoryRulesNotice(this.temporaryBackIdentity, this.directoryRulesRecovery);
-      }
-        .width(this.panelWidth()).position({ x: this.panelLeft(), y: this.panelTop() })
-        .zIndex(8).hitTestBehavior(HitTestMode.Transparent);
-    }
     this.offlineBookMenu();
   }
 
@@ -381,7 +306,6 @@ export struct ReaderFullDirectory {
     this.directoryRulesOpened = false;
     this.directoryRulesRecovery = undefined;
     this.directoryRulesRevision = 0;
-    this.onHeaderRecoveryChanged();
   }
 
   private directoryRulesFocusId(identity: string, editor: boolean): string {
@@ -395,7 +319,6 @@ export struct ReaderFullDirectory {
       this.directoryRulesOpened = true;
     }
     this.directoryRulesVisible = visible;
-    this.onHeaderRecoveryChanged();
     const generation = ++this.directoryRulesFocusGeneration;
     this.getUIContext().postFrameCallback(new DirectoryRulesFocusFrame((): void => {
       if (generation !== this.directoryRulesFocusGeneration || visible !== this.directoryRulesVisible ||
@@ -416,7 +339,6 @@ export struct ReaderFullDirectory {
     void Promise.resolve().then((): void => {
       if (publication !== this.directoryRulesRecoveryPublication || !this.directoryRulesCurrent(identity, bookId)) return;
       this.directoryRulesRecovery = recovery;
-      this.onHeaderRecoveryChanged();
     });
   }
 
@@ -427,11 +349,11 @@ export struct ReaderFullDirectory {
         actionLabel: recovery.actionLabel, secondaryActionLabel: recovery.secondaryActionLabel,
         busy: recovery.busy,
         onReconcile: (generation: number): void => {
-          if (this.directoryRulesCurrent(identity, recovery.bookId) &&
+          if (this.directoryRulesVisible && this.directoryRulesCurrent(identity, recovery.bookId) &&
             recovery.identity === this.directoryRulesRecovery?.identity) recovery.onReconcile(generation);
         },
         onSecondaryAction: (generation: number): void => {
-          if (this.directoryRulesCurrent(identity, recovery.bookId) &&
+          if (this.directoryRulesVisible && this.directoryRulesCurrent(identity, recovery.bookId) &&
             recovery.identity === this.directoryRulesRecovery?.identity) recovery.onSecondaryAction(generation);
         },
       });
@@ -755,34 +677,6 @@ export struct ReaderFullDirectory {
     const safeBottom = Math.max(20, readerInteractiveSafeBottom(readerWindowMetrics()));
     const available = Math.max(0, this.liveContainerHeight() - this.fullPanelTop() - safeBottom);
     return Math.min(designHeight, available);
-  }
-
-  private onHeaderRecoveryChanged(): void {
-    if (!this.mounted || this.usesExpandedLayout()) return;
-    const bookmarks = this.directoryRecovery.bookmarks;
-    const offline = this.directoryRecovery.offline;
-    const rules = this.directoryRulesRecovery;
-    const bookmarksSignature: FullDirectoryRecoveryMessageSignature = {
-        visible: bookmarks.visible, generation: bookmarks.generation, message: bookmarks.message,
-        retry: bookmarks.canRetry, continuing: this.directoryRecovery.canContinueBookmarks,
-        busy: this.directoryRecovery.bookmarksBusy, kind: this.directoryRecovery.bookmarksKind,
-        readback: this.directoryRecovery.bookmarksReadbackFailed };
-    const offlineSignature: FullDirectoryRecoveryMessageSignature = {
-        visible: offline.visible, generation: offline.generation, message: offline.message,
-        retry: offline.canRetry, continuing: this.directoryRecovery.canContinueOffline,
-        busy: this.directoryRecovery.offlineBusy, kind: this.directoryRecovery.offlineKind,
-        readback: this.directoryRecovery.offlineReadbackFailed };
-    const rulesSignature: FullDirectoryRulesHeaderSignature | undefined = rules === undefined ? undefined : {
-      identity: rules.identity, view: rules.view, action: rules.actionLabel,
-      secondary: rules.secondaryActionLabel, busy: rules.busy };
-    const headerSignature: FullDirectoryRecoveryHeaderSignature = {
-      book: this.bookId, source: this.sourceId, kind: this.bookKind,
-      presentation: this.directoryRecovery.presentationId, rulesVisible: this.directoryRulesVisible,
-      bookmarks: bookmarksSignature, offline: offlineSignature, rules: rulesSignature };
-    const signature = JSON.stringify(headerSignature);
-    if (signature === this.headerRecoverySignature) return;
-    this.headerRecoverySignature = signature;
-    this.invalidateFrame();
   }
 
   private acceptHeaderHeight(height: number, key: number): void {

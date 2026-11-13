@@ -1,5 +1,5 @@
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { CategorySection } from './CategorySection';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
@@ -42,9 +42,7 @@ export struct ReaderMessagePreviewPage {
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @State private hostWidth: number = -1;
   @State private hostHeight: number = -1;
-  @State private hostX: number = 0;
   @State private hostY: number = 0;
   @State private scene: MessagePreviewScene = 'none';
   @State private generation: number = 0;
@@ -102,7 +100,7 @@ export struct ReaderMessagePreviewPage {
   private select(scene: MessagePreviewScene): void {
     if (!this.begin(scene)) return;
     if (scene === 'task-success' || scene === 'task-partial') this.batch = previewImportBatch(scene === 'task-partial');
-    this.scroller.scrollEdge(Edge.Top);
+    if (this.pageActive()) this.scroller.scrollEdge(Edge.Top);
   }
 
   private previewToast(tone: MessagePreviewTone, longText: boolean = false, message: string = ''): void {
@@ -161,11 +159,13 @@ export struct ReaderMessagePreviewPage {
   build() {
     ReaderStandardPage({ variant: 'settingsGeneral', scroller: this.scroller,
       header: (): void => { this.header(); }, content: (): void => { this.content(); },
-      overlayContent: (contentStartInset: number): void => { this.previewOverlay(contentStartInset); } })
+      boundedOverlayVisible: this.admitted() && this.noticeActive(),
+      boundedOverlayContent: (): void => { this.noticePreview(); },
+      overlayContent: (): void => { this.previewOverlay(); } })
       .onAreaChange((_old: Area, next: Area): void => {
         if (!this.mounted) return;
-        this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
-        this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
+        this.hostHeight = readerPageAreaLength(next.height);
+        this.hostY = readerPageAreaLength(next.globalPosition.y);
       });
   }
 
@@ -179,10 +179,10 @@ export struct ReaderMessagePreviewPage {
       .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
     if (this.pageActive()) {
       this.pagePreview();
-    } else if (!this.dialogActive() && !this.taskActive()) {
+    } else {
       this.sampleSections();
     }
-    if (this.scene !== 'none' && !this.dialogActive() && !this.taskActive()) {
+    if (this.pageActive()) {
       ForEach([this.generation], (expected: number): void => {
         ReaderButton({ specId: 'source-tools-action', label: '结束当前预览', layout: 'full', scheme: this.appThemeScheme,
           actionEnabled: this.admitted(), onAction: (): void => this.end(expected) });
@@ -251,54 +251,31 @@ export struct ReaderMessagePreviewPage {
     }, (expected: number): string => expected.toString());
   }
 
-  private noticeLeft(): number {
+  private modalTop(): number {
     this.readerWindowMetricsRevision;
-    const metrics = readerWindowMetrics();
-    const width = this.hostWidth >= 0 ? this.hostWidth : metrics.windowRect.width;
-    const right = Math.max(0, Math.min(width, metrics.windowRect.width - readerInteractiveSafeRight(metrics) - this.hostX));
-    return Math.min(right, Math.max(0, readerInteractiveSafeLeft(metrics) - this.hostX) + 19);
-  }
-
-  private noticeWidth(): number {
-    const metrics = readerWindowMetrics();
-    const hostWidth = this.hostWidth >= 0 ? this.hostWidth : metrics.windowRect.width;
-    const right = Math.min(hostWidth, metrics.windowRect.width - readerInteractiveSafeRight(metrics) - this.hostX);
-    return Math.max(0, right - this.noticeLeft() - 19);
-  }
-
-  private noticeTop(contentStartInset: number): number {
     const metrics = readerWindowMetrics();
     const height = this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height;
     const bottom = Math.max(0, Math.min(height, metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY));
-    return Math.min(bottom, Math.max(contentStartInset, readerInteractiveSafeTop(metrics, true) - this.hostY, 0));
-  }
-
-  private noticeHeight(contentStartInset: number): number {
-    const metrics = readerWindowMetrics();
-    const hostHeight = this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height;
-    const bottom = Math.min(hostHeight, metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY);
-    return Math.max(0, bottom - this.noticeTop(contentStartInset));
+    return Math.min(bottom, Math.max(readerInteractiveSafeTop(metrics, true) - this.hostY, 0));
   }
 
   @Builder
-  private previewOverlay(contentStartInset: number) {
-    if (this.noticeActive()) {
-      ForEach([this.generation], (opening: number): void => {
-        Scroll() {
-          Column({ space: 8 }) {
-            ReaderRecoveryNotice({ view: this.noticeView(), tag: '预览', actionLabel: '核对示例',
-              layoutWidthVp: this.noticeWidth(),
-              secondaryActionLabel: this.scene === 'notice-long' ? '结束预览' : '', busy: this.scene === 'notice-busy',
-              onReconcile: (expected: number): void => this.reconcileNotice(expected),
-              onSecondaryAction: (expected: number): void => this.end(expected) });
-            ReaderButton({ specId: 'source-tools-action', label: '结束提醒预览', scheme: this.appThemeScheme,
-              layout: 'full', actionEnabled: this.owns(opening), onAction: (): void => this.end(opening) });
-          }.width('100%');
-        }.width(this.noticeWidth()).constraintSize({ maxHeight: this.noticeHeight(contentStartInset) })
-          .position({ x: this.noticeLeft(), y: this.noticeTop(contentStartInset) })
-          .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Default);
-      }, (opening: number): string => `preview-notice:${opening}`);
-    } else if (this.dialogActive() || this.taskActive()) {
+  private noticePreview() {
+    ForEach([this.generation], (opening: number): void => {
+      Column({ space: 8 }) {
+        ReaderRecoveryNotice({ view: this.noticeView(), tag: '预览', actionLabel: '核对示例',
+          secondaryActionLabel: this.scene === 'notice-long' ? '结束预览' : '', busy: this.scene === 'notice-busy',
+          onReconcile: (expected: number): void => this.reconcileNotice(expected),
+          onSecondaryAction: (expected: number): void => this.end(expected) });
+        ReaderButton({ specId: 'source-tools-action', label: '结束提醒预览', scheme: this.appThemeScheme,
+          layout: 'full', actionEnabled: this.owns(opening), onAction: (): void => this.end(opening) });
+      }.width('100%');
+    }, (opening: number): string => `preview-notice:${opening}`);
+  }
+
+  @Builder
+  private previewOverlay() {
+    if (this.dialogActive() || this.taskActive()) {
       Column() {
         ForEach([this.generation], (expected: number): void => {
           Row({ space: 8 }) {
@@ -312,8 +289,9 @@ export struct ReaderMessagePreviewPage {
         }, (expected: number): string => expected.toString());
         if (this.dialogActive()) this.dialogPreview();
         else this.taskPreview();
-      }.width('100%').height('100%').padding({ top: contentStartInset })
-        .hitTestBehavior(HitTestMode.Transparent);
+      }.width('100%').height('100%').padding({ top: this.modalTop() })
+        .hitTestBehavior(HitTestMode.Default)
+        .onTouch((event: TouchEvent): void => event.stopPropagation());
     }
   }
 

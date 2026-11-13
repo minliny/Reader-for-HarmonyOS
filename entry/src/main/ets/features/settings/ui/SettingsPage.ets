@@ -1,5 +1,3 @@
-import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { createDefaultSettingsSnapshot, type SettingsSnapshot, type GeneralSettingsKey } from '../application/SettingsGateway';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
@@ -63,10 +61,6 @@ let settingsSelectionGeneration: number = 0;
 export struct SettingsPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @State private overlayHostWidth: number = 0;
-  @State private overlayHostHeight: number = 0;
-  @State private overlayHostY: number = 0;
 
   @Prop @Watch('onActiveSectionChanged') activeSection: 'home' | 'general' = 'home';
   @Prop navigationGeneration: number = 0;
@@ -180,13 +174,7 @@ export struct SettingsPage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) { this.pageSurface(); }
-      .width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
-      .onAreaChange((_old: Area, next: Area): void => {
-        if (!this.mounted) return;
-        this.overlayHostWidth = readerPageAreaLength(next.width);
-        this.overlayHostHeight = readerPageAreaLength(next.height);
-        this.overlayHostY = readerPageAreaLength(next.globalPosition.y);
-      });
+      .width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
@@ -222,7 +210,9 @@ export struct SettingsPage {
       onOpenSync: this.onOpenSync,
       onRssRequested: this.onRssRequested,
       onDiscoverRequested: this.onDiscoverRequested,
-      showOverlay: this.openSelect !== '' || this.hasPendingSettings() || this.hasPendingCleanup(),
+      showOverlay: this.openSelect !== '',
+      boundedOverlayVisible: this.pendingFeedbackVisible(),
+      boundedOverlayContent: (): void => { this.pendingFeedback(); },
       onOverlayOriginChange: (x: number, y: number): void => {
         this.originX = x;
         this.originY = y;
@@ -233,7 +223,7 @@ export struct SettingsPage {
       // BookshelfPage 尾随闭包 pattern), 内层 this.buildHome() 才正确绑定。
       homeContent: (): void => { this.buildHome(); },
       generalContent: (): void => { this.buildGeneral(); },
-      overlayContent: (contentStartInset: number): void => { this.buildOverlay(contentStartInset); },
+      overlayContent: (): void => { this.buildOverlay(); },
     }).enabled(!this.resetInFlight);
     }
   }
@@ -275,7 +265,8 @@ export struct SettingsPage {
     ReaderStandardPage({ variant: 'settingsGeneral',
       header: (): void => { this.aboutPageHeader(identity); },
       content: (): void => { this.aboutPageContent(identity); },
-      overlayContent: (contentStartInset: number): void => { this.pendingFeedback(contentStartInset); },
+      boundedOverlayVisible: this.pendingFeedbackVisible(),
+      boundedOverlayContent: (): void => { this.pendingFeedback(); },
     });
   }
 
@@ -376,7 +367,8 @@ export struct SettingsPage {
     ReaderStandardPage({ variant: 'settingsGeneral',
       header: (): void => { this.developerPageHeader(identity); },
       content: (): void => { this.developerPageContent(identity); },
-      overlayContent: (contentStartInset: number): void => { this.pendingFeedback(contentStartInset); },
+      boundedOverlayVisible: this.pendingFeedbackVisible(),
+      boundedOverlayContent: (): void => { this.pendingFeedback(); },
     });
   }
 
@@ -471,7 +463,7 @@ export struct SettingsPage {
     return this.mounted && ReaderRuntimeOwner.isCurrent(this.themeOwner) && this.recoveryActionIdentities().includes(identity);
   }
   private dispatchRecoveryAction(identity: string): void {
-    if (!this.settingsInputIsCurrent() || !this.recoveryActionCurrent(identity)) return;
+    if (!this.settingsInputIsCurrent() || this.openSelect !== '' || this.resetInFlight || !this.recoveryActionCurrent(identity)) return;
     const generation = this.recoveryActionGeneration(identity), kind = this.recoveryActionKind(identity);
     if (kind === 'read') this.onReconcile(generation);
     else if (kind === 'accepted') this.onRetryAccepted(generation);
@@ -513,14 +505,18 @@ export struct SettingsPage {
     return (JSON.parse(identity) as string[])[index];
   }
 
+  private pendingFeedbackVisible(): boolean {
+    return this.settingsInputIsCurrent() && !this.resetInFlight && this.openSelect === '' &&
+      (this.hasPendingSettings() || this.hasPendingCleanup());
+  }
+
   @Builder
-  private pendingFeedback(contentStartInset: number) {
-    Scroll() {
+  private pendingFeedback() {
     Column({ space: 10 }) {
       if (this.hasPendingSettings()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('read'), this.recoveryIdentityFor('accepted'),
           this.temporaryBackIdentity, `${this.operation.receipt?.facts.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
+          ReaderRecoveryNotice({ view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
             canRetry: true, generation: this.operation.receipt?.facts.generation ?? 0 },
             actionLabel: '核对', busy: this.operation.receipt?.facts.fact === 'refreshing',
             secondaryActionLabel: this.recoveryIdentityFor('accepted').length > 0 ? '继续保存' : '',
@@ -531,7 +527,7 @@ export struct SettingsPage {
       if (this.hasPendingCleanup()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('cache-read'), this.recoveryIdentityFor('cache-continue'),
           this.temporaryBackIdentity, `${this.cacheCleanup?.operation.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ layoutWidthVp: this.overlayWidth(), view: { visible: true,
+          ReaderRecoveryNotice({ view: { visible: true,
             message: this.cacheCleanup?.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用',
             canRetry: true, generation: this.cacheCleanup?.operation.generation ?? 0 },
             actionLabel: '核对', busy: this.cacheCleanup?.busy === true,
@@ -541,21 +537,6 @@ export struct SettingsPage {
         }, (key: string): string => key);
       }
     }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.overlayAvailableHeight(contentStartInset) })
-      .margin({ top: contentStartInset }).padding({ left: 20, right: 20 })
-      .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  private overlayWidth(): number {
-    return Math.max(0, (this.overlayHostWidth > 0 ? this.overlayHostWidth : readerWindowMetrics().windowRect.width) - 40);
-  }
-
-  private overlayAvailableHeight(top: number): number {
-    if (this.readerWindowMetricsRevision < 0) return 0;
-    const metrics = readerWindowMetrics();
-    const height = this.overlayHostHeight > 0 ? this.overlayHostHeight : metrics.windowRect.height;
-    return Math.max(0, Math.min(height, metrics.windowRect.height -
-      readerInteractiveSafeBottom(metrics, true) - this.overlayHostY) - top);
   }
 
   private operationFeedbackIdentity(): string {
@@ -978,8 +959,7 @@ export struct SettingsPage {
   }
 
   @Builder
-  private buildOverlay(contentStartInset: number) {
-    this.pendingFeedback(contentStartInset);
+  private buildOverlay() {
     if (this.openSelect !== '') {
       SettingsSelectOverlay({
         expandedLayout: this.expandedLayout,

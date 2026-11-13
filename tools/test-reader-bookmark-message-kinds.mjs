@@ -5,122 +5,74 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
 const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 const {projectPersistedReceipt}=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const selected=selectContractCases({
  'bookmark-facts':{description:'Actual reader projection and LRE shared recovery host classify current, partial, confirmed-readback, unknown and undispatched failure with original-owner retirement',resources:[]},
- 'directory-consumers':{description:'Actual text/manga directory recovery consumers deliver retained activity Props and reject stale book, presentation, opening and locally hidden actors',resources:[]},
+ 'directory-consumers':{description:'Actual text/manga foreground directories defer recovery actors while retaining the original recovery DTO and callback contract',resources:[]},
 });
 const read=name=>readFileSync(new URL('../entry/src/main/ets/features/reading/ui/'+name+'.ets',import.meta.url),'utf8');
 
-function directoryConsumer(page, kind, interactive = true, initialState = {}) {
- const book = { sourceId: 'source-a', bookId: 'book-a', title: 'A', author: 'Author' };
- const operation = { action: 'createPosition', book, generation: 8, confirmedCount: 1,
-  requestedCount: kind === 'readback' ? 1 : 3, completion: kind === 'readback' ? 'complete' : 'partial',
-  canContinueOriginal: false,
-  projection: projectPersistedReceipt({ confirmation: 'confirmed', readback: kind === 'readback' ? 'failed' : 'succeeded',
-   generation: 8, canRetry: kind === 'readback', message: '原owner结果', refreshError: kind === 'readback' ? '列表读取失败' : undefined }) };
- const recovery = readingDirectoryRecovery('presentation-a', book, operation);
- const sdk = boundedSurfaceSdk(), messages = [], calls = [];
- class Feedback {
-  show(_context, options, current) { if (!current()) return false; messages.push({ options, current }); return true; }
-  reset() {}
- }
- const surfaceSource = read('ReaderDirectoryRecoverySurface');
- sdk.hooks.childSources.ReaderDirectoryRecoverySurface = surfaceSource;
- sdk.deps.ReaderDirectoryRecoverySurface = createReaderBuilderProbe(surfaceSource, boundedMembers(surfaceSource),
-  { ...sdk.deps, ReaderTransientFeedback: Feedback, EMPTY_READING_DIRECTORY_RECOVERY }, sdk.hooks).Component;
- const source = read(page);
- const names = ['recoveryContent', 'recoveryPresentationIdentity', 'recoveryPresentationCurrent', 'directoryInputIsCurrent', 'identity'];
- const owner = sdk.consumer(source, boundedMembers(source).filter(name => names.includes(name)), { EMPTY_READING_DIRECTORY_RECOVERY });
- let opening = true;
- Object.assign(owner, { sourceId: book.sourceId, bookId: book.bookId, directoryRecovery: recovery,
-  mounted: true, interactive, temporaryBackIdentity: 'mount-a', exitRequested: false,
-  directoryRulesVisible: false, offlineMenuVisible: false, mangaFontsReady: true,
-  downloadMenuVisible: false, admittedIdentity: 'source-a\u0000book-a', isOpeningCurrent: () => opening,
-  onReconcileBookmarks: (...args) => calls.push(args), onContinueBookmarks: (...args) => calls.push(['continue', ...args]),
-  onReconcileOffline: (...args) => calls.push(['offline', ...args]), onContinueOffline: (...args) => calls.push(['offline-continue', ...args]) });
- Object.assign(owner, initialState);
- owner.recoveryContent(); sdk.properties.flush();
- const shared = sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderDirectoryRecoverySurface);
- assert.ok(shared, page + ' mounts the actual shared Surface');
- const button = label => {
-  const action = sdk.walk(shared).find(child => child instanceof sdk.deps.ReaderRecoveryAction && child.label === label);
-  assert.ok(action, page + ' actual action ' + label);
-  const physical = [...action.nodes.values()].find(node => node.type === 'Button' && node.onClick);
-  assert.ok(physical); return physical.onClick;
- };
- return { owner, shared, messages, calls, button, setOpening(value) { opening = value; },
-  deliver() { owner.replayOnly([shared.id]); sdk.properties.flush();
-   assert.equal(sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderDirectoryRecoverySurface), shared,
-    page + ' activity delivery retains the same Surface'); } };
-}
-
 function verifyDirectoryConsumers() {
- for (const page of ['ReaderFullDirectory', 'BookDirectoryPage']) {
-  const retained = directoryConsumer(page, 'readback', false);
-  assert.equal(retained.shared.presentationActive, false, page + ' passes its initial inactive state');
-  assert.equal(retained.messages.length, 0, page + ' does not publish from an initially hidden retained caller');
-  retained.shared.presentationActive = true;
-  assert.equal(retained.messages.length, 0, 'a stale active Prop cannot borrow the real inactive directory lease');
-  assert.equal(retained.shared.notifiedReadbacks.size, 0);
-  retained.shared.presentationActive = false;
-  retained.owner.interactive = true; retained.deliver();
-  assert.equal(retained.shared.presentationActive, true);
-  assert.equal(retained.messages.length, 1, page + ' delivers one newly current readback feedback');
-  retained.owner.interactive = false; retained.deliver();
-  retained.owner.interactive = true; retained.deliver();
-  assert.equal(retained.messages.length, 1, 'the delivered readback identity survives hide/show without duplication');
-
-  const axes = [
-   ['interactive', x => { x.owner.interactive = false; }],
-   ['opening', x => x.setOpening(false)],
-   ['mounted', x => { x.owner.mounted = false; }],
-   ['source', x => { x.owner.sourceId = 'source-b'; }],
-   ['book', x => { x.owner.bookId = 'book-b'; }],
-   ['presentation', x => { x.owner.directoryRecovery = { ...x.owner.directoryRecovery, presentationId: 'presentation-b' }; }],
-   ['mount-identity', x => { x.owner.temporaryBackIdentity = 'mount-b'; }],
-  ];
-  if (page === 'ReaderFullDirectory') axes.push(
-   ['rules', x => { x.owner.directoryRulesVisible = true; }],
-   ['exit', x => { x.owner.exitRequested = true; }]);
-  else axes.push(
-   ['fonts', x => { x.owner.mangaFontsReady = false; }],
-   ['download-menu', x => { x.owner.downloadMenuVisible = true; }],
-   ['admission', x => { x.owner.admittedIdentity = 'source-a\u0000book-b'; }]);
-  for (const [name, invalidate] of axes) {
-   const result = directoryConsumer(page, 'result');
-   const acknowledge = result.button('知道了');
-   invalidate(result); acknowledge();
-   assert.equal(result.shared.dismissedResults.length, 0, page + ' ' + name + ' blocks the old result before child Prop delivery');
-   const readback = directoryConsumer(page, 'readback');
-   const retry = readback.button('重新读取书签');
-   assert.equal(readback.messages.length, 1);
-   invalidate(readback); retry();
-   assert.deepEqual(readback.calls, [], page + ' ' + name + ' blocks the old retry before child Prop delivery');
-   assert.equal(readback.messages[0].current(), false, page + ' ' + name + ' retires the delivered feedback lease');
+ const { ts, options } = installedEtsCompiler();
+ const callbackNames = ['onReconcileBookmarks', 'onContinueBookmarks', 'onReconcileOffline', 'onContinueOffline'];
+ function declaration(source, page) {
+  const tree = ts.createSourceFile(page + '.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.deepEqual(tree.parseDiagnostics, []);
+  const component = tree.statements.find(node => ts.isStructDeclaration(node));
+  let actors = 0;
+  const visit = node => {
+   if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) &&
+     node.expression.getText(tree) === 'ReaderDirectoryRecoverySurface') actors++;
+   ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  assert.equal(actors, 0, page + ' yields original recovery presentation while its catalog owns the foreground');
+  const fact = component.members.find(member => member.name?.getText(tree) === 'directoryRecovery');
+  assert.equal(fact?.type?.getText(tree), 'ReadingDirectoryRecovery');
+  assert.ok(ts.getAllDecorators(fact).some(decorator => decorator.getText(tree) === '@Prop'));
+  for (const name of callbackNames) {
+   const member = component.members.find(candidate => candidate.name?.getText(tree) === name);
+   assert.equal(member?.type?.getText(tree), '(generation: number, identity: string) => void',
+    page + ' keeps the original generation/presentation callback DTO for ' + name);
   }
-  const current = directoryConsumer(page, 'result');
-  if (page === 'ReaderFullDirectory') current.owner.offlineMenuVisible = true;
-  current.button('知道了')();
-  assert.equal(current.shared.dismissedResults.length, 1,
-   page + ' acknowledges its current visible result, including the text directory local menu');
-  if (page === 'BookDirectoryPage') {
-   const menu = directoryConsumer(page, 'readback', true, { downloadMenuVisible: true });
-   assert.equal(menu.messages.length, 0);
-   assert.equal(menu.shared.presentationActive, false, 'the manga menu explicitly hides the retained recovery overlay');
-   menu.owner.downloadMenuVisible = false; menu.deliver();
-   assert.equal(menu.shared.presentationActive, true);
-   assert.equal(menu.messages.length, 1);
-  } else assert.equal(directoryConsumer(page, 'readback', true, { offlineMenuVisible: true }).messages.length, 1,
-   'the local text menu leaves its actually visible recovery content active');
+ }
+ for (const page of ['ReaderFullDirectory', 'BookDirectoryPage']) {
+  const source = read(page);
+  declaration(source, page);
+  const sdk = boundedSurfaceSdk(), calls = [];
+  const callbacks = Object.fromEntries(callbackNames.map(name => [name, (...args) => calls.push([name, ...args])]));
+  const names = ['directoryRecovery', ...callbackNames];
+  if (page === 'ReaderFullDirectory') names.push('bookmarkWriteEnabled');
+  const owner = sdk.consumer(source, names, { EMPTY_READING_DIRECTORY_RECOVERY }, callbacks);
+  const book = { sourceId: 'source-a', bookId: 'book-a', title: 'A', author: 'Author' };
+  for (const confirmation of ['unknown', 'confirmed']) {
+   const operation = { action: 'createPosition', book, generation: 8, confirmedCount: confirmation === 'confirmed' ? 1 : 0,
+    requestedCount: 1, completion: confirmation === 'confirmed' ? 'complete' : 'unknown',
+    canContinueOriginal: confirmation === 'unknown',
+    projection: projectPersistedReceipt({ confirmation, readback: 'failed', generation: 8, canRetry: true }) };
+   const recovery = readingDirectoryRecovery('presentation-a', book, operation);
+   owner.updateStateVars({ directoryRecovery: recovery }); sdk.properties.flush();
+   assert.deepEqual(owner.directoryRecovery, recovery, page + ' retains the original owner facts during foreground deferral');
+   if (page === 'ReaderFullDirectory') assert.equal(owner.bookmarkWriteEnabled(), recovery.bookmarkWriteEnabled === true,
+    'foreground deferral preserves the original write admission');
+  }
+  for (const name of callbackNames) owner[name](8, 'presentation-a');
+  assert.deepEqual(calls, callbackNames.map(name => [name, 8, 'presentation-a']),
+   page + ' constructor retains the original callback DTO without a replacement UI action');
+  // The former actors are forbidden in the complete shipping declaration,
+  // independent of which finite property members this SDK probe selects.
+  const withRecovery = source.replace('  build() {', '  build() { ReaderDirectoryRecoverySurface({});');
+  assert.notEqual(withRecovery, source);
+  assert.throws(() => declaration(withRecovery, page), /yields original recovery presentation/);
  }
 }
 
 for(const id of selected){
  if (id === 'directory-consumers') {
   verifyDirectoryConsumers();
-  console.log('PASS actual text/manga directory recovery consumer activity and current-owner callbacks; no Core/native execution');
+  console.log('PASS actual text/manga foreground recovery deferral and retained original DTO/callback contract; finite SDK ports, no Core/native execution');
   recordContractCasePass(id); continue;
  }
  const book={sourceId:'source-a',bookId:'book-a',title:'A',author:'Author'};
