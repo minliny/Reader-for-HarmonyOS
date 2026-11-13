@@ -4,7 +4,7 @@
 
 ## 目标与执行边界
 
-本轮目标覆盖15个当前整改条目、1个保留代码条目，以及可在代码侧补齐的来源登记、局部宿主检查和跨书恢复引导。goal 已设为 active。15个当前整改项与1个保留项的代码开发、独立审修及选中定向回归已完成，最后候选的实际ArkTS编译、打包和指定身份签名已通过，goal继续跟踪保数据交付与原生证据评估。
+本轮目标覆盖15个当前整改条目、1个保留代码条目，以及可在代码侧补齐的来源登记、局部宿主检查和跨书恢复引导。15个当前整改项与1个保留项的代码开发、独立审修及选中定向回归已完成。最终候选的实际ArkTS编译、打包、指定身份签名、保数据安装和最小原生证据评估已完成，goal按该范围收口。完整页批准及全页原生验收继续开放。
 
 三个独立 agent 分别实施阅读、主流程、二级域，再交换阅读与主流程、二级与共享范围审修。Root 负责共享呈现、依据绑定、消息与控件登记和最终差异核对。全部代码开发及独立审修完成后再评估原生取证。
 
@@ -126,8 +126,22 @@ opaque候选 `20261113T135236Z-eaf26f92-b1a9f492`，App `0.2.0.DEV.23a27c337416`
 
 候选 `20261113T141413Z-34cd3bbc-355a26ef`、App `0.2.0.DEV.66c1c747d5a9` 已保数据安装并启动。标准PNG显示底栏四处白楔和断弧消失。独立复核19,560个预期胶囊内部静区像素全部为绿色，旧帧3,147个白色内部像素全部转绿。原生树导出字段中仅父Row的clip从true变false，bounds、颜色和交互字段一致。此结论覆盖当前书架状态，实际系统字号倍率尚未独立读取。
 
-全树121处直接clip调用已登记用途，其中阅读域58处，其余63处位于31个文件。库存包含true和false。独立审查保留Scroll/List视口、封面裁切、展开揭示、动态内容与过渡遮罩。阅读域另核对三个跨域入口。逐站报告位于 `native/non-reading-clip-inventory.json`、`secondary-rounded-parent-clip-review.json` 与阅读域后继报告。
+全树121处直接clip调用已登记用途，其中阅读域58处，其余63处位于31个文件。库存包含true和false。独立审查保留Scroll/List视口、封面裁切、展开揭示、动态内容与过渡遮罩。阅读域另核对三个跨域入口。逐站报告位于 `native/non-reading-clip-inventory.json`、`secondary-rounded-parent-clip-review.json` 和 `native/reading-clip-disposition.json`。阅读另覆盖12个运动PathMask，全部保留。
 
 阅读补修两处。亮度条外Column按当前minimum回执、46vp绘制宽、44vp视口与轨道，以及A完整测量矩形的包含条件控制子树裁剪。缺失、陈旧或超预算输入保留裁剪，内部Scroll及8vp百分比轨道继续裁剪。外观字体单元的空背景Row取消冗余裁剪，文字、边框、运动PathMask和原点击owner保留。
 
 精确 `rounded-parent-sdk` 第04日志通过100个受控边界样本、40个实际layout/motion样本、四个实际Props和State更新及四个负控。独立审修从生产测量、layout resolver到SDK Builder复核。测量API采用显式受控seam，字形与新原生帧尚待最终候选核对。未重复运行既有范围外用例。
+
+## 最终交付与最小原生核对
+
+冻结生产提交 `973ec49a` 的最终run为 `20261113T144057Z-973ec49a-2396219a`，App为 `0.2.0.DEV.18805b72930f`，产品版本0.2.0，安装计数器1000000。签名HAP为226273959字节，SHA-256为 `4d3fc8c03a7a465b727e2c73b87429cb34343e06dae499660731e1e8f27995eb`，指定证书身份通过。Core c078与Native配对沿既有已验证缓存。未选业务门禁保持NOT_RUN。
+
+远程现有x86_64 VM通过受控直连HDC完成保数据覆盖安装、身份复核和正常启动，回执为 `deploy-vm-6460677a198b-20261113T144225Z.json`。停止态原数据库SHA仍为4ffa067c，实际WAL已变化，旧全量证明正确拒绝复用。当前副本formal FFI新执行一次，两个未变合成用例明确复用。备份按停态原字节保存，兼容性探针在一次性副本执行。
+
+最终原生动作共四次导航，依次进入Sample EPUB、打开Home、进入快捷目录、拖抓手展开完整目录。未决卡实际隐藏，阅读正文和控制栏均可用。Home的A圆框和字形完整，实际外Column clip=false，Scroll及百分比轨道clip=true，独立审读已归档。完整目录搜索组件383px，内部TextInput248px，四个动作目标各154px，按当前density3.5对应44vp。内部绘制各112px对应32vp，收起44vp载体内绘制40×26vp。当前快捷目录可展开，全目录列表区不再被自动恢复卡占用。
+
+最终采样记录位于 `native/final188-bookshelf`、`native/final188-reader`、`native/final188-home`、`native/final188-directory-quick`、`native/final188-directory-full`。最初采样名称与历史目录冲突，在设备动作前停止，随后使用新名称，记录于 `final-native-capture-retry.json`。本轮未再次核对或继续原始书签记录，未调整系统字号。
+
+全部21项登记、2245个当前源绑定、261个唯一文件经独立只读核对匹配。此次恰21个SHA更新涉及两个阅读源，其他字段和历史证据引用结构保持一致。21个visual仍为NOT_RUN，Source E2/E3仍FAIL，三组完整页来源继续OPEN_APPROVAL。当前原生系统字号倍率未独立读回，大字号、读屏、全页触摸/焦点/系统返回及用户接受继续开放。
+
+总交付索引为 `.reader-artifacts/ui-full-fix-20261113/final-delivery-receipt.json`，Home独审为 `native/final188-home-independent.json`，目录及共享样本独审为 `native-final188-independent-review.json`，登记独审为 `final-reading-clip-register-independent.json`。独立复核直接查看三张PNG，九个原图/tree/JPEG与receipt字节一致，沿receipt绑定driver、config、部署和操作序列，12个相关生产输入与候选source-snapshot匹配，结果为CURRENT_CAPTURED_SAMPLE_REVIEW_PASS。该样本结果保持自身范围。最终文档更新不改变已安装生产字节。
