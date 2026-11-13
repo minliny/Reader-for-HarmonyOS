@@ -438,6 +438,21 @@ function pixelWithin(preferred: number, min: number, max: number, density: numbe
   return Math.max(lo, Math.min(hi, Math.ceil(preferred * density - 0.5))) / density;
 }
 
+function controlHeightWithin(preferred: number, required: number, capacity: number, density: number): number {
+  const capacityPixels = Math.max(0, capacity) * density;
+  const requiredPixels = required * density;
+  const available = Math.floor(capacityPixels + Number.EPSILON * Math.max(1, capacityPixels) * 4) / density;
+  const minimum = Math.ceil(requiredPixels - Number.EPSILON * Math.max(1, requiredPixels) * 4) / density;
+  return pixelWithin(preferred, Math.min(minimum, available), available, density) ?? 0;
+}
+
+/** Only arithmetic precision is ignored. A physical content deficit remains
+ * overflow, including a deficit smaller than a tenth of a viewport unit. */
+export function readerControlExtentFits(required: number, capacity: number): boolean {
+  return Number.isFinite(required) && Number.isFinite(capacity) && required >= 0 && capacity >= 0 &&
+    required - capacity <= Number.EPSILON * Math.max(1, required, capacity) * 4;
+}
+
 /** Only candidate widths are measured. A selected width never borrows the
  * minimum of a neighbouring width: wrapping belongs to that exact candidate. */
 export function readerControlCandidateWidths(viewportWidth: number, viewportHeight: number,
@@ -523,22 +538,23 @@ function resolveMeasuredPortraitControlPanelSize(width: number, height: number,
   const quickRequired = shell.minimum.quick.heightVp + shell.chrome.quickReserveVp;
   // Reference proportions choose a preferred size. Physical safe area and
   // real text/content budgets determine feasibility, without percentage caps.
-  const fullHeight = pixelWithin(Math.max(panelWidth / PHONE_FULL_RATIO, fullRequired, quickRequired),
-    0, availableHeight, density) ?? 0;
-  const quickHeight = pixelWithin(Math.max(panelWidth / PHONE_QUICK_RATIO, quickRequired),
-    0, fullHeight, density) ?? 0;
+  const fullHeight = controlHeightWithin(Math.max(panelWidth / PHONE_FULL_RATIO, fullRequired, quickRequired),
+    Math.max(fullRequired, quickRequired), availableHeight, density);
+  const quickHeight = controlHeightWithin(Math.max(panelWidth / PHONE_QUICK_RATIO, quickRequired),
+    quickRequired, fullHeight, density);
   return { width: panelWidth, quickHeight: quickHeight, fullHeight: fullHeight,
-    measured: candidate, preferred: ready.length > 0 && fullRequired <= fullHeight && quickRequired <= quickHeight };
+    measured: candidate, preferred: ready.length > 0 && readerControlExtentFits(fullRequired, fullHeight) &&
+      readerControlExtentFits(quickRequired, quickHeight) };
 }
 
 function resolvePortraitControlPanelSize(width: number, height: number,
   availableWidth: number, availableHeight: number, density: number): ReaderControlPanelSize {
   const stackedHeight = STACKED_QUICK_CONTENT_HEIGHT + READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE;
   const panelWidth = pixelWithin(width * PHONE_PANEL_WIDTH_SHARE, 0, availableWidth, density) ?? 0;
-  const fullHeight = pixelWithin(Math.max(stackedHeight, panelWidth / PHONE_FULL_RATIO), 0,
-    availableHeight, density) ?? 0;
-  const quickHeight = pixelWithin(Math.max(stackedHeight, panelWidth / PHONE_QUICK_RATIO), 0,
-    fullHeight, density) ?? 0;
+  const fullHeight = controlHeightWithin(Math.max(stackedHeight, panelWidth / PHONE_FULL_RATIO), stackedHeight,
+    availableHeight, density);
+  const quickHeight = controlHeightWithin(Math.max(stackedHeight, panelWidth / PHONE_QUICK_RATIO), stackedHeight,
+    fullHeight, density);
   return { width: panelWidth, quickHeight: quickHeight, fullHeight: fullHeight };
 }
 
@@ -605,11 +621,13 @@ export function resolveReaderControlLayout(
     validControlCandidate(value, Math.max(0, width - safeHorizontal * 2)) &&
     Math.abs(value.widths.panelWidthVp - defaultPanelWidth) < 0.01);
   const otherShell = otherCandidate === undefined ? undefined : controlShellMinimum(otherCandidate);
+  const otherHeight = controlHeightWithin(availablePanelHeight, 0, availablePanelHeight, density);
   const otherPanel: ReaderControlPanelSize | undefined = portraitPanel === undefined && otherCandidate !== undefined && otherShell !== undefined ? {
     width: otherCandidate.widths.panelWidthVp,
-    fullHeight: availablePanelHeight,
-    quickHeight: Math.min(availablePanelHeight, Math.max(otherShell.minimum.quick.heightVp +
-      otherShell.chrome.quickReserveVp, 330)), measured: otherCandidate, preferred: false,
+    fullHeight: otherHeight,
+    quickHeight: controlHeightWithin(Math.max(otherShell.minimum.quick.heightVp + otherShell.chrome.quickReserveVp, 330),
+      otherShell.minimum.quick.heightVp + otherShell.chrome.quickReserveVp, otherHeight, density),
+    measured: otherCandidate, preferred: false,
   } : undefined;
   const selectedPanel = portraitPanel ?? otherPanel;
   const snapshot = new ReaderControlLayoutSnapshot(
@@ -635,10 +653,10 @@ export function resolveReaderControlLayout(
     const quickHeight = Math.max(0, selectedPanel.quickHeight - measured.chrome.quickReserveVp);
     const fullHeight = Math.max(0, selectedPanel.fullHeight - measured.chrome.fullReserveVp);
     snapshot.quickMinimumFits = measured.minimum.quick.fits &&
-      measured.minimum.quick.heightVp <= quickHeight + 0.01 &&
+      readerControlExtentFits(measured.minimum.quick.heightVp, quickHeight) &&
       measured.minimum.quick.minWidthVp <= measured.widths.quickContentWidthVp + 0.01;
     snapshot.fullMinimumFits = measured.minimum.full.fits &&
-      measured.minimum.full.heightVp <= fullHeight + 0.01 &&
+      readerControlExtentFits(measured.minimum.full.heightVp, fullHeight) &&
       measured.minimum.full.minWidthVp <= measured.widths.fullContentWidthVp + 0.01;
     const sharedShell = controlShellMinimum(measured);
     snapshot.contentBudget = { key: measured.key, quickContentHeightVp: quickHeight,

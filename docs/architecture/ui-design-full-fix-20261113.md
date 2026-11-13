@@ -282,3 +282,21 @@ AutoPage默认跟随行由36调整为38，由现有AddedActor的24+12+2支付得
 上述三域已交叉独审，源码与准确测试冻结。Root补查全应用七个显式shared action factory赋值，五处已有匹配的publication、presentation/retry或source字段key，另外两处属于本批嵌套目录修复。该文字工厂搜索按具体语法记账，完整应用交互验收维持原范围。当前选定目录消息入口AST检查4/4通过。后继必要候选的同会话初始记录增加一张Tree/RS后的PNG，七个本地double和独审通过，维持非同步边界，原记录器源码与首轮动画帧保留。
 
 本批正式登记已独立接受并冻结。control20→21只更新两项目录重试/清除的生命周期和局部放置事实，数值目标保持。21项登记各递增一次并消费control21，269个唯一输入与2311处pin核对通过。13项目录事实和八个共享依赖范围绑定准确新测试。refs本批一次PASS，register本批一次保留准确39项开放诊断，所有层、不变量和21个visual结果保持。最终正式SHA为register724446fe7381及control38daef5dcf30。后继完整编译和原生结果另记，当前安装仍为本批修复前的34ea。
+
+### 111ab候选已证范围与物理像素预算后继
+
+提交64ca58ca的build03实际编译及指定证书签名通过，App111ab35d6b50、signed HAP29c4461ad770，run20261113T190614Z-64ca58ca-fd840a0b已在远程现有VM保数据安装并启动。首次截图仍为启动过渡，同会话Tree/RS后的PNG已经显示ready书架，Tab同quiet mask64837点全为正常表面，边框扇形0。启动日志PID8265只记录width196/painttrue，历史扇形归因仍OPEN。取证序列3.037秒，非同步边界保留。
+
+新Home→目录五帧中，帧1–4原PNG字节相同，章节橙条均为[149,1865,160,1977]，旧88px位移在这四帧未再出现。共同shell、正文和亮度区域各采帧保持。真实触发3.267/455.080/1056.268/1617.500/2163.021ms，间隔中的瞬间仍保持未证。Full TTS四个时长按钮实际visible bounds与orig bounds全同，均105×154px即30×44vp，paint30/glyph14。原最后加号完整显示，分钟/秒能力及当前disabled事实保持，custom无横向Scroll祖先。
+
+Home窄竖条另经源码定位。共同Quick预算将325.438vp按最近物理像素取整到325.4286vp，fits的0.01容差与Home Scroll严格小于比较产生不同结论。原生树Scroll与内容均[89,1697][1011,2346]，Scrollable仍为true。该假溢出来源继续按共享需求和容量的像素支付语义修复，已有目录/TTS实际结果各守原范围，后续VM步骤暂停。阶段证据及独审位于 `control-module-height-20261113/native-directory-click-followup-independent.json` 和 `native-systemic-findings.json`。
+
+### 共享物理像素支付修复
+
+本补修仅改ReaderLayoutGeometry与Panel的Home滚动比较。高度需求向外取整、容量向内取整，preferred光学最近取整继续在已付上下界内选择。measured portrait、legacy stacked及wide/landscape的Quick/Full共同使用。Geometry高度fits与实际Home Scroll改为同一尺度化Number.EPSILON比较，宽度规则和原业务、Motion、时钟保持。
+
+density3.5的原反例中，Home需求185.438不变，内容实际容量从185.428571改为185.714286，Quick从325.428571改为325.714286。新Scroll声明为false，旧欠付高度在新比较下仍为true，源修复处理真实支付差异。真实短窗及大字号不足仍可滚，原生scrollbar默认配置保留。
+
+准确pixel-height-payment第03记录通过20组阈值样本及70组共享布局，包含七模块、五种窗口、两组内容高度、Full736与原Motion端点。既有home-single-owner只补真实生产helper端口并选跑一叶通过，其余方法域复用。reading已独立接受两源、两个测试及原反例，回执位于 `control-module-height-20261113/pixel-height-payment-results.json` 和 `reading-crossreview-pixel-height-payment.json`。后继只补实际变动Quick和未执行端点，111ab已证TTS自定义与嵌套目录行为按未变方法范围复用。
+
+高度小批正式登记已独审接受。13项目录登记各20→21，刷新两源26处pin并新增13个准确pixel test输入，270唯一输入与2324处pin成立。control21、全部typed facts、层/不变量/visual结果及另八项登记结构保持。refs本批一次PASS0，register本批一次保持39项开放诊断。当前register191970bb93aa，control仍38daef5dcf30，生产、测试与正式登记再次冻结后再产生必要后继候选。

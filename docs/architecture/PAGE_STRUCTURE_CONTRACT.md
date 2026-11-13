@@ -897,6 +897,8 @@ if textMin + trailingWidth > contentWidth:
 rowHeight = max(baseHeight, textStackHeight(scale), trailingHeight(scale))
 ```
 
+高度进入真实物理像素预算时，需求下界向外取整，可用容量向内取整并作为上界。光学优选尺寸在已支付需求与容量之间保留自己的取整规则。Geometry的高度fits与实际Scroll准入使用同一extent比较，数值容差只消除浮点算术误差。记录边界附近的原始需求、已付高度和pixel scale，避免同一微小欠付同时得到fits通过及可滚动两个结果。真实短窗和大字号溢出继续沿原自然流滚动。
+
 ### 8.2 校准流程
 
 1. 首先冻结366×844基线；发生响应式行形态或控件预算变更后，增加实际窄宽边界（本试点320），不无条件扩为全宽度矩阵。

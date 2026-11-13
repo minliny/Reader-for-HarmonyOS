@@ -139,6 +139,7 @@ import {
 import {
   ReaderControlLayoutSnapshot,
   createDefaultReaderControlLayout,
+  readerControlExtentFits,
   type ReaderControlCandidateWidths, type ReaderControlCandidateMinimum,
   type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer,
   type ReaderControlContentMeasurer, type ReaderControlContentModule,
@@ -2051,7 +2052,7 @@ export struct ReaderControlPanel {
       if (this.contentLocation().level === 'home') {
         Scroll() { this.homeContent(); }
           .width(this.frame().content.width).height(this.frame().content.height).edgeEffect(EdgeEffect.None)
-          .enableScrollInteraction(this.frame().content.height < this.homeContentMinimumHeight());
+          .enableScrollInteraction(!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height));
       } else if (this.contentLocation().module === 'directory') {
         ReaderControlDirectoryContent({
           minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),

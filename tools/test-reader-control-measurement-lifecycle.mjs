@@ -669,7 +669,7 @@ if (selected.length) {
       const childFiles = { directory: 'ReaderControlDirectoryContent.ets', appearance: 'ReaderControlAppearanceContent.ets',
         settings: 'ReaderControlSettingsContent.ets', search: 'ReaderControlSearchContent.ets', tts: 'ReaderControlTtsContent.ets',
         autoPage: 'ReaderControlAutoPageContent.ets', replace: 'ReaderControlReplaceContent.ets' };
-      const dependencies = { ...properties.sdk, ...settings }, childSources = {};
+      const dependencies = { ...properties.sdk, ...settings, readerControlExtentFits: geometry.readerControlExtentFits }, childSources = {};
       for (const [module, file] of Object.entries(childFiles)) {
         const name = file.replace('.ets', ''), Selected = selectedProductionMethods(ui(file), name, ['preparedProfile', 'presentationPrepared'],
           { readerControlModuleProfileMatches: moduleProfileMatches, readerControlModuleFactsMatch: moduleFactsMatch });
