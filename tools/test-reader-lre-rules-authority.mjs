@@ -26,6 +26,7 @@ const {readerControlReplaceEndpoint}=await import('../entry/src/main/ets/feature
 const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
 
 const names=['readerReplaceRuntimeCurrent','projectReaderReplaceWriteFacts','controlReplaceCurrent','openQuickReplace',
+ 'controlMinimumCommittedIdentity',
  'reloadControlReplace','runControlReplaceMutation','saveControlReplace','toggleControlReplace','beginReplaceMutation',
  'isReplaceMutationCurrent','finishReplaceMutation','invalidateReplaceMutationOwner'];
 

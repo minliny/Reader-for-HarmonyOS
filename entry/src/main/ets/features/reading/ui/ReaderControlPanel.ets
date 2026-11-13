@@ -162,7 +162,7 @@ import {
   type ReaderControlSessionState,
 } from './ReaderControlSessionState';
 import {
-  readerControlMotionAxis, readerControlMotionBounds, readerControlHasFullContentSurface,
+  readerControlMotionAxis, readerControlMotionBounds, readerControlHasFullContentSurface, readerControlHasQuickContentSurface,
   sampleReaderControlMotionComposition,
   type ReaderControlMotionFrame, type ReaderControlMotionBounds,
 } from './ReaderControlMotionGeometry';
@@ -1511,7 +1511,7 @@ export struct ReaderControlPanel {
           .width(this.frame().content.width).height(this.frame().content.height)
           .position({ x: this.frame().content.x, y: this.frame().content.y })
           .attributeModifier(new ReaderPanelFrame('reader-quick-fill', this.appScheme))
-          .opacity(this.contentLocation().level !== 'home' && this.contentLocation().module !== 'tts' ?
+          .opacity(this.contentLocation().level !== 'home' && readerControlHasQuickContentSurface(this.contentLocation().module) ?
             this.frame().content.opacity * (1 - this.frame().progress) : 0)
           .hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) {
@@ -1525,7 +1525,8 @@ export struct ReaderControlPanel {
           .clip(true).opacity(this.frame().content.opacity)
           .enabled(this.contentInputEnabled())
           .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Default : HitTestMode.None);
-        // Paint the stroke after content; scrolling opaque rows must not erase it.
+        // Strokes stay above opaque scrolling rows. Each remains paired with
+        // its own source surface rather than borrowing the other actor's rect.
         Stack()
           .id('reader-control-content-outline')
           .width(this.frame().content.width).height(this.frame().content.height)
@@ -1533,9 +1534,17 @@ export struct ReaderControlPanel {
           .borderRadius(8 + 4 * this.frame().progress)
           .border({ width: TOK_BORDER_W, color: readerAppColor(this.contentLocation().module === 'settings' &&
             this.frame().progress === 0 ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.appScheme) })
-          .opacity(this.frame().content.opacity * (
-            (this.contentLocation().level !== 'home' && this.contentLocation().module !== 'tts' ? 1 - this.frame().progress : 0) +
-            (readerControlHasFullContentSurface(this.contentLocation().module) ? this.frame().progress : 0)))
+          .opacity(this.contentLocation().level !== 'home' && readerControlHasQuickContentSurface(this.contentLocation().module) ?
+            this.frame().content.opacity * (1 - this.frame().progress) : 0)
+          .hitTestBehavior(HitTestMode.None);
+        Stack()
+          .id('reader-control-full-content-outline')
+          .width(this.frame().contentSurface.width).height(this.frame().contentSurface.height)
+          .position({ x: this.frame().contentSurface.x, y: this.frame().contentSurface.y })
+          .borderRadius(12)
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
+          .opacity(readerControlHasFullContentSurface(this.contentLocation().module) ?
+            this.frame().contentSurface.opacity : 0)
           .hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) { this.controlHeader(); }
           .width(this.frame().header.width).height(this.frame().header.height)

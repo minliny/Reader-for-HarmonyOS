@@ -88,6 +88,12 @@ export function readerControlHasFullContentSurface(module: string | undefined): 
   return module === 'directory' || module === 'tts' || module === 'appearance' || module === 'settings';
 }
 
+/** Search/AutoPage/Replace already own their bordered viewport in both forms.
+ * TTS paints its own Quick backdrop, while Home owns its individual cards. */
+export function readerControlHasQuickContentSurface(module: string | undefined): boolean {
+  return module === 'directory' || module === 'appearance' || module === 'settings';
+}
+
 export function readerControlMotionBounds(width: number, fullHeight: number,
   bottomGap: number, quickHeight: number = 330, contentBudget?: ReaderControlContentBudget): ReaderControlMotionBounds {
   const height = Number.isFinite(fullHeight) ? Math.max(0, fullHeight) : 736;

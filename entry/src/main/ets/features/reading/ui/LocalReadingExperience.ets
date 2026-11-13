@@ -1167,6 +1167,7 @@ export struct ReadingExperience {
   private controlSelectionReconciliationInFlight: boolean = false;
   /** Owns only Quick Replace panel loading/visibility continuations. */
   private replacePanelGeneration: number = 0;
+  private controlReplacePreparedIdentity: string = '';
   /** Owns a Core mutation independently from panel open/close generations. */
   private replaceMutationGeneration: number = 0;
   private replaceMutationActiveGeneration: number = -1;
@@ -7838,16 +7839,20 @@ export struct ReadingExperience {
 
   private adoptControlDisplayFacts(facts: ReaderControlModuleFacts | undefined): void {
     const previous = this.controlPresentationReceipt;
-    if (previous === undefined || readerControlModuleFactsDisplayEqual(previous.facts, facts)) return;
-    this.controlPresentationReceipt = { identity: previous.identity, ownerKey: previous.ownerKey,
-      environmentKey: previous.environmentKey, key: previous.key, location: previous.location,
-      layout: previous.layout, profile: previous.profile, facts: facts,
-      prepared: previous.prepared === undefined || facts === undefined ? undefined :
-        { identity: previous.identity, key: previous.key, moduleData: previous.prepared.moduleData, facts: facts } };
+    if (previous === undefined) return;
+    if (!readerControlModuleFactsDisplayEqual(previous.facts, facts)) {
+      this.controlPresentationReceipt = { identity: previous.identity, ownerKey: previous.ownerKey,
+        environmentKey: previous.environmentKey, key: previous.key, location: previous.location,
+        layout: previous.layout, profile: previous.profile, facts: facts,
+        prepared: previous.prepared === undefined || facts === undefined ? undefined :
+          { identity: previous.identity, key: previous.key, moduleData: previous.prepared.moduleData, facts: facts } };
+    }
+    if (this.controlPage() === 'quickReplace') this.prepareControlReplacePage();
   }
 
   private admitControlMinimum(candidates: ReaderControlCandidateMinimum[], identity: string): void {
     if (!this.controlMinimumCurrent(identity)) return;
+    let preparedPage: ReaderControlPage | undefined = undefined;
     if (this.controlMinimumProfileReader !== undefined) {
       const prefix = `${identity}|${this.controlMinimumGeneration}|`;
       if (!candidates.length || candidates.some((candidate: ReaderControlCandidateMinimum): boolean => !candidate.key.startsWith(prefix)) ||
@@ -7900,7 +7905,7 @@ export struct ReadingExperience {
         this.observedControlModule = location.level === 'secondary' ? location.module : 'home';
         this.controlNavigationIntent = undefined;
         this.controlSession = committed;
-        if (previousModule !== this.observedControlModule) this.prepareControlPage(this.controlPage());
+        if (previousModule !== this.observedControlModule) preparedPage = this.controlPage();
       }
       this.controlPresentationReceipt = next;
       this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
@@ -7917,6 +7922,8 @@ export struct ReadingExperience {
     this.controlMinimumRevision += 1;
     this.controlMinimumReady = candidates.length > 0;
     this.invalidateControlBackdrop();
+    if (preparedPage !== undefined) this.prepareControlPage(preparedPage);
+    else if (this.controlPage() === 'quickReplace') this.prepareControlReplacePage();
   }
 
   private windowMetricsLayoutKey(): string {
@@ -9414,7 +9421,25 @@ export struct ReadingExperience {
       void this.loadChineseConversionMode(lifecycleToken);
     } else if (page === 'moduleSettings' || page === 'fullSettings') {
       void this.loadReaderSettingsSnapshot(lifecycleToken);
+    } else if (page === 'quickReplace') {
+      this.prepareControlReplacePage();
     }
+  }
+
+  private prepareControlReplacePage(): void {
+    if (!this.controlMinimumReady || this.controlPage() !== 'quickReplace' || !this.controlVisible() ||
+      this.controlReplaceState.mutationPending) return;
+    const identity = this.controlMinimumCommittedIdentity();
+    const receipt = this.controlPresentationReceipt;
+    if (receipt !== undefined) {
+      if (receipt.identity !== identity || receipt.ownerKey !== this.controlMinimumOwnerKey() ||
+        receipt.environmentKey !== this.controlMinimumEnvironmentKey() || receipt.location.module !== 'replace') return;
+    } else if (this.controlMinimumProfileReader !== undefined) return;
+    const preparedIdentity = JSON.stringify([identity, this.replacePanelGeneration]);
+    if (preparedIdentity === this.controlReplacePreparedIdentity) return;
+    // A dispatched write retains its original owner. Pending entries leave
+    // this marker unclaimed until the original loader accepts a current read.
+    void this.reloadControlReplace().catch((_error: Error): void => {});
   }
 
   private loadControlBookmarks(): void {
@@ -11170,14 +11195,18 @@ export struct ReadingExperience {
       generation !== this.replaceRecovery.generation || !this.replaceRecovery.visible ||
       this.rulesMutationOwner.snapshot().operationId !== this.replaceRecoveryOperationId) return;
     this.openReaderControl();
-    this.setControlPage('home');
-    this.openQuickReplace();
+    if (this.controlVisible()) this.requestControlReplacePage();
   }
 
   private openQuickReplace(): void {
     if (!this.mounted || !this.controlVisible() || this.controlPage() !== 'home') {
       return;
     }
+    this.requestControlReplacePage();
+  }
+
+  private requestControlReplacePage(): void {
+    const alreadyReplace = this.controlPage() === 'quickReplace';
     this.replacePanelGeneration += 1;
     const sessionKey = `${this.sourceId}:${this.bookId}:${this.lifecycleToken}`;
     if (this.controlReplaceState.sessionKey !== sessionKey) {
@@ -11186,10 +11215,9 @@ export struct ReadingExperience {
     this.projectReaderReplaceWriteFacts();
     this.setControlPage('quickReplace');
     // A valid empty collection still opens: Full offers a real Add action.
-    // A write already dispatched survives closure/reopen; never release its lock.
-    if (!this.controlReplaceState.mutationPending) {
-      void this.reloadControlReplace().catch((_error: Error): void => {});
-    }
+    // A same-module recovery already has a committed presentation. Other
+    // requests start reading only from the successful minimum commit hook.
+    if (alreadyReplace) this.prepareControlReplacePage();
   }
 
   private controlReplaceCurrent(lifecycle: number, sourceId: string, bookId: string,
@@ -11209,6 +11237,7 @@ export struct ReadingExperience {
     if (expectedOperationId !== undefined && recoveryFact.operationId !== expectedOperationId) return;
     if (explicitRecovery && (recoveryFact.confirmation === 'unknown' || recoveryFact.blocked) &&
       recoveryFact.operationId !== expectedOperationId) return;
+    this.controlReplacePreparedIdentity = JSON.stringify([this.controlMinimumCommittedIdentity(), panelGeneration]);
     this.projectReaderReplaceWriteFacts();
     const wasUncertain = this.controlReplaceState.writeUncertain;
     this.controlReplaceState = beginReaderControlReplaceLoad(this.controlReplaceState);

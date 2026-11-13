@@ -35,6 +35,7 @@ const { ReaderContentSearchPublication } = await import('data:text/javascript,' 
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 const names = ['openQuickReplace', 'controlReplaceCurrent', 'reloadControlReplace', 'runControlReplaceMutation',
+  'requestControlReplacePage', 'prepareControlReplacePage', 'controlMinimumCommittedIdentity',
   'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'beginReplaceMutation', 'isReplaceMutationCurrent', 'finishReplaceMutation', 'invalidateReplaceMutationOwner',
   'onControlSessionChanged','admitSessionControlClosing','publishQuickSearchState'];
 function method(name) {
@@ -81,6 +82,7 @@ function owner(Type = Host(), sdk = actualSdk) {
     replaceMutationActiveLifecycleToken: -1, replaceMutationActiveBookId: '', replaceMutationActiveRuleId: -1,
     controlReplaceState: ready('source:book:1', [rule(1)]),
     controlSession: { closeRevision: 0, location: { level: 'secondary', module: 'replace' } },
+    controlMinimumReady: true, controlMinimumProfileReader: undefined, controlPresentationReceipt: undefined,
     latestControlVisualSession: { closeRevision: 0, location: { level: 'secondary', module: 'replace' } },
     observedControlPage: 'quickReplace', observedControlModule: 'replace', observedControlCloseRevision: 0,
     searchGeneration: 0, quickSearchQuery: '', quickSearchState: { kind: 'idle' },
@@ -97,8 +99,12 @@ function owner(Type = Host(), sdk = actualSdk) {
     invalidateControlBackdrop() {}, dismissControlTemporaryLayers() {}, prepareControlPage() {},
     drainPageTurnPreparationQueue() {}, suspendAdjacentMeasurement() {},
     setControlPage(page) {
+      // This legacy write-owner fixture deliberately assumes an already
+      // committed synchronous page. The real async entry is covered by
+      // test-reader-control-replace-navigation#committed-entry-load.
       this.page = page; this.controlSession.location = { level: 'secondary', module: 'replace' };
       this.onControlSessionChanged();
+      this.prepareControlReplacePage();
     },
     replaceGateway: sdk === actualSdk ? Object.assign(new sdk.Full(runtime), { loadRules: async () => { host.loadCalls++; return [rule(1), rule(2)]; } }) : new sdk.Full(runtime),
   });

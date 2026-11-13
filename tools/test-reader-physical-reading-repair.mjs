@@ -115,7 +115,8 @@ function panelProbe(text) {
   const childBodies=type.members.filter(n=>names.includes(n.name?.getText(tree))).sort((a,b)=>b.pos-a.pos);
   for(const n of childBodies)text=text.slice(0,n.body.pos)+' { Column() {} }'+text.slice(n.body.end);
   const {owner}=createReaderBuilderProbe(text,['build',...names],{
-    readerControlHasFullContentSurface:()=>true,
+    readerControlHasFullContentSurface:motion.readerControlHasFullContentSurface,
+    readerControlHasQuickContentSurface:motion.readerControlHasQuickContentSurface,
     AccessibilityRoleType:{BUTTON:'button'},
   });
   Object.assign(owner,{layout:{viewportWidth:390,viewportHeight:844,topBarWidth:360,topBarTop:19,fullPanelWidth:364},
@@ -136,7 +137,10 @@ function panelProbe(text) {
   assert.ok(owner.attributeCalls.findIndex(n=>n.property==='id'&&n.args[0]==='reader-control-content-outline')>
     owner.attributeCalls.findIndex(n=>n.property==='id'&&n.args[0]==='reader-control-full-content-surface'));
   owner.frame=()=>motion.sampleReaderControlMotionComposition({expansionProgress:1,visibilityProgress:1},motion.readerControlMotionBounds(364,736,19));
-  owner.replay();assert.equal(quick.opacity,0);assert.ok(outline.borderRadius>=0);assert.equal(outline.opacity,1);
+  owner.replay();assert.equal(quick.opacity,0);assert.ok(outline.borderRadius>=0);assert.equal(outline.opacity,0);
+  const fullSurface=get('reader-control-full-content-surface');
+  const fullOutline=get('reader-control-full-content-outline');
+  assert.equal(fullSurface.opacity,1);assert.equal(fullOutline.opacity,1);assert.equal(fullOutline.border.width,1);
   assert.equal(get('reader-control-full-content-surface').border,undefined,'the stroke is not painted twice with alpha');
   return {grabber,quick,outline};
 }
