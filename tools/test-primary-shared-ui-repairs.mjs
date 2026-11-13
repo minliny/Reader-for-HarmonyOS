@@ -28,6 +28,8 @@ import { sourceSwitchTriggerFocusId } from '../entry/src/main/ets/features/sourc
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
 const definitions = {
+  'detail-scroll-origin': 'Actual detailContent/Scroll SDK attributes keep short and long same-book documents at the declared top inset across media and legacy type facts.',
+  'document-scroll-origin': 'Actual shelf clip and diagnostic document Scroll SDK attributes declare a top origin independently of viewport/content height.',
   'prepared-media-qualification': 'Actual coordinator cache and in-flight joins qualify current media, preserve existing consumers and never retain an explicit media-mismatched result for the next retry.',
   'detail-kind-confirmation': 'Actual current source registry gives the initial media hint while cold detail failure/retry publishes its confirmed session type through the shipping Entry/Host chain.',
   'detail-type-state': 'Unknown remote type renders the existing page-state host with current retry, keeps Back available and excludes a misleading hero/footer; local/text/manga/audio are distinguished.',
@@ -49,6 +51,67 @@ const definitions = {
 };
 const nodes = owner => [...owner.nodes.values()];
 for (const id of selectContractCases(definitions)) {
+  if (id === 'detail-scroll-origin') {
+    const records = [];
+    for (const kind of ['text', 'manga', 'legacy-local', 'unknown-remote']) {
+      for (const length of ['short', 'long']) {
+        for (const scale of [1, 2]) {
+          const metrics = windowFacts.createDefaultReaderWindowMetrics();
+          metrics.windowRect.width = 366; metrics.windowRect.height = 844; metrics.systemFontScale = scale;
+          const owner = localBookDetailSdk({ sourceSwitchTriggerFocusId, ReaderWindowCoordinator: { metrics: () => metrics } }).owner;
+          const contentKind = kind === 'text' || kind === 'manga' ? kind : undefined;
+          const sourceId = kind === 'legacy-local' ? 'local' : 'remote';
+          Object.assign(owner, { book: { sourceId, bookId: 'same-book', title: '同一本书', author: '同一作者', sourceName: '同一来源',
+            contentKind, intro: length === 'short' ? '' : '这是同一本书的完整简介。'.repeat(80), coverUrl: 'cover' },
+            viewportWidth: 366, viewportHeight: 844, measurementKey: 1, readerWindowMetricsRevision: 1,
+            toc: Array.from({ length: length === 'short' ? 1 : 24 }, (_, index) => ({ index, title: `第${index + 1}章`, bookmarks: [] })),
+            mangaFontsReady: true, introExpanded: length === 'long', introMeasured: true,
+            admissionIdentity: 'same-opening', appThemeScheme: 'day', inBookshelf: true });
+          owner.refreshGeometry();
+          if (kind === 'manga') owner.prepareMangaPreview();
+          owner.detailContent();
+          const scrolls = nodes(owner).filter(node => node.type === 'Scroll');
+          if (kind === 'unknown-remote') {
+            assert.equal(scrolls.length, 0, 'unconfirmed remote type retains its existing preparation state');
+          } else {
+            assert.equal(scrolls.length, 1);
+            assert.equal(scrolls[0].align, 'Alignment.Top', `${kind}/${length}/${scale} document uses its declared top origin`);
+            assert.equal(scrolls[0].height, '100%');
+            assert.equal(scrolls[0].create, kind === 'manga' ? undefined : owner.detailScroller);
+            const column = nodes(owner).find(node => node.type === 'Column' && node.padding?.top === owner.geometry.content.startInset &&
+              node.padding?.bottom === owner.geometry.content.endInset);
+            assert.ok(column, 'the actual detail column retains the resolved header and footer clearance');
+            assert.equal(column.height, undefined, 'the document keeps its natural short/long height');
+            assert.equal(owner.geometry.content.startInset, owner.geometry.header.clearance);
+          }
+          records.push({ kind, length, scale, scrolls: scrolls.length });
+        }
+      }
+    }
+    console.log(JSON.stringify({ kind: 'detail-scroll-sdk-origin', cases: records.length, records,
+      nativeLayout: false, nativeEvidence: 'Existing 2cd tree plus official alignment algorithm are recorded separately.' }));
+  }
+  if (id === 'document-scroll-origin') {
+    const shelfSource = read('features/bookshelf/ui/BookshelfPage.ets');
+    const shelf = createReaderBuilderProbe(shelfSource, ['filterPanel', 'filterRow', 'filterChip', 'isFilterSelected', 'hasActiveFilters'],
+      { ScrollDirection: { Vertical: 'ScrollDirection.Vertical' } }).owner;
+    Object.assign(shelf, { filterPanelHeight: 180, filterContentOpacity: 1, filterRowVisible: true,
+      appThemeScheme: 'day', contentFilter: 'all', sourceFilter: 'all' });
+    shelf.filterPanel();
+    const clip = nodes(shelf).find(node => node.type === 'Scroll');
+    assert.equal(clip.align, 'Alignment.Top');
+    assert.equal(clip.height, 180); assert.equal(clip.enableScrollInteraction, false);
+    assert.equal(typeof nodes(shelf).find(node => node.type === 'Column' && node.onAreaChange)?.onAreaChange, 'function');
+    const paragraph = createReaderBuilderProbe(read('pages/ReaderParagraphDiagnostic.ets'), ['build']).owner;
+    Object.assign(paragraph, { fontReady: false, status: '等待字体' }); paragraph.initialRender();
+    assert.equal(nodes(paragraph).find(node => node.type === 'Scroll').align, 'Alignment.Top');
+    const menu = createReaderBuilderProbe(read('pages/ReaderPageStructureVerification.ets'), ['menu', 'fontPreparationState'],
+      { readerWindowMetrics: windowFacts.createDefaultReaderWindowMetrics }).owner;
+    Object.assign(menu, { presentation: 1, requestedWidth: 366, actualWidth: 366, actualHeight: 844, fontState: 'loading',
+      menuBottomInset: () => 24 }); menu.menu();
+    assert.equal(nodes(menu).find(node => node.type === 'Scroll').align, 'Alignment.Top');
+    console.log('PASS SDK top origins for one dynamic shelf clip and two separately classified diagnostic documents');
+  }
   if (id === 'prepared-media-qualification') {
     const create = async () => {
       const coordinator = new BookAcquisitionCoordinator(async () => ({ data: { sources: [{ sourceId: 'remote', enabled: true,

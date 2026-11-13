@@ -262,7 +262,7 @@ export struct LocalBookDetail {
       }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)
         .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
         .padding({ top: this.geometry.content.startInset, bottom: this.geometry.content.endInset });
-    }.width('100%').height('100%').scrollBar(this.book.contentKind === 'manga' ? BarState.Auto : BarState.Off)
+    }.width('100%').height('100%').align(Alignment.Top).scrollBar(this.book.contentKind === 'manga' ? BarState.Auto : BarState.Off)
       .scrollBarWidth(this.book.contentKind === 'manga' ? visual.scrollbarWidth : undefined)
       .scrollBarColor(this.book.contentKind === 'manga' ? mangaDirectoryColor('scrollbar', this.appThemeScheme) : undefined)
       .onDidScroll((): void => this.onDetailScroll(scrollIdentity));

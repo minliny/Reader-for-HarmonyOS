@@ -266,13 +266,17 @@
       }
     },
     "test-bounded-local-import-composition.mjs": {
-      "sourceSha256": "c1b5016d00fad612233ea7c4470170ec4f8ac542e3811683525be04fb52d784a",
+      "sourceSha256": "580d12202ae78cca4d059adbf50319ce590191686191547f92794d2246eeb2f4",
       "cases": {
         "picker-admission": {
           "resources": [],
           "qualification": "QUALIFIED"
         },
         "result-receipts": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "scroll-origin": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -11387,7 +11391,7 @@
       }
     },
     "test-primary-shared-ui-repairs.mjs": {
-      "sourceSha256": "e912891ceacfdeac7aedafc6f5620d70b1459738bea1363580d852c17e1c206f",
+      "sourceSha256": "5db7853ce752c88c5c46654cb57008b4da90f064009fcbfcca0be4490a39d43e",
       "cases": {
         "detail-kind-confirmation": {
           "resources": [],
@@ -11458,6 +11462,14 @@
           "qualification": "QUALIFIED"
         },
         "prepared-media-qualification": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "detail-scroll-origin": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "document-scroll-origin": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -11603,6 +11615,19 @@
       "sourceSha256": "fabeb2ced5fcccb011c8baa2b4349d712018b4dfca7fd7b4360ad46a224415cf",
       "cases": {
         "history-integrity": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-scroll-flow-alignment.mjs": {
+      "sourceSha256": "d2c386d395ae3cd53252e56862b73acd2b3f9e60efe8d586bba25b4f717dedca",
+      "cases": {
+        "rules-preview": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "manga-action-body": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

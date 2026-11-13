@@ -841,6 +841,7 @@ export struct BookshelfPage {
     }
     .width('100%')
     .height(this.filterPanelHeight)
+    .align(Alignment.Top)
     .scrollable(ScrollDirection.Vertical)
     .enableScrollInteraction(false)
     .scrollBar(BarState.Off)

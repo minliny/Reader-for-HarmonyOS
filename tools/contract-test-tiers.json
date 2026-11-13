@@ -149,7 +149,10 @@
     "test-system-file-open-navigation-owner.mjs",
     "test-toc-repair-regressions.mjs",
     "test-tool-environment.mjs",
-    "test-transient-transport-acquisition.mjs"
+    "test-transient-transport-acquisition.mjs",
+    "test-primary-shared-ui-repairs.mjs",
+    "test-bounded-local-import-composition.mjs",
+    "test-reader-scroll-flow-alignment.mjs"
   ],
   "integration": [
     "test-action-menu-surface.mjs",

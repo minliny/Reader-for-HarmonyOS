@@ -388,6 +388,6 @@ export struct ReaderParagraphDiagnostic {
         Text('选择、无障碍、图片、长段性能及生产分页均未准入。Emoji 与阿拉伯文回退字体待运行时核对。')
           .fontSize(11).fontColor('#555555');
       }.width('100%').padding(12)
-    }.width('100%').layoutWeight(1)
+    }.width('100%').layoutWeight(1).align(Alignment.Top)
   }
 }

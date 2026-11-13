@@ -422,7 +422,7 @@ struct ReaderPageStructureVerification {
       Button('返回诊断菜单').id('reader-page-structure-back-pilot').onClick((): void => this.returnToPilot(menuPresentation));
     }.width('100%').padding(20);
     }.width('100%').height(`calc(100% - ${this.menuBottomInset()}vp)`)
-      .clip(true).id('reader-page-structure-menu-scroll');
+      .align(Alignment.Top).clip(true).id('reader-page-structure-menu-scroll');
     }, (menuPresentation: number): string => `fixture-menu-${menuPresentation}`);
   }
 

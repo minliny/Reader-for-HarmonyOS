@@ -2671,7 +2671,7 @@ export struct MangaReadingSurface {
         else { this.morePanel(opening); }
       }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(), bottom: resolveDrawerSpec('reader-action-sheet').contentInset });
     }.width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - this.actionHeaderHeight()) })
-      .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(BarState.Auto);
+      .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(BarState.Auto).align(Alignment.Top);
   }
   @Builder
   private directoryPanel(directoryIdentity: string = this.directoryOuterIdentity()) {

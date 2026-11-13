@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"picker-admission": {"description": "真实文件选择busy/current/关闭", "resources": []}, "result-receipts": {"description": "真实result DTO/Watch和late animation归属", "resources": []}};
+const definitions = {"picker-admission": {"description": "真实文件选择busy/current/关闭", "resources": []}, "result-receipts": {"description": "真实result DTO/Watch和late animation归属", "resources": []}, "scroll-origin": {"description": "完整SDK导入固定文档Scroll首区顶对齐，保留自然测量结果列表与居中进度", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -37,6 +37,25 @@ function mount(params={},options={},input=source,viewportHeight=0){
     BorderStyle:{Dashed:'BorderStyle.Dashed'},Curve:{Linear:'Curve.Linear'},curves:{cubicBezierCurve:(...values)=>values},
     uiContext:{animateTo:(options,work)=>{animations.push(options);work();}}}, {state:'fileSelection',reduceMotion:true,...params});
   o.viewportHeight=viewportHeight;o.aboutToAppear();o.initialRender();return{p,o,animations,feedback,clock:n=>now=n};
+}
+if(selectedCase==='scroll-origin') {
+ for(const scale of [1,2]){
+  metrics.systemFontScale=scale;
+  const selection=mount({state:'fileSelection'});
+  const selectionScroll=selection.p.nodes(selection.o).find(node=>node.type==='Scroll');
+  assert.equal(selectionScroll.align,'Alignment.Top');
+  assert.equal(selectionScroll.height,selection.o.selectionPanelHeight());
+  for(const count of [0,1,12]){
+   const items=Array.from({length:count},(_,index)=>({fileName:`book-${index}.txt`,state:'success',disposition:'created'}));
+   const result=mount({state:'result',batch:{items,imported:count}}, {},source,200);
+   assert.equal(result.o.resultLayout().compact,true);
+   const resultScroll=result.p.nodes(result.o).find(node=>node.type==='Scroll');
+   assert.equal(resultScroll.align,'Alignment.Top');
+   assert.equal(resultScroll.height,Math.max(0,result.o.resultPanelHeight()-result.o.measuredFooterHeight));
+  }
+ }
+ console.log('PASS actual SDK import document origins at 1x/2x and 0/1/12 result items; no Native geometry claim');
+ return;
 }
 if(selectedCase==='picker-admission') {
 {

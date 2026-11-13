@@ -336,7 +336,7 @@ export struct ReaderDirectoryRules {
       if (this.preview.length > 0) {
         Scroll() { Column() { ForEach(this.preview, (title: string, index: number) => {
           Text(title).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).width('100%');
-        }, (_title: string, index: number): string => `${index}`); } }.height(120);
+        }, (_title: string, index: number): string => `${index}`); } }.height(120).align(Alignment.Top);
       }
     }.width('100%').padding(10).foregroundColor(readerAppColor('TOK_INK', this.scheme))
       .backgroundColor(readerAppColor('TOK_PAPER', this.scheme));

@@ -223,7 +223,7 @@ export struct LocalImportDialog {
   private selectionDocument() {
     Scroll() {
       Column() { this.fileSelectionHeader(); this.fileSelectionBody(); this.fileSelectionActions(); }.width('100%');
-    }.width('100%').height(this.selectionPanelHeight()).scrollBar(BarState.Auto);
+    }.width('100%').height(this.selectionPanelHeight()).align(Alignment.Top).scrollBar(BarState.Auto);
   }
 
   private selectionPanelHeight(): number {
@@ -371,7 +371,7 @@ export struct LocalImportDialog {
           Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }
             .width('100%');
         }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))
-          .scrollBar(BarState.Off);
+          .align(Alignment.Top).scrollBar(BarState.Off);
       } else {
         this.resultSummary();
         this.resultItemsPanel();
