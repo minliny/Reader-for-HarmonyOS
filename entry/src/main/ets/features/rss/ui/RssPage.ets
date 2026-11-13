@@ -151,7 +151,8 @@ export struct RssPage {
   // RSS 标题左 20vp。SpaceBetween 复现 justify-end (管理右缘 = 栏宽 - 20vp 内缩)。
   @Builder
   private topBar() {
-    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+    Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center,
+      space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
       Text('RSS')
         .fontFamily(TYPE_RSS_HOME_TITLE.fontFamily)
         .fontWeight(TYPE_RSS_HOME_TITLE.fontWeight)
@@ -161,19 +162,17 @@ export struct RssPage {
         .maxLines(1)
         .margin({ left: this.headerLeftInset() });
 
-      Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(6) } }) {
+      Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+        space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(6) } }) {
         this.refreshPill();
         this.managePill();
       }
       .constraintSize({ maxWidth: this.contentFrame().width })
-      .margin({ left: this.headerLeftInset() })
-      .alignItems(VerticalAlign.Center);
+      .margin({ left: this.headerLeftInset() });
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
-    .justifyContent(FlexAlign.SpaceBetween)
-    .padding({ right: this.headerRightInset() })
-    .alignItems(VerticalAlign.Center);
+    .padding({ right: this.headerRightInset() });
   }
 
   private headerLeftInset(): number {

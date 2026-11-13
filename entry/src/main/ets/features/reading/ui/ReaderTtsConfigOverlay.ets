@@ -1,5 +1,4 @@
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE } from '../../../ui/foundation/ReaderTypography';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderBoundedSurfaceActions } from '../../../ui/surfaces/ReaderBoundedSurfaceActions';
 import { ReaderBoundedSurface, type ReaderBoundedSurfaceId } from '../../../ui/surfaces/ReaderBoundedSurface';

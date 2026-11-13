@@ -11250,7 +11250,7 @@
       }
     },
     "test-reader-control-layout-budget.mjs": {
-      "sourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "sourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "cases": {
         "admission-sdk": {
           "resources": [],
@@ -11279,7 +11279,7 @@
       }
     },
     "test-secondary-layout-repairs.mjs": {
-      "sourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "sourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "cases": {
         "select-host": {
           "resources": [],

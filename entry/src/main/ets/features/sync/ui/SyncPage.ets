@@ -452,7 +452,8 @@ export struct SyncPage {
       cardWidth: this.contentFrame().width,
     }) {
       Column() {
-        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+        Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+          space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
           Stack({ alignContent: Alignment.Center }) {
             Text(entry.destination)
               .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)
@@ -475,8 +476,7 @@ export struct SyncPage {
             .maxLines(1)
             .constraintSize({ maxWidth: '100%' });
         }
-        .width('100%')
-        .alignItems(VerticalAlign.Center);
+        .width('100%');
 
         Row() {
           // Figma's scope line (e.g. "书架、分组、设置") has no backing field on

@@ -40,7 +40,7 @@ const selected = selectContractCases({
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = rel => readFileSync(new URL(rel, root), 'utf8');
 const enums = name => new Proxy({}, { get: (_t, key) => `${name}.${String(key)}` });
-const nativeEnums = Object.fromEntries(['Alignment', 'VerticalAlign', 'HorizontalAlign', 'FlexDirection', 'FlexWrap', 'FlexAlign', 'TextAlign', 'TextOverflow', 'ScrollDirection', 'HitTestMode', 'BarState', 'WordBreak', 'ButtonType', 'ImageFit', 'FontWeight', 'AccessibilityRoleType'].map(name => [name, enums(name)]));
+const nativeEnums = Object.fromEntries(['Alignment', 'VerticalAlign', 'HorizontalAlign', 'FlexDirection', 'FlexWrap', 'FlexAlign', 'ItemAlign', 'TextAlign', 'TextOverflow', 'ScrollDirection', 'HitTestMode', 'BarState', 'WordBreak', 'ButtonType', 'ImageFit', 'FontWeight', 'AccessibilityRoleType'].map(name => [name, enums(name)]));
 const { readerReadableFontScale, readerScaledControlHeight } = surfaceFontResolvers();
 const results = [];
 const glyphCache = new Map();
@@ -392,6 +392,66 @@ function arkwebHost() {
   }
 }
 function retainedAndSettings() {
+  const { ts, options, root: sdkRoot } = installedEtsCompiler();
+  const alignmentStatements = (source, file) => {
+    const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const statements = [];
+    const visit = node => {
+      if (ts.isEtsComponentExpression(node) && ['Flex', 'Column'].includes(node.expression.getText(tree))) {
+        const component = node.expression.getText(tree);
+        const fields = component === 'Flex' ? (node.arguments[0]?.properties ?? [])
+          .filter(property => ['alignItems', 'justifyContent'].includes(property.name?.getText(tree))).map(property => property.getText(tree)) : [];
+        let cursor = node;
+        const modifiers = [];
+        while (ts.isPropertyAccessExpression(cursor.parent) && cursor.parent.expression === cursor &&
+          ts.isCallExpression(cursor.parent.parent) && cursor.parent.parent.expression === cursor.parent) {
+          const call = cursor.parent.parent;
+          if (['alignItems', 'justifyContent'].includes(cursor.parent.name.text))
+            modifiers.push(`.${cursor.parent.name.text}(${call.arguments.map(argument => argument.getText(tree)).join(', ')})`);
+          cursor = call;
+        }
+        if (component === 'Flex' || modifiers.length)
+          statements.push((component === 'Flex' ? `Flex({ ${fields.join(', ')} })` : 'column') + modifiers.join('') + ';');
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(tree);
+    return statements;
+  };
+  const alignmentDiagnostics = (source, file) => {
+    const virtual = '/ReaderRetainedAlignmentSdkCheck.ts';
+    const text = 'declare const column: ColumnAttribute;\n' + alignmentStatements(source, file).join('\n');
+    const checkOptions = { noEmit: true, skipLibCheck: true, types: [], target: ts.ScriptTarget.ES2022 };
+    const host = ts.createCompilerHost(checkOptions), getSourceFile = host.getSourceFile.bind(host);
+    host.getSourceFile = (name, ...args) => name === virtual ? ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true) : getSourceFile(name, ...args);
+    const declarations = ['common', 'enums', 'flex', 'column'].map(name => `${sdkRoot}/declarations/${name}.d.ts`);
+    return ts.getPreEmitDiagnostics(ts.createProgram([virtual, ...declarations], checkOptions, host))
+      .filter(value => value.file?.fileName === virtual).map(value => ({ code: value.code, message: ts.flattenDiagnosticMessageText(value.messageText, '\n') }));
+  };
+  const rssSource = read('features/rss/ui/RssPage.ets'), syncSource = read('features/sync/ui/SyncPage.ets');
+  const managementSource = read('features/rss/ui/RssSubscriptionManagementPage.ets');
+  for (const [file, source] of [['RssPage.ets', rssSource], ['SyncPage.ets', syncSource], ['RssSubscriptionManagementPage.ets', managementSource]])
+    assert.deepEqual(alignmentDiagnostics(source, file), [], `${file} actual Flex/Column alignments type-check against installed SDK declarations`);
+  const oldRssInner = rssSource.replace('.margin({ left: this.headerLeftInset() });\n    }', '.margin({ left: this.headerLeftInset() }).alignItems(VerticalAlign.Center);\n    }');
+  const oldRssJustify = rssSource.replace('.constraintSize({ minHeight: 58 })', '.constraintSize({ minHeight: 58 }).justifyContent(FlexAlign.SpaceBetween)');
+  const oldRssAlign = rssSource.replace('.constraintSize({ minHeight: 58 })', '.constraintSize({ minHeight: 58 }).alignItems(VerticalAlign.Center)');
+  const oldSyncFlex = syncSource.replace(".width('100%');\n\n        Row() {", ".width('100%').alignItems(VerticalAlign.Center);\n\n        Row() {");
+  for (const [file, source, attribute] of [['RssPage.ets', oldRssInner, 'alignItems'], ['RssPage.ets', oldRssJustify, 'justifyContent'],
+    ['RssPage.ets', oldRssAlign, 'alignItems'], ['SyncPage.ets', oldSyncFlex, 'alignItems']]) {
+    assert.notEqual(source, file === 'RssPage.ets' ? rssSource : syncSource);
+    const errors = alignmentDiagnostics(source, file);
+    assert.equal(errors.length, 1, `${file} former chained Flex.${attribute} reaches the SDK semantic checker independently`);
+    assert.ok(errors[0].code === 2339 && errors[0].message.includes(`Property '${attribute}' does not exist on type 'FlexAttribute'`));
+  }
+  const wrongFlexEnum = rssSource.replaceAll('alignItems: ItemAlign.Center', 'alignItems: VerticalAlign.Center');
+  const flexEnumErrors = alignmentDiagnostics(wrongFlexEnum, 'RssPage.ets');
+  assert.equal(flexEnumErrors.length, 3);
+  assert.ok(flexEnumErrors.every(error => error.code === 2322 && /VerticalAlign.*ItemAlign/.test(error.message)), 'Flex constructor rejects the former Row enum');
+  const oldColumn = managementSource.replace('.constraintSize({ minHeight: 44 })\n    .alignItems(HorizontalAlign.Center)', '.constraintSize({ minHeight: 44 })\n    .alignItems(VerticalAlign.Center)');
+  assert.notEqual(oldColumn, managementSource);
+  const columnErrors = alignmentDiagnostics(oldColumn, 'RssSubscriptionManagementPage.ets');
+  assert.equal(columnErrors.length, 1);
+  assert.ok(columnErrors[0].code === 2345 && /VerticalAlign.*HorizontalAlign/.test(columnErrors[0].message), 'Column rejects the former Row enum');
   for (const width of [320, 366]) for (const scale of [1, 1.45, 2]) {
     const value = metrics(width, 360, scale), c = context(value);
     const rel = 'features/settings/ui/SettingsSelectOverlay.ets';
@@ -416,6 +476,11 @@ function retainedAndSettings() {
     ]) {
       const owner = c.actor(page, [method], fields); owner[method](...args);
       assert.ok(c.nodes(owner).some(n => n.constraintSize?.minHeight === expected), `${page}.${method} natural parent`);
+      if (method === 'historyRow') {
+        const flex = c.nodes(owner).find(node => node.type === 'Flex');
+        assert.equal(flex.create.alignItems, 'ItemAlign.Center');
+        assert.equal(flex.alignItems, undefined, 'Sync alignment belongs to FlexOptions');
+      }
     }
     const searchRel = 'ui/controls/ReaderSearchField.ets', searchSource = read(searchRel);
     const searchMembers = ['appThemeScheme', 'readerWindowMetricsRevision', 'variant', 'mode', 'placeholder', 'accessibilityLabel', 'build', 'passiveField', 'fieldHeight', 'iconGap', 'searchIcon', 'iconSize', 'horizontalPadding',
@@ -432,6 +497,10 @@ function retainedAndSettings() {
       numericAreaLength: value => Number.parseFloat(value) });
     rss.rssHeader(); const rssNodes = c.nodes(rss);
     assert.ok(rssNodes.some(n => n.type === 'Flex' && n.create.wrap === 'FlexWrap.Wrap'), 'root toolbar can wrap title and growing current controls');
+    const rssFlexes = rssNodes.filter(node => node.type === 'Flex');
+    assert.equal(rssFlexes.length, 2);
+    assert.ok(rssFlexes.every(node => node.create.alignItems === 'ItemAlign.Center' && node.alignItems === undefined && node.justifyContent === undefined), 'both RSS Flex constructors preserve centered cross-axis alignment');
+    assert.equal(rssFlexes[0].create.justifyContent, 'FlexAlign.SpaceBetween', 'outer RSS Flex preserves separated title and actions');
     assert.ok(rssNodes.some(n => n.type === 'Scroll' && n.scrollable === 'ScrollDirection.Horizontal'), 'RSS tabs have one actual horizontal viewport');
     const searchFrame = rssNodes.find(n => n.type === 'Row' && typeof n.accessibilityText === 'string' && n.accessibilityText.includes('搜索订阅源'));
     assert.ok(searchFrame.height >= readerScaledControlHeight(44, readerTypographyRoles.TYPE_SEARCH_RSS_HINT.lineHeightFp ?? readerTypographyRoles.TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5, scale));
@@ -447,6 +516,7 @@ function retainedAndSettings() {
     const management = c.actor('features/rss/ui/RssSubscriptionManagementPage.ets', ['actionBar', 'actionTarget'], {});
     management.actionBar('rss:1');
     const managementNodes = c.nodes(management);
+    assert.equal(managementNodes.find(node => node.type === 'Column' && node.constraintSize?.minHeight === 44).alignItems, 'HorizontalAlign.Center');
     const managementActions = managementNodes.filter(n => n.type === 'Row' && typeof n.onClick === 'function');
     assert.equal(managementActions.length, 4);
     assert.ok(managementActions.every(n => n.width === '100%' && n.height === undefined && n.constraintSize.minHeight >= 44),
@@ -459,7 +529,6 @@ function retainedAndSettings() {
     assertNaturalButton(c.nodes(button).find(n => n.type === 'Button'));
     results.push({ case: 'retained-and-settings', width, scale, phoneTablet: 'bounded' });
   }
-  const { ts, options } = installedEtsCompiler();
   for (const rel of ['features/rss/ui/RssPage.ets', 'features/rss/ui/RssEntryDetailPage.ets', 'features/rss/ui/RssSourceFeedPage.ets',
     'features/rss/ui/RssSubscriptionEditorPage.ets', 'features/rss/ui/RssSubscriptionManagementPage.ets', 'features/discover/ui/DiscoverPage.ets',
     'features/sync/ui/SyncPage.ets', 'features/settings/ui/SettingsPage.ets', 'app/composition/ReaderJourneyRecoveryNotices.ets']) {

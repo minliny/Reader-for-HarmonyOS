@@ -53,6 +53,21 @@ async function run(id) {
     const pure = (file, names, source = ui(file)) => pureModuleProbe(source, file, deps, names);
     const headerSource = read('entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets');
     const compiler = installedEtsCompiler();
+    const assertTypographyBindings = (source, file) => {
+        const { ts, options } = compiler;
+        const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+        const imported = tree.statements.filter(ts.isImportDeclaration)
+            .filter(node => node.moduleSpecifier.text.endsWith('/ReaderTypography'))
+            .flatMap(node => node.importClause?.namedBindings?.elements ?? []).map(node => node.name.text);
+        const used = new Set();
+        const visit = node => {
+            if (ts.isIdentifier(node) && node.text.startsWith('TYPE_')) used.add(node.text);
+            ts.forEachChild(node, visit);
+        };
+        visit(tree);
+        for (const name of used)
+            assert.equal(imported.filter(value => value === name).length, 1, `${file} imports ${name} exactly once`);
+    };
     const headerTree = compiler.ts.createSourceFile('ReadingHeader.ets', headerSource, compiler.ts.ScriptTarget.Latest, true, compiler.ts.ScriptKind.ETS, compiler.options);
     const headerMeasure = headerTree.statements.find(n => compiler.ts.isFunctionDeclaration(n) && n.name?.text === 'readerReadingTopBarHeight');
     Object.assign(deps, pureModuleProbe(headerMeasure.getText(headerTree), 'ReadingHeaderMeasure.ets', {
@@ -497,6 +512,40 @@ async function run(id) {
         return;
     }
     if (id === 'manga-tts-sdk') {
+        const overlaySource = ui('ReaderTtsConfigOverlay.ets');
+        assertTypographyBindings(overlaySource, 'ReaderTtsConfigOverlay.ets');
+        const duplicateImport = "import { TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE } from '../../../ui/foundation/ReaderTypography';\n" + overlaySource;
+        assert.throws(() => assertTypographyBindings(duplicateImport, 'ReaderTtsConfigOverlay.ets'), /imports TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE exactly once/);
+        const { ts, options, root: sdkRoot } = compiler;
+        const scrollArguments = source => {
+            const tree = ts.createSourceFile('ReaderControlTtsContent.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+            const values = [];
+            const visit = node => {
+                if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'scrollable')
+                    values.push(node.arguments.map(argument => argument.getText(tree)).join(', '));
+                ts.forEachChild(node, visit);
+            };
+            visit(tree);
+            return values;
+        };
+        const scrollDiagnostics = source => {
+            const file = '/ReaderTtsScrollSdkCheck.ts';
+            const text = 'declare const ttsScroll: ScrollAttribute;\n' + scrollArguments(source).map(value => `ttsScroll.scrollable(${value});`).join('\n');
+            const checkOptions = { noEmit: true, skipLibCheck: true, types: [], target: ts.ScriptTarget.ES2022 };
+            const host = ts.createCompilerHost(checkOptions), getSourceFile = host.getSourceFile.bind(host);
+            host.getSourceFile = (name, ...args) => name === file ? ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true) : getSourceFile(name, ...args);
+            const declarations = ['common', 'enums', 'scroll'].map(name => `${sdkRoot}/declarations/${name}.d.ts`);
+            return ts.getPreEmitDiagnostics(ts.createProgram([file, ...declarations], checkOptions, host))
+                .filter(value => value.file?.fileName === file).map(value => ({ code: value.code, message: ts.flattenDiagnosticMessageText(value.messageText, '\n') }));
+        };
+        const ttsSource = ui('ReaderControlTtsContent.ets');
+        assert.deepEqual(scrollArguments(ttsSource), Array(3).fill('ScrollDirection.Horizontal'), 'all three TTS viewports retain horizontal scrolling');
+        assert.deepEqual(scrollDiagnostics(ttsSource), [], 'actual production Scroll arguments type-check against installed SDK declarations');
+        const oldAxis = ttsSource.replaceAll('.scrollable(ScrollDirection.Horizontal)', '.scrollable(Axis.Horizontal)');
+        assert.notEqual(oldAxis, ttsSource);
+        const axisErrors = scrollDiagnostics(oldAxis);
+        assert.equal(axisErrors.length, 3, 'all three former Axis arguments enter the SDK semantic checker');
+        assert.ok(axisErrors.every(error => error.code === 2345 && /Axis.*ScrollDirection/.test(error.message)), 'SDK rejects the former Axis enum at every production site');
         const { mangaSurfaceSdkDependencies } = await import('./lib/manga-surface-sdk-probe.mjs');
         const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
         const surfaces = readerSurfaceSpecsForProbe();
@@ -653,6 +702,13 @@ async function run(id) {
         return;
     }
     if (id === 'header-home-sdk') {
+        const panelSource = ui('ReaderControlPanel.ets');
+        assertTypographyBindings(panelSource, 'ReaderControlPanel.ets');
+        for (const name of ['TYPE_READER_CONTROL_BOOK_TITLE', 'TYPE_READER_CONTROL_CHAPTER_SOURCE']) {
+            const missingImport = panelSource.replace(name + ', ', '');
+            assert.notEqual(missingImport, panelSource);
+            assert.throws(() => assertTypographyBindings(missingImport, 'ReaderControlPanel.ets'), /exactly once/, `missing ${name} import is rejected before injected probe dependencies`);
+        }
         let headerFontsReady = true;
         const headerDependencies = pureModuleProbe(headerSource.slice(0, headerSource.indexOf('@Component')), 'ReaderReadingTopBarTitle.ets', {
             ...deps, readerWindowMetrics: () => ({ systemFontScale: scale }),

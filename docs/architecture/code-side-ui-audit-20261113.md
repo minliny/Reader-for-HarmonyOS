@@ -107,3 +107,11 @@ secondary 的 ArkWeb、download-controls、renderer-pilot、title-scale 四个�
 - 本地 CoreText/FreeType 与真实字体可定位预算，SDK 可证明真实组件属性及当前回调。原生命中、像素、系统字号、IME/手势仲裁、平台 Back、读屏及用户验收保持各自开放状态。
 
 原始证据位于本机 `.reader-artifacts/framework-confluence-20261112/code-side-audit`、`independent-code-acceptance-20261113`、`code-side-final` 和 `selector-publication`。本文件保存可跟踪的范围、职责、结果、限制与复现入口。
+
+## VM 安装阶段补记
+
+随后用户要求安装到现有 VM 供人工验收。`31536cfb` 的第一次完整 ArkTS 打包发现此前 SDK 探针漏掉的类型错误，具体为 TTS 重复或缺失 Typography 导入、Scroll 的 Axis 枚举、Flex 链式对齐属性及 Column 对齐枚举。原失败日志及11条具体诊断保留于 `.reader-artifacts/vm-manual-acceptance-20261113/hap-build-01.log`。
+
+六个生产文件已集中修正，保留 TTS 横向滚动、Slider 方向、RSS/Sync 排版和原动作。三个准确回归通过，并增加从真实生产 AST 提取调用、对当前安装 SDK 声明进行语义检查的负例。独立复核另审本批67个 ETS 的同类调用及 Typography 绑定，未发现同类残留。
+
+这些结果分别证明方法/SDK 预算和合法 API 绑定。完整 ArkTS 编译与对应 HAP 仍由安装阶段的规范流水线实际执行。前述代码侧及原生结果继续按各自候选、实际输入和证明范围记录。此轮登记仅重绑受影响输入，原层和不变量结果保留。

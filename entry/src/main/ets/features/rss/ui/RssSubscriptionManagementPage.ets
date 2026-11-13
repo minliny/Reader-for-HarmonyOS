@@ -332,7 +332,7 @@ export struct RssSubscriptionManagementPage {
     }
     .width('100%')
     .constraintSize({ minHeight: 44 })
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
   }

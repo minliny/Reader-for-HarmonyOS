@@ -78840,7 +78840,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -78968,7 +78968,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -79057,7 +79057,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/bundled-font-measurement",
-      "reviewedSourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "reviewedSourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -79201,7 +79201,7 @@
         },
         {
           "path": "tools/test-secondary-layout-repairs.mjs",
-          "sha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc"
+          "sha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491"
         }
       ],
       "definitionInputProblems": [],
@@ -375610,7 +375610,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -375738,7 +375738,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -375814,9 +375814,10 @@
         "unstable": [],
         "sourceSetSha256": "8bbca290a078d089592f66115b29b2c1ae47d6ff9319b69ce9fa2b5900e58584",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "admission-sdk"
+        "case": "admission-sdk",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "ddfd34aa8ea23f6b4dc262503e4d77eca0b3e77cc7f630e1aec93158baa26f9f",
+      "resourceDefinitionSha256": "00ac76bbc4eccc625114a10a560996fda75a8626ca9a716d84500d9bacbd9e5d",
       "repairAction": null,
       "repair": null
     },
@@ -375843,7 +375844,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -375971,7 +375972,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -376047,9 +376048,10 @@
         "unstable": [],
         "sourceSetSha256": "8bbca290a078d089592f66115b29b2c1ae47d6ff9319b69ce9fa2b5900e58584",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "module-minimum-budget"
+        "case": "module-minimum-budget",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "ddfd34aa8ea23f6b4dc262503e4d77eca0b3e77cc7f630e1aec93158baa26f9f",
+      "resourceDefinitionSha256": "00ac76bbc4eccc625114a10a560996fda75a8626ca9a716d84500d9bacbd9e5d",
       "repairAction": null,
       "repair": null
     },
@@ -376076,7 +376078,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -376204,7 +376206,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -376280,9 +376282,10 @@
         "unstable": [],
         "sourceSetSha256": "8bbca290a078d089592f66115b29b2c1ae47d6ff9319b69ce9fa2b5900e58584",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "native-targets-sdk"
+        "case": "native-targets-sdk",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "ddfd34aa8ea23f6b4dc262503e4d77eca0b3e77cc7f630e1aec93158baa26f9f",
+      "resourceDefinitionSha256": "00ac76bbc4eccc625114a10a560996fda75a8626ca9a716d84500d9bacbd9e5d",
       "repairAction": null,
       "repair": null
     },
@@ -376309,7 +376312,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -376437,7 +376440,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -376448,7 +376451,8 @@
       "nestedActions": [
         "Existing installed ETS lowering with finite builder/property/measurement ports",
         "Actual experience-to-panel minimum receipt and same-owner callback admission",
-        "In-memory old geometry/target/admission negatives, with no native/shared compilation"
+        "In-memory old geometry/target/admission negatives, with no native/shared compilation",
+        "AST-extracted production API calls and Typography imports checked against the installed SDK declarations, including typed old-error negatives"
       ],
       "nestedCalls": [
         "scripts/lib/development-environment.mjs",
@@ -376502,20 +376506,21 @@
       "validationEvidence": {
         "execution": "REUSED",
         "currentPublicationExecution": "NOT_RUN",
-        "trace": ".reader-artifacts/framework-confluence-20261112/code-side-audit/independent-primary-review/final-b-inputs.json",
+        "trace": ".reader-artifacts/vm-manual-acceptance-20261113/type-repair-manga-tts-inputs.json",
         "actualCommand": [
-          "tools/test-reader-control-layout-budget.mjs",
+          "/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-reader-control-layout-budget.mjs",
           "--case",
-          "admission-sdk,module-minimum-budget,native-targets-sdk,manga-tts-sdk,header-home-sdk,brightness-sdk"
+          "manga-tts-sdk"
         ],
         "testExitCode": 0,
         "traceIntegrity": "PASS",
         "unstable": [],
-        "sourceSetSha256": "8bbca290a078d089592f66115b29b2c1ae47d6ff9319b69ce9fa2b5900e58584",
+        "sourceSetSha256": "0ec9abf73afd7ff8d8e23e1508b9e75e90f7a6010c6ef61b7a6e43ff02a5b16c",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "manga-tts-sdk"
+        "case": "manga-tts-sdk",
+        "reuseReason": "Current type-repair exact case ran after frozen production and SDK declaration fixes. Metadata rebinding does not rerun the case."
       },
-      "resourceDefinitionSha256": "ddfd34aa8ea23f6b4dc262503e4d77eca0b3e77cc7f630e1aec93158baa26f9f",
+      "resourceDefinitionSha256": "00ac76bbc4eccc625114a10a560996fda75a8626ca9a716d84500d9bacbd9e5d",
       "repairAction": null,
       "repair": null
     },
@@ -376542,7 +376547,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -376670,7 +376675,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -376681,7 +376686,8 @@
       "nestedActions": [
         "Existing installed ETS lowering with finite builder/property/measurement ports",
         "Actual experience-to-panel minimum receipt and same-owner callback admission",
-        "In-memory old geometry/target/admission negatives, with no native/shared compilation"
+        "In-memory old geometry/target/admission negatives, with no native/shared compilation",
+        "AST-extracted production API calls and Typography imports checked against the installed SDK declarations, including typed old-error negatives"
       ],
       "nestedCalls": [
         "scripts/lib/development-environment.mjs",
@@ -376735,20 +376741,21 @@
       "validationEvidence": {
         "execution": "REUSED",
         "currentPublicationExecution": "NOT_RUN",
-        "trace": ".reader-artifacts/framework-confluence-20261112/code-side-audit/independent-primary-review/final-b-inputs.json",
+        "trace": ".reader-artifacts/vm-manual-acceptance-20261113/type-repair-header-home-inputs.json",
         "actualCommand": [
-          "tools/test-reader-control-layout-budget.mjs",
+          "/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-reader-control-layout-budget.mjs",
           "--case",
-          "admission-sdk,module-minimum-budget,native-targets-sdk,manga-tts-sdk,header-home-sdk,brightness-sdk"
+          "header-home-sdk"
         ],
         "testExitCode": 0,
         "traceIntegrity": "PASS",
         "unstable": [],
-        "sourceSetSha256": "8bbca290a078d089592f66115b29b2c1ae47d6ff9319b69ce9fa2b5900e58584",
+        "sourceSetSha256": "b91941c784466ac94e22af83d82f13b52c50ffb7cca14b084d50693a91942cdb",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "header-home-sdk"
+        "case": "header-home-sdk",
+        "reuseReason": "Current type-repair exact case ran after frozen production and SDK declaration fixes. Metadata rebinding does not rerun the case."
       },
-      "resourceDefinitionSha256": "ddfd34aa8ea23f6b4dc262503e4d77eca0b3e77cc7f630e1aec93158baa26f9f",
+      "resourceDefinitionSha256": "00ac76bbc4eccc625114a10a560996fda75a8626ca9a716d84500d9bacbd9e5d",
       "repairAction": null,
       "repair": null
     },
@@ -376775,7 +376782,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0",
+      "reviewedSourceSha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -376903,7 +376910,7 @@
         },
         {
           "path": "tools/test-reader-control-layout-budget.mjs",
-          "sha256": "afc91353f8c91165028c82849a852801261c05b2f7b21d1edd2353756a697ff0"
+          "sha256": "4dde1a3746cc272793b5a48b07bf7002473c5eb595d1115007a74abd01b329be"
         }
       ],
       "definitionInputProblems": [],
@@ -376979,9 +376986,10 @@
         "unstable": [],
         "sourceSetSha256": "8bbca290a078d089592f66115b29b2c1ae47d6ff9319b69ce9fa2b5900e58584",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "brightness-sdk"
+        "case": "brightness-sdk",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "ddfd34aa8ea23f6b4dc262503e4d77eca0b3e77cc7f630e1aec93158baa26f9f",
+      "resourceDefinitionSha256": "00ac76bbc4eccc625114a10a560996fda75a8626ca9a716d84500d9bacbd9e5d",
       "repairAction": null,
       "repair": null
     },
@@ -377009,7 +377017,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/bundled-font-measurement",
-      "reviewedSourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "reviewedSourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -377153,7 +377161,7 @@
         },
         {
           "path": "tools/test-secondary-layout-repairs.mjs",
-          "sha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc"
+          "sha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491"
         }
       ],
       "definitionInputProblems": [],
@@ -377233,9 +377241,10 @@
         "unstable": [],
         "sourceSetSha256": "d1afc0c9789f923e62f50099331ca3db4d2e4df2e3e993890c41d6abdd95db77",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "select-host"
+        "case": "select-host",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "600ee5091b797ebf382a9f7c65261ca8df5ec26cc90ace4733b139909e1b92ff",
+      "resourceDefinitionSha256": "16f4788b39f6bfabac17bfc3951393abdf09e0d5d8ea78b416a590474b0c906d",
       "repairAction": null,
       "repair": null
     },
@@ -377263,7 +377272,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/bundled-font-measurement",
-      "reviewedSourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "reviewedSourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -377407,7 +377416,7 @@
         },
         {
           "path": "tools/test-secondary-layout-repairs.mjs",
-          "sha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc"
+          "sha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491"
         }
       ],
       "definitionInputProblems": [],
@@ -377487,9 +377496,10 @@
         "unstable": [],
         "sourceSetSha256": "d1afc0c9789f923e62f50099331ca3db4d2e4df2e3e993890c41d6abdd95db77",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "actions-tools-rules"
+        "case": "actions-tools-rules",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "600ee5091b797ebf382a9f7c65261ca8df5ec26cc90ace4733b139909e1b92ff",
+      "resourceDefinitionSha256": "16f4788b39f6bfabac17bfc3951393abdf09e0d5d8ea78b416a590474b0c906d",
       "repairAction": null,
       "repair": null
     },
@@ -377517,7 +377527,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/bundled-font-measurement",
-      "reviewedSourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "reviewedSourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -377661,7 +377671,7 @@
         },
         {
           "path": "tools/test-secondary-layout-repairs.mjs",
-          "sha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc"
+          "sha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491"
         }
       ],
       "definitionInputProblems": [],
@@ -377741,9 +377751,10 @@
         "unstable": [],
         "sourceSetSha256": "d1afc0c9789f923e62f50099331ca3db4d2e4df2e3e993890c41d6abdd95db77",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "recovery-overlays"
+        "case": "recovery-overlays",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "600ee5091b797ebf382a9f7c65261ca8df5ec26cc90ace4733b139909e1b92ff",
+      "resourceDefinitionSha256": "16f4788b39f6bfabac17bfc3951393abdf09e0d5d8ea78b416a590474b0c906d",
       "repairAction": null,
       "repair": null
     },
@@ -377771,7 +377782,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/bundled-font-measurement",
-      "reviewedSourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "reviewedSourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -377915,7 +377926,7 @@
         },
         {
           "path": "tools/test-secondary-layout-repairs.mjs",
-          "sha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc"
+          "sha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491"
         }
       ],
       "definitionInputProblems": [],
@@ -377926,7 +377937,8 @@
       "nestedActions": [
         "Actual installed ETS lowering through foundation, labeled icon, toggle, InlineSelect and bounded recovery controls",
         "Selected case runner plus its same-domain supplemental target checks only",
-        "python3/Pillow/FreeType text advance and selected private JSON receipt writes"
+        "python3/Pillow/FreeType text advance and selected private JSON receipt writes",
+        "AST-extracted production API calls and Typography imports checked against the installed SDK declarations, including typed old-error negatives"
       ],
       "nestedCalls": [
         "scripts/lib/development-environment.mjs",
@@ -377984,20 +377996,21 @@
       "validationEvidence": {
         "execution": "REUSED",
         "currentPublicationExecution": "NOT_RUN",
-        "trace": ".reader-artifacts/framework-confluence-20261112/code-side-audit/independent-secondary-current-execution/c-inputs.json",
+        "trace": ".reader-artifacts/vm-manual-acceptance-20261113/type-repair-retained-inputs.json",
         "actualCommand": [
-          "tools/test-secondary-layout-repairs.mjs",
+          "/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-secondary-layout-repairs.mjs",
           "--case",
-          "select-host,actions-tools-rules,recovery-overlays,retained-and-settings,download-chapter-width"
+          "retained-and-settings"
         ],
         "testExitCode": 0,
         "traceIntegrity": "PASS",
         "unstable": [],
-        "sourceSetSha256": "d1afc0c9789f923e62f50099331ca3db4d2e4df2e3e993890c41d6abdd95db77",
+        "sourceSetSha256": "53100c4fcc5acdd9ebda480a16284778573180f421375aedbe6d5085f48d676e",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "retained-and-settings"
+        "case": "retained-and-settings",
+        "reuseReason": "Current type-repair exact case ran after frozen production and SDK declaration fixes. Metadata rebinding does not rerun the case."
       },
-      "resourceDefinitionSha256": "600ee5091b797ebf382a9f7c65261ca8df5ec26cc90ace4733b139909e1b92ff",
+      "resourceDefinitionSha256": "16f4788b39f6bfabac17bfc3951393abdf09e0d5d8ea78b416a590474b0c906d",
       "repairAction": null,
       "repair": null
     },
@@ -378025,7 +378038,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/bundled-font-measurement",
-      "reviewedSourceSha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc",
+      "reviewedSourceSha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491",
       "definitionInputs": [
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -378169,7 +378182,7 @@
         },
         {
           "path": "tools/test-secondary-layout-repairs.mjs",
-          "sha256": "298473b1f2ae873284ed26a3b3d945533b8b0f8c506dfb6771dc0f61305e9ddc"
+          "sha256": "6fcb63a8b2c48e7d45efd2b1c49901100eb79d45561a50b28b85eaf9623c3491"
         }
       ],
       "definitionInputProblems": [],
@@ -378249,9 +378262,10 @@
         "unstable": [],
         "sourceSetSha256": "d1afc0c9789f923e62f50099331ca3db4d2e4df2e3e993890c41d6abdd95db77",
         "boundary": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
-        "case": "download-chapter-width"
+        "case": "download-chapter-width",
+        "reuseReason": "Original geometry/target/owner result reused after independent review. The added SDK semantic guards execute only in manga-tts-sdk, header-home-sdk and retained-and-settings. Original proven behavior, dimensions, actions and callbacks for this case are preserved."
       },
-      "resourceDefinitionSha256": "600ee5091b797ebf382a9f7c65261ca8df5ec26cc90ace4733b139909e1b92ff",
+      "resourceDefinitionSha256": "16f4788b39f6bfabac17bfc3951393abdf09e0d5d8ea78b416a590474b0c906d",
       "repairAction": null,
       "repair": null
     },

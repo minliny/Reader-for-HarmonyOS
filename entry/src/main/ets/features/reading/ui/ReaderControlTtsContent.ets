@@ -1072,7 +1072,7 @@ export struct ReaderControlTtsContent {
               .width('100%');
           }.width(this.textMinimum()?.timerPresetsWidth ?? '100%');
           }.width('100%').height((this.textMinimum()?.timerPreset ?? 44) * 2 + 8)
-            .scrollable(Axis.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
+            .scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
           Scroll() {
           Row({ space: 4 }) {
             Column({ space: 2 }) {
@@ -1082,7 +1082,7 @@ export struct ReaderControlTtsContent {
             this.timerStepper(true); this.timerStepper(false);
           }.width(this.textMinimum()?.timerCustomWidth ?? '100%').height(this.textMinimum()?.timerCustom ?? 48)
             .padding({ left: 10, right: 6 }).alignItems(VerticalAlign.Center);
-          }.width('100%').height(this.textMinimum()?.timerCustom ?? 48).scrollable(Axis.Horizontal)
+          }.width('100%').height(this.textMinimum()?.timerCustom ?? 48).scrollable(ScrollDirection.Horizontal)
             .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
             .border({ width: 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10);
         }.width(this.frame().timer.width).height(this.frame().timerCard.height).padding(14)
@@ -1184,7 +1184,7 @@ export struct ReaderControlTtsContent {
           ForEach(this.ratePresets(), (rate: number): void => { this.ratePreset(rate); }, (rate: number): string => rate.toString());
         }.width(this.frame().speedPresets.width).height(this.frame().speedPresets.height);
         }.width(Math.max(0, this.frame().speed.width - 32)).height(this.frame().speedPresets.height)
-          .scrollable(Axis.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
+          .scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
           .position({ x: this.frame().speedPresets.x, y: this.frame().speedPresets.y })
           .opacity(this.frame().speedPresets.opacity).enabled(this.fullInput())
           .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
