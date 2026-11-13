@@ -581,7 +581,8 @@ export struct SourceManagementPage {
       .fontSize(TYPE_SOURCE_MANAGEMENT_COUNT.fontSizeFp)
       .lineHeight(TYPE_SOURCE_MANAGEMENT_COUNT.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
-      .maxLines(1)
+      .maxFontScale(this.fontScale())
+      .wordBreak(WordBreak.BREAK_WORD)
       .margin({ top: TOK_SPACE_XS });
   }
 

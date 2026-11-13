@@ -120,7 +120,7 @@ function mountedToolbar(width, scale, tab, variant = 'full-directory', source = 
   const Field = createReaderBuilderProbe(fieldSource, members(fieldSource), native, hooks).Component;
   const owner = createReaderBuilderProbe(source, members(source), { ...native, ReaderSearchField: Field }, hooks).owner;
   const calls = [];
-  Object.assign(owner, { availableWidthVp: width, inputMinimumWidthVp: 80 * scale, variant,
+  Object.assign(owner, { availableWidthVp: width, inputMinimumWidthVp: 60 * scale, variant,
     text: '', placeholder: '搜索章节名称', showChapterTools: tab === 'directory', naturalFieldHeightVp: 0,
     naturalInputHeightVp: 0, naturalToolbarHeightVp: 0, readerWindowMetricsRevision: 1,
     directoryFocusId: '', directoryFocusAllowed: false, ascending: true,
@@ -145,7 +145,7 @@ for (const id of selected) {
       const rendered = panel(width, 736, scale, tab), owner = rendered.owner;
       const minimum = owner.toolbarInputMinimumWidth(), before = rendered.measure.calls();
       const raw = readerDirectoryToolbarBudget(owner.innerWidth(), tab === 'directory', owner.queryHeight(), minimum);
-      const availableField = raw.stacked ? owner.innerWidth() - 20 : owner.innerWidth() - 20 - 12 - raw.actionsWidth;
+      const availableField = raw.stacked ? owner.innerWidth() - 20 : owner.innerWidth() - 20 - 8 - raw.actionsWidth;
       assert.ok(availableField - 39 + .01 >= minimum, 'useful editable text has its own paid lane');
       assert.equal(owner.searchControlsHeight(), raw.height + 1);
       assert.equal(raw.height, raw.stacked ? (owner.queryHeight() + 6) * 2 + 8 : owner.queryHeight() + 6);
@@ -182,24 +182,42 @@ for (const id of selected) {
       }
       compatibilitySamples.push({ width, scale, tab, host: 'unmounted-legacy-embedded', result: 'finite-budget-conservation' });
     }
-    const current = mountedToolbar(316, 1, 'directory');
-    assert.equal(current.owner.queryStacked(), true, 'the actual98vp field/59vp editable regression uses two paid rows');
+    // Independent approved normal-composition bounds. Four non-overlapping44
+    // carriers are paid separately from the32vp painted buttons.
+    const normal = mountedToolbar(336, 1, 'directory');
+    assert.equal(normal.owner.queryStacked(), false, 'approved normal width retains one toolbar row');
+    assert.equal(normal.owner.controlToolbarHeight(), 50, 'normal toolbar pays44vp targets plus3vp vertical insets; control host adds2vp boundaries');
+    assert.equal(normal.owner.toolbarBudget().actionsWidth, 176);
+    assert.equal(mountedToolbar(314, 1, 'directory').owner.queryStacked(), false, 'current366vp phone full-content width retains one row');
+    assert.equal(mountedToolbar(314, 2, 'directory').owner.queryStacked(), true, 'real2x text growth selects the narrow variant');
+    assert.equal(336 - 20 - 8 - 176, 132, 'the normal field has132vp instead of the regressed108vp');
+    const inflated = readerDirectoryToolbarBudget(336, true, 44, 80);
+    assert.equal(inflated.stacked, false);
+    const current = mountedToolbar(294, 1, 'directory');
+    assert.equal(current.owner.queryStacked(), true, 'the genuinely constrained294vp toolbar uses two paid rows');
     const oldThreshold = toolbarSource.replace(/return this\.variant !== 'manga-catalog' && this\.toolbarBudget\(\)\.stacked;/,
       "const count = this.showChapterTools ? 4 : 1; return this.variant !== 'manga-catalog' && this.availableWidthVp > 0 && this.availableWidthVp - 20 - count * 49 < 44;");
     assert.notEqual(oldThreshold, toolbarSource);
-    assert.throws(() => assert.equal(mountedToolbar(316, 1, 'directory', 'full-directory', oldThreshold).owner.queryStacked(), true));
+    assert.throws(() => assert.equal(mountedToolbar(294, 1, 'directory', 'full-directory', oldThreshold).owner.queryStacked(), true));
+    const normalMinimum = pureModuleProbe(minimumSource, 'NormalDirectoryMinimum.ets', {
+      ...deps, readerWindowMetrics: () => ({ systemFontScale: 1 }) }, ['measureReaderDirectoryMinimum']);
+    const normalProfile = normalMinimum.measureReaderDirectoryMinimum(contextAt(1).context,
+      { quickContentWidthVp: 286, fullContentWidthVp: 338 },
+      { tab: 'directory', title: '第一章', excerpt: '正文', currentTitle: '第一章', currentPosition: '1/1', hasRows: true,
+        loading: false, message: '', action: '', bookmarkError: false, catalogStatus: '', catalogAction: '' });
+    assert.equal(normalProfile.full.toolbarHeightVp, 52, 'actual control parent retains approved52vp default total');
     const minimum = pureModuleProbe(minimumSource, 'ReaderControlDirectoryMinimum.ets', {
       ...deps, readerWindowMetrics: () => ({ systemFontScale: 2 }) }, ['measureReaderDirectoryMinimum']);
     const profile = minimum.measureReaderDirectoryMinimum(contextAt(2).context, { quickContentWidthVp: 286, fullContentWidthVp: 316 },
       { tab: 'directory', title: '第一章', excerpt: '正文', currentTitle: '第一章', currentPosition: '1/1', hasRows: true,
         loading: false, message: '', action: '', bookmarkError: false, catalogStatus: '', catalogAction: '' });
-    assert.ok(profile); assert.ok(profile.full.inputMinimumWidthVp >= 160);
+    assert.ok(profile); assert.ok(profile.full.inputMinimumWidthVp >= 120);
     assert.ok(profile.full.toolbarHeightVp >= 158, 'control minimum pays both scaled rows plus its existing border');
     const measuredOwner = controlGeometry(318, 736, 2, 'directory', profile), measured = measuredOwner.contentGeometry();
     assert.equal(measured.toolbarHeight, profile.full.toolbarHeightVp);
     assert.equal(measured.nominalListTop, profile.full.listTopVp);
     assert.ok(measured.nominalListTop >= measured.toolbarTop + measured.toolbarHeight);
-    const firstFrame = controlGeometry(316, 736, 1, 'directory');
+    const firstFrame = controlGeometry(294, 736, 1, 'directory');
     const legacyGeometry = resolveReaderControlDirectoryGeometry(1, 'directory', 736, 44, 0, 44);
     assert.ok(firstFrame.contentGeometry().toolbarHeight > legacyGeometry.toolbarHeight,
       'the new two-row child requires additional first-frame budget');

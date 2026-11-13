@@ -1,6 +1,7 @@
 import { createDefaultSettingsSnapshot, type SettingsSnapshot, type GeneralSettingsKey } from '../application/SettingsGateway';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
+import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
@@ -20,7 +21,7 @@ import { ReaderMessagePreviewPage } from './ReaderMessagePreviewPage';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { ReaderSelect } from '../../../ui/controls/ReaderSelect';
-import { ReaderSegmentedControl } from '../../../ui/controls/ReaderSegmentedControl';
+import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../../ui/controls/ReaderSegmentedControl';
 import { StatusBadge } from '../../../ui/controls/StatusBadge';
 import { CategorySection } from './CategorySection';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
@@ -512,11 +513,15 @@ export struct SettingsPage {
 
   @Builder
   private pendingFeedback() {
-    Column({ space: 10 }) {
+    ReaderRecoveryGroup({ content: (): void => { this.pendingFeedbackItems(); } });
+  }
+
+  @Builder
+  private pendingFeedbackItems() {
       if (this.hasPendingSettings()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('read'), this.recoveryIdentityFor('accepted'),
           this.temporaryBackIdentity, `${this.operation.receipt?.facts.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
+          ReaderRecoveryNotice({ grouped: true, view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
             canRetry: true, generation: this.operation.receipt?.facts.generation ?? 0 },
             actionLabel: '核对', busy: this.operation.receipt?.facts.fact === 'refreshing',
             secondaryActionLabel: this.recoveryIdentityFor('accepted').length > 0 ? '继续保存' : '',
@@ -527,7 +532,7 @@ export struct SettingsPage {
       if (this.hasPendingCleanup()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('cache-read'), this.recoveryIdentityFor('cache-continue'),
           this.temporaryBackIdentity, `${this.cacheCleanup?.operation.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ view: { visible: true,
+          ReaderRecoveryNotice({ grouped: true, follows: this.hasPendingSettings(), view: { visible: true,
             message: this.cacheCleanup?.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用',
             canRetry: true, generation: this.cacheCleanup?.operation.generation ?? 0 },
             actionLabel: '核对', busy: this.cacheCleanup?.busy === true,
@@ -536,8 +541,8 @@ export struct SettingsPage {
             onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
         }, (key: string): string => key);
       }
-    }.width('100%');
   }
+
 
   private operationFeedbackIdentity(): string {
     return `${this.operation.receipt?.facts.generation ?? 0}:${this.operation.readFacts?.generation ?? 0}`;
@@ -738,7 +743,7 @@ export struct SettingsPage {
 
   @Builder
   private segmentRow(label: string, icon: () => Resource) {
-    ReaderFormRow({ icon: icon(), label }) {
+    ReaderFormRow({ icon: icon(), label, contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
       this.appThemeControl();
     }
   }

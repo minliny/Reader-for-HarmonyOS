@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { foundationControls, foundationSpecs, readerFoundationTokens, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { inlineSelectSdk } from './lib/reader-inline-select-sdk-probe.mjs';
 import { compileTailConsumer } from './lib/foundation-tail-consumer-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
@@ -30,9 +31,10 @@ function glyph(text, size, weight = 400) {
   return glyphs.get(key);
 }
 const ruleMembers = ['bookId', 'availableWidthVp', 'availableHeightVp', 'interactionEnabled', 'focusTargetId', 'build', 'canEdit', 'actorIdentity', 'ownsMountedActor', 'ownsActor', 'edit', 'changed', 'recoveryIdentity', 'ownsRecovery', 'aboutToDisappear'];
-const parentMembers = ['directoryRulesLayer', 'directoryRulesNotice', 'directoryRulesCurrent', 'panelWidth', 'panelLeft', 'panelViewportHeight', 'panelTop', 'fullPanelHeight', 'fullPanelTop',
+const parentMembers = ['directoryRulesLayer', 'directoryRulesForm', 'directoryRulesNotice', 'directoryRulesCurrent', 'panelWidth', 'panelLeft', 'panelViewportHeight', 'panelTop', 'fullPanelHeight', 'fullPanelTop',
   'liveContainerWidth', 'liveContainerHeight', 'refreshGeometry', 'topBarTop', 'topBarLeft', 'topBarRight', 'headerBarHeight', 'headerControlHeight', 'fontScale', 'usesExpandedLayout', 'headerSpec', 'headerMeasurements', 'geometry', 'measurementKey', 'containerWidth', 'containerHeight', 'readerWindowMetricsRevision'];
 const cases = [];
+const recoverySdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
 for (const id of selected) {
   for (const width of [320, 366]) for (const safeInset of [0, 40]) for (const scale of [1, 2, 3]) for (const height of [360, 180, 0]) {
     const metrics = new safe.ReaderWindowMetricsSnapshot(new safe.ReaderRectVp(0, 0, width, height));
@@ -44,6 +46,7 @@ for (const id of selected) {
     const inline = inlineSelectSdk({ properties: controls.properties, uiContext: context, dependencies: { readerWindowMetrics: () => metrics } });
     const deps = { ...controls.dependencies, ...inline.dependencies, ...readerTypographyRoles, ...readerFoundationTokens, ...surfaceFontResolvers(), ...safe,
       ...actualSourceManagementGeometry(metrics), readerIsExpandedWidth, readerAppColor, readerWindowMetrics: () => metrics, ReaderWindowCoordinator: { metrics: () => metrics },
+      ReaderRecoveryNotice: recoverySdk.deps.ReaderRecoveryNotice,
       DirectoryRuleDraft, uiContext: context, LengthMetrics: { vp: value => value } };
     const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources, ...inline.hooks.childSources, ReaderDirectoryRules: rulesSource } };
     const Editor = compileTailConsumer(rulesSource, ruleMembers, deps, hooks).Component;
@@ -59,7 +62,7 @@ for (const id of selected) {
           isPresentationCurrent: () => true, recoveryView: () => ({ visible: false }), onRecoveryChanged() {}, run: apply => businessCalls.push(apply ? 'apply' : 'preview') });
       }
     }
-    const parent = compileTailConsumer(fullSource, parentMembers, { ...deps, ReaderDirectoryRules: LoadedEditor }, hooks).owner;
+    const parent = compileTailConsumer(fullSource, parentMembers, { ...deps, ReaderDirectoryRules: LoadedEditor }, { ...hooks, allowEmptyBranchAdmission: true }).owner;
     Object.assign(parent, { appThemeScheme: 'day', catalogContext: 'reader', mounted: true, interactive: true, exitRequested: false,
       temporaryBackIdentity: 'rules:1', bookId: 'book-a', directoryRulesVisible: true, directoryRulesRecovery: undefined,
       directoryRulesFocusId: () => 'directory-rules-focus', directoryRulesAvailable: () => true, isOpeningCurrent: () => true, admitDirectoryRulesRecovery() {} });
@@ -70,6 +73,23 @@ for (const id of selected) {
     const outer = [...parent.nodes.values()].find(node => node.type === 'Scroll');
     assert.equal(outer.width, parent.panelWidth()); assert.equal(outer.height, parent.panelViewportHeight());
     assert.ok(outer.height >= 0 && outer.height <= height);
+    if (width === 366 && safeInset === 0 && scale === 1 && height === 360) {
+      const initialHeight = outer.height, initialWidth = outer.width, reconciled = [];
+      parent.directoryRulesRecovery = { identity: 'rules-operation:17', bookId: 'book-a', busy: 'none',
+        view: { visible: true, message: '原规则应用结果尚未确认，需要核对原记录。', canRetry: true, generation: 17 },
+        actionLabel: '核对原记录', secondaryActionLabel: '', onReconcile: generation => reconciled.push(generation), onSecondaryAction() {} };
+      parent.replay(); controls.properties.flush(); recoverySdk.properties.flush();
+      const notice = [...parent.children.values()].find(child => child instanceof recoverySdk.deps.ReaderRecoveryNotice);
+      assert.ok(notice, 'rules recovery mounts the shared notice in its separate local overlay');
+      const overlay = [...parent.nodes.values()].find(node => node.type === 'Scroll' && node.position?.y === 44);
+      assert.ok(overlay); assert.equal(overlay.zIndex, 1);
+      assert.equal(outer.height, initialHeight); assert.equal(outer.width, initialWidth);
+      assert.equal([...parent.children.values()].find(child => child instanceof LoadedEditor), editor);
+      notice.onReconcile(17); assert.deepEqual(reconciled, [17]);
+      parent.directoryRulesRecovery = { ...parent.directoryRulesRecovery, identity: 'successor:18' };
+      notice.onReconcile(17); assert.deepEqual(reconciled, [17], 'retired operation callback cannot forward to its successor');
+      assert.equal(outer.height, initialHeight);
+    }
     const nodes = controls.nodes(editor), input = nodes.filter(node => node.type === 'TextInput');
     assert.equal(input.length, 2); assert.ok(input.every(node => node.height >= 44));
     assert.ok(input.some(node => node.accessibilityText === '规则1匹配表达式'));

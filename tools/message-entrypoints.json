@@ -69,10 +69,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets#ReaderJourneyRecoveryNotices.build::shared.recovery-notice",
+      "id": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets#ReaderJourneyRecoveryNotices.recoveryItems::shared.recovery-notice",
       "file": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets",
       "owner": "ReaderJourneyRecoveryNotices",
-      "member": "build",
+      "member": "recoveryItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "根装配提供当前阅读、详情及漫画恢复视图；当前Runtime保留的旧版快照待恢复事实仅在可交互书架展示，暂隐不清除原文件或标记迁移完成。Library47可移植操作支持不自动授权消费旧Host文件，automaticImportDeferred仅表达旧文件保留与当前书库继续使用现有数据，不提供重试或导入按钮。展示和点击都检查当前前景与覆盖状态。",
@@ -279,10 +279,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets#BookshelfSettingsPage.pendingRecovery::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets#BookshelfSettingsPage.pendingRecoveryItems::shared.recovery-notice",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets",
       "owner": "BookshelfSettingsPage",
-      "member": "pendingRecovery",
+      "member": "pendingRecoveryItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前 mounted 的书架设置页；operation、viewModeSnapshot 与 revision/presentationRevision 决定原保存/核对准入。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
@@ -763,14 +763,14 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readerRecoveryContent::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readerRecoveryItems::shared.recovery-notice",
       "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
       "owner": "ReadingExperience",
-      "member": "readerRecoveryContent",
+      "member": "readerRecoveryItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved.",
-      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent.",
+      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。",
+      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。",
       "status": "registered-source-entry"
     },
     {
@@ -1016,10 +1016,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-action",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.resultItems::shared.recovery-action",
       "file": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets",
       "owner": "ReaderDirectoryRecoverySurface",
-      "member": "build",
+      "member": "resultItems",
       "family": "shared.recovery-action",
       "category": "书签终态确认隐藏及已确认写入后的只读刷新",
       "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading. The original owner recoveryAction assigns reconcile versus continue busy to the corresponding primary or secondary action. Explicit confirmed-readback retries retain the same known-outcome retry actor while reading, including partial/materialization result variants. Same-group admission prevents duplicate recovery actions. The owner confirmation remains qualified throughout readback.",
@@ -1027,10 +1027,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.build::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets#ReaderDirectoryRecoverySurface.pendingItems::shared.recovery-notice",
       "file": "entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface.ets",
       "owner": "ReaderDirectoryRecoverySurface",
-      "member": "build",
+      "member": "pendingItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "The current feedbackMounted directory/reader recovery surface, original presentation and bookmark/offline generation, plus the optional current caller lease. Pending facts use the original-operation notice, known result dismisses locally, and confirmed write/readback failure retries only canonical reading. The original owner recoveryAction assigns reconcile versus continue busy to the corresponding primary or secondary action. Explicit confirmed-readback retries retain the same known-outcome retry actor while reading, including partial/materialization result variants. Same-group admission prevents duplicate recovery actions. The owner confirmation remains qualified throughout readback.",
@@ -1093,10 +1093,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay.configurationStatus::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay.build::shared.recovery-notice",
       "file": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
       "owner": "ReaderTtsConfigOverlay",
-      "member": "configurationStatus",
+      "member": "build",
       "family": "shared.recovery-notice",
       "category": "原生覆盖窗口内的朗读配置未决状态",
       "effectiveHost": "当前 TTS 管理器 windowModal 的配置恢复投影，仅在回执可见时显示无动作状态提示。",
@@ -1135,17 +1135,6 @@
       "effectiveHost": "L0 RSS关闭。仅当前entity operation.projection.receipt.confirmation=unknown使用原操作表面；Entry另核original scope/subscriptionId/guid，foreign原写不投影到当前实体。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
       "retireRule": "动作携带该projection generation并由retryFeedback核当前facts.canRetry；当前实体/呈现/原回执退休后拒绝，pure read或confirmed readback改由独立PageState显示。",
       "status": "retained-disabled"
-    },
-    {
-      "id": "entry/src/main/ets/features/rss/ui/RssOriginalRecoverySurface.ets#RssOriginalRecoverySurface.build::shared.recovery-action",
-      "file": "entry/src/main/ets/features/rss/ui/RssOriginalRecoverySurface.ets",
-      "owner": "RssOriginalRecoverySurface",
-      "member": "build",
-      "family": "shared.recovery-action",
-      "category": "当前RSS原操作的回执核对及合格继续",
-      "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。调用页以无参 boundedOverlayContent 提供自然内容，ReaderStandardPage 持有实时宿主几何；feed与foreign域不挂原写提示，原intent与全域写准入保留。",
-      "retireRule": "动作key只绑定 presentationIdentity/scope/subscriptionId/guid 与原generation/operationId/method/scope/subscriptionId/guid六字段身份，message/busy仅为当前投影。current同时核mounted、身份仍存在和!busy；continue再核qualified+operationId+canRetryOriginal。实体或退场拒绝旧动作，读取不确认原写。",
-      "status": "retained-before-open"
     },
     {
       "id": "entry/src/main/ets/features/rss/ui/RssOriginalRecoverySurface.ets#RssOriginalRecoverySurface.build::shared.recovery-notice",
@@ -1379,10 +1368,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.pendingFeedback::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.pendingFeedbackItems::shared.recovery-notice",
       "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
       "owner": "SettingsPage",
-      "member": "pendingFeedback",
+      "member": "pendingFeedbackItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前已挂载且允许输入、无 reset/select 前景的设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。pendingFeedback 只提供自然内容，由 SettingsShell 转交 ReaderStandardPage 无参 boundedOverlayContent 消费实测几何。",
@@ -1657,21 +1646,10 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.originalRecovery::shared.recovery-action",
+      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.originalRecoveryNotice::shared.recovery-notice",
       "file": "entry/src/main/ets/features/sync/ui/SyncPage.ets",
       "owner": "SyncPage",
-      "member": "originalRecovery",
-      "family": "shared.recovery-action",
-      "category": "保留同步配置继续和备份保留清理的原操作动作",
-      "effectiveHost": "L0 sync关闭；configSaveContinuationIdentities与backupRetentionActionIdentities分别按确切原operation/receipt身份key挂载，busy来自snapshot.facts。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",
-      "retireRule": "generation携回onContinueConfigSave或onSkipBackupRetention，原Sync owner决定原操作继续/结束清理；关UI不取消写入或确认备份，开放前验证旧物理回调及Runtime准入。",
-      "status": "retained-before-open"
-    },
-    {
-      "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.originalRecovery::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/sync/ui/SyncPage.ets",
-      "owner": "SyncPage",
-      "member": "originalRecovery",
+      "member": "originalRecoveryNotice",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "L0 下 sync 由 ReaderProductScope 禁用；仅保留原组件、operation/original/readFacts 及呈现身份代码。 原操作提示改由 ReaderStandardPage 的无参 boundedOverlayContent 消费实时实测宿主几何，普通内容区只保留读取状态。",

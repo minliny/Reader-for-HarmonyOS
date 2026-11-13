@@ -4,6 +4,7 @@ import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { BookshelfDetailNotice } from '../../features/bookshelf/ui/BookshelfDetailNotice';
 import { BookshelfDetailPresentation } from '../../features/bookshelf/presentation/BookshelfDetailPresentation';
 import { ReadingEntryPresentation } from '../../features/reading/presentation/ReadingEntryPresentation';
+import { ReaderRecoveryGroup } from '../../ui/feedback/ReaderRecoveryGroup';
 import { ReaderRecoveryNotice } from '../../ui/feedback/ReaderRecoveryNotice';
 import type { ReaderRecoveryView } from '../../ui/feedback/ReaderRecoveryView';
 
@@ -33,45 +34,58 @@ export struct ReaderJourneyRecoveryNotices {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-    if (this.interactive && ((this.startupRecoveryVisible && this.startupRecovery.visible) ||
-      this.reading.recoveryNoticeVisible() || this.detailNoticeVisible() ||
-      (this.mangaRecoveryVisible && this.mangaRecovery.visible))) {
-      Scroll() {
-      Column({ space: 8 }) {
-        if (this.startupRecoveryVisible && this.startupRecovery.visible) {
-          ReaderRecoveryNotice({ layoutWidthVp: this.noticeWidth(), view: this.startupRecovery, tag: '旧版数据', actionLabel: '' });
-        }
-        if (this.detailNoticeVisible()) {
-          BookshelfDetailNotice({ layoutWidthVp: this.noticeWidth(), presentation: this.detail,
-            canInteract: (): boolean => this.interactive && this.canInteract() });
-        }
-        if (this.reading.recoveryNoticeVisible()) {
-          ForEach([this.reading.recoveryNotice.generation], (generation: number): void => {
-            ReaderRecoveryNotice({ layoutWidthVp: this.noticeWidth(), view: this.reading.recoveryNotice, actionLabel: this.reading.recoveryActionLabel,
-              onReconcile: (_expected: number): void => {
-                if (this.interactive && this.canInteract()) this.reading.retryRecoveryNotice(generation);
-              } });
-          }, (generation: number): string => generation.toString());
-        }
-        if (this.mangaRecoveryVisible && this.mangaRecovery.visible) {
-          ForEach([this.mangaRecovery.generation], (generation: number): void => {
-            ReaderRecoveryNotice({ layoutWidthVp: this.noticeWidth(), view: this.mangaRecovery, tag: '漫画换源',
-              actionLabel: this.mangaRecoveryActionLabel, busy: this.mangaRecoveryBusy,
-              onReconcile: (_expected: number): void => {
-                if (this.interactive && this.canInteract() && this.mangaRecoveryVisible) this.onMangaRecovery(generation);
-              } });
-          }, (generation: number): string => generation.toString());
-        }
+      if (this.interactive && ((this.startupRecoveryVisible && this.startupRecovery.visible) ||
+        this.reading.recoveryNoticeVisible() || this.detailNoticeVisible() ||
+        (this.mangaRecoveryVisible && this.mangaRecovery.visible))) {
+        Scroll() {
+          Column() {
+            ReaderRecoveryGroup({ content: (): void => { this.recoveryItems(); } });
+          }.width('100%').padding({ left: 16, right: 16 });
+        }.width('100%').constraintSize({ maxHeight: this.availableHeight() })
+          .margin({ top: this.topInset + 12 }).scrollBar(BarState.Auto).clip(true)
+          .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       }
-      .width('100%').padding({ left: 16, right: 16 });
-      }.width('100%').constraintSize({ maxHeight: this.availableHeight() })
-        .margin({ top: this.topInset + 12 }).scrollBar(BarState.Auto).clip(true)
-        .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
-    }
     }.width('100%').height('100%').zIndex(220).hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange((_old: Area, next: Area): void => {
-        this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height); this.hostY = readerPageAreaLength(next.globalPosition.y);
+        this.hostWidth = readerPageAreaLength(next.width);
+        this.hostHeight = readerPageAreaLength(next.height);
+        this.hostY = readerPageAreaLength(next.globalPosition.y);
       });
+  }
+
+  @Builder
+  private recoveryItems() {
+    if (this.startupRecoveryVisible && this.startupRecovery.visible) {
+      ReaderRecoveryNotice({ grouped: true, layoutWidthVp: this.noticeWidth(),
+        view: this.startupRecovery, tag: '旧版数据', actionLabel: '' });
+    }
+    if (this.detailNoticeVisible()) {
+      BookshelfDetailNotice({ grouped: true, follows: this.startupRecoveryVisible && this.startupRecovery.visible,
+        layoutWidthVp: this.noticeWidth(), presentation: this.detail,
+        canInteract: (): boolean => this.interactive && this.canInteract() });
+    }
+    if (this.reading.recoveryNoticeVisible()) {
+      ForEach([this.reading.recoveryNotice.generation], (generation: number): void => {
+        ReaderRecoveryNotice({ grouped: true,
+          follows: (this.startupRecoveryVisible && this.startupRecovery.visible) || this.detailNoticeVisible(),
+          layoutWidthVp: this.noticeWidth(), view: this.reading.recoveryNotice,
+          actionLabel: this.reading.recoveryActionLabel,
+          onReconcile: (_expected: number): void => {
+            if (this.interactive && this.canInteract()) this.reading.retryRecoveryNotice(generation);
+          } });
+      }, (generation: number): string => generation.toString());
+    }
+    if (this.mangaRecoveryVisible && this.mangaRecovery.visible) {
+      ForEach([this.mangaRecovery.generation], (generation: number): void => {
+        ReaderRecoveryNotice({ grouped: true,
+          follows: (this.startupRecoveryVisible && this.startupRecovery.visible) || this.detailNoticeVisible() || this.reading.recoveryNoticeVisible(),
+          layoutWidthVp: this.noticeWidth(), view: this.mangaRecovery, tag: '漫画换源',
+          actionLabel: this.mangaRecoveryActionLabel, busy: this.mangaRecoveryBusy,
+          onReconcile: (_expected: number): void => {
+            if (this.interactive && this.canInteract() && this.mangaRecoveryVisible) this.onMangaRecovery(generation);
+          } });
+      }, (generation: number): string => generation.toString());
+    }
   }
 
   private noticeWidth(): number {

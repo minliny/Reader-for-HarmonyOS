@@ -1,5 +1,4 @@
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
-import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
@@ -29,7 +28,7 @@ export struct RssOriginalRecoverySurface {
   aboutToDisappear(): void { this.mounted = false; }
   private view(): ReaderRecoveryView {
     return { visible: this.matchesScope(), message: this.original?.message ?? '',
-      canRetry: false, generation: this.original?.generation ?? 0 };
+      canRetry: this.matchesScope(), generation: this.original?.generation ?? 0 };
   }
   private matchesScope(): boolean { return rssOriginalMatchesScope(this.original, this.scope, this.subscriptionId, this.guid); }
   private identities(): string[] {
@@ -67,16 +66,12 @@ export struct RssOriginalRecoverySurface {
   }
   build() {
     if (this.matchesScope()) {
-      ReaderRecoveryNotice({ view: this.view() });
       ForEach(this.identities(), (identity: string) => {
-        ReaderRecoveryAction({ label: '核对原操作回执', generation: this.expected(identity).generation,
-          actionEnabled: this.current(identity),
-          onReconcile: (): void => { if (this.current(identity)) this.onReconcileOriginal(this.expected(identity)); } });
-        if (this.qualified(identity)) {
-          ReaderRecoveryAction({ label: this.continuationLabel(),
-            generation: this.expected(identity).generation, actionEnabled: this.current(identity),
-            onReconcile: (): void => { if (this.canContinue(identity)) this.onContinueOriginal(this.expected(identity)); } });
-        }
+        ReaderRecoveryNotice({ view: this.view(), actionLabel: '核对原操作回执',
+          actionEnabled: this.current(identity), secondaryActionEnabled: this.canContinue(identity),
+          secondaryActionLabel: this.qualified(identity) ? this.continuationLabel() : '',
+          onReconcile: (): void => { if (this.current(identity)) this.onReconcileOriginal(this.expected(identity)); },
+          onSecondaryAction: (): void => { if (this.canContinue(identity)) this.onContinueOriginal(this.expected(identity)); } });
       }, (identity: string): string => identity);
     }
   }

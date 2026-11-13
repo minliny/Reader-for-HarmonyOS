@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'approved-composition': {
+    description: 'Approved coarse-pointer action gaps and title-only folding, one-surface groups, wrapped-action blocks and retained busy geometry through actual SDK declarations.', resources: [],
+  },
   'reservation-boundary': {
     description: 'Actual SDK notice paint and measurement separate business text from the decorative action reservation. System ICU independently checks the old/new line-break opportunity.',
     resources: [],
@@ -11,6 +14,11 @@ const selected = selectContractCases({
 });
 
 for (const id of selected) {
+  if (id === 'approved-composition') {
+    await approvedComposition();
+    recordContractCasePass(id);
+    continue;
+  }
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const source = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets', import.meta.url), 'utf8');
   const original = source.replaceAll("' ' + '\u00a0'.repeat(", "'\u00a0'.repeat(");
@@ -47,10 +55,11 @@ for (const id of selected) {
     const full = measured.find(options => options.constraintWidth && options.maxLines === undefined);
     const folded = measured.find(options => options.constraintWidth && options.maxLines === 3);
     assert.ok(full && folded);
-    assert.equal(full.textContent, folded.textContent, 'full and folded use the same decorated string');
+    assert.equal(full.textContent, folded.textContent, 'full and folded use the same business title');
+    assert.equal(full.textContent, ` ${notice.tag}   ${notice.view.message}`, 'action reservation does not determine title truncation');
     if (enabled) {
       assert.ok(notice.reservedSpace.startsWith(' \u00a0'), 'the decorative run starts after a normal breakable space');
-      assert.equal(full.textContent, ` ${notice.tag}   ${notice.view.message}${notice.reservedSpace}`);
+
       const span = sdk.nodes(notice).find(node => node.type === 'Span' && typeof node.create === 'string' && node.create.includes('\u00a0'));
       if (!notice.clipped || notice.expanded) assert.equal(span?.create, notice.reservedSpace, 'actual SDK Span paints the measured reservation');
     } else {
@@ -98,9 +107,10 @@ for (const id of selected) {
   };
   long.button(expand).onClick(); long.sdk.properties.flush();
   assert.equal(long.notice.expanded, true);
-  assert.ok(long.sdk.nodes(long.notice).some(node => node.type === 'Span' && node.create === long.notice.reservedSpace));
+  assert.equal(long.notice.separateActions, true);
+  assert.equal(long.notice.reservedSpace, '', 'wrapped actions keep their own measured block');
   assert.equal(long.notice.view.message, message.repeat(5), 'expanded content keeps the complete original message');
-  assert.equal(externalBlankRemovals, 1);
+  assert.equal(externalBlankRemovals, 0);
   samples++;
 
   predecessor = fixture(original, message, 311.714285714);
@@ -144,4 +154,65 @@ print(json.dumps({'provider': library, 'samples': result}))
   console.log(JSON.stringify({ kind: 'recovery-notice-reservation-boundary', samples, boundaries, externalBlankRemovals,
     boundary: 'Actual SDK declarations/measurement strings/actions plus macOS ICU legal line opportunities. Finite measure heights and one Blank replacement are supplied. HarmonyOS pixel wrapping, Native busy timing and all natural orphan lines are outside this proof.' }));
   recordContractCasePass(id);
+}
+
+async function approvedComposition() {
+  const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const source = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets', import.meta.url), 'utf8');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+  assert.equal(readerAppColor('TOK_MESSAGE_NOTICE_DIVIDER', 'day'), '#3BFFFDF6');
+  assert.equal(readerAppColor('TOK_MESSAGE_NOTICE_DIVIDER', 'night'), '#3B263321');
+  let samples = 0;
+  for (const width of [216, 288, 342, 540]) {
+    for (const scale of [1, 1.3, 1.6, 2]) {
+      for (const longActions of [false, true]) {
+        const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+        const notice = sdk.consumer(source);
+        const measured = [];
+        const labels = longActions ? ['核对原书签操作结果', '继续保留的原书签操作'] : ['核对', '继续'];
+        Object.assign(notice, { view: { visible: true, message: '原操作等待核对', canRetry: true, generation: 3 },
+          tag: '书签', actionLabel: labels[0], secondaryActionLabel: labels[1],
+          getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({
+            measureText: options => options.textContent === '\u00a0' ? 3.15 * scale : options.textContent.length * 13 * scale,
+            measureTextSize: options => {
+              measured.push({ ...options });
+              return { width, height: options.constraintWidth ? (options.maxLines ? 66 : 66) * scale : 22 * scale };
+            },
+          }) }),
+        });
+        notice.aboutToAppear(); notice.measureFlow(width); notice.initialRender(); sdk.properties.flush();
+        assert.equal(notice.clipped, false, 'action capacity never manufactures title expansion');
+        const expected = labels.reduce((sum, label) => sum + Math.max(44, label.length * 13 * scale + 4), 0) + 18;
+        assert.equal(notice.actionsWidth, Math.min(width - (expected + 8 > width ? 8 : 0), expected));
+        assert.equal(notice.separateActions, expected + 8 > width);
+        if (notice.separateActions) assert.equal(notice.reservedSpace, '');
+        else assert.ok((notice.reservedSpace.length - 1) * 3.15 * scale >= expected + 8,
+          'reservation pays complete action carriers, coarse gap18 and text gap8');
+        assert.ok(measured.filter(value => value.constraintWidth).every(value => !value.textContent.includes('\u00a0')));
+        const flex = sdk.nodes(notice).find(node => node.type === 'Flex');
+        assert.equal(flex.create.space.main.value, 18);
+        assert.equal(flex.create.space.cross.value, 6);
+        const stale = notice.flowAreaHandler();
+        const previousWidth = notice.measuredWidth;
+        notice.busy = true;
+        stale({}, { width: width + 100 });
+        assert.equal(notice.measuredWidth, previousWidth, 'retired measurement cannot alter a successor busy actor');
+        samples++;
+      }
+    }
+  }
+  const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+  const groupSource = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryGroup.ets', import.meta.url), 'utf8');
+  const group = sdk.consumer(groupSource);
+  group.initialRender();
+  const painted = sdk.nodes(group).find(node => node.backgroundColor);
+  assert.equal(painted.borderRadius, 14);
+  assert.deepEqual(painted.padding, { left: 12, right: 12, top: 10, bottom: 10 });
+  const action = sdk.consumer(readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets', import.meta.url), 'utf8'));
+  Object.assign(action, { variant: 'notice', label: '核对', generation: 4 });
+  action.initialRender();
+  const text = [...action.nodes.values()].find(node => node.type === 'Text');
+  assert.equal(text.decoration.type, 'TextDecorationType.Underline');
+  assert.equal([...action.nodes.values()].find(node => node.type === 'Button').constraintSize.minHeight, 44);
+  console.log(JSON.stringify({ kind: 'approved-recovery-composition', samples, evidence: 'SDK declarations with finite measurements; Native line-break, underline offset and pixel fidelity remain open' }));
 }

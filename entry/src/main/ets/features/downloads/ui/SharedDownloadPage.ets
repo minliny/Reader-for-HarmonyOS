@@ -638,8 +638,7 @@ export struct SharedDownloadPage {
           coverHeight: this.bookHeight(book().key) });
       }.width(DOWNLOAD_VISUAL.coverWidth).height(this.bookHeight(book().key)).borderRadius(DOWNLOAD_VISUAL.coverRadius).clip(true)
         .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) })
-        .backgroundColor(downloadVisualColor(book().contentKind === 'manga' ? 'softGreen' : 'soft', this.appThemeScheme))
-        .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
+        .backgroundColor(downloadVisualColor(book().contentKind === 'manga' ? 'softGreen' : 'soft', this.appThemeScheme));
       Column({ space: 0 }) {
         Column({ space: 0 }) {
         Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
@@ -654,8 +653,15 @@ export struct SharedDownloadPage {
               }
             }.width('100%');
           }.id(secondary ? '' : this.focusKey('book-title:' + book().key))
+            .accessibilityLevel(secondary ? 'no' : 'auto')
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent).layoutWeight(1)
-            .constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
+            .constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight })
+            .responseRegion([{ x: 0, y: 0, width: '100%', height: '100%' },
+              readerActionTouchRegion('100%', DOWNLOAD_VISUAL.bookTopHeight)])
+            .onClick((event: ClickEvent): void => {
+              event?.stopPropagation();
+              if (!secondary) this.openBook(book(), ownerGeneration);
+            });
           if (book().contentKind !== undefined) {
             Text(book().contentKind === 'manga' ? '漫画' : '小说')
               .fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -671,33 +677,33 @@ export struct SharedDownloadPage {
                 .selectedColor(downloadVisualColor('green', this.appThemeScheme))
                 .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
                 .mark({ strokeColor: downloadVisualColor('greenInk', this.appThemeScheme) })
+                .onClick((event: ClickEvent): void => event?.stopPropagation())
                 .onChange((selected: boolean): void => {
                   const current = this.eventBook(book, ownerGeneration);
                   if (current !== undefined) this.toggleBook(current.key, selected);
                 });
-              }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget);
+              }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.bookTopHeight);
             } else {
-              this.moreButton((): string => `${book().title}的书籍操作`, (): void => {
-                const current = this.eventBook(book, ownerGeneration);
-                if (current === undefined) return;
-                this.actionBookKeys = [current.key]; this.actionChapters = [];
-                this.openSheet('book-actions', 'book-menu:' + current.key);
-              }, false, (): string => 'book-menu:' + book().key);
+              Stack({ alignContent: Alignment.Center }) {
+                this.moreButton((): string => `${book().title}的书籍操作`, (): void => {
+                  const current = this.eventBook(book, ownerGeneration);
+                  if (current === undefined) return;
+                  this.actionBookKeys = [current.key]; this.actionChapters = [];
+                  this.openSheet('book-actions', 'book-menu:' + current.key);
+                }, false, (): string => 'book-menu:' + book().key);
+              }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.bookTopHeight);
             }
           }
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).width('100%').alignItems(VerticalAlign.Center);
+        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight }).width('100%').alignItems(VerticalAlign.Center);
         Text(this.authorSource(book())).fontFamily(TYPE_DOWNLOAD_SOURCE.fontFamily).fontWeight(TYPE_DOWNLOAD_SOURCE.fontWeight)
           .fontSize(TYPE_DOWNLOAD_SOURCE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SOURCE.lineHeightFp as number).halfLeading(true)
           .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%').wordBreak(WordBreak.BREAK_WORD)
-          .constraintSize({ minHeight: secondary ? DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() :
-            Math.max(DOWNLOAD_VISUAL.touchTarget, DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale()) }).margin({ top: DOWNLOAD_VISUAL.sourceTop })
-          .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
+          .constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() }).margin({ top: DOWNLOAD_VISUAL.sourceTop });
         Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
           Text(this.downloadCount(book(), secondary)).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
             .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
             .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1)
-            .constraintSize({ minHeight: secondary ? DOWNLOAD_VISUAL.sourceLineHeight : DOWNLOAD_VISUAL.touchTarget })
-            .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); });
+            .constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() });
           if (secondary) {
             Text(book().stateLabel === '下载失败' ? '下载失败' : book().totalChapters === undefined ? '' : `目录 ${book().totalChapters}${this.unit(book())}`)
               .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
@@ -709,7 +715,7 @@ export struct SharedDownloadPage {
           } else {
             Blank().width(DOWNLOAD_VISUAL.statusWidth).height(DOWNLOAD_VISUAL.statusHeight);
           }
-        }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).margin({ top: DOWNLOAD_VISUAL.progressTop });
+        }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight }).margin({ top: DOWNLOAD_VISUAL.progressTop });
         if (book().stateLabel === '下载失败' && (book().downloadError?.trim().length ?? 0) > 0) {
           Text(book().downloadError ?? '').fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
             .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
@@ -732,6 +738,14 @@ export struct SharedDownloadPage {
           if (current !== undefined) this.recordBookHeight(current.key, readerPageAreaLength(area.height));
         });
     }.width('100%').alignItems(VerticalAlign.Top).padding({ top: DOWNLOAD_VISUAL.bookPaddingY, bottom: DOWNLOAD_VISUAL.bookPaddingY })
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .accessibilityText(secondary ? '' : `${book().title}，${this.authorSource(book())}，${this.downloadCount(book(), false)}` +
+        (this.managing ? `，${this.selectedBookKeys.includes(book().key) ? '取消选择' : '选择'}` : '，打开书籍'))
+      .accessibilitySelected(this.managing && this.selectedBookKeys.includes(book().key))
+      .accessibilityLevel(secondary ? 'no' : 'yes')
+      .focusable(!secondary && this.uiInputIsCurrent(ownerGeneration) && !this.modalBlocking())
+      .enabled(secondary || (this.uiInputIsCurrent(ownerGeneration) && !this.modalBlocking()))
+      .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
   }
 
@@ -754,11 +768,15 @@ export struct SharedDownloadPage {
           .fontColor(this.statusInk(book()))
           .textAlign(TextAlign.Center).layoutWeight(1);
       }.width('100%');
-    }.id(this.focusKey('book-status:' + book().key)).width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
+    }.id(this.focusKey('book-status:' + book().key)).width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight })
+      .responseRegion([{ x: 0, y: 0, width: '100%', height: '100%' },
+        readerActionTouchRegion(DOWNLOAD_VISUAL.statusWidth, DOWNLOAD_VISUAL.statusHeight)])
+      .padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
       .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
       .enabled(!this.managing).opacity(this.managing ? DOWNLOAD_VISUAL.disabledOpacity : 1)
       .accessibilityText(`${book().title}，${book().stateLabel}${this.bookIsRunning(book()) ? '，暂停' : book().stateLabel === '下载失败' ? '，重试' : ''}`)
-      .onClick((): void => {
+      .onClick((event: ClickEvent): void => {
+        event?.stopPropagation();
         const current = this.eventBook(book, ownerGeneration);
         if (this.managing || current === undefined) return;
         this.actionBookKeys = [current.key]; this.actionChapters = [];
@@ -936,9 +954,12 @@ export struct SharedDownloadPage {
     Button({ type: ButtonType.Normal }) {
       Image(this.visualIcon('more'))
         .width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-    }.id(this.focusKey(focusTarget())).width(DOWNLOAD_VISUAL.touchTarget)
-      .height(DOWNLOAD_VISUAL.touchTarget).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .accessibilityText(label()).onClick((): void => action());
+    }.id(this.focusKey(focusTarget())).width(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreWidth)
+      .height(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreHeight)
+      .responseRegion(readerActionTouchRegion(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreWidth,
+        chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreHeight))
+      .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+      .accessibilityText(label()).onClick((event: ClickEvent): void => { event?.stopPropagation(); action(); });
   }
 
   @Builder
@@ -2813,9 +2834,9 @@ export struct SharedDownloadPage {
         (TYPE_DOWNLOAD_TAG.lineHeightFp as number) * scale + DOWNLOAD_VISUAL.sourceLineHeight * scale +
         DOWNLOAD_VISUAL.chapterPaddingY * 2 + DOWNLOAD_VISUAL.borderWidth);
     }
-    const copy = Math.max(DOWNLOAD_VISUAL.touchTarget, (TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number) * scale) + DOWNLOAD_VISUAL.sourceTop +
-      Math.max(DOWNLOAD_VISUAL.touchTarget, DOWNLOAD_VISUAL.sourceLineHeight * scale) + Math.max(DOWNLOAD_VISUAL.touchTarget,
-        this.textControlHeight(DOWNLOAD_VISUAL.statusHeight, (TYPE_DOWNLOAD_META.lineHeightFp as number), 0)) +
+    const copy = Math.max(DOWNLOAD_VISUAL.bookTopHeight, (TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number) * scale) + DOWNLOAD_VISUAL.sourceTop +
+      DOWNLOAD_VISUAL.sourceLineHeight * scale + Math.max(DOWNLOAD_VISUAL.statusHeight,
+        (TYPE_DOWNLOAD_META.lineHeightFp as number) * scale) +
       DOWNLOAD_VISUAL.progressTop + DOWNLOAD_VISUAL.progressHeight;
     return Math.max(DOWNLOAD_VISUAL.coverHeight, DOWNLOAD_VISUAL.bookMinHeight, copy) +
       DOWNLOAD_VISUAL.bookPaddingY * 2 + DOWNLOAD_VISUAL.borderWidth;

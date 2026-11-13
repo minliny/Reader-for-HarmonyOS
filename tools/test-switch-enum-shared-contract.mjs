@@ -19,7 +19,7 @@ const liveSourcePaths = new Map([
 ]);
 const read=p=>readFileSync(new URL('../'+(liveSourcePaths.get(p)??p),import.meta.url),'utf8');
 const nativeToggle=(p,o)=>p.nodes(o).findLast(n=>n.type==='Toggle'&&n.onChange);
-const nativeChoice=(p,o)=>p.nodes(o).filter(n=>n.type==='Button'&&n.onClick);
+const nativeChoice=(p,o)=>p.choices(o);
 let cases=0;
 if(selectedCase==='toggle'){
  const p=switchControls(),calls=[],o=p.mount(p.toggle,{inputIdentity:'A',value:false,onToggle:next=>calls.push(next)}),old=nativeToggle(p,o);
@@ -60,11 +60,11 @@ if(selectedCase==='press'){
 }
 if(selectedCase==='spec-propagation'){
  const baseline=switchSpecs(), width=baseline.resolveReaderSegmentSpec('app-theme-segment').width;
- const changed=specSource.replace("checkedColor: 'TOK_PRIMARY_DARK'", "checkedColor: 'TOK_GREEN'").replace(`width: ${width},`, `width: ${width+3},`);
+ const changed=specSource.replace("checkedColor: 'TOK_PRIMARY_DARK'", "checkedColor: 'TOK_GREEN'").replace(`READER_APP_THEME_SEGMENT_WIDTH = ${width};`, `READER_APP_THEME_SEGMENT_WIDTH = ${width+3};`);
  const p=switchControls({specs:switchSpecs(changed)}),t=p.mount(p.toggle,{inputIdentity:'t'}),s=p.mount(p.segment,{inputIdentity:'s',options:['A'],optionIds:['a']});
  assert.equal(nativeToggle(p,t).selectedColor,readerAppColor('TOK_GREEN','day'));
  assert.equal(p.nodes(s).find(n=>n.type==='Row').width,width+3);
- assert.equal(nativeChoice(p,s)[0].constraintSize.minHeight,44);
+ assert.equal(nativeChoice(p,s)[0].constraintSize.minHeight,44,'official V2 receives its min44 policy; native pixels/hit remain OPEN');
  assert.equal(nativeChoice(p,s)[0].border.radius,baseline.resolveReaderSegmentSpec('app-theme-segment').itemRadius);
  const pillProbe=switchControls();
  const pill=pillProbe.mount(pillProbe.segment,{specId:'pill-choice',inputIdentity:'shelf',options:['封面','列表'],optionIds:['cover','list']});
@@ -138,7 +138,7 @@ if(selectedCase==='rss-editor'){
  actors.forEach(a=>a.aboutToDisappear());physical.forEach(({node,next})=>node.onChange(next));assert.equal(calls.length,4);cases+=2;
 }
 const appThemeMembers = ['appThemeMode', 'temporaryBackIdentity', 'appThemeControlGeneration', 'appThemeControl',
- 'themeIndex', 'appThemeControlIdentity', 'appThemeControlIsCurrent', 'settingsNavigationCurrent', 'selectAppTheme'];
+ 'settingsInputIsCurrent', 'themeIndex', 'appThemeControlIdentity', 'appThemeControlIsCurrent', 'settingsNavigationCurrent', 'selectAppTheme'];
 if(selectedCase==='theme'){
  const p=switchControls(),runtime={},calls=[];
  let openingCurrent = true;

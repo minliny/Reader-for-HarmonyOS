@@ -1,6 +1,6 @@
 import { encodeReaderDirectoryTargetProof, type ReaderDirectoryTargetProof } from './ReaderDirectoryTargetProof.ts';
 import { decodeReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
-import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
+import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingReconciliationResult, ReadingRecoveredOperation } from './ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import type { BookRequestOptions } from '../../../app/BookRequestScheduler';
 import { appendExpectedPositionVersions, decodeRemotePositionScope, encodeRemotePositionScope, type RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -557,20 +557,30 @@ export class LocalReadingFlowGateway {
   bookmarkAuthorityAvailable(): boolean { return this.bookmarkIntents !== undefined; }
   async pendingBookmarkOperation(): Promise<ReadingOperationIntent | undefined> { return this.bookmarkIntents?.pending(); }
   async reconcileBookmarkOperation(context: ReadingOperationContext, current: () => boolean,
-    evidence?: ReaderWriteEvidence, continueOriginal: boolean = false): Promise<ReadingRecoveredOperation | undefined> {
-    const qualify = (data: JsonObject, intent: ReadingOperationIntent): JsonObject => {
-      if (intent.method === 'bookmark.delete') this.decodeDeletedBookmark(data, intent.params['time'] as number);
-      else {
-        const p = intent.params;
-        this.decodeCreatedBookmark(data, { bookName: p['bookName'] as string, bookAuthor: (p['bookAuthor'] ?? '') as string,
-          chapterIndex: (p['chapterIndex'] ?? 0) as number, chapterOffset: (p['chapterPos'] ?? 0) as number,
-          chapterTitle: (p['chapterName'] ?? '') as string, bookText: (p['bookText'] ?? '') as string,
-          positionScope: decodeRemotePositionScope(p['positionScope']) });
-      }
-      return data;
-    };
+    evidence?: ReaderWriteEvidence, continueOriginal: boolean = false, expected?: ReadingOperationIntent): Promise<ReadingRecoveredOperation | undefined> {
+    const qualify = (data: JsonObject, intent: ReadingOperationIntent): JsonObject => this.qualifyBookmarkRecovery(data, intent);
+    if (expected !== undefined && continueOriginal) throw new Error('旧版原记录仅支持核对');
     return continueOriginal ? this.bookmarkIntents?.continueOriginal(context, qualify, evidence, current) :
-      this.bookmarkIntents?.reconcile(context, qualify, current);
+      this.bookmarkIntents?.reconcile(context, qualify, current, expected);
+  }
+
+  async reconcileOriginalBookmarkOperation(expected: ReadingOperationIntent,
+    current: () => boolean): Promise<ReadingReconciliationResult> {
+    if (this.bookmarkIntents === undefined) return { kind: 'unavailable' };
+    return this.bookmarkIntents.reconcileResult(expected.context,
+      (data: JsonObject, intent: ReadingOperationIntent): JsonObject => this.qualifyBookmarkRecovery(data, intent), current, expected);
+  }
+
+  private qualifyBookmarkRecovery(data: JsonObject, intent: ReadingOperationIntent): JsonObject {
+    if (intent.method === 'bookmark.delete') this.decodeDeletedBookmark(data, intent.params['time'] as number);
+    else {
+      const params = intent.params;
+      this.decodeCreatedBookmark(data, { bookName: params['bookName'] as string, bookAuthor: (params['bookAuthor'] ?? '') as string,
+        chapterIndex: (params['chapterIndex'] ?? 0) as number, chapterOffset: (params['chapterPos'] ?? 0) as number,
+        chapterTitle: (params['chapterName'] ?? '') as string, bookText: (params['bookText'] ?? '') as string,
+        positionScope: decodeRemotePositionScope(params['positionScope']) });
+    }
+    return data;
   }
 
   async loadChapter(

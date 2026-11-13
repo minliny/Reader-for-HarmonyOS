@@ -314,6 +314,18 @@ export class ReaderDirectoryOperations {
     const host = this.bookmarkHost(owner);
     if (host !== undefined) {
       const binding = this.bookmarkBinding(owner, book);
+      const original = host.originalBookmarkRecovery();
+      if (original !== undefined && original.generation === generation) {
+        if (continueOriginal) return;
+        void host.reconcileOriginalBookmark(generation, original.identity, binding).then((result): void => {
+          const current = this.ports.scene();
+          if (!binding.current() || !current.foreground || identity !== this.presentationId(current) || result === 'rejected') return;
+          this.ports.feedback(result === 'confirmed' ? '原记录中的这一项书签操作已核实，本次未派发后续书签操作。' :
+            result === 'confirmedReadbackFailed' ? '这条原书签记录已核实，当前书签读取失败。请重新打开目录读取。' :
+            result === 'notDispatched' ? '这条原书签记录已核实未派发。' : '这条原书签记录尚未取得合格回执，可再次核对。');
+        });
+        return;
+      }
       const reportResult = (): void => {
         const current = this.ports.scene(), operation = host.snapshot();
         if (!binding.current() || !current.foreground || identity !== this.presentationId(current) ||
@@ -406,10 +418,13 @@ export class ReaderDirectoryOperations {
   }
 
   recovery(bookmarks: ReaderDirectoryOperation | undefined,
-    offline: ReadingOfflineOperation | undefined): ReadingDirectoryRecovery {
+    offline: ReadingOfflineOperation | undefined, _revision: number = 0): ReadingDirectoryRecovery {
+    // The observed revision publishes changes owned by the global intent lane.
     const scene = this.ports.scene();
     return scene.book === undefined ? EMPTY_READING_DIRECTORY_RECOVERY :
-      readingDirectoryRecovery(this.presentationId(scene), scene.book, bookmarks, offline, scene.bookmarkWriteEnabled === true);
+      readingDirectoryRecovery(this.presentationId(scene), scene.book, bookmarks, offline, scene.bookmarkWriteEnabled === true,
+        scene.owner === undefined ? undefined : ReaderDirectoryHost.currentForRuntime(scene.owner)?.blockingBookmarkBook(),
+        scene.owner === undefined ? undefined : ReaderDirectoryHost.currentForRuntime(scene.owner)?.originalBookmarkRecovery());
   }
 
   bookmarkMessage(operation: ReaderDirectoryOperation | undefined): string {

@@ -135,6 +135,7 @@ export class ReadingEntryPresentation {
   directoryPresentationGeneration: number = 0;
   directoryOperation: ReaderDirectoryOperation | undefined;
   bookmarkWriteEnabled: boolean = false;
+  bookmarkRecoveryRevision: number = 0;
   offlineOperation: ReadingOfflineOperation | undefined;
   offlineOperationActive: boolean = false;
   host: ReadingEntryHost | undefined;
@@ -908,7 +909,10 @@ export class ReadingEntryPresentation {
       membership: ports.membership,
       changed: (snapshot: ReadingEntrySnapshot): void => { if (current()) this.publish(snapshot); },
       bookmarkAdmission: (enabled: boolean): void => {
-        if (current() && this.host === host) this.bookmarkWriteEnabled = enabled;
+        if (current() && this.host === host) {
+          this.bookmarkWriteEnabled = enabled;
+          this.bookmarkRecoveryRevision += 1;
+        }
       },
       bookmarkOperation: (operation: ReaderDirectoryOperation): void => {
         const book = this.book;

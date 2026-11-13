@@ -27,7 +27,6 @@ export struct ReaderTtsConfigOverlay {
 
   @State private modalUsableHeight: number = 844;
   @State private modalUsableWidth: number = 0;
-  @State private noticeContentWidth: number = -1;
   @State private measuredHeaderHeight: number = 0;
   private measuredHeaderKey: string = '';
   private releaseKeyboardAvoidance: (() => void) | undefined = undefined;
@@ -131,10 +130,6 @@ export struct ReaderTtsConfigOverlay {
       if (Math.abs(this.measuredHeaderHeight - height) > 0.5) this.measuredHeaderHeight = height;
     };
   }
-  private noticeAreaChange(_old: SizeOptions, size: SizeOptions): void {
-    const width = Number(size.width);
-    if (Number.isFinite(width) && width >= 0 && Math.abs(this.noticeContentWidth - width) > 0.5) this.noticeContentWidth = width;
-  }
   private footerHeight(): number {
     this.metricsRevision;
     return readerScaledControlHeight(76, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp ?? 20,
@@ -193,6 +188,28 @@ export struct ReaderTtsConfigOverlay {
     return Math.max(8, Math.min(desired, this.availableHeight - h - 8));
   }
 
+  private recoveryOverlayLeft(): number {
+    return (this.manager ? Math.max(0, (this.modalUsableWidth - this.panelWidth()) / 2) :
+      this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13)) + 12;
+  }
+
+  private recoveryOverlayWidth(): number {
+    // Compact content scrolls its header and footer. Keep the close column
+    // clear horizontally instead of subtracting both from a short viewport.
+    return Math.max(0, this.panelWidth() - (this.compactContent() ? 88 : 24));
+  }
+
+  private recoveryOverlayTop(): number {
+    const top = this.manager ? Math.max(0,
+      this.modalUsableHeight - this.managerOuterPadding() - this.panelHeight()) : this.panelY();
+    return top + (this.compactContent() ? 0 : this.headerHeight());
+  }
+
+  private recoveryOverlayMaxHeight(): number {
+    return this.compactContent() ? this.panelHeight() : Math.max(0,
+      this.panelHeight() - this.headerHeight() - (this.manager ? this.footerHeight() : 0));
+  }
+
   private boundedSpecId(): ReaderBoundedSurfaceId { return this.manager ? 'tts-config-manager' : 'tts-config-picker'; }
 
   @Builder
@@ -217,6 +234,16 @@ export struct ReaderTtsConfigOverlay {
         .position(this.manager ? undefined : {
           x: this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13),
           y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);
+      if (this.windowModal && this.recoveryView.visible) {
+        Scroll() {
+          ReaderRecoveryNotice({ view: this.recoveryView, tag: '朗读配置', actionLabel: '',
+            layoutWidthVp: this.recoveryOverlayWidth() });
+        }.width(this.recoveryOverlayWidth())
+          .constraintSize({ maxHeight: this.recoveryOverlayMaxHeight() })
+          .position({ x: this.recoveryOverlayLeft(), y: this.recoveryOverlayTop() })
+          .zIndex(1).scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Default)
+          .onTouch((event: TouchEvent): void => event.stopPropagation());
+      }
     }.width(this.windowModal ? '100%' : this.availableWidth)
       .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
       .onSizeChange((_oldSize: SizeOptions, size: SizeOptions): void => {
@@ -245,9 +272,6 @@ export struct ReaderTtsConfigOverlay {
 
   @Builder
   private configurationStatus() {
-    if (this.windowModal && this.recoveryView.visible) {
-      ReaderRecoveryNotice({ view: this.recoveryView, tag: '朗读配置', actionLabel: '', layoutWidthVp: this.noticeContentWidth });
-    }
     if (this.statusMessage().length > 0) {
       Text(this.statusMessage()).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily)
         .fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp).fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)
@@ -283,7 +307,6 @@ export struct ReaderTtsConfigOverlay {
               }
             }
           }.width('100%').alignItems(HorizontalAlign.Start)
-            .onSizeChange((_old: SizeOptions, size: SizeOptions): void => this.noticeAreaChange(_old, size))
             .constraintSize({ minHeight: this.manager ? 244 : 0 })
             .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');
   }

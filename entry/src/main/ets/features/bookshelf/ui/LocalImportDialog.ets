@@ -89,6 +89,7 @@ export struct LocalImportDialog {
   @State private measuredSummaryHeight: number = 68;
   @State private measuredFooterHeight: number = 76;
   @State private shellHeight: number = 228;
+  @State private measuredImportingHeight: number = 228;
   @State private importingOpacity: number = 1;
   @State private resultOpacity: number = 0;
   @State private resultInputReady: boolean = false;
@@ -96,7 +97,7 @@ export struct LocalImportDialog {
   private pickerAdmissionRevision: number = 0;
   private selectionFocusRevision: number = 0;
   private selectionFocusPending: boolean = true;
-  private motionGeneration: number = 0;
+  @State private motionGeneration: number = 0;
   private pendingHandoff: boolean = false;
   private handoffEndsAt: number = 0;
   private resultMeasured: boolean = false;
@@ -179,7 +180,7 @@ export struct LocalImportDialog {
         } else {
           // One persistent opaque shell owns the importing -> result handoff.
           ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
-            surfaceHeight: this.shellHeight, body: (): void => { this.progressLayers(); } });
+            surfaceHeight: this.state === 'importing' ? this.importingPanelHeight() : this.shellHeight, body: (): void => { this.progressLayers(); } });
         }
       }
       .width('100%')
@@ -201,6 +202,7 @@ export struct LocalImportDialog {
       const height = this.numericAreaLength(newValue.height);
       if (height > 0 && Math.abs(height - this.viewportHeight) >= .1) {
         this.viewportHeight = height;
+        if (this.state === 'importing') this.shellHeight = this.importingPanelHeight();
         if (this.state === 'result' && !this.pendingHandoff) this.shellHeight = this.resultPanelHeight();
       }
       const width = this.numericAreaLength(newValue.width);
@@ -326,18 +328,37 @@ export struct LocalImportDialog {
 
   @Builder
   private importingPanel() {
-    Column() {
-      this.importHeader('正在导入');
-      Column({ space: 16 }) {
-        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-        Text('请稍候，完成后将显示导入结果。')
-          .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
-          .lineHeight(MESSAGE_BODY.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
-      }.width('100%').padding({ left: 17, right: 17, top: 23, bottom: 14 });
-    }.width(this.panelFrame().width).height(228).alignItems(HorizontalAlign.Start)
-      .opacity(this.importingOpacity).hitTestBehavior(HitTestMode.None)
+    Scroll() {
+      Column() {
+        this.importHeader('正在导入');
+        Column({ space: 16 }) {
+          LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          Text('请稍候，完成后将显示导入结果。')
+            .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
+        }.width('100%').padding({ left: 17, right: 17, top: 23, bottom: 14 });
+      }.width('100%').constraintSize({ minHeight: 228 }).alignItems(HorizontalAlign.Start)
+        .onAreaChange(this.importingHeightChangeHandler());
+    }.width(this.panelFrame().width).height(this.importingPanelHeight()).align(Alignment.Top)
+      .scrollBar(BarState.Auto).opacity(this.importingOpacity)
+      .hitTestBehavior(this.state === 'importing' ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.resultInputReady ? 'no-hide-descendants' : 'auto');
+  }
+
+  private importingPanelHeight(): number {
+    return Math.min(this.availableHeight(), Math.max(228, this.measuredImportingHeight));
+  }
+
+  private importingHeightChangeHandler(): (oldValue: Area, area: Area) => void {
+    const generation = this.motionGeneration;
+    return (_oldValue: Area, area: Area): void => {
+      if (!this.mounted || this.state !== 'importing' || generation !== this.motionGeneration) return;
+      const height = this.numericAreaLength(area.height);
+      if (!Number.isFinite(height) || height <= 0 || Math.abs(height - this.measuredImportingHeight) < .1) return;
+      this.measuredImportingHeight = height;
+      this.shellHeight = this.importingPanelHeight();
+    };
   }
 
   @Builder
@@ -567,7 +588,7 @@ export struct LocalImportDialog {
     }
     if (this.state === 'importing') {
       this.wasImporting = true;
-      this.shellHeight = Math.min(228, this.availableHeight());
+      this.shellHeight = this.importingPanelHeight();
       this.importingOpacity = 1;
       this.resultOpacity = 0;
       return;

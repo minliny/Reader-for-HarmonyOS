@@ -261,7 +261,7 @@ export struct ReaderControlDirectoryContent {
   private toolbarHeight(): number {
     return this.selectedMinimum()?.full.toolbarHeightVp ??
       readerDirectoryToolbarBudget(this.availableWidth - 2, this.tab === 'directory',
-        this.directoryQueryHeight(), 80 * this.fontScale()).height + 2;
+        this.directoryQueryHeight(), 60 * this.fontScale()).height + 2;
   }
   private footerHeight(): number { return this.selectedMinimum()?.full.footerHeightVp ?? 48; }
   private bookmarkNaturalSize(): ReaderControlBookmarkNaturalSize | undefined {
@@ -646,14 +646,16 @@ export struct ReaderControlDirectoryContent {
         Text(title).fontFamily(TYPE_READER_DIRECTORY_TAB_COMPACT.fontFamily).fontWeight(TYPE_READER_DIRECTORY_TAB_COMPACT.fontWeight).fontSize(TYPE_READER_DIRECTORY_TAB_COMPACT.fontSizeFp).lineHeight(TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number)
           .minFontScale(1).maxFontScale(this.fontScale())
           .fontColor(this.tab === tab ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-      }.width('100%').height(this.tabHeight()).justifyContent(FlexAlign.Center)
+      }.width('100%').height(this.tabHeight() - this.value(13, 8)).justifyContent(FlexAlign.Center)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
       if (this.tab === tab) {
         Row().width('52%').height(2).borderRadius(999).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
-    }.width('100%').height(this.tabHeight()).hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    }.width(this.tabWidth()).height(this.tabHeight()).padding(0)
+    }.width('100%').height(this.tabHeight() - this.value(13, 8))
       .borderRadius(8).backgroundColor(this.tab === tab ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
+      .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+    }.width(this.tabWidth()).height(this.tabHeight()).padding(0)
+      .borderRadius(8).backgroundColor(Color.Transparent)
       .accessibilityText(title)
       .responseRegion( readerActionTouchRegion(this.tabWidth(), this.tabHeight()))
       .attributeModifier(new ReaderActionAccessibility(title, this.tabsInteractive(), this.tab === tab, true, undefined, 'nativeButton'))
@@ -673,7 +675,7 @@ export struct ReaderControlDirectoryContent {
         variant: 'full-directory',
         naturalFieldHeightVp: this.selectedMinimum()?.full.fieldHeightVp ?? 0,
         naturalInputHeightVp: this.selectedMinimum()?.full.inputHeightVp ?? 0,
-        inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp ?? 80 * this.fontScale(),
+        inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp ?? 60 * this.fontScale(),
         availableWidthVp: Math.max(0, this.availableWidth - 2),
         naturalToolbarHeightVp: this.selectedMinimum() === undefined ? 0 : this.toolbarHeight() - 2,
         text: this.draft, placeholder: this.placeholder(), ascending: this.ascending,

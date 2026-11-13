@@ -14,14 +14,14 @@ export interface ReaderDirectoryToolbarBudget {
 }
 
 /** The field pays for its icon/insets as well as useful editable text.
- * Search is separated from the three navigation actions as one fixed group. */
+ * Each of the four tools owns one non-overlapping 44vp carrier. */
 export function readerDirectoryToolbarBudget(width: number, chapterTools: boolean,
   fieldHeight: number, editableMinimum: number, naturalHeight: number = 0): ReaderDirectoryToolbarBudget {
   const field = Math.max(44, Number.isFinite(fieldHeight) ? fieldHeight : 44);
-  const text = Math.max(44, Number.isFinite(editableMinimum) ? editableMinimum : 80);
+  const text = Math.max(44, Number.isFinite(editableMinimum) ? editableMinimum : 60);
   const fieldMinimumWidth = 39 + text;
-  const actionsWidth = chapterTools ? 196 : 44;
-  const stacked = Number.isFinite(width) && width > 0 && width - 20 - 12 - actionsWidth < fieldMinimumWidth;
+  const actionsWidth = chapterTools ? 176 : 44;
+  const stacked = Number.isFinite(width) && width > 0 && width - 20 - 8 - actionsWidth < fieldMinimumWidth;
   const row = field + 6;
   return { stacked, height: Math.max(Number.isFinite(naturalHeight) ? naturalHeight : 0,
     stacked ? row * 2 + 8 : row), fieldMinimumWidth, actionsWidth };

@@ -3,7 +3,6 @@ import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
-import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
@@ -297,30 +296,41 @@ export struct SyncPage {
 
   @Builder
   private originalRecovery(identity: string) {
-    ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(), busy: this.snapshot.facts?.busy === true,
-      onReconcile: (generation: number): void => {
-        if (this.recoveryCurrent(identity)) this.onReconcile(generation);
-      } });
     if (this.canContinueConfigSave()) {
       ForEach(this.configSaveContinuationIdentities(), (continuationId: string): void => {
-        ReaderRecoveryAction({ label: '继续原操作', generation: this.configSaveGeneration(continuationId),
-          actionEnabled: this.snapshot.facts?.busy !== true,
-          onReconcile: (generation: number): void => {
-            if (this.recoveryCurrent(identity) && this.canContinueConfigSave()) this.onContinueConfigSave(generation,
-              this.effectiveWebdavUrl(), this.effectiveWebdavUser(), this.webdavPass, this.backupPass, this.effectiveWebdavPath());
-          } });
+        this.originalRecoveryNotice(identity, continuationId, 'config');
       }, (continuationId: string): string => continuationId);
+    } else if (this.canSkipBackupRetention()) {
+      ForEach(this.backupRetentionActionIdentities(), (retentionId: string): void => {
+        this.originalRecoveryNotice(identity, retentionId, 'retention');
+      }, (retentionId: string): string => retentionId);
+    } else {
+      this.originalRecoveryNotice(identity, '', 'none');
     }
-    if (this.canSkipBackupRetention()) {
-      // Keep each consent action tied to the original receipt identity.
-      ForEach(this.backupRetentionActionIdentities(), (_identity: string): void => {
-        ReaderRecoveryAction({ label: '保留备份，结束清理', generation: this.backupGeneration(_identity),
-          actionEnabled: this.snapshot.facts?.busy !== true,
-          onReconcile: (generation: number): void => {
-            if (this.recoveryCurrent(identity) && this.canSkipBackupRetention()) this.onSkipBackupRetention(generation);
-          } });
-      }, (identity: string): string => identity);
-    }
+  }
+
+  @Builder
+  private originalRecoveryNotice(identity: string, secondaryIdentity: string, kind: 'config' | 'retention' | 'none') {
+    ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(),
+      retainPrimaryAction: this.snapshot.facts?.busy === true,
+      actionEnabled: this.recoveryCurrent(identity) && this.feedbackView().canRetry,
+      secondaryActionEnabled: this.recoveryCurrent(identity),
+      secondaryActionLabel: kind === 'config' ? '继续原操作' : kind === 'retention' ? '保留备份，结束清理' : '',
+      onReconcile: (generation: number): void => {
+        if (this.recoveryCurrent(identity) && this.feedbackView().canRetry) this.onReconcile(generation);
+      },
+      onSecondaryAction: (): void => {
+        if (!this.recoveryCurrent(identity)) return;
+        if (kind === 'config' && this.canContinueConfigSave() &&
+          this.configSaveContinuationIdentities().indexOf(secondaryIdentity) >= 0) {
+          this.onContinueConfigSave(this.configSaveGeneration(secondaryIdentity), this.effectiveWebdavUrl(),
+            this.effectiveWebdavUser(), this.webdavPass, this.backupPass, this.effectiveWebdavPath());
+        }
+        if (kind === 'retention' && this.canSkipBackupRetention() &&
+          this.backupRetentionActionIdentities().indexOf(secondaryIdentity) >= 0) {
+          this.onSkipBackupRetention(this.backupGeneration(secondaryIdentity));
+        }
+      } });
   }
 
   @Builder

@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "owner": "Reader UI design authorities and page reviewers",
+  "sourceDerivedFigma": {
+    "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+    "sourceBaseline": "2a21ed0",
+    "scopeTextNode": "5005:4",
+    "kind": "source-derived",
+    "wholePageApproval": false
+  },
+  "references": [
+    {
+      "id": "approved-messages",
+      "path": "docs/message-ui/approved-scope-20261019.json",
+      "sha256": "f99fb50be5e66fdd6eb8e34fef69bc40162042d4385b6cb2755960cf93ddc6f7",
+      "kind": "approval-record",
+      "scope": "恢复提示/页面状态/确认及任务消息的指定局部配方",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    },
+    {
+      "id": "approved-directory-toolbar",
+      "path": "tools/fixtures/reader-directory-toolbar-hierarchy-20260905.json",
+      "sha256": "e1e0db2b114f11b80f86e93a38a3269c4eeeb74310a3be7f92a842b12f855af6",
+      "kind": "original-design-extract",
+      "scope": "目录工具栏整组比例与控件角色",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    },
+    {
+      "id": "approved-download",
+      "path": "docs/ui-design/shared-download/demo.html",
+      "sha256": "e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b",
+      "kind": "approved-design",
+      "scope": "下载普通/管理及其行绘制范围，后继D3常态列表优先",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    },
+    {
+      "id": "download-authorization",
+      "path": "docs/evidence/shared-download-ui-20261006.md",
+      "sha256": "866ac74df04930c051530dee7b0d46187e358faa928763f5b3999fda622ce000",
+      "kind": "approval-record",
+      "scope": "下载共享页授权范围",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    },
+    {
+      "id": "detail-successor",
+      "path": "docs/history/worktrees/manga-directory-rules-20261007/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
+      "sha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
+      "kind": "partial-approval",
+      "scope": "详情指定字体载体与共享表现，不含当前整页Hero验收",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    },
+    {
+      "id": "search-successor",
+      "path": "docs/history/worktrees/manga-directory-rules-20261007/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
+      "sha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
+      "kind": "partial-approval",
+      "scope": "搜索自然输入高度/三层页头与封面身份的指定范围",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    },
+    {
+      "id": "existing-app-classification",
+      "path": "docs/ui-design/app-baseline/CLASSIFICATION.md",
+      "sha256": "17920e1f8399b1abbebe79202a69d89d815208ffb96d580522072e5809657f10",
+      "kind": "observed-and-direction",
+      "scope": "区分已观察、方向确认和逐属性未确认",
+      "approvalScope": "COMPONENT_OR_PROPERTY"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "source-management",
+      "referenceIds": [
+        "approved-messages",
+        "existing-app-classification"
+      ],
+      "approvalScope": "PARTIAL",
+      "wholePageApproved": false,
+      "currentComparison": "CODE_REVIEW_ONLY",
+      "nativeAcceptance": "OPEN",
+      "knownGap": "GAP-03",
+      "wholePageReferenceIds": [],
+      "currentCandidate": null,
+      "comparisonEvidenceRef": null,
+      "nativeEvidenceRef": null
+    },
+    {
+      "id": "directory",
+      "referenceIds": [
+        "approved-messages",
+        "approved-directory-toolbar"
+      ],
+      "approvalScope": "PARTIAL",
+      "wholePageApproved": false,
+      "currentComparison": "CODE_REVIEW_ONLY",
+      "nativeAcceptance": "OPEN",
+      "knownGap": "GAP-03",
+      "wholePageReferenceIds": [],
+      "currentCandidate": null,
+      "comparisonEvidenceRef": null,
+      "nativeEvidenceRef": null
+    },
+    {
+      "id": "downloads",
+      "referenceIds": [
+        "approved-messages",
+        "approved-download",
+        "download-authorization"
+      ],
+      "approvalScope": "PARTIAL",
+      "wholePageApproved": false,
+      "currentComparison": "CODE_REVIEW_ONLY",
+      "nativeAcceptance": "OPEN",
+      "knownGap": "局部批准与D3已确认，当前全页字号/材质/像素与交互验收开放",
+      "wholePageReferenceIds": [],
+      "currentCandidate": null,
+      "comparisonEvidenceRef": null,
+      "nativeEvidenceRef": null
+    },
+    {
+      "id": "source-tools",
+      "referenceIds": [
+        "approved-messages",
+        "existing-app-classification"
+      ],
+      "approvalScope": "PARTIAL",
+      "wholePageApproved": false,
+      "currentComparison": "CODE_REVIEW_ONLY",
+      "nativeAcceptance": "OPEN",
+      "knownGap": "GAP-03",
+      "wholePageReferenceIds": [],
+      "currentCandidate": null,
+      "comparisonEvidenceRef": null,
+      "nativeEvidenceRef": null
+    }
+  ],
+  "routes": [
+    {
+      "route": "bookshelf",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "search",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "detail",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "bookshelfManagement",
+      "sourceReachability": "RETAINED_ENTRY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "bookshelfMultiSelect",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "bookshelfSettings",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "downloads",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "reading",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "directory",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "source",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "sourceTools",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "settings",
+      "sourceReachability": "PRODUCT_JOURNEY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "rulesManagement",
+      "sourceReachability": "RETAINED_ENTRY",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "discover",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "rss",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "rssSubscriptionManagement",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "rssSubscriptionEditor",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "rssSourceFeed",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "rssEntryDetail",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    },
+    {
+      "route": "sync",
+      "sourceReachability": "PRODUCT_GATE_CLOSED",
+      "designStatus": "PARTIAL_OR_OPEN",
+      "auditRef": "docs/architecture/ui-design-comparison-audit-20261113.md",
+      "nativeAcceptance": "OPEN"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP-01",
+      "scope": "当前书架/搜索/详情整页组合",
+      "status": "OPEN_APPROVAL",
+      "reason": "可解析局部后继授权已登记，未追回唯一的当前整页批准版本"
+    },
+    {
+      "id": "GAP-02",
+      "scope": "漫画更多/模式/设置及部分宽屏",
+      "status": "OPEN_APPROVAL",
+      "reason": "方向确认和既有实景存在，具体最终属性批准未追回"
+    },
+    {
+      "id": "GAP-03",
+      "scope": "二级表单/工具JSON/平台登录/诊断及保留新状态",
+      "status": "OPEN_APPROVAL",
+      "reason": "公共组件局部依据可用，完整状态装配批准不足"
+    },
+    {
+      "id": "GAP-04",
+      "scope": "跨书书签禁写后的原实体与恢复路径",
+      "status": "CODE_VERIFIED_NATIVE_OPEN",
+      "reason": "现行/旧版原记录的精确身份、只读核对、合格/未派发/无可用回执分类和原书引导已独立审修与定向验证，Native/用户接受开放"
+    }
+  ]
+}

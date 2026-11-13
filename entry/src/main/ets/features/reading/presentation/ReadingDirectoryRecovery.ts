@@ -1,5 +1,6 @@
+import type { ReadingOperationContext } from '../application/ReadingOperationIntents';
 import type { ReadingBookDetail } from './ReadingBookDetail';
-import type { ReaderDirectoryOperation } from '../application/ReaderDirectoryHost';
+import type { ReaderDirectoryOperation, ReaderOriginalBookmarkRecovery } from '../application/ReaderDirectoryHost';
 import type { ReadingOfflineOperation } from '../application/ReadingOfflineHost';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
@@ -14,6 +15,9 @@ export interface ReadingDirectoryRecovery {
   canContinueBookmarks: boolean;
   canContinueOffline: boolean;
   bookmarkWriteEnabled: boolean;
+  /** Read-only guidance about a foreign original operation. Never grants retry. */
+  bookmarkWriteBlockReason?: string;
+  originalBookmarks?: ReaderOriginalBookmarkRecovery;
   offlineBlocked?: boolean;
   bookmarksKind?: ReadingDirectoryMessageKind;
   offlineKind?: ReadingDirectoryMessageKind;
@@ -32,7 +36,7 @@ export const EMPTY_READING_DIRECTORY_RECOVERY: ReadingDirectoryRecovery = { pres
   bookmarkWriteEnabled: false, bookmarksBusy: false, offlineBusy: false };
 
 export function readingDirectoryRecovery(presentationId: string, book: ReadingBookDetail,
-  directory?: ReaderDirectoryOperation, offline?: ReadingOfflineOperation, bookmarkWriteEnabled: boolean = false): ReadingDirectoryRecovery {
+  directory?: ReaderDirectoryOperation, offline?: ReadingOfflineOperation, bookmarkWriteEnabled: boolean = false, blockingBookmarkBook?: ReadingOperationContext, originalBookmarks?: ReaderOriginalBookmarkRecovery): ReadingDirectoryRecovery {
   const dir = directory !== undefined && directory.book.sourceId === book.sourceId && directory.book.bookId === book.bookId &&
     directory.book.title === book.title && directory.book.author === book.author ? directory : undefined;
   const cached = offline !== undefined && offline.sourceId === book.sourceId && offline.bookId === book.bookId ? offline : undefined;
@@ -89,7 +93,14 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
   }
   bookmarks = { ...bookmarks, visible: bookmarksKind !== 'none' };
   cache = { ...cache, visible: offlineKind !== 'none' };
-  return { presentationId, bookmarks, offline: cache, bookmarksKind, offlineKind, bookmarkWriteEnabled,
+  const pendingBook = blockingBookmarkBook ?? (directory !== undefined &&
+    (directory.projection.receipt.confirmation === 'unknown' || directory.canContinueOriginal === true) ? directory.book : undefined);
+  const foreignBookmarkPending = !bookmarkWriteEnabled && pendingBook !== undefined &&
+    (pendingBook.sourceId !== book.sourceId || pendingBook.bookId !== book.bookId || pendingBook.title !== book.title || pendingBook.author !== book.author);
+  const bookmarkWriteBlockReason = originalBookmarks !== undefined ?
+    '存在旧版书签原操作记录。请在当前阅读页“更多 → 待处理事项”中核对原记录。' : foreignBookmarkPending ?
+    `${pendingBook!.title?.trim() ? `《${pendingBook!.title}》` : '另一书籍'}${pendingBook!.author?.trim() ? `（${pendingBook!.author}）` : ''}的原书签操作尚未确认。请打开原书的阅读页，在“更多 → 待处理事项”中核对原记录。` : undefined;
+  return { presentationId, bookmarks, offline: cache, bookmarksKind, offlineKind, bookmarkWriteEnabled, bookmarkWriteBlockReason, originalBookmarks,
     bookmarksReadbackFailed, offlineReadbackFailed,
     bookmarksBusy: dir?.recoveryAction !== undefined || dir?.projection.receipt.readback === 'reading',
     offlineBusy: cached?.recoveryAction !== undefined || cached?.projection.receipt.readback === 'reading',

@@ -30,8 +30,9 @@ interface ReaderSegmentSpec {
   surface?: ReaderAppColorRole;
   border?: ReaderAppColorRole;
 }
+export const READER_APP_THEME_SEGMENT_WIDTH = 168;
 const APP_THEME_SEGMENT: ReaderSegmentSpec = {
-  width: 168, padding: 2, radius: 8, itemRadius: 6, borderWidth: 1,
+  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 2, radius: 8, itemRadius: 6, borderWidth: 1,
   activeText: 'app.segment.activeText',
   inactiveText: 'app.segment.inactiveText',
   selectedSurface: 'app.segment.selected',

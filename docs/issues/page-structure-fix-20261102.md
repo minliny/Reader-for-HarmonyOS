@@ -2451,3 +2451,8 @@ Minimal scope: only sourceGroup Panel requested outer minimum becomes44+2*TOK_BO
 14.47 Corrected final freeze for candidate15: SourceGroup outer46−two1vp borders pays actual inner44; new proof176/22refs has independent old44→42 rejection, actualSDK16 parent-chain contexts and10adapter negatives. Final register1230f585.../control9272482f...rev12, Panel6f639352... and report47e0699c... bind current code/proofs; refsPASS and exact38old diagnostics remain with no stale/ref/model/new error. Prior12ce formalPASS boundary stays revoked for its eight group-option samples. All repository production/tools/active/docs freeze during canonical15; artifacts only. Candidate14 remains published/uninstalled history, never silently substituted.
 
 Current-session original system font has been restored: actual Settings sliders2/1/1, followed by foreground App and aa config readback1.000000. New receipts font-final-restore-ui/font-final-verify bind this session (not older HAP7 restoration); mutable font-restoration-required ledger is RESTORED_CONFIRMED. Large1.45 Native scopes remain retained; final changed-host/policy tests will run at original1.0, no more system setting changes. Raw restore evidence remains local/private.
+
+
+## 全量 UI 对比修复补充（2026-11-13）
+
+当前代码侧实施与独立审修详见[全应用UI对比修复](../architecture/ui-design-full-fix-20261113.md)。审计15个当前条目及1个保留条目已完成源侧修复，包含共享恢复表面、阅读/目录/TTS、下载/导入/徽标、主题行与书源统计，另补旧书签元数据兼容和精确原记录核对。独立审修发现的装配、目标归属、回执分类与测量代次遗漏已纳入对应准确回归。完整页批准、Native尺寸/字形/触摸/焦点/系统返回及用户接受继续按各层记录。

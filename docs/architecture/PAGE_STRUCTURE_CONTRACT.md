@@ -1351,3 +1351,11 @@ Stage 4代码与本地验证结果见实施方案14.10：共享source控件由44
 - 尺寸审计：`../issues/ui-dimensions-all-pages-20261101.md`
 - 书源布局审计：`../issues/source-management-layout-20261101.md`
 - 结构修复实施方案：`../issues/page-structure-fix-20261102.md`
+
+## 独立设计来源与局部宿主补充
+
+2026-11-13，全应用对比审计补充。层11的 `visual.facts.designContractRef` 解析到 `tools/contracts/design-authority.json`。登记局部批准范围、独立原稿、源码衍生画板、后继裁决和当前候选对比状态，引用文件保留SHA。当前四个页面族及21个宿主登记均保留原visual结果，局部批准不能升级成整页批准。整页PASS的comparison/native证据分别提供可解析path/SHA，证据JSON同时匹配pageId、sourcePath、主文件SHA、归一后的完整inputs及契约全部designInputs(path/SHA)。共享依赖、原稿或批准来源变化会使旧证据失效。
+
+`check-register` 在现有显式调用时校验设计引用，拒绝缺独立批准范围或当前候选证据的整页visual PASS。`test-design-authority --case authority` 是本次具体正反回归，默认不执行。20个业务路由均在来源登记中有处置，当前缺失的整页批准来源继续列为OPEN_APPROVAL。
+
+自定义临时表面需要分别登记自己的正文与覆盖区域。`overlay-assembly-contracts.json.localContentContracts` 指定file、owner及实际正文Builder，`check-overlay-assembly` 从这些正文Builder单独追踪。整个编辑器或cover采用position，不豁免其内部恢复提示的流内装配。当前登记TXT规则与TTS配置正文，准确回归 `test-overlay-assembly --case local-content` 包含真实宿主正例和插回Notice负例。检查范围仍是声明装配，原生实际几何、触摸与焦点各自取证。

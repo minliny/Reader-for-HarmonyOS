@@ -375,6 +375,9 @@ export struct ReaderControlPanel {
   onExitReading: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
   onSourceSwitch: (focusId?: string) => void = (): void => {};
+  @Prop recoveryAvailable: boolean = false;
+  @Prop @Watch('onRecoveryIdentityChanged') recoveryIdentity: string = '';
+  onOpenRecovery: (identity: string) => void = (_identity: string): void => {};
   onRefreshChapter: () => void = (): void => {};
   onOpenBookInfo: () => void = (): void => {};
   onDownloadBook: () => void = (): void => {};
@@ -383,6 +386,7 @@ export struct ReaderControlPanel {
   @Prop bookDownloadActive: boolean = false;
   @State private moreMenuVisible: boolean = false;
   private moreMenuGeneration: number = 0;
+  private moreMenuRecoveryIdentity: string = '';
   private previousTopBarVisibility: boolean = true;
   private moreMenuMeasuredWidth: number = 0;
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
@@ -1375,11 +1379,17 @@ export struct ReaderControlPanel {
     });
   }
 
+  private onRecoveryIdentityChanged(): void {
+    if (this.moreMenuVisible) this.setMoreMenuVisible(false);
+    this.moreMenuRecoveryIdentity = '';
+  }
+
   private setMoreMenuVisible(visible: boolean): void {
     if (this.moreMenuVisible === visible) return;
     if (visible && (!this.inputEnabled || this.controlObscured || this.temporaryLayerActive || this.frame().visibility <= 0)) return;
     if (visible) {
       this.moreMenuGeneration += 1;
+      this.moreMenuRecoveryIdentity = this.recoveryIdentity;
       this.moreMenuMeasuredWidth = 0;
     }
     this.moreMenuVisible = visible;
@@ -1391,13 +1401,17 @@ export struct ReaderControlPanel {
     if (generation === this.moreMenuGeneration) this.setMoreMenuVisible(false);
   }
 
-  private performMoreAction(action: 'info' | 'refresh' | 'download', generation: number = this.moreMenuGeneration): void {
+  private performMoreAction(action: 'info' | 'refresh' | 'download' | 'recovery', generation: number = this.moreMenuGeneration): void {
     if (generation !== this.moreMenuGeneration || !this.moreMenuVisible || !this.inputEnabled || this.controlObscured) return;
     if (action === 'refresh' && !this.chapterRefreshEnabled) return;
     if (action === 'download' && !this.bookDownloadEnabled) return;
+    if (action === 'recovery' && (!this.recoveryAvailable || this.moreMenuRecoveryIdentity.length === 0 ||
+      this.moreMenuRecoveryIdentity !== this.recoveryIdentity)) return;
+    const recoveryIdentity = this.moreMenuRecoveryIdentity;
     this.dismissMoreMenu(generation);
     if (action === 'info') this.onOpenBookInfo();
     else if (action === 'refresh') this.onRefreshChapter();
+    else if (action === 'recovery') this.onOpenRecovery(recoveryIdentity);
     else this.onDownloadBook();
   }
 
@@ -1408,6 +1422,7 @@ export struct ReaderControlPanel {
     if (this.moreMenuVisible && this.moreMenuMeasuredWidth <= 0) {
       const context = this.getUIContext();
       const labels: string[] = ['书籍信息', '刷新本章', '下载全部章节'];
+      if (this.recoveryAvailable) labels.push('待处理事项');
       let width: number = 0;
       labels.forEach((label: string): void => {
         const measured = context.getMeasureUtils().measureTextSize({
@@ -1452,19 +1467,22 @@ export struct ReaderControlPanel {
     };
   }
 
-  private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download'): boolean {
+  private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download' | 'recovery'): boolean {
     return this.inputEnabled && !this.controlObscured &&
       (action !== 'refresh' || this.chapterRefreshEnabled) &&
-      (action !== 'download' || this.bookDownloadEnabled);
+      (action !== 'download' || this.bookDownloadEnabled) &&
+      (action !== 'recovery' || this.recoveryAvailable);
   }
 
   private readerMoreActions(): ReaderMenuActionView[] {
-    return [
+    const actions: ReaderMenuActionView[] = [
       new ReaderMenuActionView('info', '书籍信息', this.readerMoreActionEnabled('info')),
       new ReaderMenuActionView('refresh', '刷新本章', this.readerMoreActionEnabled('refresh')),
       new ReaderMenuActionView('download', this.bookDownloadActive ? '正在下载章节…' : '下载全部章节',
         this.readerMoreActionEnabled('download')),
     ];
+    if (this.recoveryAvailable) actions.push(new ReaderMenuActionView('recovery', '待处理事项', this.readerMoreActionEnabled('recovery')));
+    return actions;
   }
 
   @Builder
@@ -1473,7 +1491,7 @@ export struct ReaderControlPanel {
       specId: 'reader-more-menu', scheme: this.appScheme, actions: this.readerMoreActions(),
       viewportHeight: Math.max(0, this.layout.viewportHeight - 36),
       onAction: (id: string): void => {
-        if (id === 'info' || id === 'refresh' || id === 'download') this.performMoreAction(id, generation);
+        if (id === 'info' || id === 'refresh' || id === 'download' || id === 'recovery') this.performMoreAction(id, generation);
       },
     });
   }
@@ -1579,12 +1597,12 @@ export struct ReaderControlPanel {
           .fontFamily(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontFamily : TYPE_READER_CONTROL_COLLAPSE_UI.fontFamily)
           .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontWeight : TYPE_READER_CONTROL_COLLAPSE_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontSizeFp : TYPE_READER_CONTROL_COLLAPSE_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.lineHeightFp : TYPE_READER_CONTROL_COLLAPSE_UI.lineHeightFp) as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center);
-      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44)
+      }.width(Math.max(40, (this.selectedMinimumProfile()?.collapseWidth ?? 44) - 4))
         .height(Math.max(26, (this.selectedMinimumProfile()?.collapseLabelHeight ?? (this.headerInter() ? 12 : 14)) + 12))
         .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44).height(this.headerFrame().height - 4).padding(0)
-        .position({ x: Math.max(0, this.headerFrame().width - (this.selectedMinimumProfile()?.collapseWidth ?? 44)), y: 2 })
+      }.width(this.selectedMinimumProfile()?.collapseWidth ?? 44).height(this.headerFrame().height).padding(0)
+        .position({ x: Math.max(0, this.headerFrame().width - (this.selectedMinimumProfile()?.collapseWidth ?? 44)), y: 0 })
         .backgroundColor(Color.Transparent).borderRadius(8)
         .id('reader-control-collapse')
         .hitTestBehavior(HitTestMode.Block)
@@ -1600,9 +1618,9 @@ export struct ReaderControlPanel {
     const profile = this.selectedMinimumProfile();
     if (profile !== undefined) {
       frame.action.width = profile.collapseWidth;
-      frame.action.height = Math.max(44, this.frame().header.height - 4);
+      frame.action.height = Math.max(44, this.frame().header.height);
       frame.action.x = Math.max(0, this.frame().header.width - frame.action.width);
-      frame.action.y = 2;
+      frame.action.y = 0;
       frame.title.height = Math.max(frame.title.height, profile.titleHeight);
     }
     return frame;

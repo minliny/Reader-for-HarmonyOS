@@ -8,6 +8,7 @@ import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 @Component
 export struct ReaderPageState {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @Prop variant: 'default' | 'readingBookmark' = 'default';
   @Prop title: string = '';
   @Prop message: string = '';
   @Prop loading: boolean = false;
@@ -30,7 +31,7 @@ export struct ReaderPageState {
   private emptySlot() {}
 
   build() {
-    Column({ space: 12 }) {
+    Column({ space: this.variant === 'readingBookmark' ? 0 : 12 }) {
       this.leading();
       if (this.loading) {
         LoadingProgress().width(32).height(32)
@@ -48,23 +49,25 @@ export struct ReaderPageState {
         Text(this.message).width('100%').textAlign(TextAlign.Center)
           .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
           .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
-          .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+          .margin({ top: this.variant === 'readingBookmark' && this.title.length > 0 ? 9 : 0 });
       }
       if (!this.loading && this.customActions) {
         this.actionContent();
       } else if (!this.loading && (this.actionLabel.length > 0 || this.secondaryActionLabel.length > 0)) {
         Flex({ justifyContent: FlexAlign.Center, wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(10), cross: LengthMetrics.vp(10) } }) {
           if (this.actionLabel.length > 0) {
-            ReaderRecoveryAction({ label: this.actionLabel, actionEnabled: this.actionEnabled, focusId: this.actionFocusId,
+            ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.actionLabel, actionEnabled: this.actionEnabled, focusId: this.actionFocusId,
               onReconcile: (): void => this.onAction() });
           }
           if (this.secondaryActionLabel.length > 0) {
-            ReaderRecoveryAction({ label: this.secondaryActionLabel, actionEnabled: this.secondaryActionEnabled,
+            ReaderRecoveryAction({ variant: this.variant === 'readingBookmark' ? 'readingState' : 'compact', minimumWidth: this.variant === 'readingBookmark' ? 92 : 44, label: this.secondaryActionLabel, actionEnabled: this.secondaryActionEnabled,
               onReconcile: (): void => this.onSecondaryAction() });
           }
-        }.width('100%');
+        }.width('100%').margin({ top: this.variant === 'readingBookmark' ? 23 : 0 });
       }
     }.width('100%').padding({ left: this.padded ? 20 : 0, right: this.padded ? 20 : 0,
-      top: this.padded ? 24 : 0, bottom: this.padded ? 24 : 0 });
+      top: this.padded ? (this.variant === 'readingBookmark' ? 30 : 24) : 0,
+      bottom: this.padded ? (this.variant === 'readingBookmark' ? 30 : 24) : 0 });
   }
 }

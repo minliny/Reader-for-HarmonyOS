@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "scope": "Current explicit ETS module inventory. Automatic frame-slot Builder tracing includes ReaderStandardPage overlayContent and boundedOverlayContent, plus the named base-geometry contracts. Unknown dynamic Builders remain UNRESOLVED.",
+  "scope": "Current explicit ETS module inventory. Automatic frame-slot Builder tracing includes ReaderStandardPage overlayContent and boundedOverlayContent, plus the named base-geometry contracts. Unknown dynamic Builders remain UNRESOLVED. Named local content Builders are independently traced inside temporary editors and native covers.",
   "checkedSlots": [
     "header",
     "content",
@@ -246,6 +246,7 @@
     "entry/src/main/ets/ui/controls/StatusBadge.ets",
     "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
     "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryGroup.ets",
     "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
     "entry/src/main/ets/ui/feedback/ReaderTransientToast.ets",
     "entry/src/main/ets/ui/foundation/MangaDirectoryPressFeedback.ets",
@@ -307,6 +308,22 @@
       "overlayMembers": [
         "recovering",
         "recoveryNoticeHeight"
+      ]
+    }
+  ],
+  "localContentContracts": [
+    {
+      "file": "entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets",
+      "owner": "ReaderFullDirectory",
+      "methods": [
+        "directoryRulesForm"
+      ]
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
+      "owner": "ReaderTtsConfigOverlay",
+      "methods": [
+        "configurationBody"
       ]
     }
   ]

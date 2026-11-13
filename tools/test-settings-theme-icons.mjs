@@ -2,14 +2,15 @@ import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
+import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 const source=readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsPage.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js'),ts=require(sdk+'/node_modules/typescript');
-for(const [name,props] of [['ReaderFormRow',['icon','label']],['ReaderToggle',['value','specId','inputIdentity','accessibilityLabel','actionEnabled','isBusy']]]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set(props));}
+for(const [name,props] of [['ReaderFormRow',['icon','label','contentMinWidth']],['ReaderToggle',['value','specId','inputIdentity','accessibilityLabel','actionEnabled','isBusy']]]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set(props));}
 syntax.builderParamObjectCollection.set('ReaderFormRow',new Set(['content']));
 class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-const {owner}=createReaderBuilderProbe(source,['segmentRow','switchRow'],{ReaderFormRow:Child,ReaderToggle:Child});
+const {owner}=createReaderBuilderProbe(source,['segmentRow','switchRow'],{...switchSpecs(),ReaderFormRow:Child,ReaderToggle:Child});
 Object.assign(owner,{temporaryBackIdentity:'theme-icon-page',appThemeScheme:'day',settingCanToggle:()=>true,settingToggleBusy:()=>false,settingValue:()=>false,toggleSetting:()=>{},appThemeControl:()=>{}});
 const tree=ts.createSourceFile('SettingsPage.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 const calls=[];function walk(n){if(ts.isCallExpression(n)&&['segmentRow','switchRow'].includes(n.expression?.name?.text))calls.push(n);ts.forEachChild(n,walk);}walk(tree);

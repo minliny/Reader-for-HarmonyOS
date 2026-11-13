@@ -59,7 +59,7 @@ function classOf(source,name,deps){const start=source.indexOf(`export class ${na
 export function boundedSurfaceSdk(options={}){
   const properties=options.properties??createArkUIPropertyRuntimeProbe();
   const childSources=Object.fromEntries([
-    ...['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderPageState'].map(name=>[name,options[name]??read('ui/feedback',name)]),
+    ...['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderRecoveryGroup','ReaderPageState'].map(name=>[name,options[name]??read('ui/feedback',name)]),
     ...['ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderActionMenuSurface']
       .map(name=>[name,options[name]??read('ui/surfaces',name)]),
   ]);

@@ -362,31 +362,46 @@ export struct ReaderFullDirectory {
 
   @Builder
   private directoryRulesLayer(identity: string, bookId: string) {
-    Scroll() {
-      Column({ space: 8 }) {
-        this.directoryRulesNotice(identity, this.directoryRulesRecovery);
-        ReaderDirectoryRules({ bookId,
-          availableWidthVp: this.panelWidth(), availableHeightVp: this.panelViewportHeight(),
-          interactionEnabled: this.directoryRulesVisible && this.interactive,
-          focusTargetId: this.directoryRulesFocusId(identity, true),
-          isPresentationCurrent: (): boolean => this.directoryRulesCurrent(identity, bookId),
-          onApplied: (): void => {
-            if (this.directoryRulesCurrent(identity, bookId)) this.directoryRulesRevision += 1;
-          },
-          onRecoveryChanged: (recovery: ReaderDirectoryRulesRecoveryProjection | undefined): void => {
-            this.admitDirectoryRulesRecovery(identity, bookId, recovery);
-          },
-        });
-      }.width('100%').alignItems(HorizontalAlign.Start);
+    Stack({ alignContent: Alignment.TopStart }) {
+      Scroll() {
+        this.directoryRulesForm(identity, bookId);
+      }.width(this.panelWidth()).height(this.panelViewportHeight())
+        .align(Alignment.TopStart).scrollBar(BarState.Auto);
+      if (this.directoryRulesRecovery?.view.visible) {
+        Scroll() { this.directoryRulesNotice(identity, this.directoryRulesRecovery); }
+          .width(Math.max(0, this.panelWidth() - 16))
+          .constraintSize({ maxHeight: Math.max(0, this.panelViewportHeight() - 44) })
+          .position({ x: 8, y: 44 }).zIndex(1).scrollBar(BarState.Auto)
+          .hitTestBehavior(HitTestMode.Default)
+          .onTouch((event: TouchEvent): void => event.stopPropagation());
+      }
     }.width(this.panelWidth()).height(this.panelViewportHeight())
       .position({ x: this.panelLeft(), y: this.panelTop() })
-      .align(Alignment.TopStart).scrollBar(BarState.Auto)
       .attributeModifier(new ReaderPanelFrame('reader', this.appThemeScheme)).clip(true)
       .visibility(this.directoryRulesVisible ? Visibility.Visible : Visibility.None)
       .enabled(this.directoryRulesVisible && this.interactive)
       .accessibilityLevel(this.directoryRulesVisible && this.interactive ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.directoryRulesVisible && this.interactive ? HitTestMode.Default : HitTestMode.None);
   }
+
+  @Builder
+  private directoryRulesForm(identity: string, bookId: string) {
+    Column() {
+      ReaderDirectoryRules({ bookId,
+        availableWidthVp: this.panelWidth(), availableHeightVp: this.panelViewportHeight(),
+        interactionEnabled: this.directoryRulesVisible && this.interactive,
+        focusTargetId: this.directoryRulesFocusId(identity, true),
+        isPresentationCurrent: (): boolean => this.directoryRulesCurrent(identity, bookId),
+        onApplied: (): void => {
+          if (this.directoryRulesCurrent(identity, bookId)) this.directoryRulesRevision += 1;
+        },
+        onRecoveryChanged: (recovery: ReaderDirectoryRulesRecoveryProjection | undefined): void => {
+          this.admitDirectoryRulesRecovery(identity, bookId, recovery);
+        },
+      });
+    }.width('100%').alignItems(HorizontalAlign.Start);
+  }
+
 
 
   @Builder

@@ -1,4 +1,4 @@
-import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationPendingError } from './ReadingOperationIntents';
+import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingOperationPendingError } from './ReadingOperationIntents';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../../app/ReaderPersistedReceiptProjection';
@@ -18,6 +18,15 @@ export interface ReaderDirectoryOperation {
   canContinueOriginal?: boolean;
   recoveryAction?: 'reconcile' | 'continue';
   projection: PersistedReceiptProjection<LocalReadingTocEntry[]>;
+}
+
+/** A legacy record with no provable display identity stays in its original
+ * global operation owner. It is never projected as the current book's result. */
+export interface ReaderOriginalBookmarkRecovery {
+  identity: string;
+  generation: number;
+  busy: boolean;
+  message: string;
 }
 
 export interface ReaderDirectoryBinding {
@@ -74,8 +83,87 @@ export class ReaderDirectoryHost {
   private operation: ReaderDirectoryOperation | undefined;
   private bookmarkProjectionStale: boolean = false;
   private pendingBookmarkIntent: boolean | undefined;
+  private pendingBookmarkBook: ReadingOperationContext | undefined;
 
   constructor(dependencies: ReaderDirectoryDependencies) { this.dependencies = dependencies; }
+
+  static currentForRuntime(runtime: ReadingGatewayRuntime): ReaderDirectoryHost | undefined {
+    return ReaderDirectoryHost.retainedRuntime === runtime ? ReaderDirectoryHost.retainedHost : undefined;
+  }
+
+  private originalBookmarkIntent: ReadingOperationIntent | undefined;
+  private originalBookmarkState: ReaderOriginalBookmarkRecovery | undefined;
+
+  originalBookmarkRecovery(): ReaderOriginalBookmarkRecovery | undefined {
+    return this.originalBookmarkState === undefined ? undefined : { ...this.originalBookmarkState };
+  }
+
+  async reconcileOriginalBookmark(generation: number, identity: string,
+    binding: ReaderDirectoryBinding): Promise<'confirmed' | 'confirmedReadbackFailed' | 'notDispatched' | 'pending' | 'rejected'> {
+    const state = this.originalBookmarkState, expected = this.originalBookmarkIntent;
+    if (this.active || !this.admitted(binding) || state === undefined || expected === undefined ||
+      state.generation !== generation || state.identity !== identity || state.busy) return 'rejected';
+    this.active = true;
+    this.originalBookmarkState = { ...state, busy: true };
+    this.publishWriteAdmission(binding);
+    try {
+      const result = await this.dependencies.gateway.reconcileOriginalBookmarkOperation(expected,
+        (): boolean => this.admitted(binding));
+      if (result.kind === 'notDispatched') return 'notDispatched';
+      if (result.kind !== 'confirmed') return 'rejected';
+      // A legacy delete carries only a global time key. Refresh the current
+      // canonical projection before its own owner can admit a new mutation.
+      this.bookmarkProjectionStale = true;
+      try {
+        await this.read(binding, (): boolean => this.admitted(binding), false);
+      } catch (_readback) { return 'confirmedReadbackFailed'; }
+      return 'confirmed';
+    } catch (_error) {
+      if (this.originalBookmarkState?.identity === identity) this.originalBookmarkState = { ...state,
+        message: '这条原书签操作尚未取得合格回执，可再次核对。当前页面未派发新的书签操作。' };
+      return 'pending';
+    } finally {
+      await this.refreshWriteAdmission(binding);
+      if (this.originalBookmarkState?.identity === identity) this.originalBookmarkState = { ...this.originalBookmarkState, busy: false };
+      this.active = false;
+      this.publishWriteAdmission(binding);
+      this.drainPendingRead();
+    }
+  }
+
+  private pendingBookmarkContext(pending: ReadingOperationIntent): ReadingOperationContext {
+    const context = { ...pending.context };
+    if (pending.method === 'bookmark.create' && typeof pending.params['bookName'] === 'string' &&
+      typeof pending.params['bookAuthor'] === 'string' &&
+      (context.title === undefined || context.title === pending.params['bookName']) &&
+      (context.author === undefined || context.author === pending.params['bookAuthor'])) {
+      if (context.title === undefined) context.title = pending.params['bookName'];
+      if (context.author === undefined) context.author = pending.params['bookAuthor'];
+    }
+    return context;
+  }
+
+  private recordPendingBookmark(pending: ReadingOperationIntent | undefined): void {
+    const context = pending === undefined ? undefined : this.pendingBookmarkContext(pending);
+    this.pendingBookmarkBook = context;
+    if (pending === undefined || (context?.title !== undefined && context.author !== undefined)) {
+      this.originalBookmarkIntent = undefined;
+      this.originalBookmarkState = undefined;
+      return;
+    }
+    const same = this.originalBookmarkIntent !== undefined && this.originalBookmarkIntent.method === pending.method &&
+      JSON.stringify(this.originalBookmarkIntent.params) === JSON.stringify(pending.params) &&
+      JSON.stringify(this.originalBookmarkIntent.context) === JSON.stringify(pending.context);
+    if (same) return;
+    const generation = ++this.generation;
+    this.originalBookmarkIntent = JSON.parse(JSON.stringify(pending)) as ReadingOperationIntent;
+    this.originalBookmarkState = { generation, identity: JSON.stringify([pending.params['operationId'], pending.params['sequence'], generation]),
+      busy: false, message: '旧版书签原操作记录缺少书名或作者，无法归入当前书籍。可核对这条原记录；本入口只核对原回执。' };
+  }
+
+  blockingBookmarkBook(): ReadingOperationContext | undefined {
+    return this.pendingBookmarkBook === undefined ? undefined : { ...this.pendingBookmarkBook };
+  }
 
   busy(): boolean { return this.active; }
   snapshot(): ReaderDirectoryOperation | undefined { return this.operation; }
@@ -217,10 +305,12 @@ export class ReaderDirectoryHost {
     try {
       const hasAuthority = this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true;
       const pending = await this.dependencies.gateway.pendingBookmarkOperation();
+      this.recordPendingBookmark(pending);
       this.pendingBookmarkIntent = hasAuthority && this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true ? pending !== undefined : undefined;
       if (pending === undefined) return;
-      if (pending.context.sourceId !== binding.book.sourceId || pending.context.bookId !== binding.book.bookId ||
-        pending.context.title !== binding.book.title || pending.context.author !== binding.book.author) {
+      const context = this.pendingBookmarkContext(pending);
+      if (context.sourceId !== binding.book.sourceId || context.bookId !== binding.book.bookId ||
+        context.title !== binding.book.title || context.author !== binding.book.author) {
         // That original write retains its own owner. It cannot turn this
         // book's independent canonical list read into a loading failure.
         return;
@@ -228,7 +318,10 @@ export class ReaderDirectoryHost {
       const evidence = new ReaderWriteEvidence();
       try {
         reconciled = true;
-        const recovered = await this.dependencies.gateway.reconcileBookmarkOperation(this.context(binding), current, evidence, continueOriginal);
+        const legacy = pending.context.title === undefined || pending.context.author === undefined;
+        if (legacy && continueOriginal) return;
+        const recovered = await this.dependencies.gateway.reconcileBookmarkOperation(legacy ? pending.context : this.context(binding),
+          current, evidence, continueOriginal, legacy ? pending : undefined);
         if (recovered === undefined) return;
         const requestedCount = previous?.requestedCount ?? pending.context.requestedCount ?? 1;
         const confirmedCount = Math.min(requestedCount, (previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0) +
@@ -248,7 +341,8 @@ export class ReaderDirectoryHost {
         const requestedCount = previous?.requestedCount ?? pending.context.requestedCount ?? 1;
         const confirmedCount = confirmed ? Math.min(requestedCount, (previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0) + (previous?.projection.receipt.confirmation === 'confirmed' ? 0 : 1)) : previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0;
         this.operation = { action: pending.context.ownerAction === 'createChapterStart' ? 'createChapterStart' : pending.method === 'bookmark.delete' ? 'delete' : 'createPosition',
-          book: { ...binding.book }, generation, requestedCount, confirmedCount, completion: confirmed ? (confirmedCount === requestedCount ? 'complete' : 'partial') : 'unknown', canContinueOriginal: !confirmed && issue.blocked !== true,
+          book: { ...binding.book }, generation, requestedCount, confirmedCount, completion: confirmed ? (confirmedCount === requestedCount ? 'complete' : 'partial') : 'unknown',
+          canContinueOriginal: pending.context.title !== undefined && pending.context.author !== undefined && !confirmed && issue.blocked !== true,
           recoveryAction: previous?.recoveryAction,
           projection: projectPersistedReceipt({ confirmation: confirmed ? 'confirmed' : 'unknown', readback: 'failed', generation, canRetry: true,
             message: issue.message, blockedReason: issue.blocked ? issue.message : undefined, refreshError: issue.message, value: binding.currentEntries(), stale: true }) };
@@ -257,6 +351,8 @@ export class ReaderDirectoryHost {
       }
     } catch (error) {
       this.pendingBookmarkIntent = undefined;
+      this.pendingBookmarkBook = undefined;
+      this.originalBookmarkIntent = undefined; this.originalBookmarkState = undefined;
       this.bookmarkProjectionStale = true; const issue = error as ReadingOperationPendingError;
       // A failed intent-file read supplies no transaction identity. Keep it a
       // retryable loading failure instead of inventing an unknown create for
@@ -382,10 +478,13 @@ export class ReaderDirectoryHost {
     try {
       const hasAuthority = this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true;
       const pending = await this.dependencies.gateway.pendingBookmarkOperation();
+      this.recordPendingBookmark(pending);
       this.pendingBookmarkIntent = hasAuthority && this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true ? pending !== undefined : undefined;
     }
     catch (error) {
       this.pendingBookmarkIntent = undefined;
+      this.pendingBookmarkBook = undefined;
+      this.originalBookmarkIntent = undefined; this.originalBookmarkState = undefined;
       this.deliver(binding, (): void => binding.failed?.(error as Error));
     }
   }

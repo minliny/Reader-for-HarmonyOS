@@ -14,7 +14,7 @@ const frameSlots = {
   BookshelfShell: ['content'],
 };
 const overlayComponents = new Set([
-  'ReaderRecoveryNotice', 'ReaderDirectoryRecoverySurface', 'RssOriginalRecoverySurface',
+  'ReaderRecoveryGroup', 'ReaderRecoveryNotice', 'ReaderDirectoryRecoverySurface', 'RssOriginalRecoverySurface',
   'ReaderTransientToast', 'ReaderDialogSurface', 'ReaderSelectPanel', 'ReaderSheetChrome',
 ]);
 const detachedMethods = new Set(['bindPopup', 'bindSheet', 'bindContentCover', 'overlay']);
@@ -32,7 +32,7 @@ function sourcePath(path) {
 /** Inspects declared Builder assembly and explicitly named base-geometry methods.
  * The installed ETS parser is the only parser. This does not execute Builders,
  * infer Native hit arbitration, or certify arbitrary runtime callback values. */
-export function inspectOverlayAssembly({ files, sourceOverrides = new Map(), geometryContracts = [],
+export function inspectOverlayAssembly({ files, sourceOverrides = new Map(), geometryContracts = [], localContentContracts = [],
   checkedSlots = [...new Set(Object.values(frameSlots).flat())] }) {
   if (!Array.isArray(files) || files.length === 0 || new Set(files).size !== files.length)
     throw new Error('Select a nonempty unique source file list');
@@ -45,6 +45,12 @@ export function inspectOverlayAssembly({ files, sourceOverrides = new Map(), geo
     if (typeof contract.owner !== 'string' || !Array.isArray(contract.methods) || contract.methods.length === 0 ||
       !Array.isArray(contract.overlayMembers) || contract.overlayMembers.length === 0)
       throw new Error('Geometry contracts require an owner, explicit methods and overlay members');
+  }
+  for (const contract of localContentContracts) {
+    sourcePath(contract.file);
+    if (!files.includes(contract.file) || typeof contract.owner !== 'string' ||
+      !Array.isArray(contract.methods) || contract.methods.length === 0)
+      throw new Error('Local content contracts require an explicitly selected file, owner and body Builders');
   }
   const { ts, options, require, root: sdkRoot } = installedEtsCompiler();
   const sdkComponents = require(`${sdkRoot}/lib/component_map.js`);
@@ -326,7 +332,7 @@ export function inspectOverlayAssembly({ files, sourceOverrides = new Map(), geo
           return;
         }
         if (overlayComponents.has(name)) {
-          if (!overlaySlot(state.slot) && state.slot !== 'positionedOverlay')
+          if (state.localContent || (!overlaySlot(state.slot) && state.slot !== 'positionedOverlay'))
             report('OVERLAY_IN_FLOW', module, node, { slot: state.slot, component: name, chain: state.chain,
               message: 'Overlay presentation is reachable from a measured page slot.' });
           return;
@@ -383,6 +389,22 @@ export function inspectOverlayAssembly({ files, sourceOverrides = new Map(), geo
         ts.forEachChild(node, visit);
       };
       visit(member.body);
+    }
+  }
+
+  // Temporary editors and native covers can own a nested content flow even
+  // when their whole surface is positioned independently of the page.
+  for (const contract of localContentContracts) {
+    const module = load(contract.file);
+    const owner = module.declarations.get(contract.owner);
+    if (!owner) {
+      report('UNRESOLVED', module, undefined, { message: `Local content owner missing: ${contract.owner}` });
+      continue;
+    }
+    for (const method of contract.methods) {
+      const chain = [`${contract.owner}.${method}:local-content`];
+      slots.push({ file: contract.file, owner: contract.owner, frame: 'localSurface', slot: 'content', chain });
+      follow(method, owner.members.get(method), owner, { slot: 'content', chain, localContent: true }, new Map(), new Set());
     }
   }
 
@@ -455,7 +477,7 @@ export function inspectOverlayAssembly({ files, sourceOverrides = new Map(), geo
   const unresolved = diagnostics.filter(row => row.rule === 'UNRESOLVED');
   return { status: failures.length ? 'FAIL' : unresolved.length ? 'UNRESOLVED' : 'PASS',
     scope: 'Explicit files, resolvable Builder assembly and declared base-geometry methods only.',
-    files, checkedSlots, slots, detached, genericSlots, diagnostics,
+    files, checkedSlots, localContentContracts, slots, detached, genericSlots, diagnostics,
     inputs,
     boundary: 'Source assembly only. Runtime values, actual geometry equality, Native pixels, hit arbitration and focus require separate evidence.' };
 }

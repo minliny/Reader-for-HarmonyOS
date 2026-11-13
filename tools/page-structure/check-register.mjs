@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { deriveStructure, prototypeForBrief } from './derive-structure.mjs';
 import { loadInputs, safePath, digest, diagnostic, printReport, isMain, registrations, isEmbeddedContent } from './lib.mjs';
+import { checkDesignAuthority } from './design-authority.mjs';
 import { checkLayoutEvidence } from './layout-evidence.mjs';
 
 // These rules consume typed declarations. Source bindings below independently
@@ -50,8 +51,13 @@ export function evaluatePage(page, model) {
 export function checkRegister(inputs = loadInputs(), { bindSource = true } = {}) {
   const diagnostics = [];
   const all = registrations(inputs.register);
+  const designDigests = new Map();
   for (const { page, host } of all) {
     diagnostics.push(...evaluatePage(page, inputs.model));
+    if (page.layers.visual.facts.designContractRef || page.layers.visual.result === 'PASS') {
+      diagnostics.push(...checkDesignAuthority(page, inputs.designAuthority, designDigests).map(item =>
+        diagnostic(item.rule, page.pageId, 'visual', 'designContractRef', item.message)));
+    }
     diagnostics.push(...checkLayoutEvidence(page, { bindSource }).diagnostics);
     for (const [id, record] of Object.entries(page.invariants)) {
       if (record.result === 'FAIL' && !diagnostics.some(d=>d.pageId===page.pageId && d.ruleId===id && d.result==='FAIL')) diagnostics.push(diagnostic(id, page.pageId, inputs.model.invariants.find(r=>r.id===id)?.layer, `invariants.${id}`, record.reason));

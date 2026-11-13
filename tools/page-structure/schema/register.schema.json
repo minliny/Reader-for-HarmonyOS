@@ -2039,6 +2039,10 @@
         "contrastEvidence": {
           "type": "string",
           "minLength": 1
+        },
+        "designContractRef": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [

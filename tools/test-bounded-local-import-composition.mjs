@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"picker-admission": {"description": "真实文件选择busy/current/关闭", "resources": []}, "result-receipts": {"description": "真实result DTO/Watch和late animation归属", "resources": []}, "scroll-origin": {"description": "完整SDK导入固定文档Scroll首区顶对齐，保留自然测量结果列表与居中进度", "resources": []}};
+const definitions = {"importing-growth": {"description": "真实进行文档自然增长、1x/2x短窗单Scroll、测量代次和持久shell", "resources": []}, "picker-admission": {"description": "真实文件选择busy/current/关闭", "resources": []}, "result-receipts": {"description": "真实result DTO/Watch和late animation归属", "resources": []}, "scroll-origin": {"description": "完整SDK导入固定文档Scroll首区顶对齐，保留自然测量结果列表与居中进度", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -21,6 +21,17 @@ const {LOCAL_IMPORT_FILE_FOCUS_ID}=selectedProductionValues(new URL('../entry/sr
 const frameSource=readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets',import.meta.url),'utf8');
 const resolverSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',import.meta.url),'utf8');
 const {readerSurfaceMaxHeight}=pureModuleProbe(resolverSource,'ReaderSurfaceResolvers.ts',{},['readerSurfaceMaxHeight']);
+const productTiming = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const { SOURCE_CHROME_VISUAL: SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts');
+const { DIRECTORY_CHROME_VISUAL: MANGA_DIRECTORY_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts');
+const { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportMotion.ts');
+const nativeCurves = { cubicBezierCurve: (...values) => ({ nativeCurveArguments: values }) };
+const nativeCurve = Object.fromEntries(['Linear', 'Ease', 'EaseIn', 'EaseInOut', 'EaseOut'].map(name => [name, `Curve.${name}`]));
+const motion = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
+  'MotionSpec.ets', { ...productTiming, SOURCE_SWITCH_VISUAL, MANGA_DIRECTORY_VISUAL, curves: nativeCurves, Curve: nativeCurve },
+  ['motionAnimateParam', 'motionAnimateParamDelayed', 'motionSpecGet']);
+const policy = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderMotionPolicy.ets', import.meta.url), 'utf8'),
+  'ReaderMotionPolicy.ets', { ...motion }, ['readerMotionCurve', 'readerMotionDurationMs']);
 const feedbackSource=readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts',import.meta.url),'utf8');
 const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
 const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,originalPending:o.originalPending,recovery:o.recovery,selectionEnabled:o.selectionEnabled,selectionBlockedMessage:o.selectionBlockedMessage});
@@ -32,11 +43,55 @@ function mount(params={},options={},input=source,viewportHeight=0){
     if(key==='readerTransientToast'&&value.visible)feedback.push(value.message);
   }};
   const feedbackDeps=pureModuleProbe(feedbackSource,'ReaderTransientFeedback.ts',{AppStorage},['ReaderTransientFeedback','READER_FEEDBACK_BRIEF_MS']);
-  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,localImportResultLayout,readerSurfaceMaxHeight,LOCAL_IMPORT_FILE_FOCUS_ID,
+  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,...motion,...policy,READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS,localImportResultLayout,readerSurfaceMaxHeight,LOCAL_IMPORT_FILE_FOCUS_ID,
     ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},readerMotionNowMs:()=>now,
     BorderStyle:{Dashed:'BorderStyle.Dashed'},Curve:{Linear:'Curve.Linear'},curves:{cubicBezierCurve:(...values)=>values},
     uiContext:{animateTo:(options,work)=>{animations.push(options);work();}}}, {state:'fileSelection',reduceMotion:true,...params});
   o.viewportHeight=viewportHeight;o.aboutToAppear();o.initialRender();return{p,o,animations,feedback,clock:n=>now=n};
+}
+if (selectedCase === 'importing-growth') {
+  for (const scale of [1, 2]) for (const viewport of [160, 400]) {
+    metrics.systemFontScale = scale;
+    const { p, o } = mount({ state: 'importing' }, {}, source, viewport);
+    const scroll = p.nodes(o).find(node => node.type === 'Scroll');
+    const document = p.nodes(o).find(node => node.type === 'Column' && node.onAreaChange);
+    const frame = p.walk(o).find(actor => actor instanceof p.deps.ReaderBoundedSurface);
+    const shell = [...frame.nodes.values()].find(node => node.type === 'Stack');
+    assert.ok(scroll && document && shell);
+    assert.equal(document.height, undefined, 'importing document retains natural native height');
+    assert.equal(document.constraintSize.minHeight, 228, 'approved regular minimum');
+    assert.equal(scroll.align, 'Alignment.Top');
+    assert.equal(scroll.hitTestBehavior, 'HitTestMode.Default', 'overflow document can actually scroll');
+    const naturalHeight = scale === 1 ? 228 : 250;
+    document.onAreaChange({}, { height: `${naturalHeight}vp` }); p.properties.flush();
+    assert.equal(o.measuredImportingHeight, naturalHeight);
+    assert.equal(scroll.height, Math.min(naturalHeight, o.availableHeight()));
+    assert.equal(shell.height, scroll.height, 'inner viewport and persistent shell share one cap');
+    assert.ok(scroll.height <= o.availableHeight());
+    document.onAreaChange({}, { height: NaN });
+    assert.equal(o.measuredImportingHeight, naturalHeight);
+    const beforeBackground = document.onAreaChange;
+    o.foreground = false; p.properties.flush();
+    const backgroundMeasure = document.onAreaChange;
+    assert.notEqual(backgroundMeasure, beforeBackground, 'current importing actor rebinds its measured receipt after a motion identity change');
+    beforeBackground({}, { height: 999 });
+    assert.equal(o.measuredImportingHeight, naturalHeight);
+    backgroundMeasure({}, { height: naturalHeight + 12 }); p.properties.flush();
+    assert.equal(o.measuredImportingHeight, naturalHeight + 12);
+    o.foreground = true; p.properties.flush();
+    document.onAreaChange({}, { height: naturalHeight }); p.properties.flush();
+    assert.equal(o.measuredImportingHeight, naturalHeight, 'foreground successor keeps a live natural-height receipt');
+    const old = document.onAreaChange;
+    o.updateStateVars({ ...props(o), state: 'result', batch: { items: [], imported: 0 } }); p.properties.flush();
+    const finalHeight = o.shellHeight;
+    old({}, { height: 999 });
+    assert.equal(o.shellHeight, finalHeight, 'late importing measurement cannot resize result');
+    o.aboutToDisappear(); o.updateStateVars({ ...props(o), state: 'importing' }); o.aboutToAppear();
+    old({}, { height: 777 });
+    assert.equal(o.measuredImportingHeight, naturalHeight, 'old opening cannot resize successor');
+  }
+  console.log('PASS actual SDK importing natural height / bounded single Scroll at 1x/2x and short windows; glyph wrapping/native touch remain OPEN');
+  return;
 }
 if(selectedCase==='scroll-origin') {
  for(const scale of [1,2]){
@@ -49,7 +104,7 @@ if(selectedCase==='scroll-origin') {
    const items=Array.from({length:count},(_,index)=>({fileName:`book-${index}.txt`,state:'success',disposition:'created'}));
    const result=mount({state:'result',batch:{items,imported:count}}, {},source,200);
    assert.equal(result.o.resultLayout().compact,true);
-   const resultScroll=result.p.nodes(result.o).find(node=>node.type==='Scroll');
+   const resultScroll=result.p.nodes(result.o).find(node=>node.type==='Scroll'&&node.scrollBar==='BarState.Off');
    assert.equal(resultScroll.align,'Alignment.Top');
    assert.equal(resultScroll.height,Math.max(0,result.o.resultPanelHeight()-result.o.measuredFooterHeight));
   }
@@ -119,7 +174,7 @@ if(selectedCase==='result-receipts') {
 {
   const {p,o}=mount({state:'result',batch:{items:[],imported:0}}, {},source,160);
   assert.equal(o.resultLayout().compact,true);
-  const scroll=p.nodes(o).find(n=>n.type==='Scroll');assert.equal(scroll.height,Math.max(0,o.resultPanelHeight()-o.measuredFooterHeight));
+  const scroll=p.nodes(o).find(n=>n.type==='Scroll'&&n.scrollBar==='BarState.Off');assert.equal(scroll.height,Math.max(0,o.resultPanelHeight()-o.measuredFooterHeight));
   const done=p.nodes(o).find(n=>n.onClick&&n.constraintSize?.minHeight===44);assert.ok(done);
 }
 {

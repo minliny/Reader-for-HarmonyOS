@@ -12,12 +12,16 @@ export struct ReaderBookmarkEmptyState {
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; }
 
+  @Builder
+  private emptyIcon() {
+    Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
+      .width(28).height(28).margin({ bottom: 16 });
+  }
+
   build() {
     Scroll() {
       Column() {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
-          .width(28).height(28);
-        ReaderPageState({ title: '暂无书签', message: '在阅读页面下拉，收藏当前位置。',
+        ReaderPageState({ variant: 'readingBookmark', leading: (): void => { this.emptyIcon(); }, title: '暂无书签', message: '在阅读页面下拉，收藏当前位置。',
           actionLabel: '返回目录', onAction: this.onReturnToDirectory });
       }.width('100%').constraintSize({ minHeight: this.viewportHeight })
         .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center);

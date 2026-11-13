@@ -5,6 +5,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 
 const selected = selectContractCases({
+  'local-content': { description: 'Explicit temporary-editor bodies reject recovery in their own content flow even when the outer surface is positioned. Real TXT and TTS bodies stay clean.', resources: [] },
   'slot-tracing': { description: 'Exact historical directory header and local Builder chains reject overlay-in-flow while current header and normal PageState remain legal.', resources: [] },
   'native-detached': { description: 'Native detached popup/sheet/cover, StandardPage bounded overlay and explicitly positioned overlay declarations stay outside measured flow; dynamic Builder values remain unresolved.', resources: [] },
   'geometry-isolation': { description: 'Declared base geometry rejects overlay reads and overlay Watch-to-frame invalidation, while overlay-to-overlay measurement remains legal.', resources: [] },
@@ -23,6 +24,41 @@ const page = body => `@Component struct Fixture {
 }`;
 
 for (const id of selected) {
+  if (id === 'local-content') {
+    const source = page(`@Builder editorBody() { Column() { this.body(); this.notice(); } }
+      build() { Stack() { this.editorBody(); }.position({x: 0, y: 0}); }`);
+    const localContentContracts = [{ file: fixturePath, owner: 'Fixture', methods: ['editorBody'] }];
+    const bad = inspectOverlayAssembly({ files: [fixturePath], sourceOverrides: new Map([[fixturePath, source]]), localContentContracts });
+    assert.equal(bad.status, 'FAIL');
+    assert.ok(bad.diagnostics.some(row => row.rule === 'OVERLAY_IN_FLOW' && row.chain.includes('Fixture.editorBody')));
+    for (const body of [
+      `Column() { this.body(); this.notice(); }.position({x: 0, y: 0});`,
+      `Stack() { this.body(); this.notice(); }.width('100%').height('100%');`
+    ]) {
+      const bypass = page(`@Builder editorBody() { ${body} } build() { this.editorBody(); }`);
+      const rejected = inspectOverlayAssembly({ files: [fixturePath], sourceOverrides: new Map([[fixturePath, bypass]]), localContentContracts });
+      assert.equal(rejected.status, 'FAIL', 'declared local body cannot grant its own overlay exemption');
+      assert.ok(rejected.diagnostics.some(row => row.rule === 'OVERLAY_IN_FLOW'));
+    }
+    const absent = inspectOverlayAssembly({ files: [fixturePath], sourceOverrides: new Map([[fixturePath, source]]),
+      localContentContracts: [{ file: fixturePath, owner: 'Fixture', methods: ['missingBody'] }] });
+    assert.equal(absent.status, 'UNRESOLVED');
+    const registry = JSON.parse(readFileSync(new URL('./page-structure/overlay-assembly-contracts.json', import.meta.url), 'utf8'));
+    const current = inspectOverlayAssembly({ files: registry.localContentContracts.map(row => row.file), localContentContracts: registry.localContentContracts });
+    assert.equal(current.status, 'PASS', JSON.stringify(current.diagnostics));
+    for (const contract of registry.localContentContracts) {
+      const text = readFileSync(new URL('../' + contract.file, import.meta.url), 'utf8');
+      const { ts, options } = installedEtsCompiler();
+      const tree = ts.createSourceFile(contract.file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+      const owner = tree.statements.find(node => node.name?.text === contract.owner);
+      const member = owner.members.find(node => node.name?.getText(tree) === contract.methods[0]);
+      const mutated = text.slice(0, member.body.end - 1) + 'ReaderRecoveryNotice({view: this.recovery});' + text.slice(member.body.end - 1);
+      const failed = inspectOverlayAssembly({ files: [contract.file], sourceOverrides: new Map([[contract.file, mutated]]), localContentContracts: [contract] });
+      assert.equal(failed.status, 'FAIL', contract.owner + ' inline-regression must be rejected');
+    }
+    recordContractCasePass(id);
+    continue;
+  }
   if (id === 'slot-tracing') {
     const valid = inspect(page(`build() { ReaderStandardPage({ header: (): void => this.heading(),
       content: (): void => this.body(), overlayContent: (): void => this.notice() }); }`));

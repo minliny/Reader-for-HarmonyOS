@@ -93,9 +93,16 @@ const methods = ['p', 'fullInput', 'sharedInput', 'effectiveRate', 'timerSummary
   'timerPresetSelected', 'timerPresetLabel', 'timerPresetIsSelected', 'chooseTimerPreset', 'timerPreset',
   'cycleQuickTimer', 'timerStepper', 'timerStepButton', 'stepTimer',
   'ratePresets', 'ratePresetWidth', 'chooseRatePreset', 'ratePreset'];
-const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts });
+const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
+const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const accessibility=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',import.meta.url),'utf8'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['ReaderActionAccessibility']);
+const presetActors=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderTtsPresetActors.ets',{...accessibility,readerAppColor,FrameCallback:class{},Color:{Transparent:'transparent'}},['ReaderTtsPresetModifier','readerTtsPresetLabelColor']);
+const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts, ...readerTypographyRoles,readerAppColor,...presetActors });
 Object.assign(owner, { motionProgress: 1, interactionEnabled: true, state: { rate: 1 }, ratePreview: -1,
   timerMode: 'duration', timerMinutes: 25, timerSeconds: 0,
+  appScheme: 'day', configField: '', textMinimum: () => undefined,
+  currentInputEnabled: () => owner.interactionEnabled,
   frame: () => ({ speedPresets: { width: 280 } }) });
 for (const minutes of [0, 15, 30, 45, 60, 'chapterEnd']) owner.timerPreset(minutes);
 owner.timerStepper(true); owner.timerStepper(false);
@@ -114,10 +121,13 @@ for (const p of [0, .2, 1, .8, 1]) {
     assert.equal(commands.length - before, p === 1 ? 1 : 0, 'new controls respect the same input lock during morph');
   }
 }
+owner.motionProgress = 1; owner.timerMode = 'duration'; owner.timerMinutes = 1; owner.timerSeconds = 20; owner.replay();
+button('增加五秒').onClick(); owner.replay(); assert.equal(owner.timerSeconds, 25);
+button('减少五秒').onClick(); owner.replay(); assert.equal(owner.timerSeconds, 20);
 owner.motionProgress = 1; owner.timerMode = 'duration'; owner.timerMinutes = 180; owner.timerSeconds = 59; owner.replay();
-assert.equal(button('增加五分钟').enabled, false); assert.equal(button('增加一秒').enabled, false);
+assert.equal(button('增加五分钟').enabled, false); assert.equal(button('增加五秒').enabled, false);
 owner.timerMinutes = 0; owner.timerSeconds = 0; owner.replay();
-assert.equal(button('减少五分钟').enabled, false); assert.equal(button('减少一秒').enabled, false);
+assert.equal(button('减少五分钟').enabled, false); assert.equal(button('减少五秒').enabled, false);
 button('朗读到本章结束停止').onClick(); owner.replay();
 assert.equal(owner.timerCaption(), '本章结束'); assert.equal(owner.timerMode, 'chapterEnd');
 owner.motionProgress = 0; owner.cycleQuickTimer(); assert.equal(owner.timerMode, 'off');

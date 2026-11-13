@@ -140,7 +140,7 @@ export struct ReaderDirectoryToolbar {
   private toolbarBudget(): ReaderDirectoryToolbarBudget {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerReadableFontScale(readerWindowMetrics().systemFontScale);
     return readerDirectoryToolbarBudget(this.availableWidthVp, this.showChapterTools, this.controlFieldHeight(),
-      this.inputMinimumWidthVp > 0 ? this.inputMinimumWidthVp : 80 * scale,
+      this.inputMinimumWidthVp > 0 ? this.inputMinimumWidthVp : 60 * scale,
       Math.max(READER_DIRECTORY_TOOLBAR_HEIGHT, this.naturalToolbarHeightVp));
   }
 
@@ -171,10 +171,10 @@ export struct ReaderDirectoryToolbar {
       if (this.variant === 'manga-catalog') {
         this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
       } else {
-        Row({ space: 12 }) {
+        Row({ space: 0 }) {
           this.tool('search', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onSearch(); });
           if (this.showChapterTools) {
-            Row({ space: 4 }) {
+            Row({ space: 0 }) {
               this.tool('top', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onTop(); });
               this.tool('bottom', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onBottom(); });
               this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
@@ -195,7 +195,7 @@ export struct ReaderDirectoryToolbar {
           .justifyContent(FlexAlign.End);
       }.width('100%').height(this.controlToolbarHeight());
     } else {
-      Row({ space: this.variant === 'manga-catalog' ? 5 : 12 }) { this.queryField(inputFocusId); this.queryTools(inputFocusId); }
+      Row({ space: this.variant === 'manga-catalog' ? 5 : 8 }) { this.queryField(inputFocusId); this.queryTools(inputFocusId); }
         .width('100%').height(this.controlToolbarHeight())
         .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
           { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 3, bottom: 3 });

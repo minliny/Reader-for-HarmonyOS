@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 17,
+  "revision": 18,
   "controls": [
     {
       "controlId": "page-back",
@@ -1392,7 +1392,7 @@
       },
       "accessibleNameSource": "原书签/离线事项：核对/继续原操作/只读重读",
       "status": "partial",
-      "knownGap": "The existing surface distinguishes original pending, known result and confirmed readback failure. Mounted, presentationActive, immediate caller lease and original presentation/generation qualify retained retry, continue and local-dismiss actions. Reactivation presents an undelivered current readback fact once. Precise method/SDK evidence is local. Native touch delivery, focus, system font and full-state acceptance remain unverified."
+      "knownGap": "The existing surface distinguishes original pending, known result and confirmed readback failure. Mounted, presentationActive, immediate caller lease and original presentation/generation qualify retained retry, continue and local-dismiss actions. Reactivation presents an undelivered current readback fact once. Precise method/SDK evidence is local. Native touch delivery, focus, system font and full-state acceptance remain unverified. Legacy originalBookmarks is a distinct read-only original-record owner and generation. It offers only exact original receipt reconciliation, preserves current-book admission, and never projects a foreign result as current-book success."
     },
     {
       "controlId": "directory-catalog-retry",
@@ -1671,30 +1671,6 @@
       "knownGap": "Actual44 direction carrier contains approved24 paint; parent budgets direction+3gap+sort field independently from filter/count, switching inline/wrapped at actual width/scale. SDK15 combinations reject former7vp overlap. Native hit/clipping/focus/system-font acceptance remains NOT_RUN."
     },
     {
-      "controlId": "download-book-cover-open",
-      "owner": "SharedDownloadPage",
-      "sources": [
-        {
-          "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "symbol": "bookRow"
-        }
-      ],
-      "states": [
-        "default",
-        "pressed",
-        "selection-mode"
-      ],
-      "hitTarget": {
-        "width": null,
-        "height": null,
-        "unit": "vp",
-        "status": "unverified"
-      },
-      "accessibleNameSource": "Image/title fallback; no explicit control name",
-      "status": "partial",
-      "knownGap": "Stack.onClick owns action; secondary context is inert. Static declaration only; native hit routing, system font scale/glyphs, focus and screen reader are NOT_RUN."
-    },
-    {
       "controlId": "download-book-title-open",
       "owner": "SharedDownloadPage",
       "sources": [
@@ -1715,54 +1691,6 @@
         "status": "spec"
       },
       "accessibleNameSource": "Visible book title",
-      "status": "partial",
-      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
-    },
-    {
-      "controlId": "download-book-source-open",
-      "owner": "SharedDownloadPage",
-      "sources": [
-        {
-          "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "symbol": "bookRow"
-        }
-      ],
-      "states": [
-        "default",
-        "pressed",
-        "selection-mode"
-      ],
-      "hitTarget": {
-        "width": 44,
-        "height": 44,
-        "unit": "vp",
-        "status": "spec"
-      },
-      "accessibleNameSource": "Visible author/source text",
-      "status": "partial",
-      "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
-    },
-    {
-      "controlId": "download-book-count-open",
-      "owner": "SharedDownloadPage",
-      "sources": [
-        {
-          "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-          "symbol": "bookRow"
-        }
-      ],
-      "states": [
-        "default",
-        "pressed",
-        "selection-mode"
-      ],
-      "hitTarget": {
-        "width": 44,
-        "height": 44,
-        "unit": "vp",
-        "status": "spec"
-      },
-      "accessibleNameSource": "Visible download count text",
       "status": "partial",
       "knownGap": "Current page has authored min44 target or 17 visual checkbox in 44 parent/response slot. Text action semantics distinguish browse/management/secondary context. Native hit/clipping/focus not verified."
     },
@@ -3163,6 +3091,30 @@
       "accessibleNameSource": "重新读取规则 / 刷新当前目录",
       "status": "partial",
       "knownGap": "Conditional local TXT FullDirectory editor only. Current SDK field/action targets, bounded host and actor/draft guards have scoped evidence. Native hit, IME, focus, screen-reader output and full business acceptance remain OPEN."
+    },
+    {
+      "controlId": "download-book-row-open",
+      "owner": "SharedDownloadPage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
+          "symbol": "bookRow"
+        }
+      ],
+      "states": [
+        "default",
+        "pressed",
+        "selection-mode"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "Current book-row button label; title has its existing child action, metadata and cover share the row intent",
+      "status": "partial",
+      "knownGap": "Whole row owns ordinary open/management selection. Informational author/count no separate44carrier. Child title/status/more stop propagation to keep one intent. Default density and declaration tested; Native arbitration/focus/reader acceptance open."
     }
   ]
 }

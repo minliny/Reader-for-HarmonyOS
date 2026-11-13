@@ -1044,7 +1044,8 @@ export struct BookshelfPage {
       y: this.projectionBookTranslateY(columnIndex, expandedLayout, index),
     })
     .id(this.bookActionFocusKey(book, false))
-    .attributeModifier(new ReaderActionAccessibility(`${book.title}，${book.author}，${this.gridProgressLabel(book)}`))
+    .attributeModifier(new ReaderActionAccessibility(`${book.title}，${book.author}，${this.gridProgressLabel(book)}` +
+      ((book.unreadCount ?? 0) > 0 ? `，更新 ${book.unreadCount} 章` : '')))
     .onClick(this.bookSelectionHandler((): ShelfBook => book))
     .gesture(
       LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
@@ -1110,9 +1111,11 @@ export struct BookshelfPage {
             .fontSize(TYPE_SHELF_UPDATE_BADGE.fontSizeFp)
             .lineHeight(TYPE_SHELF_UPDATE_BADGE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-            .maxLines(1).textAlign(TextAlign.Center);
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Center)
+            .constraintSize({ maxWidth: Math.max(0, this.shelfBookCardWidth(expandedLayout) - 28) });
         }
           .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+          .constraintSize({ maxWidth: Math.max(0, this.shelfBookCardWidth(expandedLayout) - 14) })
           .padding({ left: 7, right: 7, top: 3, bottom: 3 })
           .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
           .borderRadius(999)

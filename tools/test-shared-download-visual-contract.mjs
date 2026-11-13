@@ -1,7 +1,8 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
-const confluenceCases = new Set(['list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset']);
+const definitions={"book-row-input-owners":{"description":"Actual download row/title/status/more intent boundaries and44vp horizontal lanes including old kind-less data","resources":[]},"definition": {"description": "demo/storage输入SHA→当前generated字段/provenance一致性，不代表设计用户批准/设备接受", "resources": []}, "native-bindings": {"description": "实际SDK header测量delta/长书名信息不固定高/cover同步/语义色/Normal Button", "resources": []}, "inline-filter": {"description": "实际InlineSelect→ReaderSelect→真实popup Panel→ChoiceRow→两filter及清selection", "resources": []}, "inline-settings": {"description": "实际shared select popup即时发送空间上限或天数意图并保持存储面板", "resources": []}, "inline-quick": {"description": "实际shared quick popup choice经真实page handler", "resources": []}, "inline-range": {"description": "实际shared range book popup保选中复合书identity", "resources": []}, "select-measurement": {"description": "当前shared face与实际measureText px→vp恰一次/最长option/cap/currentchrome", "resources": []}, "area-receipts": {"description": "实际10类Area numeric/vp接纳与每源点Number退化反例、保留List/Scroll", "resources": []}, "font-receipts": {"description": "实际字体pending/ready/retired/remount callbacks与scroll排队归属", "resources": []}, "short-layout": {"description": "实际窄短/大字体sheet/dialog完整document单Scroll且预算内", "resources": []}, "reactive-metrics": {"description": "实际StorageLink订阅驱动保留header safe边和input scale更新", "resources": []}, "storage-publication": {"description": "实际数值slot未知/零/已知保留身份与打开确认的最新candidate禁用", "resources": []}, "retained-dto": {"description": "实际book/chapter同key DTO更新/row与scroll保留/移除退役callback及frozen getter反例", "resources": []}, "management-scroll": {"description": "实际管理模式双frame/dock顺序、用户/过滤/字体/窗口/书identity取消及unbound offset", "resources": []}, "overlay-chrome": {"description": "实际Watch微任务归并overlay→dialog/double→App、scheme/retire/presentation fencing", "resources": []}};
+const confluenceCases = new Set(['book-row-input-owners','list-layout','list-restore','chapter-locate-restore','private-tool-budget','touch-targets','filter-reset','book-row-density']);
 Object.assign(definitions, {
+  'book-row-density': { description: '批准demo常态24/18/28/80与实际SDK行/More/状态绘制响应、状态/管理/摘要、自然增长和当前行入口', resources: [] },
   'list-layout': { description: '实际新宿主 SDK 常态单List/管理footer/短高预算与RaiseShape身份；含旧fixed header结构负例', resources: [] },
   'list-restore': { description: '实际普通List一次性epoch恢复，touch/filter/geometry/opening/font/retire取消并保留阅读返回焦点；反例移除epoch会重复恢复', resources: [] },
   'chapter-locate-restore': { description: '实际章节定位取消旧idle并计入三个prefix，保留当前detail身份及独立章节恢复', resources: [] },
@@ -578,6 +579,128 @@ if (selectedCase === 'filter-reset') {
     reset();
     assert.equal(f.query, 'successor');
     assert.equal(moves.length, 1);
+}
+
+if (selectedCase === 'book-row-input-owners') {
+  for (const contentKind of [undefined, 'text', 'manga']) for (const managing of [false, true]) {
+    const dto = { ...book, contentKind, stateLabel: '下载中' };
+    const row = owner('day', { books: [dto], managing });
+    const intent = [];
+    row.onOpenBook = () => intent.push('open');
+    row.toggleBook = (key, selected) => intent.push(['select', key, selected]);
+    row.openSheet = kind => intent.push(kind);
+    row.sendAction = kind => intent.push(kind);
+    row.bookIsRunning = () => true;
+    row.bookRow(() => dto, false);
+    const all = records(row);
+    const carrier = all.find(n => n.type === 'Stack' && n.width === 44 && n.height === 24);
+    assert.ok(carrier, 'more/checkbox owns an explicit44vp horizontal lane even without a type tag');
+    const title = all.find(n => n.id === row.focusKey('book-title:' + dto.key));
+    const parent = all.find(n => n.type === 'Row' && n.padding?.top === 15 && n.onClick);
+    let stopped = 0;
+    const click = { stopPropagation: () => stopped++ };
+    title.onClick(click); assert.equal(stopped, 1);
+    assert.deepEqual(intent, managing ? [['select', dto.key, true]] : ['open']);
+    intent.length = 0;
+    const status = all.find(n => n.id === row.focusKey('book-status:' + dto.key));
+    status.onClick(click); assert.equal(stopped, 2);
+    assert.deepEqual(intent, managing ? [] : ['pause']);
+    intent.length = 0;
+    if (!managing) {
+      const more = all.find(n => n.id === row.focusKey('book-menu:' + dto.key));
+      more.onClick(click); assert.equal(stopped, 3); assert.deepEqual(intent, ['book-actions']);
+      assert.deepEqual([more.width, more.responseRegion.x, more.responseRegion.width], [28, -8, 44]);
+      const paintOffset = (carrier.width - more.width) / 2;
+      assert.equal(paintOffset + more.responseRegion.x, 0);
+      assert.equal(paintOffset + more.responseRegion.x + more.responseRegion.width, carrier.width);
+    }
+    assert.equal(visual.DOWNLOAD_VISUAL.bookTopGap, 6);
+    assert.equal(all.filter(n => n.type === 'Stack' && n.onClick).length, 0, 'cover delegates to the single row entry');
+    assert.ok(parent.accessibilityText.includes(dto.title));
+    assert.equal(parent.accessibilityRole, 'AccessibilityRoleType.BUTTON');
+    assert.equal(parent.enabled, true); assert.equal(parent.focusable, true);
+    if (managing) {
+      const checkbox = all.find(n => n.type === 'Checkbox');
+      assert.ok(checkbox && checkbox.onClick);
+      const before = stopped; checkbox.onClick(click); assert.equal(stopped, before + 1);
+      intent.length = 0; checkbox.onChange(true); assert.deepEqual(intent, [['select', dto.key, true]]);
+    }
+    intent.length = 0; parent.onClick(); assert.deepEqual(intent, managing ? [['select', dto.key, true]] : ['open']);
+    intent.length = 0; row.presentationGeneration++; parent.onClick(); assert.deepEqual(intent, [], 'retired row cannot dispatch to successor');
+  }
+  const secondary = owner('day', { books: [book] });
+  secondary.bookRow(() => book, true);
+  const readonlyRow = records(secondary).find(n => n.type === 'Row' && n.padding?.top === 15 && n.onClick);
+  assert.equal(readonlyRow.accessibilityLevel, 'no'); assert.equal(readonlyRow.focusable, false);
+  assert.equal(records(secondary).find(n => n.type === 'Button').accessibilityLevel, 'no');
+  console.log('PASS download input owners6 combinations, explicit44 lane and child propagation barriers');
+  return;
+}
+
+if (selectedCase === 'book-row-density') {
+  const approved = readFileSync(new URL('../docs/ui-design/shared-download/demo.html', import.meta.url), 'utf8');
+  assert.match(approved, /\.book-copy \{[^}]*min-height:80px/);
+  assert.match(approved, /\.book-top \{[^}]*min-height:24px/);
+  assert.match(approved, /\.source \{[^}]*line-height:18px/);
+  assert.match(approved, /\.status-action \{[^}]*height:28px/);
+  for (const scale of [1, 2]) {
+    windowMetrics.systemFontScale = scale;
+    platformFontScale = scale;
+    for (const secondary of [false, true]) for (const managing of [false, true]) {
+      for (const stateLabel of ['下载中', '下载失败', '已下载']) {
+        const dto = { ...book, title: '短书名', author: '作者', sourceName: '书源', stateLabel, downloadError: '' };
+        const row = owner('day', { books: [dto], managing });
+        row.bookRow(() => dto, secondary);
+        const cover = find(row, node => node.type === 'Image' && node.create === dto.coverUrl, 'actual cover');
+        assert.equal(cover.height, 80, '1x short row starts with approved 54x80 cover');
+        const sourceText = text(row, row.authorSource(dto));
+        assert.equal(sourceText.constraintSize.minHeight, 18 * scale);
+        assert.equal(sourceText.onClick, undefined, 'source is information within the enclosing book target');
+        if (!secondary) {
+          const title = find(row, node => node.id === row.focusKey('book-title:' + dto.key), 'title target');
+          assert.equal(title.constraintSize.minHeight, 24);
+          assert.deepEqual(title.responseRegion, [
+            { x: 0, y: 0, width: '100%', height: '100%' },
+            { x: 0, y: -10, width: '100%', height: 44 },
+          ], 'natural multiline button and its minimum 44 target both remain responsive');
+        }
+        const progressRow = find(row, node => node.type === 'Row' && node.margin?.top === 2, 'progress row');
+        assert.equal(progressRow.constraintSize.minHeight, 28);
+        const copy = find(row, node => node.type === 'Column' && node.layoutWeight === 1 && node.onAreaChange, 'copy natural height');
+        assert.equal(copy.height, undefined);
+        assert.equal(copy.constraintSize.minHeight, 80);
+        const count = text(row, row.downloadCount(dto, secondary));
+        assert.equal(count.constraintSize.minHeight, 18 * scale);
+        if (!secondary && !managing) {
+          const more = find(row, node => node.id === row.focusKey('book-menu:' + dto.key), 'More target');
+          assert.deepEqual([more.width, more.height, more.responseRegion.width, more.responseRegion.height], [28, 24, 44, 44]);
+          if (stateLabel !== '已下载') {
+            const status = find(row, node => node.id === row.focusKey('book-status:' + dto.key), 'status target');
+            assert.equal(status.constraintSize.minHeight, 28);
+            assert.deepEqual(status.responseRegion, [
+              { x: 0, y: 0, width: '100%', height: '100%' },
+              { x: 0, y: -8, width: 78, height: 44 },
+            ], 'natural multiline state paint keeps its full response region');
+          }
+        }
+        const content = find(row, node => node.type === 'Column' && node.onAreaChange && node.layoutWeight !== 1, 'content receipt');
+        content.onAreaChange({}, { height: '73vp' });
+        assert.equal(row.bookProgressSpacer(dto.key), 4, '73 content + 4 spare + 3 progress restores 80');
+        let opened = 0;
+        row.onOpenBook = () => opened++;
+        const rowTarget = find(row, node => node.type === 'Row' && node.padding?.top === 15 && node.onClick, 'whole row book target');
+        rowTarget.onClick();
+        assert.equal(opened, secondary || managing ? 0 : 1);
+      }
+    }
+    const minimum = owner();
+    assert.equal(minimum.selectionDockMinimumContentHeight(), scale === 1 ? 111 : 163,
+      'aggregate default row budget follows approved copy, independent of 44 response boxes');
+  }
+  windowMetrics.systemFontScale = 1;
+  platformFontScale = 1;
+  console.log('PASS actual SDK book rows 24 variants, approved 24/18/28/80 density and 44 response owners; natural glyph layout remains native OPEN');
+  return;
 }
 
 if(selectedCase==='native-bindings'){

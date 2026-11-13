@@ -638,7 +638,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
+    ...Object.fromEntries(['TextDecorationType', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'ToggleType', 'ButtonType',
       'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),

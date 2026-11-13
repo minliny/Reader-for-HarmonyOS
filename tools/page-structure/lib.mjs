@@ -21,6 +21,7 @@ export function safePath(path) {
 export function loadInputs() {
   return {
     model: readJSON('tools/page-structure/model.json'),
+    designAuthority: readJSON('tools/contracts/design-authority.json'),
     register: readJSON('tools/page-structure/register.json'),
     exceptions: readJSON('tools/page-structure/exceptions.json'),
     contracts: readJSON('tools/contracts/contract-map.json'),

@@ -1,3 +1,4 @@
+import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -31,15 +32,15 @@ function page(f,runtime,identity='settings-back:first'){
  const notices=[],authority={isCurrent:owner=>owner===runtime};
  const settings=source('features/settings/ui/SettingsPage.ets');
  let openingCurrent=true;
- const scene=createReaderBuilderProbe(source('app/composition/SettingsScenes.ets'),['settings'],
+ const scene=createReaderBuilderProbe(source('app/composition/SettingsScenes.ets'),['settings','inputIsCurrent'],
   {SettingsPage:Child,ReaderThemeHost:f.Host},{childSources:{SettingsPage:settings}}).owner;
  Object.assign(scene,{route:'settings',section:'general',presentation:{snapshot:{},operation:{},
   isCurrent:value=>openingCurrent&&value===identity}});
  scene.settings(identity);
  const binding=[...scene.children.values()].find(child=>child instanceof Child).params;
  const result=createReaderBuilderProbe(settings,['segmentRow','appThemeControl','appThemeControlIdentity',
-  'appThemeControlIsCurrent','settingsNavigationCurrent','themeIndex','selectAppTheme'],
-  {ReaderSegmentedControl:Child,ReaderRuntimeOwner:authority,SEG_OPTIONS:['跟随','浅色','深色'],TOK_SPACE_SM:12,TOK_BORDER_W:1,SELECT_ROW_H:58},
+  'appThemeControlIsCurrent','settingsInputIsCurrent','settingsNavigationCurrent','themeIndex','selectAppTheme'],
+  {...switchSpecs(),ReaderSegmentedControl:Child,ReaderRuntimeOwner:authority,SEG_OPTIONS:['跟随','浅色','深色'],TOK_SPACE_SM:12,TOK_BORDER_W:1,SELECT_ROW_H:58},
   {allowEmptyBranchAdmission:true,childSources:{ReaderSegmentedControl:source('ui/controls/ReaderSegmentedControl.ets')}});
  const methods=Object.assign(result.owner,{mounted:true,themeOwner:runtime,activeSection:'general',developerPageId:'',
   appThemeScheme:'day',temporaryBackIdentity:identity,appThemeControlGeneration:0,

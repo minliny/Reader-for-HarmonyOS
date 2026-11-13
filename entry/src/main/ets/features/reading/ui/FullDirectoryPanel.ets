@@ -1462,13 +1462,13 @@ export struct FullDirectoryPanel {
     const ready = readerFontFamilyReady(TYPE_SEARCH_DIRECTORY_INPUT.fontFamily);
     const key = `${this.searchPlaceholder()}:${this.readerWindowMetricsRevision}:${ready}`;
     if (key === this.toolbarInputWidthKey) return this.toolbarInputWidthCached;
-    const fallback = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 8 * scale);
+    const fallback = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 6 * scale);
     if (!ready) return fallback;
     const context = this.getUIContext();
     const placeholder = measureReaderControlText(context, this.searchPlaceholder(), TYPE_SEARCH_DIRECTORY_INPUT, this.innerWidth());
     const glyph = measureReaderControlText(context, '字', TYPE_SEARCH_DIRECTORY_INPUT, this.innerWidth());
     if (placeholder === undefined || glyph === undefined) return fallback;
-    const width = Math.max(fallback, placeholder.singleLineWidthVp + glyph.singleLineWidthVp * 2);
+    const width = Math.max(fallback, Math.min(placeholder.singleLineWidthVp, glyph.singleLineWidthVp * 6));
     this.toolbarInputWidthKey = key;
     this.toolbarInputWidthCached = width;
     return width;

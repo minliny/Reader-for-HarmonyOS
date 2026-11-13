@@ -95,7 +95,7 @@ if (selected.length > 0) {
 
   const pageMethods = ['build', 'pageSurface', 'aboutPage', 'developerPage', 'settingsInputIsCurrent', 'settingsNavigationCurrent',
     'aboutPageCurrent', 'developerPageCurrent', 'messagePreviewCurrent', 'pendingFeedbackVisible', 'pendingFeedback',
-    'hasPendingSettings', 'hasPendingCleanup', 'recovery', 'recoveryActionIdentities', 'recoveryIdentityFor', 'capturedPendingAction',
+    'pendingFeedbackItems', 'hasPendingSettings', 'hasPendingCleanup', 'recovery', 'recoveryActionIdentities', 'recoveryIdentityFor', 'capturedPendingAction',
     'recoveryActionKind', 'recoveryActionGeneration', 'recoveryActionCurrent', 'dispatchRecoveryAction', 'buildOverlay',
     'currentValue', 'selectOptions', 'setSelectValue', 'ownsSelection', 'commitSelection', 'dismissSelection', 'retireSelection',
     'selectionId', 'selectionField', 'languageValue', 'startupValue', 'animationValue', 'anchorRight', 'anchorBottom',

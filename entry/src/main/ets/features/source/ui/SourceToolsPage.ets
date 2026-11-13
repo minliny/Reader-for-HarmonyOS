@@ -467,12 +467,12 @@ export struct SourceToolsPage {
   @Builder
   private batchCounter(label: string, color: string) {
     Text(label)
-      .width('100%')
-      .constraintSize({ minHeight: 44 })
-      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+      .constraintSize({ maxWidth: '100%' })
+      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
       .textAlign(TextAlign.Center)
       .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
       .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+      .wordBreak(WordBreak.BREAK_WORD)
       .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
       .fontColor(color)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))

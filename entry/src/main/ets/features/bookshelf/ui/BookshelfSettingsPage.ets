@@ -3,6 +3,7 @@ import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from '../application/BookshelfViewModeHost';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
+import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection } from '../../settings/application/SettingsOrchestrator';
@@ -92,20 +93,24 @@ export struct BookshelfSettingsPage {
   }
   @Builder
   private pendingRecovery() {
-    Column({ space: 8 }) {
+    ReaderRecoveryGroup({ content: (): void => { this.pendingRecoveryItems(); } });
+  }
+
+  @Builder
+  private pendingRecoveryItems() {
       this.settingsRecovery();
       if (this.modePending()) {
-        ReaderRecoveryNotice({ view: this.viewModeRecovery(), tag: '显示方式待确认', actionLabel: '核对显示方式',
+        ReaderRecoveryNotice({ grouped: true, follows: this.settingsPending(), view: this.viewModeRecovery(), tag: '显示方式待确认', actionLabel: '核对显示方式',
           busy: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
           onReconcile: (generation: number): void => this.retryMode(generation) });
       }
-    }.width('100%');
   }
+
   @Builder
   private settingsRecovery() {
       if (this.settingsPending()) {
         ForEach([this.settingsRecoveryIdentity('read', readerRecoveryView(this.operation.receipt, this.operation.readFacts).generation)], (identity: string) => {
-          ReaderRecoveryNotice({ view: readerRecoveryView(this.operation.receipt, this.operation.readFacts), tag: '设置待处理',
+          ReaderRecoveryNotice({ grouped: true, view: readerRecoveryView(this.operation.receipt, this.operation.readFacts), tag: '设置待处理',
             actionLabel: '核对设置', busy: this.operation.receipt?.receipt.readback === 'reading',
             onReconcile: (): void => this.retrySettingsRecovery(identity),
             secondaryActionLabel: this.operation.canRetryAccepted === true ? '重试保存当前设置' : '',

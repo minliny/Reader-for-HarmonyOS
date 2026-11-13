@@ -20,6 +20,8 @@ export interface ReadingOperationIntent {
 }
 interface ReadingQualifiedReceipt { binding: ReadingOperationBinding; phase: 'committed' | 'settled'; data: JsonObject; }
 export interface ReadingRecoveredOperation { intent: ReadingOperationIntent; data: JsonObject; }
+export type ReadingReconciliationResult = { kind: 'confirmed'; recovered: ReadingRecoveredOperation } |
+  { kind: 'notDispatched'; intent: ReadingOperationIntent } | { kind: 'unavailable' };
 export class ReadingOperationPendingError extends Error {
   readonly intent?: ReadingOperationIntent;
   readonly blocked: boolean;
@@ -52,6 +54,7 @@ class ReadingDomainIntent {
     qualify: (data: JsonObject, intent: ReadingOperationIntent) => T, evidence: ReaderWriteEvidence | undefined, current: () => boolean): Promise<T> {
     return this.serial(async (): Promise<T> => {
       this.assertCurrent(); if (!current()) throw new Error('READING_OPERATION_RETIRED_BEFORE_DISPATCH');
+      if (!this.validContext(context)) throw new ReadingOperationPendingError('原操作实体上下文格式无效', undefined, true);
       if (this.domain === 'bookmark' ? method !== 'bookmark.create' && method !== 'bookmark.delete' : method !== 'cache.clear')
         throw new ReadingOperationPendingError('操作与固定域不符', undefined, true);
       const old = await this.load();
@@ -83,17 +86,29 @@ class ReadingDomainIntent {
   /** Exact pure read first. Null/head observations never submit a write or
    * clear the intent. Only a qualified receipt may reach metadata settlement. */
   async reconcile<T>(context: ReadingOperationContext, qualify: (data: JsonObject, intent: ReadingOperationIntent) => T,
-    current: () => boolean): Promise<ReadingRecoveredOperation | undefined> {
-    return this.serial(async (): Promise<ReadingRecoveredOperation | undefined> => {
-      this.assertCurrent(); if (!current()) return undefined;
-      const intent = await this.load(); if (intent === undefined) return undefined;
+    current: () => boolean, expected?: ReadingOperationIntent): Promise<ReadingRecoveredOperation | undefined> {
+    const result = await this.reconcileResult(context, qualify, current, expected);
+    return result.kind === 'confirmed' ? result.recovered : undefined;
+  }
+
+  async reconcileResult<T>(context: ReadingOperationContext, qualify: (data: JsonObject, intent: ReadingOperationIntent) => T,
+    current: () => boolean, expected?: ReadingOperationIntent): Promise<ReadingReconciliationResult> {
+    return this.serial(async (): Promise<ReadingReconciliationResult> => {
+      this.assertCurrent(); if (!current()) return { kind: 'unavailable' };
+      const intent = await this.load();
+      if (expected !== undefined && (intent === undefined || !this.same(intent, expected)))
+        throw new ReadingOperationPendingError('原操作身份已变化，请刷新原记录', intent, true);
+      if (intent === undefined) return { kind: 'unavailable' };
       this.assertContext(intent, context);
-      if (intent.phase === 'notDispatched') { await this.clear(intent); return undefined; }
+      if (intent.phase === 'notDispatched') {
+        await this.clear(intent);
+        return { kind: 'notDispatched', intent };
+      }
       const receipt = await this.queryKnownIntent(intent);
       if (receipt === undefined) throw new ReadingOperationPendingError('原操作结果尚未确认；可核对，或明确继续同一原操作', intent);
       qualify(receipt.data, intent);
       await this.finishQualified(intent, receipt.binding, receipt.phase, receipt.data);
-      return { intent, data: receipt.data };
+      return { kind: 'confirmed', recovered: { intent, data: receipt.data } };
     });
   }
   /** Explicit user continuation only, never a retry from refresh/status. The
@@ -231,7 +246,7 @@ class ReadingDomainIntent {
       try { disk = JSON.parse(raw) as ReadingOperationIntent; } catch (_) { throw new ReadingOperationPendingError('原操作记录格式无效，已保留', undefined, true); }
       if (disk?.version !== 1 || (this.domain === 'bookmark' ? disk.method !== 'bookmark.create' && disk.method !== 'bookmark.delete' : disk.method !== 'cache.clear') ||
         !this.validNewId(disk.params?.['operationId'], disk.params?.['sequence']) ||
-        typeof disk.context?.sourceId !== 'string' || typeof disk.context?.bookId !== 'string' ||
+        !this.validContext(disk.context) ||
         (disk.context.requestedCount !== undefined && (!Number.isSafeInteger(disk.context.requestedCount) || disk.context.requestedCount < 1)) ||
         (disk.context.confirmedBefore !== undefined && (!Number.isSafeInteger(disk.context.confirmedBefore) || disk.context.confirmedBefore < 0 || disk.context.requestedCount === undefined || disk.context.confirmedBefore >= disk.context.requestedCount)) ||
         (disk.phase !== 'pending' && disk.phase !== 'confirmed' && disk.phase !== 'notDispatched'))
@@ -263,6 +278,11 @@ class ReadingDomainIntent {
   private runtimeCurrent(): boolean { try { return this.ownsRuntime(); } catch (_) { return false; } }
   private assertCurrent(): void { if (!this.runtimeCurrent()) throw new ReadingOperationPendingError('原Runtime已退役，请由当前服务核对保留记录'); }
   private same(a: ReadingOperationIntent, b: ReadingOperationIntent): boolean { return a.method === b.method && JSON.stringify(a.params) === JSON.stringify(b.params) && JSON.stringify(a.context) === JSON.stringify(b.context); }
+  private validContext(context: ReadingOperationContext | undefined): boolean {
+    return typeof context?.sourceId === 'string' && typeof context?.bookId === 'string' &&
+      (context.title === undefined || typeof context.title === 'string') &&
+      (context.author === undefined || typeof context.author === 'string');
+  }
   private assertContext(intent: ReadingOperationIntent, context: ReadingOperationContext): void { if (intent.context.sourceId !== context.sourceId || intent.context.bookId !== context.bookId || intent.context.title !== context.title || intent.context.author !== context.author) throw new ReadingOperationPendingError('另一实体的原操作仍需核对，请返回原内容', intent, true); }
   private validNewId(id: unknown, sequence: unknown): boolean {
     return typeof sequence === 'number' && Number.isSafeInteger(sequence) && sequence > 0 && typeof id === 'string' &&

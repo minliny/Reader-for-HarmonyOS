@@ -86,7 +86,8 @@ export struct RetainedReaderScene {
         directoryCurrentPageTotal: this.reading.book.mangaPosition?.chapterIndex === this.reading.directoryCurrentChapterIndex ?
           this.reading.book.mangaPosition?.totalPages ?? -1 : -1,
         offlineBookOperationActive: this.reading.offlineOperationActive,
-        directoryRecovery: this.ports.directory.recovery(this.reading.directoryOperation, this.reading.offlineOperation),
+        directoryRecovery: this.ports.directory.recovery(this.reading.directoryOperation, this.reading.offlineOperation,
+          this.reading.bookmarkRecoveryRevision),
         onReconcileBookmarks: this.directoryActions.reconcileBookmarks,
         onContinueBookmarks: this.directoryActions.continueBookmarks,
         onReconcileOffline: this.directoryActions.reconcileOffline,

@@ -101,7 +101,7 @@ if (selected.length > 0) {
       measureTextSize: () => ({ width: 600, height: 22 }),
     }) });
     notice.measureFlow(600); fixture.sdk.properties.flush();
-    assert.equal(notice.actionsWidth, labelWidth(query.label) + labelWidth(continuation.label),
+    assert.equal(notice.actionsWidth, labelWidth(query.label) + labelWidth(continuation.label) + 18,
       'the original flow budget includes the retained primary during secondary busy');
     fixture.button(query).onClick(); fixture.button(continuation).onClick();
     assert.equal(fixture.calls.length, 0, 'busy native actors cannot submit either original action');
@@ -124,13 +124,13 @@ if (selected.length > 0) {
       assert.equal(argumentsFound.length, activeReadingHost ? 1 : 0,
         `${name} follows the active-reading or foreground-directory presentation policy`);
       if (!activeReadingHost) continue;
-      const emitted = ts.transpileModule(`function currentRecovery() { return ${argumentsFound[0]}; }`, {
+      const emitted = ts.transpileModule(`function currentRecovery(grouped: boolean) { return ${argumentsFound[0]}; }`, {
         compilerOptions: { target: ts.ScriptTarget.ES2022 },
       }).outputText;
       const project = new Function('EMPTY_READING_DIRECTORY_RECOVERY', emitted + ';return currentRecovery;')(EMPTY_READING_DIRECTORY_RECOVERY);
       for (const action of ['reconcile', 'continue']) {
         const value = recovery('bookmarks', 'unknown', 'reading', action);
-        const forwarded = project.call({ bookmarkRecovery: value, directoryRecovery: value });
+        const forwarded = project.call({ bookmarkRecovery: value, directoryRecovery: value }, true);
         assert.equal(forwarded.bookmarksRecoveryAction, action, `${name} forwards current original action`);
       }
     }
@@ -163,8 +163,8 @@ if (selected.length > 0) {
       assert.notEqual(oldNotice, noticeSource);
       for (const family of ['bookmarks', 'offline'])
         assert.throws(() => assertBusy(mounted(recovery(family, 'unknown', 'reading', 'continue'), surfaceSource, oldNotice), family, 'continue'), assert.AssertionError);
-      const oldBudget = noticeSource.replace('let actions = (this.view.canRetry || this.busy || this.secondaryBusy)',
-        'let actions = (this.view.canRetry || this.busy)');
+      const oldBudget = noticeSource.replace('if ((this.view.canRetry || this.busy || this.secondaryBusy || this.retainPrimaryAction) && this.actionLabel.length > 0) widths.push',
+        'if ((this.view.canRetry || this.busy || this.retainPrimaryAction) && this.actionLabel.length > 0) widths.push');
       assert.notEqual(oldBudget, noticeSource);
       assert.throws(() => assertBusy(mounted(recovery('offline', 'unknown', 'reading', 'continue'), surfaceSource, oldBudget),
         'offline', 'continue'), assert.AssertionError);
@@ -214,7 +214,7 @@ if (selected.length > 0) {
         assert.equal(recovery(family, 'confirmed', 'reading', 'reconcile', oldProject)[key], 'none', 'the prior classification removes the current retry surface');
       }
       const oldRetryRow = surfaceSource.replace(
-        "(this.readbackFailed(identity) || (this.recoveryAction(identity) === 'reconcile' && this.busy(identity))) && (this.view(identity).canRetry || this.busy(identity))",
+        /\(this\.readbackFailed\(identity\) \|\| \(this\.recoveryAction\(identity\) === 'reconcile' && this\.busy\(identity\)\)\) &&\s*\(this\.view\(identity\)\.canRetry \|\| this\.busy\(identity\)\)/,
         'this.readbackFailed(identity) && this.view(identity).canRetry');
       assert.notEqual(oldRetryRow, surfaceSource);
       for (const { family, retained } of variants) {

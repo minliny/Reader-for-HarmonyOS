@@ -1,3 +1,4 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import type { MeasureOptions } from '@ohos.measure';
 import { MESSAGE_ACTION, MESSAGE_META, MESSAGE_NOTICE_TITLE } from '../foundation/ReaderMessageStyle';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -16,10 +17,18 @@ export struct ReaderRecoveryNotice {
   @Prop @Watch('remeasure') secondaryActionLabel: string = '';
   @Prop @Watch('remeasure') busy: boolean = false;
   @Prop @Watch('remeasure') secondaryBusy: boolean = false;
+  @Prop actionEnabled: boolean = true;
+  @Prop secondaryActionEnabled: boolean = true;
+  /** Keeps the original disabled query slot while its owner reports a read. */
+  @Prop @Watch('remeasure') retainPrimaryAction: boolean = false;
   /** Flow content leaves the negative default. Overlay callers supply their current host remainder. */
   @Prop maxHeightVp: number = -1;
   /** Current outer width from a known host. Negative leaves flow width to native layout. */
-  @Prop layoutWidthVp: number = -1;
+  @Prop @Watch('remeasure') layoutWidthVp: number = -1;
+  /** The enclosing group owns its single painted surface. */
+  @Prop grouped: boolean = false;
+  @Prop follows: boolean = false;
+  @State private separateActions: boolean = false;
   @State private expanded: boolean = false;
   @State private clipped: boolean = false;
   @State private reservedSpace: string = '';
@@ -33,7 +42,11 @@ export struct ReaderRecoveryNotice {
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onSecondaryAction: (generation: number) => void = (_generation: number): void => {};
 
-  aboutToAppear(): void { this.mounted = true; this.appearanceEpoch += 1; }
+  aboutToAppear(): void {
+    this.mounted = true;
+    this.appearanceEpoch += 1;
+    if (this.layoutWidthVp > 24) this.measureFlow(this.layoutWidthVp - 24);
+  }
   aboutToDisappear(): void { this.mounted = false; this.appearanceEpoch += 1; }
 
   build() {
@@ -59,7 +72,7 @@ export struct ReaderRecoveryNotice {
             // Native text layout carries a nonbreaking space group the width
             // of the actions. The action overlay ends at the trailing edge of
             // that final line, so short/long titles share the same flow.
-            if (!this.clipped || this.expanded) {
+            if (!this.separateActions && (!this.clipped || this.expanded)) {
               Span(this.reservedSpace);
             }
           }
@@ -70,18 +83,21 @@ export struct ReaderRecoveryNotice {
           .wordBreak(WordBreak.BREAK_WORD).maxLines(this.expanded ? 10000 : 3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .onAreaChange(this.flowAreaHandler());
-          if (this.clipped && !this.expanded) { Blank().height(this.actionsHeight); }
-          else { Blank().height(Math.max(0, this.actionsHeight - this.titleLineHeight)); }
-        }.width('100%');
-        Flex({ justifyContent: FlexAlign.End, wrap: FlexWrap.Wrap }) {
-          if ((this.view.canRetry || this.busy || this.secondaryBusy) && this.actionLabel.length > 0) {
+          if (this.hasNoticeActions()) {
+            if (this.separateActions || (this.clipped && !this.expanded)) { Blank().height(this.actionsHeight + 8); }
+            else { Blank().height(Math.max(0, this.actionsHeight - this.titleLineHeight)); }
+          }
+        }.width('100%').constraintSize({ minHeight: 36 }).justifyContent(FlexAlign.Center);
+        Flex({ justifyContent: FlexAlign.End, wrap: FlexWrap.Wrap,
+          space: { main: LengthMetrics.vp(18), cross: LengthMetrics.vp(6) } }) {
+          if ((this.view.canRetry || this.busy || this.secondaryBusy || this.retainPrimaryAction) && this.actionLabel.length > 0) {
             ReaderRecoveryAction({ variant: 'notice', label: this.actionLabel, generation: this.view.generation,
-              isBusy: this.busy, actionEnabled: !this.busy && !this.secondaryBusy,
+              isBusy: this.busy, actionEnabled: this.actionEnabled && !this.busy && !this.secondaryBusy,
               onReconcile: this.onReconcile });
           }
           if (this.secondaryActionLabel.length > 0) {
             ReaderRecoveryAction({ variant: 'notice', label: this.secondaryActionLabel, generation: this.view.generation,
-              isBusy: this.secondaryBusy, actionEnabled: !this.busy && !this.secondaryBusy,
+              isBusy: this.secondaryBusy, actionEnabled: this.secondaryActionEnabled && !this.busy && !this.secondaryBusy,
               onReconcile: this.onSecondaryAction });
           }
           if (this.clipped) {
@@ -94,15 +110,26 @@ export struct ReaderRecoveryNotice {
         }.constraintSize({ maxWidth: '100%' }).width(this.actionsWidth > 0 ? this.actionsWidth : undefined)
           .onAreaChange(this.actionsAreaHandler());
       }
-      .width('100%').padding({ left: 12, right: 12, top: 10, bottom: 10 })
-      .borderRadius(14).backgroundColor(readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
-      .shadow({ radius: 16, offsetY: 4, color: '#18000000' })
+      .width('100%')
+      .margin({ top: this.grouped && this.follows ? 10 : 0 })
+      .padding({ left: this.grouped ? 0 : 12, right: this.grouped ? 0 : 12,
+        top: this.grouped ? (this.follows ? 10 : 0) : 10, bottom: this.grouped ? 0 : 10 })
+      .border({ width: { top: this.grouped && this.follows ? 1 : 0 },
+        color: readerAppColor('TOK_MESSAGE_NOTICE_DIVIDER', this.appThemeScheme), style: BorderStyle.Solid })
+      .borderRadius(this.grouped ? 0 : 14)
+      .backgroundColor(this.grouped ? Color.Transparent : readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
+      .shadow({ radius: this.grouped ? 0 : 16, offsetY: this.grouped ? 0 : 4, color: '#18000000' })
       .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private hasNoticeActions(): boolean {
+    return ((this.view.canRetry || this.busy || this.secondaryBusy || this.retainPrimaryAction) && this.actionLabel.length > 0) ||
+      this.secondaryActionLabel.length > 0 || this.clipped;
   }
 
   private measurementIdentity(): string {
     return JSON.stringify([this.appearanceEpoch, this.view.generation, this.view.message, this.view.visible, this.view.canRetry,
-      this.tag, this.actionLabel, this.secondaryActionLabel, this.busy, this.secondaryBusy,
+      this.tag, this.actionLabel, this.secondaryActionLabel, this.busy, this.secondaryBusy, this.retainPrimaryAction,
       this.maxHeightVp, this.layoutWidthVp, this.readerWindowMetricsRevision]);
   }
 
@@ -137,24 +164,28 @@ export struct ReaderRecoveryNotice {
       const labelWidth = (label: string): number => Math.max(44, context.px2vp(utils.measureText({ textContent: label,
         fontSize: `${MESSAGE_ACTION.fontSizeFp}fp`, fontFamily: MESSAGE_ACTION.fontFamily,
         fontWeight: MESSAGE_ACTION.fontWeight })) + 4);
-      let actions = (this.view.canRetry || this.busy || this.secondaryBusy) && this.actionLabel.length > 0 ? labelWidth(this.actionLabel) : 0;
-      if (this.secondaryActionLabel.length > 0) actions += labelWidth(this.secondaryActionLabel);
+      const widths: number[] = [];
+      if ((this.view.canRetry || this.busy || this.secondaryBusy || this.retainPrimaryAction) && this.actionLabel.length > 0) widths.push(labelWidth(this.actionLabel));
+      if (this.secondaryActionLabel.length > 0) widths.push(labelWidth(this.secondaryActionLabel));
       const space = context.px2vp(utils.measureText({ textContent: ' ', fontSize: '14fp',
         fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400 }));
       const options: MeasureOptions = { textContent: ` ${this.tag}   ${this.view.message}`,
         fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontSize: '14fp', fontWeight: 400,
         lineHeight: '22fp', constraintWidth: `${width}vp`, wordBreak: WordBreak.BREAK_WORD };
-      // Include the action reservation when deciding whether three lines can
-      // carry this item. Clipping must never remove that reserved final line.
-      const reservation = actions > 0 && space > 0 ? ' ' + ' '.repeat(Math.floor(Math.min(width, actions) / space)) : '';
-      options.textContent += reservation;
+      // Folding belongs to the business title alone. Decorative action space
+      // must never manufacture an expand action for an otherwise fitting title.
       const full = Number(utils.measureTextSize(options).height);
       options.maxLines = 3;
       const folded = Number(utils.measureTextSize(options).height);
       this.clipped = full > folded + .5;
-      if (this.clipped) actions += labelWidth('展开');
-      this.actionsWidth = Math.min(width, actions);
-      this.reservedSpace = actions > 0 && space > 0 ? ' ' + ' '.repeat(Math.floor(this.actionsWidth / space)) : '';
+      if (this.clipped) widths.push(Math.max(labelWidth('展开'), labelWidth('收起')));
+      const actions = widths.reduce((total: number, item: number): number => total + item, 0) + Math.max(0, widths.length - 1) * 18;
+      this.separateActions = actions + 8 > width;
+      this.actionsWidth = Math.min(Math.max(0, width - (this.separateActions ? 8 : 0)), actions);
+      // A multi-row action group gets its own natural block. Single-row groups
+      // reserve their complete hit widths, coarse-pointer gaps and text gap.
+      const reservationWidth = this.separateActions || actions === 0 ? 0 : Math.min(width, this.actionsWidth + 8);
+      this.reservedSpace = reservationWidth > 0 && space > 0 ? ' ' + ' '.repeat(Math.ceil(reservationWidth / space)) : '';
       this.titleLineHeight = context.px2vp(Number(utils.measureTextSize({ textContent: '字', fontSize: '14fp',
         fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400, lineHeight: '22fp' }).height));
 
@@ -162,9 +193,10 @@ export struct ReaderRecoveryNotice {
       // The full original message remains available if native measurement is
       // unavailable. Never hide an operation or guess its completion state.
       this.expanded = true;
-      this.clipped = true;
-      this.actionsWidth = width;
-      this.reservedSpace = '\n\u00a0';
+      this.clipped = false;
+      this.actionsWidth = Math.max(0, width - 8);
+      this.separateActions = true;
+      this.reservedSpace = '';
     }
   }
 }

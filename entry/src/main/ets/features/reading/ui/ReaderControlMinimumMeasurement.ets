@@ -81,8 +81,8 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     if (title === undefined) return undefined;
     const titleHeight = Math.max(input.headerInter ? 17 : 20, title.heightVp);
     const collapseHeight = Math.max(input.headerInter ? 12 : 14, collapse.heightVp);
-    const headerHeight = Math.max(48, titleHeight + (input.headerInter ? 13 : 10),
-      collapseHeight + (input.headerInter ? 14 : 12) + 4);
+    const headerHeight = Math.max(44, titleHeight + (input.headerInter ? 13 : 10),
+      collapseHeight + (input.headerInter ? 14 : 12));
     const normalNavigationHeight = 80 + navigationLabelHeight - 15;
     const topBarVisible = input.availableWithTopBarHeightVp === undefined ||
       input.availableWithTopBarHeightVp >= 29 + 18 + normalNavigationHeight + 13 + 44;

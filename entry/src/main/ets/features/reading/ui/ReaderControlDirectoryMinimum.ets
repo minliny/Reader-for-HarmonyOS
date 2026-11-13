@@ -54,7 +54,7 @@ function form(context: UIContext, width: number, full: boolean,
     Math.max(1, (width - (full ? 18 : 32)) / 2 - 20));
   const title = measureReaderControlText(context, facts.title, TYPE_READER_DIRECTORY_TITLE,
     Math.max(1, width - (full ? 22 : 34) - 86));
-  const fieldWidth = width - 2 - TOK_SPACE_CONTROL_INLINE * 2 - (facts.tab === 'directory' ? 196 : 49);
+  const fieldWidth = width - 2 - TOK_SPACE_CONTROL_INLINE * 2 - (facts.tab === 'directory' ? 184 : 52);
   const field = measureReaderControlText(context, facts.tab === 'bookmarks' ? '搜索书签内容' : '搜索章节名称',
     TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth - 39));
   const fieldGlyph = measureReaderControlText(context, '字', TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth - 39));
@@ -78,12 +78,12 @@ function form(context: UIContext, width: number, full: boolean,
   const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
   const tabBase = full ? 36 : 31;
   const tabHeight = Math.max(readerScaledControlHeight(44, TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, scale), tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
-  const inputHeight = Math.max(readerScaledControlHeight(42, 24, scale), field.heightVp);
+  const inputHeight = readerScaledControlHeight(42, 24, scale);
   const fieldHeight = Math.max(readerScaledControlHeight(44, 24, scale), inputHeight + 2);
-  const inputMinimumWidth = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 8 * scale,
-    field.singleLineWidthVp + fieldGlyph.singleLineWidthVp * 2);
+  const inputMinimumWidth = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 6 * scale,
+    Math.min(field.singleLineWidthVp, fieldGlyph.singleLineWidthVp * 6));
   const toolbarBudget = readerDirectoryToolbarBudget(width - 2, facts.tab === 'directory', fieldHeight,
-    inputMinimumWidth, Math.max(52, fieldHeight + 20) - 2);
+    inputMinimumWidth, Math.max(52, fieldHeight + 8) - 2);
   const toolbarHeight = toolbarBudget.height + 2;
   const bookmark: ReaderControlBookmarkNaturalSize = {
     titleHeightVp: Math.max(14, bookmarkTitle.heightVp, meta.heightVp, pending.heightVp),
@@ -109,7 +109,8 @@ function form(context: UIContext, width: number, full: boolean,
       viewport = Math.max(44, action.heightVp);
     } else {
       viewport = message.heightVp + (facts.loading ? 44 : facts.action.length > 0 ? Math.max(44, action.heightVp) + 12 : 0);
-      if (facts.bookmarkError) viewport += heading.heightVp + 72;
+      if (facts.bookmarkError) viewport = heading.heightVp + 9 + message.heightVp + 23 +
+        Math.max(44, action.heightVp + 20) + 60;
     }
   } else if (facts.catalogStatus.length > 0) {
     const action = measureReaderControlText(context, facts.catalogAction, MESSAGE_ACTION, Math.max(1, width - 36));

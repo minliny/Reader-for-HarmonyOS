@@ -1131,7 +1131,7 @@ export struct ReaderControlTtsContent {
         .width(this.textMinimum()?.timerDigitWidth ?? 23).height(this.textMinimum()?.timerDigit ?? 24).textAlign(TextAlign.Center);
       this.timerStepButton(minutes, 5);
     }.height(this.textMinimum()?.timerStepper ?? 32).alignItems(VerticalAlign.Center)
-      .accessibilityText(minutes ? `${this.timerMinutes}分（每次五分钟）` : `${this.timerSeconds}秒`);
+      .accessibilityText(minutes ? `${this.timerMinutes}分（每次五分钟）` : `${this.timerSeconds}秒（每次五秒）`);
   }
   @Builder
   private timerStepButton(minutes: boolean, delta: number) {
@@ -1142,7 +1142,7 @@ export struct ReaderControlTtsContent {
       .enabled(this.fullInput() && (delta > 0 ?
         (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
         (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)))
-      .accessibilityText(`${delta > 0 ? '增加' : '减少'}${minutes ? '五分钟' : '一秒'}`)
+      .accessibilityText(`${delta > 0 ? '增加' : '减少'}${minutes ? '五分钟' : '五秒'}`)
       .onClick((): void => { if (this.fullInput()) this.stepTimer(minutes, delta); });
   }
 

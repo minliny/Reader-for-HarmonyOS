@@ -207,11 +207,12 @@ function actionsToolsRules() {
     const upperNodes = c.nodes(actualCards);
     for (const label of ['取消', '校验并保存', '导出全部书源']) assertNaturalButton(upperNodes.find(n => n.type === 'Button' && n.accessibilityText === label));
     for (const counter of upperNodes.filter(n => n.type === 'Text' && /^(所选项通过|所选项未通过|检测错误|剩余)/.test(n.create))) {
-      assert.equal(counter.height, undefined); assert.equal(counter.width, '100%'); assert.ok(counter.constraintSize.minHeight >= 44);
+      assert.equal(counter.height, undefined); assert.equal(counter.width, undefined);
+      assert.equal(counter.constraintSize.minHeight, undefined); assert.equal(counter.constraintSize.maxWidth, '100%');
       const measured = glyph(counter.create, counter.fontSize * scale, counter.fontWeight);
       const lines = Math.ceil(measured.width / (cardWidth - 16));
       assert.ok(measured.fontHeight <= counter.fontSize * 1.5 * scale, 'actual font box fits the native AUTO line box');
-      if (scale === 2) assert.ok(lines * counter.fontSize * 1.5 * scale + 16 > 32, 'old fixed32 cannot contain the current counter line boxes');
+      if (scale === 2) assert.ok(lines * counter.fontSize * 1.5 * scale + counter.padding.top + counter.padding.bottom > 32, 'old fixed32 cannot contain the current counter line boxes');
     }
     const inline = inlineSelectSdk({ properties: c.foundation.properties, uiContext: uiContext(), dependencies: { readerWindowMetrics: () => value } });
     const debug = createReaderBuilderProbe(read('features/source/ui/SourceToolsPage.ets'), ['debugCard'],
