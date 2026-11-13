@@ -554,6 +554,7 @@ export class LocalReadingFlowGateway {
     const deleted = data['deleted']; if (typeof deleted !== 'boolean') throw new Error('bookmark.delete returned invalid deleted');
     return deleted;
   }
+  bookmarkAuthorityAvailable(): boolean { return this.bookmarkIntents !== undefined; }
   async pendingBookmarkOperation(): Promise<ReadingOperationIntent | undefined> { return this.bookmarkIntents?.pending(); }
   async reconcileBookmarkOperation(context: ReadingOperationContext, current: () => boolean,
     evidence?: ReaderWriteEvidence, continueOriginal: boolean = false): Promise<ReadingRecoveredOperation | undefined> {

@@ -17,6 +17,7 @@ export struct ReaderDirectoryChapterRow {
   @Prop previewGroupCollapsed: boolean = false;
   @Prop previewEnabled: boolean = true;
   @Prop chapterDownloadEnabled: boolean = false;
+  @Prop bookmarkActionsEnabled: boolean = true;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   canActOnEntry?: (entry: LocalReadingTocEntry) => boolean;
   onSelectChapter: (index: number) => void = (_index: number): void => {};
@@ -27,7 +28,7 @@ export struct ReaderDirectoryChapterRow {
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
 
   private bookmarkActionEnabled(): boolean {
-    return this.entry.navigable !== false && this.entry.bookmarks !== undefined &&
+    return this.bookmarkActionsEnabled && this.entry.navigable !== false && this.entry.bookmarks !== undefined &&
       (this.entry.bookmarks.length > 0 || this.chapterStartBookmarkCreationEnabled);
   }
 

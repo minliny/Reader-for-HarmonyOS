@@ -52,8 +52,13 @@ const LocalBookImportGateway=emit('features/bookshelf/application/LocalBookImpor
 const BookshelfFlowGateway=emit('features/bookshelf/application/BookshelfFlowGateway.ts','BookshelfFlowGateway',{...common,ReaderCoreGateway,LocalBookImportGateway});
 const SourceGateway=emit('features/source/application/SourceGateway.ts','SourceGateway',common);
 const BookAcquisitionProjectionGateway=emit('features/reading/application/BookAcquisitionProjectionGateway.ts','BookAcquisitionProjectionGateway',common);
+const unavailableBookmarkIO=()=>{throw Error('actual bookmark intent platform IO seam is required');};
+const BookmarkOperationIntentStore=emit('features/reading/application/ReadingOperationIntents.ts','BookmarkOperationIntentStore',{
+ ...common,fileIo:{readText:unavailableBookmarkIO},util:{generateRandomUUID:unavailableBookmarkIO},
+ replaceReaderAtomicSnapshot:unavailableBookmarkIO});
 export const ReaderDirectoryHost=emit('features/reading/application/ReaderDirectoryHost.ts','ReaderDirectoryHost',common);
 const ReadingPrefetchHost=emit('features/reading/application/ReadingPrefetchHost.ts','ReadingPrefetchHost',common);
 export const compileHost=(source=read('features/reading/application/ReadingEntryHost.ts'),dependencies={})=>emit('features/reading/application/ReadingEntryHost.ts','ReadingEntryHost',
- {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,remoteReadingEntryKind,...dependencies},source);
+ {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,
+ BookmarkOperationIntentStore,remoteReadingEntryKind,...dependencies},source);
 export const ProductionHost=compileHost();

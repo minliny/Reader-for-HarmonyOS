@@ -14,6 +14,7 @@ import { sameRemoteSessionEvidence, copyRemoteReadingSession, preparedRemoteChap
 import { captureRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { ReadingOfflineGateway } from './ReadingOfflineGateway';
 import { ReaderDirectoryHost } from './ReaderDirectoryHost';
+import { BookmarkOperationIntentStore } from './ReadingOperationIntents';
 import { ReadingPrefetchHost } from './ReadingPrefetchHost';
 import { remoteReadingEntryKind, type ReadingBookDetail } from '../presentation/ReadingBookDetail';
 import type { ReadingEntrySeed } from './ReadingEntryPreparation';
@@ -51,6 +52,7 @@ export interface ReadingEntryLease {
   offlineGeneration: () => number;
   membership: () => ReadingEntryMembership;
   changed: (snapshot: ReadingEntrySnapshot) => void;
+  bookmarkAdmission?: (enabled: boolean) => void;
   cacheDecision: (error: RemoteChapterCacheRefreshError, current: () => boolean) => Promise<boolean>;
   notice: (title: string, message: string) => void;
   refreshShelf: () => void;
@@ -302,7 +304,11 @@ export class ReadingEntryHost {
   bindReader(book: ReadingBookDetail, session: RemoteReadingSession | undefined, toc: LocalReadingTocEntry[],
     inBookshelf: boolean, lease: ReadingEntryLease): void {
     if (session !== undefined && !this.sameBook(session, book)) throw new Error('READING_ENTRY_SESSION_IDENTITY_MISMATCH');
-    this.begin(lease, book, inBookshelf, '', undefined, session, toc, undefined, false);
+    const scope = this.begin(lease, book, inBookshelf, '', undefined, session, toc, undefined, false);
+    const runtimeCurrent = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime);
+    const directory = ReaderDirectoryHost.forRuntime(this.runtime, runtimeCurrent, undefined,
+      new BookmarkOperationIntentStore(this.runtime, runtimeCurrent));
+    if (this.current(scope, lease)()) lease.bookmarkAdmission?.(directory?.bookmarkWriteEnabled() ?? false);
   }
 
   /** Read-only display anchor for a standalone text directory. Canonical
@@ -486,11 +492,24 @@ export class ReadingEntryHost {
       this.state = { ...this.state, toc: entries }; this.publish(scope, lease);
     } catch (error) { if (current()) this.diagnostic(lease, 'directory-download', error); }
     if (!current()) return;
-    const directory = ReaderDirectoryHost.forRuntime(this.runtime, (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime));
+    const runtimeCurrent = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime);
+    const directory = ReaderDirectoryHost.forRuntime(this.runtime, runtimeCurrent, undefined,
+      new BookmarkOperationIntentStore(this.runtime, runtimeCurrent));
     if (directory === undefined) return;
-    await directory.load({ book, current, currentEntries: lease.currentDirectory,
-      emitEntries: (entries): void => { if (current()) { this.state = { ...this.state, toc: entries }; this.publish(scope, lease); } },
-      failed: (error): void => { if (current()) this.diagnostic(lease, 'directory-bookmarks', error); } });
+    let reportedFailure: Error | undefined;
+    try {
+      await directory.load({ book, current, currentEntries: lease.currentDirectory,
+        emitEntries: (entries): void => { if (current()) { this.state = { ...this.state, toc: entries }; this.publish(scope, lease); } },
+        emitWriteAdmission: (enabled): void => { if (current()) lease.bookmarkAdmission?.(enabled); },
+        failed: (error): void => {
+          if (current()) { reportedFailure = error; this.diagnostic(lease, 'directory-bookmarks', error); }
+        } });
+    } catch (error) {
+      // This optional projection is also launched by the first-page boundary.
+      // Its already-delivered read failure cannot reject the readable chapter.
+      if (!current()) return;
+      if (error !== reportedFailure) throw error;
+    }
   }
 
   /** Actual semantic detail projection queue; old intent finally never

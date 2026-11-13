@@ -2908,7 +2908,7 @@ export struct MangaReadingSurface {
         this.widePanel() ? Number(this.panelWidth()) <= 340 : (this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) <= visual.narrowWidth,
       mangaQuickDisplay: !catalog,
       interactionEnabled: catalog ? this.panelPhase === 'closed' || this.panelPhase === 'open' : this.directorySheetInputCurrent(directoryIdentity),
-      chapterStartBookmarkCreationEnabled: false, chapterDownloadEnabled: this.downloadEnabled,
+      chapterStartBookmarkCreationEnabled: false, bookmarkActionsEnabled: false, chapterDownloadEnabled: this.downloadEnabled,
       chapterDownloadActionsEnabled: this.downloadEnabled,
       onDownloadChapter: (index: number): void => {
         if (catalog || this.directorySheetInputCurrent(directoryIdentity)) void this.openDownloadActions(index);

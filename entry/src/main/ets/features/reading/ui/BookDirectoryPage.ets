@@ -249,6 +249,7 @@ export struct BookDirectoryPage {
           scrollLayout: this.directoryScrollLayout(),
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
+          bookmarkActionsEnabled: false,
           chapterDownloadEnabled: this.mangaDownloadEnabled,
           chapterDownloadActionsEnabled: this.mangaDownloadEnabled,
           onDownloadChapter: (index: number): void => {

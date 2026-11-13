@@ -60,7 +60,7 @@ export function durableFixtureToolEvidence() {
   autoBuild: false };
 }
 
-export async function fixture(official=false,existing,{domain='all'}={}){
+export async function fixture(official=false,existing,{domain='all',transport}={}){
  assert.ok(domain==='all'||domain==='bookmark'||domain==='directory','supported durable fixture domain');
  const root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-host-durable-')),files=resolve(root,'files'),core=resolve(root,'core');await fsp.mkdir(files,{recursive:true});
  if (!existing?.root) ownedDurableRoots.add(root);
@@ -81,7 +81,7 @@ export async function fixture(official=false,existing,{domain='all'}={}){
  // For SDK mode emit that same whole module once, preserving its two shared lanes.
  let types=classes;
  if(official){const source=read('features/reading/application/ReadingOperationIntents.ts'),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');const output=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(output.diagnostics,[]);types={};new Function('exports','ReaderRuntimeOwner','fileIo','util','replaceReaderAtomicSnapshot','ReaderCoreRequestError','isReaderCoreTransactionPendingError',output.outputText)(types,Runtime,fileIo,{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sdk.ReaderCoreRequestError,sdk.isReaderCoreTransactionPendingError);}
- async function command(method,params){const result=await run(coreBinary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:16*1024*1024});const event=result.stdout.trim().split('\n').map(v=>JSON.parse(v)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event;}
+ async function command(method,params){if(transport!==undefined)return transport(method,params);const result=await run(coreBinary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:16*1024*1024});const event=result.stdout.trim().split('\n').map(v=>JSON.parse(v)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event;}
  const runtime={getUIAbilityContext:()=>({filesDir:files}),closed:false,
   supportsCoreCapability:()=>true,async clearOfflineBookImages(s,b){calls.push({platform:[s,b]});if(options.imageFailure)throw Error('image cleanup failed');},
   async request(method,params,requestOptions={}){calls.push({method,params:structuredClone(params),options:requestOptions});
@@ -157,7 +157,7 @@ export async function seedLegacySettingsClear(f) {
 }
 
 /** Bookmark authority only: actual atomic journal/DirectoryHost and exact Core queries; no Settings/download owners. */
-export const bookmarkFixture=(official=true,existing)=>fixture(official,existing,{domain:'bookmark'});
+export const bookmarkFixture=(official=true,existing,transport)=>fixture(official,existing,{domain:'bookmark',transport});
 
 /** Directory/offline authority without Settings presentation or owner construction. */
 export const directoryFixture=(official=true,existing)=>fixture(official,existing,{domain:'directory'});

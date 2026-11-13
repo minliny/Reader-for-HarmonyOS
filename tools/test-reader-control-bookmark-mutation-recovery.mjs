@@ -2,6 +2,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions={
  'durable-recovery':{description:'Actual bookmark Index/DirectoryHost exact receipt and committed-write reload recovery via existing Core CLI',resources:[]},
  'host-retry':{description:'Actual bookmark Host/Gateway/Operations and reader list versus unknown-write recovery, input identity and retry without Native',resources:[]},
+ 'global-write-admission':{description:'Actual global AtomicIntent/Host/Gateway admission and first-page Journey/Entry projection with finite controlled RPC outcomes; no Core CLI or native execution',resources:[]},
  'recovery-surface-sdk':{description:'SDK-emitted reading recovery Scroll touch boundary and actual retry actors with current, busy and successor identities',resources:[]}
 };
 const selected=selectContractCases(definitions);
@@ -10,7 +11,325 @@ const {default:assert}=await import('node:assert/strict');
 const book={sourceId:'local',bookId:'book',title:'Book',author:'Author'};
 const row=(bookmarks=[],title='Chapter',downloadState='completed')=>({index:0,title,downloadState,bookmarks});
 const mark=time=>({time,chapterIndex:0,chapterOffset:12,chapterTitle:'Chapter',content:'saved'});
-if(selectedCase==='recovery-surface-sdk'){
+if(selectedCase==='global-write-admission'){
+ const {writeFile}=await import('node:fs/promises');
+ const {join}=await import('node:path');
+ const {bookmarkFixture:platformFixture,deferred,until,cleanupDurableFixtures}=await import('./lib/reading-operation-durable-probe.mjs');
+ const {createHash}=await import('node:crypto');
+ const {actualReaderDirectoryJourney}=await import('./lib/reader-directory-operations-probe.mjs');
+ const {actualReadingEntryPresentation}=await import('./lib/reading-entry-presentation-probe.mjs');
+ const {compileHost,setRuntime}=await import('./lib/reading-entry-owner-probe.mjs');
+ const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+ const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
+ console.log(JSON.stringify({kind:'reader-controlled-rpc-proof',layer:'SDK-emitted actual owners and atomic file IO with finite RPC responses',coreCli:false,build:false,native:false}));
+ function finiteTransport(){
+  let binding=null,receipt=null,params,bookmarks=[],time=1;
+  const calls=[];
+  return {calls,async command(method,input){
+   calls.push({method,params:structuredClone(input)});
+   if(method==='bookmark.list')return {data:{bookmarks:bookmarks.filter(mark=>mark.bookName===input.bookName&&mark.bookAuthor===input.bookAuthor)}};
+   if(method==='bookmark.create'){
+    params=structuredClone(input);
+    binding={operationId:input.operationId,sequence:input.sequence,
+     payloadFingerprint:createHash('sha256').update(JSON.stringify(input)).digest('hex')};
+    const bookmark={bookName:input.bookName,bookAuthor:input.bookAuthor,chapterIndex:input.chapterIndex,
+     chapterPos:input.chapterPos,chapterName:input.chapterName,bookText:input.bookText,content:input.bookText,time:time++};
+    bookmarks.push(bookmark);receipt={binding,phase:'committed',outcome:{action:'create',result:{bookmark}}};
+    return {data:{bookmark}};
+   }
+   if(method==='bookmark.operation.query'){
+    if(input.operationId!==undefined){
+     if(receipt===null)return {data:{head:binding,receipt:null}};
+     assert.equal(input.operationId,binding.operationId,'controlled exact query carries the original ID');
+     assert.deepEqual(input.expected,{action:'create',params},'real intent owner supplies its frozen original DTO');
+    }
+    return {data:{head:binding,receipt:input.operationId===undefined?null:receipt}};
+   }
+   assert.equal(method,'bookmark.operation.settle','finite transport never performs unrelated RPC');
+   assert.deepEqual(input,binding,'settlement uses the original qualified binding');
+   receipt={...receipt,phase:'settled'};return {data:{binding,phase:'settled'}};
+  }};
+ }
+ const fixtures=[];
+ async function bookmarkFixture(official=true,existing){
+  const transport=existing?.transport??finiteTransport();
+  const f=await platformFixture(official,existing,transport.command.bind(transport));
+  fixtures.push(f);return Object.assign(f,{transport});
+ }
+ function consumer(f, currentBook=book){
+  const Entry=actualReadingEntryPresentation(),entry=new Entry();
+  Object.assign(entry,{book:{...currentBook},toc:[row([])],sessionActive:true,sessionGeneration:1});
+  const route={route:'reading',generation:1};
+  const scope={owner:f.runtime,mount:1,retired:false,foreground:true,covered:false};
+  const Journey=actualReaderDirectoryJourney({ReaderDirectoryHost:f.Directory,...f.types});
+  const journey=new Journey({snapshot:()=>route},{scope:()=>scope,ownsRuntime:owner=>f.Runtime.isCurrent(owner),
+   runtime:()=>undefined,entry:()=>entry,shelfBooks:()=>[],diagnostic:()=>{}});
+  const operations=journey.operations;
+  const recovery=()=>operations.recovery(entry.directoryOperation,entry.offlineOperation);
+  const load=()=>operations.loadControlBookmarks(entry.book.sourceId,entry.book.bookId,()=>true);
+  return {entry,route,scope,operations,recovery,load};
+ }
+ async function settled(f){await until(()=>!f.directory.busy());await new Promise(resolve=>setImmediate(resolve));}
+ function create(c){c.operations.togglePageBookmark({chapterIndex:0,chapterOffset:12,
+  chapterTitle:'Chapter',bookText:'saved',bookmarkTimes:[]});}
+ function admission(f,c,expected,label){
+  assert.equal(f.directory.bookmarkWriteEnabled(),expected,label+' Host');
+  assert.equal(c.entry.bookmarkWriteEnabled,expected,label+' Observed Entry');
+  assert.equal(c.recovery().bookmarkWriteEnabled,expected,label+' Recovery DTO');
+ }
+ function readerReady(f,currentBook){
+  setRuntime(f.runtime);
+  f.runtime.bookAcquisitions=()=>({setPreparationVisible(){},readingProjectionRevision:()=>0});
+  const Host=compileHost(undefined,{ReaderDirectoryHost:f.Directory,...f.types}),host=Host.forRuntime(f.runtime);
+  const diagnostics=[];
+  const Entry=actualReadingEntryPresentation({ReadingEntryHost:Host,
+   hilog:{warn:(...args)=>diagnostics.push(args)}}),entry=new Entry();
+  Object.assign(entry,{book:{...currentBook},toc:[row([])],sessionActive:true});
+  let live=true;
+  const ports={current:()=>live,projectionVisible:()=>false,membership:()=>({generation:0,blocked:false,value:true}),
+   cacheDecision:async()=>false,notice(){},refreshShelf(){}};
+  entry.bindReader(f.runtime,ports);
+  const frames=[],tasks=[],project=host.projectDirectory.bind(host);
+  host.projectDirectory=scope=>{const task=project(scope);tasks.push(task);return task;};
+  const ready=()=>entry.presentPreparedPage(0,false,()=>({runtime:()=>f.runtime,current:()=>live,afterOpening:action=>frames.push(action)}));
+  return {host,entry,ports,frames,tasks,ready,diagnostics,retire(){live=false;entry.retire();}};
+ }
+ try {
+  assert.equal(EMPTY_READING_DIRECTORY_RECOVERY.bookmarkWriteEnabled,false);
+  {
+   const f=await bookmarkFixture(),c=consumer(f);
+   admission(f,c,false,'unread startup');
+   await c.load();admission(f,c,true,'empty intent admits');
+   const gateway=f.directory.dependencies.gateway,nativePending=gateway.pendingBookmarkOperation.bind(gateway);
+   let pendingReads=0;gateway.pendingBookmarkOperation=async()=>{pendingReads++;return nativePending();};
+   for(let i=0;i<3;i++){f.directory.bookmarkWriteEnabled();c.recovery();}
+   assert.equal(pendingReads,0,'admission getters never read disk or RPC');
+   const gate=deferred();f.options.pauseMethod='bookmark.create';f.options.pauseAfterDispatch=true;f.options.gate=gate;
+   create(c);
+   await until(()=>f.writes().length===1);admission(f,c,false,'accepted write busy');
+   assert.equal(c.recovery().bookmarks.visible,false,'busy admission is independent from notice visibility');
+   gate.resolve();await settled(f);admission(f,c,true,'qualified settle and cleanup reopens');
+   assert.equal(f.writes().length,1);assert.equal(f.disk('bookmark'),'');
+   assert.equal(c.entry.directoryOperation.projection.receipt.confirmation,'confirmed');
+   const nativeRequest=f.runtime.request.bind(f.runtime);
+   f.runtime.request=async(method,params,options)=>{if(method==='bookmark.list')throw Error('canonical projection unavailable');return nativeRequest(method,params,options);};
+   await assert.rejects(c.load(),/canonical projection unavailable/);
+   admission(f,c,false,'stale projection blocks');
+   assert.equal(c.entry.directoryOperation.projection.receipt.confirmation,'confirmed','a read failure preserves the write receipt');
+   f.runtime.request=nativeRequest;await c.load();admission(f,c,true,'fresh projection reopens');
+   assert.equal(f.writes().length,1,'pure reload never repeats the write');
+   c.entry.retire();assert.equal(c.entry.bookmarkWriteEnabled,false,'retired Entry clears projected admission');
+  }
+  {
+   const f=await bookmarkFixture(),c=consumer(f),native=f.runtime.request.bind(f.runtime);
+   await c.load();f.options.beforeMethod='bookmark.create';
+   f.runtime.request=async(method,params,options)=>{
+    if(method==='bookmark.operation.query'&&f.writes().length>0)throw Error('original exact query unavailable');
+    return native(method,params,options);
+   };
+   create(c);await settled(f);
+   admission(f,c,false,'same-book unknown write');
+   assert.equal(c.recovery().bookmarksKind,'pending');
+   const original=JSON.parse(f.disk('bookmark'));
+   await c.load();admission(f,c,false,'matching list never settles original unknown');
+   assert.equal(c.entry.toc[0].bookmarks.length,0);
+   assert.deepEqual(JSON.parse(f.disk('bookmark')),original);
+   c.entry.book={...book,bookId:'other',title:'Other'};c.route.generation++;
+   await c.load();admission(f,c,false,'foreign pending after independent list read');
+   assert.equal(c.recovery().bookmarks.visible,false,'foreign recovery notice stays hidden');
+   assert.equal(c.recovery().bookmarksBusy,false,'foreign operation is not borrowed as current busy state');
+   assert.equal(f.writes().length,1);
+   const cold=await bookmarkFixture(true,{root:f.root,transport:f.transport}),b=consumer(cold,{...book,bookId:'other',title:'Other'});
+   admission(cold,b,false,'cold B before any intent read');
+   assert.equal(cold.directory.snapshot(),undefined,'cold B has no in-memory same-book receipt');
+   await b.load();admission(cold,b,false,'cold B learns foreign durable pending');
+   assert.equal(cold.directory.snapshot(),undefined);
+   assert.equal(b.recovery().bookmarks.visible,false);
+   assert.equal(b.entry.toc[0].bookmarks.length,0,'foreign pending permits the canonical B read');
+   assert.equal(cold.calls.filter(call=>call.method==='bookmark.list').length,1);
+   assert.equal(cold.calls.filter(call=>call.method==='bookmark.operation.query').length,0,'B never reconciles a foreign original');
+   assert.equal(cold.writes().length,0);
+   assert.deepEqual(JSON.parse(cold.disk('bookmark')),original);
+   const initial=readerReady(cold,{...book,sourceId:'other-source',bookId:'reader-b',title:'Reader B'});
+   assert.equal(initial.entry.bookmarkWriteEnabled,false,'known directory rows do not qualify unread initial admission');
+   const before=cold.calls.length;initial.ready();
+   assert.equal(initial.frames.length,1,'actual first-page ready schedules the existing deferred directory projection');
+   assert.equal(cold.calls.length,before,'first-page scheduling performs no eager read');
+   initial.frames.shift()();assert.equal(initial.tasks.length,1);await initial.tasks[0];
+   assert.equal(initial.entry.bookmarkWriteEnabled,false,'first-page initial read observes foreign pending without requiring controls');
+   assert.equal(cold.directory.snapshot(),undefined);
+   assert.equal(initial.entry.toc[0].bookmarks.length,0);
+   initial.ready();assert.equal(initial.frames.length,0,'same first-page presentation does not repeat blocked reads');
+   assert.deepEqual(JSON.parse(cold.disk('bookmark')),original);
+   const runtime={...cold.runtime};cold.install(runtime);
+   const current=()=>cold.Runtime.isCurrent(runtime);
+   const without=cold.Directory.forRuntime(runtime,current);
+   const beforeInstall=without.dependencies.gateway;
+   assert.equal(beforeInstall.bookmarkAuthorityAvailable(),false);
+   let entries=[row([])];const enabled=[];
+   const binding={book:b.entry.book,current,currentEntries:()=>entries,emitEntries:value=>entries=value,
+    emitWriteAdmission:value=>enabled.push(value)};
+   await without.load(binding);
+   assert.equal(entries[0].bookmarks.length,0,'no-authority canonical read stays available');
+   assert.equal(without.bookmarkWriteEnabled(),false,'optional missing authority never counts as known-clear intent');
+   assert.ok(enabled.length>0&&enabled.every(value=>value===false));
+   const installed=cold.Directory.forRuntime(runtime,current,undefined,new cold.types.BookmarkOperationIntentStore(runtime,current));
+   assert.equal(installed,without,'retained Host receives the existing authority');
+   assert.equal(beforeInstall.bookmarkAuthorityAvailable(),true);
+   assert.equal(installed.bookmarkWriteEnabled(),false,'authority installation cannot reuse no-authority empty evidence');
+   await installed.load(binding);
+   assert.equal(installed.bookmarkWriteEnabled(),false,'installed authority reads foreign pending before granting');
+   assert.ok(enabled.every(value=>value===false));
+   assert.deepEqual(JSON.parse(cold.disk('bookmark')),original);
+   const racingRuntime={...runtime};cold.install(racingRuntime);
+   const racingCurrent=()=>cold.Runtime.isCurrent(racingRuntime);
+   const racingHost=cold.Directory.forRuntime(racingRuntime,racingCurrent);
+   const raced=[];
+   const loading=racingHost.load({...binding,current:racingCurrent,emitWriteAdmission:value=>raced.push(value)});
+   assert.equal(cold.Directory.forRuntime(racingRuntime,racingCurrent,undefined,
+    new cold.types.BookmarkOperationIntentStore(racingRuntime,racingCurrent)),racingHost);
+   await loading;
+   assert.equal(racingHost.bookmarkWriteEnabled(),false,'authority arriving during an old no-authority read cannot qualify that result');
+   assert.ok(raced.length>0&&raced.every(value=>value===false));
+   await racingHost.load({...binding,current:racingCurrent});
+   assert.equal(racingHost.bookmarkWriteEnabled(),false,'the new actual-authority read observes foreign pending');
+  }
+  {
+   const f=await bookmarkFixture(),initial=readerReady(f,{...book,sourceId:'source',contentKind:'text'});
+   assert.equal(initial.entry.bookmarkWriteEnabled,false);
+   initial.ready();assert.equal(initial.frames.length,1);initial.frames.shift()();await initial.tasks[0];
+   assert.equal(initial.entry.bookmarkWriteEnabled,true,'actual first-page read qualifies an empty global intent');
+   const reads=f.calls.filter(call=>call.method==='bookmark.list').length;
+   initial.entry.bindReader(f.runtime,initial.ports);
+   assert.equal(initial.entry.bookmarkWriteEnabled,true,'retained known owner admission survives the new reader lease');
+   initial.ready();assert.equal(initial.frames.length,0,'known retained rows and owner use no fallback read');
+   assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,reads);
+   initial.entry.bookmarkWriteEnabled=false;
+   initial.entry.presentedScopeId=-1;initial.ready();assert.equal(initial.frames.length,1);
+   initial.retire();initial.frames.shift()();assert.equal(initial.tasks.length,1,'old first-page callback cannot enter a successor scope');
+   assert.equal(initial.entry.bookmarkWriteEnabled,false);
+   initial.entry.bookmarkWriteEnabled=true;
+   const replacement={...f.runtime};setRuntime(replacement);
+   initial.entry.currentHost(replacement);
+   assert.equal(initial.entry.bookmarkWriteEnabled,false,'a replacement Runtime cannot inherit an old Host admission');
+  }
+  {
+   const f=await bookmarkFixture();
+   const corrupt='{preserved-invalid-intent';
+   await writeFile(join(f.files,'reader-bookmark-intent-v1.json'),corrupt);
+   const initial=readerReady(f,{...book,sourceId:'source',contentKind:'text'}),toc=initial.entry.toc;
+   const failures=[];const onUnhandled=error=>failures.push(error);
+   process.on('unhandledRejection',onUnhandled);
+   try {
+    initial.ready();assert.equal(initial.frames.length,1);initial.frames.shift()();
+    await assert.doesNotReject(initial.tasks[0],'already diagnosed first-page intent failure is contained');
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(failures,[]);
+    assert.equal(initial.entry.bookmarkWriteEnabled,false);
+    assert.equal(initial.entry.sessionActive,true,'bookmark projection failure keeps the readable session active');
+    assert.equal(initial.entry.toc,toc,'initial failure never clears the existing directory');
+    assert.equal(f.disk('bookmark'),corrupt,'corrupt original record is retained for recovery');
+    assert.ok(initial.diagnostics.some(args=>args.includes('directory-bookmarks')),'existing diagnostic receives the exact read failure');
+    const programmerError=Error('unhandled projection programming error');
+    const nativeLoad=f.directory.load.bind(f.directory);f.directory.load=async()=>{throw programmerError;};
+    await assert.rejects(initial.host.projectDirectory(initial.entry.scopeId),error=>error===programmerError,
+     'a failure never reported by the existing read path remains rejected');
+    f.directory.load=nativeLoad;
+   } finally {process.off('unhandledRejection',onUnhandled);}
+  }
+  {
+   const f=await bookmarkFixture(),corrupt='{preserved-retired-intent';
+   await writeFile(join(f.files,'reader-bookmark-intent-v1.json'),corrupt);
+   const initial=readerReady(f,{...book,sourceId:'source',contentKind:'text'}),toc=initial.entry.toc;
+   const gateway=f.directory.dependencies.gateway,pending=gateway.pendingBookmarkOperation.bind(gateway),gate=deferred();
+   let entered=false;
+   gateway.pendingBookmarkOperation=async()=>{
+    const outcome=pending().then(value=>({value}),error=>({error}));
+    entered=true;await gate.promise;
+    const result=await outcome;if(result.error!==undefined)throw result.error;return result.value;
+   };
+   const failures=[];const onUnhandled=error=>failures.push(error);process.on('unhandledRejection',onUnhandled);
+   try {
+    initial.ready();initial.frames.shift()();await until(()=>entered);
+    initial.retire();gate.resolve();
+    await assert.doesNotReject(initial.tasks[0],'entered initial read rejection retires with its stale lease');
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(failures,[]);
+    assert.equal(initial.entry.bookmarkWriteEnabled,false);
+    assert.equal(initial.entry.toc,toc,'stale read never replaces successor directory data');
+    assert.equal(initial.diagnostics.length,0,'retired first-page read cannot publish to the old Entry');
+    assert.equal(f.disk('bookmark'),corrupt,'retiring a read cannot clear the original intent');
+   } finally {process.off('unhandledRejection',onUnhandled);}
+  }
+  {
+   const f=await bookmarkFixture(),c=consumer(f);await c.load();
+   f.options.loseFinishAt=f.io.finishes+3;
+   create(c);await settled(f);
+   admission(f,c,false,'confirmed write with cleanup ACK failure');
+   assert.equal(c.entry.directoryOperation.projection.receipt.confirmation,'confirmed');
+   assert.equal((await f.bookmarkStore.pending()).phase,'confirmed','exact confirmed intent remains owned until cleanup ACK');
+   f.options.loseFinishAt=f.io.finishes+2;
+   await c.load();admission(f,c,false,'successful canonical read cannot bypass failed intent cleanup');
+   assert.equal(c.entry.directoryOperation.projection.receipt.confirmation,'confirmed');
+   assert.equal(c.entry.directoryOperation.projection.receipt.readback,'succeeded');
+   assert.equal(c.entry.directoryOperation.projection.facts.stale,false,'list freshness and global write admission are independent');
+   f.options.loseFinishAt=undefined;
+   await c.load();admission(f,c,true,'actual same-intent cleanup qualifies new writes');
+   assert.equal(await f.bookmarkStore.pending(),undefined);assert.equal(f.writes().length,1);
+  }
+  {
+   const f=await bookmarkFixture(),c=consumer(f);await c.load();
+   f.options.transformMethod='bookmark.operation.query';
+   f.options.transform=data=>data.receipt===null?data:{...data,receipt:{...data.receipt,
+    binding:{...data.receipt.binding,sequence:data.receipt.binding.sequence+1}}};
+   create(c);await settled(f);
+   admission(f,c,false,'invalid exact receipt cannot qualify cleanup');
+   assert.equal(c.entry.directoryOperation.projection.receipt.confirmation,'confirmed','the original ACK remains confirmed');
+   assert.match(c.entry.directoryOperation.projection.refreshError,/持久head与精确回执不符/);
+   assert.notEqual(await f.bookmarkStore.pending(),undefined);
+   assert.equal(f.calls.filter(call=>call.method==='bookmark.operation.settle').length,0,'invalid binding never reaches settlement');
+   f.options.transformMethod=undefined;await c.load();admission(f,c,true,'actual qualifier accepts restored exact original receipt');
+   assert.equal(f.writes().length,1,'receipt retry never allocates a replacement mutation');
+  }
+  {
+   const f=await bookmarkFixture(),c=consumer(f);
+   await writeFile(join(f.files,'reader-bookmark-intent-v1.json'),'{unreadable');
+   await assert.rejects(c.load(),/原操作记录格式无效/);admission(f,c,false,'unreadable startup intent');
+   assert.equal(f.directory.snapshot(),undefined,'unreadable file never invents a book operation');
+   await writeFile(join(f.files,'reader-bookmark-intent-v1.json'),'');
+   await c.load();admission(f,c,true,'real retry reads clear intent and fresh list');
+   const gateway=f.directory.dependencies.gateway,nativePending=gateway.pendingBookmarkOperation.bind(gateway);
+   gateway.pendingBookmarkOperation=async()=>{throw Error('post-write intent read unavailable');};
+   create(c);await settled(f);
+   admission(f,c,false,'post-write qualification read failure');
+   assert.equal(c.entry.directoryOperation.projection.receipt.confirmation,'confirmed','qualification read cannot downgrade exact confirmed receipt');
+   assert.equal(c.entry.directoryOperation.projection.receipt.readback,'succeeded');
+   gateway.pendingBookmarkOperation=nativePending;await c.load();admission(f,c,true,'qualification retry');
+  }
+  {
+   const f=await bookmarkFixture(),c=consumer(f);await c.load();
+   const old=c.operations.bookmarkBinding(f.runtime,c.entry.book),gate=deferred();
+   f.options.pauseMethod='bookmark.create';f.options.pauseAfterDispatch=true;f.options.gate=gate;
+   create(c);
+   await until(()=>f.writes().length===1);admission(f,c,false,'old owner active');
+   c.entry.book={...book,bookId:'successor',title:'Successor'};c.route.generation++;
+   c.entry.bookmarkWriteEnabled=false;
+   assert.equal(old.current(),false,'actual Binding retires old navigation and book');
+   gate.resolve();await settled(f);
+   assert.equal(f.directory.bookmarkWriteEnabled(),true,'accepted original settles in Host');
+   assert.equal(c.entry.bookmarkWriteEnabled,false,'old completion cannot enable successor Entry');
+   assert.equal(c.recovery().bookmarkWriteEnabled,false,'successor keeps unqualified DTO');
+   await c.load();admission(f,c,true,'successor own load qualifies admission');
+   assert.equal(f.writes().length,1);
+  }
+  console.log(JSON.stringify({kind:'bookmark-admission-method-evidence',fixtures:fixtures.map((f,index)=>({index,
+   methods:f.calls.map(call=>call.method).filter(Boolean),
+   originalWrites:f.writes().map(call=>({method:call.method,operationId:call.params.operationId,sequence:call.params.sequence})),
+   exactQueries:f.calls.filter(call=>call.method==='bookmark.operation.query'&&call.params.operationId!==undefined).map(call=>call.params.operationId),
+   settlements:f.calls.filter(call=>call.method==='bookmark.operation.settle').map(call=>call.params)}))}));
+ } finally {await cleanupDurableFixtures();}
+ console.log('PASS global bookmark admission: 9 actual owner scenarios plus first-page and retained initial projection, cold/foreign/same/settled/cleanup/stale/busy/unreadable/old binding/invalid receipt and current/retired first-page rejection ownership');
+}else if(selectedCase==='recovery-surface-sdk'){
  const {registerHooks}=await import('node:module');
  registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);

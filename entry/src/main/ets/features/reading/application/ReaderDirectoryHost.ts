@@ -27,6 +27,7 @@ export interface ReaderDirectoryBinding {
   currentEntries: () => LocalReadingTocEntry[];
   emitEntries: (entries: LocalReadingTocEntry[]) => void;
   emitOperation?: (operation: ReaderDirectoryOperation) => void;
+  emitWriteAdmission?: (enabled: boolean) => void;
   failed?: (error: Error) => void;
   onSettled?: (confirmed: boolean) => void;
 }
@@ -70,11 +71,21 @@ export class ReaderDirectoryHost {
   private readGeneration: number = 0;
   private operation: ReaderDirectoryOperation | undefined;
   private bookmarkProjectionStale: boolean = false;
+  private pendingBookmarkIntent: boolean | undefined;
 
   constructor(dependencies: ReaderDirectoryDependencies) { this.dependencies = dependencies; }
 
   busy(): boolean { return this.active; }
   snapshot(): ReaderDirectoryOperation | undefined { return this.operation; }
+  /** Global owner fact. A hidden/foreign receipt and an unread intent file
+   * never grant a new write. Reading this projection performs no IO. */
+  bookmarkWriteEnabled(): boolean {
+    try {
+      return this.dependencies.ownsRuntime() && this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true &&
+        this.pendingBookmarkIntent === false && !this.active &&
+        !this.bookmarkProjectionStale && this.operation?.projection.receipt.confirmation !== 'unknown';
+    } catch (_error) { return false; }
+  }
 
   async createChapterStart(chapterIndex: number, binding: ReaderDirectoryBinding): Promise<void> {
     const entry = this.knownChapter(chapterIndex, binding);
@@ -128,6 +139,7 @@ export class ReaderDirectoryHost {
   async load(binding: ReaderDirectoryBinding): Promise<void> {
     if (!this.admitted(binding)) return;
     if (this.active) {
+      this.publishWriteAdmission(binding);
       if (this.operation !== undefined && this.sameBook(this.operation.book, binding.book))
         this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
       return new Promise<void>((resolve, reject): void => {
@@ -172,10 +184,14 @@ export class ReaderDirectoryHost {
   private async recoverPending(binding: ReaderDirectoryBinding, continueOriginal: boolean): Promise<void> {
     if (this.active || !this.admitted(binding)) return;
     this.active = true; const previous = this.operation !== undefined && this.sameBook(this.operation.book, binding.book) ? this.operation : undefined;
+    this.publishWriteAdmission(binding);
+    let reconciled = false;
     const current = (): boolean => this.admitted(binding);
     if (previous !== undefined) this.updateReadback(binding, 'reading');
     try {
+      const hasAuthority = this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true;
       const pending = await this.dependencies.gateway.pendingBookmarkOperation();
+      this.pendingBookmarkIntent = hasAuthority && this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true ? pending !== undefined : undefined;
       if (pending === undefined) return;
       if (pending.context.sourceId !== binding.book.sourceId || pending.context.bookId !== binding.book.bookId ||
         pending.context.title !== binding.book.title || pending.context.author !== binding.book.author) {
@@ -185,6 +201,7 @@ export class ReaderDirectoryHost {
       }
       const evidence = new ReaderWriteEvidence();
       try {
+        reconciled = true;
         const recovered = await this.dependencies.gateway.reconcileBookmarkOperation(this.context(binding), current, evidence, continueOriginal);
         if (recovered === undefined) return;
         const requestedCount = previous?.requestedCount ?? pending.context.requestedCount ?? 1;
@@ -211,6 +228,7 @@ export class ReaderDirectoryHost {
         this.deliver(binding, (): void => binding.failed?.(error as Error));
       }
     } catch (error) {
+      this.pendingBookmarkIntent = undefined;
       this.bookmarkProjectionStale = true; const issue = error as ReadingOperationPendingError;
       // A failed intent-file read supplies no transaction identity. Keep it a
       // retryable loading failure instead of inventing an unknown create for
@@ -228,19 +246,25 @@ export class ReaderDirectoryHost {
           blockedReason: issue.message, message: issue.message, refreshError: issue.message }) };
       this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
       this.deliver(binding, (): void => binding.failed?.(error as Error));
-    } finally { this.active = false; }
+    } finally {
+      if (reconciled) await this.refreshWriteAdmission(binding);
+      this.active = false;
+      this.publishWriteAdmission(binding);
+    }
   }
 
   private async write(action: ReaderDirectoryOperation['action'], requestedCount: number,
     binding: ReaderDirectoryBinding, mutation: (evidence: ReaderWriteEvidence, current: () => boolean) => Promise<void>): Promise<void> {
-    if (this.active || !this.admitted(binding)) { this.settled(binding, false); return; }
+    if (this.active || !this.admitted(binding)) { this.publishWriteAdmission(binding); this.settled(binding, false); return; }
     // Exact receipts can recover the original operation. A new mutation can
     // neither replace unknown nor use an old/stale bookmark projection.
     if (this.bookmarkProjectionStale) {
+      this.publishWriteAdmission(binding);
       this.deliver(binding, (): void => binding.failed?.(new Error('书签视图尚未刷新，请先重新载入核对')));
       this.settled(binding, false); return;
     }
     if (this.operation?.projection.receipt.confirmation === 'unknown') {
+      this.publishWriteAdmission(binding);
       const message = this.sameBook(this.operation.book, binding.book) ? '书签操作结果未确认，请重新载入核对，不要重复操作' :
         `《${this.operation.book.title}》的原书签操作尚未确认，请返回原书籍核对`;
       this.deliver(binding, (): void => binding.failed?.(new Error(message)));
@@ -251,6 +275,7 @@ export class ReaderDirectoryHost {
     const book = { ...binding.book };
     const evidence = new ReaderWriteEvidence();
     this.active = true;
+    this.publishWriteAdmission(binding);
     const current = (): boolean => generation === this.generation && this.active && this.admitted(binding);
     this.publish(action, book, generation, requestedCount, evidence, 'idle', binding);
     try {
@@ -264,8 +289,10 @@ export class ReaderDirectoryHost {
         this.deliver(binding, (): void => binding.failed?.(error as Error));
       }
     } finally {
+      await this.refreshWriteAdmission(binding);
       this.settled(binding, evidence.confirmation() === 'confirmed' && evidence.confirmedCount === requestedCount);
       if (generation === this.generation) this.active = false;
+      this.publishWriteAdmission(binding);
       this.drainPendingRead();
     }
   }
@@ -278,10 +305,15 @@ export class ReaderDirectoryHost {
         read: (entries, guard): Promise<LocalReadingTocEntry[]> => this.dependencies.gateway.loadBookmarkProjection(
           binding.book.title, binding.book.author, entries, guard),
         commit: (entries): void => this.deliver(binding, (): void => binding.emitEntries(entries)) });
-      if (current()) { this.bookmarkProjectionStale = false; this.updateReadback(binding, 'succeeded'); }
+      if (current()) {
+        this.bookmarkProjectionStale = false;
+        this.updateReadback(binding, 'succeeded');
+        this.publishWriteAdmission(binding);
+      }
     } catch (error) {
       if (!current()) return;
       this.bookmarkProjectionStale = true; this.updateReadback(binding, 'failed', (error as Error).message);
+      this.publishWriteAdmission(binding);
       if (reportFailure) this.deliver(binding, (): void => binding.failed?.(error as Error));
       throw error;
     }
@@ -316,6 +348,22 @@ export class ReaderDirectoryHost {
   private knownChapter(index: number, binding: ReaderDirectoryBinding): LocalReadingTocEntry | undefined {
     if (!Number.isSafeInteger(index) || index < 0 || !this.admitted(binding)) return undefined;
     return binding.currentEntries().find(entry => entry.index === index && entry.navigable !== false && entry.title.trim().length > 0);
+  }
+
+  private async refreshWriteAdmission(binding: ReaderDirectoryBinding): Promise<void> {
+    try {
+      const hasAuthority = this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true;
+      const pending = await this.dependencies.gateway.pendingBookmarkOperation();
+      this.pendingBookmarkIntent = hasAuthority && this.dependencies.gateway.bookmarkAuthorityAvailable?.() === true ? pending !== undefined : undefined;
+    }
+    catch (error) {
+      this.pendingBookmarkIntent = undefined;
+      this.deliver(binding, (): void => binding.failed?.(error as Error));
+    }
+  }
+
+  private publishWriteAdmission(binding: ReaderDirectoryBinding): void {
+    this.deliver(binding, (): void => binding.emitWriteAdmission?.(this.bookmarkWriteEnabled()));
   }
 
   private sameBook(a: ReadingBookDetail, b: ReadingBookDetail): boolean {

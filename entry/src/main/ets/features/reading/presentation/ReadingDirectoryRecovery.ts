@@ -13,6 +13,7 @@ export interface ReadingDirectoryRecovery {
   offline: ReaderRecoveryView;
   canContinueBookmarks: boolean;
   canContinueOffline: boolean;
+  bookmarkWriteEnabled: boolean;
   offlineBlocked?: boolean;
   bookmarksKind?: ReadingDirectoryMessageKind;
   offlineKind?: ReadingDirectoryMessageKind;
@@ -25,10 +26,10 @@ export type ReadingDirectoryMessageKind = 'pending' | 'result' | 'readback' | 'n
 const EMPTY_VIEW: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
 export const EMPTY_READING_DIRECTORY_RECOVERY: ReadingDirectoryRecovery = { presentationId: '',
   bookmarks: EMPTY_VIEW, offline: EMPTY_VIEW, canContinueBookmarks: false, canContinueOffline: false,
-  bookmarksBusy: false, offlineBusy: false };
+  bookmarkWriteEnabled: false, bookmarksBusy: false, offlineBusy: false };
 
 export function readingDirectoryRecovery(presentationId: string, book: ReadingBookDetail,
-  directory?: ReaderDirectoryOperation, offline?: ReadingOfflineOperation): ReadingDirectoryRecovery {
+  directory?: ReaderDirectoryOperation, offline?: ReadingOfflineOperation, bookmarkWriteEnabled: boolean = false): ReadingDirectoryRecovery {
   const dir = directory !== undefined && directory.book.sourceId === book.sourceId && directory.book.bookId === book.bookId &&
     directory.book.title === book.title && directory.book.author === book.author ? directory : undefined;
   const cached = offline !== undefined && offline.sourceId === book.sourceId && offline.bookId === book.bookId ? offline : undefined;
@@ -85,7 +86,7 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
   }
   bookmarks = { ...bookmarks, visible: bookmarksKind !== 'none' };
   cache = { ...cache, visible: offlineKind !== 'none' };
-  return { presentationId, bookmarks, offline: cache, bookmarksKind, offlineKind,
+  return { presentationId, bookmarks, offline: cache, bookmarksKind, offlineKind, bookmarkWriteEnabled,
     bookmarksReadbackFailed, offlineReadbackFailed,
     bookmarksBusy: dir?.projection.receipt.readback === 'reading', offlineBusy: cached?.projection.receipt.readback === 'reading',
     canContinueBookmarks: dir?.canContinueOriginal === true, canContinueOffline: cached?.canContinueOriginal === true,

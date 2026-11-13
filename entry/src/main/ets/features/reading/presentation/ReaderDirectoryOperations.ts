@@ -24,6 +24,7 @@ export interface ReaderDirectoryScene {
   readonly foreground: boolean;
   readonly reading: boolean;
   readonly offlineBusy: boolean;
+  readonly bookmarkWriteEnabled?: boolean;
   readonly book?: ReadingBookDetail;
   readonly session?: RemoteReadingSession;
 }
@@ -36,6 +37,7 @@ export interface ReaderDirectoryPorts {
   currentEntries(): LocalReadingTocEntry[];
   replaceEntries(entries: LocalReadingTocEntry[]): void;
   publishBookmarks(operation: ReaderDirectoryOperation | undefined): void;
+  publishBookmarkAdmission?(enabled: boolean): void;
   publishOffline(operation: ReadingOfflineOperation | undefined, busy: boolean): void;
   refreshMangaDirectory(detailOnly: boolean): void;
   feedback(message: string): void;
@@ -193,7 +195,12 @@ export class ReaderDirectoryOperations {
     const host = ReaderDirectoryHost.forRuntime(owner, current,
       (error: Error): void => this.ports.diagnostic('bookmarkDelivery', error), new BookmarkOperationIntentStore(owner, current));
     this.ports.publishBookmarks(host?.snapshot());
+    this.publishBookmarkAdmission(host?.bookmarkWriteEnabled() ?? false);
     return host;
+  }
+
+  private publishBookmarkAdmission(enabled: boolean): void {
+    this.ports.publishBookmarkAdmission?.(enabled);
   }
 
   offlineHost(owner: ReadingGatewayRuntime): ReadingOfflineHost | undefined {
@@ -221,6 +228,7 @@ export class ReaderDirectoryOperations {
         book: operation.book, generation: operation.generation, requestedCount: operation.requestedCount,
         confirmedCount: operation.confirmedCount, completion: operation.completion,
         canContinueOriginal: operation.canContinueOriginal, projection: operation.projection }),
+      emitWriteAdmission: (enabled: boolean): void => this.publishBookmarkAdmission(enabled),
       failed: (error: Error): void => this.ports.diagnostic('bookmarkOperation', error), onSettled };
   }
 
@@ -367,7 +375,7 @@ export class ReaderDirectoryOperations {
     offline: ReadingOfflineOperation | undefined): ReadingDirectoryRecovery {
     const scene = this.ports.scene();
     return scene.book === undefined ? EMPTY_READING_DIRECTORY_RECOVERY :
-      readingDirectoryRecovery(this.presentationId(scene), scene.book, bookmarks, offline);
+      readingDirectoryRecovery(this.presentationId(scene), scene.book, bookmarks, offline, scene.bookmarkWriteEnabled === true);
   }
 
   bookmarkMessage(operation: ReaderDirectoryOperation | undefined): string {

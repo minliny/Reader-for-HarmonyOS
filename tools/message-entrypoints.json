@@ -747,7 +747,7 @@
       "member": "onReaderBookmarkGestureUnavailable",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
+      "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。 The existing gesture feedback reports a refused global bookmarkWriteEnabled fact as a generic temporary-unavailability message without inferring a foreign operation identity. The Host remains the write authority.",
       "retireRule": "切书/切章选择代次、退出、后台或窗口失效拒绝旧展示/操作；原事实由对应 gateway/coordinator 保管。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
@@ -769,7 +769,7 @@
       "member": "readerRecoveryContent",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate to the existing ReaderDirectoryRecoverySurface, preserving pending/result/readback classification. Floating feedback draws, receives input and exposes accessibility only while its current reader input lease holds and controls are hidden. The directory List prefix retains current-book original facts while controls display.",
+      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added.",
       "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent.",
       "status": "registered-source-entry"
     },
@@ -914,17 +914,6 @@
       "category": "保留目录内容时加载完整目录/重试读取",
       "effectiveHost": "当前阅读控制面板snapshot.catalogState，非loading且interactionEnabled时onRequireCompleteCatalog；已有rows保留，不重置阅读进度。",
       "retireRule": "控制面板关闭/切实体或presentation变化由父owner退役；本组件Action默认generation0，调用者已有准入仍须保留，登记不替代原生生命周期验收。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets#ReaderControlDirectoryContent.directoryPrefix::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
-      "owner": "ReaderControlDirectoryContent",
-      "member": "directoryPrefix",
-      "family": "shared.recovery-notice",
-      "category": "当前书原书签写入未决的目录内核对",
-      "effectiveHost": "当前book匹配的ReadingDirectoryRecovery.bookmarks pending，消费原DirectoryHost事实，复用既有单List自然高度prefix。控制栏可见时全局浮层退出，由此保留解释与恢复动作。",
-      "retireRule": "prefixIdentity含session/tab/layoutPresentation/bookmarkRecoveryIdentity；核currentContent、父live input lease、原generation、busy及canRetry/canContinue，再由LRE核lifecycle/presentation/current input。不改变正文分页或控制壳预算，关闭提示不取消原intent。",
       "status": "registered-source-entry"
     },
     {

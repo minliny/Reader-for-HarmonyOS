@@ -705,7 +705,7 @@ export struct LocalBookDetail {
 
   @Builder
   private chapterPreviewRow(entry: LocalReadingTocEntry) {
-    ReaderDirectoryChapterRow({ variant: 'detail-preview', entry,
+    ReaderDirectoryChapterRow({ variant: 'detail-preview', entry, bookmarkActionsEnabled: false,
       previewNested: this.chapterPreviewNested(entry), previewGroupCollapsed: this.collapsedGroups.includes(entry.index),
       previewEnabled: !this.removing && this.detailBookAvailable(),
       canActOnEntry: (candidate: LocalReadingTocEntry): boolean => this.canActOnChapterPreview(candidate),

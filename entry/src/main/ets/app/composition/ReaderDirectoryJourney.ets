@@ -57,6 +57,7 @@ export class ReaderDirectoryJourney {
         return owner === undefined ? undefined : ports.entry().currentHost(owner);
       }),
       publishBookmarks: (operation: ReaderDirectoryOperation | undefined): void => { ports.entry().directoryOperation = operation; },
+      publishBookmarkAdmission: (enabled: boolean): void => { ports.entry().bookmarkWriteEnabled = enabled; },
       publishOffline: (operation: ReadingOfflineOperation | undefined, busy: boolean): void =>
         ports.entry().publishOfflineOperation(operation, busy),
       refreshMangaDirectory: (detailOnly: boolean): void => {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 16,
+  "revision": 17,
   "controls": [
     {
       "controlId": "page-back",
@@ -1198,17 +1198,22 @@
     },
     {
       "controlId": "directory-bookmark-marker",
-      "owner": "FullDirectoryPanel/ReaderDirectoryChapterRow",
+      "owner": "ReaderDirectoryChapterRow/ReaderDirectoryNavigationList",
       "sources": [
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets",
-          "symbol": "marker"
+          "symbol": "bookmarkActionEnabled"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets",
+          "symbol": "bookmarkActionEnabled"
         }
       ],
       "states": [
         "empty",
         "bookmarked",
-        "unavailable"
+        "unavailable",
+        "write-blocked"
       ],
       "hitTarget": {
         "width": 44,
@@ -1218,7 +1223,7 @@
       },
       "accessibleNameSource": "添加本章章首书签/删除本章已有书签",
       "status": "partial",
-      "knownGap": "开关依据真实bookmarkTimes/章首请求；完整目录可用态与Host busy/unknown准入是否全部反映到marker尚未验证。"
+      "knownGap": "Native marker enabled and current parent mutation ports consume the readonly global Host bookmarkWriteEnabled fact, including unread intent, foreign pending, busy and stale projection. Readonly manga/detail-preview callers explicitly pass false. Chapter/bookmark reading and download admission remain independent. Precise local owner and SDK actor evidence exists. Native delivery, focus, glyphs and user acceptance remain OPEN."
     },
     {
       "controlId": "directory-download-marker-text",

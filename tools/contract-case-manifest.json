@@ -1886,7 +1886,7 @@
       }
     },
     "test-reader-control-bookmark-mutation-recovery.mjs": {
-      "sourceSha256": "a2fa15c6f9448e07fca8ca732c0bc6ba97916c2b65c8e7be3e154afac399b1eb",
+      "sourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
       "cases": {
         "durable-recovery": {
           "resources": [],
@@ -1899,6 +1899,10 @@
         "recovery-surface-sdk": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
+        },
+        "global-write-admission": {
+          "resources": [],
+          "qualification": "QUALIFIED"
         }
       }
     },
@@ -2433,7 +2437,7 @@
       "cases": {
         "node-protocol": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "REVIEW_NEEDED"
         },
         "sdk-protocol": {
           "resources": [],
@@ -11482,7 +11486,7 @@
       }
     },
     "test-reader-directory-pending-prefix.mjs": {
-      "sourceSha256": "9a8c1ce3a81ae0b0001b5c41ed68f4c86559f37e7258d6bf864e9174330ce9c4",
+      "sourceSha256": "0ab0c482842366bd768241bc3eb7be050ec4facccaa82379a6ee32a517038ced",
       "cases": {
         "pending-prefix": {
           "resources": [],

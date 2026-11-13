@@ -333,8 +333,6 @@ export struct ReaderControlPanel {
   @Prop bookmarkLoadFailed: boolean = false;
   @Prop bookmarkLoadMessage: string = '';
   @Prop bookmarkRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
-  @Prop bookmarkRecoveryIdentity: string = '';
-  onBookmarkRecovery: (identity: string, continuing: boolean) => void = (): void => {};
   onRetryBookmarkLoad: () => void = (): void => {};
   @Prop searchQuery: string = '';
   searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
@@ -1664,8 +1662,7 @@ export struct ReaderControlPanel {
           onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),
           bookmarkLoadFailed: this.bookmarkLoadFailed,
           bookmarkLoadMessage: this.bookmarkLoadMessage,
-          bookmarkRecovery: this.bookmarkRecovery, bookmarkRecoveryIdentity: this.bookmarkRecoveryIdentity,
-          onBookmarkRecovery: (identity: string, continuing: boolean): void => this.onBookmarkRecovery(identity, continuing),
+          bookmarkRecovery: this.bookmarkRecovery,
           onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),
           chapterDownloadEnabled: this.chapterDownloadEnabled,
           mangaSearch: this.mangaSearch,

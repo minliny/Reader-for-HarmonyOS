@@ -68,6 +68,7 @@ export struct ReaderDirectoryNavigationSurface {
   /** Manga uses existing markers to manage active/retained downloads. */
   @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop bookmarkActionsEnabled: boolean = true;
   /** Optional native-only prefix used by the constrained text control host. */
   @Prop headerCount: number = 0;
   @Prop prefixHeight: number = 0;
@@ -641,6 +642,7 @@ export struct ReaderDirectoryNavigationSurface {
               chapterDownloadEnabled: this.chapterDownloadEnabled,
               chapterDownloadActionsEnabled: this.chapterDownloadActionsEnabled,
               chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+              bookmarkActionsEnabled: this.bookmarkActionsEnabled,
               headerCount: this.headerCount, prefixHeight: this.prefixHeight, prefixIdentity: this.prefixIdentity,
               prefixRevealRevision: this.prefixRevealRevision,
               prefixBuilder: (): void => this.prefixBuilder(),
@@ -659,13 +661,13 @@ export struct ReaderDirectoryNavigationSurface {
               onClearSearch: (): void => this.onClearSearch(),
               onInvalidated: (): void => { if (!this.awaitingRulesRefresh) this.invalidate(); },
               onDeleteBookmarks: (times: number[]): void => {
-                if (!this.awaitingRulesRefresh) this.onDeleteBookmarks(times);
+                if (!this.awaitingRulesRefresh && this.bookmarkActionsEnabled) this.onDeleteBookmarks(times);
               },
               onDownloadChapter: (chapterIndex: number): void => {
                 if (!this.awaitingRulesRefresh) this.onDownloadChapter(chapterIndex);
               },
               onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
-                if (!this.awaitingRulesRefresh) this.onCreateChapterStartBookmark(request);
+                if (!this.awaitingRulesRefresh && this.bookmarkActionsEnabled) this.onCreateChapterStartBookmark(request);
               },
             });
             if (this.view.visibleTotal === 0 && !this.mangaDisplay && !this.hasPrefix()) {

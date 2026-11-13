@@ -220,6 +220,7 @@ export struct FullDirectoryPanel {
   // Creation stays disabled until an owner supplies the full book identity
   // required by bookmark.create and reloads the Core-backed projection.
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop bookmarkActionsEnabled: boolean = true;
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   // R-LOCAL-TOC-01: the owner resolves the correct return target. This panel
@@ -709,6 +710,7 @@ export struct FullDirectoryPanel {
             chapterEntries: this.admittedEntries,
             chapterDownloadEnabled: this.chapterDownloadEnabled,
             chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+            bookmarkActionsEnabled: this.bookmarkActionsEnabled,
             headerCount: this.standaloneShort() ? 1 : 0,
             prefixHeight: this.standalonePrefixHeight(), prefixIdentity: `${this.listSessionKey}:${this.activeTab}:${this.fontScale()}:${this.innerWidth()}`,
             prefixBuilder: (): void => { this.standalonePrefix(); },
@@ -722,10 +724,10 @@ export struct FullDirectoryPanel {
               this.navigationActive = active;
               if (active) this.initialListPositionReady = true;
             },
-            onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            onDeleteBookmarks: (times: number[]): void => { if (this.bookmarkActionsEnabled) this.onDeleteBookmarks(times); },
             onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
             onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-              this.onCreateChapterStartBookmark(request),
+              { if (this.bookmarkActionsEnabled) this.onCreateChapterStartBookmark(request); },
           });
         } else {
           this.flatChapterList();
@@ -772,12 +774,15 @@ export struct FullDirectoryPanel {
     ReaderDirectoryChapterRow({ variant: 'standalone', entry: entry, rowHeight: this.directoryListRowHeight(),
       currentChapterIndex: this.currentChapterIndex, chapterDownloadEnabled: this.chapterDownloadEnabled,
       chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+      bookmarkActionsEnabled: this.bookmarkActionsEnabled,
       canActOnEntry: (current: LocalReadingTocEntry): boolean =>
         sameReaderDirectoryData([current], [entry]) && this.flatChapterIsCurrent(entry),
       onSelectChapter: (index: number): void => this.onSelectChapter(index),
       onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
-      onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
-      onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => this.onCreateChapterStartBookmark(request),
+      onDeleteBookmarks: (times: number[]): void => { if (this.bookmarkActionsEnabled) this.onDeleteBookmarks(times); },
+      onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
+        if (this.bookmarkActionsEnabled) this.onCreateChapterStartBookmark(request);
+      },
     });
   }
 

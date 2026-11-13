@@ -134,6 +134,7 @@ export class ReadingEntryPresentation {
   directoryChapterTitle: string = '';
   directoryPresentationGeneration: number = 0;
   directoryOperation: ReaderDirectoryOperation | undefined;
+  bookmarkWriteEnabled: boolean = false;
   offlineOperation: ReadingOfflineOperation | undefined;
   offlineOperationActive: boolean = false;
   host: ReadingEntryHost | undefined;
@@ -221,6 +222,7 @@ export class ReadingEntryPresentation {
 
   leaveDetail(owner: ReaderRuntimeOwner | undefined): void {
     const book = this.book, session = this.session;
+    this.bookmarkWriteEnabled = false;
     this.finishReading(owner);
     this.toc = [];
     this.book = undefined;
@@ -339,7 +341,8 @@ export class ReadingEntryPresentation {
       foreground: context.foreground, directoryVisible: route === 'directory',
       acceptsProjection: route === 'detail' || route === 'reading' || route === 'directory',
       presentation: this.directoryPresentationGeneration, sessionGeneration: this.sessionGeneration,
-      reading: this.sessionActive, offlineBusy: this.offlineOperationActive, book: this.book, session: this.session };
+      reading: this.sessionActive, offlineBusy: this.offlineOperationActive,
+      bookmarkWriteEnabled: this.bookmarkWriteEnabled, book: this.book, session: this.session };
   }
 
   replaceOwnedDirectoryEntries(entries: LocalReadingTocEntry[], resolveHost: () => ReadingEntryHost | undefined): void {
@@ -463,6 +466,7 @@ export class ReadingEntryPresentation {
     if (session === undefined || session.identity.sourceId !== book.sourceId || session.identity.bookId !== book.bookId)
       return false;
     const opening = prepare();
+    this.bookmarkWriteEnabled = false;
     this.clearExitRequest();
     this.beginReaderPresentation();
     this.book = this.detailForShelf(book, opening.sourceName);
@@ -530,6 +534,7 @@ export class ReadingEntryPresentation {
 
   currentHost(owner: ReaderRuntimeOwner): ReadingEntryHost {
     const host = ReadingEntryHost.forRuntime(owner);
+    if (this.host !== host) this.bookmarkWriteEnabled = false;
     this.host = host;
     return host;
   }
@@ -555,6 +560,7 @@ export class ReadingEntryPresentation {
 
   enterLocalDetail(owner: ReaderRuntimeOwner, book: ShelfBook, resume: boolean, prepare: () => ReadingEntryPorts): boolean {
     if (book.sourceId !== LOCAL_SOURCE_ID) return false;
+    this.bookmarkWriteEnabled = false;
     this.contentKind = 'text';
     const ports = prepare();
     const host = this.currentHost(owner);
@@ -572,6 +578,7 @@ export class ReadingEntryPresentation {
       notice('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
       return false;
     }
+    this.bookmarkWriteEnabled = false;
     const retainedSession = this.session;
     const fallbackSeeds = request.fallbackSeeds ?? [];
     // Navigation retires the previous presentation before publishing the
@@ -640,6 +647,7 @@ export class ReadingEntryPresentation {
   }
 
   retire(retireShelfPreparation: boolean = true): void {
+    this.bookmarkWriteEnabled = false;
     this.directoryBackfill.retire();
     this.clearRecoveryNotice();
     const host = this.host;
@@ -831,7 +839,7 @@ export class ReadingEntryPresentation {
     this.pendingRemoteDirectory = undefined;
     this.pendingLocalDirectory = undefined;
     const fallback = firstPresentation && remote === undefined && local === undefined &&
-      this.toc.some((entry: LocalReadingTocEntry): boolean => entry.bookmarks === undefined) ?
+      (!this.bookmarkWriteEnabled || this.toc.some((entry: LocalReadingTocEntry): boolean => entry.bookmarks === undefined)) ?
       resolveHost()?.deferredDirectoryProjection() : undefined;
     if (remote === undefined && local === undefined && fallback === undefined) return;
     afterOpening((): void => {
@@ -899,6 +907,9 @@ export class ReadingEntryPresentation {
       offlineGeneration: (): number => this.offlineOperation?.generation ?? 0,
       membership: ports.membership,
       changed: (snapshot: ReadingEntrySnapshot): void => { if (current()) this.publish(snapshot); },
+      bookmarkAdmission: (enabled: boolean): void => {
+        if (current() && this.host === host) this.bookmarkWriteEnabled = enabled;
+      },
       cacheDecision: (error: RemoteChapterCacheRefreshError, guard: () => boolean): Promise<boolean> =>
         ports.cacheDecision(error, (): boolean => current() && guard()),
       notice: (title: string, message: string): void => { if (current()) ports.notice(title, message); },
@@ -912,6 +923,8 @@ export class ReadingEntryPresentation {
   private publish(snapshot: ReadingEntrySnapshot): void {
     const previous = this.published;
     const changedScope = previous?.scopeId !== snapshot.scopeId;
+    if (changedScope || this.book?.sourceId !== snapshot.book?.sourceId || this.book?.bookId !== snapshot.book?.bookId ||
+      this.book?.title !== snapshot.book?.title || this.book?.author !== snapshot.book?.author) this.bookmarkWriteEnabled = false;
     this.published = snapshot;
     this.scopeId = snapshot.scopeId;
     if (changedScope || previous?.book !== snapshot.book) this.book = snapshot.book;

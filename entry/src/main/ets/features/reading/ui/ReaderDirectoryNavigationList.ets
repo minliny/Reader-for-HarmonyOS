@@ -272,6 +272,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop bookmarkActionsEnabled: boolean = true;
   /** One optional native-only prefix; Core/page ranks stay zero based. */
   @Prop @Watch('onPrefixChanged') headerCount: number = 0;
   @Prop @Watch('onPrefixChanged') prefixHeight: number = 0;
@@ -595,8 +596,14 @@ export struct ReaderDirectoryNavigationList {
     if (this.mangaDisplay && changed.size > 0) this.mangaPresentationRevision += 1;
   }
 
+  private bookmarkActionEnabled(chapter: LocalReadingTocEntry | undefined): boolean {
+    return this.interactionEnabled && this.bookmarkActionsEnabled && chapter !== undefined &&
+      chapter.navigable !== false && chapter.bookmarks !== undefined &&
+      (chapter.bookmarks.length > 0 || this.chapterStartBookmarkCreationEnabled);
+  }
+
   private marker(chapter: LocalReadingTocEntry): void {
-    if (this.interactionEnabled === false) return;
+    if (!this.bookmarkActionEnabled(chapter)) return;
     const state = readerDirectoryBookmarkMarkerState(chapter);
     if (state.kind === 'bookmarked') this.onDeleteBookmarks(state.bookmarkTimes);
     else if (state.kind === 'empty' && this.chapterStartBookmarkCreationEnabled)
@@ -1448,9 +1455,10 @@ export struct ReaderDirectoryNavigationList {
             .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签')
+            .enabled(this.bookmarkActionEnabled(this.chapterByIndex.get(item.node.chapterIndex)))
       .responseRegion( readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
       .attributeModifier(new ReaderActionAccessibility((this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks?.length ?? 0) > 0 ?
-              '删除本章已有书签' : '添加本章章首书签', true, false))
+              '删除本章已有书签' : '添加本章章首书签', this.bookmarkActionEnabled(this.chapterByIndex.get(item.node.chapterIndex)), false))
             .onClick((): void => {
               const chapter = this.chapterByIndex.get(item.node?.chapterIndex ?? -1);
               if (chapter !== undefined) this.marker(chapter);

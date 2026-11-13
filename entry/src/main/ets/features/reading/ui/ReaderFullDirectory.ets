@@ -237,6 +237,10 @@ export struct ReaderFullDirectory {
     return JSON.stringify([this.sourceId, this.bookId, this.directoryRecovery.presentationId, this.temporaryBackIdentity]);
   }
 
+  private bookmarkWriteEnabled(): boolean {
+    return this.directoryRecovery.bookmarkWriteEnabled === true;
+  }
+
   private recoveryPresentationCurrent(identity: string): boolean {
     return this.mounted && this.interactive && !this.exitRequested && !this.directoryRulesVisible &&
       identity === this.recoveryPresentationIdentity() && this.isOpeningCurrent();
@@ -332,10 +336,11 @@ export struct ReaderFullDirectory {
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (index: number): void => { if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(index); },
-          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => { if (this.bookmarkWriteEnabled()) this.onDeleteBookmarks(bookmarkTimes); },
+          bookmarkActionsEnabled: this.bookmarkWriteEnabled(),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-            this.onCreateChapterStartBookmark(request),
+            { if (this.bookmarkWriteEnabled()) this.onCreateChapterStartBookmark(request); },
           onExit: (): void => { this.consumeBack(identity); },
         });
       }

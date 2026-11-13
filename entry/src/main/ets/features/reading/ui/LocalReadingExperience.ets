@@ -1950,8 +1950,6 @@ export struct ReadingExperience {
         bookmarkLoadFailed: this.controlBookmarkLoadFailed,
         bookmarkLoadMessage: this.bookmarkLoadMessage,
         bookmarkRecovery: this.bookmarkRecovery,
-        bookmarkRecoveryIdentity: this.bookmarkRecoveryIdentity(),
-        onBookmarkRecovery: (identity: string, continuing: boolean): void => this.reconcileBookmarkRecovery(identity, continuing),
         onRetryBookmarkLoad: (): void => this.loadControlBookmarks(),
         searchQuery: this.quickSearchQuery,
         searchPublication: this.quickSearchPublication,
@@ -2015,9 +2013,9 @@ export struct ReadingExperience {
           this.selectBookmarkAnchor(chapterIndex, chapterOffset, positionScope),
         bookmarkIdentity: this.bookmarkIdentity,
         onDownloadChapter: (chapterIndex: number): void => this.requestReadingDownload(chapterIndex),
-        onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+        onDeleteBookmarks: (bookmarkTimes: number[]): void => { if (this.bookmarkWriteEnabled()) this.onDeleteBookmarks(bookmarkTimes); },
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-          this.onCreateChapterStartBookmark(request),
+          { if (this.bookmarkWriteEnabled()) this.onCreateChapterStartBookmark(request); },
         onPreviousChapter: (): void => this.stepControlChapter(-1),
         onNextChapter: (): void => this.stepControlChapter(1),
         onProgressChange: (percent: number): void => this.seekControlProgress(percent),
@@ -2280,6 +2278,10 @@ export struct ReadingExperience {
     return `${this.lifecycleToken}:${this.bookmarkRecovery.presentationId}:${this.bookmarkRecovery.bookmarks.generation}`;
   }
 
+  private bookmarkWriteEnabled(): boolean {
+    return this.bookmarkRecovery.bookmarkWriteEnabled === true;
+  }
+
   private reconcileBookmarkRecovery(identity: string, continuing: boolean): void {
     const recovery = this.bookmarkRecovery;
     if (!this.isSessionActive(this.lifecycleToken) || !this.isControlInputEnabled() ||
@@ -2338,7 +2340,7 @@ export struct ReadingExperience {
   }
 
   private readerRecoveryInputCurrent(): boolean {
-    return !this.controlMotionVisible() && this.isControlInputEnabled() && !this.sourceSwitchPresentationVisible;
+    return !this.controlVisible() && !this.controlMotionVisible() && this.isControlInputEnabled() && !this.sourceSwitchPresentationVisible;
   }
 
   @Builder
@@ -2354,6 +2356,7 @@ export struct ReadingExperience {
                 presentationId: this.bookmarkRecovery.presentationId, bookmarks: this.bookmarkRecovery.bookmarks,
                 bookmarksKind: this.bookmarkRecovery.bookmarksKind, bookmarksReadbackFailed: this.bookmarkRecovery.bookmarksReadbackFailed,
                 bookmarksBusy: this.bookmarkRecovery.bookmarksBusy, canContinueBookmarks: this.bookmarkRecovery.canContinueBookmarks,
+                bookmarkWriteEnabled: this.bookmarkRecovery.bookmarkWriteEnabled,
                 offline: EMPTY_READING_DIRECTORY_RECOVERY.offline, canContinueOffline: false,
               }, presentationActive: this.readerRecoveryInputCurrent(),
                 isPresentationCurrent: (): boolean => this.readerRecoveryInputCurrent() && identity === this.bookmarkRecoveryIdentity(),
@@ -12509,6 +12512,7 @@ export struct ReadingExperience {
   }
 
   private canStartReaderBookmarkGesture(): boolean {
+    if (!this.bookmarkWriteEnabled()) return false;
     // Speculative neighbour layout can yield to an operation on the stable
     // visible page, just as it yields to an already prepared page turn. Real
     // page/commit/window barriers remain checked below after the lane retires.
@@ -13051,7 +13055,7 @@ export struct ReadingExperience {
     const anchor = this.pageBookmarkFeedbackAnchor();
     const message = reason === 'busy' ? '页面切换中，请稍后下拉' :
       this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === anchor ?
-        '书签正在保存，请稍后再试' : this.currentPageBookmarkStatus() === 'unknown' ?
+        '书签正在保存，请稍后再试' : !this.bookmarkWriteEnabled() ? '书签暂不可操作，请稍后再试' : this.currentPageBookmarkStatus() === 'unknown' ?
         '书签尚未加载，请稍后下拉' : '页面尚未就绪，请稍后下拉';
     const generation = ++this.bookmarkUnavailableGeneration;
     if (this.bookmarkUnavailableTimer >= 0) clearTimeout(this.bookmarkUnavailableTimer);
@@ -13142,6 +13146,7 @@ export struct ReadingExperience {
   }
 
   private toggleCurrentPageBookmark(): void {
+    if (!this.bookmarkWriteEnabled()) { this.onReaderBookmarkGestureUnavailable('unavailable'); return; }
     const page = this.visiblePage;
     const chapterIndex = this.currentChapterIndex();
     if (page === undefined || chapterIndex < 0) return;
