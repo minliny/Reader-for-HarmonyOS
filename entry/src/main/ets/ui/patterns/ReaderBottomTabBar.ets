@@ -46,7 +46,7 @@ export struct ReaderBottomTabBar {
       .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.scheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
       .borderRadius(this.materialRadius())
-      .shadow(readerSurfaceElevation('raised', this.scheme))
+      .shadow(readerSurfaceElevation('raised', this.scheme, true))
       .clip(true)
       .hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange(this.measurementHandler(this.surfaceWidth, this.fontScale));

@@ -1,6 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 export const CONTRACT_CASES = {
+  'opaque-tab-shadow': { description: 'Opaque phone-only raised-shadow fill opt-in preserves other surfaces and actual geometry; no native raster claim.', resources: [] },
   'current-phone-shape': { description: 'Current phone Tab and six exact callers have one measured Native border/radius/clip/shadow owner, reject stale geometry and cannot restore phone Canvas; no Native raster claim.', resources: [] },
   'measurement-identity': { description: 'Actual phone shape and footer handlers retain accepted geometry while rejecting retired measurement callbacks.', resources: [] },
   'footer-propagation': { description: 'Actual nonstandard bookshelf and standard settings consume measured occupied footer extent, including all three bookshelf states.', resources: [] },
@@ -146,8 +147,8 @@ async function currentPhoneShape(sources={}) {
   assert.equal(children(tab).filter(child=>child.params?.resolvedShape!==undefined).length,0,'phone Tab has no second painter or geometry output');
   assert.equal(material.borderRadius,tab.currentRaisedShape().radius,'Native material consumes its accepted effective radius');
   assert.equal(material.clip,true,'the actual Native material clips to its own rounded border');
-  assert.deepEqual(material.shadow,deps.readerSurfaceElevation('raised','day'),'the actual Native material owns its shared raised shadow');
-  assert.equal(material.shadow.fill,false,'raised Native ink excludes the interior fill');
+  assert.deepEqual(material.shadow,deps.readerSurfaceElevation('raised','day',true),'the actual Native material owns its shared raised shadow');
+  assert.equal(material.shadow.fill,true,'opaque phone material opts into the filled native shadow path');
   assert.equal(material.shadow.type,'ShadowType.COLOR','actual Native shadow uses the SDK color kind');
   const tabButtons=nodes(tab,'Button');
   assert.equal(tabButtons.length,2,'both admitted tabs use the real native Button');
@@ -161,14 +162,14 @@ async function currentPhoneShape(sources={}) {
       ['tab-Normal-sentinel-restored','ButtonType.Capsule','ButtonType.Normal',/native tab capsule owns/],
       ['Native-radius-diverges','.borderRadius(this.materialRadius())','.borderRadius(0)',/Native material consumes|effective radius owner/],
       ['Native-clip-disabled','.clip(true)','.clip(false)',/Native material clips|rounded clip owner/],
-      ['Native-shadow-detached',".shadow(readerSurfaceElevation('raised', this.scheme))",'',/owns its shared raised shadow|shared elevation owner|one shadow modifier/],
+      ['Native-shadow-detached',".shadow(readerSurfaceElevation('raised', this.scheme, true))",'',/owns its shared raised shadow|shared elevation owner|one shadow modifier/],
     ]){
       const mutant=replaceOnce(c,c.read(tabPath),before,after);
       await rejected(c,name,()=>currentPhoneShape({negative:true,[tabPath]:mutant}),expected);
     }
     const canvas=replaceOnce(c,c.read(tabPath),'      Row({ space: TOK_SPACE_XS }) {','      Canvas({});\n      Row({ space: TOK_SPACE_XS }) {');
     await rejected(c,'phone-Canvas-restored',()=>currentPhoneShape({negative:true,[tabPath]:canvas}),/phone cannot restore a second Canvas/);
-    const double=replaceOnce(c,c.read(tabPath),".shadow(readerSurfaceElevation('raised', this.scheme))", ".shadow(readerSurfaceElevation('raised', this.scheme)).shadow(readerSurfaceElevation('raised', this.scheme))");
+    const double=replaceOnce(c,c.read(tabPath),".shadow(readerSurfaceElevation('raised', this.scheme, true))", ".shadow(readerSurfaceElevation('raised', this.scheme, true)).shadow(readerSurfaceElevation('raised', this.scheme, true))");
     await rejected(c,'duplicate-material-shadow',()=>currentPhoneShape({negative:true,[tabPath]:double}),/one shadow modifier/);
   }
 }
@@ -205,7 +206,7 @@ function assertPhoneMaterialOwners(c,sources){
     visit(node);return rows;
   }
   const roles=[
-    ['ui/patterns/ReaderBottomTabBar.ets','build','this.materialRadius()','true',"readerSurfaceElevation('raised', this.scheme)",'this.measurementHandler(this.surfaceWidth, this.fontScale)'],
+    ['ui/patterns/ReaderBottomTabBar.ets','build','this.materialRadius()','true',"readerSurfaceElevation('raised', this.scheme, true)",'this.measurementHandler(this.surfaceWidth, this.fontScale)'],
     ['ui/chrome/PageBackBar.ets','panel','this.panelRadius()','this.framed() || this.raised()',"readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme)",'this.panelAreaChangeHandler()'],
     ['features/search/ui/ReaderLibrarySearchSurface.ets','header','this.headerMaterialRadius()','true',"readerSurfaceElevation(this.headerVeil() ? 'raised' : 'fixed', this.scheme)",'this.headerSurfaceAreaChange()'],
     ['features/downloads/ui/SharedDownloadPage.ets','storageDock','this.dockMaterialRadius(false)','true',"readerSurfaceElevation('raised', this.appThemeScheme)",'this.raisedDockAreaChangeHandler(false)'],
@@ -359,5 +360,44 @@ async function footerPropagation(overrides={}) {
   }
 }
 
-const implementations={'current-phone-shape':currentPhoneShape,'measurement-identity':measurementIdentity,'footer-propagation':footerPropagation};
+async function opaqueTabShadow() {
+  const c=await context(),{assert,deps,ts,options}=c;
+  const colors=c.load('ui/foundation/ReaderThemeRegistry.ts');
+  for(const scheme of ['day','night']){
+    const color=colors.readerAppColor('app.navigation.floatingSurface',scheme);
+    assert.match(color,/^#FF[0-9A-Fa-f]{6}$/,'the explicit phone material is opaque in both themes');
+    const original=deps.readerSurfaceElevation('raised',scheme);
+    const opted=deps.readerSurfaceElevation('raised',scheme,true);
+    assert.equal(original.fill,false,'existing translucent raised callers retain hollow shadow behavior');
+    assert.equal(opted.fill,true);
+    assert.deepEqual({...opted,fill:false},original,'the experiment changes only shadow fill');
+    for(const kind of ['embedded','fixed','floating','popover','sheet'])
+      assert.deepEqual(deps.readerSurfaceElevation(kind,scheme,true),deps.readerSurfaceElevation(kind,scheme),
+        'opaque opt-in is scoped to raised elevation');
+  }
+  const consumers=['ui/patterns/ReaderBottomTabBar.ets','ui/chrome/PageBackBar.ets',
+    'features/search/ui/ReaderLibrarySearchSurface.ets','features/downloads/ui/SharedDownloadPage.ets',
+    'ui/surfaces/ReaderPanelFrame.ets'];
+  const explicit=[];
+  for(const path of consumers){
+    const tree=ts.createSourceFile(path,c.read(path),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+    function visit(node){
+      if(ts.isCallExpression(node)&&node.expression.getText(tree)==='readerSurfaceElevation'&&node.arguments.length>2)
+        explicit.push({path,value:node.arguments[2].getText(tree)});
+      ts.forEachChild(node,visit);
+    }
+    visit(tree);
+  }
+  assert.deepEqual(explicit,[{path:consumers[0],value:'true'}],'only the verified opaque phone material requests filled shadow');
+  await currentPhoneShape({negative:true});
+  const path=consumers[0];
+  const mutant=replaceOnce(c,c.read(path),"readerSurfaceElevation('raised', this.scheme, true)",
+    "readerSurfaceElevation('raised', this.scheme)");
+  await rejected(c,'opaque-phone-opt-in-dropped',()=>currentPhoneShape({negative:true,[path]:mutant}),
+    /shared elevation owner|opaque phone material|owns its shared raised shadow/);
+  console.log(JSON.stringify({case:'opaque-tab-shadow',status:'PASS',explicitOpaqueConsumers:1,
+    changedNativeParameter:'shadow.fill',nativeRaster:'NOT_RUN',hypothesis:'OPEN'}));
+}
+
+const implementations={'opaque-tab-shadow':opaqueTabShadow,'current-phone-shape':currentPhoneShape,'measurement-identity':measurementIdentity,'footer-propagation':footerPropagation};
 for(const id of selectContractCases(CONTRACT_CASES)){await implementations[id]();recordContractCasePass(id);}

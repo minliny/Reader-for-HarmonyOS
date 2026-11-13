@@ -102,3 +102,13 @@ manifest位于 `.reader-artifacts/hap/20261113T125933Z-ed8d6937-54bfeed6/manifes
 第一版TTS状态胶囊测试把maxWidth当作实际自然宽，该判断已撤回，最终使用当前状态文字的生产测量返回值。一条RSS初次夹具失败日志被后续运行覆盖，失败原因和修正保留在 `secondary-pill-results.json`，最终及same-box新日志分别冻结。代码与SDK属性结果各自保留证据范围。
 
 四族全部21项登记的2245个主源与依赖绑定已刷新并逐项匹配，包含261个唯一文件。主登记和全部嵌套变体共同更新。21项visual继续NOT_RUN，历史布局、SDK、原生产物维持其原输入和原判定。登记事实更新记录为 `final-pill-register-all-bindings.json`。
+
+## 圆角治理后的原生剩余问题
+
+候选 `20261113T134029Z-91218050-0141197c`，App `0.2.0.DEV.e543e955ba4d` 已实际编译、指定身份签名、保数据安装并启动。其底栏与第一份候选在相同像素区域完全一致，白楔与断弧继续FAIL。Normal加999与Capsule两种子按钮输入在该场景产生相同像素，通用圆角治理未关闭这项原生缺陷。
+
+独立原生树核对确认父Row为196×68vp，两个子按钮约85×50vp，与实际padding、border和密度一致。当前路径Canvas为0，没有额外有效白色覆盖层。源码半径对应的父子端部近乎同心，尺寸预算能够排除版面错位。tree没有导出实际radius和shadow字段，当前代码值不能替代原生属性回执。
+
+包含动态分支的native raised共6个装配站点。PhoneTab的日夜材质均为FF不透明色，其余dock和veil存在半透明主题分支。当前单变量假设仅使PhoneTab显式选择opaqueMaterial，raised helper默认false。上游fill=false分支增加DIFFERENCE剪裁，true分支跳过该内部剪裁，上游同时有自动恢复。当前实验不认定VM泄漏或版本已匹配。抗锯齿边界及实际故障因果继续由新帧回答。[RenderService实现](https://raw.githubusercontent.com/openharmony/graphic_graphic_2d/master/rosen/modules/render_service_base/src/property/rs_properties_painter.cpp)
+
+准确 `opaque-tab-shadow` 叶及独立审修通过。该实验只有PhoneTab的shadow.fill从false到true，其他材质参数、border、clip、几何和业务调用保持原值。证据为 `native/opaque-tab-shadow-sdk.json` 和 `native/reading-raised-path-review.json`，原生假设状态为OPEN。全部代码和独立审修冻结后再构建候选。本轮另一次构建尝试在编译前被沙盒进程优先级权限拒绝，相同冻结输入在允许执行资源保护操作的上下文中完成编译，记录保留。
