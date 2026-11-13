@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-恢复消息与书签写准入补修已完成代码开发、独立精确复核及受影响登记核对。后续候选需绑定本轮新字节。`6df7044e` 候选已保数据安装，目录实屏暴露本轮新增的恢复提示前缀占满列表问题。该安排已撤回，同时修复代码复查发现的书签删除按钮及跨书籍写准入事实缺口。前轮以有限属性、预算和状态探针宣布全页面代码侧完成，遗漏了真实宿主装配、入口差异、图标角色、浮层归属及保留控件闭包。本轮结论以实际宿主覆盖、原始错误位置、根因和独立证据逐项对账。
+恢复消息与书签写准入补修的 `9cab47ae` 候选已完成代码开发、独立精确复核、登记核对及保数据安装。Root继续从首次读取链发现原回执未交付页面的遗漏，随后暂停VM交互，完成这段连接及响应式发布的补修和独立验收。后续候选需绑定新增的两文件字节。`6df7044e` 候选暴露的恢复提示前缀占满列表问题已撤回。前轮以有限属性、预算和状态探针宣布全页面代码侧完成，遗漏了真实宿主装配、入口差异、图标角色、浮层归属及保留控件闭包。本轮结论以实际宿主覆盖、原始错误位置、根因和独立证据逐项对账。
 
 当前发现库存为267个ETS模块、175个struct声明、41个页面或表面命名文件。旧静态组件闭包为173项。267个发现模块均已在生产宿主、支持模块、保留实现或诊断夹具中记录处置，缺失0。实际页面与变体由独立作者逐宿主记录。当前源码的HAP与VM证据在交付阶段另行追加。
 
@@ -247,3 +247,15 @@ Root独立执行阅读9项同进程精确场景、主流程6项、后续canonica
 本次登记为Control17，目录13个实例revision15。五个JSON实际变化，tiers字节及既有755权限保持。已删除恢复prefix消息入口，消息全树164/164通过。新增global准入case默认OFF，原node-protocol因实际load/recover路径改变降为当前 `REVIEW_NEEDED`，历史PASS保留，当前共34项待审。72个本批case按实际方法影响分别记录复用或当前资格，未刷新全树证明。
 
 Root最终四项静态核对中 `validate-model`、`check-contract-refs` 通过。`check-register` 保留原39项诊断，E2 FAIL21、E3 FAIL5、B1 NOT_RUN2、G-03 NOT_RUN8、SCOPE NOT_RUN3，全部页面层结果及不变量保持原判定。可选的Source旧layoutEvidence当前引用已撤下，原样本和哈希保留，旧报告没有冒充本次字节。
+
+### 首次读取的回执投影补遗
+
+`9cab47ae` 候选完整构建、指定证书验签和保数据安装通过，run为 `20261113T055038Z-9cab47ae-d74e868d`，App身份 `0.2.0.DEV.536530c56082`，signed HAP SHA-256为 `9833a50b4c907dbd5245c19dd9aa6b6c1e7b203efcbdd352c13755c5c8ba87b0`。新鲜停止态DB/WAL、三次已有编译缓存的Core运行及五项兼容性证明均绑定该候选。启动后确认现有书架和Sample EPUB正文可用。
+
+Root在后续代码审读中发现 `projectDirectory` 的初始Binding只交付entries和写准入，没有转交Host已经恢复出的原操作。Entry因此缺少该原回执，要等显式打开目录时由Operations发布snapshot才有核对入口。增强准确case在未改动的 `9cab47ae` 生产源码上实际失败，Entry.operation为undefined。该缺口属于本轮初始authority接通后的修复遗漏，原106处总数保持。
+
+两个生产文件现沿既有Lease转交原operation，继续核当前Runtime、scope、Host及sourceId/bookId/title/author。Entry按原Operations模式复制顶层DTO，保证同一Host操作就地更新projection时，Observed页面能收到新发布。没有新增读取或新操作owner。初始同书unknown与confirmed、foreign隐藏、旧lease/替换Host及四个身份字段均有准确回归。
+
+增强global准入case独立通过，90个稳定输入。首次同书恢复仅query1次、list1次、新写入0，分别产生pending或已确认的none投影。独立operation-only诊断通过，121个稳定输入，实际Lease回调经Observed Entry、Index闭包及Retained同一Shell自动收到pending→pending-busy→readback→none。没有手动回放observer。原UI137输入的目录及浮层State证据按未变方法复用，原失败及两次独立增量均保留。
+
+本补遗当前字节的HAP与VM验证待后续绑定。原 `9cab47ae` 帧、安装结果和源代码侧失败各自保留。

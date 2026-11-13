@@ -13,7 +13,7 @@ import { sameRemoteSessionEvidence, copyRemoteReadingSession, preparedRemoteChap
   preparedRemoteChapterPositionMatches, withPreparedRemoteChapter } from './RemoteReadingEvidence';
 import { captureRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { ReadingOfflineGateway } from './ReadingOfflineGateway';
-import { ReaderDirectoryHost } from './ReaderDirectoryHost';
+import { ReaderDirectoryHost, type ReaderDirectoryOperation } from './ReaderDirectoryHost';
 import { BookmarkOperationIntentStore } from './ReadingOperationIntents';
 import { ReadingPrefetchHost } from './ReadingPrefetchHost';
 import { remoteReadingEntryKind, type ReadingBookDetail } from '../presentation/ReadingBookDetail';
@@ -53,6 +53,7 @@ export interface ReadingEntryLease {
   membership: () => ReadingEntryMembership;
   changed: (snapshot: ReadingEntrySnapshot) => void;
   bookmarkAdmission?: (enabled: boolean) => void;
+  bookmarkOperation?: (operation: ReaderDirectoryOperation) => void;
   cacheDecision: (error: RemoteChapterCacheRefreshError, current: () => boolean) => Promise<boolean>;
   notice: (title: string, message: string) => void;
   refreshShelf: () => void;
@@ -501,6 +502,7 @@ export class ReadingEntryHost {
       await directory.load({ book, current, currentEntries: lease.currentDirectory,
         emitEntries: (entries): void => { if (current()) { this.state = { ...this.state, toc: entries }; this.publish(scope, lease); } },
         emitWriteAdmission: (enabled): void => { if (current()) lease.bookmarkAdmission?.(enabled); },
+        emitOperation: (operation): void => { if (current()) lease.bookmarkOperation?.(operation); },
         failed: (error): void => {
           if (current()) { reportedFailure = error; this.diagnostic(lease, 'directory-bookmarks', error); }
         } });

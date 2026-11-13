@@ -2749,7 +2749,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -2949,7 +2949,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -4073,7 +4073,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -4253,7 +4253,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -5515,7 +5515,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -5791,7 +5791,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -6916,7 +6916,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -7184,7 +7184,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -8302,7 +8302,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -8558,7 +8558,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -9593,7 +9593,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -9773,7 +9773,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -10811,7 +10811,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -11079,7 +11079,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -12204,7 +12204,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -12384,7 +12384,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -13509,7 +13509,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -13777,7 +13777,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -14812,7 +14812,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -14992,7 +14992,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -16030,7 +16030,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -16298,7 +16298,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -17440,7 +17440,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -17696,7 +17696,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",
@@ -18833,7 +18833,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-                "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+                "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets",
@@ -19089,7 +19089,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-                "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+                "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
               },
               {
                 "path": "entry/src/main/ets/features/reading/presentation/ReaderDirectoryOperations.ts",

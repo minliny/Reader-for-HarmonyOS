@@ -56,9 +56,9 @@ if(selectedCase==='global-write-admission'){
   const f=await platformFixture(official,existing,transport.command.bind(transport));
   fixtures.push(f);return Object.assign(f,{transport});
  }
- function consumer(f, currentBook=book){
-  const Entry=actualReadingEntryPresentation(),entry=new Entry();
-  Object.assign(entry,{book:{...currentBook},toc:[row([])],sessionActive:true,sessionGeneration:1});
+ function consumer(f, currentBook=book,existingEntry){
+  const Entry=actualReadingEntryPresentation(),entry=existingEntry??new Entry();
+  if(existingEntry===undefined)Object.assign(entry,{book:{...currentBook},toc:[row([])],sessionActive:true,sessionGeneration:1});
   const route={route:'reading',generation:1};
   const scope={owner:f.runtime,mount:1,retired:false,foreground:true,covered:false};
   const Journey=actualReaderDirectoryJourney({ReaderDirectoryHost:f.Directory,...f.types});
@@ -159,6 +159,8 @@ if(selectedCase==='global-write-admission'){
    assert.equal(initial.entry.bookmarkWriteEnabled,false,'first-page initial read observes foreign pending without requiring controls');
    assert.equal(cold.directory.snapshot(),undefined);
    assert.equal(initial.entry.toc[0].bookmarks.length,0);
+   assert.equal(initial.entry.directoryOperation,undefined,'foreign initial read never publishes the foreign receipt as this book');
+   assert.equal(consumer(cold,initial.entry.book,initial.entry).recovery().bookmarks.visible,false);
    initial.ready();assert.equal(initial.frames.length,0,'same first-page presentation does not repeat blocked reads');
    assert.deepEqual(JSON.parse(cold.disk('bookmark')),original);
    const runtime={...cold.runtime};cold.install(runtime);
@@ -193,6 +195,44 @@ if(selectedCase==='global-write-admission'){
    assert.ok(raced.length>0&&raced.every(value=>value===false));
    await racingHost.load({...binding,current:racingCurrent});
    assert.equal(racingHost.bookmarkWriteEnabled(),false,'the new actual-authority read observes foreign pending');
+  }
+  for(const outcome of ['unknown','confirmed']){
+   const currentBook={...book,sourceId:'source',contentKind:'text'};
+   const f=await bookmarkFixture(),originalConsumer=consumer(f,currentBook);await originalConsumer.load();
+   f.options[outcome==='unknown'?'beforeMethod':'afterMethod']='bookmark.create';
+   create(originalConsumer);await settled(f);
+   const original=JSON.parse(f.disk('bookmark'));
+   assert.equal(originalConsumer.entry.directoryOperation.projection.receipt.confirmation,'unknown');
+   const cold=await bookmarkFixture(true,{root:f.root,transport:f.transport}),initial=readerReady(cold,currentBook);
+   const view=consumer(cold,currentBook,initial.entry);
+   assert.equal(initial.entry.directoryOperation,undefined);
+   initial.ready();assert.equal(initial.frames.length,1);initial.frames.shift()();await initial.tasks[0];
+   assert.ok(initial.entry.directoryOperation,'actual first-page directory recovery publishes its same-book operation to Entry');
+   assert.equal(initial.entry.directoryOperation.projection.receipt.confirmation,outcome);
+   assert.equal(initial.entry.directoryOperation.projection.receipt.readback,'succeeded');
+   assert.notEqual(initial.entry.directoryOperation,cold.directory.snapshot(),'Entry receives a fresh top-level DTO for mutable owner readback updates');
+   const recovery=view.recovery();
+   assert.equal(recovery.bookmarks.visible,outcome==='unknown');
+   assert.equal(recovery.bookmarksKind,outcome==='unknown'?'pending':'none');
+   assert.equal(recovery.bookmarkWriteEnabled,outcome==='confirmed');
+   assert.equal(cold.calls.filter(call=>call.method==='bookmark.list').length,1,'initial receipt projection adds no list read');
+   assert.equal(cold.writes().length,0,'initial recovery never submits a replacement mutation');
+   const query=cold.calls.find(call=>call.method==='bookmark.operation.query'&&call.params.operationId!==undefined);
+   assert.equal(query.params.operationId,original.params.operationId);
+   if(outcome==='unknown')assert.deepEqual(JSON.parse(cold.disk('bookmark')),original);
+   else assert.equal(cold.disk('bookmark'),'');
+   const lease=initial.host.lease,accepted=initial.entry.directoryOperation,operation=cold.directory.snapshot();
+   for(const field of ['sourceId','bookId','title','author']){
+    const shown=initial.entry.book;initial.entry.book={...shown,[field]:shown[field]+'-successor'};
+    lease.bookmarkOperation(operation);
+    assert.equal(initial.entry.directoryOperation,accepted,'initial operation delivery rejects changed '+field);
+    initial.entry.book=shown;
+   }
+   const boundHost=initial.entry.host;initial.entry.host=undefined;lease.bookmarkOperation(operation);
+   assert.equal(initial.entry.directoryOperation,accepted,'a replaced presentation Host cannot receive the old lease receipt');
+   initial.entry.host=boundHost;
+   initial.retire();lease.bookmarkOperation(operation);
+   assert.equal(initial.entry.directoryOperation,accepted,'retired Entry lease cannot deliver an old operation');
   }
   {
    const f=await bookmarkFixture(),initial=readerReady(f,{...book,sourceId:'source',contentKind:'text'});

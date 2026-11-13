@@ -1886,7 +1886,7 @@
       }
     },
     "test-reader-control-bookmark-mutation-recovery.mjs": {
-      "sourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
+      "sourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
       "cases": {
         "durable-recovery": {
           "resources": [],

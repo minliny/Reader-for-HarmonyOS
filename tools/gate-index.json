@@ -32857,7 +32857,7 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
+      "reviewedSourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
       "estimatedCostType": "existing-core-cli",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -33003,7 +33003,7 @@
         },
         {
           "path": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
-          "sha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2"
+          "sha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
@@ -33047,6 +33047,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -80624,7 +80630,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -81002,6 +81008,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -81169,7 +81181,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -81545,6 +81557,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -82007,7 +82025,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -82103,7 +82121,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -82661,6 +82679,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -82828,7 +82852,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -83197,6 +83221,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -83360,7 +83390,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -83720,6 +83750,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -84270,7 +84306,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -84675,6 +84711,12 @@
         "path": ".reader-artifacts/vm-ui-feedback-20261113/arkts-binding-followup/preview/adapter-review.json",
         "sha256": "468f0aa1314e4fa99fbb3e9c2b3cf37192ab19e9c1cd37fbd008fe443c139885",
         "scope": "Exact shallow-copy factory relocation, finite adapter injection and removal of two deleted receiver calls. No qualification promotion or new case execution is inferred."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": null,
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -121115,7 +121157,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -121611,6 +121653,12 @@
         "case": "pointer-routing",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "pointer-routing",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -127257,7 +127305,7 @@
       "mechanism": "Actual bookmark Index/DirectoryHost exact receipt and committed-write reload recovery via existing Core CLI; owner implementation record: [\"Added scoped bookmarkFixture reusing actual journal/Core exact-query, without GeneralSettings/download/Offline owner construction; old default fixture behavior preserved.\", \"makeIndex bookmark domain emits only 15 actual current Index members; no UI recovery leaves or unrelated source regex.\", \"Host watcher/retry is independent actual AST-selected class methods, durable temp roots cleaned finally.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
+      "reviewedSourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
       "definitionInputs": [
         {
           "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryHost.ts",
@@ -127401,7 +127449,7 @@
         },
         {
           "path": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
-          "sha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2"
+          "sha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
@@ -127420,7 +127468,7 @@
       "evidenceBoundary": "Actual existing CLI SQLite plus SDK ordinary methods; no native storage/device/UI acceptance.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "7bc68ffb609f41a167f47179f4e0684c602d4e979dd598599cc6d4d4bee8e47b",
+      "resourceDefinitionSha256": "e50fb8089a5cd80d2752368033f8da29f82bb324aa82901719a919b7c4f05b1a",
       "definitionIdentityState": "REVIEW_NEEDED",
       "priorValidationEvidence": {
         "plan": "READING-020",
@@ -127441,6 +127489,12 @@
         "case": "durable-recovery",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "durable-recovery",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -127480,7 +127534,7 @@
       "mechanism": "Actual Host watchers error/Prop delivery order and explicit retry without Core; owner implementation record: [\"Added scoped bookmarkFixture reusing actual journal/Core exact-query, without GeneralSettings/download/Offline owner construction; old default fixture behavior preserved.\", \"makeIndex bookmark domain emits only 15 actual current Index members; no UI recovery leaves or unrelated source regex.\", \"Host watcher/retry is independent actual AST-selected class methods, durable temp roots cleaned finally.\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
+      "reviewedSourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
       "definitionInputs": [
         {
           "path": "entry/src/main/ets/app/BookRequestScheduler.ts",
@@ -127708,7 +127762,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -128068,7 +128122,7 @@
         },
         {
           "path": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
-          "sha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2"
+          "sha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd"
         }
       ],
       "definitionInputProblems": [],
@@ -128089,7 +128143,7 @@
       "evidenceBoundary": "Actual existing CLI SQLite plus SDK ordinary methods; no native storage/device/UI acceptance.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "7bc68ffb609f41a167f47179f4e0684c602d4e979dd598599cc6d4d4bee8e47b",
+      "resourceDefinitionSha256": "e50fb8089a5cd80d2752368033f8da29f82bb324aa82901719a919b7c4f05b1a",
       "definitionIdentityState": "REVIEW_NEEDED",
       "priorValidationEvidence": {
         "execution": "REUSED",
@@ -128124,6 +128178,12 @@
         "case": "host-retry",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "host-retry",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -152520,7 +152580,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -152930,6 +152990,12 @@
         "case": "sdk-public-slots",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "sdk-public-slots",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -382396,7 +382462,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -382928,6 +382994,12 @@
         "case": "admission-sdk",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "admission-sdk",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -383386,7 +383458,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -383970,6 +384042,12 @@
         "case": "native-targets-sdk",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "native-targets-sdk",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -384175,7 +384253,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -384760,6 +384838,12 @@
         "case": "manga-tts-sdk",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "manga-tts-sdk",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -385183,7 +385267,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -385715,6 +385799,12 @@
         "case": "brightness-sdk",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "brightness-sdk",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -388354,7 +388444,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -388804,6 +388894,12 @@
         "case": "matrix",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "matrix",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -389373,7 +389469,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -389785,6 +389881,12 @@
         "case": "header-spacing",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "header-spacing",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -389949,7 +390051,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -390361,6 +390463,12 @@
         "case": "icon-roles",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "icon-roles",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -390380,7 +390488,7 @@
         "finite native/property/measurement ports"
       ],
       "estimatedCostType": "sdk-lowering",
-      "reviewedSourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
+      "reviewedSourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
       "definitionInputs": [
         {
           "path": "entry/src/main/ets/features/reading/application/ReaderDirectoryHost.ts",
@@ -390524,7 +390632,7 @@
         },
         {
           "path": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
-          "sha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2"
+          "sha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts",
@@ -390549,7 +390657,7 @@
         ]
       },
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "7bc68ffb609f41a167f47179f4e0684c602d4e979dd598599cc6d4d4bee8e47b",
+      "resourceDefinitionSha256": "e50fb8089a5cd80d2752368033f8da29f82bb324aa82901719a919b7c4f05b1a",
       "protectedBehavior": "Recovery Scroll keeps touches from the real parent outside-dismiss handler while the current physical retry reaches its owner and busy/old identities reject.",
       "mechanism": "Installed SDK lowers the actual recovery Builder and actual parent onControlBackdropTouch with production backdrop policy; controlled Down/Up compare the prior and fixed boundary.",
       "productionBinding": "ReadingExperience.readerRecoveryContent/bookmarkRecoveryIdentity/reconcileBookmarkRecovery/onControlBackdropTouch, shared ReaderRecoveryNotice/Action, ReaderControlBackdropTouch policy.",
@@ -390596,6 +390704,12 @@
         "case": "recovery-surface-sdk",
         "decision": "REVIEW_NEEDED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "recovery-surface-sdk",
+        "decision": "REVIEW_NEEDED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -390763,7 +390877,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -391174,6 +391288,12 @@
         "case": "surface-measurements",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "surface-measurements",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -391640,7 +391760,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -391736,7 +391856,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -392305,6 +392425,12 @@
         "case": "detail-kind-confirmation",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "detail-kind-confirmation",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -392596,7 +392722,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -392692,7 +392818,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -393264,6 +393390,12 @@
         "case": "detail-type-state",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "detail-type-state",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -393555,7 +393687,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -393651,7 +393783,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -394223,6 +394355,12 @@
         "case": "library-watch-parent-delivery",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "library-watch-parent-delivery",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -394494,7 +394632,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -394590,7 +394728,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -395159,6 +395297,12 @@
         "case": "detail-entry-dto-geometry",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "detail-entry-dto-geometry",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -395450,7 +395594,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -395546,7 +395690,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -396118,6 +396262,12 @@
         "case": "detail-directory-action",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "detail-directory-action",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -396409,7 +396559,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -396505,7 +396655,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -397077,6 +397227,12 @@
         "case": "bookshelf-action-lanes",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "bookshelf-action-lanes",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -397368,7 +397524,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -397464,7 +397620,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -398036,6 +398192,12 @@
         "case": "labeled-action-paint",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "labeled-action-paint",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -398327,7 +398489,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -398423,7 +398585,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -398995,6 +399157,12 @@
         "case": "select-watch-parent-delivery",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "select-watch-parent-delivery",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -399286,7 +399454,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -399382,7 +399550,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -399954,6 +400122,12 @@
         "case": "directory-watch-parent-delivery",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "directory-watch-parent-delivery",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -400246,7 +400420,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -400342,7 +400516,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -400918,6 +401092,12 @@
         "case": "dialog-action-budget",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "dialog-action-budget",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -401209,7 +401389,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -401305,7 +401485,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -401877,6 +402057,12 @@
         "case": "menu-divider-current",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "menu-divider-current",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -402168,7 +402354,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -402264,7 +402450,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -402836,6 +403022,12 @@
         "case": "main-rail-current",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "main-rail-current",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -403127,7 +403319,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -403223,7 +403415,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -403795,6 +403987,12 @@
         "case": "no-cover-graphic",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "no-cover-graphic",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -404086,7 +404284,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -404182,7 +404380,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -404754,6 +404952,12 @@
         "case": "compact-source-paint",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "compact-source-paint",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -405045,7 +405249,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -405141,7 +405345,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -405713,6 +405917,12 @@
         "case": "tablet-select-admission",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "tablet-select-admission",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -406004,7 +406214,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -406100,7 +406310,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -406672,6 +406882,12 @@
         "case": "dialog-current-actions",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "dialog-current-actions",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -406963,7 +407179,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -407059,7 +407275,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -407631,6 +407847,12 @@
         "case": "detail-hero-source",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "detail-hero-source",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -407902,7 +408124,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -407998,7 +408220,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -408567,6 +408789,12 @@
         "case": "prepared-media-qualification",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "prepared-media-qualification",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -408734,7 +408962,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -409137,6 +409365,12 @@
         "case": "bookmark-facts",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "bookmark-facts",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -409304,7 +409538,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -409707,6 +409941,12 @@
         "case": "directory-consumers",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "directory-consumers",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -409870,7 +410110,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -410265,6 +410505,12 @@
         "case": "measurement-owner",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "measurement-owner",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -410444,7 +410690,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -410896,6 +411142,12 @@
         },
         "inputEvidence": "Log-only prior execution. Current declared production methods and dependency bytes are bound separately by this metadata review. No execution input trace or sourceSet is inferred.",
         "boundary": "Local method/SDK evidence with finite ports. This does not prove native lifecycle scheduling, pixels, touch, focus, system font rendering or feature enablement."
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "pending-prefix",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -412000,7 +412252,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -412451,6 +412703,12 @@
         "case": "standalone-prefix-sdk",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "standalone-prefix-sdk",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -413759,7 +414017,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -414198,6 +414456,12 @@
         "case": "scroll-owner",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "scroll-owner",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -414361,7 +414625,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -414800,6 +415064,12 @@
         "case": "default-scroll",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "default-scroll",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -415758,7 +416028,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -415854,7 +416124,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -416317,6 +416587,12 @@
         "case": "target-handoff",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "target-handoff",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -416584,7 +416860,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -416680,7 +416956,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -417143,6 +417419,12 @@
         "case": "failure-retention",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "failure-retention",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -417410,7 +417692,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -417506,7 +417788,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -417969,6 +418251,12 @@
         "case": "restoration-retention",
         "decision": "REUSED",
         "sha256": "d8bbea81c0a5d921eea56c461a7547d1003b87e76cd8fd2ec806b871c02cc703"
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "restoration-retention",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     },
     {
@@ -418589,7 +418877,7 @@
         "Private temporary AtomicFile/fsync IO with explicit finite RPC transport"
       ],
       "estimatedCostType": "selected-local-owner-sdk-atomic-file",
-      "reviewedSourceSha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2",
+      "reviewedSourceSha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd",
       "definitionInputs": [
         {
           "path": "entry/src/main/ets/app/BookRequestScheduler.ts",
@@ -418757,7 +419045,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryHost.ts",
-          "sha256": "9eea5328b82301a3dedae8fa26555445fe8c664ef5c7ae48d0375b5d3386da8f"
+          "sha256": "0a50f567c5b63c8ac4687e298f39ef2d2aaabd3f8bf330e2a377c880d200e49b"
         },
         {
           "path": "entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts",
@@ -418853,7 +419141,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-          "sha256": "1cb1c5f0e88122e421b56ee06a3a1e4fe999346aa35e860594337dc68800fe61"
+          "sha256": "f2cecc61d2949e015e58b5fd9a1f0eb53f8ed50330ef2201ee5298a6a6f0bfa1"
         },
         {
           "path": "entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts",
@@ -418945,7 +419233,7 @@
         },
         {
           "path": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
-          "sha256": "76d853641ec99f745fab2e4c18c892d29ced7f82ca7a51f93735ff29d04936a2"
+          "sha256": "2da2a411334e9b91f8afd6df922292359b7ec9fc16807c964e29a658c31e7fcd"
         }
       ],
       "definitionInputProblems": [],
@@ -418971,11 +419259,32 @@
         ]
       },
       "resourceNeeds": [],
-      "resourceDefinitionSha256": "7bc68ffb609f41a167f47179f4e0684c602d4e979dd598599cc6d4d4bee8e47b",
+      "resourceDefinitionSha256": "e50fb8089a5cd80d2752368033f8da29f82bb324aa82901719a919b7c4f05b1a",
       "mechanism": "Select this exact manual case using --case pending-prefix. No sibling execution is inferred.",
       "repair": null,
       "repairAction": null,
       "validationEvidence": {
+        "execution": "REUSED",
+        "currentPublicationExecution": "NOT_RUN",
+        "trace": ".reader-artifacts/vm-global-ui-audit-20261113/reading-manga/pending-prefix-withdrawal/initial-operation-independent-inputs.json",
+        "traceSha256": "ce25cf78584ac8a87e1d84f0de6673abab543870c6b47d03ec56e18310df3732",
+        "actualCommand": [
+          "/Users/minliny/Documents/Reader/.reader-isolated/framework-confluence-20261112/Reader-for-HarmonyOS/tools/test-reader-control-bookmark-mutation-recovery.mjs",
+          "--case",
+          "global-write-admission"
+        ],
+        "case": "global-write-admission",
+        "testExitCode": 0,
+        "traceIntegrity": "PASS",
+        "sourceSetSha256": "005df220e0f06e1fcd5788c8170b50745707475fbe22183339c4bce743ce5379",
+        "supportingReactiveEvidence": {
+          "trace": ".reader-artifacts/vm-global-ui-audit-20261113/reading-manga/pending-prefix-withdrawal/observed-operation-independent-inputs.json",
+          "sha256": "393ea2f70c905f97a302c74d44fe77986faf143b9d4104fbd168baa465a71a64",
+          "scope": "Actual Observed Entry lease operation publication → real Journey/Operations/Entry.directoryScene → SDK-lowered RetainedReaderScene ObjectLink and same Shell child, with admission held false so original-operation pending/readback changes independently invalidate the shared recovery parameters. Instrumented property delivery, no manual replay or Native renderer claim."
+        },
+        "boundary": "Actual exact nonauthor local owner and reactive publication evidence. Native renderer, device behavior and user acceptance remain separate."
+      },
+      "priorInitialOperationValidationEvidence": {
         "execution": "REUSED",
         "currentPublicationExecution": "NOT_RUN",
         "trace": ".reader-artifacts/vm-global-ui-audit-20261113/reading-manga/pending-prefix-withdrawal/owner-independent-final04-inputs.json",
@@ -418995,6 +419304,12 @@
           "sha256": "0cc400fd517fcec5f0d2c0428e9cc72dbb0cc518cfa1e5737be4b4539c9f16c9",
           "scope": "Actual Observed Entry/ObjectLink RetainedReaderScene false→true→false publication to ReaderShell child parameters with instrumented SDK property delivery. No manual replay, Native renderer or complete downstream tree claim."
         }
+      },
+      "initialOperationMethodReview": {
+        "path": ".reader-artifacts/vm-ui-feedback-20261113/recovery-prefix-rollback/initial-operation-metadata/review.json",
+        "case": "global-write-admission",
+        "decision": "REUSED",
+        "sha256": "8ac89f5dada797a145af2803cbd708c6e57d98aac966376309a33c9df1477860"
       }
     }
   ],

@@ -910,6 +910,15 @@ export class ReadingEntryPresentation {
       bookmarkAdmission: (enabled: boolean): void => {
         if (current() && this.host === host) this.bookmarkWriteEnabled = enabled;
       },
+      bookmarkOperation: (operation: ReaderDirectoryOperation): void => {
+        const book = this.book;
+        if (current() && this.host === host && book !== undefined && operation.book.sourceId === book.sourceId &&
+          operation.book.bookId === book.bookId && operation.book.title === book.title && operation.book.author === book.author) {
+          this.directoryOperation = { action: operation.action, book: operation.book, generation: operation.generation,
+            requestedCount: operation.requestedCount, confirmedCount: operation.confirmedCount, completion: operation.completion,
+            canContinueOriginal: operation.canContinueOriginal, projection: operation.projection };
+        }
+      },
       cacheDecision: (error: RemoteChapterCacheRefreshError, guard: () => boolean): Promise<boolean> =>
         ports.cacheDecision(error, (): boolean => current() && guard()),
       notice: (title: string, message: string): void => { if (current()) ports.notice(title, message); },
