@@ -80,12 +80,17 @@ function form(context: UIContext, width: number, full: boolean,
   const back = measureReaderControlText(context, '返回', TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, 51);
   const glyph = measureReaderControlText(context, '字', TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, original.field.width - 22);
   const loadAction = measureReaderControlText(context, facts.loadMoreLabel, MESSAGE_ACTION, Math.max(1, width - 36), 'wrap');
-  const loadWidth = loadAction === undefined ? 0 : Math.max(facts.loadMoreMessage.length > 0 ? 30 : 112,
-    loadAction.singleLineWidthVp + (facts.loadMoreMessage.length > 0 ? 4 : 16));
+  // ReaderRecoveryAction's text variant keeps a 44vp native minimum and 2vp
+  // horizontal padding on each side, beside the weighted message Text.
+  const recoveryNativeMinimumWidth = 44;
+  const recoveryHorizontalPadding = 2 * 2;
+  const loadActionGap = 10;
+  const loadWidth = loadAction === undefined ? 0 : Math.max(facts.loadMoreMessage.length > 0 ? recoveryNativeMinimumWidth : 112,
+    loadAction.singleLineWidthVp + (facts.loadMoreMessage.length > 0 ? recoveryHorizontalPadding : 16));
   const loadMessage = measureReaderControlText(context, facts.loadMoreMessage,
     new ReaderInheritedTextStyle(MESSAGE_BODY.fontFamily, undefined, MESSAGE_BODY.fontSizeFp,
       MESSAGE_BODY.lineHeightFp, undefined, 'system', 'appBaseline'),
-    Math.max(1, original.results.width - loadWidth - 10), 'wrap');
+    Math.max(1, original.results.width - loadWidth - loadActionGap), 'wrap');
   const status = measureReaderControlText(context, facts.message, MESSAGE_BODY, Math.max(1, width - 4), 'wrap');
   if (field === undefined || title === undefined || snippet === undefined || match === undefined ||
     loadAction === undefined || loadMessage === undefined || status === undefined || back === undefined || glyph === undefined) return undefined;

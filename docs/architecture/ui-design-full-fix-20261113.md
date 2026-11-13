@@ -250,3 +250,35 @@ Search原Publication的raw snapshot与resultScope在同一facts中取得，实�
 失败日志及公开诊断位于 `control-module-height-20261113/build-framework-systemic-01-failure.json`。其中一个诊断被既有签名日志清洗器隐藏，源码缺失导入独立可见，后继完整编译核对修复结果。两处修改独审、当前源pin与准确refs/register更新后再构建后继候选，原业务SDK按未变行为复用。
 
 类型补修只更新两份生产源码，七模块facts类型导入闭包一并只读核对。21处关联pin刷新，13个受影响登记各加一次revision，control20、facts/results/evidence保持。typefix refs01通过，register01继续准确39项开放诊断，diff检查通过。源修复及最小登记差异分别经独立接受后冻结，实际后继编译结果另记。
+
+## 后继候选原生核对与新增组合缺口
+
+提交3e6f0552的build02实际编译及指定证书签名通过，run为20261113T182831Z-3e6f0552-89e0ba3a，App为34ea6aa499ab，signed HAP为c55acc24726d。原Native和Core输入复用，契约业务套件本次未执行。远程现有x86_64 VM已保数据安装启动，准确回执为deploy-vm-6460677a198b-20261113T182959Z。当前原库及WAL停态字节与上份proof不同，新副本正式FFI执行一次、两项同源合成用例复用，原库备份保持原字节。
+
+首次记录器的PNG显示系统启动动画，随后UITree已有书架，仍保持非同步边界。零点击、零重启后取得ready书架观察，Tab的64837个同quiet像素全部为正常表面色，历史5463个边框泄漏点当前为0。实际RS前后同字节，686×238px、r119、border3及shadow/clip与旧正常帧一致。PID13077的40条startup只有一次width196/painttrue记录，未观察零宽，历史扇形归因继续OPEN。独立原生读审位于 `control-module-height-20261113/native-tab-current-independent.json`。
+
+当前实际视口1280×2832px、density3.5。Home、目录和朗读Quick的可见shell均为[43,1595][1238,2734]，content均为[89,1697][1011,2346]。Full目录真实工具32×44响应、32paint/16glyph、query原生30高已读回。一次误点Full目录隐藏导航位置没有效果，前后PNG字节相同，后续改为真实收起再使用可见导航。原记录保留。
+
+有界Home→目录采样实际触发为3.917/467.995/1115.432/1696.028/2243.508ms。帧0为Home，帧1为已有Chapter One加加载文字，帧2–4相同。共同shell、grabber、亮度、nav及正文像素保持，内部章行从1953上移到1865px，恰88px。根因是ReaderDirectoryNavigationSurface在既有内容Stack之前插撤私有loading Row，该状态未进入父ModuleFacts。四个直接消费者共享此实现，触发链包括挂载及查询/目录刷新。该内部位移独立开放。
+
+Full朗读另一条组合缺口已有实际tree。自定义时长Scroll宽261.43vp，双stepper加标签的Row宽310.286vp。秒数增加按钮原154px宽，只剩2px可见。原Make一组30paint分钟控件，新增秒组后四个44横槽和标签仍挤在一行。旧oracle只断言Scroll内容能容纳这些宽度，遗漏整组动作的初始可见性。该组合支付缺口独立开放。
+
+新增问题已先记录并暂停后续VM操作。当前继续从代码侧修正嵌套异步状态、时长组合与同类producer/真实子组件扣款，全部开发、准确回归及独审完成后才产生后继候选。已通过的局部几何、安装、Tab当前帧及实际抓取范围保留原判定。连续过渡、大字号原生、读屏和用户接受仍按实际执行记账。原未决书签记录核对及继续次数为0。
+
+历史进一步核对。目录外Column及失败行来自6705242d2，368af7f7c于2026-10-20加入保留内容loading文字。TTS分钟及秒数组来自2026-09-12的d6966fc90，31536cfb加入测量宽度及横滚，0b2de1c5恢复30paint时仍保留44横槽。前者是嵌套旧宿主进入后继几何合同后的遗漏，后者同时包含合流参数和前次修复遗漏。准确范围见 `control-module-height-20261113/native-systemic-historical-origin.json`。
+
+### 嵌套状态与实际子组合修复
+
+目录唯一生产修改为ReaderDirectoryNavigationSurface。已有有效内容时，其100%×100%内容Stack始终保留原列表盒。读取失败继续原短反馈，重试沿既有动作组件进入右下自然盒覆盖槽，使用外margin、Default及基本触摸停止冒泡。无内容状态继续原PageState。所有恢复动作显式交付既有generation到长期receiver，Retry核原读取输入，Clear核当前query，在debounce期间保持可清除。
+
+准确retained Surface第12记录通过，包含真实NavigationList的同实例List ID/盒声明、PageState和RecoveryAction保留更新、新query/旧native回调、四个直接caller加wrapper共七组装配，以及Transparent与原捕获factory负控。原生手势仲裁、连续帧和新增覆盖槽命中尚待实际取证。第09旧Transparent PASS作为已被替代的历史保留，后继源码已按SDK定义修正Default。测试只收窄基本触摸诊断文案时，逐字节比对复用第12回执。
+
+TTS完整自定义时长将30横槽、30paint和14glyph与至少44纵向载体分别支付。按实际viewport选择单行、标签独占行或分秒组分行，全部高度同步推进timerCard和后继区域。最终06准确叶通过17组Full端点与68个按钮，包含261.4286vp实际视口和320/366×1/1.3/1.6/2输入。原44横槽负例被拒。额外51个中间装配保持完整Full-only配方，原Card连续插值和timer根clip继续揭示，204个Full动作按生产端点资格禁用。完整自然内容可超过中间揭示区域，该范围未记为完整可见。
+
+其余五模块完成16组真实组合审查，修复三处producer账差。Search按共享text RecoveryAction实际min44及两侧padding2分配消息宽度，Replace工具栏扣回native双边框2，AutoPage跟随行按真实switch44×24、间距8、padding18/12及双边框2测量。唯一准确组合第04通过Search17、Replace10组30按钮、Auto10组，分别有旧producer负控。Settings与Appearance的已列组合未发现额外可证同类账差，全部视觉状态继续各守原范围。
+
+AutoPage默认跟随行由36调整为38，由现有AddedActor的24+12+2支付得出，2×为40。该实施决定保留既有文字、开关paint和动作。原稿的AddedActor来源缺口继续登记。目录及TTS的紧凑横向响应仍小于44，E2维持原FAIL。
+
+上述三域已交叉独审，源码与准确测试冻结。Root补查全应用七个显式shared action factory赋值，五处已有匹配的publication、presentation/retry或source字段key，另外两处属于本批嵌套目录修复。该文字工厂搜索按具体语法记账，完整应用交互验收维持原范围。当前选定目录消息入口AST检查4/4通过。后继必要候选的同会话初始记录增加一张Tree/RS后的PNG，七个本地double和独审通过，维持非同步边界，原记录器源码与首轮动画帧保留。
+
+本批正式登记已独立接受并冻结。control20→21只更新两项目录重试/清除的生命周期和局部放置事实，数值目标保持。21项登记各递增一次并消费control21，269个唯一输入与2311处pin核对通过。13项目录事实和八个共享依赖范围绑定准确新测试。refs本批一次PASS，register本批一次保留准确39项开放诊断，所有层、不变量和21个visual结果保持。最终正式SHA为register724446fe7381及control38daef5dcf30。后继完整编译和原生结果另记，当前安装仍为本批修复前的34ea。

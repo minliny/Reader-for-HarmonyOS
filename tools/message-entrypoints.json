@@ -978,8 +978,8 @@
       "member": "build",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前 navigation snapshot、目录 sourceId/bookId 和 mounted/generation 的导航表面。",
-      "retireRule": "导航表面退场、目录身份变更或重新获取代次使旧 retry 无效；成功投影替换暂时失败状态。 加载/空/失败由当前内容事实切换，重试动作继续回到原 owner。",
+      "effectiveHost": "当前sourceId/bookId/openRevision及读取generation的无可用内容状态，保留原prefix List或内容区。动作由actionGeneration交回长期receiver，按当前request与runtime核对。",
+      "retireRule": "身份、query、排序、当前章、读取代次或退场使旧expected无效。Props与Watch交接期间拒错；当前clear在query debounce期间仍按当前输入生效。加载与失败采用原事实，原业务回执保持。",
       "status": "registered-source-entry"
     },
     {
@@ -989,8 +989,8 @@
       "member": "build",
       "family": "shared.recovery-action",
       "category": "目录树有旧内容时读取失败重试",
-      "effectiveHost": "当前mounted、sourceId/bookId和navigation generation；showLoadStatus且loadFailed/hasRetainedContent时展示，interactionEnabled才retryOpen。",
-      "retireRule": "retryOpen核mounted/interactionEnabled再openTree；异步响应核generation/sourceId/bookId；invalidate/消失使旧response拒绝并保留已有条目。",
+      "effectiveHost": "已有有效内容的导航表面原Stack右下自然宽重试槽。背景读取保留列表盒与anchor，失败动作只在自身实际盒取得命中，所属宿主与原读取owner决定准入。",
+      "retireRule": "expected读取generation、当前source/book/open/query/sort/chapter、mounted/interaction及原runtime全部匹配才重读。Default隔离底层兄弟与触摸冒泡，区域外由原List接收。退役或新请求拒绝旧按钮，失败反馈沿原类别。",
       "status": "registered-source-entry"
     },
     {
@@ -1011,8 +1011,8 @@
       "member": "treePrefixEmptyState",
       "family": "shared.page-state",
       "category": "页面或局部内容的筛选空态",
-      "effectiveHost": "Current text Tree view.visibleTotal=0 with headerCount=1: prefix and natural minimum44 empty-state ListItem share the sole native List. Clear-search forwards only current query owner; neither UI item is a Core rank.",
-      "retireRule": "Captured mounted/source/book/generation/viewId and interaction admission retire an old clear-search callback before successor presentation; closing/scrolling the prefix does not mutate Core progress.",
+      "effectiveHost": "当前文字Tree filtered-empty且headerCount=1，prefix与自然空态共用同一List。PageState.actionGeneration交回长期clear receiver，操作当前query owner。",
+      "retireRule": "mounted/source/book/open/read generation与Props/Watch当前输入检查使旧native回调退役。当前query debounce保留clear资格，关闭或滚动prefix沿原owner语义。",
       "status": "registered-source-entry"
     },
     {

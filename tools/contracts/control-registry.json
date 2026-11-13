@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 20,
+  "revision": 21,
   "controls": [
     {
       "controlId": "page-back",
@@ -1434,7 +1434,7 @@
       },
       "accessibleNameSource": "重试加载目录/清除搜索；消息owner决定",
       "status": "partial",
-      "knownGap": "文字FullDirectoryPanel过滤空无一键清除：手动清空输入再搜索。漫画有清除搜索。加载/读取/写回执不同，不合并状态机。"
+      "knownGap": "Current nested NavigationSurface preserves the retained List box during background reads. Its existing retry action occupies the content Stack bottom-end natural box after a failed read, with Default sibling hit-test blocking and stopped basic touch-event bubbling. Native gesture arbitration remains NOT_RUN. The original transient failure category and no-content PageState remain. Expected generation plus current source/book/open/query/sort/chapter/runtime fence retained callbacks. Target dimensions and Native delivery remain unverified."
     },
     {
       "controlId": "directory-control-load-catalog",
@@ -2850,7 +2850,7 @@
       },
       "accessibleNameSource": "清除搜索; prefix tool and filtered-empty recovery delegate the same current local query owner",
       "status": "partial",
-      "knownGap": "Actual prefix clear44 and existing PageState recovery use current presentation/source/book/view guards. SDK actions/old-callback retirement pass; native hit/scroll/focus remains NOT_RUN."
+      "knownGap": "Actual prefix clear44 and current PageState recovery consume existing generation through a long-lived receiver. Props/Watch handoff rejects stale input, while current clear remains usable during the query debounce. This batch checks retained SDK child updates and logical List identity. Native hit/scroll/focus remains NOT_RUN."
     },
     {
       "controlId": "directory-rules-pattern",

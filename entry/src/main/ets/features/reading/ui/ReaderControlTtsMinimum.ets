@@ -141,6 +141,12 @@ export interface ReaderTtsTextMinimum {
   timerPresetsWidth: number;
   timerCustom: number;
   timerCustomWidth: number;
+  timerCustomLayout: 'inline' | 'labelAbove' | 'stacked';
+  timerCustomLabelWidth: number;
+  timerCustomLabelHeight: number;
+  timerStepperWidth: number;
+  timerUnitLabelHeight: number;
+  timerStepButtonWidth: number;
   timerDigit: number;
   timerDigitWidth: number;
   timerStepper: number;
@@ -197,6 +203,22 @@ export function readerTtsTimerCardLayout(targetHeight: number, paintHeight: numb
     height: topPadding + 14 + targetHeight * 2 + rowGap + sectionGap + customHeight };
 }
 
+/** The custom timer owns one paid viewport. Only its vertical button carrier
+ * requests44vp; the authored30vp horizontal slots remain independent. */
+function customTimerLayout(text: ReaderTtsTextMinimum): void {
+  const contentWidth = Math.max(0, text.timerCustomWidth - 16 - 1);
+  const groupsWidth = text.timerStepperWidth * 2 + 4;
+  if (text.timerCustomLabelWidth + 8 + text.timerStepperWidth * 2 <= contentWidth) {
+    text.timerCustomLayout = 'inline';
+    text.timerCustom = Math.max(48, text.timerCustomLabelHeight + 8, text.timerStepper + 4);
+    return;
+  }
+  const groupHeight = text.timerUnitLabelHeight + 2 + text.timerStepper;
+  text.timerCustomLayout = groupsWidth <= contentWidth ? 'labelAbove' : 'stacked';
+  text.timerCustom = 1 + 8 + text.timerCustomLabelHeight + 4 + groupHeight +
+    (text.timerCustomLayout === 'stacked' ? 4 + groupHeight : 0);
+}
+
 // These leaves do not call Text.lineHeight. Speed values additionally retain
 // ArkUI's inherited weight. Do not measure a stronger recipe than is painted.
 function actual(style: ReaderTextStyle | ReaderInheritedTextStyle, weight: boolean = true): ReaderInheritedTextStyle {
@@ -244,6 +266,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, Math.max(1, (inner - 44) / 3));
   const custom = largest(context, ['自定义时长'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL), inner);
   const customMeta = largest(context, ['分 · 秒'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY), inner);
+  const timerUnit = largest(context, ['分', '秒'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY), inner);
   const digit = largest(context, [facts.minutes, facts.seconds], actual(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE), inner);
   const rate = largest(context, [facts.rate], actual(TYPE_READER_TTS_RETAINED_SPEED_VALUE, false), inner);
   const range = largest(context, ['0.50x', '2.00x'], actual(TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, false), inner);
@@ -279,7 +302,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     digit === undefined || rate === undefined || range === undefined || ratePreset === undefined || section === undefined ||
     sectionMeta === undefined || tabTitle === undefined || tabSubtitle === undefined || labels === undefined ||
     field === undefined || fieldGlyph === undefined || voiceBadge === undefined || voiceTitle === undefined ||
-    toggle === undefined || toggleLine === undefined || manage === undefined ||
+    toggle === undefined || toggleLine === undefined || manage === undefined || timerUnit === undefined ||
     manageTitle === undefined || error === undefined) return undefined;
 
   const cap = Math.max(70, Math.min(170, inner * 0.56));
@@ -296,9 +319,12 @@ function measureForm(context: UIContext, width: number, full: boolean,
     stopLabelWidth: Math.max(24, stop.singleLineWidthVp), timerPreset: Math.max(44, timerPreset.heightVp + 8),
     timerPresetPaint: Math.max(36, timerPreset.heightVp + 8), quickTimerPaintHeight: Math.max(30, caption.heightVp + 12),
     timerPresetsWidth: Math.max(inner - 28, 3 * Math.max(44, Math.ceil(timerPreset.singleLineWidthVp) + 12) + 16),
-    timerCustomWidth: Math.max(inner - 28, custom.singleLineWidthVp + 4 +
-      2 * (44 * 2 + Math.max(23, digit.singleLineWidthVp) + 2) + 4 + 16),
-    timerCustom: Math.max(48, custom.heightVp + 2 + customMeta.heightVp + 8, digit.heightVp + 16),
+    timerCustomWidth: Math.max(0, inner - 28), timerCustomLayout: 'inline',
+    timerCustomLabelWidth: Math.max(custom.singleLineWidthVp, customMeta.singleLineWidthVp),
+    timerCustomLabelHeight: custom.heightVp + 2 + customMeta.heightVp,
+    timerStepperWidth: 30 * 2 + Math.max(23, digit.singleLineWidthVp) + 2,
+    timerUnitLabelHeight: timerUnit.heightVp, timerStepButtonWidth: 30,
+    timerCustom: 48,
     timerDigit: Math.max(24, digit.heightVp), timerDigitWidth: Math.max(23, digit.singleLineWidthVp),
     timerStepper: Math.max(44, digit.heightVp + 8), timerStepButton: Math.max(44, digit.heightVp + 6),
     ratePreset: Math.max(44, ratePreset.heightVp + 8), ratePresetPaint: Math.max(32, ratePreset.heightVp + 8), speedRange: Math.max(14, range.heightVp),
@@ -335,7 +361,12 @@ function measureForm(context: UIContext, width: number, full: boolean,
   text.configRow = Math.max(text.configRow, text.configField);
   text.voiceRow = Math.max(text.voiceRow, text.voiceField + 12);
   text.timerStepper = Math.max(text.timerStepper, text.timerStepButton, text.timerDigit);
-  text.timerCustom = Math.max(text.timerCustom, text.timerStepper + 4);
+  const customContentWidth = Math.max(1, text.timerCustomWidth - 16 - 1);
+  const customLabel = largest(context, ['自定义时长'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL), customContentWidth, true);
+  const customLabelMeta = largest(context, ['分 · 秒'], actual(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY), customContentWidth, true);
+  if (customLabel === undefined || customLabelMeta === undefined) return undefined;
+  text.timerCustomLabelHeight = customLabel.heightVp + 2 + customLabelMeta.heightVp;
+  customTimerLayout(text);
   text.detailCard = text.voiceRow + text.toggleRow * 5 + text.configRow;
   text.systemCard = 14 + text.serviceTab + 15 + text.configRow * (facts.online ? 1 : 2);
 
@@ -465,6 +496,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.detail.height = text.sectionHeader + 8 + text.detailCard;
     frame.contentHeight = frame.detail.y + frame.detail.height + 16;
     minWidth = width - inner + Math.max(32 + 44, 38 + 2 * (27 + 36),
+      28 + 16 + 1 + text.timerStepperWidth,
       28 + 8 + 44 + Math.max(text.engineFieldWidth, text.languageFieldWidth, text.failureFieldWidth),
       28 + 44 + text.voiceFieldWidth, 28 + 8 + 44 + text.manageButtonWidth);
 
@@ -490,7 +522,7 @@ export function measureReaderTtsMinimum(context: UIContext, widths: ReaderContro
 export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
   progress: number): ReaderTtsTextMinimum {
   const q = profile.quickText; const f = profile.fullText;
-  return {
+  const text: ReaderTtsTextMinimum = {
     quickPlaybackTitle: readerControlLerp(q.quickPlaybackTitle, f.quickPlaybackTitle, progress),
     quickPlaybackStatus: readerControlLerp(q.quickPlaybackStatus, f.quickPlaybackStatus, progress),
     quickSettingTitle: readerControlLerp(q.quickSettingTitle, f.quickSettingTitle, progress),
@@ -499,12 +531,21 @@ export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
     sectionHeader: readerControlLerp(q.sectionHeader, f.sectionHeader, progress),
     stopLabel: readerControlLerp(q.stopLabel, f.stopLabel, progress), stopLabelWidth: readerControlLerp(q.stopLabelWidth, f.stopLabelWidth, progress),
     timerPresetsWidth: readerControlLerp(q.timerPresetsWidth, f.timerPresetsWidth, progress),
-    timerCustomWidth: readerControlLerp(q.timerCustomWidth, f.timerCustomWidth, progress),
+    // This is Full-only natural content. The animated timer viewport reveals
+    // it through its existing clip; changing its layout at an intermediate
+    // width would introduce a second, discontinuous reflow during the morph.
+    timerCustomWidth: f.timerCustomWidth,
+    timerCustomLayout: f.timerCustomLayout,
+    timerCustomLabelWidth: f.timerCustomLabelWidth,
+    timerCustomLabelHeight: f.timerCustomLabelHeight,
+    timerStepperWidth: f.timerStepperWidth,
+    timerUnitLabelHeight: f.timerUnitLabelHeight,
+    timerStepButtonWidth: f.timerStepButtonWidth,
     timerPresetPaint: readerControlLerp(q.timerPresetPaint ?? 36, f.timerPresetPaint ?? 36, progress),
     quickTimerPaintHeight: readerControlLerp(q.quickTimerPaintHeight ?? 30, f.quickTimerPaintHeight ?? 30, progress),
-    timerPreset: readerControlLerp(q.timerPreset, f.timerPreset, progress), timerCustom: readerControlLerp(q.timerCustom, f.timerCustom, progress),
-    timerDigit: readerControlLerp(q.timerDigit, f.timerDigit, progress), timerDigitWidth: readerControlLerp(q.timerDigitWidth, f.timerDigitWidth, progress),
-    timerStepper: readerControlLerp(q.timerStepper, f.timerStepper, progress), timerStepButton: readerControlLerp(q.timerStepButton, f.timerStepButton, progress),
+    timerPreset: readerControlLerp(q.timerPreset, f.timerPreset, progress), timerCustom: f.timerCustom,
+    timerDigit: f.timerDigit, timerDigitWidth: f.timerDigitWidth,
+    timerStepper: f.timerStepper, timerStepButton: f.timerStepButton,
     ratePresetPaint: readerControlLerp(q.ratePresetPaint ?? 32, f.ratePresetPaint ?? 32, progress),
     ratePreset: readerControlLerp(q.ratePreset, f.ratePreset, progress), speedRange: readerControlLerp(q.speedRange, f.speedRange, progress),
     speedRangeWidth: readerControlLerp(q.speedRangeWidth, f.speedRangeWidth, progress),
@@ -523,4 +564,5 @@ export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
     manageButton: readerControlLerp(q.manageButton, f.manageButton, progress),
     manageButtonWidth: readerControlLerp(q.manageButtonWidth, f.manageButtonWidth, progress),
     seekY: readerControlLerp(q.seekY, f.seekY, progress), errorY: readerControlLerp(q.errorY, f.errorY, progress) };
+  return text;
 }

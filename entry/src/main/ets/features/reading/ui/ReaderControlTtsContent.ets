@@ -1176,18 +1176,7 @@ export struct ReaderControlTtsContent {
           }.width(this.textMinimum()?.timerPresetsWidth ?? '100%');
           }.width('100%').height((this.textMinimum()?.timerPreset ?? 44) * 2 + this.timerCardLayout().rowGap)
             .scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
-          Scroll() {
-          Row({ space: 4 }) {
-            Column({ space: 2 }) {
-              Text('自定义时长').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
-              Text('分 · 秒').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme));
-            }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-            this.timerStepper(true); this.timerStepper(false);
-          }.width(this.textMinimum()?.timerCustomWidth ?? '100%').height(this.textMinimum()?.timerCustom ?? 48)
-            .padding({ left: 10, right: 6 }).alignItems(VerticalAlign.Center);
-          }.width('100%').height(this.textMinimum()?.timerCustom ?? 48).scrollable(ScrollDirection.Horizontal)
-            .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
-            .border({ width: 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10);
+          this.timerCustomDuration();
         }.width(this.frame().timer.width).height(this.frame().timerCard.height)
           .padding({ left: 14, right: 14, top: this.timerCardLayout().topPadding, bottom: 14 })
           .position({ x: this.frame().timerCard.x, y: this.frame().timerCard.y })
@@ -1200,6 +1189,76 @@ export struct ReaderControlTtsContent {
       .position({ x: this.frame().timer.x, y: this.frame().timer.y }).clip(true)
       .translate({ y: this.sharedScrollTranslation() }).clipShape(this.sharedClip('timer'));
   }
+  @Builder
+  private timerCustomLabel() {
+    Column({ space: 2 }) {
+      Text('自定义时长').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontFamily)
+        .fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontSizeFp)
+        .fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL.fontWeight)
+        .fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
+      Text('分 · 秒').fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontFamily)
+        .fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontWeight)
+        .fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontSizeFp)
+        .fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme));
+    }.width(this.textMinimum()?.timerCustomLayout === 'inline' ?
+      this.textMinimum()?.timerCustomLabelWidth ?? 60 : '100%')
+      .height(this.textMinimum()?.timerCustomLabelHeight ?? 33.5)
+      .alignItems(HorizontalAlign.Start);
+  }
+
+  @Builder
+  private timerCustomGroup(minutes: boolean) {
+    Column({ space: 2 }) {
+      Text(minutes ? '分' : '秒')
+        .fontFamily(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontFamily)
+        .fontWeight(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontWeight)
+        .fontSize(TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY.fontSizeFp)
+        .fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme))
+        .height(this.textMinimum()?.timerUnitLabelHeight ?? 13.5);
+      this.timerStepper(minutes);
+    }.width(this.textMinimum()?.timerStepperWidth ?? 85)
+      .height((this.textMinimum()?.timerUnitLabelHeight ?? 13.5) + 2 +
+        (this.textMinimum()?.timerStepper ?? 44))
+      .alignItems(HorizontalAlign.Center);
+  }
+
+  @Builder
+  private timerCustomDuration() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      if ((this.textMinimum()?.timerCustomLayout ?? 'inline') === 'inline') {
+        Row({ space: 4 }) {
+          this.timerCustomLabel();
+          this.timerStepper(true);
+          this.timerStepper(false);
+        }.width(Math.max(0, (this.textMinimum()?.timerCustomWidth ?? this.frame().timer.width - 28) - 1))
+          .height(Math.max(0, (this.textMinimum()?.timerCustom ?? 48) - 1))
+          .padding({ left: 10, right: 6 }).alignItems(VerticalAlign.Center)
+          .justifyContent(FlexAlign.SpaceBetween);
+      } else {
+        Column({ space: 4 }) {
+          this.timerCustomLabel();
+          if (this.textMinimum()?.timerCustomLayout === 'labelAbove') {
+            Row({ space: 4 }) {
+              this.timerCustomGroup(true);
+              this.timerCustomGroup(false);
+            }.width('100%')
+              .height((this.textMinimum()?.timerUnitLabelHeight ?? 13.5) + 2 +
+                (this.textMinimum()?.timerStepper ?? 44))
+              .justifyContent(FlexAlign.End);
+          } else {
+            this.timerCustomGroup(true);
+            this.timerCustomGroup(false);
+          }
+        }.width(Math.max(0, (this.textMinimum()?.timerCustomWidth ?? this.frame().timer.width - 28) - 1))
+          .height(Math.max(0, (this.textMinimum()?.timerCustom ?? 48) - 1))
+          .padding({ left: 10, right: 6, top: 4, bottom: 4 })
+          .alignItems(HorizontalAlign.End);
+      }
+    }.width(this.textMinimum()?.timerCustomWidth ?? '100%')
+      .height(this.textMinimum()?.timerCustom ?? 48)
+      .border({ width: 0.5, color: readerAppColor('TOK_TTS_LINE', this.appScheme) }).borderRadius(10);
+  }
+
   @Builder
   private timerPreset(minutes: number | 'chapterEnd') {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -1234,7 +1293,8 @@ export struct ReaderControlTtsContent {
         .fontFamily(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE.fontWeight).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
         .width(this.textMinimum()?.timerDigitWidth ?? 23).height(this.textMinimum()?.timerDigit ?? 24).textAlign(TextAlign.Center);
       this.timerStepButton(minutes, 5);
-    }.height(this.textMinimum()?.timerStepper ?? 32).alignItems(VerticalAlign.Center)
+    }.width(this.textMinimum()?.timerStepperWidth ?? 85)
+      .height(this.textMinimum()?.timerStepper ?? 44).alignItems(VerticalAlign.Center)
       .accessibilityText(minutes ? `${this.displayTimerMinutes()}分（每次五分钟）` : `${this.displayTimerSeconds()}秒（每次五秒）`);
   }
   @Builder
@@ -1246,7 +1306,8 @@ export struct ReaderControlTtsContent {
       }.width(30).height(30).borderRadius(15).backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme))
         .border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) })
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.width(44).height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1).backgroundColor(Color.Transparent)
+    }.width(this.textMinimum()?.timerStepButtonWidth ?? 30)
+      .height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1).backgroundColor(Color.Transparent)
       .enabled(this.fullInput() && this.configField === '' && (delta > 0 ?
         (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
         (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)))

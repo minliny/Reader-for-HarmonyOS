@@ -1,5 +1,4 @@
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
-import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
@@ -111,11 +110,14 @@ export struct ReaderDirectoryNavigationSurface {
   private lastQuery: string = '';
   private lastAscending: boolean = true;
   private lastChapterIndex: number = -1;
+  private inputOwnerKey: string = '';
+  private openedInputKey: string = '';
   private locateCurrentPending: boolean = false;
   private scrollIntentUnsubscribe: (() => void) | undefined = undefined;
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.inputOwnerKey = this.currentInputOwnerKey();
     if (this.mangaDisplay) {
       void this.prepareMangaFonts();
     }
@@ -136,6 +138,7 @@ export struct ReaderDirectoryNavigationSurface {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.inputOwnerKey = '';
     this.feedback.reset();
     this.runtimeOwner = undefined;
     this.mangaFontGeneration += 1;
@@ -169,6 +172,7 @@ export struct ReaderDirectoryNavigationSurface {
 
   private onIdentityChanged(): void {
     if (!this.mounted) return;
+    this.inputOwnerKey = this.currentInputOwnerKey();
     this.feedback.reset();
     this.cancelQueryTimer();
     this.generation += 1;
@@ -364,6 +368,7 @@ export struct ReaderDirectoryNavigationSurface {
     const bookId = this.bookId;
     const sourceId = this.sourceId;
     if (gateway === undefined || bookId.length === 0) return;
+    this.openedInputKey = this.currentReadInputKey();
     const generation = ++this.generation;
     this.loadPending = false;
     this.loadFailed = false;
@@ -553,48 +558,49 @@ export struct ReaderDirectoryNavigationSurface {
 
   private hasPrefix(): boolean { return !this.mangaDisplay && this.headerCount === 1; }
 
-  private prefixClearAction(): () => void {
-    const generation = this.generation, bookId = this.bookId, sourceId = this.sourceId, viewId = this.view?.viewId;
-    return (): void => {
-      if (this.mounted && this.interactionEnabled && generation === this.generation && bookId === this.bookId &&
-        sourceId === this.sourceId && viewId === this.view?.viewId) this.onClearSearch();
-    };
+  private currentInputOwnerKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.openRevision]);
   }
 
-  private prefixRetryAction(): () => void {
-    const generation = this.generation, bookId = this.bookId, sourceId = this.sourceId;
-    return (): void => {
-      if (this.mounted && this.interactionEnabled && generation === this.generation && bookId === this.bookId &&
-        sourceId === this.sourceId) this.retryOpen();
-    };
+  private currentReadInputKey(): string {
+    return JSON.stringify([this.currentInputOwnerKey(), this.query, this.ascending, this.currentChapterIndex]);
+  }
+
+  private recoveryInputCurrent(expected: number): boolean {
+    return this.mounted && this.interactionEnabled && expected === this.generation &&
+      this.inputOwnerKey === this.currentInputOwnerKey() && this.lastQuery === this.query &&
+      this.lastAscending === this.ascending && this.lastChapterIndex === this.currentChapterIndex &&
+      (this.navigationPortFactory !== undefined ||
+        (this.runtimeOwner !== undefined && ReaderRuntimeOwner.isCurrent(this.runtimeOwner)));
+  }
+
+  private retryInputCurrent(): boolean {
+    return this.recoveryInputCurrent(this.generation) && this.showLoadStatus && this.loadFailed &&
+      !this.loadPending && this.openedInputKey === this.currentReadInputKey();
+  }
+
+  private retryCurrent(expected: number): void {
+    if (expected === this.generation && this.retryInputCurrent()) this.retryOpen();
+  }
+
+  private clearInputCurrent(): boolean {
+    return this.recoveryInputCurrent(this.generation) && this.query.trim().length > 0;
+  }
+
+  private clearCurrent(expected: number): void {
+    if (expected === this.generation && this.clearInputCurrent()) this.onClearSearch();
   }
 
   @Builder
   private treePrefixEmptyState() {
     ReaderPageState({ message: '没有匹配的目录项', padded: false,
-      actionLabel: this.query.trim().length > 0 ? '清除搜索' : '', actionEnabled: this.interactionEnabled,
-      onAction: this.prefixClearAction(), mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
+      actionLabel: this.query.trim().length > 0 ? '清除搜索' : '', actionEnabled: this.clearInputCurrent(),
+      actionGeneration: this.generation, onAction: (expected: number): void => this.clearCurrent(expected),
+      mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme) });
   }
 
   build() {
-    Column() {
-      if (this.showLoadStatus && (this.loadPending || this.loadFailed) &&
-        this.hasRetainedContent()) {
-        Row({ space: 6 }) {
-          if (this.loadPending) {
-            Text('正在加载目录')
-              .layoutWeight(1).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-              .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
-              .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number);
-          } else {
-            Blank().layoutWeight(1);
-          }
-          if (this.loadFailed) {
-            ReaderRecoveryAction({ label: '重试加载目录', actionEnabled: this.interactionEnabled,
-              onReconcile: (): void => this.retryOpen() });
-          }
-        }.width('100%').padding({ left: 8, right: 8, top: 2, bottom: 2 });
-      }
+    Stack({ alignContent: Alignment.BottomEnd }) {
       Stack() {
         if (this.mangaDisplay && !this.mangaFontsReady) {
           Blank().width('100%').height('100%');
@@ -605,8 +611,10 @@ export struct ReaderDirectoryNavigationSurface {
               ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: Math.max(0, this.prefixHeight) });
               ListItem() {
                 ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
-                  actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.interactionEnabled,
-                  mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme), onAction: this.prefixRetryAction() });
+                  actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.retryInputCurrent(),
+                  actionGeneration: this.generation,
+                  mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
+                  onAction: (expected: number): void => this.retryCurrent(expected) });
               }.width('100%').constraintSize({ minHeight: 44 });
             }.width('100%').height('100%').scrollBar(BarState.Off).edgeEffect(this.edgeEffectMode)
               .enableScrollInteraction(this.interactionEnabled).onWillStartDragging((): void => { if (this.mounted) this.onTreeUserScrollIntent(); })
@@ -614,9 +622,10 @@ export struct ReaderDirectoryNavigationSurface {
           } else {
             Column() {
               ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
-                actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.interactionEnabled,
+                actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.retryInputCurrent(),
+                actionGeneration: this.generation,
                 mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
-                onAction: (): void => this.retryOpen() });
+                onAction: (expected: number): void => this.retryCurrent(expected) });
             }.width('100%').height('100%').justifyContent(FlexAlign.Center);
           }
         } else if (this.view === undefined) {
@@ -677,7 +686,16 @@ export struct ReaderDirectoryNavigationSurface {
             }
           }.width('100%').height('100%');
         }
-      }.width('100%').layoutWeight(1);
+      }.width('100%').height('100%');
+      if (this.showLoadStatus && this.loadFailed && this.hasRetainedContent()) {
+        Row() {
+          ReaderRecoveryAction({ label: '重试加载目录', generation: this.generation,
+            actionEnabled: this.retryInputCurrent(),
+            onReconcile: (expected: number): void => this.retryCurrent(expected) });
+        }.constraintSize({ maxWidth: '100%' }).margin({ right: 8, bottom: 8 })
+          .hitTestBehavior(HitTestMode.Default)
+          .onTouch((event: TouchEvent): void => { event.stopPropagation(); }).zIndex(1);
+      }
     }.width('100%').height('100%');
   }
 }

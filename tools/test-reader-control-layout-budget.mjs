@@ -1,6 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 const definitions = {
     'authored-allocation-sdk': { description: 'Original default macros, same-pass typed module profiles, paid touch regions and actual SDK paint remain separate at real narrow/font growth inputs', resources: [] },
+    'timer-custom-allocation-sdk': { description: 'Actual TTS timer child combination pays all four thirty-painted minute/second actions inside current and narrow enlarged-text viewports without horizontal hiding', resources: [] },
     'tts-paint-target-sdk': { description: 'Approved Make paint stays separate from actual paid response regions, including constrained44 goals, centered Full stop, glyph recipes and native choice ownership', resources: [] },
     'module-shell-sdk': { description: 'Current Home and all module receipts retain the common measured outer shell while content budgets, stale fencing and true metric reflow remain current', resources: [] },
     'admission-sdk': { description: 'Current experience scheduling to measured Panel admission across orientations and wide windows, render-safe readiness and stale frame negatives', resources: [] },
@@ -694,6 +695,229 @@ async function run(id) {
         console.log(`authored allocation PASS 7 independent default macros, ${samples} real producer profiles, constrained responses and actualSDK transport; ${compiledBuilders} affected Builders compile; callback scope and frozen-source checks`);
         return;
     }
+    if (id === 'timer-custom-allocation-sdk') {
+        const { createHash } = await import('node:crypto');
+        const makeSource = read('tools/fixtures/tts-reference/PhoneScreen.tsx');
+        assert.equal(createHash('sha256').update(makeSource).digest('hex'),
+            '731582c1ac493d48f1ebdaae1e5527de5dfe3f391d37d8c85a51643ce72b4a3c');
+        assert.match(makeSource, /function StepButton[\s\S]*?size-\[30px\][\s\S]*?<svg width="14" height="14"/);
+        const accessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url),
+            ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
+        const ttsSource = ui('ReaderControlTtsContent.ets');
+        const presetPaint = pureModuleProbe(ttsSource.slice(0, ttsSource.indexOf('@Component')), 'ReaderTtsPaint.ets',
+            { ...deps, ...accessibility, FrameCallback: class {}, Color: { Transparent: 'Color.Transparent' } },
+            ['ReaderTtsPresetModifier', 'readerTtsPresetLabelColor']);
+        const ttsState = await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
+        const methods = ['p', 'fullInput', 'sharedInput', 'timer', 'timerCardLayout', 'timerPreset', 'timerPresetLabel', 'timerPresetSelected',
+            'timerPresetIsSelected', 'chooseTimerPreset', 'timerCustomDuration', 'timerCustomLabel', 'timerCustomGroup',
+            'timerStepper', 'timerStepButton', 'stepTimer', 'twoDigits', ...displayMethods('ReaderControlTtsContent.ets')];
+        const epsilon = 0.000001;
+        const contains = (parent, child, label) => {
+            assert.ok(child.x >= parent.x - epsilon && child.y >= parent.y - epsilon &&
+                child.x + child.width <= parent.x + parent.width + epsilon &&
+                child.y + child.height <= parent.y + parent.height + epsilon, label);
+        };
+        const inspectTimer = (profile, inputWidths, minutes, seconds, source = ttsSource, progress = 1) => {
+            const owner = createReaderBuilderProbe(source, methods,
+                { ...deps, ...tt, ...accessibility, ...presetPaint, ...ttsState }).owner;
+            const text = tt.sampleReaderTtsTextMinimum(profile, progress);
+            const animatedWidth = actor.readerControlLerp(inputWidths.quickContentWidthVp, inputWidths.fullContentWidthVp, progress);
+            Object.assign(owner, { appScheme: 'day', state: { status: 'idle' }, sourceOnly: 'none',
+                configField: '', timerMode: 'duration', timerMinutes: minutes, timerSeconds: seconds,
+                motionProgress: progress, textMinimum: () => text,
+                frame: () => playback.sampleReaderControlTts(progress, animatedWidth, 1 / 3, 0, false, profile),
+                currentInputEnabled: () => true,
+                sectionSurface() {}, moduleHeader() {}, quickLabel() {},
+                sharedScrollTranslation: () => 0, sharedClip: () => 'retained-motion-mask',
+                presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), timerCaption: () => '25 分钟' });
+            const captures = { steppers: [], groups: [], labels: [], custom: [] };
+            for (const [method, destination] of [['timerStepper', 'steppers'], ['timerCustomGroup', 'groups'],
+                ['timerCustomLabel', 'labels'], ['timerCustomDuration', 'custom']]) {
+                const original = owner[method].bind(owner);
+                owner[method] = (...args) => {
+                    const firstId = owner.nodes.size;
+                    original(...args);
+                    captures[destination].push({ args, nodes: [...owner.nodes.values()].slice(firstId) });
+                };
+            }
+            owner.timer();
+            assert.equal(captures.custom.length, 1, 'real timer Builder invokes its custom-duration child once');
+            assert.equal(captures.steppers.length, 2, 'real custom-duration child mounts both unit steppers');
+            assert.deepEqual(captures.steppers.map(stepper => stepper.args[0]), [true, false]);
+            const customNodes = captures.custom[0].nodes;
+            assert.equal(customNodes.filter(node => node.type === 'Scroll').length, 0,
+                'required custom timer actions never depend on a hidden horizontal Scroll');
+            const customRoot = customNodes[0];
+            const mode = profile.fullText.timerCustomLayout;
+            const flow = customNodes.find(node => node.padding?.left === 10);
+            assert.ok(flow, 'actual custom parent pays its original left/right padding');
+            const border = customRoot.border.width;
+            const paidViewport = { x: border, y: border,
+                width: customRoot.width - border * 2, height: customRoot.height - border * 2 };
+            assert.equal(flow.height, paidViewport.height,
+                'the actual flow height equals the border-paid custom viewport');
+            assert.equal(flow.width, paidViewport.width,
+                'the actual flow width explicitly equals the border-paid custom viewport');
+            const contentWidth = paidViewport.width - flow.padding.left - flow.padding.right;
+            const label = captures.labels[0].nodes[0];
+            const stepperRoots = captures.steppers.map(record => record.nodes[0]);
+            const groupRoots = captures.groups.map(record => record.nodes[0]);
+            const groupGap = mode === 'labelAbove' ? customNodes.find(node => node.type === 'Row' &&
+                node.width === '100%' && node.height === groupRoots[0].height).create.space : 4;
+            const origins = [];
+            if (mode === 'inline') {
+                const nativeGap = flow.create.space;
+                const childrenWidth = label.width + stepperRoots[0].width + stepperRoots[1].width;
+                assert.ok(childrenWidth + nativeGap * 2 <= contentWidth + epsilon,
+                    'actual inline label plus both actual native stepper rows fit the paid parent');
+                const distributedGap = (contentWidth - childrenWidth) / 2;
+                let x = paidViewport.x + flow.padding.left + label.width + distributedGap;
+                for (const stepper of stepperRoots) {
+                    origins.push({ x, y: paidViewport.y + (paidViewport.height - stepper.height) / 2 });
+                    x += stepper.width + distributedGap;
+                }
+            } else {
+                assert.equal(groupRoots.length, 2, 'wrapped layout retains a separate semantic unit group');
+                assert.deepEqual(captures.groups.map(record => record.nodes.find(node => node.type === 'Text').create),
+                    ['分', '秒'], 'wrapped groups visibly identify minutes and seconds');
+                const firstY = paidViewport.y + flow.padding.top + label.height + flow.create.space;
+                if (mode === 'labelAbove') {
+                    const groupsWidth = groupRoots[0].width + groupRoots[1].width + groupGap;
+                    assert.ok(groupsWidth <= contentWidth + epsilon, 'both actual unit groups fit their shared row');
+                    let x = paidViewport.x + flow.padding.left + contentWidth - groupsWidth;
+                    groupRoots.forEach((group, index) => {
+                        const unit = captures.groups[index].nodes.find(node => node.type === 'Text');
+                        origins.push({ x, y: firstY + unit.height + group.create.space });
+                        x += group.width + groupGap;
+                    });
+                } else {
+                    let y = firstY;
+                    groupRoots.forEach((group, index) => {
+                        assert.ok(group.width <= contentWidth + epsilon, 'each stacked unit group fits its own paid row');
+                        const unit = captures.groups[index].nodes.find(node => node.type === 'Text');
+                        origins.push({ x: paidViewport.x + flow.padding.left + contentWidth - group.width,
+                            y: y + unit.height + group.create.space });
+                        y += group.height + flow.create.space;
+                    });
+                }
+            }
+            const rectangles = [];
+            captures.steppers.forEach((record, index) => {
+                const row = record.nodes[0];
+                const buttons = record.nodes.filter(node => node.type === 'Button');
+                const digit = record.nodes.find(node => node.type === 'Text');
+                assert.equal(buttons.length, 2);
+                assert.ok(buttons[0].width + digit.width + buttons[1].width + row.create.space * 2 <= row.width + epsilon,
+                    'real native buttons and numeric value fit their declared stepper parent');
+                let x = origins[index].x;
+                for (const [buttonIndex, button] of buttons.entries()) {
+                    const rectangle = { x, y: origins[index].y + (row.height - button.height) / 2,
+                        width: button.width, height: button.height };
+                    assert.equal(button.width, 30, 'actual horizontal carrier preserves authored thirty paint');
+                    assert.ok(button.height >= 44, 'actual vertical carrier pays the requested height');
+                    contains({ ...origins[index], width: row.width, height: row.height }, rectangle,
+                        'whole native action is inside its actual stepper parent');
+                    contains(paidViewport, rectangle, 'whole native action is visible inside the custom viewport');
+                    rectangles.push(rectangle);
+                    x += button.width + row.create.space;
+                    if (buttonIndex === 0) x += digit.width + row.create.space;
+                }
+                const paints = record.nodes.filter(node => node.type === 'Stack');
+                assert.ok(paints.every(paint => paint.width === 30 && paint.height === 30));
+                assert.ok(record.nodes.filter(node => node.type === 'Image').every(glyph => glyph.width === 14 && glyph.height === 14));
+            });
+            assert.equal(rectangles.length, 4);
+            for (let first = 0; first < rectangles.length; first++) for (let second = first + 1; second < rectangles.length; second++) {
+                const left = rectangles[first], right = rectangles[second];
+                assert.ok(left.x + left.width <= right.x + epsilon || right.x + right.width <= left.x + epsilon ||
+                    left.y + left.height <= right.y + epsilon || right.y + right.height <= left.y + epsilon,
+                    'different unit actions have disjoint actual paid rectangles');
+            }
+            assert.equal(customRoot.width, profile.fullText.timerCustomWidth);
+            assert.equal(customRoot.height, profile.fullText.timerCustom);
+            assert.equal(profile.full.timerCard.height,
+                tt.readerTtsTimerCardLayout(profile.fullText.timerPreset, profile.fullText.timerPresetPaint, customRoot.height).height);
+            assert.equal(profile.full.timer.height, profile.full.timerCard.y + profile.full.timerCard.height);
+            assert.equal(profile.full.config.y, profile.full.timer.y + profile.full.timer.height + 20);
+            assert.equal(profile.full.detail.y, profile.full.config.y + profile.full.config.height + 20);
+            assert.equal(profile.full.contentHeight, profile.full.detail.y + profile.full.detail.height + 16);
+            const actualTimerFrame = owner.frame();
+            const timerRoot = nodes(owner, 'Stack').find(node => node.clip === true &&
+                node.position?.x === actualTimerFrame.timer.x && node.position?.y === actualTimerFrame.timer.y);
+            assert.ok(timerRoot, 'real timer retains its original animated root clip');
+            const timerCard = nodes(owner, 'Column').find(node => node.padding?.left === 14);
+            assert.ok(timerCard);
+            assert.equal(timerCard.height, actualTimerFrame.timerCard.height);
+            assert.equal(timerCard.height,
+                actor.readerControlLerp(profile.quick.timerCard.height, profile.full.timerCard.height, progress),
+                'the original Card reveal follows one continuous endpoint interpolation');
+            for (const field of ['timerCustomWidth', 'timerCustom', 'timerCustomLayout', 'timerCustomLabelWidth',
+                'timerCustomLabelHeight', 'timerStepperWidth', 'timerUnitLabelHeight', 'timerStepButtonWidth',
+                'timerDigit', 'timerDigitWidth', 'timerStepper', 'timerStepButton']) {
+                assert.equal(text[field], profile.fullText[field],
+                    'Full-only natural custom recipe stays stable through the morph: ' + field);
+            }
+            const customButtons = captures.steppers.flatMap(record => record.nodes.filter(node => node.type === 'Button'));
+            if (progress < 1) {
+                assert.ok(customButtons.every(button => button.enabled === false),
+                    'partially revealed Full custom buttons have no input eligibility');
+                assert.equal(timerCard.enabled, false);
+                assert.equal(timerCard.opacity, progress);
+            }
+            return { mode, width: customRoot.width, height: customRoot.height, buttons: rectangles.length,
+                progress, allocatedCardHeight: timerCard.height,
+                naturalFullCardHeight: tt.readerTtsTimerCardLayout(text.timerPreset, text.timerPresetPaint, text.timerCustom).height };
+        };
+        const samples = [];
+        const morphSamples = [];
+        const nativeWidths = { panelWidthVp: 341.42857142857144, fullContentWidthVp: 315.42857142857144,
+            quickContentWidthVp: 263.42857142857144 };
+        scale = 1;
+        const currentProfile = tt.measureReaderTtsMinimum(context, nativeWidths, { ...ttsFacts, minutes: '25', seconds: '00' });
+        assert.equal(currentProfile.fullText.timerCustomLayout, 'inline');
+        assert.ok(Math.abs(currentProfile.fullText.timerCustomWidth - 261.42857142857144) < epsilon);
+        samples.push(inspectTimer(currentProfile, nativeWidths, 25, 0));
+        for (const progress of [.25, .5, .75])
+            morphSamples.push(inspectTimer(currentProfile, nativeWidths, 25, 0, ttsSource, progress));
+        for (const viewportWidth of [320, 366]) for (const fontScale of [1, 1.3, 1.6, 2]) {
+            scale = fontScale;
+            const metrics = createDefaultReaderWindowMetrics();
+            metrics.windowRect.width = viewportWidth;
+            metrics.windowRect.height = 844;
+            metrics.densityPixels = 3.5;
+            const actualWidths = geo.readerControlCandidateWidths(viewportWidth, 844, false, metrics)[0];
+            for (const minutes of [25, 180]) {
+                const profile = tt.measureReaderTtsMinimum(context, actualWidths,
+                    { ...ttsFacts, minutes: String(minutes), seconds: '59' });
+                assert.ok(profile, 'current native measurement input yields a complete TTS profile');
+                samples.push(inspectTimer(profile, actualWidths, minutes, 59));
+                for (const progress of [.25, .5, .75])
+                    morphSamples.push(inspectTimer(profile, actualWidths, minutes, 59, ttsSource, progress));
+            }
+        }
+        assert.deepEqual(new Set(samples.map(sample => sample.mode)), new Set(['inline', 'labelAbove', 'stacked']));
+        const unavailableWidths = { panelWidthVp: 26, fullContentWidthVp: 0, quickContentWidthVp: 0 };
+        assert.equal(tt.measureReaderTtsMinimum(context, unavailableWidths, ttsFacts), undefined,
+            'a zero-width viewport does not produce a payable profile');
+        scale = 1;
+        const physicallyNarrow = tt.measureReaderTtsMinimum(context,
+            { panelWidthVp: 156, fullContentWidthVp: 130, quickContentWidthVp: 104 }, ttsFacts);
+        assert.equal(physicallyNarrow, undefined,
+            'an unsupported tiny viewport keeps the existing unavailable measurement result');
+        const originalCarrier = ttsSource.replace('.width(this.textMinimum()?.timerStepButtonWidth ?? 30)', '.width(44)');
+        assert.notEqual(originalCarrier, ttsSource);
+        assert.throws(() => inspectTimer(currentProfile, nativeWidths, 25, 0, originalCarrier),
+            /fit their declared stepper parent|preserves authored thirty paint/,
+            'the old forty-four horizontal carrier is rejected by the actual child composition');
+        console.log('PASS TTS custom duration actual timer composition', JSON.stringify({ samples: samples.length,
+            actualNativeViewport: currentProfile.fullText.timerCustomWidth, layouts: [...new Set(samples.map(sample => sample.mode))],
+            completeNativeActions: samples.reduce((count, sample) => count + sample.buttons, 0),
+            partialMorphSamples: morphSamples.length,
+            partialMorphActionsDisabled: morphSamples.reduce((count, sample) => count + sample.buttons, 0), negativeControls: 1,
+            partialMorphBoundary: 'Full natural custom recipe is stable; original animated timer/Card clipping can reveal only part until Full input becomes eligible',
+            evidence: 'SDK attributes and finite Row/Column allocation, controlled text measurement, no native rasterization' }));
+        return;
+    }
     if (id === 'tts-paint-target-sdk') {
         const { createHash } = await import('node:crypto');
         const oracle = JSON.parse(read('tools/fixtures/reader-control-tts-make-20260911.json'));
@@ -710,7 +934,7 @@ async function run(id) {
         const ttsMaterial = pure('ReaderControlTtsStyle.ts', ['readerTtsPlayGradientStart']);
         const methods = ['p', 'transport', 'transportPaint', 'transportGlyphSize', 'transportResponse', 'roundControl', 'timer', 'timerCardLayout',
             'timerPreset', 'timerPresetLabel', 'timerPresetSelected', 'timerPresetIsSelected', 'chooseTimerPreset',
-            'timerStepButton', 'timerStepper', 'stepTimer', 'twoDigits', 'ratePreset', 'ratePresetWidth', 'chooseRatePreset',
+            'timerStepButton', 'timerStepper', 'timerCustomDuration', 'timerCustomLabel', 'timerCustomGroup', 'stepTimer', 'twoDigits', 'ratePreset', 'ratePresetWidth', 'chooseRatePreset',
             ...displayMethods('ReaderControlTtsContent.ets')];
         const paintOwner = source => createReaderBuilderProbe(source, methods,
             { ...deps, ...tt, ...accessibility, ...presetPaint, ...state, ...ttsMaterial }).owner;
@@ -1241,7 +1465,8 @@ async function run(id) {
             }
             assert.ok(tts.quick.quickTimerSelect.x + tts.quick.quickTimerSelect.width <= tts.quick.timer.width + .1);
             assert.ok(tts.full.speedPresets.width >= 44 * 5 + 32);
-            assert.ok(tts.fullText.timerCustomWidth >= 2 * (44 * 2 + tts.fullText.timerDigitWidth + 2) + 4 + 16);
+            assert.equal(tts.fullText.timerCustomWidth, Math.max(0, tts.full.timer.width - 28));
+            assert.equal(tts.fullText.timerStepButtonWidth, 30);
         };
         for (scale of [1, 1.3, 1.6, 2])
             for (const width of [272, 314, 548, 694]) {
@@ -1395,7 +1620,7 @@ async function run(id) {
             const ttsProfile = tt.measureReaderTtsMinimum(context, w, ttsFacts);
             const accessibility = selectedProductionClasses(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), ['ReaderActionAccessibility'], { AccessibilityRoleType: { BUTTON: 'button' } });
             const presetModifier = selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), ['ReaderTtsPresetModifier'], { ...accessibility, readerAppColor, Color: { Transparent: 'transparent' } });
-            const presets = native('ReaderControlTtsContent.ets', ['timer', 'timerCardLayout', 'timerPreset', 'timerStepper', 'timerStepButton', 'ratePreset', 'ratePresetWidth'], {
+            const presets = native('ReaderControlTtsContent.ets', ['timer', 'timerCardLayout', 'timerPreset', 'timerStepper', 'timerStepButton', 'timerCustomDuration', 'timerCustomLabel', 'timerCustomGroup', 'ratePreset', 'ratePresetWidth'], {
                 ...accessibility, ...presetModifier, ...tt, readerTtsPresetLabelColor: () => '#222', ...await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts'),
             });
             Object.assign(presets, { appScheme: 'day', frame: () => ttsProfile.full, textMinimum: () => ttsProfile.fullText, sectionSurface: () => { }, moduleHeader: () => { }, quickLabel: () => { },
@@ -1407,10 +1632,14 @@ async function run(id) {
             presets.ratePreset(.5);
             for (const button of nodes(presets, 'Button').filter(node => node.opacity !== 0)) {
                 assert.ok(button.height >= 44, button.accessibilityText);
-                if (typeof button.width === 'number')
-                    assert.ok(button.width >= 44);
+                if (typeof button.width === 'number') {
+                    if (/五分钟|五秒/.test(button.accessibilityText ?? ''))
+                        assert.equal(button.width, 30, 'custom timer uses authored horizontal paint slots');
+                    else assert.ok(button.width >= 44);
+                }
             }
-            assert.ok(nodes(presets, 'Scroll').length >= 2, 'timer controls own bounded horizontal lanes');
+            assert.equal(nodes(presets, 'Scroll').length, 1,
+                'only enlarged preset choices retain their bounded horizontal lane');
             const hiddenQuick=nodes(presets,'Button').find(node=>node.opacity===0);assert.equal(hiddenQuick.enabled,false);assert.equal(hiddenQuick.accessibilityLevel,'no-hide-descendants');
         }
         const wheelNames = ['build', 'targetWidth', 'targetHeight', 'offsets', 'valid', 'label', 'step'];

@@ -15,6 +15,7 @@ import {
   TYPE_READER_TIMER_RETAINED_BUILD_VALUE,
 } from '../../../ui/foundation/ReaderTypography';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { sampleReaderControlAutoPage, type ReaderControlAutoPageNaturalProfile,
   type ReaderControlAutoPageFrame } from './ReaderControlPlaybackGeometry';
 import type { ReaderControlCandidateWidths, ReaderControlModuleMinimum } from './ReaderLayoutGeometry';
@@ -103,7 +104,15 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
   const wheel = measureReaderControlText(context, '59', autoRecipe(TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED, false), inner);
   const neighbour = measureReaderControlText(context, '59', autoRecipe(TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR, false), inner);
   const unit = measureReaderControlText(context, '分', autoRecipe(TYPE_READER_TIMER_RETAINED_BUILD_VALUE, false), inner);
-  const follow = measureReaderControlText(context, '跟随高亮', autoRecipe(TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL), Math.max(1, inner - 8 - 18 - 8 - 42), 'wrap');
+  const followHorizontalPadding = 2 * 9;
+  const followVerticalPadding = 2 * 6;
+  const followBorder = 2 * TOK_BORDER_W;
+  const followSwitchWidth = 44;
+  const followSwitchHeight = 24;
+  const followSwitchMargin = 8;
+  const followLabelWidth = Math.min(236, Math.max(1, inner - 8 - followHorizontalPadding -
+    followBorder - followSwitchMargin - followSwitchWidth));
+  const follow = measureReaderControlText(context, '跟随高亮', autoRecipe(TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL), followLabelWidth, 'wrap');
   if (title === undefined || statusText === undefined || moduleTitle === undefined || moduleMeta === undefined ||
     chapter === undefined || running === undefined || stop === undefined || speedTitle === undefined || speedValue === undefined ||
     speedRange === undefined || step === undefined || timerTitle === undefined || timerMeta === undefined ||
@@ -216,7 +225,7 @@ function measureAutoEndpoint(context: UIContext, width: number, full: boolean,
   const timerBodyExtra = Math.max(0, pickerY + rowHeight * 3 + 4 + unitHeight + 12 - 138, labelY + timerLabelHeight + 12 - 138);
   frame.timer.height += timerHeaderExtra + timerBodyExtra;
   if (full) frame.details.y += timerHeaderExtra + timerBodyExtra;
-  const followHeight = Math.max(36, follow.heightVp + 12);
+  const followHeight = Math.max(36, Math.max(follow.heightVp, followSwitchHeight) + followVerticalPadding + followBorder);
   frame.follow.height = followHeight;
   frame.follow.y += speedHeight - (full ? 64 : 32);
   frame.details.height += headerExtra + speedHeight - (full ? 64 : 32) + followHeight - 36;

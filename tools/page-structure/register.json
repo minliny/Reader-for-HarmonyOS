@@ -1030,11 +1030,11 @@
         }
       },
       "exceptions": [],
-      "revision": 22,
+      "revision": 23,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 20,
+        "control": 21,
         "platform": 3
       },
       "sourceInputs": [
@@ -1772,7 +1772,8 @@
               "ReaderFullDirectory.directoryOverlay",
               "ReaderFullDirectory.offlineBookMenu",
               "ReaderFullDirectory.directoryRulesLayer",
-              "ReaderFullDirectory.directoryRulesNotice (active directoryRulesLayer only)"
+              "ReaderFullDirectory.directoryRulesNotice (active directoryRulesLayer only)",
+              "ReaderDirectoryNavigationSurface.build (retained read failure only)"
             ],
             "zOrder": [
               "directory-content",
@@ -1784,8 +1785,15 @@
             "focusRestore": "unverified"
           },
           "result": "NOT_RUN",
-          "evidence": [],
-          "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open. Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+          "evidence": [
+            {
+              "kind": "test",
+              "path": "tools/test-reader-directory-retained-surface.mjs",
+              "symbol": "retained-surface",
+              "result": "PASS"
+            }
+          ],
+          "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open. Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
         },
         "states": {
           "applicability": "applicable",
@@ -1910,6 +1918,11 @@
                 "controlRef": "directory-bookmark-marker",
                 "busyBound": true,
                 "disabledBound": true
+              },
+              {
+                "controlRef": "directory-catalog-retry",
+                "busyBound": false,
+                "disabledBound": true
               }
             ]
           },
@@ -1950,9 +1963,15 @@
               "path": "tools/test-reader-control-recovery-generation.mjs",
               "symbol": "retained-recovery",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-reader-directory-retained-surface.mjs",
+              "symbol": "retained-surface",
+              "result": "PASS"
             }
           ],
-          "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes."
+          "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
         },
         "adaptation": {
           "applicability": "applicable",
@@ -2028,7 +2047,8 @@
           "facts": {
             "keys": [
               "fullDirectory:header:${topBarTop()}",
-              "FullDirectoryPanel listSessionKey/viewport/row height"
+              "FullDirectoryPanel listSessionKey/viewport/row height",
+              "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
             ],
             "revisionSource": "readerWindowMetricsRevision + headerMeasurementRevision + animationGeneration",
             "cacheOwner": "ReaderFullDirectory.headerMeasurements + FullDirectoryPanel ReaderControlListPositioningState",
@@ -2066,9 +2086,15 @@
               "path": "tools/test-reader-control-recovery-generation.mjs",
               "symbol": "retained-recovery",
               "result": "PASS"
+            },
+            {
+              "kind": "test",
+              "path": "tools/test-reader-directory-retained-surface.mjs",
+              "symbol": "retained-surface",
+              "result": "PASS"
             }
           ],
-          "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success."
+          "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN."
         },
         "dataLifecycle": {
           "applicability": "applicable",
@@ -2505,11 +2531,11 @@
         }
       },
       "exceptions": [],
-      "revision": 19,
+      "revision": 20,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 20,
+        "control": 21,
         "platform": 3
       },
       "sourceInputs": [
@@ -2565,7 +2591,7 @@
         },
         {
           "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-          "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+          "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
           "symbol": "openTree"
         },
         {
@@ -3034,6 +3060,14 @@
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
           "sha256": "eae4a849a198d96d43be4d972de21d2e708d7a578d0834200b62131c355be379"
+        },
+        {
+          "path": "tools/test-reader-directory-retained-surface.mjs",
+          "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+        },
+        {
+          "path": "tools/test-reader-control-layout-budget.mjs",
+          "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
         }
       ],
       "variants": [
@@ -3320,10 +3354,12 @@
                 "facts": {
                   "types": [
                     "transient",
-                    "manga-download-popup"
+                    "manga-download-popup",
+                    "recovery"
                   ],
                   "hosts": [
-                    "ReaderMangaDownloadPopup"
+                    "ReaderMangaDownloadPopup",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -3334,8 +3370,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -3431,6 +3474,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -3453,9 +3501,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -3530,7 +3584,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -3556,9 +3611,15 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -3857,11 +3918,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -3917,7 +3978,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -4334,6 +4395,10 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
               }
             ]
           }
@@ -4648,7 +4713,8 @@
                     "ReaderFullDirectory.directoryOverlay",
                     "ReaderFullDirectory.offlineBookMenu",
                     "ReaderFullDirectory.directoryRulesLayer",
-                    "ReaderFullDirectory.directoryRulesNotice (active directoryRulesLayer only)"
+                    "ReaderFullDirectory.directoryRulesNotice (active directoryRulesLayer only)",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -4660,8 +4726,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open. Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "Local TXT rules editor requires local source, bookId, supported format and reading.directory.view.v2. Detail and reader FullDirectory hosts pass actual measured width/height into a bounded editor Scroll. Opening/book identity, editor/header focus IDs and original recovery proxy are source/SDK reviewed. Native Back, keyboard and focus acceptance remain open. Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -4786,6 +4859,11 @@
                       "controlRef": "directory-bookmark-marker",
                       "busyBound": true,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -4826,9 +4904,15 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Standalone query defaults to native32vp; the Control caller explicitly passes30vp. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -4904,7 +4988,8 @@
                 "facts": {
                   "keys": [
                     "fullDirectory:header:${topBarTop()}",
-                    "FullDirectoryPanel listSessionKey/viewport/row height"
+                    "FullDirectoryPanel listSessionKey/viewport/row height",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + headerMeasurementRevision + animationGeneration",
                   "cacheOwner": "ReaderFullDirectory.headerMeasurements + FullDirectoryPanel ReaderControlListPositioningState",
@@ -4942,9 +5027,27 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success."
+                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -5346,11 +5449,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -5406,7 +5509,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -5826,7 +5929,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -5850,7 +5953,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -5862,7 +5965,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -5878,11 +5981,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -5947,6 +6050,18 @@
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
                 "sha256": "eae4a849a198d96d43be4d972de21d2e708d7a578d0834200b62131c355be379"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -6234,10 +6349,12 @@
                 "facts": {
                   "types": [
                     "transient",
-                    "manga-download-popup"
+                    "manga-download-popup",
+                    "recovery"
                   ],
                   "hosts": [
-                    "ReaderMangaDownloadPopup"
+                    "ReaderMangaDownloadPopup",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -6248,8 +6365,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -6345,6 +6469,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -6367,9 +6496,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -6444,7 +6579,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -6470,9 +6606,27 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -6771,11 +6925,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -6831,7 +6985,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -7243,7 +7397,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -7267,7 +7421,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -7279,7 +7433,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -7295,11 +7449,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -7336,6 +7490,18 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -7602,8 +7768,12 @@
                 "applicability": "applicable",
                 "owner": "ReaderControlDirectoryContent",
                 "facts": {
-                  "types": [],
-                  "hosts": [],
+                  "types": [
+                    "recovery"
+                  ],
+                  "hosts": [
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
+                  ],
                   "zOrder": [
                     "inherited-ReaderControlPanel"
                   ],
@@ -7611,8 +7781,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Current original recovery stays on the LRE floating surface, yields while controls display, and returns when controls close. The control directory contains no recovery message prefix."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Current original recovery stays on the LRE floating surface, yields while controls display, and returns when controls close. The control directory contains no recovery message prefix. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -7733,6 +7910,11 @@
                       "controlRef": "directory-bookmark-marker",
                       "busyBound": true,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -7773,9 +7955,15 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -7851,7 +8039,8 @@
                   "keys": [
                     "sessionKey/tab + lifecycle/positionTicket + leadingKey/fraction",
                     "atomic presentation owner/environment/identity/admitted profile key",
-                    "same-pass Directory moduleData and readonly view reader"
+                    "same-pass Directory moduleData and readonly view reader",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "ReaderControlDirectoryContent.lifecycle/sessionKey + progress + availableWidth/Height",
                   "cacheOwner": "ReaderControlDirectoryPosition + placement ticket",
@@ -7891,9 +8080,27 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success."
+                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -8221,11 +8428,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -8281,7 +8488,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -8681,7 +8888,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -8705,7 +8912,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -8717,7 +8924,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -8733,11 +8940,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -8794,6 +9001,18 @@
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
                 "sha256": "eae4a849a198d96d43be4d972de21d2e708d7a578d0834200b62131c355be379"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -9071,10 +9290,12 @@
                 "facts": {
                   "types": [
                     "page-state",
-                    "transient"
+                    "transient",
+                    "recovery"
                   ],
                   "hosts": [
-                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface"
+                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -9084,8 +9305,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -9171,6 +9399,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -9193,9 +9426,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -9270,7 +9509,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -9296,9 +9536,15 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -9547,11 +9793,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -9607,7 +9853,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -10024,6 +10270,10 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
               }
             ]
           }
@@ -10304,10 +10554,12 @@
                 "facts": {
                   "types": [
                     "page-state",
-                    "transient"
+                    "transient",
+                    "recovery"
                   ],
                   "hosts": [
-                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface"
+                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -10317,8 +10569,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -10404,6 +10663,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -10426,9 +10690,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -10503,7 +10773,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -10529,9 +10800,27 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -10780,11 +11069,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -10840,7 +11129,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -11252,7 +11541,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -11276,7 +11565,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -11288,7 +11577,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -11304,11 +11593,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -11345,6 +11634,18 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -11632,10 +11933,12 @@
                 "facts": {
                   "types": [
                     "transient",
-                    "manga-download-popup"
+                    "manga-download-popup",
+                    "recovery"
                   ],
                   "hosts": [
-                    "ReaderMangaDownloadPopup"
+                    "ReaderMangaDownloadPopup",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -11646,8 +11949,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -11743,6 +12053,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -11765,9 +12080,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -11842,7 +12163,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -11868,9 +12190,15 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -12169,11 +12497,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -12229,7 +12557,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -12646,6 +12974,10 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
               }
             ]
           }
@@ -12933,10 +13265,12 @@
                 "facts": {
                   "types": [
                     "transient",
-                    "manga-download-popup"
+                    "manga-download-popup",
+                    "recovery"
                   ],
                   "hosts": [
-                    "ReaderMangaDownloadPopup"
+                    "ReaderMangaDownloadPopup",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -12947,8 +13281,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -13044,6 +13385,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -13066,9 +13412,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -13143,7 +13495,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -13169,9 +13522,27 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -13470,11 +13841,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -13530,7 +13901,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -13942,7 +14313,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -13966,7 +14337,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -13978,7 +14349,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -13994,11 +14365,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -14035,6 +14406,18 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -14312,10 +14695,12 @@
                 "facts": {
                   "types": [
                     "page-state",
-                    "transient"
+                    "transient",
+                    "recovery"
                   ],
                   "hosts": [
-                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface"
+                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -14325,8 +14710,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原详情宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -14412,6 +14804,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -14434,9 +14831,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -14511,7 +14914,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -14537,9 +14941,15 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -14788,11 +15198,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -14848,7 +15258,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -15265,6 +15675,10 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
               }
             ]
           }
@@ -15545,10 +15959,12 @@
                 "facts": {
                   "types": [
                     "page-state",
-                    "transient"
+                    "transient",
+                    "recovery"
                   ],
                   "hosts": [
-                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface"
+                    "BookDirectoryPage font/mangaEmptyState + ReaderDirectoryNavigationSurface",
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
                   ],
                   "zOrder": [
                     "directory-content",
@@ -15558,8 +15974,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "返回/焦点恢复未验；不因离线/下载虚构平台filePicker。选择宿主未注入directoryRecovery或download callbacks，保留代码分支不计active操作。 Standalone catalog foreground defers ordinary bookmark/offline recovery while preserving original owner facts and callback DTOs. Return follows the captured 原可呈现的阅读宿主 before any eligible recovery presentation resumes. Local rules recovery belongs only to its active editor. Native Back, physical hit/focus and pixels remain open. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -15645,6 +16068,11 @@
                       "controlRef": "directory-locate-manga",
                       "busyBound": false,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -15667,9 +16095,15 @@
                     "path": "tools/test-control-directory-focus-path.mjs",
                     "result": "PASS",
                     "symbol": "toolbar-focus-path"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Current selected SDK consumers prove private FullDirectory toolbar/native44 carriers, actual-width query stacking, reading TopBar font budgets, Control tab/reveal extents, fallback rows and Text row target/response pairing. Opening-scoped keyboard-observation and toolbar focus-path methods are covered with finite ports. Native pointer delivery, upper-edge hits, glyph/clipping, actual IME, focus and Core query/anchor journeys remain OPEN. Earlier HAP7/HAP12 receipts remain historical and are not inherited for this confluence candidate. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -15744,7 +16178,8 @@
                 "facts": {
                   "keys": [
                     "BookDirectoryPage.standardMeasurements(bookDirectory:header)仅retained standard path",
-                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale"
+                    "mangaToolsHeight/mangaFooterMeasured + viewportWidth/fontScale",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "readerWindowMetricsRevision + projectionGeneration + scrollGeneration + mangaFontGeneration",
                   "cacheOwner": "BookDirectoryPage mangaToolsHeight/mangaFooterMeasured；ReaderDirectoryNavigationList own page/layout window",
@@ -15770,9 +16205,27 @@
                     "path": "tools/test-control-directory-short-content.mjs",
                     "result": "NOT_RUN",
                     "symbol": "short-sdk,prefix-anchors,directory-focus,keyboard-observation,measured-profile"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range."
+                "knownGap": "Actual actor area and real parent/list extents are bound to current production methods and selected SDK geometry checks. Native Area/transition/glyph delivery and full route/business acceptance remain NOT_RUN. Historical mixed target/short-content bundles contain FullDirectoryPanel or Control uniform44-floor assertions. Those bundles are NOT_RUN for the current source. Manga actual44 declarations stay separate. Independently scoped focus, keyboard and TopBar receipts retain only their exact evidence range. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -16021,11 +16474,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -16081,7 +16534,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -16493,7 +16946,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -16517,7 +16970,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -16529,7 +16982,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -16545,11 +16998,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -16586,6 +17039,18 @@
               {
                 "path": "tools/test-directory-foreground-adapter.mjs",
                 "sha256": "d5bb1a0f0c93c0c55511b43eee10b90b7c888a011fb17a9c3534401a8dce32ff"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -16857,8 +17322,12 @@
                 "applicability": "applicable",
                 "owner": "ReaderControlDirectoryContent",
                 "facts": {
-                  "types": [],
-                  "hosts": [],
+                  "types": [
+                    "recovery"
+                  ],
+                  "hosts": [
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
+                  ],
                   "zOrder": [
                     "inherited-ReaderControlPanel"
                   ],
@@ -16866,8 +17335,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Current original recovery stays on the LRE floating surface, yields while controls display, and returns when controls close. The control directory contains no recovery message prefix."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Current original recovery stays on the LRE floating surface, yields while controls display, and returns when controls close. The control directory contains no recovery message prefix. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -16996,6 +17472,11 @@
                       "controlRef": "directory-bookmark-marker",
                       "busyBound": true,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -17036,9 +17517,15 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -17118,7 +17605,8 @@
                     "positive prefix Area width/expected height current-owner receipt",
                     "Native-only headerCount/first-visible rect; Core rank unmodified",
                     "atomic presentation owner/environment/identity/admitted profile key",
-                    "same-pass Directory moduleData and readonly view reader"
+                    "same-pass Directory moduleData and readonly view reader",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "lifecycle/layoutRestoreTicket for geometry; layoutPresentation for semantic/structure only; prefixRevealRevision only explicit UI reveal/focus",
                   "cacheOwner": "Content prefix measurement + flat placement; NavigationList canonical Tree anchor",
@@ -17159,9 +17647,27 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success."
+                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -17495,11 +18001,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -17555,7 +18061,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -17955,7 +18461,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -17979,7 +18485,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -17991,7 +18497,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -18007,11 +18513,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -18068,6 +18574,18 @@
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
                 "sha256": "eae4a849a198d96d43be4d972de21d2e708d7a578d0834200b62131c355be379"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -18339,8 +18857,12 @@
                 "applicability": "applicable",
                 "owner": "ReaderControlDirectoryContent",
                 "facts": {
-                  "types": [],
-                  "hosts": [],
+                  "types": [
+                    "recovery"
+                  ],
+                  "hosts": [
+                    "ReaderDirectoryNavigationSurface.build (retained read failure only)"
+                  ],
                   "zOrder": [
                     "inherited-ReaderControlPanel"
                   ],
@@ -18348,8 +18870,15 @@
                   "focusRestore": "unverified"
                 },
                 "result": "NOT_RUN",
-                "evidence": [],
-                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Current original recovery stays on the LRE floating surface, yields while controls display, and returns when controls close. The control directory contains no recovery message prefix."
+                "evidence": [
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  }
+                ],
+                "knownGap": "组件存在/消息ID可解析不证明临时层Back、读屏焦点或真实遮挡通过。 Current original recovery stays on the LRE floating surface, yields while controls display, and returns when controls close. The control directory contains no recovery message prefix. Retained directory reads keep the declared100% List slot. Pending adds no normal-flow status row. After a retained-content read failure, the existing ReaderRecoveryAction occupies only its natural bottom-end Row inside ReaderDirectoryNavigationSurface.build, with external8vp margin and Default sibling hit testing. Its onTouch stops basic touch-event bubbling; Native gesture arbitration, pointer routing, focus and pixels remain NOT_RUN. This local read-retry action retains the original read owner and does not own or confirm an unresolved write."
               },
               "states": {
                 "applicability": "applicable",
@@ -18478,6 +19007,11 @@
                       "controlRef": "directory-bookmark-marker",
                       "busyBound": true,
                       "disabledBound": true
+                    },
+                    {
+                      "controlRef": "directory-catalog-retry",
+                      "busyBound": false,
+                      "disabledBound": true
                     }
                   ]
                 },
@@ -18518,9 +19052,15 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes."
+                "knownGap": "E2 remains FAIL. Actual compact targets include tabs31/36vp, field native32vp standalone or30vp formal Control,32x44vp tools,32/40vp chapter lanes and26xrow marker responses. These do not all pay44x44vp. Current authored-allocation-sdk and revised targeted leaves prove their declared non-overlapping budgets only. Native pointer delivery, interception, clipping, glyphs and focus remain OPEN. Formal inputs use the prepared pair ownerCurrent guard before the original live business admission. The collapse action is a separate dock-native carrier from the30vp header paint. Former44-target closure/focus evidence is marked NOT_RUN for this current changed assembly. Its original historical receipts remain preserved. Current exact leaves carry only their listed code/SDK scopes. Nested retry consumes the existing read generation through a long-lived expected receiver and checks current source/book/open/query/sort/chapter/runtime, failed state and read-input key. Clear uses its current owner/query/generation independently of the debounced read key. The scoped retained-surface SDK evidence does not close E2 or Native event delivery."
               },
               "adaptation": {
                 "applicability": "applicable",
@@ -18600,7 +19140,8 @@
                     "positive prefix Area width/expected height current-owner receipt",
                     "Native-only headerCount/first-visible rect; Core rank unmodified",
                     "atomic presentation owner/environment/identity/admitted profile key",
-                    "same-pass Directory moduleData and readonly view reader"
+                    "same-pass Directory moduleData and readonly view reader",
+                    "ReaderDirectoryNavigationSurface generation + current source/book/open and opened read-input key"
                   ],
                   "revisionSource": "lifecycle/layoutRestoreTicket for geometry; layoutPresentation for semantic/structure only; prefixRevealRevision only explicit UI reveal/focus",
                   "cacheOwner": "Content prefix measurement + flat placement; NavigationList canonical Tree anchor",
@@ -18641,9 +19182,27 @@
                     "path": "tools/test-reader-control-recovery-generation.mjs",
                     "symbol": "retained-recovery",
                     "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-directory-retained-surface.mjs",
+                    "symbol": "retained-surface",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-layout-budget.mjs",
+                    "symbol": "timer-custom-allocation-sdk",
+                    "result": "PASS"
+                  },
+                  {
+                    "kind": "test",
+                    "path": "tools/test-reader-control-child-composition.mjs",
+                    "symbol": "search-recovery-row,replace-toolbar-row,auto-follow-row",
+                    "result": "PASS"
                   }
                 ],
-                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success."
+                "knownGap": "Current declared geometry is bound through pure module facts, same-pass typed profile and actual row/toolbar consumers. Runtime/receipt/owner identity and geometry request keys are distinct. Admitted-pair cache keys retain an old complete view/profile through partial Prop delivery and switch only when the new pair is complete. Real disappearance clears retained readonly state. Native Area/font/transition delivery and whole-route acceptance remain NOT_RUN. Former short-content/focus oracle receipts require current-scope revalidation; they do not establish current Native success. Nested pending/failure/retry preserves the declared content Stack and native List identity. The retry and PageState use existing generation; no new counter, clock or business owner was introduced. Retained List sizing and same-child action handoff are code/SDK facts. Actual anchor pixels and native branch removal remain NOT_RUN. Shared reading-control dependency evidence includes the precise TTS custom-duration and Search/Replace/AutoPage child-composition cases. TTS Full uses30vp horizontal custom carriers, original30paint/14glyph and at least44vp vertical carriers; current/narrow large-text allocations reflow semantically. Full-only natural custom layout stays stable while the original morph clip reveals it, with Full input unavailable before the endpoint. These dependency-scope tests do not validate this directory route or grant Native visual/target PASS."
               },
               "dataLifecycle": {
                 "applicability": "applicable",
@@ -18972,11 +19531,11 @@
               }
             },
             "exceptions": [],
-            "revision": 19,
+            "revision": 20,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             },
             "sourceInputs": [
@@ -19032,7 +19591,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationSurface.ets",
-                "sha256": "9a69c7cd8da0d3b35f8a15567b2bae09a7dc3e91fa3a8908b86333ca578c977b",
+                "sha256": "2222c9311d53bd7de6f942dcc5b6896a11dddc82b74ee672bd225fcc49e942ec",
                 "symbol": "openTree"
               },
               {
@@ -19432,7 +19991,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlAutoPageMinimum.ets",
-                "sha256": "b393c87bcf43af748c7878f684db1c923666cd4ff233859e0cd203c2c810656f"
+                "sha256": "664a35000f6f41842bdd9291933a8aba8da68e4c43bbbf83450abf96becf7d0c"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts",
@@ -19456,7 +20015,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlReplaceMinimum.ets",
-                "sha256": "99891a4d06b5dfae3701d6d918b4495683efb68840ae4ca6514e6e3c43e3ea74"
+                "sha256": "0fbeccd478d3255d9c4a089e1456e69bd97187c5ef1390cb393127a9c1e8ef53"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
@@ -19468,7 +20027,7 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets",
-                "sha256": "3868799f23736e723368056b2ccba8865e6c89cf77474592a3695a931ca173c1"
+                "sha256": "df2c049cb6dd08b4649748b4cdaf0f769964b2275a08375335716d52866a58f8"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets",
@@ -19484,11 +20043,11 @@
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets",
-                "sha256": "f329e0e577e18d4804d1c32cd549074e03604fe7687ff8823b6c32917aa6eae4"
+                "sha256": "a05ea2a2eeede2877bfc3123cbbf1881d90bdc817feecd361b5be002a61fd90e"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets",
-                "sha256": "7a5a7010d6bad84f1cf26dbe57b161c304b45736751ee9c126c15011611c7e56"
+                "sha256": "e7868139e46e7883bd6c245e91e46d184e2bd2fb18e5c60847e7615e625c6df9"
               },
               {
                 "path": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
@@ -19545,6 +20104,18 @@
               {
                 "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
                 "sha256": "eae4a849a198d96d43be4d972de21d2e708d7a578d0834200b62131c355be379"
+              },
+              {
+                "path": "tools/test-reader-directory-retained-surface.mjs",
+                "sha256": "a383ea4191d223b15c2266cb40c3bef5d04a0f7a4ea3b958524bf7e72a51e4ee"
+              },
+              {
+                "path": "tools/test-reader-control-child-composition.mjs",
+                "sha256": "1910f6f43e0dd7845acbfcf0d637c4dc9716ebfa16c78047db545d613ff64620"
+              },
+              {
+                "path": "tools/test-reader-control-layout-budget.mjs",
+                "sha256": "eec6c2c048c6dd57016c5a4c4d63773529446617395b51fe10c492e2c6d147e2"
               }
             ]
           }
@@ -19719,7 +20290,7 @@
         },
         {
           "path": "tools/message-entrypoints.json",
-          "sha256": "f10947d77731cad1ba17d11dd294c9fa374f9a4247662d32ac66a7ef180263d5"
+          "sha256": "6e74d50995ac0e2b13494a205d68dbf87f279b5eab0e526b06f946d97c94314e"
         },
         {
           "path": "tools/test-shared-download-visual-contract.mjs",
@@ -20886,11 +21457,11 @@
         }
       },
       "exceptions": [],
-      "revision": 13,
+      "revision": 14,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 20,
+        "control": 21,
         "platform": 3
       },
       "variants": [
@@ -21078,7 +21649,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "f10947d77731cad1ba17d11dd294c9fa374f9a4247662d32ac66a7ef180263d5"
+                "sha256": "6e74d50995ac0e2b13494a205d68dbf87f279b5eab0e526b06f946d97c94314e"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -22251,11 +22822,11 @@
               }
             },
             "exceptions": [],
-            "revision": 13,
+            "revision": 14,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             }
           }
@@ -22444,7 +23015,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "f10947d77731cad1ba17d11dd294c9fa374f9a4247662d32ac66a7ef180263d5"
+                "sha256": "6e74d50995ac0e2b13494a205d68dbf87f279b5eab0e526b06f946d97c94314e"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -23617,11 +24188,11 @@
               }
             },
             "exceptions": [],
-            "revision": 13,
+            "revision": 14,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             }
           }
@@ -23810,7 +24381,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "f10947d77731cad1ba17d11dd294c9fa374f9a4247662d32ac66a7ef180263d5"
+                "sha256": "6e74d50995ac0e2b13494a205d68dbf87f279b5eab0e526b06f946d97c94314e"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -24939,11 +25510,11 @@
               }
             },
             "exceptions": [],
-            "revision": 13,
+            "revision": 14,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             }
           }
@@ -25132,7 +25703,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "f10947d77731cad1ba17d11dd294c9fa374f9a4247662d32ac66a7ef180263d5"
+                "sha256": "6e74d50995ac0e2b13494a205d68dbf87f279b5eab0e526b06f946d97c94314e"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -26261,11 +26832,11 @@
               }
             },
             "exceptions": [],
-            "revision": 13,
+            "revision": 14,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             }
           }
@@ -26454,7 +27025,7 @@
               },
               {
                 "path": "tools/message-entrypoints.json",
-                "sha256": "f10947d77731cad1ba17d11dd294c9fa374f9a4247662d32ac66a7ef180263d5"
+                "sha256": "6e74d50995ac0e2b13494a205d68dbf87f279b5eab0e526b06f946d97c94314e"
               },
               {
                 "path": "tools/test-shared-download-visual-contract.mjs",
@@ -27583,11 +28154,11 @@
               }
             },
             "exceptions": [],
-            "revision": 13,
+            "revision": 14,
             "registryRevisions": {
               "contractMap": 3,
               "navigation": 4,
-              "control": 20,
+              "control": 21,
               "platform": 3
             }
           }
@@ -28640,11 +29211,11 @@
         }
       },
       "exceptions": [],
-      "revision": 9,
+      "revision": 10,
       "registryRevisions": {
         "contractMap": 3,
         "navigation": 4,
-        "control": 20,
+        "control": 21,
         "platform": 3
       },
       "sourceInputs": [

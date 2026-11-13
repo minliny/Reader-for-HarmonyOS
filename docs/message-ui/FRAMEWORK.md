@@ -54,6 +54,8 @@
 
 保留同一消息组件时，普通回调字段由原实例持有，调用方须提供长期有效的转交函数。当前动作身份通过可观察字段传入，`ReaderRecoveryAction.generation` 与 `ReaderPageState.actionGeneration` 在点击时作为 expected 交回原业务owner，再核对当前宿主、实体及动作资格。`actionGeneration` 默认0，既有无参回调继续适用。自定义动作slot遵循相同身份规则。
 
+嵌套目录宿主已有有效条目时，后台读取保留原列表的内容盒与anchor。读取失败沿已有短反馈说明事实，原重试动作在所属内容Stack的局部覆盖槽提供。该槽以自然按钮盒使用Default命中并停止基本触摸事件向祖先冒泡，盒外由原列表接收。原生手势仲裁单独取证。无内容的加载和失败继续占原内容区，使用PageState及原查询、重试资格。父级模块profile和key保持相同，还须逐层核对内部私有状态的装配变化。
+
 动作身份与显示事实在同一次业务快照中取得。SDK的State/Prop显示代理只参与绘制依赖，原业务owner的严格引用身份仍从原Publication取得。同一query的busy/ready保持原动作身份，后继query采用新显示事实时交接代次。回归须包含真实SDK装饰器、保留实例和旧回调，记录源码方法、SDK调度与原生命中各自实际覆盖范围。
 
 行内动作的装饰占位与业务文案之间须保留合法换行边界，测量和绘制使用一致规则。装饰NBSP组保持自己的动作预留职责，正文按原生断行及既有长文展开规则呈现。当前精确回归为 `H-recovery-notice-flow#reservation-boundary`，默认关闭。

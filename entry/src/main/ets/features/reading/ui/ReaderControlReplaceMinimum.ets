@@ -6,6 +6,7 @@ import { TYPE_READER_REPLACE_RULE_NAME, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PA
   TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL,
   TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE, ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderControlCandidateWidths } from './ReaderLayoutGeometry';
 import type { ReaderControlReplaceMinimumProfile, ReaderControlReplaceEndpointMinimum } from './ReaderControlReplaceGeometry';
 
@@ -66,10 +67,14 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
   if (editorFlag === undefined || editorBack === undefined) return undefined;
   const toolbarLabels: string[] = ['新增规则', '导入', '导出'];
   const weights: number[] = [100.66, 96.67, 96.67];
+  const toolbarIconWidth = 20;
+  const toolbarIconLabelGap = 6;
+  const toolbarHorizontalBorder = 2 * TOK_BORDER_W;
+  const toolbarLabelChrome = toolbarIconWidth + toolbarIconLabelGap + toolbarHorizontalBorder;
   let toolbarHeight = 40; let toolbarFits = true;
   for (let i = 0; i < toolbarLabels.length; i++) {
     const text = measureReaderControlText(context, toolbarLabels[i], TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL,
-      Math.max(1, (width - 28 - 16) * weights[i] / 294 - 26));
+      Math.max(1, (width - 28 - 16) * weights[i] / 294 - toolbarLabelChrome));
     if (text === undefined) return undefined;
     toolbarHeight = Math.max(toolbarHeight, text.heightVp + 12); toolbarFits = toolbarFits && text.fitsWidth;
   }
@@ -79,7 +84,7 @@ function measureEndpoint(context: UIContext, width: number, full: boolean,
     toolbarFits = true;
     for (let i = 0; i < toolbarLabels.length; i++) {
       const text = measureReaderControlText(context, toolbarLabels[i], TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL,
-        Math.max(1, width - 28 - 26));
+        Math.max(1, width - 28 - toolbarLabelChrome));
       if (text === undefined) return undefined;
       toolbarHeight = Math.max(toolbarHeight, text.heightVp + 12); toolbarFits = toolbarFits && text.fitsWidth;
     }
