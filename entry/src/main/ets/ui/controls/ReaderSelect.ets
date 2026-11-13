@@ -93,7 +93,7 @@ export struct ReaderSelect {
     .height(this.triggerHeight())
     .padding(0)
     .backgroundColor(Color.Transparent)
-    .borderRadius(this.variant === 'appearanceLibrary' ? 999 : this.variant === 'sourceGroup' ? 8 : this.variant === 'settingsPhone' ? 7 : 6)
+    .borderRadius(this.variant === 'appearanceLibrary' ? Math.min(this.resolvedWidth(), this.triggerHeight()) / 2 : this.variant === 'sourceGroup' ? 8 : this.variant === 'settingsPhone' ? 7 : 6)
     .responseRegion({ x: 0, y: this.variant === 'appearanceLibrary' ? -APPEARANCE_HIT_OUTSET : 0,
       width: '100%', height: this.variant === 'appearanceLibrary' ?
         this.triggerHeight() + APPEARANCE_HIT_OUTSET * 2 : this.triggerHeight() })
@@ -131,7 +131,8 @@ export struct ReaderSelect {
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12)
         .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
-    }.width('100%').height(this.triggerHeight()).padding({ left: 11, right: 9 }).borderRadius(999)
+    }.width('100%').height(this.triggerHeight()).padding({ left: 11, right: 9 })
+      .borderRadius(Math.min(this.resolvedWidth(), this.triggerHeight()) / 2)
       .backgroundColor(this.isOpen ? readerAppColor('app.appearance.selectOpenFill', this.appThemeScheme) : readerAppColor('app.appearance.selectFill', this.appThemeScheme));
   }
 

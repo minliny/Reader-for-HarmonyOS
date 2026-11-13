@@ -51,6 +51,7 @@ export interface ReaderTtsTextMinimum {
   quickPlaybackStatus: number;
   quickSettingTitle: number;
   header: number;
+  playbackMetaWidth: number;
   sectionHeader: number;
   stopLabel: number;
   stopLabelWidth: number;
@@ -131,7 +132,8 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const qStatus = largest(context, [facts.playbackLabel], actual(TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE), inner);
   const qSetting = largest(context, ['定时', '语速'], actual(TYPE_READER_TTS_QUICK_SETTING_LABEL), inner);
   const header = largest(context, ['朗读控制', '定时停止', '语速'], actual(TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE), inner);
-  const playbackMeta = largest(context, [facts.status, facts.timerSummary], TYPE_READER_TTS_SECTION_META, inner);
+  const playbackMeta = largest(context, [facts.status], TYPE_READER_TTS_SECTION_META, inner);
+  const timerMeta = largest(context, [facts.timerSummary], TYPE_READER_TTS_SECTION_META, inner);
   const speedMeta = largest(context, [facts.rate], TYPE_READER_TTS_SECTION_SPEED_META, inner);
   const voice = largest(context, ['当前音色 · ' + facts.voice], actual(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL), Math.max(1, frame.voice.width - 22));
   const stop = largest(context, ['停止'], actual(TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL), inner);
@@ -164,13 +166,13 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const manage = largest(context, [facts.manageLabel], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE), inner);
   const manageTitle = largest(context, ['服务信息'], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL), inner);
   const error = measureReaderControlText(context, facts.error, MESSAGE_BODY, inner - 32, 'wrap');
-  const values: (ReaderControlTextExtent | undefined)[] = [qPlayback, qStatus, qSetting, header, playbackMeta,
+  const values: (ReaderControlTextExtent | undefined)[] = [qPlayback, qStatus, qSetting, header, playbackMeta, timerMeta,
     speedMeta, voice, stop, caption, timerPreset, custom, customMeta, digit, rate, range, ratePreset,
     section, sectionMeta, tabTitle, tabSubtitle, labels, field, voiceBadge, toggle, manage, manageTitle, error];
   for (const value of values) if (value === undefined) return undefined;
   // Narrow explicitly after the complete native-read failure check.
   if (qPlayback === undefined || qStatus === undefined || qSetting === undefined || header === undefined ||
-    playbackMeta === undefined || speedMeta === undefined || voice === undefined || stop === undefined ||
+    playbackMeta === undefined || timerMeta === undefined || speedMeta === undefined || voice === undefined || stop === undefined ||
     caption === undefined || timerPreset === undefined || custom === undefined || customMeta === undefined ||
     digit === undefined || rate === undefined || range === undefined || ratePreset === undefined || section === undefined ||
     sectionMeta === undefined || tabTitle === undefined || tabSubtitle === undefined || labels === undefined ||
@@ -186,7 +188,8 @@ function measureForm(context: UIContext, width: number, full: boolean,
   if (voiceValue === undefined || engineValue === undefined || languageValue === undefined || failureValue === undefined) return undefined;
   const text: ReaderTtsTextMinimum = {
     quickPlaybackTitle: Math.max(16, qPlayback.heightVp), quickPlaybackStatus: Math.max(13, qStatus.heightVp),
-    quickSettingTitle: Math.max(18, qSetting.heightVp), header: Math.max(18, header.heightVp, playbackMeta.heightVp, speedMeta.heightVp),
+    quickSettingTitle: Math.max(18, qSetting.heightVp), header: Math.max(18, header.heightVp, playbackMeta.heightVp, timerMeta.heightVp, speedMeta.heightVp),
+    playbackMetaWidth: playbackMeta.singleLineWidthVp,
     sectionHeader: Math.max(18, section.heightVp, sectionMeta.heightVp), stopLabel: Math.max(14, stop.heightVp),
     stopLabelWidth: Math.max(24, stop.singleLineWidthVp), timerPreset: Math.max(44, timerPreset.heightVp + 8),
     timerPresetsWidth: Math.max(inner - 28, 3 * Math.max(44, Math.ceil(timerPreset.singleLineWidthVp) + 12) + 16),
@@ -366,7 +369,9 @@ export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
     quickPlaybackTitle: readerControlLerp(q.quickPlaybackTitle, f.quickPlaybackTitle, progress),
     quickPlaybackStatus: readerControlLerp(q.quickPlaybackStatus, f.quickPlaybackStatus, progress),
     quickSettingTitle: readerControlLerp(q.quickSettingTitle, f.quickSettingTitle, progress),
-    header: readerControlLerp(q.header, f.header, progress), sectionHeader: readerControlLerp(q.sectionHeader, f.sectionHeader, progress),
+    header: readerControlLerp(q.header, f.header, progress),
+    playbackMetaWidth: readerControlLerp(q.playbackMetaWidth ?? 0, f.playbackMetaWidth ?? 0, progress),
+    sectionHeader: readerControlLerp(q.sectionHeader, f.sectionHeader, progress),
     stopLabel: readerControlLerp(q.stopLabel, f.stopLabel, progress), stopLabelWidth: readerControlLerp(q.stopLabelWidth, f.stopLabelWidth, progress),
     timerPresetsWidth: readerControlLerp(q.timerPresetsWidth, f.timerPresetsWidth, progress),
     timerCustomWidth: readerControlLerp(q.timerCustomWidth, f.timerCustomWidth, progress),

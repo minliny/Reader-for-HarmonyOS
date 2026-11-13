@@ -649,7 +649,7 @@ export struct ReaderControlDirectoryContent {
       }.width('100%').height(this.tabHeight() - this.value(13, 8)).justifyContent(FlexAlign.Center)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
       if (this.tab === tab) {
-        Row().width('52%').height(2).borderRadius(999).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
+        Row().width('52%').height(2).borderRadius(1).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
     }.width('100%').height(this.tabHeight() - this.value(13, 8))
       .borderRadius(8).backgroundColor(this.tab === tab ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)

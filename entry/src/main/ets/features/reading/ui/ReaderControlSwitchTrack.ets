@@ -28,7 +28,7 @@ export struct ReaderControlSwitchTrack {
     }
     .width(this.trackWidth).height(this.trackHeight)
     .backgroundColor(this.value ? (this.activeColor === '' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : this.activeColor) : (this.inactiveColor === '' ? readerAppColor('app.toggle.inactiveTrack', this.appThemeScheme) : this.inactiveColor))
-    .borderRadius(999)
+    .borderRadius(Math.min(this.trackWidth, this.trackHeight) / 2)
     .hitTestBehavior(HitTestMode.Transparent);
   }
 }

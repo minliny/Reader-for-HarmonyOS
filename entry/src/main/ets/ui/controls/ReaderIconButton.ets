@@ -40,7 +40,8 @@ export struct ReaderIconButton {
         .height(resolveReaderIconButtonSpec(this.specId).iconSize).accessibilityLevel('no');
     }.width(resolveReaderIconButtonSpec(this.specId).boxSize).height(resolveReaderIconButtonSpec(this.specId).boxSize).padding(0)
       .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
-        resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).pressedRadius))
+        Math.min(resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
+        Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2)))
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .accessibilityText(this.accessibilityLabel).accessibilitySelected(false)
       .enabled(this.canAct())
@@ -62,10 +63,11 @@ export struct ReaderIconButton {
     .padding(0)
     .width(resolveReaderIconButtonSpec(this.specId).boxSize)
     .height(resolveReaderIconButtonSpec(this.specId).boxSize)
-    .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
-      resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).pressedRadius,
-      this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false))
     .border(this.activeBorder())
+    .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
+      Math.min(resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
+      Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
+      this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false))
     .opacity(this.specId === 'reader-chapter-step' && !this.actionEnabled ? 0.4 : 1)
     .enabled(this.canAct())
     .id(this.focusId)

@@ -1,4 +1,6 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity } from '../application/RssMutationRecoveryContract';
@@ -39,6 +41,8 @@ import {
 @Component
 export struct RssSubscriptionManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
 
   @Prop items: RssSubscriptionManagementItem[];
   @Prop expandedLayout: boolean;
@@ -67,12 +71,16 @@ export struct RssSubscriptionManagementPage {
   onDisclosureChanged: (subscriptionId: string, expanded: boolean) => void =
     (_subscriptionId: string, _expanded: boolean): void => {};
   @State private expandedSubscriptionId: string = '';
+  @State private addPillShape: ReaderRaisedShape | undefined = undefined;
+  @State private pillAppearanceRevision: number = 0;
   private readonly pageScroller: Scroller = new Scroller();
   private readonly resultFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private mounted: boolean = false;
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.pillAppearanceRevision += 1;
+    this.addPillShape = undefined;
     registerReaderFonts(this.getUIContext().getFont());
     if (this.items.some((item: RssSubscriptionManagementItem): boolean =>
       item.subscriptionId === this.focusedSubscriptionId)) {
@@ -131,9 +139,32 @@ export struct RssSubscriptionManagementPage {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(999)
+      .borderRadius(this.currentAddPillRadius())
+      .onAreaChange(this.addPillAreaHandler())
       .onClick((): void => this.onAdd());
     }
+  }
+
+  private addPillMeasurementKey(): string {
+    return `${this.pillAppearanceRevision}:${this.readerWindowMetricsRevision}:${this.uiConfigurationRevision}:` +
+      `${this.expandedLayout}:${this.presentationIdentity}:${this.addActionWidth()}`;
+  }
+
+  private addPillAreaHandler(): (oldValue: Area, next: Area) => void {
+    const identity = this.addPillMeasurementKey();
+    return (_old: Area, next: Area): void => {
+      if (!this.mounted || identity !== this.addPillMeasurementKey()) return;
+      const shape = resolveReaderRaisedShape(identity, readerPageAreaLength(next.width),
+        readerPageAreaLength(next.height), 999);
+      if (shape === undefined) return;
+      if (shape.identity !== this.addPillShape?.identity || shape.radius !== this.addPillShape?.radius) {
+        this.addPillShape = shape;
+      }
+    };
+  }
+
+  private currentAddPillRadius(): number {
+    return this.mounted && this.addPillShape !== undefined ? this.addPillShape.radius : 22;
   }
 
   private addActionWidth(): number {

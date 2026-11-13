@@ -293,7 +293,7 @@ export struct FullDirectoryPanel {
         .width(42)
         .height(4)
         .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
-        .borderRadius(999)
+        .borderRadius(2)
         .margin({ left: this.gripLeft(), top: 9 });
 
       Column({ space: TOK_SPACE_XS }) {
@@ -619,7 +619,7 @@ export struct FullDirectoryPanel {
           .width(this.activeTabLineWidth())
           .height(2)
           .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-          .borderRadius(999);
+          .borderRadius(Math.min(this.activeTabLineWidth(), 2) / 2);
       }
   }
 
@@ -668,7 +668,7 @@ export struct FullDirectoryPanel {
           .width(this.activeTabLineWidth())
           .height(2)
           .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-          .borderRadius(999);
+          .borderRadius(Math.min(this.activeTabLineWidth(), 2) / 2);
       }
   }
 

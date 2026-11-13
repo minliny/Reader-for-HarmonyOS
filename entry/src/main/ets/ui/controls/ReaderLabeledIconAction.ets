@@ -4,6 +4,8 @@ import { ReaderLabeledIconActionSpecId, resolveReaderLabeledIconActionSpec } fro
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { TOK_BORDER_W } from '../foundation/ReaderTokens';
+import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
+import { readerPageAreaLength } from '../layout/ReaderPageShell';
 
 class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute> {
   private id: ReaderLabeledIconActionSpecId;
@@ -38,12 +40,15 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   private scheme: string;
   private scale: number;
   private enabled: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean, scale: number = 1) {
+  private paintRadius: number | undefined;
+  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean, scale: number = 1,
+    paintRadius: number | undefined = undefined) {
     this.id = id;
     this.divider = divider;
     this.scheme = scheme;
     this.scale = scale;
     this.enabled = enabled;
+    this.paintRadius = paintRadius;
   }
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
@@ -64,7 +69,7 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
       else instance.border({ width: TOK_BORDER_W, color: readerAppColor(spec.borderRole, this.scheme) });
     }
     if (spec.surfaceRole !== undefined && !spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
-    else if (spec.radius !== undefined && !spec.surfaceOnHit) instance.borderRadius(spec.radius);
+    else if (spec.radius !== undefined && !spec.surfaceOnHit) instance.borderRadius(this.paintRadius ?? spec.radius);
     if (spec.gradientStart !== undefined && spec.gradientEnd !== undefined) this.gradient(instance, false);
     if (!spec.outerHit) {
       if (spec.equalLayout && !spec.naturalHeight) instance.layoutWeight(1);
@@ -83,7 +88,7 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   private feedback(): ReaderPressFeedback {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
     return new ReaderPressFeedback(readerAppColor(spec.surfaceRole ?? 'TOK_PAPER', this.scheme), this.scheme,
-      spec.radius ?? 0, spec.radius ?? 0, this.enabled && spec.pressFeedback !== false);
+      this.paintRadius ?? spec.radius ?? 0, this.paintRadius ?? spec.radius ?? 0, this.enabled && spec.pressFeedback !== false);
   }
 }
 class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute> {
@@ -122,6 +127,7 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute>
 @Component
 export struct ReaderLabeledIconAction {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderLabeledIconActionSpecId = 'rss-feed';
   @Prop label: string = '';
@@ -132,8 +138,14 @@ export struct ReaderLabeledIconAction {
   @Prop actionEnabled: boolean = true;
   @Prop focusId: string = '';
   onAction: () => void = (): void => {};
+  @State private rowPaintShape: ReaderRaisedShape | undefined = undefined;
+  @State private rowPaintAppearanceRevision: number = 0;
   private mounted: boolean = false;
-  aboutToAppear(): void { this.mounted = true; }
+  aboutToAppear(): void {
+    this.mounted = true;
+    this.rowPaintAppearanceRevision += 1;
+    this.rowPaintShape = undefined;
+  }
   aboutToDisappear(): void { this.mounted = false; }
   @Builder
   private labelContents() {
@@ -148,7 +160,9 @@ export struct ReaderLabeledIconAction {
         (resolveReaderLabeledIconActionSpec(this.specId).rowHeight ?? 44) < 44)) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
-          .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()));
+          .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled,
+            this.fontScale(), this.rowPaintRadius()))
+          .onAreaChange(this.rowPaintAreaChange());
       }.width(this.fillWidth ? '100%' : undefined).padding(0).backgroundColor(Color.Transparent).borderRadius(0).clip(false)
         .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale(), this.fillWidth))
         .enabled(this.actionEnabled)
@@ -158,7 +172,9 @@ export struct ReaderLabeledIconAction {
     } else {
       Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
         .width(this.fillWidth ? '100%' : undefined)
-        .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled, this.fontScale()))
+        .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled,
+          this.fontScale(), this.rowPaintRadius()))
+        .onAreaChange(this.rowPaintAreaChange())
         .enabled(this.actionEnabled).focusable(this.actionEnabled)
         .id(this.focusId)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
@@ -168,6 +184,28 @@ export struct ReaderLabeledIconAction {
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
+  }
+  private rowPaintIdentity(): string {
+    return JSON.stringify([this.rowPaintAppearanceRevision, this.readerWindowMetricsRevision, this.uiConfigurationRevision,
+      this.specId, this.label, this.fontScale(), this.fillWidth]);
+  }
+  private rowPaintRadius(): number | undefined {
+    const spec = resolveReaderLabeledIconActionSpec(this.specId);
+    if (spec.radius !== 999) return undefined;
+    if (this.mounted && this.rowPaintShape !== undefined) return this.rowPaintShape.radius;
+    const minimumWidth = typeof spec.rowWidth === 'number' ? spec.rowWidth :
+      spec.iconSize + spec.gap + 2 * (spec.horizontalPadding ?? 0);
+    return resolveReaderRaisedShape(this.rowPaintIdentity(), minimumWidth, spec.rowHeight ?? 44, spec.radius)?.radius ?? 0;
+  }
+  private rowPaintAreaChange(): (_old: Area, area: Area) => void {
+    const identity = this.rowPaintIdentity();
+    return (_old: Area, area: Area): void => {
+      if (!this.mounted || identity !== this.rowPaintIdentity() || resolveReaderLabeledIconActionSpec(this.specId).radius !== 999) return;
+      const shape = resolveReaderRaisedShape(identity, readerPageAreaLength(area.width), readerPageAreaLength(area.height), 999);
+      if (shape === undefined || (this.rowPaintShape?.identity === identity &&
+        this.rowPaintShape.width === shape.width && this.rowPaintShape.height === shape.height)) return;
+      this.rowPaintShape = shape;
+    };
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

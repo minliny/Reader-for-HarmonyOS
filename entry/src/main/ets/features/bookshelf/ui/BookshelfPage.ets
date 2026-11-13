@@ -946,7 +946,7 @@ export struct BookshelfPage {
 
   @Builder
   private filterChip(dimension: string, value: string, label: string) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Row() {
       Text(label)
         .fontFamily(TYPE_SHELF_FILTER_LABEL.fontFamily).fontWeight(TYPE_SHELF_FILTER_LABEL.fontWeight)
@@ -964,7 +964,7 @@ export struct BookshelfPage {
         [[readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 1]] :
         [[Color.Transparent, 0], [Color.Transparent, 1]] })
       .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .constraintSize({ maxWidth: 160, minHeight: 44 })
       .attributeModifier(new ReaderActionAccessibility(`${dimension === 'content' ? '内容类型' : '来源'}：${label}`, true, this.isFilterSelected(dimension, value), true, undefined, 'nativeButton'))
       .onClick((): void => this.selectFilter(dimension, value));
@@ -1118,7 +1118,8 @@ export struct BookshelfPage {
           .constraintSize({ maxWidth: Math.max(0, this.shelfBookCardWidth(expandedLayout) - 14) })
           .padding({ left: 7, right: 7, top: 3, bottom: 3 })
           .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-          .borderRadius(999)
+          .borderRadius(Math.min(Math.max(0, this.shelfBookCardWidth(expandedLayout) - 14),
+            (TYPE_SHELF_UPDATE_BADGE.lineHeightFp as number) * this.continueCardFontScale() + 6) / 2)
           .align(Alignment.TopEnd)
           .margin({ top: 7, right: 7 })
           .opacity(this.viewSwitchGridContentOpacity);

@@ -207,6 +207,7 @@ export struct ReaderButton {
           }
         }.accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
+        .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.selectionSemantic))
         .enabled(this.actionEnabled)
@@ -218,6 +219,7 @@ export struct ReaderButton {
         Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
+        .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.selectionSemantic))
         .enabled(this.actionEnabled)

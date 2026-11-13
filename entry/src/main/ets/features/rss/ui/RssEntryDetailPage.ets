@@ -1,5 +1,6 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
-import { readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
+import { readerPageAreaLength, readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
+import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import type { RssFavoritePresentation, RssEntrySnapshot } from '../presentation/RssPresentationContract';
@@ -47,6 +48,7 @@ export struct RssEntryDetailPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
   @Prop subscription: RssSubscription;
   @Prop item: RssItem;
   @Prop expandedLayout: boolean;
@@ -65,10 +67,18 @@ export struct RssEntryDetailPage {
   onSourceSettings: () => void = (): void => {};
   onOpenOriginal: () => void = (): void => {};
   @State private viewportWidth: number = 0;
+  @State private originalLinkPillShape: ReaderRaisedShape | undefined = undefined;
+  @State private pillAppearanceRevision: number = 0;
+  private pillMounted: boolean = false;
 
   aboutToAppear(): void {
+    this.pillMounted = true;
+    this.pillAppearanceRevision += 1;
+    this.originalLinkPillShape = undefined;
     registerReaderFonts(this.getUIContext().getFont());
   }
+
+  aboutToDisappear(): void { this.pillMounted = false; }
 
   build() {
     ReaderStandardPage({
@@ -332,7 +342,8 @@ export struct RssEntryDetailPage {
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-        .borderRadius(999);
+        .borderRadius(this.currentOriginalLinkPillRadius())
+        .onAreaChange(this.originalLinkPillAreaHandler());
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
@@ -342,6 +353,28 @@ export struct RssEntryDetailPage {
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8)
     .onClick((): void => this.onOpenOriginal());
+  }
+
+  private originalLinkPillMeasurementKey(): string {
+    return `${this.pillAppearanceRevision}:${this.readerWindowMetricsRevision}:${this.uiConfigurationRevision}:` +
+      `${this.viewportWidth}:${this.presentationIdentity}`;
+  }
+
+  private originalLinkPillAreaHandler(): (oldValue: Area, next: Area) => void {
+    const identity = this.originalLinkPillMeasurementKey();
+    return (_old: Area, next: Area): void => {
+      if (!this.pillMounted || identity !== this.originalLinkPillMeasurementKey()) return;
+      const shape = resolveReaderRaisedShape(identity, readerPageAreaLength(next.width),
+        readerPageAreaLength(next.height), 999);
+      if (shape === undefined) return;
+      if (shape.identity !== this.originalLinkPillShape?.identity || shape.radius !== this.originalLinkPillShape?.radius) {
+        this.originalLinkPillShape = shape;
+      }
+    };
+  }
+
+  private currentOriginalLinkPillRadius(): number {
+    return this.pillMounted && this.originalLinkPillShape !== undefined ? this.originalLinkPillShape.radius : 14;
   }
 
   @Builder

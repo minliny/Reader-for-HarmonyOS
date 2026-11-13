@@ -6,6 +6,7 @@ import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerMainTabItemHeight } from '../../ui/layout/ReaderFloatingBarMetrics';
+import { resolveReaderRaisedShape } from '../../ui/layout/ReaderRaisedShape';
 import {
   TOK_BORDER_W,
   TOK_MUTED,
@@ -70,7 +71,7 @@ export struct MainTabBar {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
-    .borderRadius(TOK_RADIUS_PILL)
+    .borderRadius(this.railRadius())
     .clip(false)
     .onAreaChange((_old: Area, area: Area): void => this.recordRaisedSurface(true, area))
     .hitTestBehavior(HitTestMode.Transparent);
@@ -114,7 +115,8 @@ export struct MainTabBar {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(this.current === tab.key ? TOK_RADIUS_PILL : 0)
+    .borderRadius(this.current === tab.key ? Math.min(66,
+      readerMainTabItemHeight(this.navigationFontScale(), vertical)) / 2 : 0)
     .accessibilityText(`${tab.label}${this.current === tab.key ? '，已选中' : ''}`)
     .accessibilityRole(AccessibilityRoleType.BUTTON)
     .accessibilitySelected(this.current === tab.key)
@@ -130,6 +132,11 @@ export struct MainTabBar {
 
   private navigationFontScale(): number {
     return this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+  }
+
+  private railRadius(): number {
+    return resolveReaderRaisedShape('main-tab-rail', this.railSurfaceWidth || MAIN_TAB_RAIL_WIDTH,
+      this.railSurfaceHeight || mainTabRailHeight(MAIN_TABS.length, this.navigationFontScale()), TOK_RADIUS_PILL)?.radius ?? 0;
   }
 
   @Builder

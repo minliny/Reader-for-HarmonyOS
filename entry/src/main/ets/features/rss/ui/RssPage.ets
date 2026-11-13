@@ -20,7 +20,8 @@ import {
 import { MainTabShell } from '../../shell/MainTabShell';
 import { readerMainNavigationMode, readerMainRailLeading } from '../../shell/MainNavigationSpec';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
-import { readerPageContentStartInset } from '../../../ui/layout/ReaderPageShell';
+import { readerPageAreaLength, readerPageContentStartInset } from '../../../ui/layout/ReaderPageShell';
+import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
@@ -73,6 +74,7 @@ export struct RssPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
   @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @Prop presentation: RssPresentation;
@@ -96,10 +98,18 @@ export struct RssPage {
   @State private filterOpen: boolean = false;
   @State private measuredHeaderHeight: number = 0;
   @State private viewportWidth: number = 0;
+  @State private refreshPillShape: ReaderRaisedShape | undefined = undefined;
+  @State private pillAppearanceRevision: number = 0;
+  private pillMounted: boolean = false;
 
   aboutToAppear(): void {
+    this.pillMounted = true;
+    this.pillAppearanceRevision += 1;
+    this.refreshPillShape = undefined;
     registerReaderFonts(this.getUIContext().getFont());
   }
+
+  aboutToDisappear(): void { this.pillMounted = false; }
 
   build() {
     MainTabShell({
@@ -223,9 +233,32 @@ export struct RssPage {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('app.feed.pillSurface', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.feed.pillBorder', this.appThemeScheme) })
-    .borderRadius(999)
+    .borderRadius(this.currentRefreshPillRadius())
+    .onAreaChange(this.refreshPillAreaHandler())
     .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
     .onClick((): void => this.onRefresh());
+  }
+
+  private refreshPillMeasurementKey(): string {
+    return `${this.pillAppearanceRevision}:${this.readerWindowMetricsRevision}:${this.uiConfigurationRevision}:` +
+      `${this.viewportWidth}:${this.mainViewportRevision}:${this.isWideViewport()}:${this.refreshStatusText()}`;
+  }
+
+  private refreshPillAreaHandler(): (oldValue: Area, next: Area) => void {
+    const identity = this.refreshPillMeasurementKey();
+    return (_old: Area, next: Area): void => {
+      if (!this.pillMounted || identity !== this.refreshPillMeasurementKey()) return;
+      const shape = resolveReaderRaisedShape(identity, readerPageAreaLength(next.width),
+        readerPageAreaLength(next.height), 999);
+      if (shape === undefined) return;
+      if (shape.identity !== this.refreshPillShape?.identity || shape.radius !== this.refreshPillShape?.radius) {
+        this.refreshPillShape = shape;
+      }
+    };
+  }
+
+  private currentRefreshPillRadius(): number {
+    return this.pillMounted && this.refreshPillShape !== undefined ? this.refreshPillShape.radius : 17;
   }
 
   @Builder
@@ -240,6 +273,7 @@ export struct RssPage {
     Row() {
       ReaderSearchField({
         variant: 'rssPassive', mode: 'passive',
+        fieldWidthVp: this.contentFrame().width,
         placeholder: '搜索订阅源、文章标题或分组', accessibilityLabel: '搜索订阅源、文章标题或分组',
       });
     }.width(this.contentFrame().width).constraintSize({ minHeight: 44 })

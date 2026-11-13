@@ -92,7 +92,7 @@ export struct ReaderSessionCapsuleLeading {
             // their ink centre to the circle; fp keeps the correction font-scaled.
             .baselineOffset('-0.65fp')
             .fontColor(this.effectiveOnPrimaryColor()).textAlign(TextAlign.Center).maxLines(1);
-        }.width(this.countdownSize).height(this.countdownSize).backgroundColor(this.effectivePrimaryColor()).borderRadius(999);
+        }.width(this.countdownSize).height(this.countdownSize).backgroundColor(this.effectivePrimaryColor()).borderRadius(this.countdownSize / 2);
       } else {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.themeScheme === 'night' ? $r('app.media.reader_tts_headphones_theme_night') :
@@ -143,7 +143,7 @@ export struct ReaderSessionCapsulePause {
         (this.themeScheme === 'night' ? $r('app.media.reader_session_play_theme_night') : $r('app.media.reader_session_play')))
         .width(8).height(8);
     }
-    .width(16).height(16).backgroundColor(this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme)).borderRadius(999)
+    .width(16).height(16).backgroundColor(this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme)).borderRadius(8)
     .hitTestBehavior(HitTestMode.None);
   }
 }

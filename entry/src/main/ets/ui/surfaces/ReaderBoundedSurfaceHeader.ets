@@ -165,7 +165,8 @@ export struct ReaderBoundedSurfaceHeader {
     Column({ space: 0 }) {
       Row() {
         Blank().width(this.sheetSpec().handleWidth).height(this.sheetSpec().handleHeight)
-          .backgroundColor(readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme)).borderRadius(999);
+          .backgroundColor(readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme))
+          .borderRadius(Math.min(this.sheetSpec().handleWidth, this.sheetSpec().handleHeight) / 2);
       }.width('100%').justifyContent(FlexAlign.Center)
         .margin({ top: this.sheetSpec().handleTop, bottom: this.sheetSpec().handleBottom });
       Row({ space: this.sheetSpec().compactHeader ? this.sheetSpec().titleGap : 0 }) {

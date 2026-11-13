@@ -335,7 +335,7 @@ export struct ReaderTtsConfigOverlay {
         Text(choice.label.includes('女') ? '女' : choice.label.includes('男') ? '男' : '声')
           .width(34).height(34).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp)
-          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.control.paint.212F6373', this.appThemeScheme)).borderRadius(999);
+          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.control.paint.212F6373', this.appThemeScheme)).borderRadius(17);
       }
       Column({ space: 0 }) {
         Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label).width('100%')

@@ -102,6 +102,8 @@ export struct ReaderSearchField {
   @Prop focusOnAppear: boolean = false;
   @Prop naturalFieldHeightVp: number = 0;
   @Prop naturalInputHeightVp: number = 0;
+  /** Border-box width supplied by the passive RSS field's existing frame owner. */
+  @Prop fieldWidthVp: number = 0;
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusId: string = '';
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusAllowed: boolean = false;
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusRevision: number = 0;
@@ -586,7 +588,8 @@ export struct ReaderSearchField {
 
   private cornerRadius(): number {
     if (this.variant === 'bookPanel') return 18;
-    return this.variant === 'rssPassive' ? 999 : this.variant === 'sourceManagement' ? 12 : 8;
+    return this.variant === 'rssPassive' ? Math.min(Math.max(0, this.fieldWidthVp), this.fieldHeight()) / 2 :
+      this.variant === 'sourceManagement' ? 12 : 8;
   }
 
   private inputColor(): string {

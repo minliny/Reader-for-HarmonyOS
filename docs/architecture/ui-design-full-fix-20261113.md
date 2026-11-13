@@ -79,10 +79,26 @@ TTS compact状态的恢复滚动位于面板左侧，右侧保留原关闭目标
 
 官方onClick是隐式单击TapGesture，默认同类手势按子优先竞争。TouchEvent.stopPropagation只终止基础事件冒泡，不能用来证明父手势被取消。修正采用真实受支持的点击结构，保留List拖动，撤回有限probe中手造stopPropagation标志所声称的证明。[OpenHarmony单一手势说明](https://github.com/openharmony/docs/blob/master/zh-cn/application-dev/ui/arkts-gesture-events-single-gesture.md)、[华为事件交互原理](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/arkts-interaction-basic-principles/)
 
-## 固定候选
+## 第一份固定候选
 
 HarmonyOS提交 `ed8d693798d5c3112e938e7a7dd45fda28c17df7`，Reader-UI提交 `f206f0d`，Core沿 `c078126376294faa3a611690fbe48e79f0f86cc4`。候选run为 `20261113T125933Z-ed8d6937-54bfeed6`，App身份为 `0.2.0.DEV.ac7d00ae82ab`，产品版本继续 `0.2.0`，安装计数器继续 `1000000`。
 
 实际编译从 `2026-11-13T12:59:06.286Z` 至 `12:59:32.525Z`。签名HAP为226233325字节，SHA-256为 `f893c0fb9032c831bf1e60a4efae79e58a156def9807be0f38d0608889fd3c05`。唯一证书身份核验通过。当前Core/Native输入与已有缓存一致，Native未重复编译。所有未选业务门禁保留NOT_RUN。
 
 manifest位于 `.reader-artifacts/hap/20261113T125933Z-ed8d6937-54bfeed6/manifest.json`，日志位于 `.reader-artifacts/ui-full-fix-20261113/hap-build-final.log`。本候选编译及签名通过，全页视觉、原生命中、焦点、系统字号和用户验收各保留原状态。
+
+## 原生采样追加的通用圆角修复
+
+第一份候选已在远程x86_64 VM保数据安装并启动。停态原库与WAL的备份保持原字节，当前副本正式FFI用例新执行一次，两项同源合成测试使用冻结原日志复用。签名、UID、ABI、版本检查和安装启动通过，回执为 `deploy-vm-6460677a198b-20261113T131446Z.json`。
+
+该候选首张书架帧出现底部导航白色楔形和断弧，新增 `NATIVE-PILL-01`。后续原生导航暂停，先从代码扩展审计。初始SDK AST库存为161个Normal构造、39处直接pill圆角输入及16处规格赋值，调用链又追出ReaderSearchField一处间接输入。最终逐项处置40处原生入口及16处规格，覆盖24个生产文件。
+
+自然尺寸真胶囊Button使用受支持的Capsule类型。共享ReaderButton通过实际type modifier刷新已挂载实例的规格。已知绘制盒按短边限制半径，触控载体继续按自身预算分配。自然Row/Text复用实际Area或既有精确尺寸输入，保留原业务动作。RSS passive field的宽度沿唯一调用方的原contentFrame传入。
+
+独立审修修正了IconButton的border与圆角应用顺序、TTS状态自然宽的生产测量传播、Labeled测量的appearance/window/UIConfig身份，以及配置修订但同盒不再发Area时的已采用几何保留。无效Area保持最后有效结果，新展示清理旧shape，旧闭包继续拒绝更新。
+
+最终代码证据为 `native/pill-native-input-closure.json`，状态为CODE_ACCEPTED_INDEPENDENTLY_REVIEWED。准确phone shape、shared controls、badge、reading、RSS和Labeled叶分别有新运行或明确REUSED记录。阅读明确尺寸盒为380样本，真实minimum到header链为72组合，RSS为12组合和228个Area回执。全部生产与测试冻结并完成跨域独审后，才进入下一份候选构建。
+
+第一版TTS状态胶囊测试把maxWidth当作实际自然宽，该判断已撤回，最终使用当前状态文字的生产测量返回值。一条RSS初次夹具失败日志被后续运行覆盖，失败原因和修正保留在 `secondary-pill-results.json`，最终及same-box新日志分别冻结。代码与SDK属性结果各自保留证据范围。
+
+四族全部21项登记的2245个主源与依赖绑定已刷新并逐项匹配，包含261个唯一文件。主登记和全部嵌套变体共同更新。21项visual继续NOT_RUN，历史布局、SDK、原生产物维持其原输入和原判定。登记事实更新记录为 `final-pill-register-all-bindings.json`。

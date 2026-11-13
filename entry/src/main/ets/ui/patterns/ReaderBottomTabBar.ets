@@ -58,7 +58,7 @@ export struct ReaderBottomTabBar {
 
   @Builder
   private tabItem(tab: ReaderBottomTabItem) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Column({ space: 2 }) {
         Stack({ alignContent: Alignment.Center }) {
           Image(tab.icon).width(24).height(24).accessibilityLevel('no');
@@ -80,7 +80,6 @@ export struct ReaderBottomTabBar {
     .constraintSize({ minHeight: readerMainTabItemHeight(this.fontScale, false) })
     .padding(0)
     .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.scheme) : Color.Transparent)
-    .borderRadius(this.current === tab.key ? TOK_RADIUS_PILL : 0)
     .enabled(this.inputEnabled)
     .accessibilityText(`${tab.label}${this.current === tab.key ? '，已选中' : ''}`)
     .accessibilitySelected(this.current === tab.key)

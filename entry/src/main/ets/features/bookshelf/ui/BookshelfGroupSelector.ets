@@ -2,11 +2,13 @@ import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY } from '../../../ui/fou
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TOK_GREEN, TOK_CARD_BG, TOK_BORDER, TOK_PRIMARY_SOFT } from '../../../ui/foundation/ReaderTokens';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 
 /** V1 lightweight single-select group control; never mutates groups on open. */
 @Component
 export struct BookshelfGroupSelector {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop selected: boolean = false;
   @Prop busy: boolean = false;
@@ -27,7 +29,8 @@ export struct BookshelfGroupSelector {
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).accessibilityLevel('no')
           .padding({ left: 12, right: 12, top: 5, bottom: 5 })
           .backgroundColor(this.selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-          .border({ width: 1, color: this.selected ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(999);
+          .border({ width: 1, color: this.selected ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
+          .borderRadius(this.chipRadius());
       }
         .constraintSize({ minWidth: 44, minHeight: 44 })
         .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
@@ -35,5 +38,10 @@ export struct BookshelfGroupSelector {
         .attributeModifier(new ReaderActionAccessibility('默认分组', !this.busy, this.selected, true, undefined, 'nativeButton'))
         .onClick((): void => { if (!this.busy) this.onSelect(); });
     }.width('100%').padding({ top: 8, bottom: 8 }).alignItems(HorizontalAlign.Start);
+  }
+
+  private chipRadius(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale;
+    return ((TYPE_APP_FILTER_OPTION.lineHeightFp as number) * Math.max(1, scale) + 10) / 2;
   }
 }

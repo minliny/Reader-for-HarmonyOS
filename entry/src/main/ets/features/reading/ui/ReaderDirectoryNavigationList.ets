@@ -1390,7 +1390,7 @@ export struct ReaderDirectoryNavigationList {
         Text('…').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       } else {
         if (this.isCurrentNode(item)) {
-          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(999)
+          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(1.5)
             .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         Text(item.node.title)

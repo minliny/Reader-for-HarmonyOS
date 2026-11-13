@@ -149,9 +149,16 @@ async function currentPhoneShape(sources={}) {
   assert.deepEqual(material.shadow,deps.readerSurfaceElevation('raised','day'),'the actual Native material owns its shared raised shadow');
   assert.equal(material.shadow.fill,false,'raised Native ink excludes the interior fill');
   assert.equal(material.shadow.type,'ShadowType.COLOR','actual Native shadow uses the SDK color kind');
+  const tabButtons=nodes(tab,'Button');
+  assert.equal(tabButtons.length,2,'both admitted tabs use the real native Button');
+  for(const button of tabButtons){
+    assert.equal(button.createWithChild.type,'ButtonType.Capsule','native tab capsule owns half-minimum actual corners');
+    assert.equal(button.borderRadius,undefined,'the tab never sends the unbounded pill token to native Button corners');
+  }
   assert.equal(metrics.systemFontScale,1);
   if(!sources.negative){
     for(const [name,before,after,expected] of [
+      ['tab-Normal-sentinel-restored','ButtonType.Capsule','ButtonType.Normal',/native tab capsule owns/],
       ['Native-radius-diverges','.borderRadius(this.materialRadius())','.borderRadius(0)',/Native material consumes|effective radius owner/],
       ['Native-clip-disabled','.clip(true)','.clip(false)',/Native material clips|rounded clip owner/],
       ['Native-shadow-detached',".shadow(readerSurfaceElevation('raised', this.scheme))",'',/owns its shared raised shadow|shared elevation owner|one shadow modifier/],

@@ -112,7 +112,7 @@ export struct ReaderDirectoryChapterRow {
     Row() {
       Row() {
         if (this.entry.index === this.currentChapterIndex) {
-          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(999).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
+          Row().width(3).height(Math.max(44, this.rowHeight)).borderRadius(1.5).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         if (this.variant === 'standalone') {
           Stack({ alignContent: Alignment.Center }) { this.chapterTitle(); }.layoutWeight(1).height(Math.max(44, this.rowHeight));

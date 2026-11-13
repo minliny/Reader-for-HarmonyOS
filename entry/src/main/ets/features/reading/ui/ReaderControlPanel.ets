@@ -2392,7 +2392,9 @@ export struct ReaderControlPanel {
         .height(this.layout.contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
         .backgroundColor(this.brightnessAutomatic ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme) : readerAppColor('TOK_READ_ELEVATED', this.appScheme))
         .border({ width: TOK_BORDER_W, color: this.brightnessAutomatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-        .borderRadius(999).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+        .borderRadius(Math.min(
+          this.layout.contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
+          this.layout.contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }
       .width(Math.max(READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,
         this.layout.contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE))
@@ -2416,7 +2418,7 @@ export struct ReaderControlPanel {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-    .borderRadius(999).clip(true);
+    .borderRadius(Math.min(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, this.brightnessContentHeight()) / 2).clip(true);
   }
 
   private brightnessTrackHeight(): number {
@@ -2542,7 +2544,7 @@ export struct ReaderControlPanel {
       .width(42)
       .height(42)
       .backgroundColor(this.isActiveModule(module) ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
-      .borderRadius(999);
+      .borderRadius(21);
 
       // Make v17 imported Quick navigation: Noto Sans SC Bold 10, normal line height.
       Text(label)

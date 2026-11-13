@@ -24,7 +24,7 @@ function runBadgeBudget() {
   const styles = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfCoverVisual.ts', import.meta.url), 'utf8'),
     'BookshelfCoverVisual.ts', {}, ['BOOKSHELF_COVER_SHADOW_RADIUS', 'BOOKSHELF_COVER_SHADOW_OFFSET_Y']);
   const names = ['projectionBookCoverLayer', 'projectionBookCard', 'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight',
-    'gridProgressLabel'];
+    'gridProgressLabel', 'continueCardFontScale'];
   const coverSource = readFileSync(new URL('../entry/src/main/ets/ui/patterns/NoCoverCover.ets', import.meta.url), 'utf8');
   class Cover { constructor(owner, params) { Object.assign(this, { owner, params }); } }
   const nativeGesture = new Proxy({}, { get: () => () => {} });
@@ -32,7 +32,7 @@ function runBadgeBudget() {
     globalThis: { Gesture: nativeGesture }, LongPressGesture: nativeGesture, GesturePriority: { Low: 'low' } },
     { childSources: { NoCoverCover: coverSource } });
   let variants = 0;
-  for (const width of [320, 366, 720]) for (const count of [1, 99, 123456789]) {
+  for (const width of [320, 366, 720]) for (const count of [1, 99, 123456789]) for (const fontScale of [1, 2]) {
     for (const morph of [false, true]) {
       const wide = width === 720;
       const owner = new probe.Component(undefined, {});
@@ -40,16 +40,20 @@ function runBadgeBudget() {
         appThemeScheme: 'day', viewSwitchGridContentOpacity: 1,
         shelfContentWidth: () => width - 40, projectionCoverRadius: () => 8,
         projectionCoverLayerOpacity: () => 1, hasCover: () => true,
+        continueCardFontScale: () => fontScale,
       });
       const book = { sourceId: 'test', bookId: 'same', title: '书名', author: '作者', coverUrl: 'file://cover', unreadCount: count };
       owner.projectionBookCoverLayer(book, wide, morph, 0);
       const nodes = [...owner.nodes.values()];
       const text = nodes.find(node => node.type === 'Text' && node.create === `更新 ${count} 章`);
-      const badge = nodes.find(node => node.type === 'Row' && node.borderRadius === 999);
+      const badge = nodes.find(node => node.type === 'Row' && node.constraintSize?.maxWidth !== undefined && node.padding?.top === 3);
       assert.ok(text && badge);
       const coverWidth = owner.shelfBookCardWidth(wide);
       assert.equal(badge.constraintSize.maxWidth, Math.max(0, coverWidth - 14));
       assert.equal(text.constraintSize.maxWidth, Math.max(0, coverWidth - 28));
+      assert.equal(badge.borderRadius, Math.min(Math.max(0, coverWidth - 14),
+        readerTypographyRoles.TYPE_SHELF_UPDATE_BADGE.lineHeightFp * fontScale + 6) / 2,
+        'badge Native corners stay finite within the bounded paint width and actual single-line typography budget');
       assert.equal(text.maxLines, 1);
       assert.equal(text.textOverflow.overflow, 'TextOverflow.Ellipsis');
       assert.equal(text.fontSize, readerTypographyRoles.TYPE_SHELF_UPDATE_BADGE.fontSizeFp);

@@ -17,7 +17,7 @@ export struct StatusBadge {
         .fill(Color.Transparent).stroke(this.symbolColor()).strokeWidth(1.6)
         .strokeLineCap(LineCapStyle.Round).strokeLineJoin(LineJoinStyle.Round)
         .accessibilityLevel('no');
-    }.width(24).height(18).borderRadius(999).backgroundColor(this.surfaceColor())
+    }.width(24).height(18).borderRadius(9).backgroundColor(this.surfaceColor())
       .accessibilityGroup(true).accessibilityText(this.label.trim().length > 0 ? this.label : '状态未知');
   }
 
