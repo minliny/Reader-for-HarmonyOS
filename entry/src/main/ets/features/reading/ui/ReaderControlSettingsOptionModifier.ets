@@ -40,8 +40,8 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Co
       .width(this.actor.width).height(this.actor.height)
       .position({ x: this.actor.x, y: this.actor.y })
       .backgroundColor(this.active ? readerAppColor('TOK_READ_ELEVATED', this.appScheme) : Color.Transparent)
-      .borderRadius(6)
       .border({ width: 0.5, color: readerAppColor('TOK_LINE', this.appScheme) })
+      .borderRadius(6)
       .responseRegion(this.response)
       .enabled(this.enabled).accessibilityText(this.accessibility).onClick(this.action);
   }

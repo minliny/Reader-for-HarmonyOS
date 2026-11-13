@@ -603,8 +603,9 @@ export struct ReaderControlReplaceContent {
     }.width('100%').height('100%').justifyContent(FlexAlign.Center);
     }.width(this.toolbarButtonWidth(index)).height(this.frame().toolbarCellHeight).padding(0)
       .position({ x: this.toolbarButtonX(index), y: this.frame().toolbarColumns === 1 ? index * (this.frame().toolbarCellHeight + 8) : 0 })
-      .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme)).borderRadius(8)
+      .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: add ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .borderRadius(8)
       .id(`${this.state.sessionKey}:replace-editor:${focusRole}`)
       .attributeModifier(new ReaderActionAccessibility(label, this.layer === '' && this.fullInput() && this.readyInput(), false, true, undefined, 'nativeButton'))
       .onClick((): void => { if (this.layer === '' && this.fullInput() && this.readyInput()) action(); });

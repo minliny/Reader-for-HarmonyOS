@@ -280,9 +280,10 @@ export struct ReaderChoiceRow {
           .fontColor(readerAppColor('TOK_DOWNLOAD_INK', this.scheme));
       }.width('100%');
     }.constraintSize({ minHeight: this.spec().height }).width('100%')
-      .padding({ left: 0, right: 0, top: this.spec().padding, bottom: this.spec().padding }).borderRadius(0)
+      .padding({ left: 0, right: 0, top: this.spec().padding, bottom: this.spec().padding })
       .backgroundColor(Color.Transparent).enabled(this.actionEnabled).id(this.focusId)
       .border({ width: { bottom: this.spec().dividerHeight }, color: readerAppColor('TOK_DOWNLOAD_LINE', this.scheme) })
+      .borderRadius(0)
       .accessibilityRole(AccessibilityRoleType.RADIO).accessibilitySelected(this.selected).accessibilityText(this.label)
       .onClick((): void => this.choose());
   }

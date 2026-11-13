@@ -303,8 +303,9 @@ export struct ReaderTtsConfigOverlay {
                     .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)
                     .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
                     .accessibilityLevel('no');
-                }.width('100%').height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+                }.width('100%').height(44).padding(0).backgroundColor(Color.Transparent)
                   .border({ width: { top: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) }).enabled(!this.busy)
+                  .borderRadius(0)
                   .accessibilityText('管理在线 TTS')
                   .onClick((): void => this.onManage(this.selectionId));
               }

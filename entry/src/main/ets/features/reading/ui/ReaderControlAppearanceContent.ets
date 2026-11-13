@@ -775,8 +775,9 @@ export struct ReaderControlAppearanceContent {
       .height(Math.max(0, (this.minimumProfile()?.themeActionHeight ?? 28) - TOK_BORDER_W * 2))
       .fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontWeight)
       .wordBreak(WordBreak.BREAK_WORD).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center);
-    }.width(74).height(this.minimumProfile()?.themeActionHeight ?? 28).padding(0).backgroundColor(Color.Transparent).borderRadius(6)
+    }.width(74).height(this.minimumProfile()?.themeActionHeight ?? 28).padding(0).backgroundColor(Color.Transparent)
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .borderRadius(6)
       .position(this.actorPosition(day ? this.frame().themeDayAction : this.frame().themeNightAction))
       .opacity(this.motionProgress * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .enabled(this.fullInput())

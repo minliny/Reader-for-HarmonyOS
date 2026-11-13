@@ -3022,8 +3022,8 @@ export struct MangaReadingSurface {
       Text(label).layoutWeight(1).textAlign(TextAlign.Center).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18).fontColor(this.isSheetChoiceSelected(kind) ? '#FFFAF4' : this.mutedColor());
     }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
     }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(8)
-      .backgroundColor(this.isSheetChoiceSelected(kind) ? this.greenColor() : this.softSurfaceColor()).borderRadius(12)
-      .border({ width: 1, color: this.isSheetChoiceSelected(kind) ? this.greenColor() : this.lineColor() }).onClick(action)
+      .backgroundColor(this.isSheetChoiceSelected(kind) ? this.greenColor() : this.softSurfaceColor())
+      .border({ width: 1, color: this.isSheetChoiceSelected(kind) ? this.greenColor() : this.lineColor() }).borderRadius(12).onClick(action)
       .accessibilityText(`${label}，${this.isSheetChoiceSelected(kind) ? '已选择' : '未选择'}`);
   }
   @Builder
@@ -3033,8 +3033,8 @@ export struct MangaReadingSurface {
       Text(label).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18).fontColor(this.inkColor()).layoutWeight(1);
       if (this.fitPreference === fit) { Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(18).height(18); }
     }.width('100%').height('100%').accessibilityLevel('no-hide-descendants');
-    }.width('100%').height(this.sheetActionHeight()).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-      .border({ width: { bottom: 1 }, color: this.lineColor() }).onClick(action)
+    }.width('100%').height(this.sheetActionHeight()).padding(0).backgroundColor(Color.Transparent)
+      .border({ width: { bottom: 1 }, color: this.lineColor() }).borderRadius(0).onClick(action)
       .accessibilityText(`${label}，${this.fitPreference === fit ? '已选择' : '未选择'}`);
   }
   @Builder

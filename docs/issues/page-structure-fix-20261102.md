@@ -2481,3 +2481,5 @@ Current-session original system font has been restored: actual Settings sliders2
 2026-11-14。全量重审已进一步定位d8ad88ef原生包装的父边框与子Text外盒重复、31536cfb有限宽度扣款缺边框，以及Replace旧行外壳和自然增长预算的复合欠付。八个模块及三个嵌套宿主的46个border站点、共享57文件与34个原生Button构造、AutoPage/Replace全部38个Builder链已完成源侧逐项审读。五类私有模板缺口分别修复，默认原稿角色保持，真实文字增长沿实际内容盒计算。逐项历史、准确回归和独立审修见[控制栏体系修复记录](../architecture/ui-design-full-fix-20261113.md)。
 
 本批正式register为9c96a9e0，九登记各revision22→23，274唯一输入、2356处pin，control21保持。refs单次PASS0，register单次保留原39项完整诊断，Primary独审23881e00接受。此前App081已在现有远程VM保数据更新，Home真实657px内容和视口相等且Scroll为false，首次ready Tab正常。该包Appearance两枚主题动作Text越界继续保留FAIL，后继已修源码须由新准确候选另行记录。全部生产与独立审修冻结后才继续安装或设备步骤，历史Tab扇形因果、全页visual和Source E2/E3仍按原开放判定。
+
+全应用原生Button顺序后继批已完成代码与独立审修。当前SDK要求显式borderRadius位于border之后，268ETS/207构造及66modifier闭包内九坏序模板已按原值调整，八生产文件保持其他几何和业务。373TS无对应构造或modifier声明，207构造的内容盒同型账本没有额外精确outer重复。正式72fee70d/control21为当前冻结，16受影响own登记各递增一次，277唯一输入、2388pin，refsPASS0/register原39项保持，Primary终核9bc073c4接受。Appb5e6的两个主题Text已实际完整包含并获独审，圆角材质与尚未采样的AutoPage/Replace端点由后继候选单列核对。[完整修复与历史归因记录](../architecture/ui-design-full-fix-20261113.md)

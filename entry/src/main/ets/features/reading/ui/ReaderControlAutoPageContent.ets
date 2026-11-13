@@ -842,9 +842,10 @@ export struct ReaderControlAutoPageContent {
       Text(increase ? '+' : '−').width(this.textMetric('stepLabelWidth', 18)).height(this.textMetric('stepLabelHeight', 18))
         .fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.fontSizeFp).lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_ICON', this.appScheme)).textAlign(TextAlign.Center).accessibilityLevel('no');
-    }.width(this.speedActor(increase ? 'plus' : 'minus').width).height(this.speedActor(increase ? 'plus' : 'minus').height).padding(0).borderRadius(12)
+    }.width(this.speedActor(increase ? 'plus' : 'minus').width).height(this.speedActor(increase ? 'plus' : 'minus').height).padding(0)
       .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
+      .borderRadius(12)
       .position({ x: this.speedActor(increase ? 'plus' : 'minus').x, y: this.speedActor(increase ? 'plus' : 'minus').y })
       .opacity(this.speedActor(increase ? 'plus' : 'minus').opacity)
       .enabled(this.sharedInput() && this.p() === 0)
